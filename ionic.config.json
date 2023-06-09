@@ -1,0 +1,7 @@
+{
+  "name": "Nimiq Pay",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}

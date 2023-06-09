@@ -1,0 +1,100 @@
+export interface ParticipantAuthorizeRequest {
+    public_key: string;
+    phone_number: string;
+}
+
+export interface ParticipantVerifyRequest {
+    phone_number: string;
+    access_code: number;
+}
+
+export interface ParticipantVerifyResponse {
+    token: string;
+}
+
+export interface ParticipantBalanceResponse {
+    balance: number;
+}
+
+export interface ParticipantVoucherResponse {
+    id: string;
+    claims_remaining: number;
+    reward: number;
+}
+
+export interface PaymentRequest {
+    type: string;
+    reference: string;
+    destination: string;
+}
+
+export interface TaskClaimRequest {
+    proof: any;
+}
+
+export class BonusClient {
+    endpoint: string = "https://bonus-nim.zeromox.com/api";
+
+    private async fetchJson(path: string, options: RequestInit = {}): Promise<any | null> {
+        try {
+            const response = await fetch(this.endpoint + path, options);
+            if (response.status === 404) return null;
+            if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+            return await response.json();
+        } catch (e: any) {
+            throw new Error(`Request to ${path} failed: ${e.message}`, { cause: e });
+        }
+    }
+
+    async authorizeParticipant(publicKey: Nimiq.PublicKey, phoneNumber: string): Promise<any> {
+        const request: ParticipantAuthorizeRequest = { public_key: publicKey.toHex(), phone_number: phoneNumber }
+        return (await this.fetchJson(`/participant/authorize`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request)
+        }))
+    }
+
+    async verifyParticipant(phoneNumber: string, accessCode: string): Promise<ParticipantVerifyResponse> {
+        const request: ParticipantVerifyRequest = { phone_number: phoneNumber, access_code: parseInt(accessCode) }
+        return (await this.fetchJson(`/participant/verify`, {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(request)
+        })) as ParticipantVerifyResponse
+    }
+
+    async getParticipantBalance(token: string): Promise<number> {
+        return ((await this.fetchJson(`/participant/balance`, { headers: { token } })) as ParticipantBalanceResponse).balance
+    }
+
+    async getParticipantVoucher(token: string): Promise<ParticipantVoucherResponse> {
+        return (await this.fetchJson(`/participant/voucher`, { headers: { token } })) as ParticipantVoucherResponse
+    }
+
+    async doPayment(token: string, type: string, reference: string, destination: string): Promise<void> {
+        const request: PaymentRequest = { type, reference, destination }
+        await this.fetchJson(`/payment`, {
+            method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(request)
+        })
+    }
+
+    async getTasks(token: string): Promise<any> {
+        return (await this.fetchJson(`/task`, { headers: { token } }))
+    }
+
+    async getTask(token: string, id: string): Promise<any> {
+        return (await this.fetchJson(`/task/${id}`, { headers: { token } }))
+    }
+
+    async claimTask(token: string, id: string, proof: any): Promise<any> {
+        const request: TaskClaimRequest = { proof }
+        await this.fetchJson(`/task/${id}/claim`, {
+            method: "POST", headers: { "Content-Type": "application/json", token }, body: JSON.stringify(request)
+        })
+    }
+
+    async getVoucher(id: string): Promise<any> {
+        return (await this.fetchJson(`/voucher/${id}`))
+    }
+
+    async claimVoucher(token: string, id: string): Promise<void> {
+        return (await this.fetchJson(`/voucher/${id}/claim`, { headers: { token } }))
+    }
+}
