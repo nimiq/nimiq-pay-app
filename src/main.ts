@@ -1,74 +1,72 @@
 import { createApp } from 'vue'
+import { IonicVue } from '@ionic/vue'
 import App from './App.vue'
-import router from './router';
-
-import { IonicVue } from '@ionic/vue';
+import router from './router'
 
 /* Core CSS required for Ionic components to work properly */
-import '@ionic/vue/css/core.css';
+import '@ionic/vue/css/core.css'
 
 /* Basic CSS for apps built with Ionic */
-import '@ionic/vue/css/normalize.css';
-import '@ionic/vue/css/structure.css';
-import '@ionic/vue/css/typography.css';
+import '@ionic/vue/css/normalize.css'
+import '@ionic/vue/css/structure.css'
+import '@ionic/vue/css/typography.css'
 
 /* Optional CSS utils that can be commented out */
-import '@ionic/vue/css/padding.css';
-import '@ionic/vue/css/float-elements.css';
-import '@ionic/vue/css/text-alignment.css';
-import '@ionic/vue/css/text-transformation.css';
-import '@ionic/vue/css/flex-utils.css';
-import '@ionic/vue/css/display.css';
+import '@ionic/vue/css/padding.css'
+import '@ionic/vue/css/float-elements.css'
+import '@ionic/vue/css/text-alignment.css'
+import '@ionic/vue/css/text-transformation.css'
+import '@ionic/vue/css/flex-utils.css'
+import '@ionic/vue/css/display.css'
 
 /* Theme variables */
-import './theme/variables.css';
+import './theme/variables.css'
 
-import { NimiqNetworkClient } from "@/lib/nimiq-network-client";
-import { NimiqWallet } from "@/lib/nimiq-wallet";
-import { InstantPayClient } from "@/lib/instant-pay-client";
-import { InstantPayWallet } from "@/lib/instant-pay-wallet";
-import { FiatHandler } from './lib/fiat-handler';
-import { StorageManager } from './lib/storage-manager';
-import { BonusClient } from './lib/bonus-client';
-import { BonusWallet } from './lib/bonus-wallet';
-import { defineCustomElements as jeepSqlite, applyPolyfills } from "jeep-sqlite/loader";
+import { FiatHandler } from './lib/fiat-handler'
+import { StorageManager } from './lib/storage-manager'
+import { BonusClient } from './lib/bonus-client'
+import { BonusWallet } from './lib/bonus-wallet'
+import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
+import { NimiqWallet } from '@/lib/nimiq-wallet'
+import { InstantPayClient } from '@/lib/instant-pay-client'
+import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 
 applyPolyfills().then(() => {
-    jeepSqlite(window);
-});
+  jeepSqlite(window)
+})
 
 window.addEventListener('DOMContentLoaded', async () => {
-    const storageManager = new StorageManager()
-    await storageManager.init()
-    const nimiqNetworkClient = new NimiqNetworkClient()
-    const nimiqWallet = new NimiqWallet(nimiqNetworkClient, storageManager)
-    const instantPayClient = new InstantPayClient()
-    const instantPayWallet = new InstantPayWallet(nimiqWallet, nimiqNetworkClient, instantPayClient)
-    const fiatHandler = new FiatHandler()
-    const bonusClient = new BonusClient()
-    const bonusWallet = new BonusWallet(nimiqWallet, storageManager, bonusClient)
+  const storageManager = new StorageManager()
+  await storageManager.init()
+  const nimiqNetworkClient = new NimiqNetworkClient()
+  const nimiqWallet = new NimiqWallet(nimiqNetworkClient, storageManager)
+  const instantPayClient = new InstantPayClient()
+  const instantPayWallet = new InstantPayWallet(nimiqWallet, nimiqNetworkClient, instantPayClient)
+  const fiatHandler = new FiatHandler()
+  const bonusClient = new BonusClient()
+  const bonusWallet = new BonusWallet(nimiqWallet, storageManager, bonusClient)
 
-    const app = createApp(App)
-        .use(IonicVue)
-        .use(router)
-        .provide(StorageManager.KEY, storageManager)
-        .provide(NimiqNetworkClient.KEY, nimiqNetworkClient)
-        .provide(NimiqWallet.KEY, nimiqWallet)
-        .provide(InstantPayWallet.KEY, instantPayWallet)
-        .provide(FiatHandler.KEY, fiatHandler)
-        .provide(BonusWallet.KEY, bonusWallet)
+  const app = createApp(App)
+    .use(IonicVue)
+    .use(router)
+    .provide(StorageManager.KEY, storageManager)
+    .provide(NimiqNetworkClient.KEY, nimiqNetworkClient)
+    .provide(NimiqWallet.KEY, nimiqWallet)
+    .provide(InstantPayWallet.KEY, instantPayWallet)
+    .provide(FiatHandler.KEY, fiatHandler)
+    .provide(BonusWallet.KEY, bonusWallet)
 
-    await router.isReady()
+  await router.isReady()
 
-    if (router.currentRoute.value.path == "/") {
-        if (await storageManager.exists()) {
-            router.push('/pin')
-        } else {
-            router.push('/setup')
-        }
-    }
-    
-    app.mount('#app');
+  if (router.currentRoute.value.path === '/') {
+    if (await storageManager.exists())
+      router.push('/pin')
+    else
+      router.push('/setup')
+  }
+
+  app.mount('#app')
 })
 
 // import {getNimiqClient, getWallet as getNimiqWallet, NimiqNetworkClient} from "./lib/nimiq-network-client"
