@@ -53,9 +53,19 @@ export class NimiqNetworkClient {
     return client.getHeadHeight()
   }
 
+  async getHeadHeightOrPending() {
+    const client = await this.clientPromise
+    return client.getHeadHeight()
+  }
+
   async getAccount(address: Nimiq.Address | string) {
     const client = await this.getClientWithConsensus()
     return client.getAccount(address)
+  }
+
+  async getTransactionReceipts(hashes: (Nimiq.Hash | string)[]) {
+    const client = await this.getClientWithConsensus()
+    return client.getTransactionReceiptsByHashes(hashes)
   }
 
   async sendTransaction(tx: Nimiq.Transaction) {

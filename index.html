@@ -29,6 +29,8 @@
     <script src="/nimiq/web.js"></script>
     <script type="module" src="node_modules/jeep-sqlite/dist/jeep-sqlite/jeep-sqlite.esm.js"></script>
     <script type="module" src="/src/main.ts"></script>
+    <!-- This is to make the web video behave the same as native -->
+    <style>body>div:not(#app) { z-index: -100; }</style>
   </body>
 
 </html>

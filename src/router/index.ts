@@ -1,7 +1,5 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import HomeView from '@/views/HomeView.vue'
-import PinView from '@/views/PinView.vue'
 
 // TODO: Add animations
 // https://ionicframework.com/docs/vue/navigation#navigating-using-useionrouter

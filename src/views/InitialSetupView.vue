@@ -51,12 +51,12 @@ const page = ref()
 </template>
 
 <style scoped>
-ion-modal ion-toolbar {
-    --border-color: transparent;
+ion-toolbar {
     --background: none;
 }
 
-ion-toolbar {
-    --background: none;
+ion-icon.icon-extra-large {
+    font-size: 96px;
+    padding: 32px;
 }
 </style>

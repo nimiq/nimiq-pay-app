@@ -44,6 +44,19 @@ input.phone {
   font-family: monospace;
 }
 
+ion-modal ion-toolbar {
+    --border-color: transparent;
+    --background: var(--ion-background-color, #fff);
+}
+
+body.scanner-active ion-app>:not(ion-modal) {
+    display: none;
+}
+
+body.scanner-active ion-content, body.scanner-active .ion-page, body.scanner-active ion-modal {
+    --background: none;
+}
+
 /* TODO: Remove this */
 p, a, h1, h2, h3, h4, h5, h6, svg {
   color: rgb(59 130 246);
