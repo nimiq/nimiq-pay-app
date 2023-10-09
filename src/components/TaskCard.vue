@@ -33,7 +33,7 @@ defineProps({
 <template>
   <div
     class="p-4 pr-10 text-xl font-semibold text-blue-600 bg-blue-100 rounded-lg min-h-[10rem] relative ion-activatable ripple-parent overflow-hidden"
-    :class="{ 'text-blue-50 bg-blue-500': highlight }"
+    :class="{ '[&>*]:text-blue-50 bg-blue-500': highlight }"
   >
     <IonIcon :icon="chevronForwardOutline" size="large" class="absolute right-0 bottom-2" />
     <span v-if="total" class="absolute text-sm top-2 right-3">

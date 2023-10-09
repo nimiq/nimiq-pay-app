@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonMenuButton, IonModal, IonPage, IonRow, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonCol, IonContent, IonFab, IonFabButton, IonFooter, IonGrid, IonHeader, IonIcon, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import type { Ref } from 'vue'
@@ -137,6 +137,8 @@ onMounted(async () => {
     router.replace('/pin')
 
   scrollToFirstNotification()
+
+  console.log('isDev', isDev)
 })
 </script>
 
@@ -172,7 +174,7 @@ onMounted(async () => {
           </IonButton>
         </IonRow>
         <!-- Horizontal Scroll -->
-        <IonRow class="mb-4">
+        <IonRow>
           <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4">
             <li v-for="(notification, index) in notificationArray" :key="notification.title">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
@@ -181,8 +183,10 @@ onMounted(async () => {
             </li>
           </ul>
         </IonRow>
+
+        <!-- Earn NIM -->
         <IonRow>
-          <p class="ml-1 text-lg font-semibold">
+          <p class="mt-4 ml-1 text-lg font-semibold">
             Earn NIM
           </p>
         </IonRow>
@@ -220,6 +224,24 @@ onMounted(async () => {
         </IonRow>
       </IonGrid>
 
+      <!-- Map -->
+      <IonRow>
+        <p class="mt-8 ml-1 text-lg font-semibold">
+          Find places that accept crypto
+        </p>
+      </IonRow>
+      <IonRow>
+        <div class="flex items-center justify-center w-full mt-2 bg-blue-200 rounded-lg h-72">
+          <span class="text-blue-50">Map</span>
+        </div>
+      </IonRow>
+      <IonRow class="ion-justify-content-center">
+        <IonButton fill="clear">
+          Go to map
+          <IonIcon slot="end" :icon="chevronForwardOutline" />
+        </IonButton>
+      </IonRow>
+
       <!-- BonusNIM Modal -->
       <NotificationAlert ref="bonusModal">
         <template #title>
@@ -254,6 +276,13 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+ion-col {
+  --ion-grid-column-padding: 0;
+}
+
+ion-row {
+  column-gap: 0.5rem;
+}
 /* Disable scrollbar */
 ion-content {
   --offset-bottom: auto!important;

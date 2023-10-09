@@ -20,7 +20,7 @@ export class NimiqWallet {
   constructor(private nimiqNetworkClient: NimiqNetworkClient, private storageManager: StorageManager) {
     this.privateKeyPromise = (async () => {
       const storage = await this.storageManager.get(WalletStorageKey)
-      if (storage.privatekeyString == null) {
+      if (!storage.privatekeyString) {
         storage.privatekeyString = Nimiq.PrivateKey.generate().toHex()
         await this.storageManager.update(WalletStorageKey, newStorage => newStorage.privatekeyString = storage.privatekeyString)
       }

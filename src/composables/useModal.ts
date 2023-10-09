@@ -9,6 +9,7 @@ import PromoCodeModal from '@/modals/PromoCodeModal.vue'
 import PhoneNumberModal from '@/modals/PhoneNumberModal/index.vue'
 import PushNotificationEnableModal from '@/modals/PushNotificationEnableModal.vue'
 import RewardsIntroModal from '@/modals/RewardsIntroModal/index.vue'
+import DevModal from '@/modals/DevModal.vue'
 
 export enum ModalType {
   EnablePushNotifications,
@@ -18,6 +19,7 @@ export enum ModalType {
   PromoCode,
   VerifyPhone,
   RewardsIntro,
+  Dev,
 }
 
 const activeModal = ref<HTMLIonModalElement | null>(null)
@@ -37,6 +39,7 @@ function _useModal() {
       component = null
     }
 
+    // TODO: Lazy import
     switch (modal) {
       case ModalType.NewPin:
         component = PinChooseModal
@@ -52,6 +55,10 @@ function _useModal() {
         break
       case ModalType.RewardsIntro:
         component = RewardsIntroModal
+        break
+      case ModalType.Dev:
+        if (import.meta.env.MODE === 'development')
+          component = DevModal
         break
     }
     if (component) {

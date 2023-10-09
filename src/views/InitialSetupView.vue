@@ -27,7 +27,7 @@ const page = ref()
           <p class="text-2xl">
             Pay in many places
           </p>
-          <div class="flex flex-row flex-wrap justify-center gap-10 mx-8 mt-8">
+          <div class="flex flex-row flex-wrap justify-center w-5/6 gap-10 mx-auto mt-8">
             <div v-for="i in 5">
               <CircleFilled class="w-14 fill-blue-500" />
               <p>Logo</p>

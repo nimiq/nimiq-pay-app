@@ -3,6 +3,8 @@ PODS:
     - CapacitorCordova
   - CapacitorApp (5.0.6):
     - Capacitor
+  - CapacitorClipboard (5.0.6):
+    - Capacitor
   - CapacitorCommunityBarcodeScanner (4.0.1):
     - Capacitor
   - CapacitorCommunitySqlite (5.2.5):
@@ -28,6 +30,7 @@ PODS:
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
   - "CapacitorCommunityBarcodeScanner (from `../../node_modules/@capacitor-community/barcode-scanner`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
@@ -46,6 +49,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorApp:
     :path: "../../node_modules/@capacitor/app"
+  CapacitorClipboard:
+    :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCommunityBarcodeScanner:
     :path: "../../node_modules/@capacitor-community/barcode-scanner"
   CapacitorCommunitySqlite:
@@ -64,6 +69,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Capacitor: 4c0681b47eebeba1f902093d24149cf2f518393e
   CapacitorApp: 024e1b1bea5f883d79f6330d309bc441c88ad04a
+  CapacitorClipboard: 77edf49827ea21da2a9c05c690a4a6a4d07199c4
   CapacitorCommunityBarcodeScanner: 7feb206489c8555a8ca0c74c57ddf49ead774eb8
   CapacitorCommunitySqlite: 62fa0ce24dacf7bbc6c3fe43765613dcd930b3e2
   CapacitorCordova: 1222fdd78bfd0d323cc22bf254eed1484fe6c92a
@@ -74,6 +80,6 @@ SPEC CHECKSUMS:
   SQLCipher: f2e96b3822e3006b379181a0e4fd145f6de29b56
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 47a1e0737a4041ad9866248866b321563923bf55
+PODFILE CHECKSUM: a637c472767eebde9c22095cebb6c7acff33fadf
 
 COCOAPODS: 1.13.0
