@@ -1,16 +1,15 @@
 <template>
-    <ion-menu contentId="main-content">
-        <ion-content class="ion-padding">This is the menu content.</ion-content>
-    </ion-menu>
     <ion-page>
         <ion-content :fullscreen="true" id="main-content">
             <ion-toolbar style="--background: transparent">
                 <ion-buttons slot="start">
-                    <ion-menu-button></ion-menu-button>
+                    <ion-button id="main-menu-button">
+                        <ion-icon :icon="menu"></ion-icon>
+                    </ion-button>
                 </ion-buttons>
                 <ion-buttons slot="end">
                     <ion-button fill="solid">BonusNIM
-                        <ion-icon slot="end" :icon="chevronForwardOutline"></ion-icon>
+                        <ion-icon slot="end" :icon="chevronForward"></ion-icon>
                     </ion-button>
                 </ion-buttons>
             </ion-toolbar>
@@ -21,15 +20,31 @@
                 </div>
                 <div class="line-nim">
                     <span class="balance-nim">{{ Math.floor(instantPayWallet.balance.value) }} NIM</span>
-                    <span class="price-change"><ion-icon slot="start" :icon="trendingUpOutline"></ion-icon> {{
+                    <span class="price-change"><ion-icon slot="start" :icon="trendingUp"></ion-icon> {{
                         Math.round(fiatHandler.priceChange.value * 1000) / 10 }}%</span>
                 </div>
                 <div class="line-topup">
                     <ion-button fill="clear">Top up
-                        <ion-icon slot="end" :icon="chevronForwardOutline"></ion-icon>
+                        <ion-icon slot="end" :icon="chevronForward"></ion-icon>
                     </ion-button>
                 </div>
             </div>
+            <ion-list v-if="instantPayWallet.transactions.value.length > 0" lines="none">
+                <ion-item v-for="tx in instantPayWallet.transactions.value.slice(0, 3)" :button="true" :detail="false">
+                    <ion-icon slot="start" :icon="basket" size="large"></ion-icon>
+                    <ion-label>
+                        <ion-text>{{ tx.title }}</ion-text><br/>
+                        <ion-note color="medium">{{ tx.datetime }}</ion-note>
+                    </ion-label>
+                    <div slot="end">
+                        <div>{{ tx.fiatAmount }}</div>
+                        <ion-note color="medium">{{ tx.amount / 100000 }} NIM</ion-note>
+                    </div>
+                </ion-item>
+                <div style="text-align: center">
+                    <ion-button fill="clear">Show all</ion-button>
+                </div>
+            </ion-list>
             <div style="height: 100rem" />
             <ion-card>
                 <ion-card-header>
@@ -39,7 +54,8 @@
                     <p>Initialized: <strong>{{ nimiqNetworkClient.initialized }}</strong></p>
                     <p>Consensus state: <strong>{{ nimiqNetworkClient.consensusState.value }}</strong></p>
                     <p>Head <strong>{{ nimiqNetworkClient.head.value?.height }}</strong>:
-                        <code>{{ nimiqNetworkClient.head.value?.hash()?.toHex() }}</code></p>
+                        <code>{{ nimiqNetworkClient.head.value?.hash()?.toHex() }}</code>
+                    </p>
                 </ion-card-content>
             </ion-card>
             <ion-card>
@@ -67,7 +83,7 @@
                         <strong>{{ instantPayWallet.validityEnd.value }}</strong>)
                     </p>
                     <p>Timeouted: <strong>{{ instantPayWallet.timeouted.value }}</strong></p>
-                    <ion-button @click="startScan()"
+                    <ion-button @click="openModal('/app/pay')"
                         :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value == 0">
                         Pay
                     </ion-button>
@@ -81,13 +97,45 @@
                     </ion-button>
                 </ion-card-content>
             </ion-card>
+            <ion-modal ref="menuModal" trigger="main-menu-button" can-dismiss="true" :initial-breakpoint="1"
+                :breakpoints="[0, 1]" handle="false" style="--height: auto">
+                <ion-toolbar style="--background: transparent;">
+                    <ion-buttons slot="end">
+                        <ion-button @click="menuModal.$el.dismiss()"><ion-icon :icon="close"></ion-icon></ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+                <ion-list lines="none">
+                    <ion-item button :detail="false">Top Up</ion-item>
+                    <ion-item button :detail="false">Withdraw</ion-item>
+                    <div class="menu-list-divider"></div>
+                    <ion-item button :detail="false">Activate Bluecode payments</ion-item>
+                    <ion-item button :detail="false">Activate Cashback & Rewards</ion-item>
+                    <div class="menu-list-divider"></div>
+                    <ion-item button :detail="false">Settings</ion-item>
+                    <ion-item button :detail="false">Back Up</ion-item>
+                    <ion-item button :detail="false">Log Out</ion-item>
+                </ion-list>
+            </ion-modal>
+            <ion-modal ref="modal" can-dismiss="true" handle="false" :initial-breakpoint="1" :breakpoints="[0, 1]">
+                <ion-toolbar>
+                    <ion-buttons slot="start" :style="{ display: backVisible ? 'flex' : 'none' }">
+                        <ion-button @click="backModal"><ion-icon :icon="chevronBack"></ion-icon></ion-button>
+                    </ion-buttons>
+                    <ion-buttons slot="end">
+                        <ion-button @click="closeModal"><ion-icon :icon="close"></ion-icon></ion-button>
+                    </ion-buttons>
+                </ion-toolbar>
+                <ion-content class="ion-padding">
+                    <ion-router-outlet></ion-router-outlet>
+                </ion-content>
+            </ion-modal>
         </ion-content>
         <ion-footer>
             <ion-toolbar>
                 <ion-grid>
                     <ion-row class="ion-justify-content-center">
                         <ion-col size="8">
-                            <ion-button expand="block" @click="startScan()"
+                            <ion-button expand="block" @click="openModal('/app/pay')"
                                 :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value == 0">Pay
                             </ion-button>
                         </ion-col>
@@ -99,6 +147,11 @@
 </template>
 
 <style>
+.menu-list-divider {
+    height: 1px;
+    background-color: rgba(0,0,0,0.2);
+    margin: 0.5rem 1rem;
+}
 .balance-view {
     padding: 4rem 1rem;
     text-align: center;
@@ -134,21 +187,27 @@ import {
     IonRow,
     IonCol,
     IonMenuButton,
+    IonNote,
     IonGrid,
     IonIcon,
+    IonModal,
+    IonList,
+    IonItem,
+    IonLabel,
+    IonRouterOutlet,
+    IonText,
     IonTitle,
     IonToolbar,
     alertController
 } from '@ionic/vue';
-import { inject, onMounted, onDeactivated, onBeforeUnmount } from "vue";
+import { inject, onMounted, onDeactivated, onBeforeUnmount, ref } from "vue";
+import { useRouter } from 'vue-router';
 import { NimiqNetworkClient } from "@/lib/nimiq-network-client";
 import { NimiqWallet } from "@/lib/nimiq-wallet";
 import { InstantPayWallet } from "@/lib/instant-pay-wallet";
 import { FiatHandler } from "@/lib/fiat-handler";
 import { StorageManager } from "@/lib/storage-manager";
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
-import { useRouter } from 'vue-router';
-import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
+import { chevronForward, chevronBack, trendingUp, close, menu, basket } from 'ionicons/icons'
 
 const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
@@ -157,36 +216,26 @@ const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const storageManager = inject(StorageManager.KEY) as StorageManager
 
 const router = useRouter()
+const menuModal = ref()
+const modal = ref()
+const backVisible = ref()
 
-async function startScan() {
-    await BarcodeScanner.checkPermission({ force: true })
-    await BarcodeScanner.hideBackground()
-    while (true) {
-        const result = await BarcodeScanner.startScan()
-        if (!result.hasContent) continue
-        if (!result.content.startsWith("nimiq:")) continue
-        try {
-            const url = new URL(result.content)
-            const address = Nimiq.Address.fromString(url.pathname)
-            const searchParams = new URLSearchParams(url.search)
-            const amountString = searchParams.get("amount")
-            if (amountString == null) continue
-            const amount = Math.round(parseFloat(amountString) * 100000)
-            await instantPayWallet.sendTransaction(address, amount)
-            break
-        } catch (e) {
-            console.log(e)
-        }
-    }
-    await stopScan()
+router.afterEach((to) => {
+    backVisible.value = false
+    if (to.path == '/app') closeModal()
+})
+
+function openModal(target: string) {
+    router.push(target)
+    modal.value.$el.present()
 }
 
-async function stopScan() {
-    await BarcodeScanner.showBackground()
-    await BarcodeScanner.stopScan()
+function backModal() {
+    if (router.currentRoute.value.path != '/app/pay') router.back()
 }
 
-onBeforeUnmount(stopScan)
-onDeactivated(stopScan)
+function closeModal() {
+    modal.value.$el.dismiss()
+}
 
 </script>

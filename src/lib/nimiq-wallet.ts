@@ -1,12 +1,13 @@
 import { App, computed, InjectionKey, ref, Ref, shallowRef } from "vue"
 import { NimiqNetworkClient } from "@/lib/nimiq-network-client"
-import { StorageManager, StorageKey } from "./storage-manager"
+import { StorageManager, StorageKey, WalletType, WalletStatus, TransactionStatus } from "./storage-manager"
 
 interface WalletStorage {
     privatekeyString?: string
 }
 
 const WalletStorageKey = { name: "wallet" } as StorageKey<WalletStorage>
+const REQUIRED_BLOCK_CONFIRMATIONS = 10
 
 export class NimiqWallet {
     private readonly privateKeyPromise: Promise<Nimiq.PrivateKey>
@@ -37,9 +38,29 @@ export class NimiqWallet {
             await client.addHeadChangedListener(async () => {
                 const account = await client.getAccount(wallet.address)
                 this.balanceRaw.value = account.balance
+                await this.storageManager.run(
+                    "INSERT OR REPLACE INTO wl(id, type, status, balance) VALUES (?,?,?,?)",
+                    [wallet.address.toUserFriendlyAddress(), WalletType.RAW, WalletStatus.ACTIVE, account.balance]
+                )
+                const pendingTransactions = await this.storageManager.query("SELECT id FROM tx WHERE status = ? OR status = ?", [TransactionStatus.PENDING, TransactionStatus.MINED])
+                if (pendingTransactions.length > 0) {
+                    const receipts = await nimiqNetworkClient.getTransactionReceipts(pendingTransactions.map(tx => tx.id))
+                    const currentHeadHeight = await nimiqNetworkClient.getHeadHeight()
+                    for (const receipt of receipts) {
+                        await this.storageManager.run(
+                            "UPDATE tx SET status = ?, block = ?, blockHeight = ? WHERE id = ?", 
+                            [receipt.blockHeight > currentHeadHeight + REQUIRED_BLOCK_CONFIRMATIONS ? TransactionStatus.CONFIRMED : TransactionStatus.MINED, receipt.blockHash.toHex(), receipt.blockHeight, receipt.transactionHash.toHex()]
+                        )
+                    }
+                }
             })
             this.initialized.value = true
-        })()
+        })();
+        (async () => {
+            const wallets = await this.storageManager.query("SELECT id, balance FROM wl WHERE type = ?", [WalletType.RAW])
+            this.address.value = wallets[0].id
+            this.balanceRaw.value = wallets[0].balance
+        })
     }
 
     async getWallet(): Promise<Nimiq.Wallet> {

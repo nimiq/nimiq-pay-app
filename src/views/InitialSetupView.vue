@@ -28,10 +28,6 @@
 </template>
 
 <style>
-ion-modal ion-toolbar {
-    --border-color: transparent;
-    --background: none;
-}
 
 ion-content p {
     padding-left: 2em;

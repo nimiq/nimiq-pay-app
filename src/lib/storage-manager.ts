@@ -5,11 +5,35 @@ import { InjectionKey } from "vue"
 export interface StorageKey<T> { name: string; }
 
 const DB_NAME = "storage"
-const DB_VERSION = 1
+const DB_VERSION = 4
 const upgrades: { version: number, statements: string[] }[] = [
     {
         version: 1,
         statements: ["CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);"]
+    },
+    {
+        version: 2,
+        statements: [
+            "CREATE TABLE IF NOT EXISTS tx (id TEXT PRIMARY KEY NOT NULL, type INTEGER NOT NULL, ts INTEGER NOT NULL, amount INTEGER NOT NULL, status INTEGER NOT NULL, wlId TEXT NOT NULL, peerId TEXT, peerName TEXT, fee INTEGER, fiatUnit TEXT, fiatAmount TEXT, raw TEXT);",
+            "CREATE TABLE IF NOT EXISTS wl (id TEXT PRIMARY KEY NOT NULL, type INTEGER NOT NULL, status INTEGER NOT NULL, balance INTEGER, start INTEGER, end INTEGER);"
+        ]
+    },
+    {
+        version: 3,
+        statements: [
+            "ALTER TABLE wl ADD COLUMN proofSize INTEGER;"
+        ]
+    },
+    {
+        version: 4,
+        statements: [
+            "ALTER TABLE tx ADD COLUMN block INTEGER;",
+            "ALTER TABLE tx ADD COLUMN blockHeight TEXT;",
+            "ALTER TABLE tx ADD COLUMN details TEXT;",
+            "ALTER TABLE tx ADD COLUMN rail TEXT;",
+            "ALTER TABLE tx ADD COLUMN railId TEXT;",
+            "ALTER TABLE tx ADD COLUMN railPeerId TEXT;"
+        ]
     }
 ]
 
@@ -18,6 +42,36 @@ interface InternalStorage {
 }
 
 const InternalStorageKey = { name: "_" } as StorageKey<InternalStorage>
+
+export enum TransactionType {
+    UNKNOWN = 0,
+    PAYMENT = 1,
+    DEPOSIT_TO_INSTANT = 2,
+    EXTEND_INSTANT = 3,
+    RECOVER_INSTANT = 4,
+}
+
+export enum TransactionStatus {
+    UNKNOWN = 0,
+    PENDING = 1,
+    MINED = 2,
+    CONFIRMED = 3
+}
+
+export enum WalletType {
+    UNKNOWN = 0,
+    RAW = 1,
+    INSTANT = 2,
+    BONUS = 3,
+}
+
+export enum WalletStatus {
+    UNKNOWN = 0,
+    PENDING = 1,
+    ACTIVE = 2,
+    EXPIRED = 3,
+    EMPTIED = 4
+}
 
 export class StorageManager {
     private unlockedReady: Promise<void>
@@ -58,6 +112,7 @@ export class StorageManager {
         for (const upgrade of upgrades) {
             await this.sqlite!.addUpgradeStatement(DB_NAME, upgrade.version, upgrade.statements)
         }
+        this.unlock("1234")
     }
 
     isUnlocked(): boolean {
@@ -67,6 +122,21 @@ export class StorageManager {
     async awaitUnlocked(): Promise<void> {
         await this.unlockedReady
         await this.unlocked
+    }
+
+    async query(statement: string, params?: any[]): Promise<any[]> {
+        await this.awaitUnlocked()
+        const result = await this.db!.query(statement, params)
+        const values = result?.values
+        if (Array.isArray(values)) return values
+        return []
+    }
+
+    async run(statement:string, params?: any[]): Promise<number> {
+        await this.awaitUnlocked()
+        const result = await this.db!.run(statement, params)
+        if (Capacitor.getPlatform() === "web") await this.sqlite!.saveToStore(DB_NAME)
+        return result.changes?.changes || 0
     }
 
     async get<T>(key: StorageKey<T>): Promise<T> {

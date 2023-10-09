@@ -1,11 +1,15 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
-import AppView from '../views/AppView.vue'
-import PinView from '../views/PinView.vue'
 
 const routes: Array<RouteRecordRaw> = [
-    { path: '/app', component: AppView },
-    { path: '/pin', component: PinView },
+    { 
+        path: '/app', component: () => import('@/views/AppView.vue'),
+        children: [
+            { path: 'pay', component: () => import('@/views/app/PayView.vue') },
+            { path: 'pay/confirm', component: () => import('@/views/app/PayConfirmView.vue') }
+        ]
+    },
+    { path: '/pin', component: () => import('@/views/PinView.vue') },
     {
         path: '/setup', component: () => import('@/views/InitialSetupView.vue'),
         children: [
