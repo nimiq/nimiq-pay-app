@@ -16,7 +16,7 @@ export interface ParticipantBalanceResponse {
     balance: number;
 }
 
-export interface ParticipantVoucherResponse {
+export interface VoucherInfoResponse {
     id: string;
     claims_remaining: number;
     reward: number;
@@ -64,8 +64,8 @@ export class BonusClient {
         return ((await this.fetchJson(`/participant/balance`, { headers: { token } })) as ParticipantBalanceResponse).balance
     }
 
-    async getParticipantVoucher(token: string): Promise<ParticipantVoucherResponse> {
-        return (await this.fetchJson(`/participant/voucher`, { headers: { token } })) as ParticipantVoucherResponse
+    async getParticipantVoucher(token: string): Promise<VoucherInfoResponse> {
+        return (await this.fetchJson(`/participant/voucher`, { headers: { token } })) as VoucherInfoResponse
     }
 
     async doPayment(token: string, type: string, reference: string, destination: string): Promise<void> {
@@ -75,7 +75,7 @@ export class BonusClient {
         })
     }
 
-    async getTasks(token: string): Promise<any> {
+    async getTasks(token: string): Promise<any[]> {
         return (await this.fetchJson(`/task`, { headers: { token } }))
     }
 
@@ -90,7 +90,7 @@ export class BonusClient {
         })
     }
 
-    async getVoucher(id: string): Promise<any> {
+    async getVoucher(id: string): Promise<VoucherInfoResponse> {
         return (await this.fetchJson(`/voucher/${id}`))
     }
 

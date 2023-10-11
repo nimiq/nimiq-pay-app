@@ -1,4 +1,4 @@
-import { BonusClient } from "./bonus-client";
+import { BonusClient, VoucherInfoResponse } from "./bonus-client";
 import { StorageManager, StorageKey } from "./storage-manager";
 import { NimiqWallet } from "./nimiq-wallet";
 import { InjectionKey } from "vue";
@@ -42,8 +42,24 @@ export class BonusWallet {
         return this.accessCode
     }
 
+    async getTasks(): Promise<any[]> {
+        return this.bonusClient.getTasks(await this.getToken())
+    }
+
+    async getTask(id: string): Promise<any> {
+        return this.bonusClient.getTask(await this.getToken(), id)
+    }
+
+    async getVoucherInfo(code: string): Promise<VoucherInfoResponse> {
+        return this.bonusClient.getVoucher(code)
+    }
+
     async redeemVoucher(code: string) {
         await this.bonusClient.claimVoucher(await this.getToken(), code)
+    }
+
+    async getReferralVoucherInfo(): Promise<VoucherInfoResponse> {
+        return this.bonusClient.getParticipantVoucher(await this.getToken())
     }
 
     async setPromoCode(code: string) {

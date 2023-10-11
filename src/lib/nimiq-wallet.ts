@@ -3,17 +3,19 @@ import { NimiqNetworkClient } from "@/lib/nimiq-network-client"
 import { StorageManager, StorageKey, WalletType, WalletStatus, TransactionStatus } from "./storage-manager"
 
 interface WalletStorage {
-    privatekeyString?: string
+    privatekeyString?: string,
+    entropy?: string
 }
 
 const WalletStorageKey = { name: "wallet" } as StorageKey<WalletStorage>
 const REQUIRED_BLOCK_CONFIRMATIONS = 10
+const UNLOCK_TIMEOUT = 5 * 60 * 1000
 
 export class NimiqWallet {
     private readonly privateKeyPromise: Promise<Nimiq.PrivateKey>
     private readonly walletPromise: Promise<Nimiq.Wallet>
     public readonly initialized: Ref<boolean> = ref(false)
-    public readonly address: Ref<Nimiq.Address | null> = ref(null)
+    public readonly address: Ref<Nimiq.Address | undefined> = ref(undefined)
     public readonly balanceRaw: Ref<number> = ref(0)
     public readonly balance: Ref<number> = computed(() => this.balanceRaw.value / 100000)
 
@@ -21,8 +23,13 @@ export class NimiqWallet {
         this.privateKeyPromise = (async () => {
             let storage = await this.storageManager.get(WalletStorageKey)
             if (storage.privatekeyString == null) {
+                const entropy = Nimiq.Entropy.generate()
+                storage.entropy = entropy.toHex().substring(0, 32)
                 storage.privatekeyString = Nimiq.PrivateKey.generate().toHex()
-                await this.storageManager.update(WalletStorageKey, (newStorage) => newStorage.privatekeyString = storage.privatekeyString)
+                await this.storageManager.update(WalletStorageKey, (newStorage) => {
+                    newStorage.privatekeyString = storage.privatekeyString
+                    newStorage.entropy = storage.entropy
+                })
             }
             return Nimiq.PrivateKey.unserialize(Nimiq.BufferUtils.fromHex(storage.privatekeyString))
         })()
@@ -63,8 +70,19 @@ export class NimiqWallet {
         })
     }
 
+    isReady(): boolean {
+        return this.initialized.value && this.storageManager.getLastUnlocked() > Date.now() - UNLOCK_TIMEOUT
+    }
+
     async getWallet(): Promise<Nimiq.Wallet> {
         return this.walletPromise
+    }
+
+    async getWords(): Promise<string[]> {
+        await this.walletPromise
+        const storage = await this.storageManager.get(WalletStorageKey)
+        if (storage.entropy === undefined) return []
+        return Nimiq.MnemonicUtils.entropyToMnemonic(storage.entropy)
     }
 
     static KEY: InjectionKey<NimiqWallet> = Symbol(NimiqWallet.name)
