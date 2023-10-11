@@ -12,9 +12,9 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND = 120
 export interface PendingPayment {
   address: Nimiq.Address
   amount: number
-  message?: string
+  message?: string | null
   details?: string
-  label?: string
+  label?: string | null
   rail?: string
   railId?: string
   railPeerId?: string
@@ -32,7 +32,7 @@ export class InstantPayWallet {
   public readonly validityEnd: Ref<number> = ref(0)
   public readonly timeout: Ref<number> = ref(Number.MAX_VALUE)
   public readonly valid: Ref<boolean> = computed(() => this.isValid(this.nimiqNetworkClient.head?.value?.height, this.validityStart.value, this.validityEnd.value))
-  public readonly timeouted: Ref<boolean> = computed(() => this.timeout.value != 0 && this.nimiqNetworkClient.head?.value?.height != null && this.timeout.value < this.nimiqNetworkClient.head?.value?.height)
+  public readonly timeouted: Ref<boolean> = computed(() => this.timeout.value !== 0 && this.nimiqNetworkClient.head?.value?.height != null && this.timeout.value < this.nimiqNetworkClient.head?.value?.height)
   public readonly transactions: Ref<any[]> = ref([])
 
   private pendingPayment: PendingPayment | null = null
@@ -61,10 +61,10 @@ export class InstantPayWallet {
     this.ready.value = await this.isReady()
 
     let wallets = await this.storageManager.query('SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?', [WalletType.INSTANT, WalletStatus.ACTIVE])
-    if (wallets.length == 0)
+    if (wallets.length === 0)
       wallets = await this.storageManager.query('SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?', [WalletType.INSTANT, WalletStatus.PENDING])
 
-    if (wallets.length == 0) {
+    if (wallets.length === 0) {
       const wallet = await this.getWallet()
       wallets = [{ id: wallet.address, balance: wallet.balance, start: wallet.validityStart, end: wallet.validityEnd }]
     }
@@ -82,11 +82,13 @@ export class InstantPayWallet {
       const date = new Date(tx.ts * 1000)
       let txTypeName = null
       switch (tx.type) {
-        case TransactionType.PAYMENT: txTypeName = 'Payment'; break
+        case TransactionType.PAYMENT:
+          txTypeName = 'Payment'
+          break
       }
       return {
         title: tx.peerName ?? txTypeName ?? (`${tx.peerId.substring(0, 9)}…`),
-        datetime: tx.status == TransactionStatus.PENDING ? 'Pending' : date.getTime() > today.getTime() ? 'Today' : date.getTime() > yesterday.getTime() ? 'Yesterday' : date.toLocaleDateString(),
+        datetime: tx.status === TransactionStatus.PENDING ? 'Pending' : date.getTime() > today.getTime() ? 'Today' : date.getTime() > yesterday.getTime() ? 'Yesterday' : date.toLocaleDateString(),
         ...tx,
       }
     })
@@ -185,7 +187,7 @@ export class InstantPayWallet {
   }
 
   async completePendingPayment(payment: PendingPayment) {
-    if (this.pendingPayment != payment)
+    if (this.pendingPayment !== payment)
       throw new Error('Unexpected pending payment')
     const tx = await this.pay(payment.address, payment.amount, payment.message)
     await this.storageManager.run(

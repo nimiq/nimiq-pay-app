@@ -235,3 +235,10 @@ http://ionicframework.com/docs/theming/ */
     @apply border-2 border-blue-400 rounded focus:border-blue-600;
   }
 }
+
+@layer base {
+    /* This is to make the web video behave the same as native */
+    body>div:not(#app) { 
+      z-index: -100;
+    }
+}

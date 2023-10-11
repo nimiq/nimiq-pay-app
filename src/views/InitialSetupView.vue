@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { ModalType, useModal } from '@/composables/useModal'
 import CircleFilled from '@/components/icons/circle-filled.vue'
 

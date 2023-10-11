@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFab, IonFabButton, IonFooter, IonGrid, IonHeader, IonIcon, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import type { Ref } from 'vue'
-import { inject, onBeforeUnmount, onDeactivated, onMounted, ref, watchEffect } from 'vue'
+import { inject, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
-import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
-import { NimiqWallet } from '@/lib/nimiq-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
-import NotificationCard from '@/components/NotificationCard.vue'
 import TaskCard from '@/components/TaskCard.vue'
+import MenuModal from '@/modals/MenuModal.vue'
+
+// TODO: lazy load
+import NotificationCard from '@/components/NotificationCard.vue'
 import NotificationAlert from '@/components/NotificationAlert.vue'
 
 const router = useRouter()
@@ -21,8 +21,6 @@ const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const storageManager = inject(StorageManager.KEY) as StorageManager
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
-const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
-const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 const { showModal, showNotificationAlert } = useModal()
 const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
 const isPhoneRegistered = bonusWallet.isRegistered()
@@ -56,38 +54,6 @@ const notificationArray = ref([
 
 function removeNotification(index: number) {
   notificationArray.value.splice(index, 1)
-}
-
-async function startScan() {
-  await BarcodeScanner.checkPermission({ force: true })
-  await BarcodeScanner.hideBackground()
-  while (true) {
-    const result = await BarcodeScanner.startScan()
-    if (!result.hasContent)
-      continue
-    if (!result.content.startsWith('nimiq:'))
-      continue
-    try {
-      const url = new URL(result.content)
-      const address = Nimiq.Address.fromString(url.pathname)
-      const searchParams = new URLSearchParams(url.search)
-      const amountString = searchParams.get('amount')
-      if (amountString == null)
-        continue
-      const amount = Math.round(Number.parseFloat(amountString) * 100000)
-      await instantPayWallet.sendTransaction(address, amount)
-      break
-    }
-    catch (e) {
-      console.error(e)
-    }
-  }
-  await stopScan()
-}
-
-async function stopScan() {
-  await BarcodeScanner.showBackground()
-  await BarcodeScanner.stopScan()
 }
 
 function scrollToFirstNotification() {
@@ -129,16 +95,11 @@ watchEffect(async () => {
   }
 })
 
-onBeforeUnmount(stopScan)
-onDeactivated(stopScan)
-
 onMounted(async () => {
   if (!storageManager.isUnlocked())
     router.replace('/pin')
 
   scrollToFirstNotification()
-
-  console.log('isDev', isDev)
 })
 </script>
 
@@ -147,10 +108,10 @@ onMounted(async () => {
     <IonHeader class="px-2 ion-no-border">
       <IonToolbar>
         <IonButtons slot="start">
-          <IonMenuButton :auto-hide="false" @click="() => console.log('Menu clicked')" />
+          <IonMenuButton :auto-hide="false" id="main-menu-button" />
         </IonButtons>
-        <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem">
+        <IonButtons v-if="isPhoneRegistered" slot="end">
+          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
             Earn BonusNIM
             <IonIcon slot="end" :icon="chevronForwardOutline" />
           </IonButton>
@@ -183,64 +144,34 @@ onMounted(async () => {
             </li>
           </ul>
         </IonRow>
-
-        <!-- Earn NIM -->
-        <IonRow>
-          <p class="mt-4 ml-1 text-lg font-semibold">
-            Earn NIM
-          </p>
-        </IonRow>
         <!-- Referral -->
-        <IonRow>
+        <IonRow class="mt-4">
           <TaskCard highlight large>
-            Invite a friend and earn up to 2500€ both!
+            Invite a friend and earn up to 20€ both!
           </TaskCard>
         </IonRow>
-        <!-- Tasks -->
-        <!-- TODO: get them from array -->
+
+        <!-- Map -->
         <IonRow>
-          <IonCol>
-            <TaskCard>
-              Earn BonusNIM with Cash Back
-            </TaskCard>
-          </IonCol>
-          <IonCol>
-            <TaskCard :reward="2000" :progress="2" :total="4">
-              Task Name
-            </TaskCard>
-          </IonCol>
+          <p class="mt-8 ml-1 text-lg font-semibold">
+            Find places that accept crypto
+          </p>
         </IonRow>
         <IonRow>
-          <IonCol>
-            <TaskCard :reward="1000" :progress="0" :total="4">
-              Task Name
-            </TaskCard>
-          </IonCol>
-          <IonCol>
-            <TaskCard :reward="500">
-              Task Name
-            </TaskCard>
-          </IonCol>
+          <div class="flex items-center justify-center w-full mt-2 bg-blue-200 rounded-lg h-72">
+            <span class="text-blue-50">Map</span>
+          </div>
+        </IonRow>
+        <IonRow class="ion-justify-content-center">
+          <IonButton fill="clear">
+            Go to map
+            <IonIcon slot="end" :icon="chevronForwardOutline" />
+          </IonButton>
         </IonRow>
       </IonGrid>
 
-      <!-- Map -->
-      <IonRow>
-        <p class="mt-8 ml-1 text-lg font-semibold">
-          Find places that accept crypto
-        </p>
-      </IonRow>
-      <IonRow>
-        <div class="flex items-center justify-center w-full mt-2 bg-blue-200 rounded-lg h-72">
-          <span class="text-blue-50">Map</span>
-        </div>
-      </IonRow>
-      <IonRow class="ion-justify-content-center">
-        <IonButton fill="clear">
-          Go to map
-          <IonIcon slot="end" :icon="chevronForwardOutline" />
-        </IonButton>
-      </IonRow>
+      <!-- Menu Modal -->
+      <MenuModal />
 
       <!-- BonusNIM Modal -->
       <NotificationAlert ref="bonusModal">
@@ -263,7 +194,7 @@ onMounted(async () => {
               <IonButton
                 style="--box-shadow: none;"
                 expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-                @click="startScan()"
+                @click="showModal(ModalType.Pay, false, true)"
               >
                 Pay
               </IonButton>
@@ -276,13 +207,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-ion-col {
-  --ion-grid-column-padding: 0;
-}
-
-ion-row {
-  column-gap: 0.5rem;
-}
 /* Disable scrollbar */
 ion-content {
   --offset-bottom: auto!important;

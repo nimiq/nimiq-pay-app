@@ -8,7 +8,7 @@ import { useSwipe } from '@vueuse/core'
 import Tab1 from './Tab1.vue'
 import Tab2 from './Tab2.vue'
 import Tab3 from './Tab3.vue'
-import { useModal } from '@/composables/useModal'
+import { ModalType, useModal } from '@/composables/useModal'
 
 const tabList = [
   markRaw(Tab1),
@@ -16,8 +16,7 @@ const tabList = [
   markRaw(Tab3),
 ]
 
-const router = useRouter()
-const { closeModal } = useModal()
+const { showModal } = useModal()
 const nav = (document.querySelector('[data-reward-info-nav]')) as Nav & HTMLElement
 const swipeable = ref(null)
 const smoothSpring: Ref<number | null> = ref(0)
@@ -25,8 +24,7 @@ const { isSwiping, direction, lengthX } = useSwipe(swipeable, { threshold: 1 })
 const maxSwipe = 40
 
 async function handleGoTo() {
-  closeModal()
-  router.replace('/app')
+  await showModal(ModalType.Rewards)
 }
 
 async function getActiveTab() {

@@ -1,83 +1,75 @@
-import { ref } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
 import type { Ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
 import type { ComponentRef } from '@ionic/core'
 
-import PinChooseModal from '@/modals/PinChooseModal.vue'
-import PromoCodeModal from '@/modals/PromoCodeModal.vue'
-import PhoneNumberModal from '@/modals/PhoneNumberModal/index.vue'
-import PushNotificationEnableModal from '@/modals/PushNotificationEnableModal.vue'
-import RewardsIntroModal from '@/modals/RewardsIntroModal/index.vue'
-import DevModal from '@/modals/DevModal.vue'
-
 export enum ModalType {
-  EnablePushNotifications,
-  Login,
-  NewPin,
-  NewPhone,
-  PromoCode,
-  VerifyPhone,
-  RewardsIntro,
-  Dev,
+  Dev = '@/modals/DevModal.vue',
+  EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
+  ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
+  Login = '@/modals/setup/LoginModal.vue',
+  NewPin = '@/modals/setup/PinChooseModal.vue',
+  NewPhone = '@/modals/setup/PhoneNumberModal/index.vue',
+  Pay = '@/modals/PayModal/index.vue',
+  PromoCode = '@/modals/setup/PromoCodeModal.vue',
+  Rewards = '@/modals/RewardsModal.vue',
+  RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
 }
-
-const activeModal = ref<HTMLIonModalElement | null>(null)
 
 function _useModal() {
   const isPresent = ref(false)
 
-  async function showModal(modal: ModalType) {
+  async function showModal(modal: ModalType, isOnTop = false, isFullscreen = false) {
     if (import.meta.env.MODE === 'development') {
       // eslint-disable-next-line no-console
       console.log('showModal', modal)
     }
 
     let component: ComponentRef = null
-    if (activeModal.value) {
+    if (!isOnTop)
       await closeModal()
-      component = null
-    }
 
-    // TODO: Lazy import
+    // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
+      case ModalType.EnablePushNotifications:
+        component = defineAsyncComponent(() => import(ModalType.EnablePushNotifications))
+        break
+      case ModalType.ExpiringRewards:
+        component = defineAsyncComponent(() => import(ModalType.ExpiringRewards))
+        break
       case ModalType.NewPin:
-        component = PinChooseModal
+        component = defineAsyncComponent(() => import(ModalType.NewPin))
         break
       case ModalType.NewPhone:
-        component = PhoneNumberModal
+        component = defineAsyncComponent(() => import(ModalType.NewPhone))
+        break
+      case ModalType.Pay:
+        component = defineAsyncComponent(() => import(ModalType.Pay))
         break
       case ModalType.PromoCode:
-        component = PromoCodeModal
+        component = defineAsyncComponent(() => import(ModalType.PromoCode))
         break
-      case ModalType.EnablePushNotifications:
-        component = PushNotificationEnableModal
+      case ModalType.Rewards:
+        component = defineAsyncComponent(() => import(ModalType.Rewards))
         break
       case ModalType.RewardsIntro:
-        component = RewardsIntroModal
+        component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
         break
       case ModalType.Dev:
         if (import.meta.env.MODE === 'development')
-          component = DevModal
+          component = defineAsyncComponent(() => import(ModalType.Dev))
         break
     }
-    if (component) {
-      activeModal.value = await modalController.create({
-        component,
-        handle: false,
-        // canDismiss: async (data?: any, role?: string) => role !== 'gesture' || !ModalType.RewardsIntro,
-        canDismiss: true,
-        initialBreakpoint: 1,
-        breakpoints: [0, 1],
-      })
-      activeModal.value.addEventListener('did-present', () => {
-        isPresent.value = true
-      })
-      activeModal.value.addEventListener('will-dismiss', () => {
-        isPresent.value = false
-      })
-      await activeModal.value.present()
-    }
+
+    const modalToShow = await modalController.create({
+      component,
+      handle: false,
+      canDismiss: true,
+      initialBreakpoint: isFullscreen ? undefined : 1,
+      breakpoints: isFullscreen ? undefined : [0, 1],
+    })
+    await modalToShow.present()
   }
 
   async function showNotificationAlert(modalRef: Ref<{ $el: HTMLIonModalElement } | undefined>) {
@@ -86,41 +78,27 @@ function _useModal() {
       if (!modal)
         return
       if (import.meta.env.MODE === 'development') {
-      // eslint-disable-next-line no-console
+        // eslint-disable-next-line no-console
         console.log('showNotificationAlert')
       }
       modal.present()
-      setTimeout(() => {
-        modal.dismiss()
+      setTimeout(async () => {
+        await modal.dismiss()
         resolve()
       }, 2000)
     })
   }
 
-  async function closeModal() {
+  async function closeModal(modalToClose?: HTMLIonModalElement) {
+    // Close the top modal
+    const modal = modalToClose || await modalController.getTop()
+
     if (import.meta.env.MODE === 'development') {
       // eslint-disable-next-line no-console
-      console.log('closeModal')
+      console.log('closeModal', modal)
     }
-
-    if (activeModal.value) {
-      await activeModal.value.dismiss()
-      activeModal.value.removeEventListener(
-        'did-present',
-        () => isPresent.value = false,
-      )
-      activeModal.value.removeEventListener(
-        'will-dismiss',
-        () => isPresent.value = false,
-      )
-      activeModal.value = null
-    }
-    else {
-      // This should not happen, but in the cases where the modal was not created by us, we can try to close it
-      const modal = await modalController.getTop()
-      if (modal)
-        await modal.dismiss()
-    }
+    if (modal)
+      await modal.dismiss()
   }
 
   return {

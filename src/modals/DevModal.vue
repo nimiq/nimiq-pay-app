@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
-import { inject, onBeforeUnmount, onDeactivated } from 'vue'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { inject } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
@@ -11,38 +10,6 @@ import { NimiqWallet } from '@/lib/nimiq-wallet'
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
-
-async function startScan() {
-  await BarcodeScanner.checkPermission({ force: true })
-  await BarcodeScanner.hideBackground()
-  while (true) {
-    const result = await BarcodeScanner.startScan()
-    if (!result.hasContent)
-      continue
-    if (!result.content.startsWith('nimiq:'))
-      continue
-    try {
-      const url = new URL(result.content)
-      const address = Nimiq.Address.fromString(url.pathname)
-      const searchParams = new URLSearchParams(url.search)
-      const amountString = searchParams.get('amount')
-      if (amountString == null)
-        continue
-      const amount = Math.round(Number.parseFloat(amountString) * 100000)
-      await instantPayWallet.sendTransaction(address, amount)
-      break
-    }
-    catch (e) {
-      console.error(e)
-    }
-  }
-  await stopScan()
-}
-
-async function stopScan() {
-  await BarcodeScanner.showBackground()
-  await BarcodeScanner.stopScan()
-}
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -56,9 +23,6 @@ async function writeToClipboard(string: string) {
 
   await toast.present()
 };
-
-onBeforeUnmount(stopScan)
-onDeactivated(stopScan)
 </script>
 
 <template>
@@ -109,7 +73,7 @@ onDeactivated(stopScan)
         <p>Timeouted: <strong>{{ instantPayWallet.timeouted.value }}</strong></p>
         <IonButton
           :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-          @click="startScan()"
+          @click="() => console.log('Pay clicked')"
         >
           Pay
         </IonButton>

@@ -3,6 +3,7 @@ import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView, useRouter } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
+import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import { ModalType, useModal } from '@/composables/useModal'
 
 const isDev = import.meta.env.DEV
@@ -10,8 +11,12 @@ const isDev = import.meta.env.DEV
 StatusBar.setBackgroundColor({ color: '#ffffff' })
 StatusBar.setOverlaysWebView({ overlay: false })
 
-useRouter().afterEach(() => {
-  useModal().closeModal()
+useRouter().afterEach(async () => {
+  await useModal().closeModal()
+  // Just in case the barcode has started scanning and the app has been navigated away from
+  document.body.classList.remove('scanner-active')
+  await BarcodeScanner.showBackground()
+  await BarcodeScanner.stopScan()
 })
 </script>
 
@@ -20,7 +25,7 @@ useRouter().afterEach(() => {
     <RouterView />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="() => useModal().showModal(ModalType.Dev)">
+      <IonFabButton @click="() => useModal().showModal(ModalType.Dev, true)">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>
