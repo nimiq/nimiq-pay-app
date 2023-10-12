@@ -288,27 +288,11 @@ export class StorageManager {
     this.newPin = undefined
   }
 
-  // startNewPin(pin: string) {
-  //   if (this.newPin)
-  //     throw new Error('New PIN procedure already in process')
-  //   if (pin === null)
-  //     throw new Error('New PIN must not be null')
-  //   this.newPin = pin
-  // }
-
-  // async confirmNewPin(pin: string) {
-  //   if (this.newPin === undefined)
-  //     throw new Error('New PIN procedure not active')
-  //   if (pin !== this.newPin)
-  //     throw new Error('PIN mismatch')
-  //   // TODO: Protect storage with pin
-  //   await this.unlock(pin)
-  //   this.newPin = undefined
-  // }
-
-  // cancelNewPin() {
-  //   this.newPin = undefined
-  // }
+  async setPin(pin: string) {
+    this.newPin = pin
+    await this.unlock(pin)
+    this.newPin = undefined
+  }
 
   async exists() {
     return !!(await this.sqlite!.isDatabase(DB_NAME)).result

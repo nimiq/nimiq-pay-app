@@ -19,7 +19,7 @@ async function handleSkip() {
     await stopScan()
     instantPayWallet.preparePayment({
       address: Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
-      amount: Nimiq.Policy.coinsToLunas(10),
+      amount: Nimiq.Policy.coinsToLunas(1),
       message: 'Ref #123456789',
       label: 'Test Store',
       rail: 'cpl',
@@ -79,7 +79,7 @@ async function stopScan() {
 }
 
 function navigateToPayConfirm() {
-  nav.push(markRaw(PayConfirm), { foo: 'bar' })
+  nav.push(markRaw(PayConfirm))
 }
 
 onMounted(async () => {
@@ -107,9 +107,11 @@ onDeactivated(stopScan)
         <button class="px-6 py-2 text-white bg-blue-600 rounded-lg">
           Scan QR
         </button>
+        <!--
         <button class="px-6 py-2 text-blue-600 rounded-lg">
           Bluecode
         </button>
+        -->
       </div>
     </IonToolbar>
   </IonFooter>

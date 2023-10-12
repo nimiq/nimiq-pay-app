@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
+import VueVirtualScroller from 'vue-virtual-scroller'
+import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import App from './App.vue'
 import router from './router'
 
@@ -22,6 +24,10 @@ import '@ionic/vue/css/display.css'
 /* Theme variables */
 import './theme/variables.css'
 
+/* Vue Virtual Scroller */
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
+
+/* Libs */
 import { FiatHandler } from '@/lib/fiat-handler'
 import { StorageManager } from '@/lib/storage-manager'
 import { BonusClient } from '@/lib/bonus-client'
@@ -30,7 +36,6 @@ import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
 import { InstantPayClient } from '@/lib/instant-pay-client'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
-import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 
 applyPolyfills().then(() => {
   jeepSqlite(window)
@@ -50,6 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
     .use(IonicVue)
     .use(router)
+    .use(VueVirtualScroller)
     .provide(StorageManager.KEY, storageManager)
     .provide(NimiqNetworkClient.KEY, nimiqNetworkClient)
     .provide(NimiqWallet.KEY, nimiqWallet)

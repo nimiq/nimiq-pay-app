@@ -25,7 +25,7 @@ useRouter().afterEach(async () => {
     <RouterView />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="() => useModal().showModal(ModalType.Dev, true)">
+      <IonFabButton @click="() => useModal().showModal(ModalType.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>

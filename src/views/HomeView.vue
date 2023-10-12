@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
-import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
+import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonMenuButton, IonNote, IonPage, IonRow, IonText, IonToolbar } from '@ionic/vue'
+import { basket, chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { inject, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,6 +10,7 @@ import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
 import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
+import TransactionCard from '@/components/TransactionCard.vue'
 import MenuModal from '@/modals/MenuModal.vue'
 
 // TODO: lazy load
@@ -108,7 +109,7 @@ onMounted(async () => {
     <IonHeader class="px-2 ion-no-border">
       <IonToolbar>
         <IonButtons slot="start">
-          <IonMenuButton :auto-hide="false" id="main-menu-button" />
+          <IonMenuButton id="main-menu-button" :auto-hide="false" />
         </IonButtons>
         <IonButtons v-if="isPhoneRegistered" slot="end">
           <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
@@ -121,7 +122,7 @@ onMounted(async () => {
     <IonContent class="ion-padding scroll-smooth">
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
-        <IonRow class="flex flex-col items-center justify-center h-[40vh]">
+        <IonRow class="flex flex-col items-center justify-center h-[40vh] transition-all" :class="instantPayWallet.transactions.value.length && '!h-[30vh]'">
           <h1 class="mb-3 text-5xl font-normal">
             {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }} €
           </h1>
@@ -134,9 +135,20 @@ onMounted(async () => {
             Top Up <IonIcon slot="end" :icon="chevronForwardOutline" />
           </IonButton>
         </IonRow>
+
+        <!-- TX History -->
+        <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6">
+          <TransactionCard v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id" :tx="transaction" />
+          <div v-if="instantPayWallet.transactions.value.length > 3" class="text-center">
+            <IonButton fill="clear" @click="showModal(ModalType.TransactionHistory)">
+              See more
+            </IonButton>
+          </div>
+        </IonList>
+
         <!-- Horizontal Scroll -->
-        <IonRow>
-          <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4">
+        <IonRow v-if="notificationArray.length">
+          <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 mb-4">
             <li v-for="(notification, index) in notificationArray" :key="notification.title">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
@@ -145,7 +157,7 @@ onMounted(async () => {
           </ul>
         </IonRow>
         <!-- Referral -->
-        <IonRow class="mt-4">
+        <IonRow class="mb-8">
           <TaskCard highlight large>
             Invite a friend and earn up to 20€ both!
           </TaskCard>
@@ -153,7 +165,7 @@ onMounted(async () => {
 
         <!-- Map -->
         <IonRow>
-          <p class="mt-8 ml-1 text-lg font-semibold">
+          <p class="ml-1 text-lg font-semibold">
             Find places that accept crypto
           </p>
         </IonRow>
@@ -194,7 +206,7 @@ onMounted(async () => {
               <IonButton
                 style="--box-shadow: none;"
                 expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-                @click="showModal(ModalType.Pay, false, true)"
+                @click="showModal(ModalType.Pay, { isFullscreen: true })"
               >
                 Pay
               </IonButton>

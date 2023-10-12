@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@capacitor/clipboard": "^5.0.6",
-    "@vueuse/core": "^10.4.1"
+    "@vueuse/core": "^10.4.1",
+    "vue-virtual-scroller": "^2.0.0-beta.8"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^1.0.0-beta.15",

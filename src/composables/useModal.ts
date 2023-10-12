@@ -2,10 +2,11 @@ import { defineAsyncComponent, ref } from 'vue'
 import type { Ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
-import type { ComponentRef } from '@ionic/core'
+import type { ComponentProps, ComponentRef } from '@ionic/core'
 
 export enum ModalType {
   Dev = '@/modals/DevModal.vue',
+  DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
@@ -15,12 +16,14 @@ export enum ModalType {
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Rewards = '@/modals/RewardsModal.vue',
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  TransactionHistory = '@/modals/TransactionHistoryModal.vue',
 }
 
 function _useModal() {
   const isPresent = ref(false)
 
-  async function showModal(modal: ModalType, isOnTop = false, isFullscreen = false) {
+  async function showModal(modal: ModalType, options?: { isOnTop?: boolean; isFullscreen?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
+    const { isOnTop, isFullscreen, componentProps } = options || {}
     if (import.meta.env.MODE === 'development') {
       // eslint-disable-next-line no-console
       console.log('showModal', modal)
@@ -32,6 +35,9 @@ function _useModal() {
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
+      case ModalType.DetailedTransaction:
+        component = defineAsyncComponent(() => import(ModalType.DetailedTransaction))
+        break
       case ModalType.EnablePushNotifications:
         component = defineAsyncComponent(() => import(ModalType.EnablePushNotifications))
         break
@@ -56,11 +62,16 @@ function _useModal() {
       case ModalType.RewardsIntro:
         component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
         break
+      case ModalType.TransactionHistory:
+        component = defineAsyncComponent(() => import(ModalType.TransactionHistory))
+        break
       case ModalType.Dev:
         if (import.meta.env.MODE === 'development')
           component = defineAsyncComponent(() => import(ModalType.Dev))
         break
     }
+
+    console.log('componentProps', componentProps)
 
     const modalToShow = await modalController.create({
       component,
@@ -68,6 +79,7 @@ function _useModal() {
       canDismiss: true,
       initialBreakpoint: isFullscreen ? undefined : 1,
       breakpoints: isFullscreen ? undefined : [0, 1],
+      componentProps,
     })
     await modalToShow.present()
   }

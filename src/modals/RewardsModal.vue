@@ -31,7 +31,7 @@ const { closeModal, showModal } = useModal()
         </p>
       </IonRow>
       <IonRow class="ion-justify-content-center">
-        <IonButton fill="clear" class="font-medium" @click="showModal(ModalType.ExpiringRewards, true)">
+        <IonButton fill="clear" class="font-medium" @click="showModal(ModalType.ExpiringRewards, { isOnTop: true })">
           800 NIM expiring soon <IonIcon slot="end" :icon="chevronForwardOutline" />
         </IonButton>
       </IonRow>

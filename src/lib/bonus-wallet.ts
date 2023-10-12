@@ -1,4 +1,6 @@
-import type { InjectionKey } from 'vue'
+import { computed, ref } from 'vue'
+import { computedAsync } from '@vueuse/core'
+import type { ComputedRef, InjectionKey, Ref } from 'vue'
 import type { BonusClient, VoucherInfoResponse } from './bonus-client'
 import type { StorageKey, StorageManager } from './storage-manager'
 import type { NimiqWallet } from './nimiq-wallet'
