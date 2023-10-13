@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
-import { inject, onMounted, ref, watch } from 'vue'
+import { inject, onMounted, ref } from 'vue'
 import { until } from '@vueuse/core'
 import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
@@ -45,27 +45,27 @@ onMounted(async () => {
           3,44 €
         </p>
       </IonRow>
-      <IonRow class="ion-justify-content-center">
+      <IonRow class="mb-4 ion-justify-content-center">
         <IonButton fill="clear" class="font-medium" @click="showModal(ModalType.ExpiringRewards, { isOnTop: true })">
           800 NIM expiring soon <IonIcon slot="end" :icon="chevronForwardOutline" />
         </IonButton>
       </IonRow>
       <!-- Earn NIM -->
       <IonRow>
-        <p class="mt-4 ml-1 text-lg font-semibold">
+        <p class="mb-4 ml-1 text-lg font-semibold">
           Earn NIM
         </p>
       </IonRow>
 
       <!-- Referral -->
-      <IonRow class="mt-4">
+      <IonRow>
         <TaskCard highlight large>
           Invite a friend and earn up to 20€ both!
         </TaskCard>
       </IonRow>
 
       <!-- Tasks -->
-      <Transition mode="out-in">
+      <Transition name="slide-fade" mode="out-in">
         <IonRow v-if="isTaskShown" class="flex gap-2">
           <IonCol v-for="task in tasks" :key="task.id">
             <!-- TODO: Do we really need different bg? -->
@@ -95,6 +95,15 @@ ion-row {
 }
 
 ion-spinner {
-    --color: rgb(59 130 246);
-  }
+  --color: rgb(59 130 246);
+}
+
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-to, .slide-fade-enter-from {
+  transform: translateY(20px);
+  opacity: 0;
+}
 </style>
