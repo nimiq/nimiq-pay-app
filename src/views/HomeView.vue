@@ -73,8 +73,14 @@ watchEffect(async () => {
     return notification.title !== verifyNumberTitle && notification.title !== claimRewardTitle
   })
 
+  // eslint-disable-next-line no-console
+  console.group('👤 User Info')
+  // eslint-disable-next-line no-console
   console.log('isPhoneRegistered', isPhoneRegistered.value)
+  // eslint-disable-next-line no-console
   console.log('isPromoCodeEntered', isPromoCodeEntered.value)
+  // eslint-disable-next-line no-console
+  console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
       showNotificationAlert(bonusModal)
@@ -113,7 +119,7 @@ onMounted(async () => {
         </IonButtons>
         <IonButtons v-if="isPhoneRegistered" slot="end">
           <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
-            Earn BonusNIM
+            Earn CC Points
             <IonIcon slot="end" :icon="chevronForwardOutline" />
           </IonButton>
         </IonButtons>
@@ -185,10 +191,10 @@ onMounted(async () => {
       <!-- Menu Modal -->
       <MenuModal />
 
-      <!-- BonusNIM Modal -->
+      <!-- CC Points Modal -->
       <NotificationAlert ref="bonusModal">
         <template #title>
-          You got BonusNIM!
+          You got CC Points!
         </template>
         <template #body>
           {{ bonusAmount }}€

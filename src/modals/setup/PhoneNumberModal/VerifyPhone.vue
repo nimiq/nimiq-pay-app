@@ -103,7 +103,7 @@ onMounted(() => {
 
     <NotificationAlert ref="bonusModal">
       <template #title>
-        BonusNIM is now active!
+        CC Points is now active!
       </template>
     </NotificationAlert>
   </IonContent>

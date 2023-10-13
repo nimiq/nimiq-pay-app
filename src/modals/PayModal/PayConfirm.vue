@@ -69,10 +69,10 @@ onMounted(() => {
       </IonRow>
       <IonRow class="flex flex-col items-center my-auto ion-justify-content-center">
         <IonToggle :disabled="true" label-placement="end" :checked="false" class="text-xl font-semibold text-blue-500">
-          Use BonusNIM
+          Use CC Points
         </IonToggle>
         <!-- <p class="mt-4">
-          You pay 10.00€ with BonusNIM
+          You pay 10.00€ with CC Points
           <br>
           You pay 40.00€ with your NIM balance
         </p> -->

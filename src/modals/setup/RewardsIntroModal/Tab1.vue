@@ -5,7 +5,7 @@ import TabTemplate from './TabTemplate.vue'
 <template>
   <TabTemplate>
     <template #title>
-      What's BonusNIM?
+      What's CC Points?
     </template>
     <template #subtitle>
       Rewards you can use to pay in many places

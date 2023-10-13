@@ -73,11 +73,16 @@ export class InstantPayWallet {
     this.validityStart.value = wallets[0].start || 0
     this.validityEnd.value = wallets[0].end || 0
 
+    // eslint-disable-next-line no-console
+    console.group(`🛒 Transactions`)
     const transactions = await this.storageManager.query('SELECT * FROM tx WHERE type = ? ORDER BY ts DESC', [TransactionType.PAYMENT])
+    // eslint-disable-next-line no-console
+    console.log('Transactions from DB', transactions)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const yesterday = new Date(today.getTime() - 1)
     yesterday.setHours(0, 0, 0, 0)
+    // TODO: don't update if not necessary, this causes extra re-renders
     this.transactions.value = transactions.map((tx) => {
       const date = new Date(tx.ts * 1000)
       let txTypeName = null
@@ -92,6 +97,10 @@ export class InstantPayWallet {
         ...tx,
       }
     })
+    // eslint-disable-next-line no-console
+    console.log('Transactions', this.transactions.value)
+    // eslint-disable-next-line no-console
+    console.groupEnd()
 
     if (wallets[0].id) {
       const address = Nimiq.Address.fromString(wallets[0].id)

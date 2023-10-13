@@ -5,10 +5,10 @@ import TabTemplate from './TabTemplate.vue'
 <template>
   <TabTemplate>
     <template #title>
-      Pay with BonusNIM
+      Pay with CC Points
     </template>
     <template #subtitle>
-      Activate <span class="font-extrabold">Use Bonus NIM</span> when making your purchase
+      Activate <span class="font-extrabold">Use CC Points</span> when making your purchase
     </template>
     <template #body>
       <div class="w-full bg-blue-100 h-3/4" />

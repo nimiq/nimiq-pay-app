@@ -6,7 +6,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 <template>
   <ModalTemplate>
     <template #title>
-      Expiring BonusNIM
+      Expiring CC Points
     </template>
     <IonGrid class="flex flex-col self-start mt-8 gap-y-6">
       <!-- TODO: get this from API -->

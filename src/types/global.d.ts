@@ -21,3 +21,13 @@ interface Transaction {
   railPeerId?: string
   location?: string
 }
+
+interface Task {
+  description: string
+  id: string
+  order: number
+  parent_task_id: string | null
+  reward_amount: number
+  status: string
+  task_prover_function: string
+}

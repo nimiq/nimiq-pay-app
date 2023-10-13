@@ -80,7 +80,7 @@ function closeModal() {
         </IonButtons>
         <IonButtons slot="end">
           <IonButton fill="solid">
-            BonusNIM
+            CC Points
             <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
         </IonButtons>
@@ -264,7 +264,7 @@ function closeModal() {
 <style scoped>
 .menu-list-divider {
     height: 1px;
-    background-color: rgba(0,0,0,0.2);
+    background-color: rgb(0,0,0 / 0.2);
     margin: 0.5rem 1rem;
 }
 .balance-view {

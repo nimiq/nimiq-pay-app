@@ -5,10 +5,10 @@ import TabTemplate from './TabTemplate.vue'
 <template>
   <TabTemplate>
     <template #title>
-      Earn BonusNIM
+      Earn CC Points
     </template>
     <template #subtitle>
-      Complete the tasks and earn BonusNIM
+      Complete the tasks and earn CC Points
     </template>
     <template #body>
       <div class="w-full bg-blue-100 h-3/4" />

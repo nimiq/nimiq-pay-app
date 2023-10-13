@@ -77,7 +77,7 @@ watch(isSwiping, async () => {
         </IonRow>
         <IonRow>
           <IonButton expand="block" class="w-full font-bold" @click="handleGoTo">
-            Go to BonusNIM
+            Go to CC Points
           </IonButton>
         </IonRow>
       </IonGrid>
