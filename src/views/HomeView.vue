@@ -4,6 +4,7 @@ import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { inject, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
+import { Browser } from '@capacitor/browser'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -180,7 +181,7 @@ onMounted(async () => {
           </div>
         </IonRow>
         <IonRow class="ion-justify-content-center">
-          <IonButton fill="clear">
+          <IonButton fill="clear" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
             Go to map
             <IonIcon slot="end" :icon="chevronForwardOutline" />
           </IonButton>
