@@ -47,6 +47,10 @@ export class BonusWallet {
     return this.accessCode
   }
 
+  async getParticipantBalance(): Promise<number> {
+    return this.bonusClient.getParticipantBalance(await this.getToken())
+  }
+
   async getTasks(): Promise<any[]> {
     return this.bonusClient.getTasks(await this.getToken())
   }

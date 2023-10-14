@@ -10,20 +10,23 @@ export enum ModalType {
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
+  Menu = '@/modals/MenuModal.vue',
   NewPin = '@/modals/setup/PinChooseModal.vue',
   NewPhone = '@/modals/setup/PhoneNumberModal/index.vue',
+  NimTransfer = '@/modals/deposit/NimTransferModal.vue',
   Pay = '@/modals/PayModal/index.vue',
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Rewards = '@/modals/RewardsModal.vue',
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
 }
 
 function _useModal() {
   const isPresent = ref(false)
 
-  async function showModal(modal: ModalType, options?: { isOnTop?: boolean; isFullscreen?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
-    const { isOnTop, isFullscreen, componentProps } = options || {}
+  async function showModal(modal: ModalType, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
+    const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
     if (import.meta.env.MODE === 'development') {
       // eslint-disable-next-line no-console
       console.log('showModal', modal)
@@ -44,11 +47,17 @@ function _useModal() {
       case ModalType.ExpiringRewards:
         component = defineAsyncComponent(() => import(ModalType.ExpiringRewards))
         break
+      case ModalType.Menu:
+        component = defineAsyncComponent(() => import(ModalType.Menu))
+        break
       case ModalType.NewPin:
         component = defineAsyncComponent(() => import(ModalType.NewPin))
         break
       case ModalType.NewPhone:
         component = defineAsyncComponent(() => import(ModalType.NewPhone))
+        break
+      case ModalType.NimTransfer:
+        component = defineAsyncComponent(() => import(ModalType.NimTransfer))
         break
       case ModalType.Pay:
         component = defineAsyncComponent(() => import(ModalType.Pay))
@@ -62,6 +71,9 @@ function _useModal() {
       case ModalType.RewardsIntro:
         component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
         break
+      case ModalType.TopUp:
+        component = defineAsyncComponent(() => import(ModalType.TopUp))
+        break
       case ModalType.TransactionHistory:
         component = defineAsyncComponent(() => import(ModalType.TransactionHistory))
         break
@@ -71,8 +83,6 @@ function _useModal() {
         break
     }
 
-    console.log('componentProps', componentProps)
-
     const modalToShow = await modalController.create({
       component,
       handle: false,
@@ -81,6 +91,9 @@ function _useModal() {
       breakpoints: isFullscreen ? undefined : [0, 1],
       componentProps,
     })
+    if (isSmall)
+      modalToShow.style.setProperty('--height', 'auto')
+
     await modalToShow.present()
   }
 
@@ -113,8 +126,17 @@ function _useModal() {
       await modal.dismiss()
   }
 
+  async function closeAllModals() {
+    let modal = await modalController.getTop()
+    while (modal) {
+      await modal.dismiss()
+      modal = await modalController.getTop()
+    }
+  }
+
   return {
     closeModal,
+    closeAllModals,
     isPresent,
     showModal,
     showNotificationAlert,

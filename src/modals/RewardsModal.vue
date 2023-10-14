@@ -2,15 +2,23 @@
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
 import { inject, onMounted, ref } from 'vue'
-import { until } from '@vueuse/core'
+import { computedAsync, until } from '@vueuse/core'
 import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
+import { FiatHandler } from '@/lib/fiat-handler'
 
+const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const { closeModal, showModal } = useModal()
 const tasks = ref<Task[]>([])
 const isTaskShown = ref(false)
+// TODO: save this in db, return initial stated the one from db and after the response from API, update it in db
+// That way the user won't see 0 as balance while fetching the new one
+const bonusBalance = computedAsync(async () => {
+  const balance = await bonusWallet.getParticipantBalance()
+  return balance / 1e5
+}, 0)
 
 onMounted(async () => {
   tasks.value = (await bonusWallet.getTasks()).sort((a, b) => a.order - b.order)
@@ -35,14 +43,13 @@ onMounted(async () => {
   <IonContent class="ion-padding">
     <IonGrid class="flex flex-col gap-y-2">
       <IonRow class="ion-justify-content-center">
-        <!-- TODO: get this from API -->
         <h1 class="text-5xl font-light">
-          4000 NIM
+          {{ bonusBalance }} NIM
         </h1>
       </IonRow>
       <IonRow class="ion-justify-content-center">
         <p class="">
-          3,44 €
+          {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }} €
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">

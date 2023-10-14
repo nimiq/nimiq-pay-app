@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonMenuButton, IonNote, IonPage, IonRow, IonText, IonToolbar } from '@ionic/vue'
-import { basket, chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
+import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
+import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { inject, onMounted, ref, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -11,7 +11,6 @@ import { FiatHandler } from '@/lib/fiat-handler'
 import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import TransactionCard from '@/components/TransactionCard.vue'
-import MenuModal from '@/modals/MenuModal.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -115,7 +114,7 @@ onMounted(async () => {
     <IonHeader class="px-2 ion-no-border">
       <IonToolbar>
         <IonButtons slot="start">
-          <IonMenuButton id="main-menu-button" :auto-hide="false" />
+          <IonMenuButton :auto-hide="false" @click="showModal(ModalType.Menu, { isSmall: true })" />
         </IonButtons>
         <IonButtons v-if="isPhoneRegistered" slot="end">
           <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
@@ -137,7 +136,7 @@ onMounted(async () => {
             <IonIcon slot="start" :icon="trendingUpOutline" class="ml-3" />
             <span class="ml-1 font-semibold">{{ Math.round(fiatHandler.priceChange.value * 1000) / 10 }}%</span>
           </p>
-          <IonButton fill="clear" class="text-xl font-medium">
+          <IonButton fill="clear" class="text-xl font-medium" @click="showModal(ModalType.TopUp, { isSmall: true })">
             Top Up <IonIcon slot="end" :icon="chevronForwardOutline" />
           </IonButton>
         </IonRow>
@@ -187,9 +186,6 @@ onMounted(async () => {
           </IonButton>
         </IonRow>
       </IonGrid>
-
-      <!-- Menu Modal -->
-      <MenuModal />
 
       <!-- CC Points Modal -->
       <NotificationAlert ref="bonusModal">

@@ -13,50 +13,45 @@ const menuModal = ref()
 </script>
 
 <template>
-  <IonModal
-    ref="menuModal" trigger="main-menu-button" :initial-breakpoint="1"
-    :breakpoints="[0, 1]" handle="false" style="--height: auto"
-  >
-    <IonHeader class="ion-no-border">
-      <IonToolbar>
-        <IonButtons slot="end">
-          <IonButton @click.stop="menuModal.$el.dismiss()">
-            <IonIcon :icon="close" />
-          </IonButton>
-        </IonButtons>
-      </IonToolbar>
-    </IonHeader>
+  <IonHeader class="ion-no-border">
+    <IonToolbar>
+      <IonButtons slot="end">
+        <IonButton @click.stop="menuModal.$el.dismiss()">
+          <IonIcon :icon="close" />
+        </IonButton>
+      </IonButtons>
+    </IonToolbar>
+  </IonHeader>
 
-    <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
-      <IonItem button :detail="false">
-        Top Up
-      </IonItem>
-      <IonItem button :detail="false">
-        Withdraw
-      </IonItem>
+  <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
+    <IonItem button :detail="false" @click="showModal(ModalType.TopUp, { isSmall: true })">
+      Top Up
+    </IonItem>
+    <IonItem button :detail="false">
+      Withdraw
+    </IonItem>
 
-      <ItemDivider />
+    <ItemDivider />
 
-      <IonItem button :detail="false">
-        Activate Bluecode payments
-      </IonItem>
-      <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(ModalType.NewPhone)">
-        Activate Cashback & Rewards
-      </IonItem>
+    <IonItem button :detail="false">
+      Activate Bluecode payments
+    </IonItem>
+    <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(ModalType.NewPhone)">
+      Activate Cashback & Rewards
+    </IonItem>
 
-      <ItemDivider />
+    <ItemDivider />
 
-      <IonItem button :detail="false">
-        Settings
-      </IonItem>
-      <IonItem button :detail="false">
-        Back Up
-      </IonItem>
-      <IonItem button :detail="false">
-        Log Out
-      </IonItem>
-    </IonList>
-  </IonModal>
+    <IonItem button :detail="false">
+      Settings
+    </IonItem>
+    <IonItem button :detail="false">
+      Back Up
+    </IonItem>
+    <IonItem button :detail="false">
+      Log Out
+    </IonItem>
+  </IonList>
 </template>
 
 <style scoped>

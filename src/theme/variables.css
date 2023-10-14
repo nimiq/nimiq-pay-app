@@ -222,6 +222,28 @@ http://ionicframework.com/docs/theming/ */
 } 
 */
 
+/* Fonts */
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('../assets/fonts/FiraMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('../assets/fonts/FiraMono-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Fira Mono';
+  src: url('../assets/fonts/FiraMono-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
 /* TailwindCSS */
 @tailwind base;
 @tailwind components;
