@@ -1,16 +1,18 @@
+import path from 'node:path'
 import legacy from '@vitejs/plugin-legacy'
 import vue from '@vitejs/plugin-vue'
-import path from 'path'
 import { defineConfig } from 'vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   optimizeDeps: {
-    exclude: ['node_modules/@nimiq/core-web/web.esm.js']
+    exclude: ['node_modules/@nimiq/core-web/web.esm.js'],
   },
   plugins: [
     vue(),
-    legacy()
+    legacy(),
+    VitePWA({ registerType: 'autoUpdate' }),
   ],
   resolve: {
     alias: {
@@ -19,6 +21,6 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom'
-  }
+    environment: 'jsdom',
+  },
 })
