@@ -5,6 +5,7 @@ import { TransactionStatus, TransactionType, WalletStatus, WalletType } from './
 import type { InstantPayClient, InstantPayStatus, InstantPayWalletState } from '@/lib/instant-pay-client'
 import type { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import type { NimiqWallet } from '@/lib/nimiq-wallet'
+import { BonusWallet } from './bonus-wallet'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND = 120
@@ -38,7 +39,7 @@ export class InstantPayWallet {
   private pendingPayment: PendingPayment | null = null
   private nextAddress: Nimiq.Address | null = null
 
-  constructor(private nimiqWallet: NimiqWallet, private nimiqNetworkClient: NimiqNetworkClient, private instantPayClient: InstantPayClient, private storageManager: StorageManager) {
+  constructor(private nimiqWallet: NimiqWallet, private nimiqNetworkClient: NimiqNetworkClient, private instantPayClient: InstantPayClient, private bonusWallet: BonusWallet, private storageManager: StorageManager) {
     // TODO
     (async () => {
       await nimiqNetworkClient.awaitInitialized()
@@ -180,11 +181,27 @@ export class InstantPayWallet {
     }
   }
 
-  preparePayment(payment: PendingPayment) {
+  // Never tested
+  async completeWithCplData(payment: PendingPayment) {
+    try {
+      const res = await fetch("https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/"+payment.railId)
+      const obj = await res.json()
+      payment.fiatUnit = obj.fields.fiat_currency_code.stringValue
+      payment.fiatAmount = obj.fields.fiat_price.doubleValue
+      payment.details = obj.fields.item_description.stringValue
+    } catch (e) {
+      // Ignore
+    }
+  }
+
+  async preparePayment(payment: PendingPayment) {
     if (this.pendingPayment != null)
       throw new Error('Payment pending')
-    this.pendingPayment = payment
+    if (payment.rail === "cpl" && payment.railId !== undefined) {
+      await this.completeWithCplData(payment)
+    }
     // TODO: Get more details from payment rail where possible
+    this.pendingPayment = payment
   }
 
   getPendingPayment(): PendingPayment | null {
@@ -195,14 +212,26 @@ export class InstantPayWallet {
     this.pendingPayment = null
   }
 
-  async completePendingPayment(payment: PendingPayment) {
+  async completePendingPayment(payment: PendingPayment, bonus: boolean = false) {
     if (this.pendingPayment !== payment)
       throw new Error('Unexpected pending payment')
-    const tx = await this.pay(payment.address, payment.amount, payment.message)
-    await this.storageManager.run(
-      'UPDATE tx SET peerName = ?, rail = ?, railId = ?, railPeerId = ?, details = ?, fee = ?, fiatAmount = ?, fiatUnit = ? WHERE id = ?',
-      [payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit, tx.transactionHash.toHex()],
-    )
+    if (bonus) {
+      try {
+        this.bonusWallet.pay(payment.rail!, payment.railId || payment.message!!, payment.address.toUserFriendlyAddress())
+      } catch (e) {
+        throw "Bonus payment not possible"
+      }
+      await this.storageManager.run(
+        'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,"bonus",?,?,?,?,?,?,?,?,?)',
+        [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, payment.address, payment.label, payment.rail,payment.railId, payment.railPeerId, payment.fee, payment.fiatAmount, payment.fiatUnit]
+      )
+    } else {
+      const tx = await this.pay(payment.address, payment.amount, payment.message)
+      await this.storageManager.run(
+        'UPDATE tx SET peerName = ?, rail = ?, railId = ?, railPeerId = ?, details = ?, fee = ?, fiatAmount = ?, fiatUnit = ? WHERE id = ?',
+        [payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit, tx.transactionHash.toHex()],
+      )
+    }
     this.pendingPayment = null
     await this.updateReactive()
   }

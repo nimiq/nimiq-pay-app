@@ -17,7 +17,7 @@ async function handleSkip() {
   if (isDev) {
     console.log('Skipping QR code scan')
     await stopScan()
-    instantPayWallet.preparePayment({
+    await instantPayWallet.preparePayment({
       address: Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
       amount: Nimiq.Policy.coinsToLunas(1),
       message: 'Ref #123456789',
@@ -52,15 +52,17 @@ async function startScan() {
       const message = searchParams.get('message')
       const label = searchParams.get('label')
       const gocrypto_id = searchParams.get('gocrypto_id')
+      const cpl_id = searchParams.get('cpl_id')
       let rail, railId
       if (gocrypto_id != null) {
         rail = 'gocrypto'
         railId = gocrypto_id
       }
-      else if (message !== null && message.startsWith('Ref #') && label !== null) {
+      else if (message !== null && (message.startsWith('Ref #') && label !== null || cpl_id !== null)) {
         rail = 'cpl'
+        railId = cpl_id || undefined
       }
-      instantPayWallet.preparePayment({ address, amount, message, label, rail, railId })
+      await instantPayWallet.preparePayment({ address, amount, message, label, rail, railId })
       break
     }
     catch (e) {
