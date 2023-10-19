@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
-import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
+import { chevronForward, trendingDown, trendingUp } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -161,7 +161,7 @@ onMounted(async () => {
         <IonButtons v-if="isPhoneRegistered" slot="end">
           <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
             Earn CC Points
-            <IonIcon slot="end" :icon="chevronForwardOutline" />
+            <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
         </IonButtons>
       </IonToolbar>
@@ -170,16 +170,18 @@ onMounted(async () => {
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[40vh] transition-all" :class="instantPayWallet.transactions.value.length && '!h-[30vh]'">
-          <h1 class="mb-3 text-5xl font-normal">
-            {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }} €
-          </h1>
+          <ion-text color="primary">
+            <h1 class="mb-3 text-5xl font-normal">
+            {{ fiatHandler.currencyPrefix.value }}{{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
+            </h1>
+          </ion-text>
           <p class="text-lg text-blue-300">
             {{ Math.floor(instantPayWallet.balance.value).toFixed(2) }} NIM
-            <IonIcon slot="start" :icon="trendingUpOutline" class="ml-3" />
-            <span class="ml-1 font-semibold">{{ Math.round(fiatHandler.priceChange.value * 1000) / 10 }}%</span>
+            <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-3" />
+            <span class="ml-1 font-semibold">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
           </p>
           <IonButton fill="clear" class="text-xl font-medium" @click="showModal(ModalType.TopUp, { isSmall: true })">
-            Top Up <IonIcon slot="end" :icon="chevronForwardOutline" />
+            Top Up <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
         </IonRow>
 
@@ -224,7 +226,7 @@ onMounted(async () => {
         <IonRow class="ion-justify-content-center">
           <IonButton fill="clear" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
             Go to map
-            <IonIcon slot="end" :icon="chevronForwardOutline" />
+            <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
         </IonRow>
       </IonGrid>

@@ -13,7 +13,7 @@ export interface StorageKey<T> {
 }
 
 const DB_NAME = 'storage'
-const DB_VERSION = 4
+const DB_VERSION = 5
 const upgrades: { version: number; statements: string[] }[] = [
   {
     version: 1,
@@ -42,6 +42,13 @@ const upgrades: { version: number; statements: string[] }[] = [
       'ALTER TABLE tx ADD COLUMN railId TEXT;',
       'ALTER TABLE tx ADD COLUMN railPeerId TEXT;',
     ],
+  },
+  {
+    version: 5,
+    statements: [
+      "CREATE TABLE IF NOT EXISTS price (ts INTEGER NOT NULL PRIMARY KEY, value INTEGER NOT NULL);",
+      "CREATE TABLE IF NOT EXISTS fiat (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL, UNIQUE (currency, ts));",
+    ]
   },
 ]
 

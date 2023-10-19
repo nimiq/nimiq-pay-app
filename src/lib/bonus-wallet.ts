@@ -76,6 +76,10 @@ export class BonusWallet {
     this.promoCode.value = code
   }
 
+  async pay(type: string, reference: string, destination: string) {
+    await this.bonusClient.doPayment(await this.getToken(), type, reference, destination)
+  }
+
   isRegistered(): Ref<boolean> {
     return computedAsync(async () => !!this.phoneNumber.value || !!(await this.storageManager.get(BonusStorageKey))?.token)
   }
