@@ -63,7 +63,9 @@ async function writeToClipboard(string: string) {
         <IonCardTitle>Instant wallet</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
-        <p>Address: <code>{{ instantPayWallet.address.value?.toUserFriendlyAddress() }}</code></p>
+        <p @click="() => writeToClipboard(instantPayWallet.address.value?.toUserFriendlyAddress() || '')">
+          Address: <code>{{ instantPayWallet.address.value?.toUserFriendlyAddress() }}</code>
+        </p>
         <p>Balance (if valid): <code>{{ instantPayWallet.balance.value }} NIM</code></p>
         <p>
           Valid: <strong>{{ instantPayWallet.valid.value }}</strong> (from <strong>{{

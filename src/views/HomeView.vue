@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForwardOutline, trendingUpOutline } from 'ionicons/icons'
 import type { Ref } from 'vue'
-import { inject, onMounted, ref, watchEffect } from 'vue'
+import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
+import { StatusBar, Style } from '@capacitor/status-bar'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -15,7 +16,6 @@ import TransactionCard from '@/components/TransactionCard.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
-import NotificationAlert from '@/components/NotificationAlert.vue'
 
 const router = useRouter()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
@@ -25,8 +25,8 @@ const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const { showModal, showNotificationAlert } = useModal()
 const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
 const isPhoneRegistered = bonusWallet.isRegistered()
-const bonusModal: Ref<{ $el: HTMLIonModalElement } | undefined> = ref()
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
+const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
 // TODO: get this from API
 const bonusAmount = 5
 // TODO: get this from somewhere
@@ -65,6 +65,21 @@ function scrollToFirstNotification() {
   })
 }
 
+if (import.meta.env.DEV) {
+  watchEffect(() => {
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('👛 Instant Pay Wallet')
+    // eslint-disable-next-line no-console
+    console.log('Ready:', instantPayWallet.ready.value)
+    // eslint-disable-next-line no-console
+    console.log('Valid:', instantPayWallet.valid.value)
+    // eslint-disable-next-line no-console
+    console.log('Balance:', instantPayWallet.balance.value)
+    // eslint-disable-next-line no-console
+    console.groupEnd()
+  })
+}
+
 watchEffect(async () => {
   const verifyNumberTitle = 'Verify your phone number to get cashback and earn rewards'
   const claimRewardTitle = 'You have 5€ reward to claim!'
@@ -74,7 +89,7 @@ watchEffect(async () => {
   })
 
   // eslint-disable-next-line no-console
-  console.group('👤 User Info')
+  console.groupCollapsed('👤 User Info')
   // eslint-disable-next-line no-console
   console.log('isPhoneRegistered', isPhoneRegistered.value)
   // eslint-disable-next-line no-console
@@ -83,7 +98,7 @@ watchEffect(async () => {
   console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
-      showNotificationAlert(bonusModal)
+      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} €`, extra: `${(bonusAmount / fiatHandler.price.value).toFixed(2)} NIM` })
     }, 750)
   }
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
@@ -102,7 +117,20 @@ watchEffect(async () => {
   }
 })
 
+watch(isRecoveryWordsShown, () => {
+  // If no backup done and balance > 0
+  if (isRecoveryWordsShown.value) {
+    StatusBar.setBackgroundColor({ color: '#dbeafe' })
+    StatusBar.setStyle({ style: Style.Light })
+  }
+  else {
+    StatusBar.setBackgroundColor({ color: '#ffffff' })
+    StatusBar.setStyle({ style: Style.Light })
+  }
+}, { immediate: true })
+
 onMounted(async () => {
+  // TODO: if no storage, go to setup
   if (!storageManager.isUnlocked())
     router.replace('/pin')
 
@@ -112,8 +140,21 @@ onMounted(async () => {
 
 <template>
   <IonPage>
-    <IonHeader class="px-2 ion-no-border">
-      <IonToolbar>
+    <IonHeader class="ion-no-border">
+      <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
+        <div slot="start" class="flex items-center gap-2 ml-2">
+          <div class="w-3 h-3 bg-blue-600 rounded-full" />
+          <p class="font-semibold">
+            There is no 'forgot password'
+          </p>
+        </div>
+        <IonButtons slot="end">
+          <IonButton fill="solid" class="font-bold" size="small" @click="showModal(ModalType.Backup)">
+            Recovery Words
+          </IonButton>
+        </IonButtons>
+      </IonToolbar>
+      <IonToolbar class="px-2">
         <IonButtons slot="start">
           <IonMenuButton :auto-hide="false" @click="showModal(ModalType.Menu, { isSmall: true })" />
         </IonButtons>
@@ -187,19 +228,6 @@ onMounted(async () => {
           </IonButton>
         </IonRow>
       </IonGrid>
-
-      <!-- CC Points Modal -->
-      <NotificationAlert ref="bonusModal">
-        <template #title>
-          You got CC Points!
-        </template>
-        <template #body>
-          {{ bonusAmount }}€
-        </template>
-        <template #extra>
-          {{ (bonusAmount / fiatHandler.price.value).toFixed(2) }} NIM
-        </template>
-      </NotificationAlert>
     </IonContent>
     <IonFooter>
       <IonToolbar>

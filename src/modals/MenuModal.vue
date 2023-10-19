@@ -8,15 +8,14 @@ import { BonusWallet } from '@/lib/bonus-wallet'
 
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const isPhoneRegistered = bonusWallet.isRegistered()
-const { showModal } = useModal()
-const menuModal = ref()
+const { showModal, closeModal } = useModal()
 </script>
 
 <template>
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click.stop="menuModal.$el.dismiss()">
+        <IonButton @click.stop="closeModal()">
           <IonIcon :icon="close" />
         </IonButton>
       </IonButtons>
@@ -31,11 +30,14 @@ const menuModal = ref()
       Withdraw
     </IonItem>
 
-    <ItemDivider />
+    <!-- TODO: remove if when BlueCode is added -->
+    <ItemDivider v-if="!isPhoneRegistered" />
 
+    <!--
     <IonItem button :detail="false">
       Activate Bluecode payments
     </IonItem>
+    -->
     <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(ModalType.NewPhone)">
       Activate Cashback & Rewards
     </IonItem>
@@ -45,10 +47,10 @@ const menuModal = ref()
     <IonItem button :detail="false">
       Settings
     </IonItem>
-    <IonItem button :detail="false">
+    <IonItem button :detail="false" @click="showModal(ModalType.Backup)">
       Back Up
     </IonItem>
-    <IonItem button :detail="false">
+    <IonItem button :detail="false" @click="showModal(ModalType.LogoutConfirm, { isSmall: true })">
       Log Out
     </IonItem>
   </IonList>

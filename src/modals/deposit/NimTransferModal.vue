@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonBackButton, IonButton, IonButtons } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, toastController } from '@ionic/vue'
 import { inject } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
@@ -22,10 +22,17 @@ async function handleOpenWallet() {
   })
 }
 
-function handleCopy() {
-  Clipboard.write({
+async function handleCopy() {
+  await Clipboard.write({
     string: nimiqWallet.address.value?.toUserFriendlyAddress(),
   })
+  const toast = await toastController.create({
+    message: 'Address copied to clipboard',
+    duration: 1500,
+    position: 'bottom',
+  })
+
+  await toast.present()
 }
 </script>
 
