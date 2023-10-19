@@ -5,7 +5,6 @@ import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { IonBackButton, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { useRoute } from 'vue-router'
-import NotificationAlert from '@/components/NotificationAlert.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
 
@@ -15,7 +14,6 @@ const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const codeField = ref()
 const prefill = bonusWallet.getPrefillAccessCode()
 const code: Ref<number | null> = ref(Number(prefill))
-const bonusModal: Ref<{ $el: HTMLIonModalElement } | undefined> = ref()
 const nav = (document.querySelector('[data-phone-nav]')) as Nav & HTMLElement
 
 watch(code, (newValue) => {
@@ -33,7 +31,7 @@ async function handleVerify() {
       showModal(ModalType.EnablePushNotifications)
     }
     else if (path === '/app') {
-      await showNotificationAlert(bonusModal)
+      await showNotificationAlert({ title: 'CC Points is now active!' })
       showModal(ModalType.RewardsIntro)
     }
   }
@@ -100,12 +98,6 @@ onMounted(() => {
         </IonButton>
       </IonGrid>
     </IonGrid>
-
-    <NotificationAlert ref="bonusModal">
-      <template #title>
-        CC Points is now active!
-      </template>
-    </NotificationAlert>
   </IonContent>
 </template>
 

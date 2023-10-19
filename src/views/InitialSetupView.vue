@@ -41,7 +41,7 @@ const page = ref()
           <IonButton class="font-bold" fill="clear" @click="() => showModal(ModalType.PromoCode)">
             I have a promo code
           </IonButton>
-          <IonButton class="font-bold" fill="clear" :disabled="true" @click="() => showModal(ModalType.Login)">
+          <IonButton class="font-bold" fill="clear" @click="() => showModal(ModalType.Login)">
             Login
           </IonButton>
         </IonRow>

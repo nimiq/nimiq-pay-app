@@ -15,7 +15,6 @@ onMounted(async () => {
 <template>
   <IonHeader class="ion-no-border">
     <IonToolbar>
-      <slot name="leftButton" />
       <IonButtons slot="end">
         <IonButton @click.stop="() => closeModal()">
           <IonIcon :icon="close" />

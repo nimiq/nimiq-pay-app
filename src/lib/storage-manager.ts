@@ -6,7 +6,7 @@ import {
   CapacitorSQLite,
   SQLiteConnection,
 } from '@capacitor-community/sqlite'
-import type { InjectionKey } from 'vue'
+import { type InjectionKey, type Ref, computed, ref } from 'vue'
 
 export interface StorageKey<T> {
   name: string
@@ -54,6 +54,7 @@ const upgrades: { version: number; statements: string[] }[] = [
 
 interface InternalStorage {
   pin?: string
+  isBackupDone?: boolean
 }
 
 const InternalStorageKey = { name: '_' } as StorageKey<InternalStorage>
@@ -97,6 +98,7 @@ export class StorageManager {
   private sqlite?: SQLiteConnection
   private db?: SQLiteDBConnection
   private lastUnlocked: number = 0
+  private isBackup: Ref<boolean> = ref(false)
 
   constructor() {
     this.unlockedReady = new Promise((resolveUnlockedReady) => {
@@ -200,12 +202,12 @@ export class StorageManager {
       if (Capacitor.getPlatform() !== 'web') {
         const check = await this.sqlite!.checkEncryptionSecret(pin)
         if (!check.result)
-          throw 'Invalid secret'
+          throw new Error('Invalid secret')
       }
       else {
         const actualPin = (await this.get(InternalStorageKey)).pin
         if (pin !== actualPin)
-          throw 'Invalid secret'
+          throw new Error('Invalid secret')
       }
     }
     else {
@@ -223,7 +225,7 @@ export class StorageManager {
       if (secret.result) {
         const check = await this.sqlite!.checkEncryptionSecret(pin)
         if (!check.result)
-          throw 'Invalid secret'
+          throw new Error('Invalid secret')
       }
       else if (this.newPin != null) {
         await this.sqlite!.setEncryptionSecret(this.newPin)
@@ -232,7 +234,7 @@ export class StorageManager {
         await this.sqlite!.setEncryptionSecret(pin)
       }
       else {
-        throw 'Not set up'
+        throw new Error('Not set up')
       }
     }
     else {
@@ -244,11 +246,11 @@ export class StorageManager {
         await this.updateInternal(db, InternalStorageKey, storage => storage.pin = this.newPin as string)
       }
       else if (actualPin !== undefined) {
-        if (pin != actualPin)
-          throw 'Invalid secret'
+        if (pin !== actualPin)
+          throw new Error('Invalid secret')
       }
       else {
-        throw 'Not set up'
+        throw new Error('Not set up')
       }
       await db.close()
     }
@@ -270,6 +272,7 @@ export class StorageManager {
 
       await this.db.open()
       this.markUnlocked?.call(null)
+      this.isBackup.value = (await this.get(InternalStorageKey)).isBackupDone ?? false
     }
   }
 
@@ -279,17 +282,17 @@ export class StorageManager {
 
   startNewPin(pin: string) {
     if (this.newPin !== undefined)
-      throw 'New PIN procedure already in process'
+      throw new Error('New PIN procedure already in process')
     if (pin == null)
-      throw 'New PIN must not be null'
+      throw new Error('New PIN must not be null')
     this.newPin = pin
   }
 
   async confirmNewPin(pin: string) {
     if (this.newPin === undefined)
-      throw 'New PIN procedure not active'
+      throw new Error('New PIN procedure not active')
     if (pin !== this.newPin)
-      throw 'PIN mismatch'
+      throw new Error('PIN mismatch')
     // TODO: Protect storage with pin
     await this.unlock(pin)
     this.newPin = undefined
@@ -303,6 +306,23 @@ export class StorageManager {
 
   async exists() {
     return !!(await this.sqlite!.isDatabase(DB_NAME)).result
+  }
+
+  async setBackupDone(value: boolean) {
+    await this.update(InternalStorageKey, storage => storage.isBackupDone = value)
+    this.isBackup.value = value
+  }
+
+  isBackupDone() {
+    console.log('isBackupDone', this.isBackup)
+    return this.isBackup
+  }
+
+  async deleteDatabase() {
+    await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
+    await this.db?.delete()
+    this.db = undefined
+    return await this.sqlite!.closeAllConnections()
   }
 
   static KEY: InjectionKey<StorageManager> = Symbol(StorageManager.name)

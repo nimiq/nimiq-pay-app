@@ -63,6 +63,7 @@ onMounted(shown)
             <input
               ref="pinField" v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4"
               maxlength="4" size="4" placeholder="••••" class="pin"
+              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
               autofocus="true"
               @blur="handleBlur"
             >

@@ -75,7 +75,7 @@ export class InstantPayWallet {
     this.validityEnd.value = wallets[0].end || 0
 
     // eslint-disable-next-line no-console
-    console.group(`🛒 Transactions`)
+    console.groupCollapsed(`🛒 Transactions`)
     const transactions = await this.storageManager.query('SELECT * FROM tx WHERE type = ? ORDER BY ts DESC', [TransactionType.PAYMENT])
     // eslint-disable-next-line no-console
     console.log('Transactions from DB', transactions)
@@ -119,6 +119,14 @@ export class InstantPayWallet {
   }
 
   private isStatusReady(status: InstantPayStatus, ourBlockHeight: number) {
+    if (status.status !== 'good') {
+      // eslint-disable-next-line no-console
+      console.groupCollapsed('🎛️ InstantPay Server Status')
+      // eslint-disable-next-line no-console
+      console.log('Not ready', status)
+      // eslint-disable-next-line no-console
+      console.groupEnd()
+    }
     return status.status === 'good' && status.blockHeight > ourBlockHeight - MAX_BLOCK_HEIGHT_MISMATCH && status.blockHeight < ourBlockHeight + MAX_BLOCK_HEIGHT_MISMATCH
   }
 

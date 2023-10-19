@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
+import { IonApp, IonFab, IonFabButton, IonIcon, isPlatform } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView, useRouter } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'

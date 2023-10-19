@@ -42,6 +42,7 @@ onMounted(() => {
         ref="codeField" type="text" minlength="6"
         maxlength="8" size="8"
         class="w-full pin" autofocus="true"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         :value="referralCode" @input="referralCode = ($event.target as HTMLTextAreaElement).value"
       >
     </form>

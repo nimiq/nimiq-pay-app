@@ -5,11 +5,14 @@ import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 
 export enum ModalType {
+  Backup = '@/modals/BackupModal/index.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
+  LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
+  LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
   NewPin = '@/modals/setup/PinChooseModal.vue',
   NewPhone = '@/modals/setup/PhoneNumberModal/index.vue',
@@ -38,6 +41,9 @@ function _useModal() {
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
+      case ModalType.Backup:
+        component = defineAsyncComponent(() => import(ModalType.Backup))
+        break
       case ModalType.DetailedTransaction:
         component = defineAsyncComponent(() => import(ModalType.DetailedTransaction))
         break
@@ -46,6 +52,15 @@ function _useModal() {
         break
       case ModalType.ExpiringRewards:
         component = defineAsyncComponent(() => import(ModalType.ExpiringRewards))
+        break
+      case ModalType.Login:
+        component = defineAsyncComponent(() => import(ModalType.Login))
+        break
+      case ModalType.LogoutConfirm:
+        component = defineAsyncComponent(() => import(ModalType.LogoutConfirm))
+        break
+      case ModalType.LogoutWarning:
+        component = defineAsyncComponent(() => import(ModalType.LogoutWarning))
         break
       case ModalType.Menu:
         component = defineAsyncComponent(() => import(ModalType.Menu))
@@ -97,20 +112,34 @@ function _useModal() {
     await modalToShow.present()
   }
 
-  async function showNotificationAlert(modalRef: Ref<{ $el: HTMLIonModalElement } | undefined>) {
+  async function showNotificationAlert({ title, message, extra }: { title: string; message?: string; extra?: string }) {
     return new Promise<void>((resolve) => {
-      const modal = modalRef.value?.$el
-      if (!modal)
-        return
-      if (import.meta.env.MODE === 'development') {
-        // eslint-disable-next-line no-console
-        console.log('showNotificationAlert')
-      }
-      modal.present()
-      setTimeout(async () => {
-        await modal.dismiss()
-        resolve()
-      }, 2000)
+      modalController.create({
+        component: defineAsyncComponent(() => import('@/components/NotificationAlert.vue')),
+        handle: false,
+        canDismiss: async (data?: any, role?: string) => role !== 'backdrop',
+        componentProps: { title, message, extra },
+      }).then(async (modal) => {
+        if (import.meta.env.MODE === 'development') {
+          // eslint-disable-next-line no-console
+          console.log('showNotificationAlert')
+        }
+        // Adding styles to make it look like a notification
+        modal.style.setProperty('--width', 'fit-content')
+        modal.style.setProperty('--min-width', '250px')
+        modal.style.setProperty('--max-width', '80vw')
+        modal.style.setProperty('--height', 'fit-content')
+        modal.style.setProperty('--border-radius', '18px')
+        modal.style.setProperty('--border-color', 'rgb(59 130 246)')
+        modal.style.setProperty('--border-width', '1.5px')
+        modal.style.setProperty('--border-style', 'solid')
+
+        await modal.present()
+        setTimeout(async () => {
+          await modal.dismiss()
+          resolve()
+        }, 2000)
+      })
     })
   }
 
