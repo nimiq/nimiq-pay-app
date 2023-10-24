@@ -16,7 +16,7 @@ export class NimiqNetworkClient {
     this.clientPromise = initPromise.then(() => {
       return Nimiq.Client.Configuration.builder().instantiateClient()
     })
-    this.clientPromise.then((async (client) => {
+    this.clientPromise.then(async (client) => {
       await client.addConsensusChangedListener((consensusState) => {
         this.consensusState.value = consensusState
       })
@@ -26,7 +26,7 @@ export class NimiqNetworkClient {
       const block = await client.getHeadBlock()
       this.initialized.value = true
       this.head.value = block
-    }))
+    })
   }
 
   async awaitInitialized() {

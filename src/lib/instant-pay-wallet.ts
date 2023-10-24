@@ -1,11 +1,13 @@
 import type { InjectionKey, Ref } from 'vue'
 import { computed, ref } from 'vue'
+import type { Address } from '@nimiq/core-web'
+import { Wallet } from '@nimiq/core-web'
 import type { StorageManager } from './storage-manager'
 import { TransactionStatus, TransactionType, WalletStatus, WalletType } from './storage-manager'
+import type { BonusWallet } from './bonus-wallet'
 import type { InstantPayClient, InstantPayStatus, InstantPayWalletState } from '@/lib/instant-pay-client'
 import type { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import type { NimiqWallet } from '@/lib/nimiq-wallet'
-import { BonusWallet } from './bonus-wallet'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND = 120
@@ -40,7 +42,7 @@ export class InstantPayWallet {
   private nextAddress: Nimiq.Address | null = null
 
   constructor(private nimiqWallet: NimiqWallet, private nimiqNetworkClient: NimiqNetworkClient, private instantPayClient: InstantPayClient, private bonusWallet: BonusWallet, private storageManager: StorageManager) {
-    // TODO
+    // TODO: Check if this is necessary with so much promises and awaits
     (async () => {
       await nimiqNetworkClient.awaitInitialized()
       await this.updateWalletInfo()
@@ -49,6 +51,14 @@ export class InstantPayWallet {
       await client.addHeadChangedListener(async () => {
         await this.updateWalletInfo()
         await this.updateReactive()
+
+        // TODO: improve this. Check for incoming tx but also take into account not ready instant wallet for recovery
+        // That will mean that deposit tx will be to held in a queue and only sent when instant wallet is valid, ask for recover and deposit
+        // Check if we have a pending deposit
+        const { address } = await this.nimiqWallet.getWallet()
+        const account = await client.getAccount(address)
+        if (account.balance > 0)
+          await this.topUp(address)
       })
     })();
     (async () => {
@@ -56,6 +66,22 @@ export class InstantPayWallet {
       await this.updateWalletInfo()
       await this.updateReactive()
     })()
+  }
+
+  private async topUp(address: Address) {
+    if (!this.valid.value && this.validityStart.value !== 0 && this.validityEnd.value !== 0)
+      return
+    if (this.balanceRaw.value !== 0) {
+      console.log('Wallet not empty, recovering')
+      this.recover()
+      // Wait for recover tx to be mined
+      return
+    }
+    console.log('Wallet empty, depositing')
+    const client = await this.nimiqNetworkClient.getClient()
+    const account = await client.getAccount(address)
+    if (account.balance > 0)
+      await this.deposit(account.balance)
   }
 
   private async updateReactive() {
@@ -67,6 +93,8 @@ export class InstantPayWallet {
 
     if (wallets.length === 0) {
       const wallet = await this.getWallet()
+      if (!wallet)
+        return
       wallets = [{ id: wallet.address, balance: wallet.balance, start: wallet.validityStart, end: wallet.validityEnd }]
     }
 
@@ -192,12 +220,13 @@ export class InstantPayWallet {
   // Never tested
   async completeWithCplData(payment: PendingPayment) {
     try {
-      const res = await fetch("https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/"+payment.railId)
+      const res = await fetch(`https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${payment.railId}`)
       const obj = await res.json()
       payment.fiatUnit = obj.fields.fiat_currency_code.stringValue
       payment.fiatAmount = obj.fields.fiat_price.doubleValue
       payment.details = obj.fields.item_description.stringValue
-    } catch (e) {
+    }
+    catch (e) {
       // Ignore
     }
   }
@@ -205,9 +234,9 @@ export class InstantPayWallet {
   async preparePayment(payment: PendingPayment) {
     if (this.pendingPayment != null)
       throw new Error('Payment pending')
-    if (payment.rail === "cpl" && payment.railId !== undefined) {
+    if (payment.rail === 'cpl' && payment.railId !== undefined)
       await this.completeWithCplData(payment)
-    }
+
     // TODO: Get more details from payment rail where possible
     this.pendingPayment = payment
   }
@@ -225,15 +254,17 @@ export class InstantPayWallet {
       throw new Error('Unexpected pending payment')
     if (bonus) {
       try {
-        this.bonusWallet.pay(payment.rail!, payment.railId || payment.message!!, payment.address.toUserFriendlyAddress())
-      } catch (e) {
-        throw "Bonus payment not possible"
+        this.bonusWallet.pay(payment.rail!, payment.railId || payment.message!, payment.address.toUserFriendlyAddress())
+      }
+      catch (e) {
+        throw new Error('Bonus payment not possible')
       }
       await this.storageManager.run(
         'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,"bonus",?,?,?,?,?,?,?,?,?)',
-        [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, payment.address, payment.label, payment.rail,payment.railId, payment.railPeerId, payment.fee, payment.fiatAmount, payment.fiatUnit]
+        [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, payment.address, payment.label, payment.rail, payment.railId, payment.railPeerId, payment.fee, payment.fiatAmount, payment.fiatUnit],
       )
-    } else {
+    }
+    else {
       const tx = await this.pay(payment.address, payment.amount, payment.message)
       await this.storageManager.run(
         'UPDATE tx SET peerName = ?, rail = ?, railId = ?, railPeerId = ?, details = ?, fee = ?, fiatAmount = ?, fiatUnit = ? WHERE id = ?',
@@ -273,6 +304,9 @@ export class InstantPayWallet {
   }
 
   async deposit(amount: number) {
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('🏦 Deposit')
+    // eslint-disable-next-line no-console
     console.log(`Deposit ${amount / 100000} to instant wallet`)
     const status = await this.getReadyStatus()
     const wallet = await this.nimiqWallet.getWallet()
@@ -289,6 +323,7 @@ export class InstantPayWallet {
     )
     tx.proof = wallet.signTransaction(tx).serialize()
     this.nextAddress = tx.recipient
+    // eslint-disable-next-line no-console
     console.log(`New instant wallet address: ${this.nextAddress.toUserFriendlyAddress()}`)
     await this.nimiqNetworkClient.sendTransaction(tx)
     await this.storageManager.run(
@@ -299,6 +334,8 @@ export class InstantPayWallet {
       'INSERT OR REPLACE INTO wl(id, type, status, balance) VALUES (?,?,?,?)',
       [tx.recipient.toUserFriendlyAddress(), WalletType.INSTANT, WalletStatus.PENDING, tx.value],
     )
+    // eslint-disable-next-line no-console
+    console.groupEnd()
   }
 
   async pay(recipient: Nimiq.Address, amount: number, message: string | null = null): Promise<Nimiq.ClientTransactionDetails> {

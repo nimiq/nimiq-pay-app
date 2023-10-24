@@ -66,15 +66,15 @@ onMounted(async () => {
 
       <!-- Referral -->
       <IonRow>
-        <TaskCard highlight large>
+        <TaskCard highlight large @click="showModal(ModalType.Voucher, { isOnTop: true })">
           Invite a friend and earn up to 20€ both!
         </TaskCard>
       </IonRow>
 
       <!-- Tasks -->
       <Transition name="slide-fade" mode="out-in">
-        <IonRow v-if="isTaskShown" class="flex gap-2">
-          <IonCol v-for="task in tasks" :key="task.id">
+        <IonRow v-if="isTaskShown" class="grid grid-cols-2 gap-2">
+          <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
             <!-- TODO: Do we really need different bg? -->
             <TaskCard :reward="task.reward_amount / 1e5" class="h-full" :class="{ 'bg-blue-200/80': !(task.order % 3) }">
               {{ task.description }}
@@ -103,14 +103,5 @@ ion-row {
 
 ion-spinner {
   --color: rgb(59 130 246);
-}
-
-.slide-fade-enter-active, .slide-fade-leave-active {
-  transition: all 0.3s ease-out;
-}
-
-.slide-fade-leave-to, .slide-fade-enter-from {
-  transform: translateY(20px);
-  opacity: 0;
 }
 </style>

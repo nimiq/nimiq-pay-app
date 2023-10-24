@@ -170,11 +170,9 @@ onMounted(async () => {
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[40vh] transition-all" :class="instantPayWallet.transactions.value.length && '!h-[30vh]'">
-          <ion-text color="primary">
-            <h1 class="mb-3 text-5xl font-normal">
+          <h1 class="mb-3 text-5xl font-normal">
             {{ fiatHandler.currencyPrefix.value }}{{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
-            </h1>
-          </ion-text>
+          </h1>
           <p class="text-lg text-blue-300">
             {{ Math.floor(instantPayWallet.balance.value).toFixed(2) }} NIM
             <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-3" />
@@ -205,9 +203,10 @@ onMounted(async () => {
             </li>
           </ul>
         </IonRow>
+
         <!-- Referral -->
         <IonRow class="mb-8">
-          <TaskCard highlight large>
+          <TaskCard highlight large @click="showModal(ModalType.Voucher)">
             Invite a friend and earn up to 20€ both!
           </TaskCard>
         </IonRow>

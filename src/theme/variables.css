@@ -222,6 +222,17 @@ http://ionicframework.com/docs/theming/ */
 } 
 */
 
+/* Transitions */
+.slide-fade-enter-active, .slide-fade-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-fade-leave-to, .slide-fade-enter-from {
+  transform: translateY(20px);
+  opacity: 0;
+}
+
+
 /* Fonts */
 @font-face {
   font-family: 'Fira Mono';

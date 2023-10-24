@@ -65,15 +65,15 @@ export class BonusWallet {
 
   async redeemVoucher(code: string) {
     await this.bonusClient.claimVoucher(await this.getToken(), code)
+    this.promoCode.value = code
   }
 
   async getReferralVoucherInfo(): Promise<VoucherInfoResponse> {
     return this.bonusClient.getParticipantVoucher(await this.getToken())
   }
 
-  async setPromoCode(code: string) {
-    await this.bonusClient.getVoucher(code)
-    this.promoCode.value = code
+  async checkPromoCode(code: string) {
+    return await this.bonusClient.getVoucher(code)
   }
 
   async pay(type: string, reference: string, destination: string) {

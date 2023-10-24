@@ -1,11 +1,11 @@
+/* eslint-disable no-console */
 import type { InjectionKey, Ref } from 'vue'
-import { App, computed, ref, shallowRef } from 'vue'
+import { computed, ref } from 'vue'
 import type { StorageKey, StorageManager } from './storage-manager'
 import { TransactionStatus, WalletStatus, WalletType } from './storage-manager'
 import type { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 
 interface WalletStorage {
-  privatekeyString?: string
   entropy?: string
 }
 
@@ -16,6 +16,7 @@ const UNLOCK_TIMEOUT = 5 * 60 * 1000
 export class NimiqWallet {
   private readonly privateKeyPromise: Promise<Nimiq.PrivateKey>
   private readonly walletPromise: Promise<Nimiq.Wallet>
+  private readonly backupEntropy: Ref<Nimiq.Entropy | undefined> = ref(undefined)
   public readonly initialized: Ref<boolean> = ref(false)
   public readonly address: Ref<Nimiq.Address | undefined> = ref(undefined)
   public readonly balanceRaw: Ref<number> = ref(0)
@@ -23,24 +24,37 @@ export class NimiqWallet {
 
   constructor(private nimiqNetworkClient: NimiqNetworkClient, private storageManager: StorageManager) {
     this.privateKeyPromise = (async () => {
-      const storage = await this.storageManager.get(WalletStorageKey)
-      if (storage.privatekeyString == null) {
-        const entropy = Nimiq.Entropy.generate()
-        storage.entropy = entropy.toHex().substring(0, 32)
-        storage.privatekeyString = Nimiq.PrivateKey.generate().toHex()
+      console.groupCollapsed('🔑 Getting Private Key')
+      let { entropy } = await this.storageManager.get(WalletStorageKey)
+      console.log('Entropy:', entropy)
+      if (!entropy) {
+        if (this.backupEntropy.value) {
+          console.log('⚠️ Using backup entropy ⚠️')
+          entropy = this.backupEntropy.value.toHex()
+        }
+        else {
+          console.log('⚠️ Generating new wallet ⚠️')
+          // eslint-disable-next-line ts/ban-ts-comment
+          // @ts-expect-error
+          Nimiq.Entropy.SIZE = 16
+          entropy = Nimiq.Entropy.generate().toHex().substring(0, 32)
+        }
         await this.storageManager.update(WalletStorageKey, (newStorage) => {
-          newStorage.privatekeyString = storage.privatekeyString
-          newStorage.entropy = storage.entropy
+          newStorage.entropy = entropy
         })
       }
-      return Nimiq.PrivateKey.unserialize(Nimiq.BufferUtils.fromHex(storage.privatekeyString))
+      const mnemonic = Nimiq.MnemonicUtils.entropyToMnemonic(entropy)
+      console.groupEnd()
+      return Nimiq.MnemonicUtils.mnemonicToExtendedPrivateKey(mnemonic).derivePath(`m/44'/242'/0'/0'`).privateKey
     })()
+
     const walletPromise = this.walletPromise = nimiqNetworkClient.awaitInitialized().then(async () => {
       const privateKey = await this.privateKeyPromise
       const wallet = new Nimiq.Wallet(Nimiq.KeyPair.derive(privateKey))
       this.address.value = wallet.address
       return wallet
     });
+
     (async () => {
       const client = await this.nimiqNetworkClient.getClient()
       const wallet = await walletPromise
@@ -63,13 +77,12 @@ export class NimiqWallet {
           }
         }
       })
+
+      if (this.backupEntropy.value)
+        await this.storageManager.setBackupDone(true)
+
       this.initialized.value = true
     })()
-    async () => {
-      const wallets = await this.storageManager.query('SELECT id, balance FROM wl WHERE type = ?', [WalletType.RAW])
-      this.address.value = wallets[0].id
-      this.balanceRaw.value = wallets[0].balance
-    }
   }
 
   isReady(): boolean {
@@ -81,11 +94,32 @@ export class NimiqWallet {
   }
 
   async getWords(): Promise<string[]> {
+    console.groupCollapsed('💾 Backup')
     await this.walletPromise
     const storage = await this.storageManager.get(WalletStorageKey)
+    console.log(storage)
     if (storage.entropy === undefined)
       return []
+    console.groupEnd()
     return Nimiq.MnemonicUtils.entropyToMnemonic(storage.entropy)
+  }
+
+  importBackup(mnemonic: string | string[]): void {
+    console.groupCollapsed('💾 Import Backup')
+    try {
+      // eslint-disable-next-line ts/ban-ts-comment
+      // @ts-expect-error
+      Nimiq.Entropy.SIZE = 16
+      const entropy = Nimiq.MnemonicUtils.mnemonicToEntropy(mnemonic)
+      console.log('Entropy:', entropy)
+      this.backupEntropy.value = entropy
+      console.groupEnd()
+    }
+    catch (e) {
+      console.error(e)
+      console.groupEnd()
+      throw e
+    }
   }
 
   static KEY: InjectionKey<NimiqWallet> = Symbol(NimiqWallet.name)

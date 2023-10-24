@@ -46,9 +46,9 @@ const upgrades: { version: number; statements: string[] }[] = [
   {
     version: 5,
     statements: [
-      "CREATE TABLE IF NOT EXISTS price (ts INTEGER NOT NULL PRIMARY KEY, value INTEGER NOT NULL);",
-      "CREATE TABLE IF NOT EXISTS fiat (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL, UNIQUE (currency, ts));",
-    ]
+      'CREATE TABLE IF NOT EXISTS price (ts INTEGER NOT NULL PRIMARY KEY, value INTEGER NOT NULL);',
+      'CREATE TABLE IF NOT EXISTS fiat (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL, UNIQUE (currency, ts));',
+    ],
   },
 ]
 
@@ -314,7 +314,7 @@ export class StorageManager {
   }
 
   isBackupDone() {
-    console.log('isBackupDone', this.isBackup)
+    console.log('isBackupDone', this.isBackup.value)
     return this.isBackup
   }
 

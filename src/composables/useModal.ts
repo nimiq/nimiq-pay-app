@@ -23,6 +23,7 @@ export enum ModalType {
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
   TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
+  Voucher = '@/modals/VoucherModal.vue',
 }
 
 function _useModal() {
@@ -91,6 +92,9 @@ function _useModal() {
         break
       case ModalType.TransactionHistory:
         component = defineAsyncComponent(() => import(ModalType.TransactionHistory))
+        break
+      case ModalType.Voucher:
+        component = defineAsyncComponent(() => import(ModalType.Voucher))
         break
       case ModalType.Dev:
         if (import.meta.env.MODE === 'development')

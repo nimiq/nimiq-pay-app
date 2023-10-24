@@ -4,20 +4,22 @@ import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vu
 import { close } from 'ionicons/icons'
 import { useRouter } from 'vue-router'
 import { StorageManager } from '@/lib/storage-manager'
+import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
 
 const storageManager = inject(StorageManager.KEY) as StorageManager
+const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const { closeModal, showModal } = useModal()
 const router = useRouter()
 
 async function handleConfirm() {
-  if (storageManager.isBackupDone().value) {
+  if (storageManager.isBackupDone().value || instantPayWallet.balance.value === 0) {
     // TODO: ask for pin
     await storageManager.deleteDatabase()
     router.replace('/setup')
   }
   else {
-    showModal(ModalType.LogoutWarning, { isOnTop: true, isSmall: true})
+    showModal(ModalType.LogoutWarning, { isOnTop: true, isSmall: true })
   }
 }
 </script>

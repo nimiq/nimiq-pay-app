@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar, modalController } from '@ionic/vue'
-import { onMounted, ref } from 'vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { ModalType, useModal } from '@/composables/useModal'
+import Info from '@/components/icons/info.vue'
 
 const { showModal, closeModal } = useModal()
-
-onMounted(async () => {
-  const modal = await modalController.getTop()
-  console.log(modal)
-})
 </script>
 
 <template>
@@ -26,9 +21,10 @@ onMounted(async () => {
     <h1 class="my-4">
       Top Up
     </h1>
-    <p class="self-start px-4 mb-8 text-xl text-center">
-      Lorem ipsum dolor sit amet, consectetur adipiscing.
-    </p>
+    <div class="flex items-start self-start justify-center gap-2 px-4 py-2 mb-8 text-xl text-center border border-blue-500 rounded-md">
+      <Info class="w-6 mt-1" />
+      <p>Payments only available 10 minutes after top-up</p>
+    </div>
     <div class="self-end w-full py-8">
       <IonButton
         expand="block"
