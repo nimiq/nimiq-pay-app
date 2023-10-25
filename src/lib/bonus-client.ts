@@ -32,6 +32,16 @@ export interface TaskClaimRequest {
   proof: any
 }
 
+export interface TaskClaimResponse {
+  created_at: string
+  id: string
+  participant_id: string
+  task_id: string
+  task_proof: string
+  task_status: 'in-progress' | 'completed' | 'rejected'
+  updated_at: string
+}
+
 export class BonusClient {
   endpoint: string = 'https://bonus-nim.zeromox.com/api'
 
@@ -92,9 +102,9 @@ export class BonusClient {
     return (await this.fetchJson(`/task/${id}`, { headers: { token } }))
   }
 
-  async claimTask(token: string, id: string, proof: any): Promise<any> {
+  async claimTask(token: string, id: string, proof: any): Promise<TaskClaimResponse> {
     const request: TaskClaimRequest = { proof }
-    await this.fetchJson(`/task/${id}/claim`, {
+    return await this.fetchJson(`/task/${id}/claim`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', token },
       body: JSON.stringify(request),
@@ -106,6 +116,9 @@ export class BonusClient {
   }
 
   async claimVoucher(token: string, id: string): Promise<void> {
-    return (await this.fetchJson(`/voucher/${id}/claim`, { headers: { token } }))
+    return await this.fetchJson(`/voucher/${id}/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', token },
+    })
   }
 }

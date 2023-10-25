@@ -135,6 +135,12 @@ export class StorageManager {
   }
 
   async awaitUnlocked(): Promise<void> {
+    try {
+      if (!this.db)
+        await this.open()
+    }
+    catch {}
+
     await this.unlockedReady
     await this.unlocked
   }
@@ -263,7 +269,12 @@ export class StorageManager {
   }
 
   private async open() {
-    if (this.db === undefined || !this.db.isDBOpen()) {
+    let isOpen = false
+    try {
+      isOpen = (await this.db?.isDBOpen())?.result || false
+    }
+    catch {}
+    if (this.db === undefined || !isOpen) {
       if (Capacitor.getPlatform() !== 'web')
         this.db = await this.sqlite!.createConnection(DB_NAME, true, 'secret', DB_VERSION, false)
 
@@ -309,7 +320,6 @@ export class StorageManager {
   }
 
   async setBackupDone(value: boolean) {
-    await this.open()
     await this.update(InternalStorageKey, storage => storage.isBackupDone = value)
     this.isBackup.value = value
   }

@@ -21,6 +21,7 @@ export enum ModalType {
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Rewards = '@/modals/RewardsModal.vue',
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
   Voucher = '@/modals/VoucherModal.vue',
@@ -86,6 +87,9 @@ function _useModal() {
         break
       case ModalType.RewardsIntro:
         component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
+        break
+      case ModalType.Task:
+        component = defineAsyncComponent(() => import(ModalType.Task))
         break
       case ModalType.TopUp:
         component = defineAsyncComponent(() => import(ModalType.TopUp))

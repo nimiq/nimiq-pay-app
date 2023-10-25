@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import type { ComputedRef, InjectionKey, Ref } from 'vue'
-import type { BonusClient, VoucherInfoResponse } from './bonus-client'
+import type { BonusClient, TaskClaimResponse, VoucherInfoResponse } from './bonus-client'
 import type { StorageKey, StorageManager } from './storage-manager'
 import type { NimiqWallet } from './nimiq-wallet'
 
@@ -9,6 +9,8 @@ interface BonusStorage {
   token?: string
   phoneNumber?: string
   ownPromoCode?: string
+  refererPromoCode?: string
+  isRefererClaimed?: boolean
 }
 
 const BonusStorageKey = { name: 'bonus' } as StorageKey<BonusStorage>
@@ -30,16 +32,14 @@ export class BonusWallet {
   async verify(accessCode: number) {
     if (this.phoneNumber.value === null)
       throw new Error('No authorization in process')
-    const response = await this.bonusClient.verifyParticipant(this.phoneNumber.value, accessCode)
-    await this.storageManager.update(BonusStorageKey, storage => storage.token = response.token)
-    if (this.promoCode.value !== null) {
-      try {
-        this.redeemVoucher(this.promoCode.value)
-        this.promoCode.value = null
-      }
-      catch (e) {
-        // Ignore
-      }
+    try {
+      const response = await this.bonusClient.verifyParticipant(this.phoneNumber.value, accessCode)
+      await this.storageManager.update(BonusStorageKey, storage => storage.token = response.token)
+      await this.checkDelayedRedeemVoucher()
+    }
+    catch (e) {
+      this.phoneNumber.value = null
+      throw e
     }
   }
 
@@ -59,21 +59,53 @@ export class BonusWallet {
     return this.bonusClient.getTask(await this.getToken(), id)
   }
 
+  async claimTask(id: string, proof: any): Promise<TaskClaimResponse> {
+    return await this.bonusClient.claimTask(await this.getToken(), id, proof)
+  }
+
   async getVoucherInfo(code: string): Promise<VoucherInfoResponse> {
     return this.bonusClient.getVoucher(code)
+  }
+
+  async delayRedeemVoucher(code: string) {
+    this.promoCode.value = code
+    this.storageManager.update(BonusStorageKey, (storage) => {
+      storage.refererPromoCode = code
+      storage.isRefererClaimed = false
+    })
+  }
+
+  async checkDelayedRedeemVoucher() {
+    try {
+      console.groupCollapsed('🎁 Checking delayed voucher')
+      const codePromise = this.storageManager.get(BonusStorageKey).then(storage => storage.refererPromoCode)
+      const isClaimedPromise = this.storageManager.get(BonusStorageKey).then(storage => storage.isRefererClaimed)
+      const [isClaimed, code] = await Promise.all([isClaimedPromise, codePromise])
+      console.log('isClaimed', isClaimed)
+      console.log('code', code)
+      console.groupEnd()
+      if (!code)
+        return
+
+      if (isClaimed)
+        this.promoCode.value = code
+      else
+        await this.redeemVoucher(code)
+    }
+    catch (e) {
+      console.error(e)
+      console.groupEnd()
+    }
   }
 
   async redeemVoucher(code: string) {
     await this.bonusClient.claimVoucher(await this.getToken(), code)
     this.promoCode.value = code
+    this.storageManager.update(BonusStorageKey, (storage) => { storage.isRefererClaimed = true })
   }
 
   async getReferralVoucherInfo(): Promise<VoucherInfoResponse> {
     return this.bonusClient.getParticipantVoucher(await this.getToken())
-  }
-
-  async checkPromoCode(code: string) {
-    return await this.bonusClient.getVoucher(code)
   }
 
   async pay(type: string, reference: string, destination: string) {
@@ -84,8 +116,8 @@ export class BonusWallet {
     return computedAsync(async () => !!this.phoneNumber.value || !!(await this.storageManager.get(BonusStorageKey))?.token)
   }
 
-  isPromoCodeEntered(): ComputedRef<boolean> {
-    return computed(() => !!this.promoCode.value)
+  isPromoCodeEntered(): Ref<boolean> {
+    return computedAsync(async () => !!this.promoCode.value && !!(await this.storageManager.get(BonusStorageKey).then(storage => storage.isRefererClaimed)))
   }
 
   private async getToken(): Promise<string> {

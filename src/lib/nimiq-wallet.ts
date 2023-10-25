@@ -24,8 +24,8 @@ export class NimiqWallet {
 
   constructor(private nimiqNetworkClient: NimiqNetworkClient, private storageManager: StorageManager) {
     this.privateKeyPromise = (async () => {
-      console.groupCollapsed('🔑 Getting Private Key')
       let { entropy } = await this.storageManager.get(WalletStorageKey)
+      console.groupCollapsed('🔑 Getting Private Key')
       console.log('Entropy:', entropy)
       if (!entropy) {
         if (this.backupEntropy.value) {
@@ -39,6 +39,7 @@ export class NimiqWallet {
           Nimiq.Entropy.SIZE = 16
           entropy = Nimiq.Entropy.generate().toHex().substring(0, 32)
         }
+        console.groupEnd()
         await this.storageManager.update(WalletStorageKey, (newStorage) => {
           newStorage.entropy = entropy
         })
@@ -78,9 +79,6 @@ export class NimiqWallet {
         }
       })
 
-      if (this.backupEntropy.value)
-        await this.storageManager.setBackupDone(true)
-
       this.initialized.value = true
     })()
   }
@@ -111,8 +109,9 @@ export class NimiqWallet {
       // @ts-expect-error
       Nimiq.Entropy.SIZE = 16
       const entropy = Nimiq.MnemonicUtils.mnemonicToEntropy(mnemonic)
-      console.log('Entropy:', entropy)
+      console.log('Entropy:', entropy.toHex())
       this.backupEntropy.value = entropy
+      this.storageManager.setBackupDone(true)
       console.groupEnd()
     }
     catch (e) {

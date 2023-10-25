@@ -131,9 +131,12 @@ watch(isRecoveryWordsShown, () => {
 
 onMounted(async () => {
   // TODO: if no storage, go to setup
-  if (!storageManager.isUnlocked())
-    router.replace('/pin')
+  if (!storageManager.isUnlocked()) {
+    await router.replace('/pin')
+    return
+  }
 
+  bonusWallet.checkDelayedRedeemVoucher()
   scrollToFirstNotification()
 })
 </script>

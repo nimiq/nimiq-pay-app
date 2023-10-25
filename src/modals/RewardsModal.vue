@@ -22,11 +22,16 @@ const bonusBalance = computedAsync(async () => {
 
 onMounted(async () => {
   tasks.value = (await bonusWallet.getTasks()).sort((a, b) => a.order - b.order)
+  // Move completed tasks to the end
+  tasks.value = tasks.value.sort((a, b) => {
+    if (a.status === 'completed' && b.status !== 'completed')
+      return 1
+    if (a.status !== 'completed' && b.status === 'completed')
+      return -1
+    return 0
+  })
   await until(tasks).changed({ timeout: 1000 })
   isTaskShown.value = true
-  // console.log(tasks.value)
-  // const task = await bonusWallet.getTask(tasks.value[0].id)
-  // console.log(task)
 })
 </script>
 
@@ -76,7 +81,7 @@ onMounted(async () => {
         <IonRow v-if="isTaskShown" class="grid grid-cols-2 gap-2">
           <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
             <!-- TODO: Do we really need different bg? -->
-            <TaskCard :reward="task.reward_amount / 1e5" class="h-full" :class="{ 'bg-blue-200/80': !(task.order % 3) }">
+            <TaskCard :task="task" class="h-full" :class="{ 'bg-blue-200/80': !(task.order % 3) }">
               {{ task.description }}
             </TaskCard>
           </IonCol>

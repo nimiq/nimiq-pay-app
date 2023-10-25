@@ -61,7 +61,7 @@ function handleShare() {
       <IonButton fill="clear" class="mb-4 text-base" @click="handleCopy">
         Copy code
       </IonButton>
-      <IonButton v-if="canShare" expand="block" strong @click="handleShare">
+      <IonButton v-if="canShare" expand="block" strong :disabled="!voucherCode" @click="handleShare">
         Share Nimiq Pay App and code
       </IonButton>
     </div>

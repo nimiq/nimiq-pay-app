@@ -14,25 +14,26 @@ const rewardAmount = ref(0)
 watch(referralCode, async (newValue) => {
   if (newValue.length === 7) {
     try {
-      const { claims_remaining, reward } = await bonusWallet.checkPromoCode(referralCode.value)
+      const { claims_remaining, reward } = await bonusWallet.getVoucherInfo(referralCode.value)
       if (claims_remaining === 0) { throw new Error('This promo code has been claimed too many times') }
       else if (claims_remaining > 0) {
-        rewardAmount.value = reward
         codeField.value.blur()
+        rewardAmount.value = reward
       }
     }
     catch (e: any) {
       codeField.value.setCustomValidity(e.message || e)
       codeField.value.reportValidity()
     }
-  } else {
+  }
+  else {
     rewardAmount.value = 0
   }
 })
 
-async function handleClaim() {
+function handleClaim() {
   try {
-    await bonusWallet.redeemVoucher(referralCode.value)
+    bonusWallet.delayRedeemVoucher(referralCode.value)
     showModal(ModalType.NewPin)
   }
   catch (e: any) {
@@ -65,8 +66,13 @@ onMounted(() => {
         :value="referralCode" @input="referralCode = ($event.target as HTMLTextAreaElement).value.toUpperCase()"
       >
     </form>
-    <IonButton expand="block" v-if="rewardAmount" @click="handleClaim">
-      Claim Promo Code
-    </IonButton>
+    <div v-if="rewardAmount" class="self-end w-full">
+      <p class="mb-4">
+        You are going to get {{ rewardAmount / 1e5 }} NIM
+      </p>
+      <IonButton expand="block" @click="handleClaim">
+        Claim Promo Code
+      </IonButton>
+    </div>
   </ModalTemplate>
 </template>
