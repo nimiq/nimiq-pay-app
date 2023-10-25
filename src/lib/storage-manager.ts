@@ -309,12 +309,12 @@ export class StorageManager {
   }
 
   async setBackupDone(value: boolean) {
+    await this.open()
     await this.update(InternalStorageKey, storage => storage.isBackupDone = value)
     this.isBackup.value = value
   }
 
   isBackupDone() {
-    console.log('isBackupDone', this.isBackup.value)
     return this.isBackup
   }
 
