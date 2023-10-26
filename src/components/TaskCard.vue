@@ -38,6 +38,8 @@ const { showModal } = useModal()
 const isLoading = ref(false)
 
 async function handleClick() {
+  if (props.task?.status === 'completed')
+    return
   if (!props.task) {
     emit('click')
     return

@@ -116,9 +116,6 @@ export class BonusClient {
   }
 
   async claimVoucher(token: string, id: string): Promise<void> {
-    return await this.fetchJson(`/voucher/${id}/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', token },
-    })
+    return await this.fetchJson(`/voucher/${id}/claim`, { headers: { token } })
   }
 }

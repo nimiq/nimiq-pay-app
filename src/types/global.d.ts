@@ -33,4 +33,4 @@ interface Task {
   task_prover_function: string
 }
 
-type TaskType = 'question' | 'text-input'
+type TaskType = 'question' | 'text-input' | 'yt-video'

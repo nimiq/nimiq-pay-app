@@ -20,10 +20,11 @@ async function handleCopy() {
   await Clipboard.write({
     string: voucherCode.value.id,
   })
-  await toastController.create({
+  const toast = await toastController.create({
     message: '✔️ Copied to the clipboard!',
     duration: 2000,
   })
+  await toast.present()
 }
 
 function handleShare() {
