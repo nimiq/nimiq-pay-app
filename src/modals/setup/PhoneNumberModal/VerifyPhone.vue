@@ -55,6 +55,14 @@ function handleResendRequest() {
   nav.pop()
 }
 
+function handleClose() {
+  if (path === '/setup')
+    showModal(ModalType.EnablePushNotifications)
+
+  else
+    closeModal()
+}
+
 onMounted(() => {
   setTimeout(() => {
     codeField.value.focus()
@@ -69,7 +77,7 @@ onMounted(() => {
         <IonBackButton />
       </IonButtons>
       <IonButtons slot="end">
-        <IonButton @click="() => closeModal()">
+        <IonButton @click="handleClose">
           <IonIcon :icon="close" />
         </IonButton>
       </IonButtons>

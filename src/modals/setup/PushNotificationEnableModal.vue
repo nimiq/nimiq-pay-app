@@ -43,7 +43,7 @@ async function handlePushButton() {
       <IonButton expand="block" @click="handlePushButton">
         Enable Push Notifications
       </IonButton>
-      <IonButton fill="clear" expand="block" @click="router.push('/app')">
+      <IonButton fill="clear" expand="block" @click="router.replace('/app')">
         Skip for now
       </IonButton>
     </div>

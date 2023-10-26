@@ -260,6 +260,7 @@ export class StorageManager {
       }
       await db.close()
     }
+    this.wasUnlocked = true
     this.lastUnlocked = Date.now()
     await this.open()
   }
@@ -332,6 +333,9 @@ export class StorageManager {
     await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
     await this.db?.delete()
     this.db = undefined
+    await this.sqlite?.deleteOldDatabases()
+    this.lastUnlocked = 0
+    this.wasUnlocked = false
     return await this.sqlite!.closeAllConnections()
   }
 

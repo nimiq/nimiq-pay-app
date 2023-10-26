@@ -31,6 +31,7 @@ export class NimiqWallet {
         if (this.backupEntropy.value) {
           console.log('⚠️ Using backup entropy ⚠️')
           entropy = this.backupEntropy.value.toHex()
+          this.backupEntropy.value = undefined
         }
         else {
           console.log('⚠️ Generating new wallet ⚠️')

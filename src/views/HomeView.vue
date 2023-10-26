@@ -130,13 +130,16 @@ watch(isRecoveryWordsShown, () => {
 }, { immediate: true })
 
 onMounted(async () => {
-  // TODO: if no storage, go to setup
+  if (!(await storageManager.exists())) {
+    await router.replace('/setup')
+    return
+  }
   if (!storageManager.isUnlocked()) {
     await router.replace('/pin')
     return
   }
 
-  bonusWallet.checkDelayedRedeemVoucher()
+  // bonusWallet.checkDelayedRedeemVoucher()
   scrollToFirstNotification()
 })
 </script>
@@ -209,7 +212,7 @@ onMounted(async () => {
 
         <!-- Referral -->
         <IonRow class="mb-8">
-          <TaskCard highlight large @click="showModal(ModalType.Voucher)">
+          <TaskCard highlight large @click="isPhoneRegistered ? showModal(ModalType.Voucher) : showModal(ModalType.NewPhone)">
             Invite a friend and earn up to 20€ both!
           </TaskCard>
         </IonRow>
