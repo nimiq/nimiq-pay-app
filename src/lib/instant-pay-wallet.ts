@@ -217,7 +217,6 @@ export class InstantPayWallet {
     }
   }
 
-  // Never tested
   async completeWithCplData(payment: PendingPayment) {
     try {
       const res = await fetch(`https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${payment.railId}`)
@@ -228,13 +227,14 @@ export class InstantPayWallet {
     }
     catch (e) {
       // Ignore
+      console.error(e)
     }
   }
 
   async preparePayment(payment: PendingPayment) {
     if (this.pendingPayment != null)
       throw new Error('Payment pending')
-    if (payment.rail === 'cpl' && payment.railId !== undefined)
+    if (payment.rail === 'CPL' && payment.railId !== undefined)
       await this.completeWithCplData(payment)
 
     // TODO: Get more details from payment rail where possible
