@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { IonGrid, IonRow } from '@ionic/vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 </script>
 
 <template>
@@ -14,7 +15,10 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
         <span class="text-xl">July</span>
         <div class="flex flex-col text-end">
           <span class="text-lg">3,44 €</span>
-          <span class="text-sm text-blue-300">4000 NIM</span>
+          <div class="flex items-center gap-x-1">
+            <CryptoCityLogo class="h-3" />
+            <span class="text-sm text-blue-300">4000</span>
+          </div>
         </div>
       </IonRow>
     </IonGrid>

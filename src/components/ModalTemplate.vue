@@ -3,14 +3,14 @@ import { IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonRow,
 import { close } from 'ionicons/icons'
 import { useModal } from '@/composables/useModal'
 
-const { closeModal, closeAllModals } = useModal()
-
 defineProps({
   closeAll: {
     type: Boolean,
     default: false,
   },
 })
+
+const { closeModal, closeAllModals } = useModal()
 </script>
 
 <template>

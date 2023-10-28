@@ -32,7 +32,7 @@ function handleShare() {
     // Title if sharing via email
     title: 'Nimiq Pay App',
     // Text to share via all the apps
-    text: `Hey! Join me on Nimiq Pay App and earn CC Points to pay for your purchases! Use my code ${voucherCode.value.id} to earn 5€ in CC Points at registration.`,
+    text: `Hey! Join me on Nimiq Pay App and earn CC Points to pay for your purchases! Use my code ${voucherCode.value.id} to earn ${voucherCode.value.reward} NIM in CC Points at registration.`,
     url: 'https://www.nimiq.com/',
     // Title for the share modal. Only on Android
     dialogTitle: 'Nimiq Pay App',

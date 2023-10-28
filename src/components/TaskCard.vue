@@ -4,6 +4,7 @@ import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
 import { chevronForwardOutline } from 'ionicons/icons'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 const props = defineProps({
   progress: {
@@ -79,9 +80,15 @@ async function handleClick() {
         >
           <slot />
         </h2>
-        <p v-if="task?.reward_amount" class="text-lg font-light" :class="{ 'text-white': task?.status === 'completed' }">
-          You earn {{ task.reward_amount / 1e5 }} NIM
-        </p>
+        <div v-if="task?.reward_amount" class="flex flex-col justify-start text-lg font-light gap-x-2" :class="{ 'text-white': task?.status === 'completed' }">
+          <span>You earn</span>
+          <div class="flex items-center gap-x-1">
+            <CryptoCityLogo class="h-5" />
+            <span>
+              {{ task.reward_amount / 1e5 }}
+            </span>
+          </div>
+        </div>
       </div>
     </Transition>
     <IonRippleEffect />

@@ -259,10 +259,15 @@ export class InstantPayWallet {
       catch (e) {
         throw new Error('Bonus payment not possible')
       }
-      await this.storageManager.run(
-        'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,"bonus",?,?,?,?,?,?,?,?,?)',
-        [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, payment.address, payment.label, payment.rail, payment.railId, payment.railPeerId, payment.fee, payment.fiatAmount, payment.fiatUnit],
-      )
+      try {
+        await this.storageManager.run(
+          'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+          [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, 'bonus', payment.address, payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit],
+        )
+      }
+      catch (e) {
+        console.error('Error saving bonus tx', e)
+      }
     }
     else {
       const tx = await this.pay(payment.address, payment.amount, payment.message)

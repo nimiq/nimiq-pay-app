@@ -4,6 +4,7 @@ import CheckIcon from '@/components/icons/check.vue'
 
 defineProps<{
   title: string
+  subtitle?: string
   message?: string
   extra?: string
 }>()
@@ -18,6 +19,9 @@ defineProps<{
       <h2 class="text-3xl font-semibold">
         {{ title }}
       </h2>
+      <p class="text-opacity-90">
+        {{ subtitle }}
+      </p>
     </IonRow>
     <IonRow class="ion-justify-content-center">
       <p class="text-5xl">

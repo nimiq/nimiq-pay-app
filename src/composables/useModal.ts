@@ -120,13 +120,13 @@ function _useModal() {
     await modalToShow.present()
   }
 
-  async function showNotificationAlert({ title, message, extra }: { title: string; message?: string; extra?: string }) {
+  async function showNotificationAlert({ title, subtitle, message, extra }: { title: string; subtitle?: string; message?: string; extra?: string }) {
     return new Promise<void>((resolve) => {
       modalController.create({
         component: defineAsyncComponent(() => import('@/components/NotificationAlert.vue')),
         handle: false,
         canDismiss: async (data?: any, role?: string) => role !== 'backdrop',
-        componentProps: { title, message, extra },
+        componentProps: { title, subtitle, message, extra },
       }).then(async (modal) => {
         if (import.meta.env.MODE === 'development') {
           // eslint-disable-next-line no-console

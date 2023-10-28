@@ -7,6 +7,7 @@ import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
@@ -47,9 +48,10 @@ onMounted(async () => {
   </IonHeader>
   <IonContent class="ion-padding">
     <IonGrid class="flex flex-col gap-y-2">
-      <IonRow class="ion-justify-content-center">
+      <IonRow class="flex items-center ion-justify-content-center">
+        <CryptoCityLogo class="h-8" />
         <h1 class="text-5xl font-light">
-          {{ bonusBalance }} NIM
+          {{ bonusBalance }}
         </h1>
       </IonRow>
       <IonRow class="ion-justify-content-center">
@@ -59,20 +61,23 @@ onMounted(async () => {
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">
         <IonButton fill="clear" class="font-medium" @click="showModal(ModalType.ExpiringRewards, { isOnTop: true })">
-          800 NIM expiring soon <IonIcon slot="end" :icon="chevronForwardOutline" />
+          <CryptoCityLogo slot="start" class="h-4 mr-2" />
+          800 expiring soon
+          <IonIcon slot="end" :icon="chevronForwardOutline" />
         </IonButton>
       </IonRow>
-      <!-- Earn NIM -->
+      <!-- Earn Points -->
       <IonRow>
         <p class="mb-4 ml-1 text-lg font-semibold">
-          Earn NIM
+          Earn Points!
         </p>
       </IonRow>
 
       <!-- Referral -->
       <IonRow>
+        <!-- TODO: get amount from API -->
         <TaskCard highlight large @click="showModal(ModalType.Voucher, { isOnTop: true })">
-          Invite a friend and earn up to 20€ both!
+          Invite a friend and earn up to 200 Points both!
         </TaskCard>
       </IonRow>
 

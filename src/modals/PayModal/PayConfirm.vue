@@ -10,8 +10,10 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { useModal } from '@/composables/useModal'
+import InfoIcon from '@/components/icons/info.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
-const { closeModal } = useModal()
+const { closeModal, showNotificationAlert } = useModal()
 const nav = (document.querySelector('[data-pay-nav]')) as Nav & HTMLElement
 
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
@@ -50,8 +52,15 @@ async function pay() {
   const loading = await loadingController.create({})
   loading.present()
   // TODO: Handle errors
+  // TODO: check if payment is still valid when paying directly with NIM
   await instantPayWallet.completePendingPayment(pendingPayment, isPayingWithPoints.value)
-  loading.dismiss()
+  await loading.dismiss()
+
+  const title = pendingPayment?.fiatAmount ? `You paid ${pendingPayment?.fiatAmount} ${pendingPayment?.fiatUnit}` : `You paid ${pendingPayment?.amount / 1e5} NIM`
+  const subtitle = pendingPayment?.fiatAmount ? `${pendingPayment?.amount / 1e5} NIM` : undefined
+  const extra = cashbackAmount.value ? `You get ${cashbackAmount.value / 1e5} NIM cash back in CC Points!` : undefined
+  await showNotificationAlert({ title, subtitle, extra })
+
   closeModal()
 }
 
@@ -78,41 +87,50 @@ onMounted(() => {
         <IonBackButton @click="handleBack" />
       </IonButtons>
     </template>
-    <IonGrid class="flex flex-col h-full">
-      <IonRow v-if="pendingPayment?.label" class="flex items-center gap-2 text-blue-500 ion-justify-content-center">
-        <IonIcon :icon="basket" size="large" />
-        <h1>{{ pendingPayment?.label }}</h1>
-      </IonRow>
-      <IonRow class="flex flex-col mt-16 ion-justify-content-center">
-        <p v-if="pendingPayment?.fiatAmount" class="text-6xl uppercase">
-          {{ pendingPayment?.fiatAmount }} {{ pendingPayment?.fiatUnit }}
-        </p>
-        <p class="mt-4 text-2xl text-blue-300" :class="{ 'text-6xl text-blue-500 mt-0': !pendingPayment?.fiatAmount }">
-          {{ (pendingPayment?.amount ?? 0) / 1e5 }} NIM
-        </p>
-        <p class="mt-2 text-2xl text-blue-300">
-          {{ (pendingPayment?.fee ?? 0) / 1e5 }} NIM fee
-        </p>
-      </IonRow>
-      <IonRow class="flex flex-col items-center my-auto ion-justify-content-center">
-        <IonToggle :disabled="!canUsePoints" label-placement="end" class="text-xl font-semibold text-blue-500" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
-          Use CC Points
-        </IonToggle>
-        <Transition name="slide-fade" mode="out-in">
-          <p v-if="cashbackAmount" class="mt-8 text-lg font-semibold">
-            You get {{ (cashbackAmount / 1e5).toFixed(2) }} NIM cash back in CC Points for this transaction!
+    <div class="grid w-full h-full grid-rows-3">
+      <div class="flex flex-col items-center self-start">
+        <div v-if="pendingPayment?.label" class="flex items-center justify-center gap-x-2">
+          <IonIcon :icon="basket" size="large" />
+          <h1>{{ pendingPayment?.label }}</h1>
+        </div>
+        <div class="flex flex-col justify-center mt-6 gap-y-3">
+          <div v-if="pendingPayment?.fiatAmount" class="flex items-center justify-center text-4xl uppercase gap-x-2">
+            <span>{{ pendingPayment?.fiatAmount }} {{ pendingPayment?.fiatUnit }}</span>
+            <InfoIcon class="h-5 stroke-2 opacity-70" />
+          </div>
+          <p class="text-6xl">
+            {{ (pendingPayment?.amount || 0) / 1e5 }} NIM
           </p>
+          <p class="">
+            Fees might apply &nbsp; ~{{ (pendingPayment?.fee || 0) / 1e5 }} NIM
+          </p>
+        </div>
+      </div>
+      <div class="flex items-end justify-center">
+        <IonToggle :disabled="!canUsePoints" label-placement="end" class="mb-4 text-2xl font-semibold text-blue-500" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
+          <div class="flex items-center">
+            <span class="mr-3">Use</span>
+            <CryptoCityLogo class="h-5 mr-2" />
+            <span>{{ ((pendingPayment?.amount || 0) / 1e5).toLocaleString() }}</span>
+          </div>
+        </IonToggle>
+      </div>
+      <div class="flex flex-col items-center self-end justify-between w-full h-full">
+        <Transition name="slide-fade" mode="out-in">
+          <!-- TODO: use component< -->
+          <div v-if="cashbackAmount" class="flex items-start px-2 py-2 mt-4 mb-auto text-lg border border-blue-500 rounded-md">
+            <InfoIcon class="h-6 stroke-2" />
+            <span>You get {{ (cashbackAmount / 1e5).toFixed(2) }} NIM cash back in CC Points for this transaction!</span>
+          </div>
         </Transition>
-      </IonRow>
-      <IonRow class="relative w-3/5 mx-auto mt-auto min-w-fit ion-justify-content-center">
         <!-- TODO: how to display this? -->
-        <p v-if="paymentDetails?.reason" class="absolute w-[90vw] text-red-500 -top-6">
+        <p v-if="paymentDetails?.reason" class="text-red-500 -top-6">
           {{ paymentDetails?.reason }}
         </p>
-        <IonButton size="large" expand="block" class="w-full" :disabled="!isPaymentValid" @click="() => pay()">
+        <IonButton size="large" expand="block" class="w-full mt-auto" :disabled="!isPaymentValid" @click="() => pay()">
           Pay
         </IonButton>
-      </IonRow>
-    </IonGrid>
+      </div>
+    </div>
   </ModalTemplate>
 </template>

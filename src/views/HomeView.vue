@@ -6,6 +6,7 @@ import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { computedAsync } from '@vueuse/core'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -13,6 +14,7 @@ import { FiatHandler } from '@/lib/fiat-handler'
 import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import TransactionCard from '@/components/TransactionCard.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -27,6 +29,7 @@ const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
 const isPhoneRegistered = bonusWallet.isRegistered()
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
+const pointsBalance = computedAsync(async () => await bonusWallet.getParticipantBalance(), 0)
 // TODO: get this from API
 const bonusAmount = 5
 // TODO: get this from somewhere
@@ -165,9 +168,11 @@ onMounted(async () => {
           <IonMenuButton :auto-hide="false" @click="showModal(ModalType.Menu, { isSmall: true })" />
         </IonButtons>
         <IonButtons v-if="isPhoneRegistered" slot="end">
-          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
-            Earn CC Points
-            <IonIcon slot="end" :icon="chevronForward" />
+          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-end: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
+            {{
+              isPhoneRegistered ? pointsBalance / 1e5 : 'Earn CC Points'
+            }}
+            <CryptoCityLogo slot="start" class="h-4 mr-2 text-white" />
           </IonButton>
         </IonButtons>
       </IonToolbar>
@@ -213,7 +218,7 @@ onMounted(async () => {
         <!-- Referral -->
         <IonRow class="mb-8">
           <TaskCard highlight large @click="isPhoneRegistered ? showModal(ModalType.Voucher) : showModal(ModalType.NewPhone)">
-            Invite a friend and earn up to 20€ both!
+            Invite a friend and earn up to 200 Points both!
           </TaskCard>
         </IonRow>
 
