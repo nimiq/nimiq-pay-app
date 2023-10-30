@@ -1,7 +1,8 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
-import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+// import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite';
 import App from './App.vue'
 import router from './router'
 
@@ -37,9 +38,11 @@ import { NimiqWallet } from '@/lib/nimiq-wallet'
 import { InstantPayClient } from '@/lib/instant-pay-client'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 
-applyPolyfills().then(() => {
-  jeepSqlite(window)
-})
+// Doesn't work when building for production
+// applyPolyfills().then(() => {
+//   jeepSqlite(window)
+// })
+customElements.define('jeep-sqlite', JeepSqlite);
 
 window.addEventListener('DOMContentLoaded', async () => {
   const storageManager = new StorageManager()
