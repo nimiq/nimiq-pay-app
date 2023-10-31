@@ -43,7 +43,7 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      Invite a friend and both earn 5€ in CC Points
+      Invite a friend and both earn {{ voucherCode?.reward / 1e5 }} NIM in CC Points
     </template>
     <div class="self-start">
       <p>Lorem ipsum dolor sit amet, consectetur adipiscing.</p>
@@ -54,8 +54,10 @@ function handleShare() {
       <p v-if="!voucherCode" class="text-4xl font-semibold">
         Loading...
       </p>
-      <p v-else class="text-4xl font-semibold">
+      <p v-else class="flex flex-col text-4xl font-semibold">
         {{ voucherCode?.id }}
+        <!-- TODO: replace 10 with data from API -->
+        <span class="mt-4 text-lg">{{ voucherCode?.claims_remaining }} out of 10 still claimable</span>
       </p>
     </Transition>
     <div class="self-end w-full">

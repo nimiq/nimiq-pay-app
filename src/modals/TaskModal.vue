@@ -7,6 +7,7 @@ import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 const props = defineProps({
   task: {
@@ -93,16 +94,20 @@ async function handleSubmit() {
     <template #title>
       {{ task.description }}
     </template>
-    <div class="self-stretch">
-      <p class="text-center" :class="{ 'mb-8': type !== 'yt-video' }">
-        You earn
-        <br>
-        <span class="text-4xl">{{ task.reward_amount / 1e5 }} NIM</span>
-      </p>
+    <div class="self-stretch max-w-[90vw]">
+      <div class="text-center" :class="{ 'mb-8': type !== 'yt-video' }">
+        <span>You earn</span>
+        <div class="flex items-center justify-center mt-2">
+          <CryptoCityLogo class="h-8 mr-2" />
+          <span class="text-4xl">{{ task.reward_amount / 1e5 }}</span>
+        </div>
+      </div>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
-          {{ option }}
+          <p class="text-left whitespace-normal">
+            {{ option }}
+          </p>
         </IonRadio>
       </IonRadioGroup>
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
