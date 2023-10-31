@@ -55,6 +55,7 @@ const upgrades: { version: number; statements: string[] }[] = [
 interface InternalStorage {
   pin?: string
   isBackupDone?: boolean
+  isSetupDone?: boolean
 }
 
 const InternalStorageKey = { name: '_' } as StorageKey<InternalStorage>
@@ -314,6 +315,11 @@ export class StorageManager {
     this.newPin = pin
     await this.unlock(pin)
     this.newPin = undefined
+    await this.update(InternalStorageKey, storage => storage.isSetupDone = true)
+  }
+
+  async isSetupDone(): Promise<boolean> {
+    return !!(await this.get(InternalStorageKey)).isSetupDone
   }
 
   async exists() {

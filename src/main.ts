@@ -1,8 +1,9 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
+
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
-import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite';
+import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 import App from './App.vue'
 import router from './router'
 
@@ -42,7 +43,7 @@ import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 // applyPolyfills().then(() => {
 //   jeepSqlite(window)
 // })
-customElements.define('jeep-sqlite', JeepSqlite);
+customElements.define('jeep-sqlite', JeepSqlite)
 
 window.addEventListener('DOMContentLoaded', async () => {
   const storageManager = new StorageManager()
@@ -69,7 +70,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await router.isReady()
 
   if (router.currentRoute.value.path === '/') {
-    if (await storageManager.exists())
+    if (await storageManager.exists() && await storageManager.isSetupDone())
       router.push('/pin')
     else
       router.push('/setup')
