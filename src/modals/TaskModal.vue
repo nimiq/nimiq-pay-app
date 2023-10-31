@@ -94,7 +94,7 @@ async function handleSubmit() {
     <template #title>
       {{ task.description }}
     </template>
-    <div class="self-stretch max-w-[90vw]">
+    <div class="self-stretch max-w-[98vw]">
       <div class="text-center" :class="{ 'mb-8': type !== 'yt-video' }">
         <span>You earn</span>
         <div class="flex items-center justify-center mt-2">

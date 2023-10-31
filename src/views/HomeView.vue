@@ -31,7 +31,7 @@ const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
 const pointsBalance = computedAsync(async () => await bonusWallet.getParticipantBalance(), 0)
 // TODO: get this from API
-const bonusAmount = 5
+const bonusAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
@@ -101,7 +101,7 @@ watchEffect(async () => {
   console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
-      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} €`, extra: `${(bonusAmount / fiatHandler.price.value).toFixed(2)} NIM` })
+      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} CC Points`})
     }, 750)
   }
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
