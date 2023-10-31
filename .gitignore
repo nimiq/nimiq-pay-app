@@ -33,3 +33,6 @@ npm-debug.log*
 /www
 
 android/.idea
+
+# Local Netlify folder
+.netlify
