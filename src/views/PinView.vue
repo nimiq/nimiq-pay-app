@@ -15,23 +15,25 @@ watch(pin, (newValue) => {
     handleSubmit()
 })
 
-function handleSubmit() {
+async function handleSubmit() {
   if (pin.value.length < 4)
     return false
-  storageManager.unlock(pin.value)
+  await storageManager.unlock(pin.value)
+  continueToApp()
   return false
 }
 
 function shown() {
   setTimeout(() => {
     pinField.value?.focus()
+    Keyboard.show()
   }, 200)
-  Keyboard.show()
-  continueToApp()
 }
 
 async function continueToApp() {
   await storageManager.awaitUnlocked()
+  pinField.value?.blur()
+  Keyboard.hide()
   router.replace('/app')
 }
 
