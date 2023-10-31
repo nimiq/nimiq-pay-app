@@ -47,7 +47,14 @@ function handleBlur() {
   pinField.value?.focus()
 }
 
-onMounted(shown)
+onMounted(async () => {
+  if (!(await storageManager.exists()) || !(await storageManager.isSetupDone())) {
+    await router.replace('/setup')
+    return
+  }
+
+  shown()
+})
 </script>
 
 <template>
