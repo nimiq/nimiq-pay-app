@@ -71,12 +71,18 @@ export class InstantPayWallet {
   private async topUp(address: Address) {
     if (!this.valid.value && this.validityStart.value !== 0 && this.validityEnd.value !== 0)
       return
-    if (this.balanceRaw.value !== 0) {
-      console.log('Wallet not empty, recovering')
-      this.recover()
-      // Wait for recover tx to be mined
-      return
+
+    const instantWallet = await this.getWallet()
+    if (instantWallet) {
+      const instantAccount = await this.nimiqNetworkClient.getAccount(instantWallet.address)
+      if (instantAccount.balance !== 0) {
+        console.log('Wallet not empty, recovering')
+        this.recover()
+        // Wait for recover tx to be mined
+        return
+      }
     }
+
     console.log('Wallet empty, depositing')
     const client = await this.nimiqNetworkClient.getClient()
     const account = await client.getAccount(address)
