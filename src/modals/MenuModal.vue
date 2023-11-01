@@ -26,7 +26,7 @@ const { showModal, closeModal } = useModal()
     <IonItem button :detail="false" @click="showModal(ModalType.TopUp, { isSmall: true })">
       Top Up
     </IonItem>
-    <IonItem button :detail="false">
+    <IonItem button :detail="false" @click="showModal(ModalType.Withdraw)">
       Withdraw
     </IonItem>
 
@@ -44,7 +44,7 @@ const { showModal, closeModal } = useModal()
 
     <ItemDivider />
 
-    <IonItem button :detail="false">
+    <IonItem button :detail="false" @click="showModal(ModalType.Settings, { isOnTop: true })">
       Settings
     </IonItem>
     <IonItem button :detail="false" @click="showModal(ModalType.Backup)">

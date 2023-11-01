@@ -14,7 +14,7 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
       <IonRow v-for="i in 5" :key="i" class="flex justify-between w-full text-blue-500">
         <span class="text-xl">July</span>
         <div class="flex flex-col text-end">
-          <span class="text-lg">3,44 €</span>
+          <span class="text-lg">$3,44</span>
           <div class="flex items-center gap-x-1">
             <CryptoCityLogo class="h-3" />
             <span class="text-sm text-blue-300">4000</span>

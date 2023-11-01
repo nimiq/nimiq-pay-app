@@ -1,0 +1,78 @@
+<script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { inject, ref } from 'vue'
+import type { Ref } from 'vue'
+import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { useModal } from '@/composables/useModal'
+import ModalTemplate from '@/components/ModalTemplate.vue'
+
+const { closeModal, showNotificationAlert } = useModal()
+const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
+const amount: Ref<number | undefined> = ref()
+const address = ref('')
+
+async function withdraw() {
+  if (!amount.value || !address.value)
+    return
+  if (amount.value > instantPayWallet.balanceRaw.value)
+    alert('Insufficient funds')
+  // TODO: handle invalid address
+  const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)
+  await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'Nimiq Pay App Withdraw' })
+  const payment = instantPayWallet.getPendingPayment()
+  // TODO: handle null payment
+  if (payment === null)
+    return
+  await instantPayWallet.completePendingPayment(payment)
+  await showNotificationAlert({ title: `You withdrew ${amount.value} NIM` })
+  closeModal()
+}
+</script>
+
+<template>
+  <ModalTemplate>
+    <template #title>
+      Withdraw
+    </template>
+    <div class="grid items-center h-full grid-rows-3">
+      <div class="relative text-4xl rounded-md">
+        <input v-model="amount" type="number" class="text-center" placeholder="0.00">
+        <span class="absolute inset-y-0 flex items-center right-2">
+          NIM
+        </span>
+      </div>
+      <div class="text-3xl">
+        <input :value="address" type="text" class="uppercase !px-4" placeholder="NQ..." @input="address = ($event.target as HTMLTextAreaElement).value.toUpperCase()">
+      </div>
+      <div class="self-end w-full">
+        <div class="flex justify-between mb-8 gap-x-2">
+          <button @click="amount = 250">
+            250 NIM
+          </button>
+          <button @click="amount = 500">
+            500 NIM
+          </button>
+          <button @click="amount = 1000">
+            1000 NIM
+          </button>
+          <button @click="amount = instantPayWallet.balance.value">
+            All
+          </button>
+        </div>
+        <IonButton expand="block" :disabled="!amount || !address" @click="withdraw">
+          Confirm
+        </IonButton>
+      </div>
+    </div>
+  </ModalTemplate>
+</template>
+
+<style scoped>
+input {
+  @apply w-full border-0 py-1.5 pl-4 pr-20 ring-1 outline-none ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gray-400
+}
+
+button {
+  @apply px-2 py-2 rounded-md bg-blue-100 text-blue-500 font-semibold w-1/4
+}
+</style>

@@ -56,7 +56,7 @@ onMounted(async () => {
       </IonRow>
       <IonRow class="ion-justify-content-center">
         <p class="">
-          {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }} €
+          $ {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }}
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">

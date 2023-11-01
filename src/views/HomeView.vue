@@ -35,8 +35,8 @@ const bonusAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
-    title: 'Notification Card 1',
-    action: () => console.log('Notification Card 1 clicked'),
+    title: 'Buy NIM with Credit Card',
+    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
   },
   {
     title: 'Notification Card 2',
@@ -101,7 +101,7 @@ watchEffect(async () => {
   console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
-      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} CC Points`})
+      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} CC Points` })
     }, 750)
   }
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {

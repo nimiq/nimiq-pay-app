@@ -21,10 +21,12 @@ export enum ModalType {
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Rewards = '@/modals/RewardsModal.vue',
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
   Voucher = '@/modals/VoucherModal.vue',
+  Withdraw = '@/modals/WithdrawModal.vue',
 }
 
 function _useModal() {
@@ -88,6 +90,9 @@ function _useModal() {
       case ModalType.RewardsIntro:
         component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
         break
+      case ModalType.Settings:
+        component = defineAsyncComponent(() => import(ModalType.Settings))
+        break
       case ModalType.Task:
         component = defineAsyncComponent(() => import(ModalType.Task))
         break
@@ -99,6 +104,9 @@ function _useModal() {
         break
       case ModalType.Voucher:
         component = defineAsyncComponent(() => import(ModalType.Voucher))
+        break
+      case ModalType.Withdraw:
+        component = defineAsyncComponent(() => import(ModalType.Withdraw))
         break
       case ModalType.Dev:
         if (import.meta.env.MODE === 'development')
