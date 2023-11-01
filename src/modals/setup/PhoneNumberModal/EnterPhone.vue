@@ -72,22 +72,22 @@ onMounted(focusInput)
       Verify your phone number
     </template>
     <template #subtitle>
-      It's so easy. Just verify your phone number.
+      It's so easy.
+      <br>
+      Just verify your phone number.
     </template>
-    <div class="self-start mt-8">
-      <form @submit.prevent="() => alert?.present()">
-        <input
-          ref="phoneInput" v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 my-2 phone"
-          size="16"
-        >
-      </form>
-      <p class="text-md">
+    <div class="self-start w-full mt-8">
+      <input
+        ref="phoneInput" v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 px-4 my-2 phone"
+        size="16"
+      >
+      <p class="text-sm font-semibold text-space/50">
         You get an SMS. Standard rates may apply.
       </p>
-      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-xl font-bold" @click="handleClose">
+      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-base font-semibold text-sky" @click="handleClose">
         Skip
       </IonButton>
-      <IonButton id="present-alert" size="small" class="mx-4 mt-6 text-xl font-bold" :disabled="phoneNumber.length < 4">
+      <IonButton id="present-alert" size="small" class="mx-4 mt-6 text-base font-semibold" :disabled="phoneNumber.length < 4">
         Verify
       </IonButton>
     </div>

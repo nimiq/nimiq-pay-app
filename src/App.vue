@@ -34,19 +34,19 @@ useRouter().afterEach(async () => {
 </template>
 
 <style>
+/* TODO: move this to variables or something */
 ion-toolbar {
   --background: transparent;
 }
 
 input.pin {
-  text-align: center;
   font-size: 40px;
-  font-family: monospace;
+  letter-spacing: clamp(10px, 8vw, 10rem);
+  @apply w-full border-0 outline-none text-center caret-transparent ml-8;
 }
 
 input.phone {
   font-size: 20px;
-  font-family: monospace;
 }
 
 ion-modal ion-toolbar {

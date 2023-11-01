@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
-import { ref } from 'vue'
+import { inject, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { StorageManager } from '@/lib/storage-manager'
 import { ModalType, useModal } from '@/composables/useModal'
 import CircleFilled from '@/components/icons/circle-filled.vue'
 
 const { showModal } = useModal()
+const router = useRouter()
+const storageManager = inject(StorageManager.KEY) as StorageManager
 const page = ref()
+
+onMounted(async () => {
+  console.log('InitialSetupView mounted', await storageManager.isSetupDone())
+  if (await storageManager.isSetupDone())
+    router.replace('/app')
+})
 </script>
 
 <template>

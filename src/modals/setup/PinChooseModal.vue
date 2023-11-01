@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue'
-import { IonButton, IonButtons, IonIcon} from '@ionic/vue'
+import { IonButton, IonButtons, IonIcon } from '@ionic/vue'
 import { chevronBackOutline } from 'ionicons/icons'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { StorageManager } from '@/lib/storage-manager'
@@ -72,11 +72,9 @@ onMounted(() => {
       <br>
       No personal data needed.
     </template>
-    <form class="self-start mt-[30%]" @submit.prevent>
-      <input
-        ref="pinField" v-model="pin" type="password" inputmode="numeric" class="pin" pattern="[0-9]*" minlength="4"
-        maxlength="4" size="4" placeholder="••••" autofocus="true"
-      >
-    </form>
+    <input
+      ref="pinField" v-model="pin" type="password" inputmode="numeric" class="pin self-start mt-[30%]" pattern="[0-9]*" minlength="4"
+      maxlength="4" size="4" placeholder="••••" autofocus="true"
+    >
   </ModalTemplate>
 </template>

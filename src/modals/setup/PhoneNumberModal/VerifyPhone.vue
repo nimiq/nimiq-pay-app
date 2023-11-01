@@ -84,27 +84,25 @@ onMounted(() => {
     </IonToolbar>
   </IonHeader>
   <IonContent class="text-center ion-padding">
+    <!-- TODO: redo this -->
     <IonGrid class="mx-6">
-      <h1 class="mb-4">
+      <h1 class="mb-4 text-2xl font-bold">
         Confirm your phone number
       </h1>
-      <p class="mb-8 text-xl font-semibold">
+      <p class="mb-8 text-base font-normal">
         We've sent you a code, please confirm.
       </p>
-      <form @submit.prevent>
-        <input
-          ref="codeField" v-model="code" type="number" inputmode="numeric" pattern="[0-9]*" minlength="8"
-          maxlength="8" class="w-full p-1 my-2 pin" autofocus="true"
-        >
-      </form>
-      <IonGrid class="flex items-center justify-between">
-        <IonButton fill="clear" class="text-xl font-bold" @click="handleResendRequest">
-          Resend Code
-        </IonButton>
-        <IonButton size="small" class="text-xl font-bold" :disabled="(code || '').toString().length !== 8" @click="handleVerify">
-          Verify
-        </IonButton>
-      </IonGrid>
+      <input
+        ref="codeField" type="number" inputmode="numeric" pattern="[0-9]*" minlength="8"
+        maxlength="8" class="w-full p-1 my-10 text-3xl tracking-widest text-center" autofocus="true"
+        :value="code" @input="code = Number(($event.target as HTMLTextAreaElement).value)"
+      >
+      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-base font-semibold text-sky" @click="handleResendRequest">
+        Resend
+      </IonButton>
+      <IonButton size="small" class="mx-4 mt-6 text-base font-semibold" :disabled="(code || '').toString().length !== 8" @click="handleVerify">
+        Verify
+      </IonButton>
     </IonGrid>
   </IonContent>
 </template>

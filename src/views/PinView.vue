@@ -38,10 +38,10 @@ async function continueToApp() {
 }
 
 // Prevent the keyboard from hiding
-Keyboard.addListener('keyboardDidHide', () => {
-  pinField.value?.blur()
-  pinField.value?.focus()
-})
+// Keyboard.addListener('keyboardDidHide', () => {
+//   pinField.value?.blur()
+//   pinField.value?.focus()
+// })
 
 function handleBlur() {
   pinField.value?.focus()
