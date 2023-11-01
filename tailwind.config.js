@@ -2,7 +2,9 @@
 export default {
   content: ['index.html', './src/**/*.{vue,ts}'],
   theme: {
-    extend: {},
+    extend: {
+      ...require('tailwindcss-nimiq-theme'),
+    },
   },
   plugins: [
     function ({ addComponents }) {
