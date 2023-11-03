@@ -165,7 +165,7 @@ onMounted(async () => {
           </p>
         </div>
         <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blu)" size="small" @click="showModal(ModalType.Backup)">
+          <IonButton fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)" size="small" @click="showModal(ModalType.Backup)">
             Recovery Words
           </IonButton>
         </IonButtons>
