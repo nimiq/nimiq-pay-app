@@ -165,7 +165,7 @@ onMounted(async () => {
           </p>
         </div>
         <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold normal-case" size="small" @click="showModal(ModalType.Backup)">
+          <IonButton fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blu)" size="small" @click="showModal(ModalType.Backup)">
             Recovery Words
           </IonButton>
         </IonButtons>
@@ -173,10 +173,7 @@ onMounted(async () => {
       <IonToolbar class="px-2">
         <IonButtons slot="start">
           <IonButton
-            @click="() => {
-              console.log('Menu clicked')
-              showModal(ModalType.Menu, { isSmall: true })
-            }"
+            @click="showModal(ModalType.Menu, { isSmall: true })"
           >
             <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>

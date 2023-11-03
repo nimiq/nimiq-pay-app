@@ -14,7 +14,7 @@ const rewardAmount = ref(0)
 watch(referralCode, async (newValue) => {
   if (newValue.length === 7) {
     try {
-      const { claims_remaining, reward } = await bonusWallet.getReferralInfo(referralCode.value)
+      const { claims_remaining, reward } = await bonusWallet.getVoucherInfo(referralCode.value)
       if (claims_remaining === 0) { throw new Error('This promo code has been claimed too many times') }
       else if (claims_remaining > 0) {
         codeField.value.blur()

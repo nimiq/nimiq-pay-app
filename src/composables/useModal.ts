@@ -109,8 +109,8 @@ function _useModal() {
         component = defineAsyncComponent(() => import(ModalType.Withdraw))
         break
       case ModalType.Dev:
-        if (import.meta.env.MODE === 'development')
-          component = defineAsyncComponent(() => import(ModalType.Dev))
+        // if (import.meta.env.MODE === 'development')
+        component = defineAsyncComponent(() => import(ModalType.Dev))
         break
     }
 
