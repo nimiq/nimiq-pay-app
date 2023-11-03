@@ -8,10 +8,10 @@ import TabTemplate from './TabTemplate.vue'
       Pay with CC Points
     </template>
     <template #subtitle>
-      Activate <span class="font-extrabold">Use CC Points</span> when making your purchase
+      Pay with CC Points instead of NIM wherever they're accepted.
     </template>
     <template #body>
-      <div class="w-full bg-blue-100 h-3/4" />
+      <div class="w-full bg-space-space-300 h-3/4" />
     </template>
   </TabTemplate>
 </template>

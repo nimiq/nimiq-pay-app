@@ -24,7 +24,11 @@ const { isSwiping, direction, lengthX } = useSwipe(swipeable, { threshold: 1 })
 const maxSwipe = 40
 
 async function handleGoTo() {
-  await showModal(ModalType.Rewards)
+  const activeTab = await getActiveTab()
+  if (tabList[activeTab + 1])
+    nav.push(tabList[activeTab + 1], undefined, { mode: 'ios' })
+  else
+    await showModal(ModalType.Rewards)
 }
 
 async function getActiveTab() {
@@ -62,13 +66,13 @@ watch(isSwiping, async () => {
     <IonHeader class="ion-no-border">
       <IonToolbar />
     </IonHeader>
-    <IonContent ref="swipeable" class="text-center ion-padding" :style="{ right: `${smoothSpring !== null ? smoothSpring : Math.sign(lengthX) * Math.min(Math.abs(lengthX), maxSwipe)}px` }">
+    <IonContent ref="swipeable" class="text-center" :style="{ right: `${smoothSpring !== null ? smoothSpring : Math.sign(lengthX) * Math.min(Math.abs(lengthX), maxSwipe)}px` }">
       <IonGrid class="flex flex-col h-full gap-4 px-4 pb-4">
         <IonRow class="ion-justify-content-center">
-          <h1 class="mb-2">
+          <h1 class="mb-4 text-2xl font-bold">
             <slot name="title" />
           </h1>
-          <p class="px-8 text-lg font-semibold">
+          <p class="px-3 text-base text-space/60">
             <slot name="subtitle" />
           </p>
         </IonRow>
@@ -76,7 +80,7 @@ watch(isSwiping, async () => {
           <slot name="body" />
         </IonRow>
         <IonRow>
-          <IonButton expand="block" class="w-full font-bold" @click="handleGoTo">
+          <IonButton expand="block" class="w-full text-base font-bold" @click="handleGoTo">
             Go to CC Points
           </IonButton>
         </IonRow>

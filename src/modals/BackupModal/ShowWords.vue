@@ -24,14 +24,16 @@ const words = asyncComputed(async () => {
       </IonButtons>
     </template>
     <template #title>
-      Write these 12 Words on Paper
+      Copy the words
     </template>
     <template #subtitle>
-      Anyone with these words can access your account! Keep them safe.
+      Write the words below on a piece of paper in the right order. 
+      <br>
+      Keep it safe and never share it!
     </template>
     <MnemonicInput :recovery-words="words" />
-    <IonButton class="self-end w-full mb-2 text-lg font-bold" @click="nav.push(markRaw(ValidateWords))">
-      Next
+    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">
+      Continue
     </IonButton>
   </ModalTemplate>
 </template>

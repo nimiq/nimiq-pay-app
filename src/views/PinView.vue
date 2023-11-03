@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, ref, watch } from 'vue'
+import { inject, onMounted, onUnmounted, ref, watch } from 'vue'
 import { IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
 import { Keyboard } from '@capacitor/keyboard'
@@ -26,7 +26,7 @@ async function handleSubmit() {
 function shown() {
   setTimeout(() => {
     pinField.value?.focus()
-    Keyboard.show()
+    // Keyboard.show()
   }, 200)
 }
 
@@ -55,28 +55,31 @@ onMounted(async () => {
 
   shown()
 })
+
+onUnmounted(() => {
+  pinField.value?.blur()
+  Keyboard.hide()
+})
 </script>
 
 <template>
-  <IonPage>
+  <IonPage class="bg-[#F8F8F8]">
     <IonHeader class="ion-no-border">
       <IonToolbar />
     </IonHeader>
-    <IonContent class="text-center ion-padding">
+    <IonContent class="text-center ion-padding" style="--background: #F8F8F8">
       <IonGrid class="flex flex-col h-full">
         <IonRow class="ion-justify-content-center">
           <h1>Enter PIN</h1>
         </IonRow>
         <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
-          <form @submit.prevent="handleSubmit">
-            <input
-              ref="pinField" v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4"
-              maxlength="4" size="4" placeholder="••••" class="pin"
-              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-              autofocus="true"
-              @blur="handleBlur"
-            >
-          </form>
+          <input
+            ref="pinField" v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4"
+            maxlength="4" size="4" placeholder="••••" class="pin bg-[#F8F8F8]"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            autofocus="true"
+            @blur="handleBlur"
+          >
         </IonRow>
       </IonGrid>
     </IonContent>

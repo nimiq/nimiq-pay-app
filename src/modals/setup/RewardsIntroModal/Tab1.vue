@@ -5,13 +5,13 @@ import TabTemplate from './TabTemplate.vue'
 <template>
   <TabTemplate>
     <template #title>
-      What's CC Points?
+      Welcome to Crypto City Points
     </template>
     <template #subtitle>
-      Rewards you can use to pay in many places
+      Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.
     </template>
     <template #body>
-      <div class="w-full bg-blue-100 h-3/4" />
+      <div class="w-full bg-space-space-300 h-3/4" />
     </template>
   </TabTemplate>
 </template>

@@ -12,12 +12,17 @@ function handleClose() {
 </script>
 
 <template>
-  <div class="p-4 pr-8 text-xl font-bold text-blue-600 bg-blue-100 rounded-lg min-h-[10rem] relative ion-activatable ripple-parent">
+  <div class="p-4 text-xl rounded-md min-h-[10rem] relative ion-activatable ripple-parent bg-white shadow-card">
     <!-- Padding to prevent miss click in card when wanting to click on close button -->
-    <IonIcon :icon="close" class="absolute pb-2 pl-2 top-2 right-3" @click.stop="handleClose" />
-    <p class="w-[50vw] snap-start">
-      <slot />
-    </p>
+    <IonIcon :icon="close" class="absolute pb-2 pl-2 top-2 right-2 text-space/40" @click.stop="handleClose" />
+    <div class="w-[50vw] snap-start">
+      <span class="text-lg font-bold text-sky">
+        <slot />
+      </span>
+      <p class="mt-2 text-base text-space/60">
+        <slot name="subtitle" />
+      </p>
+    </div>
     <IonRippleEffect />
   </div>
 </template>

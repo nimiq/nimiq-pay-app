@@ -43,29 +43,27 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      Invite a friend and both earn {{ voucherCode?.reward / 1e5 }} NIM in CC Points
+      Invite a friend and get {{ voucherCode?.reward / 1e5 }} NIM each
     </template>
-    <div class="self-start">
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing.</p>
-      <br>
-      <p>Lorem ipsum dolor sit amet, consectetur adipiscing. Lorem ipsum dolor sit amet, consectetur adipiscing.</p>
-    </div>
+    <p class="self-start text-space/60">
+      Crypto adoption needs you! Bring a friend and you both get {{ voucherCode?.reward / 1e5 }} NIM in CC Points.
+    </p>
     <Transition name="slide-fade" mode="out-in">
       <p v-if="!voucherCode" class="text-4xl font-semibold">
         Loading...
       </p>
-      <p v-else class="flex flex-col text-4xl font-semibold">
+      <p v-else class="flex flex-col text-3xl font-semibold">
         {{ voucherCode?.id }}
         <!-- TODO: replace 10 with data from API -->
-        <span class="mt-4 text-lg">{{ voucherCode?.claims_remaining }} out of 10 still claimable</span>
+        <span class="mt-2 text-sm text-space/60">{{ voucherCode?.claims_remaining < 10 ? 'Only' : '' }} {{ voucherCode?.claims_remaining }} out of 10 remaining</span>
       </p>
     </Transition>
-    <div class="self-end w-full">
-      <IonButton fill="clear" class="mb-4 text-base" @click="handleCopy">
-        Copy code
-      </IonButton>
+    <div class="flex flex-col self-end w-full">
       <IonButton v-if="canShare" expand="block" strong :disabled="!voucherCode" @click="handleShare">
-        Share Nimiq Pay App and code
+        Invite a Friend
+      </IonButton>
+      <IonButton fill="clear" class="text-base normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
+        Copy code
       </IonButton>
     </div>
   </ModalTemplate>

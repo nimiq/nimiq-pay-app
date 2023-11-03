@@ -74,6 +74,38 @@ http://ionicframework.com/docs/theming/ */
   --ion-color-light-contrast-rgb: 0, 0, 0;
   --ion-color-light-shade: #d7d8da;
   --ion-color-light-tint: #f5f6f9;
+
+  /* Nimiq Colors */
+  --colors-gray: #f8f8f8;
+  --colors-lightgray: #fbfbfb;
+  --colors-white: white;
+
+  --colors-darkblue: #1f2348;
+  --colors-darkblue-6: #ededf0;
+  --colors-darkblue-10: #e9e9ed;
+  --colors-darkblue-15: #cdcdd5;
+  --colors-darkblue-20: #d2d3da;
+  --colors-darkblue-25: #c7c8d1;
+  --colors-darkblue-30: #bcbdc8;
+  --colors-darkblue-40: #a5a7b6;
+  --colors-darkblue-50: #8f91a3;
+  --colors-darkblue-60: #797b91;
+  --colors-darkblue-80: #4c4f6d;
+  --colors-darkblue-90: #35395a;
+  --colors-darkblue-94: #2c3053;
+
+  --colors-blue: #0582ca;
+  --colors-blue-10: #e6f3fa;
+  --colors-blue-60: #69b4df;
+
+  --colors-darkblue-900: #0d102c;
+  --colors-darkblue-1000: #12163c;
+
+  --colors-yellow: #E9B213;
+
+  --radial-gradient-light-blue: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%);
+  --radial-gradient-green: radial-gradient(100% 100% at 100% 100%, #41A38E 0%, #21BCA5 100%);
+  --radial-gradient-orange: radial-gradient(100% 100% at 100% 100%, #FD6216 0%, #FC8701 100%);
 }
 
 /* TODO: Temp disable dark mode */
@@ -314,3 +346,4 @@ body {
       z-index: -100;
     }
 }
+

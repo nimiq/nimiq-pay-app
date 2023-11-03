@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, ref, watch } from 'vue'
+import { inject, onMounted, ref, watchEffect } from 'vue'
 import type { Ref } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { IonBackButton, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
@@ -16,8 +16,8 @@ const prefill = bonusWallet.getPrefillAccessCode()
 const code: Ref<number | null> = ref(Number(prefill))
 const nav = (document.querySelector('[data-phone-nav]')) as Nav & HTMLElement
 
-watch(code, (newValue) => {
-  if (newValue?.toString().length === 8)
+watchEffect(() => {
+  if (code.value?.toString().length === 8)
     handleVerify()
 })
 
@@ -89,7 +89,7 @@ onMounted(() => {
       <h1 class="mb-4 text-2xl font-bold">
         Confirm your phone number
       </h1>
-      <p class="mb-8 text-base font-normal">
+      <p class="mb-8 text-base text-space/60">
         We've sent you a code, please confirm.
       </p>
       <input
@@ -97,11 +97,8 @@ onMounted(() => {
         maxlength="8" class="w-full p-1 my-10 text-3xl tracking-widest text-center" autofocus="true"
         :value="code" @input="code = Number(($event.target as HTMLTextAreaElement).value)"
       >
-      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-base font-semibold text-sky" @click="handleResendRequest">
+      <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" @click="handleResendRequest">
         Resend
-      </IonButton>
-      <IonButton size="small" class="mx-4 mt-6 text-base font-semibold" :disabled="(code || '').toString().length !== 8" @click="handleVerify">
-        Verify
       </IonButton>
     </IonGrid>
   </IonContent>

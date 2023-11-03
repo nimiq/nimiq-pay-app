@@ -10,18 +10,16 @@ const { closeModal } = useModal()
   <ModalTemplate :close-all="true">
     <template #leftButton>
       <IonButtons slot="start">
-        <IonBackButton default-href="/" @click.prevent="closeModal" />
+        <IonBackButton default-href="/" @click.prevent="closeModal()" />
       </IonButtons>
     </template>
     <div class="w-full h-full">
-      <div class="font-semibold">
-        <p class="text-left uppercase">
-          Settings
-        </p>
-      </div>
-      <IonList lines="none">
+      <p class="text-sm font-bold text-left uppercase text-space/60">
+        Settings
+      </p>
+      <IonList lines="none" class="mt-4">
         <IonItem>
-          <IonSelect label="Language" placeholder="English">
+          <IonSelect label="Language" placeholder="English" class="text-lg font-semibold">
             <IonSelectOption value="english">
               English
             </IonSelectOption>

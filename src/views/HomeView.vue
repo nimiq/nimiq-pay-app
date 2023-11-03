@@ -15,6 +15,7 @@ import { ModalType, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import TransactionCard from '@/components/TransactionCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import MenuIcon from '@/components/icons/menu.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -30,8 +31,9 @@ const isPhoneRegistered = bonusWallet.isRegistered()
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
 const pointsBalance = computedAsync(async () => await bonusWallet.getParticipantBalance(), 0)
+const isReferralCardShown = ref(true)
 // TODO: get this from API
-const bonusAmount = 10
+const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
@@ -40,18 +42,22 @@ const notificationArray = ref([
   },
   {
     title: 'Notification Card 2',
+    subtitle: 'Subtitle',
     action: () => console.log('Notification Card 2 clicked'),
   },
   {
     title: 'Notification Card 3',
+    subtitle: 'Subtitle',
     action: () => console.log('Notification Card 3 clicked'),
   },
   {
     title: 'Notification Card 4',
+    subtitle: 'Subtitle',
     action: () => console.log('Notification Card 4 clicked'),
   },
   {
     title: 'Notification Card 5',
+    subtitle: 'Subtitle',
     action: () => console.log('Notification Card 5 clicked'),
   },
 ])
@@ -84,7 +90,7 @@ if (import.meta.env.DEV) {
 }
 
 watchEffect(async () => {
-  const verifyNumberTitle = 'Verify your phone number to get cashback and earn rewards'
+  const verifyNumberTitle = 'Verify your phone number'
   const claimRewardTitle = 'You have 5€ reward to claim!'
   // Remove custom notifications and add them later if necessary
   notificationArray.value = notificationArray.value.filter((notification) => {
@@ -101,12 +107,13 @@ watchEffect(async () => {
   console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
-      showNotificationAlert({ title: 'You got CC Points!', message: `${bonusAmount} CC Points` })
+      showNotificationAlert({ title: 'You got CC Points!', message: `${referralRewardAmount} CC Points` })
     }, 750)
   }
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
     notificationArray.value.unshift({
       title: verifyNumberTitle,
+      subtitle: 'Get cashback and earn rewards',
       action: () => showModal(ModalType.NewPhone),
     })
     scrollToFirstNotification()
@@ -127,7 +134,7 @@ watch(isRecoveryWordsShown, () => {
     StatusBar.setStyle({ style: Style.Light })
   }
   else {
-    StatusBar.setBackgroundColor({ color: '#ffffff' })
+    StatusBar.setBackgroundColor({ color: '#F8F8F8' })
     StatusBar.setStyle({ style: Style.Light })
   }
 }, { immediate: true })
@@ -148,7 +155,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <IonPage>
+  <IonPage class="bg-[#F8F8F8]">
     <IonHeader class="ion-no-border">
       <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
         <div slot="start" class="flex items-center gap-2 ml-2">
@@ -158,74 +165,93 @@ onMounted(async () => {
           </p>
         </div>
         <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold" size="small" @click="showModal(ModalType.Backup)">
+          <IonButton fill="solid" class="font-bold normal-case" size="small" @click="showModal(ModalType.Backup)">
             Recovery Words
           </IonButton>
         </IonButtons>
       </IonToolbar>
       <IonToolbar class="px-2">
         <IonButtons slot="start">
-          <IonMenuButton :auto-hide="false" @click="showModal(ModalType.Menu, { isSmall: true })" />
+          <IonButton
+            @click="() => {
+              console.log('Menu clicked')
+              showModal(ModalType.Menu, { isSmall: true })
+            }"
+          >
+            <MenuIcon class="h-5 w-7 opacity-30" />
+          </IonButton>
         </IonButtons>
-        <IonButtons v-if="isPhoneRegistered" slot="end">
-          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-end: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
+        <IonButtons slot="end">
+          <IonButton
+            class="text-base normal-case"
+            style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
+            @click="isPhoneRegistered ? showModal(ModalType.Rewards) : showModal(ModalType.NewPhone)"
+          >
+            <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{
-              isPhoneRegistered ? pointsBalance / 1e5 : 'Earn CC Points'
+              isPhoneRegistered ? pointsBalance / 1e5 : 'Earn Points'
             }}
-            <CryptoCityLogo slot="start" class="h-4 mr-2 text-white" />
           </IonButton>
         </IonButtons>
       </IonToolbar>
     </IonHeader>
     <IonContent class="ion-padding scroll-smooth">
+      <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
-        <IonRow class="flex flex-col items-center justify-center h-[40vh] transition-all" :class="instantPayWallet.transactions.value.length && '!h-[30vh]'">
-          <h1 class="mb-3 text-5xl font-normal">
-            {{ fiatHandler.currencyPrefix.value }}{{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
+        <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
+          <h1 class="mb-2 text-5xl font-normal">
+            {{ fiatHandler.currencyPrefix.value }} {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
           </h1>
-          <p class="text-lg text-blue-300">
-            {{ Math.floor(instantPayWallet.balance.value).toFixed(2) }} NIM
-            <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-3" />
-            <span class="ml-1 font-semibold">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
+          <p class="text-base font-semibold text-space/60">
+            <span>
+              {{ Math.floor(instantPayWallet.balance.value).toFixed(2) }} NIM
+            </span>
+            <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" />
+            <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
           </p>
-          <IonButton fill="clear" class="text-xl font-medium" @click="showModal(ModalType.TopUp, { isSmall: true })">
-            Top Up <IonIcon slot="end" :icon="chevronForward" />
+          <IonButton fill="clear" class="text-base normal-case text-sky" @click="showModal(ModalType.TopUp, { isSmall: true })">
+            Top up <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
         </IonRow>
 
         <!-- TX History -->
-        <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6">
+        <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6 bg-transparent">
           <TransactionCard v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id" :tx="transaction" />
           <div v-if="instantPayWallet.transactions.value.length > 3" class="text-center">
-            <IonButton fill="clear" @click="showModal(ModalType.TransactionHistory)">
-              See more
+            <IonButton fill="clear" class="text-base normal-case text-sky" @click="showModal(ModalType.TransactionHistory)">
+              See all <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
             </IonButton>
           </div>
         </IonList>
 
         <!-- Horizontal Scroll -->
         <IonRow v-if="notificationArray.length">
-          <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 mb-4">
+          <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4">
             <li v-for="(notification, index) in notificationArray" :key="notification.title">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
+                <template #subtitle>
+                  {{ notification.subtitle }}
+                </template>
               </NotificationCard>
             </li>
           </ul>
         </IonRow>
 
         <!-- Referral -->
-        <IonRow class="mb-8">
-          <TaskCard highlight large @click="isPhoneRegistered ? showModal(ModalType.Voucher) : showModal(ModalType.NewPhone)">
-            Invite a friend and earn up to 200 Points both!
-          </TaskCard>
+        <IonRow v-if="isReferralCardShown" class="mb-8">
+          <NotificationCard class="w-full" @click="isPhoneRegistered ? showModal(ModalType.Referral) : showModal(ModalType.NewPhone)" @close="isReferralCardShown = false">
+            <span class="text-lg text-pumpkin">
+              Bring a friend and get {{ referralRewardAmount }} Points each!
+            </span>
+          </NotificationCard>
         </IonRow>
 
         <!-- Map -->
         <IonRow>
           <p class="ml-1 text-lg font-semibold">
-            Find places that accept crypto
+            Find places that accept crypto!
           </p>
         </IonRow>
         <IonRow>
@@ -234,28 +260,24 @@ onMounted(async () => {
           </div>
         </IonRow>
         <IonRow class="ion-justify-content-center">
-          <IonButton fill="clear" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
-            Go to map
-            <IonIcon slot="end" :icon="chevronForward" />
+          <IonButton fill="clear" class="text-base normal-case" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
+            Go to Crypto Map
+            <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
         </IonRow>
       </IonGrid>
     </IonContent>
+
+    <!-- Footer -->
     <IonFooter>
       <IonToolbar>
-        <IonGrid>
-          <IonRow class="ion-justify-content-center">
-            <IonCol size="8">
-              <IonButton
-                style="--box-shadow: none;"
-                expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-                @click="showModal(ModalType.Pay, { isFullscreen: true })"
-              >
-                Pay
-              </IonButton>
-            </IonCol>
-          </IonRow>
-        </IonGrid>
+        <IonButton
+          class="w-3/4 mx-auto text-base"
+          expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
+          @click="showModal(ModalType.Pay, { isFullscreen: true })"
+        >
+          Pay
+        </IonButton>
       </IonToolbar>
     </IonFooter>
   </IonPage>
@@ -273,12 +295,13 @@ ion-content {
 }
 
 ion-footer > ion-toolbar {
-  --border-color: rgb(59 130 246);
-  --border-width: 1px 0 0 0;
-  --border-style: solid;
+  --background: white;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
 }
 
 .footer-md {
-    box-shadow: none !important;
+  box-shadow: none;
 }
 </style>

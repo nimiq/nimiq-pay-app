@@ -33,17 +33,17 @@ async function handlePushButton() {
 <template>
   <ModalTemplate>
     <template #title>
-      Get notified
+      Enable notifications
     </template>
     <template #subtitle>
-      Get notified about spendings, security, top up, challenges, and more, so you're always in the know
+      Get important info on transactions, top ups, security and more.
     </template>
     <NotificationBell class="w-36 h-36" />
-    <div class="self-end w-full mb-2">
-      <IonButton expand="block" @click="handlePushButton">
-        Enable Push Notifications
+    <div class="self-end w-full">
+      <IonButton expand="block" class="text-base font-bold" @click="handlePushButton">
+        Enable Notifications
       </IonButton>
-      <IonButton fill="clear" expand="block" @click="router.replace('/app')">
+      <IonButton fill="clear" expand="block" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')">
         Skip for now
       </IonButton>
     </div>

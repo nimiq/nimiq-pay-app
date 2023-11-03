@@ -5,7 +5,7 @@
 <style scoped>
 .item-divider {
   height: 1px;
-  background-color: rgb(59 130 246 / 0.4);
+  background-color: theme('colors.space.space-300');
   margin: 1rem;
   border-radius: 5rem;
 }

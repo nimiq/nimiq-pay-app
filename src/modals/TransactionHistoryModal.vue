@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, watch } from 'vue'
-import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonList, IonSearchbar, IonToolbar } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonList, IonSearchbar, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -32,22 +32,25 @@ const transactions = computed(() => {
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <slot name="leftButton" />
+      <IonButtons slot="start">
+        <IonBackButton default-href="/" @click.stop="closeModal()" />
+      </IonButtons>
       <IonButtons slot="end">
-        <IonButton @click.stop="() => closeModal()">
+        <IonButton @click.stop="closeModal()">
           <IonIcon :icon="close" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
   <IonContent>
-    <h1 class="my-2 text-center">
+    <p class="px-8 mt-2 text-sm font-bold uppercase text-space/60">
       All transactions
-    </h1>
-    <div class="px-4">
+    </p>
+    <div class="px-4 mt-6">
       <input
         :value="query"
         type="text" placeholder="Search"
-        class="w-full px-3 py-2 mx-auto mt-8 text-xl text-blue-500 border-0 rounded-lg outline-none bg-blue-100/60 placeholder:text-blue-400"
+        class="w-full px-4 py-2 border-[1.5px] rounded-[8rem] outline-none border-space-space-300 focus:border-sky-sky-500 text-sky placeholder:text-space/60"
         @input="query = ($event.target as HTMLTextAreaElement).value.toLowerCase()"
       >
     </div>

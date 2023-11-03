@@ -9,16 +9,19 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
     <template #title>
       Expiring CC Points
     </template>
+    <template #subtitle>
+      These points are made for spending. Get out there and drive crypto adoption.
+    </template>
     <IonGrid class="flex flex-col self-start mt-8 gap-y-6">
       <!-- TODO: get this from API -->
-      <IonRow v-for="i in 5" :key="i" class="flex justify-between w-full text-blue-500">
-        <span class="text-xl">July</span>
+      <IonRow v-for="i in 5" :key="i" class="flex justify-between w-full">
+        <span class="text-base font-semibold">July</span>
         <div class="flex flex-col text-end">
-          <span class="text-lg">$3,44</span>
           <div class="flex items-center gap-x-1">
-            <CryptoCityLogo class="h-3" />
-            <span class="text-sm text-blue-300">4000</span>
+            <CryptoCityLogo class="h-4 w-5 [&>path]:fill-space/40" />
+            <span class="text-base font-bold">4000</span>
           </div>
+          <span class="text-sm text-space/60">$3,44</span>
         </div>
       </IonRow>
     </IonGrid>

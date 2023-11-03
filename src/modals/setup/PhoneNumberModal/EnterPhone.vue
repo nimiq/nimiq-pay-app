@@ -76,7 +76,7 @@ onMounted(focusInput)
       <br>
       Just verify your phone number.
     </template>
-    <div class="self-start w-full mt-8">
+    <div class="flex flex-col self-start w-full h-full pt-8">
       <input
         ref="phoneInput" v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 px-4 my-2 phone"
         size="16"
@@ -84,12 +84,14 @@ onMounted(focusInput)
       <p class="text-sm font-semibold text-space/50">
         You get an SMS. Standard rates may apply.
       </p>
-      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-base font-semibold text-sky" @click="handleClose">
-        Skip
-      </IonButton>
-      <IonButton id="present-alert" size="small" class="mx-4 mt-6 text-base font-semibold" :disabled="phoneNumber.length < 4">
-        Verify
-      </IonButton>
+      <div class="flex flex-col justify-center mt-auto">
+        <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
+          Verify
+        </IonButton>
+        <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleClose">
+          Skip for now
+        </IonButton>
+      </div>
     </div>
   </ModalTemplate>
   <IonAlert ref="alert" trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="alertButtons" />

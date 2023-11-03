@@ -6,9 +6,9 @@ import { StatusBar } from '@capacitor/status-bar'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import { ModalType, useModal } from '@/composables/useModal'
 
-const isDev = import.meta.env.DEV
+const isDev = true || import.meta.env.DEV
 
-StatusBar.setBackgroundColor({ color: '#ffffff' })
+StatusBar.setBackgroundColor({ color: '#F8F8F8' })
 StatusBar.setOverlaysWebView({ overlay: false })
 
 useRouter().afterEach(async () => {
@@ -52,6 +52,31 @@ input.phone {
 ion-modal ion-toolbar {
     --border-color: transparent;
     --background: var(--ion-background-color, #fff);
+}
+
+.sc-ion-buttons-md-s ion-button,
+.sc-ion-buttons-ios-s ion-button {
+  --padding-top: 9px;
+  --padding-bottom: 10px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+}
+
+ion-button {
+  --border-radius: 10rem !important;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 22px;
+  --padding-bottom: 22px;
+  @apply uppercase font-bold;
+}
+
+ion-button:not(.button-clear){
+  --background: var(--radial-gradient-light-blue);
+}
+
+ion-back-button {
+  @apply text-space/30;
 }
 
 body.scanner-active ion-app>:not(ion-modal) {

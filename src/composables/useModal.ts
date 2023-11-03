@@ -1,7 +1,7 @@
 import { defineAsyncComponent, ref } from 'vue'
-import type { Ref } from 'vue'
+import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
-import { modalController } from '@ionic/vue'
+import { isPlatform, modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 
 export enum ModalType {
@@ -25,7 +25,7 @@ export enum ModalType {
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
-  Voucher = '@/modals/VoucherModal.vue',
+  Referral = '@/modals/ReferralModal.vue',
   Withdraw = '@/modals/WithdrawModal.vue',
 }
 
@@ -102,8 +102,8 @@ function _useModal() {
       case ModalType.TransactionHistory:
         component = defineAsyncComponent(() => import(ModalType.TransactionHistory))
         break
-      case ModalType.Voucher:
-        component = defineAsyncComponent(() => import(ModalType.Voucher))
+      case ModalType.Referral:
+        component = defineAsyncComponent(() => import(ModalType.Referral))
         break
       case ModalType.Withdraw:
         component = defineAsyncComponent(() => import(ModalType.Withdraw))
@@ -124,6 +124,8 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
+    if (isFullscreen && isPlatform('android'))
+      await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
     await modalToShow.present()
   }
@@ -169,6 +171,9 @@ function _useModal() {
     }
     if (modal)
       await modal.dismiss()
+
+    if (isPlatform('android'))
+      await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   }
 
   async function closeAllModals() {

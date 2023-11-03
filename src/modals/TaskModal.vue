@@ -16,7 +16,7 @@ const props = defineProps({
   },
 })
 
-const { showModal, showNotificationAlert } = useModal()
+const { closeModal, showNotificationAlert } = useModal()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const type: ComputedRef<TaskType> = computed(() => props.task ? JSON.parse(props.task.metadata).type : '')
 const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? JSON.parse(props.task.metadata).options : '')
@@ -85,7 +85,7 @@ async function handleSubmit() {
   }
 
   await showNotificationAlert({ title: `You earned ${props.task.reward_amount / 1e5} CC Points` })
-  showModal(ModalType.Rewards)
+  closeModal()
 }
 </script>
 
@@ -95,17 +95,15 @@ async function handleSubmit() {
       {{ task.description }}
     </template>
     <div class="self-stretch max-w-[98vw]">
-      <div class="text-center" :class="{ 'mb-8': type !== 'yt-video' }">
+      <div class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
         <span>You earn</span>
-        <div class="flex items-center justify-center mt-2">
-          <CryptoCityLogo class="h-8 mr-2" />
-          <span class="text-4xl">{{ task.reward_amount / 1e5 }}</span>
-        </div>
+        <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
+        <span>{{ task.reward_amount / 1e5 }}</span>
       </div>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
-          <p class="text-left whitespace-normal">
+          <p class="text-left whitespace-normal text-space/60">
             {{ option }}
           </p>
         </IonRadio>

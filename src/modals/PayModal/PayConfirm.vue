@@ -50,7 +50,7 @@ const isPaymentValid = computed(() => {
 const cashbackAmount = computed(() => {
   if (paymentDetails.value?.cashback === undefined || pendingPayment === null)
     return 0
-  return paymentDetails.value?.cashback.amount_in_luna || (pendingPayment?.amount * paymentDetails.value?.cashback.percentage / 100)
+  return pendingPayment.fiatAmount ? paymentDetails.value?.cashback.percentage * pendingPayment.fiatAmount / 100 : paymentDetails.value?.cashback.amount_in_luna / 1e5
 })
 
 async function pay() {
@@ -58,14 +58,17 @@ async function pay() {
     return
   const loading = await loadingController.create({})
   loading.present()
+  setTimeout(() => {
+    loading.dismiss()
+  }, 1 * 60 * 1e3)
   // TODO: Handle errors
   // TODO: check if payment is still valid when paying directly with NIM
   await instantPayWallet.completePendingPayment(pendingPayment, isPayingWithPoints.value)
   await loading.dismiss()
 
-  const title = pendingPayment?.fiatAmount ? `You paid ${pendingPayment?.fiatAmount} ${pendingPayment?.fiatUnit}` : `You paid ${pendingPayment?.amount / 1e5} NIM`
-  const subtitle = pendingPayment?.fiatAmount ? `${pendingPayment?.amount / 1e5} NIM` : undefined
-  const extra = cashbackAmount.value ? `You get ${cashbackAmount.value / 1e5} NIM cash back in CC Points!` : undefined
+  const title = pendingPayment?.fiatAmount ? `You paid ${pendingPayment.fiatAmount} ${pendingPayment.fiatUnit}` : `You paid ${(pendingPayment.amount / 1e5).toLocaleString()} NIM`
+  const subtitle = pendingPayment?.fiatAmount ? `${(pendingPayment.amount / 1e5).toLocaleString()} NIM` : undefined
+  const extra = cashbackAmount.value ? `You get ${cashbackAmount.value.toLocaleString()} ${pendingPayment.fiatUnit || 'NIM'} cashback in CC Points!` : undefined
   await showNotificationAlert({ title, subtitle, extra })
 
   closeModal()
@@ -96,50 +99,64 @@ onMounted(() => {
     </template>
     <div class="grid w-full h-full grid-rows-[2fr_1fr]">
       <div class="flex flex-col items-center self-start">
-        <div v-if="pendingPayment?.label" class="flex items-center justify-center gap-x-2">
-          <IonIcon :icon="basket" size="large" />
-          <h1>{{ pendingPayment?.label }}</h1>
+        <!-- Store Name -->
+        <div v-if="pendingPayment?.label" class="flex items-center justify-center mb-8 gap-x-3">
+          <IonIcon :icon="basket" class="w-8 h-8 p-1 rounded-full bg-space/5" />
+          <span class="text-2xl font-bold"> {{ pendingPayment?.label }} </span>
         </div>
-        <div class="flex flex-col justify-center mt-6 gap-y-3">
-          <div v-if="pendingPayment?.fiatAmount" class="flex items-center justify-center text-4xl uppercase gap-x-2">
-            <span>{{ pendingPayment?.fiatAmount }} {{ pendingPayment?.fiatUnit }}</span>
-            <InfoIcon class="h-5 stroke-2 opacity-70" />
+        <!-- Payment Amount -->
+        <div class="flex flex-col justify-center gap-y-2">
+          <div v-if="pendingPayment?.fiatAmount" class="flex items-center justify-center gap-x-2">
+            <span class="text-3xl uppercase text-space/60">{{ pendingPayment?.fiatAmount }} {{ pendingPayment?.fiatUnit }}</span>
+            <InfoIcon class="w-4 h-4 stroke-2 opacity-60" />
           </div>
-          <p class="text-6xl">
+          <p class="text-5xl">
             {{ (pendingPayment?.amount || 0) / 1e5 }} NIM
           </p>
-          <p class="">
-            Fees might apply &nbsp; ~{{ (pendingPayment?.fee || 0) / 1e5 }} NIM
+          <p class="text-base font-semibold text-space/60">
+            Fees might apply ~{{ (pendingPayment?.fee || 0) / 1e5 }} NIM
           </p>
+          <!-- Cashback -->
           <Transition name="slide-fade" mode="out-in">
-            <!-- TODO: use component< -->
-            <div v-if="cashbackAmount && !isPayingWithPoints" class="flex items-start px-2 py-2 mt-4 mb-auto text-lg border border-blue-500 rounded-md">
-              <InfoIcon class="h-6 stroke-2" />
-              <span>You get {{ (cashbackAmount / 1e5).toFixed(2) }} NIM cash back in CC Points for this transaction!</span>
+            <!-- TODO: use component -->
+            <div v-if="cashbackAmount && instantPayWallet.balanceRaw.value > (pendingPayment?.amount || 0)" class="flex items-start justify-center mt-8 mb-auto font-semibold gap-x-2">
+              <InfoIcon class="h-6 transition-colors stroke-2" :class="{ 'text-space/60': isPayingWithPoints }" />
+              <span class="transition-colors" :class="{ 'text-space/60': isPayingWithPoints }">
+                This purchase gets you {{ cashbackAmount }} {{ pendingPayment?.fiatUnit?.toUpperCase() || 'NIM' }} in CC Points.
+              </span>
             </div>
           </Transition>
         </div>
       </div>
       <div class="flex flex-col items-center self-end justify-between w-full h-full">
-        <IonToggle :disabled="canUsePoints !== CanUsePointsState.CAN_USE_POINTS" label-placement="end" class="mb-4 text-2xl font-semibold text-blue-500" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
-          <div class="flex items-center">
-            <span class="mr-3">Use</span>
-            <CryptoCityLogo class="h-5 mr-2" />
+        <!-- Use Points Toggle -->
+        <IonToggle :disabled="canUsePoints !== CanUsePointsState.CAN_USE_POINTS" label-placement="end" class="mb-4" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
+          <div class="flex items-center text-lg">
+            <span class="mr-2">Use</span>
+            <CryptoCityLogo class="w-5 h-5 mr-1" />
             <span>{{ ((pendingPayment?.amount || 0) / 1e5).toLocaleString() }}</span>
           </div>
         </IonToggle>
-        <div class="mb-auto">
+        <!-- Message under Toggle -->
+        <div class="mb-auto font-semibold">
           <Transition name="slide-fade" mode="out-in">
-            <p v-if="canUsePoints === CanUsePointsState.NOT_ENOUGH_POINTS">
-              Sorry! You don't have enough points to pay for this purchase
+            <p v-if="instantPayWallet.balanceRaw.value < (pendingPayment?.amount || 0) && canUsePoints !== CanUsePointsState.CAN_USE_POINTS" class="text-pumpkin">
+              You don't have enough NIM for this purchase.
+            </p>
+            <p v-else-if="canUsePoints === CanUsePointsState.NOT_ENOUGH_POINTS" class="text-space/60">
+              You don't have enough CC Points for this purchase.
+            </p>
+            <p v-else class="text-space/60">
+              There is no cashback reward when paying with CC Points.
             </p>
           </Transition>
         </div>
         <!-- TODO: how to display this? -->
-        <p v-if="paymentDetails?.reason" class="mt-auto text-red-500 -top-6">
+        <p v-if="isPayingWithPoints && paymentDetails?.reason" class="mt-auto text-red-500 -top-6">
           {{ paymentDetails?.reason }}
         </p>
-        <IonButton size="large" expand="block" class="w-1/2 min-w-[10rem]" :disabled="!isPaymentValid" @click="() => pay()">
+        <!-- Pay Button -->
+        <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" :disabled="isPayingWithPoints && !isPaymentValid" @click="() => pay()">
           Pay
         </IonButton>
       </div>

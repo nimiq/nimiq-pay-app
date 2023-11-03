@@ -5,13 +5,13 @@ import TabTemplate from './TabTemplate.vue'
 <template>
   <TabTemplate>
     <template #title>
-      Earn CC Points
+      Get CC Points
     </template>
     <template #subtitle>
-      Complete the tasks and earn CC Points
+      Get CC Points as cash back rewards or complete challenges to earn them.
     </template>
     <template #body>
-      <div class="w-full bg-blue-100 h-3/4" />
+      <div class="w-full bg-space-space-300 h-3/4" />
     </template>
   </TabTemplate>
 </template>

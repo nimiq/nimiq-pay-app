@@ -34,7 +34,7 @@ async function handleNavigate(index?: number) {
 
 <template>
   <IonHeader class="ion-no-border">
-    <NavBar :count="tabList.length" :active="activeTab" @navigate="handleNavigate" />
+    <!-- <NavBar :count="tabList.length" :active="activeTab" @navigate="handleNavigate" /> -->
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click="() => closeModal()">

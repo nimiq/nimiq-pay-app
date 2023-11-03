@@ -73,11 +73,11 @@ onMounted(updateRandomWord)
         <IonBackButton default-href="/" @click.prevent="nav.pop()" />
       </IonButtons>
     </template>
-    <div class="grid grid-rows-[2fr_4fr_6fr] items-center h-full gap-y-4">
-      <h1 class="self-end text-3xl">
-        Validate your back up
-      </h1>
-      <div v-if="randomIndex !== null">
+    <template #title>
+      Test your backup
+    </template>
+    <div class="flex flex-col h-full gap-y-8">
+      <div v-if="randomIndex !== null" class="mt-[40%]">
         <p class="mb-6 text-6xl font-semibold">
           {{ randomIndex + 1 }}
         </p>
@@ -86,8 +86,8 @@ onMounted(updateRandomWord)
           What's the {{ randomIndex + 1 }}th word?
         </p>
       </div>
-      <div class="grid grid-cols-3 gap-4 mb-auto">
-        <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold text-blue-500 bg-blue-100 rounded" @click="() => handleGuess(word)">
+      <div class="grid grid-cols-3 gap-4">
+        <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded" @click="() => handleGuess(word)">
           {{ word }}
         </div>
       </div>

@@ -74,8 +74,7 @@ export class InstantPayWallet {
 
     const instantWallet = await this.getWallet()
     if (instantWallet) {
-      const instantAccount = await this.nimiqNetworkClient.getAccount(instantWallet.address)
-      if (instantAccount.balance !== 0) {
+      if (this.balanceRaw.value !== 0) {
         console.log('Wallet not empty, recovering')
         this.recover()
         // Wait for recover tx to be mined
@@ -103,10 +102,11 @@ export class InstantPayWallet {
         return
       wallets = [{ id: wallet.address, balance: wallet.balance, start: wallet.validityStart, end: wallet.validityEnd }]
     }
+    console.log('Wallets in DB', wallets)
 
-    this.balanceRaw.value = wallets[0].balance || 0
-    this.validityStart.value = wallets[0].start || 0
-    this.validityEnd.value = wallets[0].end || 0
+    this.balanceRaw.value = wallets[wallets.length - 1].balance || 0
+    this.validityStart.value = wallets[wallets.length - 1].start || 0
+    this.validityEnd.value = wallets[wallets.length - 1].end || 0
 
     // eslint-disable-next-line no-console
     console.groupCollapsed(`🛒 Transactions`)

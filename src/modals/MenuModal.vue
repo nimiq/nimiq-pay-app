@@ -16,7 +16,7 @@ const { showModal, closeModal } = useModal()
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click.stop="closeModal()">
-          <IonIcon :icon="close" />
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
@@ -48,7 +48,7 @@ const { showModal, closeModal } = useModal()
       Settings
     </IonItem>
     <IonItem button :detail="false" @click="showModal(ModalType.Backup)">
-      Back Up
+      Back up account
     </IonItem>
     <IonItem button :detail="false" @click="showModal(ModalType.LogoutConfirm, { isSmall: true })">
       Log Out
@@ -58,8 +58,7 @@ const { showModal, closeModal } = useModal()
 
 <style scoped>
 ion-item {
-  @apply text-xl font-semibold text-blue-500;
-  --padding-top: 0.25rem;
-  --padding-bottom: 0.25rem;
+  @apply text-lg font-semibold;
+  --padding-bottom: 8px;
 }
 </style>

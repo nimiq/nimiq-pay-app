@@ -45,7 +45,7 @@ async function withdraw() {
         <input :value="address" type="text" class="uppercase !px-4" placeholder="NQ..." @input="address = ($event.target as HTMLTextAreaElement).value.toUpperCase()">
       </div>
       <div class="self-end w-full">
-        <div class="flex justify-between mb-8 gap-x-2">
+        <div class="flex justify-between mb-8 gap-x-5">
           <button @click="amount = 250">
             250 NIM
           </button>
@@ -69,10 +69,10 @@ async function withdraw() {
 
 <style scoped>
 input {
-  @apply w-full border-0 py-1.5 pl-4 pr-20 ring-1 outline-none ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gray-400
+  @apply w-full border-0 py-1.5 pl-4 pr-20 ring-1 outline-none ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-gray-400;
 }
 
 button {
-  @apply px-2 py-2 rounded-md bg-blue-100 text-blue-500 font-semibold w-1/4
+  @apply px-2 py-2 rounded-full bg-space-space-200 text-space/60 font-bold w-1/4 min-w-[64px];
 }
 </style>

@@ -2,8 +2,9 @@
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { ModalType, useModal } from '@/composables/useModal'
+import InfoIcon from '@/components/icons/info.vue'
 
-const { closeModal, showModal, closeAllModals } = useModal()
+const { showModal, closeAllModals } = useModal()
 </script>
 
 <template>
@@ -11,21 +12,24 @@ const { closeModal, showModal, closeAllModals } = useModal()
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click.stop="() => closeAllModals()">
-          <IonIcon :icon="close" />
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <div class="flex flex-col items-center h-full p-8 text-center gap-y-4">
-    <h1 class="mb-4">
-      Back up your account before log out
+  <div class="flex flex-col items-center h-full p-8 pt-0 text-center">
+    <h1 class="text-2xl font-bold">
+      Back up your account before login out
     </h1>
-    <p class="px-4 mb-8 text-xl text-center text-red-500">
-      You will lose your money and data if you don't back up your account
-    </p>
+    <div class="flex items-start justify-center mt-8 font-semibold gap-x-2 text-pumpkin">
+      <InfoIcon class="h-6 w-5 stroke-[1.5] text-pumpkin" />
+      <span>
+        Your account, funds and data will be lost if you log out without a backup.
+      </span>
+    </div>
 
-    <IonButton class="self-end w-full mt-16 font-semibold" @click="showModal(ModalType.Backup)">
-      Back up account
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="showModal(ModalType.Backup)">
+      Backup Account
     </IonButton>
   </div>
 </template>

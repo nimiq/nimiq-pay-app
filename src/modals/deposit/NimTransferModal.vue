@@ -44,22 +44,22 @@ async function handleCopy() {
       </IonButtons>
     </template>
     <template #title>
-      Send NIM to this address
+      Send NIM to top up
     </template>
     <template #subtitle>
-      Lorem ipsum dolor sit amet, consectetur adipiscing.
+      Send a transaction to the address below. Top up as much as you like.
     </template>
-    <div class="grid h-full grid-[1fr_8fr_1fr] justify-items-center items-center">
-      <NimLogo class="w-20 h-20 fill-blue-500" />
+    <div class="flex flex-col items-center justify-center mt-8">
+      <NimLogo class="w-16 mb-8 h-14" />
       <AddressDisplay class="w-4/5 min-w-[18rem] my-4" :address="nimiqWallet.address.value?.toUserFriendlyAddress() || 'Error' " />
-      <div class="self-end w-full">
-        <IonButton expand="block" @click="handleOpenWallet">
-          Open Wallet
-        </IonButton>
-        <IonButton expand="block" fill="clear" class="mt-4" @click="handleCopy">
-          Copy address
-        </IonButton>
-      </div>
+    </div>
+    <div class="self-end w-full">
+      <IonButton expand="block" class="text-base" @click="handleOpenWallet">
+        Open Wallet
+      </IonButton>
+      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
+        Copy address
+      </IonButton>
     </div>
   </ModalTemplate>
 </template>
