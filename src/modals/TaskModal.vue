@@ -28,7 +28,6 @@ const isVideoEnded = ref(false)
 const isAlreadyClaimed = ref(false)
 
 watchEffect(() => {
-  console.log(videoOptions.value)
   if (videoOptions.value) {
     nextTick(() => {
       const player = YouTubePlayer('yt-player', {
@@ -84,7 +83,7 @@ async function handleSubmit() {
       return
   }
 
-  await showNotificationAlert({ title: `You earned ${props.task.reward_amount / 1e5} CC Points` })
+  showNotificationAlert('You got CC Points')
   closeModal()
 }
 </script>

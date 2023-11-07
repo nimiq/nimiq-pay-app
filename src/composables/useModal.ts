@@ -1,8 +1,9 @@
 import { defineAsyncComponent, ref } from 'vue'
 import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
-import { isPlatform, modalController } from '@ionic/vue'
+import { isPlatform, modalController, toastController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
+import CheckIcon from '@/components/icons/check.vue'
 
 export enum ModalType {
   Backup = '@/modals/BackupModal/index.vue',
@@ -130,35 +131,15 @@ function _useModal() {
     await modalToShow.present()
   }
 
-  async function showNotificationAlert({ title, subtitle, message, extra }: { title: string; subtitle?: string; message?: string; extra?: string }) {
-    return new Promise<void>((resolve) => {
-      modalController.create({
-        component: defineAsyncComponent(() => import('@/components/NotificationAlert.vue')),
-        handle: false,
-        canDismiss: async (data?: any, role?: string) => role !== 'backdrop',
-        componentProps: { title, subtitle, message, extra },
-      }).then(async (modal) => {
-        if (import.meta.env.MODE === 'development') {
-          // eslint-disable-next-line no-console
-          console.log('showNotificationAlert')
-        }
-        // Adding styles to make it look like a notification
-        modal.style.setProperty('--width', 'fit-content')
-        modal.style.setProperty('--min-width', '250px')
-        modal.style.setProperty('--max-width', '80vw')
-        modal.style.setProperty('--height', 'fit-content')
-        modal.style.setProperty('--border-radius', '18px')
-        modal.style.setProperty('--border-color', 'rgb(59 130 246)')
-        modal.style.setProperty('--border-width', '1.5px')
-        modal.style.setProperty('--border-style', 'solid')
-
-        await modal.present()
-        setTimeout(async () => {
-          await modal.dismiss()
-          resolve()
-        }, 2000)
-      })
+  async function showNotificationAlert(message: string) {
+    const toast = await toastController.create({
+      message,
+      duration: 3 * 1e3,
+      icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18"><path fill="currentColor" stroke="currentColor" d="M16.5826 1.18747c-.4488-.321965-1.0735-.218934-1.3953.23013L5.83073 14.4705l-3.1233-3.1278c-.25259-.2529-.6208-.3517-.96594-.2593-.34514.0925-.61477.3621-.70733.7074-.092555.3453.00603.7138.25861.9667l3.95664 3.9582c.21013.2024.49697.3047.78763.2809.29065-.0237.55712-.1712.73169-.4049L16.8126 2.5836c.3218-.44908.2188-1.07414-.23-1.39613Z"/></svg>',
+      cssClass: 'notification-alert-toast',
+      position: 'top',
     })
+    await toast.present()
   }
 
   async function closeModal(modalToClose?: HTMLIonModalElement) {

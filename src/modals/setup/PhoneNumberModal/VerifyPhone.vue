@@ -31,7 +31,7 @@ async function handleVerify() {
       showModal(ModalType.EnablePushNotifications)
     }
     else if (path === '/app') {
-      await showNotificationAlert({ title: 'CC Points is now active!' })
+      showNotificationAlert('CC points activated')
       showModal(ModalType.RewardsIntro)
     }
   }

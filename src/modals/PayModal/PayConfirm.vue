@@ -66,11 +66,7 @@ async function pay() {
   await instantPayWallet.completePendingPayment(pendingPayment, isPayingWithPoints.value)
   await loading.dismiss()
 
-  const title = pendingPayment?.fiatAmount ? `You paid ${pendingPayment.fiatAmount} ${pendingPayment.fiatUnit}` : `You paid ${(pendingPayment.amount / 1e5).toLocaleString()} NIM`
-  const subtitle = pendingPayment?.fiatAmount ? `${(pendingPayment.amount / 1e5).toLocaleString()} NIM` : undefined
-  const extra = cashbackAmount.value ? `You get ${cashbackAmount.value.toLocaleString()} ${pendingPayment.fiatUnit || 'NIM'} cashback in CC Points!` : undefined
-  await showNotificationAlert({ title, subtitle, extra })
-
+  showNotificationAlert('Payment successful')
   closeModal()
 }
 

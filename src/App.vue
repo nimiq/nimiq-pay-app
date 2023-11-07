@@ -79,6 +79,27 @@ ion-back-button {
   @apply text-space/30;
 }
 
+ion-toast.notification-alert-toast{
+  --background: #fff;
+  --border-radius: 100px;
+  --box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
+  --width: fit-content;
+}
+
+ion-toast.notification-alert-toast::part(container){
+  padding: 0px 2px;
+}
+
+ion-toast.notification-alert-toast::part(icon) {
+    width: 16px;
+    height: 16px;
+    color: #21BCA5;
+}
+
+ion-toast.notification-alert-toast::part(message) {
+    @apply text-black text-lg font-semibold;
+}
+
 body.scanner-active ion-app>:not(ion-modal) {
     display: none;
 }

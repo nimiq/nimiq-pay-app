@@ -24,7 +24,7 @@ async function withdraw() {
   if (payment === null)
     return
   await instantPayWallet.completePendingPayment(payment)
-  await showNotificationAlert({ title: `You withdrew ${amount.value} NIM` })
+  showNotificationAlert('Withdrawal successful')
   closeModal()
 }
 </script>

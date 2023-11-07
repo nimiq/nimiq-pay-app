@@ -48,14 +48,14 @@ async function handleGuess(word: string) {
     successCount.value = 0
     usedIndexes.value = []
     // TODO: improve this
-    showNotificationAlert({ title: 'Wrong word!' })
+    showNotificationAlert('Wrong word!')
     setTimeout(() => {
       nav.pop()
     }, 1000)
   }
   if (successCount.value === 3) {
     storageManager.setBackupDone(true)
-    await showNotificationAlert({ title: 'You account is backed up!' })
+    showNotificationAlert('Back up successful')
     closeModal()
   }
   else {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
-import { inject, ref, unref } from 'vue'
+import { inject, ref } from 'vue'
 import type { Ref } from 'vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
 import ModalTemplate from '@/components/ModalTemplate.vue'

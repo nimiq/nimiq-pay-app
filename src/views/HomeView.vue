@@ -107,7 +107,7 @@ watchEffect(async () => {
   console.groupEnd()
   if (isPromoCodeEntered.value && isPhoneRegistered.value) {
     setTimeout(() => {
-      showNotificationAlert({ title: 'You got CC Points!', message: `${referralRewardAmount} CC Points` })
+      showNotificationAlert('CC Points added')
     }, 750)
   }
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
