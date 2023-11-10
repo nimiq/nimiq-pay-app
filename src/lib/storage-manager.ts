@@ -56,6 +56,7 @@ interface InternalStorage {
   pin?: string
   isBackupDone?: boolean
   isSetupDone?: boolean
+  isFirstRun?: boolean
 }
 
 const InternalStorageKey = { name: '_' } as StorageKey<InternalStorage>
@@ -320,6 +321,15 @@ export class StorageManager {
 
   async isSetupDone(): Promise<boolean> {
     return !!(await this.get(InternalStorageKey)).isSetupDone
+  }
+
+  async isFirstRun(): Promise<boolean> {
+    const isFirstRun = (await this.get(InternalStorageKey)).isFirstRun
+    return isFirstRun ?? true
+  }
+
+  async setFirstRun(value: boolean) {
+    await this.update(InternalStorageKey, storage => storage.isFirstRun = value)
   }
 
   async exists() {

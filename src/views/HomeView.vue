@@ -37,7 +37,6 @@ const pointsBalance = computedAsync(async () => {
   console.log('height:', nimiqNetworkClient.head.value?.height)
   return await bonusWallet.getParticipantBalance()
 }, 0)
-watch
 const isReferralCardShown = ref(true)
 // TODO: get this from API
 const referralRewardAmount = 10
@@ -154,6 +153,11 @@ onMounted(async () => {
   if (!storageManager.isUnlocked()) {
     await router.replace('/pin')
     return
+  }
+
+  if(await storageManager.isFirstRun()){
+    await storageManager.setFirstRun(false)
+    showModal(ModalType.RewardsIntro)
   }
 
   // bonusWallet.checkDelayedRedeemVoucher()
