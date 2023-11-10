@@ -3,14 +3,26 @@ import { IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonRow,
 import { close } from 'ionicons/icons'
 import { useModal } from '@/composables/useModal'
 
-defineProps({
+const props = defineProps({
   closeAll: {
     type: Boolean,
     default: false,
   },
+  onClosing: {
+    type: Function,
+    default: () => {},
+  },
 })
 
 const { closeModal, closeAllModals } = useModal()
+
+function handleClose() {
+  if (props.closeAll)
+    closeAllModals()
+  else
+    closeModal()
+  props.onClosing()
+}
 </script>
 
 <template>
@@ -18,7 +30,7 @@ const { closeModal, closeAllModals } = useModal()
     <IonToolbar>
       <slot name="leftButton" />
       <IonButtons slot="end">
-        <IonButton @click.stop="closeAll ? closeAllModals() : closeModal()">
+        <IonButton @click.stop="handleClose">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>

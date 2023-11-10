@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { IonButton, toastController } from '@ionic/vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { PushNotifications } from '@capacitor/push-notifications'
 import NotificationBell from '@/components/icons/notification-bell.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 
 const router = useRouter()
+const { path } = useRoute()
 
 async function registerNotifications() {
   let permStatus = await PushNotifications.checkPermissions()
@@ -28,10 +29,15 @@ async function handlePushButton() {
     (await toastController.create({ message: e.message || e, duration: 2000 })).present()
   }
 }
+
+function handleClose() {
+  if (path !== '/app')
+    router.replace('/app')
+}
 </script>
 
 <template>
-  <ModalTemplate>
+  <ModalTemplate :on-closing="handleClose">
     <template #title>
       Enable notifications
     </template>
@@ -43,7 +49,8 @@ async function handlePushButton() {
       <IonButton expand="block" class="text-base font-bold" @click="handlePushButton">
         Enable Notifications
       </IonButton>
-      <IonButton fill="clear" expand="block" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')">
+      <IonButton fill="clear" expand="block" class="text-base font-bold normal-case"
+        style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')">
         Skip for now
       </IonButton>
     </div>

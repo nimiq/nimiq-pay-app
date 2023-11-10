@@ -4,7 +4,7 @@ import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import type { Alert } from '@ionic/core/dist/types/components/alert/alert'
 import { inject, markRaw, onMounted, ref } from 'vue'
 import type { Ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import VerifyPhone from './VerifyPhone.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
@@ -12,6 +12,7 @@ import { ModalType, useModal } from '@/composables/useModal'
 
 const { showModal } = useModal()
 const { path } = useRoute()
+const router = useRouter()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const phoneInput = ref()
 const phoneNumber = ref('')
@@ -67,7 +68,7 @@ onMounted(focusInput)
 </script>
 
 <template>
-  <ModalTemplate>
+  <ModalTemplate :on-closing="handleClose">
     <template #title>
       Verify your phone number
     </template>
