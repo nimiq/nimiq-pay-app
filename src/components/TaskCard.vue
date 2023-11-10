@@ -61,7 +61,7 @@ async function handleClick() {
       Complete
     </span>
     <Transition name="fade" mode="out-in">
-      <IonSpinner v-if="isLoading" class="absolute -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
+      <IonSpinner v-if="isLoading" class="absolute text-white -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
       <div v-else class="flex flex-col justify-between h-full gap-y-2">
         <span
           class="font-bold" :class="{ '!text-xl w-3/4': large }"

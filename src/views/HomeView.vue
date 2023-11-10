@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward, trendingDown, trendingUp } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
@@ -10,9 +10,9 @@ import { computedAsync } from '@vueuse/core'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import { FiatHandler } from '@/lib/fiat-handler'
 import { ModalType, useModal } from '@/composables/useModal'
-import TaskCard from '@/components/TaskCard.vue'
 import TransactionCard from '@/components/TransactionCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
@@ -24,13 +24,20 @@ const router = useRouter()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const storageManager = inject(StorageManager.KEY) as StorageManager
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
+const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const { showModal, showNotificationAlert } = useModal()
 const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
 const isPhoneRegistered = bonusWallet.isRegistered()
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
-const pointsBalance = computedAsync(async () => await bonusWallet.getParticipantBalance(), 0)
+// TODO: remove this and use a store for pointsBalance
+// This should be updated every time there is a task claimed
+const pointsBalance = computedAsync(async () => {
+  console.log('height:', nimiqNetworkClient.head.value?.height)
+  return await bonusWallet.getParticipantBalance()
+}, 0)
+watch
 const isReferralCardShown = ref(true)
 // TODO: get this from API
 const referralRewardAmount = 10
@@ -165,16 +172,17 @@ onMounted(async () => {
           </p>
         </div>
         <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)" size="small" @click="showModal(ModalType.Backup)">
+          <IonButton
+            fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)"
+            size="small" @click="showModal(ModalType.Backup)"
+          >
             Recovery Words
           </IonButton>
         </IonButtons>
       </IonToolbar>
       <IonToolbar class="px-2">
         <IonButtons slot="start">
-          <IonButton
-            @click="showModal(ModalType.Menu, { isSmall: true })"
-          >
+          <IonButton @click="showModal(ModalType.Menu, { isSmall: true })">
             <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>
         </IonButtons>
@@ -198,7 +206,8 @@ onMounted(async () => {
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
           <h1 class="mb-2 text-5xl font-normal">
-            {{ fiatHandler.currencyPrefix.value }} {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
+            {{ fiatHandler.currencyPrefix.value }} {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value
+              * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>
@@ -207,24 +216,38 @@ onMounted(async () => {
             <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" />
             <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
           </p>
-          <IonButton fill="clear" class="text-base normal-case text-sky" @click="showModal(ModalType.TopUp, { isSmall: true })">
-            Top up <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
+          <IonButton
+            fill="clear" class="text-base normal-case text-sky"
+            @click="showModal(ModalType.TopUp, { isSmall: true })"
+          >
+            Top up
+            <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
         </IonRow>
 
         <!-- TX History -->
         <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6 bg-transparent">
-          <TransactionCard v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id" :tx="transaction" />
+          <TransactionCard
+            v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id"
+            :tx="transaction"
+          />
           <div v-if="instantPayWallet.transactions.value.length > 3" class="text-center">
-            <IonButton fill="clear" class="text-base normal-case text-sky" @click="showModal(ModalType.TransactionHistory)">
-              See all <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
+            <IonButton
+              fill="clear" class="text-base normal-case text-sky"
+              @click="showModal(ModalType.TransactionHistory)"
+            >
+              See all
+              <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
             </IonButton>
           </div>
         </IonList>
 
         <!-- Horizontal Scroll -->
         <IonRow v-if="notificationArray.length">
-          <ul ref="notificationList" class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4">
+          <ul
+            ref="notificationList"
+            class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
+          >
             <li v-for="(notification, index) in notificationArray" :key="notification.title">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
@@ -238,7 +261,11 @@ onMounted(async () => {
 
         <!-- Referral -->
         <IonRow v-if="isReferralCardShown" class="mb-8">
-          <NotificationCard class="w-full" @click="isPhoneRegistered ? showModal(ModalType.Referral) : showModal(ModalType.NewPhone)" @close="isReferralCardShown = false">
+          <NotificationCard
+            class="w-full"
+            @click="isPhoneRegistered ? showModal(ModalType.Referral) : showModal(ModalType.NewPhone)"
+            @close="isReferralCardShown = false"
+          >
             <span class="text-lg text-pumpkin">
               Bring a friend and get {{ referralRewardAmount }} Points each!
             </span>
@@ -257,7 +284,10 @@ onMounted(async () => {
           </div>
         </IonRow>
         <IonRow class="ion-justify-content-center">
-          <IonButton fill="clear" class="text-base normal-case" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
+          <IonButton
+            fill="clear" class="text-base normal-case"
+            @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })"
+          >
             Go to Crypto Map
             <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
@@ -269,8 +299,8 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <IonButton
-          class="w-3/4 mx-auto text-base"
-          expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
+          class="w-3/4 mx-auto text-base" expand="block"
+          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
           @click="showModal(ModalType.Pay, { isFullscreen: true })"
         >
           Pay
@@ -283,15 +313,16 @@ onMounted(async () => {
 <style scoped>
 /* Disable scrollbar */
 ion-content {
-  --offset-bottom: auto!important;
+  --offset-bottom: auto !important;
   --overflow: hidden;
   overflow: auto;
+
   &::-webkit-scrollbar {
     display: none;
   }
 }
 
-ion-footer > ion-toolbar {
+ion-footer>ion-toolbar {
   --background: white;
   --padding-top: 8px;
   --padding-bottom: 8px;

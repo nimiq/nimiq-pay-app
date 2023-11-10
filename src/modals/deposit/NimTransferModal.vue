@@ -13,7 +13,8 @@ const { closeModal, closeAllModals } = useModal()
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 
 async function handleOpenWallet() {
-  const url = new URL(`https://wallet.nimiq${import.meta.env.DEV ? '-testnet' : ''}.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
+  // const url = new URL(`https://wallet.nimiq${import.meta.env.DEV ? '-testnet' : ''}.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
+  const url = new URL(`https://wallet.nimiq-testnet.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
   await Browser.open({ url: url.toString(), toolbarColor: '#E9B213' })
   Browser.addListener('browserFinished', () => {
     // TODO: check if tx incoming

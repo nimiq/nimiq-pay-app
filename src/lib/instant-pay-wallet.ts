@@ -111,8 +111,9 @@ export class InstantPayWallet {
     // eslint-disable-next-line no-console
     console.groupCollapsed(`🛒 Transactions`)
     const transactions = await this.storageManager.query('SELECT * FROM tx WHERE type = ? ORDER BY ts DESC', [TransactionType.PAYMENT])
+    const transactionsLog = await this.storageManager.query('SELECT * FROM tx ORDER BY ts DESC')
     // eslint-disable-next-line no-console
-    console.log('Transactions from DB', transactions)
+    console.log('Transactions from DB', transactionsLog)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const yesterday = new Date(today.getTime() - 1)
@@ -268,7 +269,7 @@ export class InstantPayWallet {
       try {
         await this.storageManager.run(
           'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-          [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, 'bonus', payment.address, payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit],
+          [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, 'bonus', payment.address.toUserFriendlyAddress(), payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit],
         )
       }
       catch (e) {
