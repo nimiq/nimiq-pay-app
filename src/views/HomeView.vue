@@ -155,7 +155,7 @@ onMounted(async () => {
     return
   }
 
-  if(await storageManager.isFirstRun()){
+  if (await storageManager.isFirstRun()) {
     await storageManager.setFirstRun(false)
     showModal(ModalType.RewardsIntro)
   }
@@ -304,7 +304,7 @@ onMounted(async () => {
       <IonToolbar>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
+          :disabled="pointsBalance === 0 && (!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0)"
           @click="showModal(ModalType.Pay, { isFullscreen: true })"
         >
           Pay
