@@ -14,8 +14,8 @@ const address = ref('')
 async function withdraw() {
   if (!amount.value || !address.value)
     return
-  if (amount.value > instantPayWallet.balanceRaw.value)
-    alert('Insufficient funds')
+  if (Nimiq.Policy.coinsToLunas(amount.value) > instantPayWallet.balanceRaw.value)
+    showNotificationAlert('Not enough funds')
   // TODO: handle invalid address
   const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)
   await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'Nimiq Pay App Withdraw' })
@@ -24,6 +24,7 @@ async function withdraw() {
   if (payment === null)
     return
   await instantPayWallet.completePendingPayment(payment)
+  // TODO: handle not successful
   showNotificationAlert('Withdrawal successful')
   closeModal()
 }

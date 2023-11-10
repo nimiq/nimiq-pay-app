@@ -239,6 +239,7 @@ export class InstantPayWallet {
   }
 
   async preparePayment(payment: PendingPayment) {
+    // TODO: handle this
     if (this.pendingPayment != null)
       throw new Error('Payment pending')
     if (payment.rail === 'CPL' && payment.railId !== undefined)
