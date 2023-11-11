@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, toastController } from '@ionic/vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { PushNotifications } from '@capacitor/push-notifications'
 import NotificationBell from '@/components/icons/notification-bell.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -49,8 +49,10 @@ function handleClose() {
       <IonButton expand="block" class="text-base font-bold" @click="handlePushButton">
         Enable Notifications
       </IonButton>
-      <IonButton fill="clear" expand="block" class="text-base font-bold normal-case"
-        style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')">
+      <IonButton
+        fill="clear" expand="block" class="text-base font-bold normal-case"
+        style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')"
+      >
         Skip for now
       </IonButton>
     </div>

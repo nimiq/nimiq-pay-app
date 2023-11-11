@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton } from '@ionic/vue'
+import { IonButton, IonSpinner } from '@ionic/vue'
 import { inject, ref } from 'vue'
 import type { Ref } from 'vue'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -10,23 +10,32 @@ const { closeModal, showNotificationAlert } = useModal()
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const amount: Ref<number | undefined> = ref()
 const address = ref('')
+const isLoading = ref(false)
 
 async function withdraw() {
-  if (!amount.value || !address.value)
+  if (!amount.value || !address.value || isLoading.value)
     return
   if (Nimiq.Policy.coinsToLunas(amount.value) > instantPayWallet.balanceRaw.value)
-    showNotificationAlert('Not enough funds')
+    showNotificationAlert('Not enough funds', true)
   // TODO: handle invalid address
   const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)
-  await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'Nimiq Pay App Withdraw' })
-  const payment = instantPayWallet.getPendingPayment()
-  // TODO: handle null payment
-  if (payment === null)
-    return
-  await instantPayWallet.completePendingPayment(payment)
-  // TODO: handle not successful
-  showNotificationAlert('Withdrawal successful')
-  closeModal()
+  try {
+    isLoading.value = true
+    await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'Nimiq Pay App Withdraw' })
+    const payment = instantPayWallet.getPendingPayment()
+    // TODO: handle null payment
+    if (payment === null)
+      return
+    await instantPayWallet.completePendingPayment(payment)
+    isLoading.value = false
+    // TODO: handle not successful
+    showNotificationAlert('Withdrawal successful')
+    closeModal()
+  }
+  catch (e) {
+    isLoading.value = false
+    console.error('Error Withdraw', e)
+  }
 }
 </script>
 
@@ -43,7 +52,10 @@ async function withdraw() {
         </span>
       </div>
       <div class="text-3xl">
-        <input :value="address" type="text" class="uppercase !px-4" placeholder="NQ..." @input="address = ($event.target as HTMLTextAreaElement).value.toUpperCase()">
+        <input
+          :value="address" type="text" class="uppercase !px-4" placeholder="NQ..."
+          @input="address = ($event.target as HTMLTextAreaElement).value.toUpperCase()"
+        >
       </div>
       <div class="self-end w-full">
         <div class="flex justify-between mb-8 gap-x-5">
@@ -61,7 +73,10 @@ async function withdraw() {
           </button>
         </div>
         <IonButton expand="block" :disabled="!amount || !address" @click="withdraw">
-          Confirm
+          <IonSpinner v-if="isLoading" name="dots" style="--color: white" />
+          <span v-else>
+            Confirm
+          </span>
         </IonButton>
       </div>
     </div>

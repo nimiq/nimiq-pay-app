@@ -3,7 +3,7 @@ import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
 import { isPlatform, modalController, toastController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
-import CheckIcon from '@/components/icons/check.vue'
+import { check, xmark } from '@/components/icons'
 
 export enum ModalType {
   Backup = '@/modals/BackupModal/index.vue',
@@ -131,12 +131,12 @@ function _useModal() {
     await modalToShow.present()
   }
 
-  async function showNotificationAlert(message: string) {
+  async function showNotificationAlert(message: string, error = false) {
     const toast = await toastController.create({
       message,
       duration: 3 * 1e3,
-      icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18"><path fill="currentColor" stroke="currentColor" d="M16.5826 1.18747c-.4488-.321965-1.0735-.218934-1.3953.23013L5.83073 14.4705l-3.1233-3.1278c-.25259-.2529-.6208-.3517-.96594-.2593-.34514.0925-.61477.3621-.70733.7074-.092555.3453.00603.7138.25861.9667l3.95664 3.9582c.21013.2024.49697.3047.78763.2809.29065-.0237.55712-.1712.73169-.4049L16.8126 2.5836c.3218-.44908.2188-1.07414-.23-1.39613Z"/></svg>',
-      cssClass: 'notification-alert-toast',
+      icon: error ? xmark : check,
+      cssClass: `notification-alert-toast ${error && 'toast-error'}`,
       position: 'top',
     })
     await toast.present()

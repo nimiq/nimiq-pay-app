@@ -9,6 +9,7 @@
     "dev:ios": "ionic cap run ios --livereload --external --watch",
     "dev": "vite",
     "build": "vue-tsc && vite build",
+    "release": "ionic cap build --prod",
     "preview": "vite preview",
     "test:e2e": "cypress run",
     "test:unit": "vitest",

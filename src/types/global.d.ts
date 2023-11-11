@@ -2,7 +2,7 @@ interface Transaction {
   title: string
   datetime: string
   id: string
-  type: number
+  type: TransactionType
   ts: number
   amount: number
   status: number

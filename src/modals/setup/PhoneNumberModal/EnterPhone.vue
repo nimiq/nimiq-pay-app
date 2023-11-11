@@ -12,7 +12,6 @@ import { ModalType, useModal } from '@/composables/useModal'
 
 const { showModal } = useModal()
 const { path } = useRoute()
-const router = useRouter()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const phoneInput = ref()
 const phoneNumber = ref('')

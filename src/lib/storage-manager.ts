@@ -67,6 +67,7 @@ export enum TransactionType {
   DEPOSIT_TO_INSTANT = 2,
   EXTEND_INSTANT = 3,
   RECOVER_INSTANT = 4,
+  DEPOSIT = 'deposit',
 }
 
 export enum TransactionStatus {

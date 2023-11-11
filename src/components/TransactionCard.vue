@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { IonIcon, IonItem } from '@ionic/vue'
 import { basket } from 'ionicons/icons'
-import type { PropType } from 'vue'
+import { type PropType, computed, onMounted } from 'vue'
 import { ModalType, useModal } from '@/composables/useModal'
 
-defineProps({
+const props = defineProps({
   tx: {
     type: Object as PropType<Transaction>,
     required: true,
@@ -12,6 +12,15 @@ defineProps({
 })
 
 const { showModal } = useModal()
+const direction = computed(() => {
+  if (!props.tx)
+    return 1
+  return props.tx.type === 'deposit' ? 1 : -1
+})
+
+onMounted(() => {
+  console.log(props)
+})
 </script>
 
 <template>
@@ -25,18 +34,18 @@ const { showModal } = useModal()
       <IonIcon slot="start" :icon="basket" size="large" class="p-1 rounded-full w-7 h-7 bg-space/5" />
       <div class="font-semibold">
         <p class="text-base">
-          {{ tx.title }}
+          {{ tx.type === 'deposit' ? 'Top Up' : tx.title }}
         </p>
         <p class="text-sm text-space/50">
           {{ tx.datetime }}
         </p>
       </div>
       <div class="ml-auto text-right">
-        <p class="text-base font-bold">
-          {{ tx.fiatUnit?.toLocaleUpperCase() }} {{ tx.fiatAmount }}
+        <p v-if="tx.fiatAmount" class="text-base font-bold">
+          {{ direction * tx.fiatAmount }} {{ tx.fiatUnit?.toLocaleUpperCase() }}
         </p>
-        <p class="text-sm font-semibold text-space/50" :class="{ 'text-blue-500 text-xl': !tx.fiatAmount }">
-          {{ (tx.amount / 1e5).toFixed(2) }} NIM
+        <p :class="tx.fiatAmount ? 'text-sm font-semibold text-space/50' : '!text-space !text-base !font-bold'">
+          {{ (direction * tx.amount / 1e5).toFixed(2) }} NIM
         </p>
       </div>
     </div>
