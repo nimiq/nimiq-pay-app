@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonModal, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { inject, ref } from 'vue'
-import ItemDivider from '@/components/ItemDivider.vue'
+import { onLongPress } from '@vueuse/core'
 import { ModalType, useModal } from '@/composables/useModal'
 import { BonusWallet } from '@/lib/bonus-wallet'
+import ItemDivider from '@/components/ItemDivider.vue'
 
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const isPhoneRegistered = bonusWallet.isRegistered()
+const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
+
+function onLongPressCallback() {
+  useModal().showModal(ModalType.Dev, { isOnTop: true })
+}
+
+onLongPress(
+  htmlRefHook,
+  onLongPressCallback,
+  { modifiers: { prevent: true }, delay: 3 * 1e3 },
+)
 </script>
 
 <template>
@@ -44,7 +56,7 @@ const { showModal, closeModal } = useModal()
 
     <ItemDivider />
 
-    <IonItem button :detail="false" @click="showModal(ModalType.Settings, { isOnTop: true })">
+    <IonItem ref="htmlRefHook" button :detail="false" @click="showModal(ModalType.Settings, { isOnTop: true })">
       Settings
     </IonItem>
     <IonItem button :detail="false" @click="showModal(ModalType.Backup)">

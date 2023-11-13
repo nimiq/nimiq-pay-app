@@ -7,6 +7,7 @@ import { check, xmark } from '@/components/icons'
 
 export enum ModalType {
   Backup = '@/modals/BackupModal/index.vue',
+  CashlinkScanner = '@/modals/deposit/CashlinkScannerModal.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
@@ -48,6 +49,9 @@ function _useModal() {
     switch (modal) {
       case ModalType.Backup:
         component = defineAsyncComponent(() => import(ModalType.Backup))
+        break
+      case ModalType.CashlinkScanner:
+        component = defineAsyncComponent(() => import(ModalType.CashlinkScanner))
         break
       case ModalType.DetailedTransaction:
         component = defineAsyncComponent(() => import(ModalType.DetailedTransaction))

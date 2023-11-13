@@ -6,7 +6,7 @@ import { StatusBar } from '@capacitor/status-bar'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import { ModalType, useModal } from '@/composables/useModal'
 
-const isDev = true || import.meta.env.DEV
+const isDev = import.meta.env.DEV
 
 StatusBar.setBackgroundColor({ color: '#F8F8F8' })
 StatusBar.setOverlaysWebView({ overlay: false })
@@ -25,7 +25,7 @@ useRouter().afterEach(async () => {
     <RouterView />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="() => useModal().showModal(ModalType.Dev, { isOnTop: true })">
+      <IonFabButton @click="useModal().showModal(ModalType.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>

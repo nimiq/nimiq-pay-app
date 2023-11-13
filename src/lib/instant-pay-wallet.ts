@@ -91,30 +91,38 @@ export class InstantPayWallet {
           await this.topUp(address)
       })
       if (nimiqWallet.address.value) {
-        await client.addTransactionListener(async (tx) => {
-          if (tx.sender.toUserFriendlyAddress() === this.address.value?.toUserFriendlyAddress())
-            return
-          // TODO: handle unknown, rejected...
-          if (tx.state !== 'mined')
-            return
+        console.groupCollapsed('📡 InstantPay Top Up')
+        // Get last txs and check if they are in the tx table
+        const txArray = await client.getTransactionsByAddress(nimiqWallet.address.value)
+        console.log('txArray', txArray)
 
-          console.log('Transaction received', tx.transactionHash.toHex(), tx)
+        for (const tx of txArray) {
+          console.log('recipient', tx.recipient.toUserFriendlyAddress(), nimiqWallet.address.value.toUserFriendlyAddress())
+          if (tx.recipient.toUserFriendlyAddress() !== nimiqWallet.address.value.toUserFriendlyAddress())
+            continue
+          // Check if tx is in the table
+          const isTxInTable = await this.storageManager.query(
+            'SELECT * FROM tx WHERE id = ?',
+            [tx.transactionHash.toHex()],
+          )
+          if (isTxInTable.length > 0)
+            continue
+
           await this.storageManager.run(
             'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
             [
               tx.transactionHash.toHex(),
               TransactionType.DEPOSIT,
-              Date.now() / 1000,
+              tx.timestamp,
               tx.value,
               TransactionStatus.MINED,
               tx.sender.toUserFriendlyAddress(),
               tx.recipient.toUserFriendlyAddress(),
-              // TODO: do this raw thing
-              '',
             ],
           )
-          console.log('Transaction saved')
-        }, [nimiqWallet.address.value])
+          console.log('Transaction saved', tx)
+        }
+        console.groupEnd()
       }
     })();
     (async () => {
@@ -704,7 +712,15 @@ export class InstantPayWallet {
     type: TransactionType = TransactionType.UNKNOWN,
     message: string | null = null,
   ): Promise<Nimiq.ClientTransactionDetails> {
+    console.groupCollapsed('📡 InstantPay Send Transaction Internal')
     const wallet = await this.nimiqWallet.getWallet()
+    console.log('wallet', wallet)
+    console.log('instantWallet', instantWallet)
+    console.log('recipient', recipient.toUserFriendlyAddress())
+    console.log('amount', amount)
+    console.log('status', status)
+    if (message)
+      console.log('message', Nimiq.BufferUtils.fromAscii(message))
     const tx = new Nimiq.ExtendedTransaction(
       Nimiq.Address.fromString(instantWallet.address),
       Nimiq.Account.Type.HTLC,
@@ -714,9 +730,7 @@ export class InstantPayWallet {
       0,
       status.blockHeight,
       0,
-      message == null
-        ? new Uint8Array(0)
-        : Nimiq.BufferUtils.fromAscii(message),
+      message ? Nimiq.BufferUtils.fromAscii(message) : new Uint8Array(0),
     )
     tx.proof = this.createEarlyResolveProof(wallet, tx, instantWallet)
     const instantTransactionReceipt = await this.instantPayClient
@@ -744,6 +758,7 @@ export class InstantPayWallet {
       'UPDATE wl SET balance = balance - ? WHERE id = ?',
       [tx.value, tx.sender.toUserFriendlyAddress()],
     )
+    console.groupEnd()
     return result
   }
 

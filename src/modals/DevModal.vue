@@ -7,10 +7,12 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
+import { StorageManager } from '@/lib/storage-manager'
 
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
+const storageManager = inject(StorageManager.KEY) as StorageManager
 const router = useRouter()
 
 async function writeToClipboard(string: string) {
@@ -25,6 +27,12 @@ async function writeToClipboard(string: string) {
 
   await toast.present()
 };
+
+async function handleClearTx() {
+  // Clear tx table
+  await storageManager.run('DELETE FROM tx')
+  router.go(0)
+}
 </script>
 
 <template>
@@ -92,5 +100,8 @@ async function writeToClipboard(string: string) {
         </IonButton>
       </IonCardContent>
     </IonCard>
+    <IonButton @click="handleClearTx">
+      Clear Tx History
+    </IonButton>
   </ModalTemplate>
 </template>
