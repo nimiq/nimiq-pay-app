@@ -126,7 +126,7 @@ onMounted(() => {
       </div>
       <div class="flex flex-col items-center self-end justify-between w-full h-full">
         <!-- Use Points Toggle -->
-        <IonToggle :disabled="canUsePoints !== CanUsePointsState.CAN_USE_POINTS" label-placement="end" class="mb-4" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
+        <IonToggle v-if="paymentDetails?.valid" :disabled="canUsePoints !== CanUsePointsState.CAN_USE_POINTS" label-placement="end" class="mb-4" @ion-change="(e) => isPayingWithPoints = e.detail.checked">
           <div class="flex items-center text-lg">
             <span class="mr-2">Use</span>
             <CryptoCityLogo class="w-5 h-5 mr-1" />
