@@ -442,6 +442,8 @@ export class InstantPayWallet {
           tx.transactionHash.toHex(),
         ],
       )
+      // TODO: send tx to /api/payment/on-chain
+      console.log('Payment tx', tx)
     }
     this.pendingPayment = null
     await this.updateReactive()
