@@ -54,7 +54,8 @@ const alertButtons = [
 ]
 
 function handleClose() {
-  showModal(ModalType.EnablePushNotifications)
+  if (path === '/setup')
+    showModal(ModalType.EnablePushNotifications)
 }
 
 function focusInput() {
