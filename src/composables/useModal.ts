@@ -33,6 +33,7 @@ export enum ModalType {
 
 function _useModal() {
   const isPresent = ref(false)
+  const allModals: HTMLIonModalElement[] = []
 
   async function showModal(modal: ModalType, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
     const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
@@ -132,6 +133,7 @@ function _useModal() {
     if (isFullscreen && isPlatform('android') && !isPlatform('mobileweb'))
       await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
+    allModals.unshift(modalToShow)
     await modalToShow.present()
   }
 
@@ -162,11 +164,15 @@ function _useModal() {
   }
 
   async function closeAllModals() {
-    let modal = await modalController.getTop()
-    while (modal) {
+    const modal = await modalController.getTop()
+
+    // Close all modals in background
+    allModals.forEach(async (modal) => {
+      if (modal)
+        await modal.dismiss()
+    })
+    if (modal)
       await modal.dismiss()
-      modal = await modalController.getTop()
-    }
   }
 
   return {
