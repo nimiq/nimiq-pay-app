@@ -22,6 +22,10 @@ const bonusBalance = computedAsync(async () => {
 }, 0)
 
 onMounted(async () => {
+  // If phone number is not verified, show the modal
+  if (!bonusWallet.isRegistered())
+    showModal(ModalType.NewPhone)
+
   tasks.value = (await bonusWallet.getTasks()).sort((a, b) => a.order - b.order)
   // Move completed tasks to the end
   tasks.value = tasks.value.sort((a, b) => {
