@@ -9,15 +9,17 @@ const router = useRouter()
 const { path } = useRoute()
 
 async function registerNotifications() {
-  let permStatus = await PushNotifications.checkPermissions()
+  // TODO: implement this
 
-  if (permStatus.receive === 'prompt')
-    permStatus = await PushNotifications.requestPermissions()
+  // let permStatus = await PushNotifications.checkPermissions()
 
-  if (permStatus.receive !== 'granted')
-    throw new Error('Permission not granted.')
+  // if (permStatus.receive === 'prompt')
+  //   permStatus = await PushNotifications.requestPermissions()
 
-  await PushNotifications.register()
+  // if (permStatus.receive !== 'granted')
+  //   throw new Error('Permission not granted.')
+
+  // await PushNotifications.register()
 }
 
 async function handlePushButton() {
