@@ -129,7 +129,7 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
-    if (isFullscreen && isPlatform('android'))
+    if (isFullscreen && isPlatform('android') && !isPlatform('mobileweb'))
       await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
     await modalToShow.present()
@@ -157,7 +157,7 @@ function _useModal() {
     if (modal)
       await modal.dismiss()
 
-    if (isPlatform('android'))
+    if (isPlatform('android') && !isPlatform('mobileweb'))
       await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   }
 
