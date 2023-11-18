@@ -58,9 +58,8 @@ function handleResendRequest() {
 function handleClose() {
   if (path === '/setup')
     showModal(ModalType.EnablePushNotifications)
-
   else
-    closeModal()
+    showModal(ModalType.Rewards)
 }
 
 onMounted(() => {

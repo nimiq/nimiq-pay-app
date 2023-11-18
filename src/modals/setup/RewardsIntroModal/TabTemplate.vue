@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
-import { useRouter } from 'vue-router'
 import type { Ref } from 'vue'
-import { markRaw, ref, watch } from 'vue'
+import { inject, markRaw, ref, watch } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { useSwipe } from '@vueuse/core'
 import Tab1 from './Tab1.vue'
 import Tab2 from './Tab2.vue'
 import Tab3 from './Tab3.vue'
+import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
 
 const tabList = [
@@ -16,7 +16,8 @@ const tabList = [
   markRaw(Tab3),
 ]
 
-const { showModal } = useModal()
+const { showModal, closeModal } = useModal()
+const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const nav = (document.querySelector('[data-reward-info-nav]')) as Nav & HTMLElement
 const swipeable = ref(null)
 const smoothSpring: Ref<number | null> = ref(0)
@@ -27,8 +28,10 @@ async function handleGoTo() {
   const activeTab = await getActiveTab()
   if (tabList[activeTab + 1])
     nav.push(tabList[activeTab + 1], undefined, { mode: 'ios' })
-  else
+  else if (bonusWallet.isRegistered())
     await showModal(ModalType.Rewards)
+  else
+    await showModal(ModalType.NewPhone)
 }
 
 async function getActiveTab() {
