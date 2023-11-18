@@ -10,7 +10,7 @@ export default defineConfig({
     exclude: ['node_modules/@nimiq/core-web/web.esm.js'],
   },
   plugins: [
-    vue(),
+    vue({ script: { defineModel: true } }),
     legacy(),
     VitePWA({ registerType: 'autoUpdate' }),
   ],

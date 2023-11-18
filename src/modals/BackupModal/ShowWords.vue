@@ -2,7 +2,7 @@
 import { IonBackButton, IonButton, IonButtons } from '@ionic/vue'
 import { inject, markRaw } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
-import { asyncComputed } from '@vueuse/core'
+import { computedAsync } from '@vueuse/core'
 import ValidateWords from './ValidateWords.vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -11,7 +11,7 @@ import MnemonicInput from '@/components/MnemonicInput.vue'
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 
-const words = asyncComputed(async () => {
+const words = computedAsync(async () => {
   return await nimiqWallet.getWords()
 }, ['Loading...'])
 </script>

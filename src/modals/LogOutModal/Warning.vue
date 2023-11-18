@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const { closeModal, showModal, closeAllModals } = useModal()
 </script>
@@ -24,7 +24,7 @@ const { closeModal, showModal, closeAllModals } = useModal()
       You will lose your money and data if you don't back up your account
     </p>
 
-    <IonButton class="self-end w-full mt-16 font-semibold" @click="showModal(ModalType.Backup)">
+    <IonButton class="self-end w-full mt-16 font-semibold" @click="showModal(Modal.Backup)">
       Back up account
     </IonButton>
   </div>

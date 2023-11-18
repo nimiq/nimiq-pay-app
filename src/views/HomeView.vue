@@ -2,31 +2,31 @@
 import { IonButton, IonButtons, IonCol, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonMenuButton, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward, trendingDown, trendingUp } from 'ionicons/icons'
 import type { Ref } from 'vue'
-import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
+import { inject, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { storeToRefs } from 'pinia'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import TransactionCard from '@/components/TransactionCard.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
+import { useApp } from '@/stores/app'
 
+const { showRecoveryWordsAlert } = storeToRefs(useApp())
 const router = useRouter()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const storageManager = inject(StorageManager.KEY) as StorageManager
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const { showModal, showNotificationAlert } = useModal()
-const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
-const isPhoneRegistered = bonusWallet.isRegistered()
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
-const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
 // TODO: get this from API
 const bonusAmount = 5
 // TODO: get this from somewhere
@@ -104,29 +104,22 @@ watchEffect(async () => {
   else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
     notificationArray.value.unshift({
       title: verifyNumberTitle,
-      action: () => showModal(ModalType.NewPhone),
+      action: () => showModal(Modal.NewPhone),
     })
     scrollToFirstNotification()
   }
   else if (isPromoCodeEntered.value && !isPhoneRegistered.value) {
     notificationArray.value.unshift({
       title: claimRewardTitle,
-      action: () => showModal(ModalType.NewPhone),
+      action: () => showModal(Modal.NewPhone),
     })
     scrollToFirstNotification()
   }
 })
 
-watch(isRecoveryWordsShown, () => {
-  // If no backup done and balance > 0
-  if (isRecoveryWordsShown.value) {
-    StatusBar.setBackgroundColor({ color: '#dbeafe' })
-    StatusBar.setStyle({ style: Style.Light })
-  }
-  else {
-    StatusBar.setBackgroundColor({ color: '#ffffff' })
-    StatusBar.setStyle({ style: Style.Light })
-  }
+watch(showRecoveryWordsAlert, () => {
+  StatusBar.setStyle({ style: Style.Light })
+  StatusBar.setBackgroundColor({ color: showRecoveryWordsAlert.value ? '#dbeafe' : '#ffffff' })
 }, { immediate: true })
 
 onMounted(async () => {
@@ -152,17 +145,17 @@ onMounted(async () => {
           </p>
         </div>
         <IonButtons slot="end">
-          <IonButton fill="solid" class="font-bold" size="small" @click="showModal(ModalType.Backup)">
+          <IonButton fill="solid" class="font-bold" size="small" @click="showModal(Modal.Backup)">
             Recovery Words
           </IonButton>
         </IonButtons>
       </IonToolbar>
       <IonToolbar class="px-2">
         <IonButtons slot="start">
-          <IonMenuButton :auto-hide="false" @click="showModal(ModalType.Menu, { isSmall: true })" />
+          <IonMenuButton :auto-hide="false" @click="showModal(Modal.Menu, { isSmall: true })" />
         </IonButtons>
         <IonButtons v-if="isPhoneRegistered" slot="end">
-          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(ModalType.Rewards)">
+          <IonButton fill="solid" class="font-bold" style="--padding-start: 0.75rem; --padding-bottom: 0.4rem; --padding-top: 0.4rem" @click="showModal(Modal.Rewards)">
             Earn CC Points
             <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
@@ -181,7 +174,7 @@ onMounted(async () => {
             <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-3" />
             <span class="ml-1 font-semibold">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
           </p>
-          <IonButton fill="clear" class="text-xl font-medium" @click="showModal(ModalType.TopUp, { isSmall: true })">
+          <IonButton fill="clear" class="text-xl font-medium" @click="showModal(Modal.TopUp, { isSmall: true })">
             Top Up <IonIcon slot="end" :icon="chevronForward" />
           </IonButton>
         </IonRow>
@@ -190,7 +183,7 @@ onMounted(async () => {
         <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6">
           <TransactionCard v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id" :tx="transaction" />
           <div v-if="instantPayWallet.transactions.value.length > 3" class="text-center">
-            <IonButton fill="clear" @click="showModal(ModalType.TransactionHistory)">
+            <IonButton fill="clear" @click="showModal(Modal.TransactionHistory)">
               See more
             </IonButton>
           </div>
@@ -209,7 +202,7 @@ onMounted(async () => {
 
         <!-- Referral -->
         <IonRow class="mb-8">
-          <TaskCard highlight large @click="showModal(ModalType.Voucher)">
+          <TaskCard highlight large @click="showModal(Modal.Voucher)">
             Invite a friend and earn up to 20€ both!
           </TaskCard>
         </IonRow>
@@ -241,7 +234,7 @@ onMounted(async () => {
               <IonButton
                 style="--box-shadow: none;"
                 expand="block" :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-                @click="showModal(ModalType.Pay, { isFullscreen: true })"
+                @click="showModal(Modal.Pay, { isFullscreen: true })"
               >
                 Pay
               </IonButton>

@@ -3,7 +3,7 @@ import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonLabel, IonList, 
 import { close } from 'ionicons/icons'
 import { inject, ref } from 'vue'
 import ItemDivider from '@/components/ItemDivider.vue'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import { BonusWallet } from '@/lib/bonus-wallet'
 
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
@@ -23,7 +23,7 @@ const { showModal, closeModal } = useModal()
   </IonHeader>
 
   <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
-    <IonItem button :detail="false" @click="showModal(ModalType.TopUp, { isSmall: true })">
+    <IonItem button :detail="false" @click="showModal(Modal.TopUp, { isSmall: true })">
       Top Up
     </IonItem>
     <IonItem button :detail="false">
@@ -38,7 +38,7 @@ const { showModal, closeModal } = useModal()
       Activate Bluecode payments
     </IonItem>
     -->
-    <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(ModalType.NewPhone)">
+    <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(Modal.NewPhone)">
       Activate Cashback & Rewards
     </IonItem>
 
@@ -47,10 +47,10 @@ const { showModal, closeModal } = useModal()
     <IonItem button :detail="false">
       Settings
     </IonItem>
-    <IonItem button :detail="false" @click="showModal(ModalType.Backup)">
+    <IonItem button :detail="false" @click="showModal(Modal.Backup)">
       Back Up
     </IonItem>
-    <IonItem button :detail="false" @click="showModal(ModalType.LogoutConfirm, { isSmall: true })">
+    <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
       Log Out
     </IonItem>
   </IonList>

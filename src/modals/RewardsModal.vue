@@ -3,7 +3,7 @@ import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon,
 import { chevronForwardOutline, close } from 'ionicons/icons'
 import { inject, onMounted, ref } from 'vue'
 import { computedAsync, until } from '@vueuse/core'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
@@ -58,7 +58,7 @@ onMounted(async () => {
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">
-        <IonButton fill="clear" class="font-medium" @click="showModal(ModalType.ExpiringRewards, { isOnTop: true })">
+        <IonButton fill="clear" class="font-medium" @click="showModal(Modal.ExpiringRewards, { isOnTop: true })">
           800 NIM expiring soon <IonIcon slot="end" :icon="chevronForwardOutline" />
         </IonButton>
       </IonRow>
@@ -71,7 +71,7 @@ onMounted(async () => {
 
       <!-- Referral -->
       <IonRow>
-        <TaskCard highlight large @click="showModal(ModalType.Voucher, { isOnTop: true })">
+        <TaskCard highlight large @click="showModal(Modal.Voucher, { isOnTop: true })">
           Invite a friend and earn up to 20€ both!
         </TaskCard>
       </IonRow>

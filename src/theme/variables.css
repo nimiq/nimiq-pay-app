@@ -270,10 +270,14 @@ http://ionicframework.com/docs/theming/ */
 
 @layer base {
   h1 {
-    @apply text-4xl font-semibold;
+    @apply text-4xl font-semibold [text-wrap:balance];
   }
   input {
     @apply border-2 border-blue-400 rounded focus:border-blue-600;
+  }
+
+  p {
+    @apply [text-wrap:pretty];
   }
 }
 

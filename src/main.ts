@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
 import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
@@ -28,45 +29,25 @@ import './theme/variables.css'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 /* Libs */
-import { FiatHandler } from '@/lib/fiat-handler'
-import { StorageManager } from '@/lib/storage-manager'
-import { BonusClient } from '@/lib/bonus-client'
-import { BonusWallet } from '@/lib/bonus-wallet'
-import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
-import { NimiqWallet } from '@/lib/nimiq-wallet'
-import { InstantPayClient } from '@/lib/instant-pay-client'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { useConn } from './stores/conn'
 
 applyPolyfills().then(() => {
   jeepSqlite(window)
 })
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const storageManager = new StorageManager()
-  await storageManager.init()
-  const nimiqNetworkClient = new NimiqNetworkClient()
-  const bonusClient = new BonusClient()
-  const instantPayClient = new InstantPayClient()
-  const nimiqWallet = new NimiqWallet(nimiqNetworkClient, storageManager)
-  const bonusWallet = new BonusWallet(nimiqWallet, storageManager, bonusClient)
-  const instantPayWallet = new InstantPayWallet(nimiqWallet, nimiqNetworkClient, instantPayClient, bonusWallet, storageManager)
-  const fiatHandler = new FiatHandler(storageManager)
-
   const app = createApp(App)
-    .use(IonicVue)
-    .use(router)
-    .use(VueVirtualScroller)
-    .provide(StorageManager.KEY, storageManager)
-    .provide(NimiqNetworkClient.KEY, nimiqNetworkClient)
-    .provide(NimiqWallet.KEY, nimiqWallet)
-    .provide(InstantPayWallet.KEY, instantPayWallet)
-    .provide(FiatHandler.KEY, fiatHandler)
-    .provide(BonusWallet.KEY, bonusWallet)
+  app.use(IonicVue)
+  app.use(createPinia())
+  app.use(router)
+  app.use(VueVirtualScroller)
 
   await router.isReady()
 
+  await useConn().init()
+
   if (router.currentRoute.value.path === '/') {
-    if (await storageManager.exists())
+    if (await useConn().dbExists)
       router.push('/pin')
     else
       router.push('/setup')

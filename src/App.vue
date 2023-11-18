@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { IonApp, IonFab, IonFabButton, IonIcon, isPlatform } from '@ionic/vue'
+import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView, useRouter } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const isDev = import.meta.env.DEV
 
@@ -21,11 +21,11 @@ useRouter().afterEach(async () => {
 </script>
 
 <template>
-  <IonApp>
+  <IonApp class="text-space">
     <RouterView />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="() => useModal().showModal(ModalType.Dev, { isOnTop: true })">
+      <IonFabButton @click="() => useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>
@@ -60,10 +60,5 @@ body.scanner-active ion-app>:not(ion-modal) {
 
 body.scanner-active ion-content, body.scanner-active .ion-page, body.scanner-active ion-modal {
     --background: none;
-}
-
-/* TODO: Remove this */
-p, a, h1, h2, h3, h4, h5, h6, svg {
-  color: #1f2348;
 }
 </style>

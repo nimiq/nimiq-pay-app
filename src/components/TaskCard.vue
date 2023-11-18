@@ -3,7 +3,7 @@ import { type PropType, inject, ref } from 'vue'
 import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
 import { chevronForwardOutline } from 'ionicons/icons'
 import { BonusWallet } from '@/lib/bonus-wallet'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const props = defineProps({
   progress: {
@@ -47,7 +47,7 @@ async function handleClick() {
   isLoading.value = true
   const task = await bonusWallet.getTask(props.task.id)
   isLoading.value = false
-  showModal(ModalType.Task, { componentProps: { task } })
+  showModal(Modal.Task, { componentProps: { task } })
 }
 </script>
 

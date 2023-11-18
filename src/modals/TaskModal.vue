@@ -5,7 +5,7 @@ import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
 import YouTubePlayer from 'youtube-player'
 import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 import { BonusWallet } from '@/lib/bonus-wallet'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 
 const props = defineProps({
@@ -84,7 +84,7 @@ async function handleSubmit() {
   }
 
   await showNotificationAlert({ title: `You earned ${props.task.reward_amount / 1e5} CC Points` })
-  showModal(ModalType.Rewards)
+  showModal(Modal.Rewards)
 }
 </script>
 

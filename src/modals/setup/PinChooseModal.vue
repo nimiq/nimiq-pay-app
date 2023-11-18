@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, inject, onMounted, ref, watch } from 'vue'
-import { IonButton, IonButtons, IonIcon} from '@ionic/vue'
+import { IonButton, IonButtons, IonIcon } from '@ionic/vue'
 import { chevronBackOutline } from 'ionicons/icons'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { StorageManager } from '@/lib/storage-manager'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 enum PinType {
   CHOOSE = 'Choose PIN',
@@ -12,7 +12,7 @@ enum PinType {
 }
 
 const { showModal } = useModal()
-const storageManager = inject(StorageManager.KEY) as StorageManager
+const storageManager = inject(StorageManager.KEY)!
 const pinField = ref()
 const title = ref(PinType.CHOOSE)
 const pin = ref('')
@@ -24,7 +24,7 @@ watch(pin, async (newValue) => {
   if (newValue.length === 4) {
     if (newPin.value && pin.value === newPin.value) {
       await storageManager.setPin(pin.value)
-      showModal(ModalType.NewPhone)
+      showModal(Modal.NewPhone)
     }
     else if (newPin.value && pin.value !== newPin.value) {
       pinField.value.setCustomValidity('PINs don\'t match')

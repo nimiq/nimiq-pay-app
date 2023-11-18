@@ -8,7 +8,7 @@ import { useSwipe } from '@vueuse/core'
 import Tab1 from './Tab1.vue'
 import Tab2 from './Tab2.vue'
 import Tab3 from './Tab3.vue'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const tabList = [
   markRaw(Tab1),
@@ -24,7 +24,7 @@ const { isSwiping, direction, lengthX } = useSwipe(swipeable, { threshold: 1 })
 const maxSwipe = 40
 
 async function handleGoTo() {
-  await showModal(ModalType.Rewards)
+  await showModal(Modal.Rewards)
 }
 
 async function getActiveTab() {

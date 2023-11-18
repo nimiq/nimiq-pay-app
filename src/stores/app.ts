@@ -1,0 +1,58 @@
+import { useStorageAsync } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
+import type { StorageLikeAsync } from '@vueuse/core'
+import { computed, onMounted } from 'vue'
+import { useConn } from './conn'
+import { useRemoteSigner } from './remote-signer'
+import { useSync } from '@/composables/useSync'
+
+export function kv(): StorageLikeAsync {
+  const { waitForUnlock } = useConn()
+  const { db } = storeToRefs(useConn())
+
+  return {
+    async getItem(key) {
+      await waitForUnlock()
+      const res = await db.value!.query('SELECT value FROM kv WHERE key = ?', [key])
+      return res.values?.at(0)?.value || ''
+    },
+    async setItem(key, value) {
+      await waitForUnlock()
+      await db.value!.run('INSERT OR REPLACE INTO kv(key, value) VALUES (?, ?)', [key, value])
+    },
+    removeItem: async (key) => {
+      await waitForUnlock()
+      db.value!.run('DELETE FROM kv WHERE key = ?', [key])
+    },
+  } satisfies StorageLikeAsync
+}
+
+export const useApp = defineStore('app', () => {
+  const phoneNumber = useStorageAsync('phoneNumber', '', kv())
+  const referralCode = useStorageAsync('referralCode', '', kv())
+  const pinCode = useStorageAsync('pinCode', '', kv())
+  const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv())
+  const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv())
+  const pointsToken = useStorageAsync('pointsToken', '', kv())
+
+  // @ts-expect-error 16 is the value we need to have to get the 12 words
+  Nimiq.Entropy.SIZE = 16
+  // Maybe we should revisit this later. Right now this will be in memory all the times
+  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv())
+
+  const { remoteBalance } = useRemoteSigner()
+  const showRecoveryWordsAlert = computed(() => !hasDoneBackup.value && remoteBalance > 0)
+
+  onMounted(() => useSync().syncWallets())
+
+  return {
+    phoneNumber,
+    referralCode,
+    pinCode,
+    entropy,
+    hasDoneBackup,
+    selectedFiat,
+    pointsToken,
+    showRecoveryWordsAlert,
+  }
+})

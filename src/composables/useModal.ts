@@ -1,16 +1,16 @@
 import { defineAsyncComponent, ref } from 'vue'
-import type { Ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 
-export enum ModalType {
+export enum Modal {
+  Login = '@/modals/Login.vue',
   Backup = '@/modals/BackupModal/index.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
-  Login = '@/modals/setup/LoginModal.vue',
+  // Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
@@ -30,7 +30,7 @@ export enum ModalType {
 function _useModal() {
   const isPresent = ref(false)
 
-  async function showModal(modal: ModalType, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
     const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
     if (import.meta.env.MODE === 'development') {
       // eslint-disable-next-line no-console
@@ -43,66 +43,69 @@ function _useModal() {
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
-      case ModalType.Backup:
-        component = defineAsyncComponent(() => import(ModalType.Backup))
+      case Modal.Login:
+        component = defineAsyncComponent(() => import(Modal.Login))
         break
-      case ModalType.DetailedTransaction:
-        component = defineAsyncComponent(() => import(ModalType.DetailedTransaction))
+      case Modal.Backup:
+        component = defineAsyncComponent(() => import(Modal.Backup))
         break
-      case ModalType.EnablePushNotifications:
-        component = defineAsyncComponent(() => import(ModalType.EnablePushNotifications))
+      case Modal.DetailedTransaction:
+        component = defineAsyncComponent(() => import(Modal.DetailedTransaction))
         break
-      case ModalType.ExpiringRewards:
-        component = defineAsyncComponent(() => import(ModalType.ExpiringRewards))
+      case Modal.EnablePushNotifications:
+        component = defineAsyncComponent(() => import(Modal.EnablePushNotifications))
         break
-      case ModalType.Login:
-        component = defineAsyncComponent(() => import(ModalType.Login))
+      case Modal.ExpiringRewards:
+        component = defineAsyncComponent(() => import(Modal.ExpiringRewards))
         break
-      case ModalType.LogoutConfirm:
-        component = defineAsyncComponent(() => import(ModalType.LogoutConfirm))
+      // case Modal.Login:
+      //   component = defineAsyncComponent(() => import(Modal.Login))
+      //   break
+      case Modal.LogoutConfirm:
+        component = defineAsyncComponent(() => import(Modal.LogoutConfirm))
         break
-      case ModalType.LogoutWarning:
-        component = defineAsyncComponent(() => import(ModalType.LogoutWarning))
+      case Modal.LogoutWarning:
+        component = defineAsyncComponent(() => import(Modal.LogoutWarning))
         break
-      case ModalType.Menu:
-        component = defineAsyncComponent(() => import(ModalType.Menu))
+      case Modal.Menu:
+        component = defineAsyncComponent(() => import(Modal.Menu))
         break
-      case ModalType.NewPin:
-        component = defineAsyncComponent(() => import(ModalType.NewPin))
+      case Modal.NewPin:
+        component = defineAsyncComponent(() => import(Modal.NewPin))
         break
-      case ModalType.NewPhone:
-        component = defineAsyncComponent(() => import(ModalType.NewPhone))
+      case Modal.NewPhone:
+        component = defineAsyncComponent(() => import(Modal.NewPhone))
         break
-      case ModalType.NimTransfer:
-        component = defineAsyncComponent(() => import(ModalType.NimTransfer))
+      case Modal.NimTransfer:
+        component = defineAsyncComponent(() => import(Modal.NimTransfer))
         break
-      case ModalType.Pay:
-        component = defineAsyncComponent(() => import(ModalType.Pay))
+      case Modal.Pay:
+        component = defineAsyncComponent(() => import(Modal.Pay))
         break
-      case ModalType.PromoCode:
-        component = defineAsyncComponent(() => import(ModalType.PromoCode))
+      case Modal.PromoCode:
+        component = defineAsyncComponent(() => import(Modal.PromoCode))
         break
-      case ModalType.Rewards:
-        component = defineAsyncComponent(() => import(ModalType.Rewards))
+      case Modal.Rewards:
+        component = defineAsyncComponent(() => import(Modal.Rewards))
         break
-      case ModalType.RewardsIntro:
-        component = defineAsyncComponent(() => import(ModalType.RewardsIntro))
+      case Modal.RewardsIntro:
+        component = defineAsyncComponent(() => import(Modal.RewardsIntro))
         break
-      case ModalType.Task:
-        component = defineAsyncComponent(() => import(ModalType.Task))
+      case Modal.Task:
+        component = defineAsyncComponent(() => import(Modal.Task))
         break
-      case ModalType.TopUp:
-        component = defineAsyncComponent(() => import(ModalType.TopUp))
+      case Modal.TopUp:
+        component = defineAsyncComponent(() => import(Modal.TopUp))
         break
-      case ModalType.TransactionHistory:
-        component = defineAsyncComponent(() => import(ModalType.TransactionHistory))
+      case Modal.TransactionHistory:
+        component = defineAsyncComponent(() => import(Modal.TransactionHistory))
         break
-      case ModalType.Voucher:
-        component = defineAsyncComponent(() => import(ModalType.Voucher))
+      case Modal.Voucher:
+        component = defineAsyncComponent(() => import(Modal.Voucher))
         break
-      case ModalType.Dev:
+      case Modal.Dev:
         if (import.meta.env.MODE === 'development')
-          component = defineAsyncComponent(() => import(ModalType.Dev))
+          component = defineAsyncComponent(() => import(Modal.Dev))
         break
     }
 

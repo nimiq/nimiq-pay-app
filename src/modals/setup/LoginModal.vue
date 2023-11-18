@@ -4,7 +4,7 @@ import { inject, ref, unref } from 'vue'
 import type { Ref } from 'vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import MnemonicInput from '@/components/MnemonicInput.vue'
 
 const isDev = import.meta.env.DEV
@@ -16,7 +16,7 @@ const isDevImport = ref(false)
 
 function handleLogin() {
   nimiqWallet.importBackup(loginWords.value)
-  showModal(ModalType.NewPin)
+  showModal(Modal.NewPin)
 }
 
 const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adult', 'cost', 'country', 'mask', 'night', 'giraffe']

@@ -6,7 +6,7 @@ import { IonBackButton, IonButton, IonButtons, IonContent, IonGrid, IonHeader, I
 import { close } from 'ionicons/icons'
 import { useRoute } from 'vue-router'
 import { BonusWallet } from '@/lib/bonus-wallet'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const { showModal, closeModal, showNotificationAlert } = useModal()
 const { path } = useRoute()
@@ -18,8 +18,8 @@ const nav = (document.querySelector('[data-phone-nav]')) as Nav & HTMLElement
 
 watch(code, (newValue) => {
   if (newValue?.toString().length === 8)
-    handleVerify()
-})
+      err('This phone number is already used')
+
 
 async function handleVerify() {
   try {
@@ -28,11 +28,11 @@ async function handleVerify() {
 
     await bonusWallet.verify(code.value)
     if (path === '/setup') {
-      showModal(ModalType.EnablePushNotifications)
+      showModal(Modal.EnablePushNotifications)
     }
     else if (path === '/app') {
       await showNotificationAlert({ title: 'CC Points is now active!' })
-      showModal(ModalType.RewardsIntro)
+      showModal(Modal.RewardsIntro)
     }
   }
   catch (e: any) {

@@ -1,0 +1,160 @@
+import type { MaybeRef } from 'vue'
+
+export enum Transfer {
+  // Normal payment from the user to the merchant or another user
+  UserPayment = 'user-payment',
+
+  // The users receives funds from any other user
+  UserReceipt = 'user-receipt',
+
+  // When the user receives funds, they will be automatically send to the HTLC contract
+  LocalToRemote = 'local-to-remote',
+
+  // When the user sends funds to the HTLC contract but there is already a HTLC contract with the user's address,
+  // then the funds need to be recovered. And then the user can start a new HTLC contract.
+  RemoteToLocal = 'remote-to-local',
+
+  // If the server missbehave and doesn't sends the funds before the timeout of the HTLC, then the user can recover the funds. Usually the server will send the funds before the timeout.
+  RemoteToLocalAfterTimeout = 'remote-to-local-after-timeout',
+
+  // A special transaction to extend the validity of the HTLC contract
+  ExtendRemote = 'extend-remote',
+}
+
+export interface BaseTransaction {
+  /**
+   * Human merchant name
+   */
+  peerName?: string
+
+  /**
+   * Raw transaction
+   */
+  raw?: string
+
+  /**
+   * Also known as the provide e.g 'bluecode', 'cpl'...
+   */
+  rail?: string
+
+  /**
+   * Reference of the payment
+   */
+  railId?: string
+
+  /**
+   * Id of the merchant in Bluecode
+   */
+  railPeerId?: string
+
+  /**
+   * Details of the transaction
+   */
+  details?: string
+
+  sender: string
+  recipient: string
+  status: Nimiq.Client.TransactionState
+  ts: number
+  amount: number
+  fee: number
+  hash: string
+}
+
+export type UserTransaction = BaseTransaction & { transfer: Omit<Transfer, Transfer.UserReceipt> }
+export type ReceiptTransaction = BaseTransaction & { transfer: Transfer.UserReceipt }
+export type Transaction = UserTransaction | ReceiptTransaction
+
+export enum PaymentMethod {
+  NIM = 'nim',
+  Points = 'points',
+}
+
+export enum WalletType {
+  None = 'none',
+  Raw = 'raw',
+  Instant = 'instant',
+  Bonus = 'bonus',
+}
+
+export enum WalletStatus {
+  None = 'none',
+  Pending = 'pending',
+  Active = 'active',
+  Expired = 'expired',
+  Emptied = 'emptied',
+}
+
+// export type PointsTransaction = BaseTransaction & { method: PaymentMethod.Points }
+// export type NimTransaction = BaseTransaction & { method: PaymentMethod.NIM; hash: string }
+// export type Transaction = PointsTransaction | NimTransaction
+
+// We store the remote Wallet.
+// The only thing we store about the local wallet is the entropy, and from that we can derive the private key
+// and its remote wallet
+export interface Wallet {
+  id: string
+  address: string
+  type: WalletType
+  status: WalletStatus
+  balance: number
+  proofSize: number
+  active: boolean
+
+  /**
+   * The validity of the wallet has started to be valid
+   */
+  start: number
+
+  /**
+   * The validity of the wallet has ended
+   */
+  end: number
+
+}
+
+export interface PriceTable {
+  id: number
+  currency: MaybeRef<string>
+  ts: MaybeRef<number>
+  value: MaybeRef<number>
+}
+
+export enum SQLQuery {
+  SelectActiveWallet = 'SELECT * FROM wallets WHERE active = 1',
+  InsertWallet = 'INSERT INTO wallets(id, type, status, balance, start, end, proofSize, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+  UpdateWallet = 'UPDATE wallets SET type = COALESCE(?, type), status = COALESCE(?, status), balance = COALESCE(?, balance), start = COALESCE(?, start), end = COALESCE(?, end), proofSize = COALESCE(?, proofSize), active = COALESCE(?, active) WHERE address = ?',
+  DeactivateWallet = 'UPDATE wallets SET active = 0 WHERE id = ?',
+
+  // InsertTransaction = 'INSERT INTO transactions(id, remoteAddress, peerName, raw, rail, railId, railPeerId, details, recipient, status, transferType, ts, amount, fee, hash, method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  // GetAllTransactions = 'SELECT * FROM transactions',
+
+  InsertPrice = 'INSERT INTO nimPrices (currency, ts, value) VALUES (?, ?, ?)',
+  GetPriceAt = 'SELECT * FROM nimPrices WHERE ts <= ? AND currency = ? ORDER BY ts DESC LIMIT 1',
+}
+
+export interface SQLQueryArg {
+  [SQLQuery.SelectActiveWallet]: undefined
+  [SQLQuery.InsertWallet]: Omit<Wallet, 'id'>
+  [SQLQuery.UpdateWallet]: Omit<Wallet, 'id'>
+  [SQLQuery.DeactivateWallet]: MaybeRef<string>
+
+  // [SQLQuery.InsertTransaction]: Omit<Transaction, 'id'>
+  // [SQLQuery.GetAllTransactions]: undefined
+
+  [SQLQuery.InsertPrice]: Omit<PriceTable, 'id'>
+  [SQLQuery.GetPriceAt]: { ts: number; currency: string }
+}
+
+export interface SQLQueryResult {
+  [SQLQuery.SelectActiveWallet]: Wallet | undefined
+  [SQLQuery.InsertWallet]: undefined
+  [SQLQuery.UpdateWallet]: undefined
+  [SQLQuery.DeactivateWallet]: undefined
+
+  // [SQLQuery.InsertTransaction]: undefined
+  // [SQLQuery.GetAllTransactions]: Transaction[]
+
+  [SQLQuery.InsertPrice]: undefined
+  [SQLQuery.GetPriceAt]: PriceTable | undefined
+}

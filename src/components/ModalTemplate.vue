@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
+import { useSlots } from 'vue'
 import { useModal } from '@/composables/useModal'
-
-const { closeModal, closeAllModals } = useModal()
 
 defineProps({
   closeAll: {
@@ -11,6 +10,11 @@ defineProps({
     default: false,
   },
 })
+
+const { closeModal, closeAllModals } = useModal()
+
+const slots = useSlots()
+const hasSlot = (name: string) => !!slots[name]
 </script>
 
 <template>
@@ -24,21 +28,22 @@ defineProps({
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <IonContent class="text-center ion-padding">
-    <IonGrid class="flex flex-col h-full gap-4 mx-6">
-      <IonRow class="ion-justify-content-center">
-        <h1>
-          <slot name="title" />
-        </h1>
-      </IonRow>
-      <IonRow class="ion-justify-content-center">
-        <p class="text-xl font-semibold">
-          <slot name="subtitle" />
-        </p>
-      </IonRow>
-      <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
+  <IonContent>
+    <div class="flex flex-col h-full gap-4 px-12 text-center text-space">
+      <h1>
+        <slot name="title" />
+      </h1>
+      <p class="text-xl font-semibold opacity-80">
+        <slot name="subtitle" />
+      </p>
+
+      <p v-if="hasSlot('error')" class="mt-4 text-tomato">
+        <slot name="error" />
+      </p>
+
+      <div class="flex-1 mx-auto">
         <slot />
-      </IonRow>
-    </IonGrid>
+      </div>
+    </div>
   </IonContent>
 </template>

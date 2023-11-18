@@ -5,7 +5,7 @@ import { close } from 'ionicons/icons'
 import { useRouter } from 'vue-router'
 import { StorageManager } from '@/lib/storage-manager'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const storageManager = inject(StorageManager.KEY) as StorageManager
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
@@ -19,7 +19,7 @@ async function handleConfirm() {
     router.replace('/setup')
   }
   else {
-    showModal(ModalType.LogoutWarning, { isOnTop: true, isSmall: true })
+    showModal(Modal.LogoutWarning, { isOnTop: true, isSmall: true })
   }
 }
 </script>

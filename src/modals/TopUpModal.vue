@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import Info from '@/components/icons/info.vue'
 
 const { showModal, closeModal } = useModal()
@@ -36,7 +36,7 @@ const { showModal, closeModal } = useModal()
       <IonButton
         expand="block"
         class="font-bold"
-        @click="showModal(ModalType.NimTransfer, { isFullscreen: true, isOnTop: true })"
+        @click="showModal(Modal.NimTransfer, { isFullscreen: true, isOnTop: true })"
       >
         With NIM transfer
       </IonButton>

@@ -1,7 +1,6 @@
 import type { InjectionKey, Ref } from 'vue'
 import { computed, ref } from 'vue'
 import type { Address } from '@nimiq/core-web'
-import { Wallet } from '@nimiq/core-web'
 import type { StorageManager } from './storage-manager'
 import { TransactionStatus, TransactionType, WalletStatus, WalletType } from './storage-manager'
 import type { BonusWallet } from './bonus-wallet'
@@ -404,7 +403,7 @@ export class InstantPayWallet {
       this.nextAddress = tx.recipient
       await this.nimiqNetworkClient.sendTransaction(signedTransaction)
       await this.storageManager.run(
-        'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
+        'INSERT OR REPLACE INTO tx(id, type, status, ts, amount, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
         [tx.hash().toHex(), TransactionType.EXTEND_INSTANT, Date.now() / 1000, tx.value, TransactionStatus.PENDING, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(signedTransaction.serializeContent())],
       )
     }

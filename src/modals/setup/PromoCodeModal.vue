@@ -3,7 +3,7 @@ import { inject, onMounted, ref, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 
 const { showModal } = useModal()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
@@ -34,7 +34,7 @@ watch(referralCode, async (newValue) => {
 function handleClaim() {
   try {
     bonusWallet.delayRedeemVoucher(referralCode.value)
-    showModal(ModalType.NewPin)
+    showModal(Modal.NewPin)
   }
   catch (e: any) {
     codeField.value.setCustomValidity(e.message || e)

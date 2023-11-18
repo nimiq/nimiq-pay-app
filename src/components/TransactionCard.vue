@@ -2,7 +2,7 @@
 import { IonIcon, IonItem } from '@ionic/vue'
 import { basket } from 'ionicons/icons'
 import type { PropType } from 'vue'
-import { ModalType, useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import { TransactionType } from '@/lib/storage-manager'
 
 defineProps({
@@ -20,7 +20,7 @@ const { showModal } = useModal()
     :button="true" :detail="false"
     style="--padding-start: 0; --padding-end: 0; --inner-padding-end: 0; --inner-padding-start: 0;"
     class="my-6 rounded"
-    @click="showModal(ModalType.DetailedTransaction, { isOnTop: true, componentProps: { tx } })"
+    @click="showModal(Modal.DetailedTransaction, { isOnTop: true, componentProps: { tx } })"
   >
     <div class="flex items-center w-full text-blue-500 gap-x-2">
       <IonIcon slot="start" :icon="basket" size="large" />
