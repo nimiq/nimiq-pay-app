@@ -1,8 +1,8 @@
 <template>
-  <svg
-    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
-    viewBox="0 0 24 24"
-  >
-    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 18">
+    <path
+      fill="currentColor" stroke="currentColor"
+      d="M16.5826 1.18747c-.4488-.321965-1.0735-.218934-1.3953.23013L5.83073 14.4705l-3.1233-3.1278c-.25259-.2529-.6208-.3517-.96594-.2593-.34514.0925-.61477.3621-.70733.7074-.092555.3453.00603.7138.25861.9667l3.95664 3.9582c.21013.2024.49697.3047.78763.2809.29065-.0237.55712-.1712.73169-.4049L16.8126 2.5836c.3218-.44908.2188-1.07414-.23-1.39613Z"
+    />
   </svg>
 </template>

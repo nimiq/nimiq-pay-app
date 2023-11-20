@@ -1,20 +1,28 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { useSlots } from 'vue'
 import { useModal } from '@/composables/useModal'
 
-defineProps({
+const props = defineProps({
   closeAll: {
     type: Boolean,
     default: false,
+  },
+  onClosing: {
+    type: Function,
+    default: () => {},
   },
 })
 
 const { closeModal, closeAllModals } = useModal()
 
-const slots = useSlots()
-const hasSlot = (name: string) => !!slots[name]
+function handleClose() {
+  if (props.closeAll)
+    closeAllModals()
+  else
+    closeModal()
+  props.onClosing()
+}
 </script>
 
 <template>
@@ -22,28 +30,30 @@ const hasSlot = (name: string) => !!slots[name]
     <IonToolbar>
       <slot name="leftButton" />
       <IonButtons slot="end">
-        <IonButton @click.stop="closeAll ? closeAllModals() : closeModal()">
-          <IonIcon :icon="close" />
+        <IonButton @click.stop="handleClose">
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <IonContent>
-    <div class="flex flex-col h-full gap-4 px-12 text-center text-space">
-      <h1>
-        <slot name="title" />
-      </h1>
-      <p class="text-xl font-semibold opacity-80">
-        <slot name="subtitle" />
-      </p>
-
-      <p v-if="hasSlot('error')" class="mt-4 text-tomato">
+  <IonContent class="text-center" style="--padding-top: 16px; --padding-bottom: 16px;">
+    <IonGrid class="flex flex-col h-full gap-4 mx-6">
+      <IonRow class="ion-justify-content-center">
+        <h1 class="text-2xl font-bold">
+          <slot name="title" />
+        </h1>
+      </IonRow>
+      <IonRow class="ion-justify-content-center">
+        <p class="text-lg font-normal text-space/60">
+          <slot name="subtitle" />
+        </p>
+      </IonRow>
+      <IonRow class="text-lg text-space/60">
         <slot name="error" />
-      </p>
-
-      <div class="flex-1 mx-auto">
+      </IonRow>
+      <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
         <slot />
-      </div>
-    </div>
+      </IonRow>
+    </IonGrid>
   </IonContent>
 </template>

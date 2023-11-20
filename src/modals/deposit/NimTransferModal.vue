@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { IonBackButton, IonButton, IonButtons, toastController } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonIcon, toastController } from '@ionic/vue'
 import { inject } from 'vue'
+import { qrCodeOutline } from 'ionicons/icons'
 import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
-import { useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import AddressDisplay from '@/components/AddressDisplay.vue'
 import NimLogo from '@/components/icons/nimiq-logo.vue'
 
-const { closeModal, closeAllModals } = useModal()
+const { closeModal, closeAllModals, showModal } = useModal()
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 
 async function handleOpenWallet() {
-  const url = new URL(`https://wallet.nimiq${import.meta.env.DEV ? '-testnet' : ''}.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
+  // const url = new URL(`https://wallet.nimiq${import.meta.env.DEV ? '-testnet' : ''}.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
+  const url = new URL(`https://wallet.nimiq-testnet.com/nimiq:${nimiqWallet.address.value?.toUserFriendlyAddress().replace(/ /g, '')}`)
   await Browser.open({ url: url.toString(), toolbarColor: '#E9B213' })
   Browser.addListener('browserFinished', () => {
     // TODO: check if tx incoming
@@ -34,6 +36,11 @@ async function handleCopy() {
 
   await toast.present()
 }
+
+async function handleOpenCashlinkScanner() {
+  await closeAllModals()
+  showModal(Modal.CashlinkScanner, { isFullscreen: true })
+}
 </script>
 
 <template>
@@ -44,22 +51,28 @@ async function handleCopy() {
       </IonButtons>
     </template>
     <template #title>
-      Send NIM to this address
+      Send NIM to top up
     </template>
     <template #subtitle>
-      Lorem ipsum dolor sit amet, consectetur adipiscing.
+      Send a transaction to the address below. Top up as much as you like.
     </template>
-    <div class="grid h-full grid-[1fr_8fr_1fr] justify-items-center items-center">
-      <NimLogo class="w-20 h-20 fill-blue-500" />
+    <div class="flex flex-col items-center justify-center mt-8">
+      <NimLogo class="w-16 mb-8 h-14" />
       <AddressDisplay class="w-4/5 min-w-[18rem] my-4" :address="nimiqWallet.address.value?.toUserFriendlyAddress() || 'Error' " />
-      <div class="self-end w-full">
-        <IonButton expand="block" @click="handleOpenWallet">
-          Open Wallet
-        </IonButton>
-        <IonButton expand="block" fill="clear" class="mt-4" @click="handleCopy">
-          Copy address
-        </IonButton>
-      </div>
+    </div>
+    <div>
+      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleOpenCashlinkScanner">
+        <IonIcon slot="start" :icon="qrCodeOutline" />
+        Scan Cashlink
+      </IonButton>
+    </div>
+    <div class="self-end w-full">
+      <IonButton expand="block" class="text-base" @click="handleOpenWallet">
+        Open Wallet
+      </IonButton>
+      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
+        Copy address
+      </IonButton>
     </div>
   </ModalTemplate>
 </template>

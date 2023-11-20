@@ -1,10 +1,10 @@
-import { isPlatform } from '@ionic/vue'
+import { Capacitor } from '@capacitor/core'
 
 export function useDevice() {
   return {
-    isWeb: isPlatform('desktop') || isPlatform('mobileweb'),
-    isAndroid: isPlatform('android') && !isPlatform('mobileweb'),
-    isIOS: isPlatform('ios') && !isPlatform('mobileweb'),
+    isWeb: Capacitor.getPlatform() === 'web',
+    isAndroid: Capacitor.getPlatform() === 'android',
+    isIOS: Capacitor.getPlatform() === 'ios',
     locale: navigator.language,
   }
 }

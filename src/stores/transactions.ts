@@ -3,7 +3,7 @@ import { onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import type { Transaction } from '@/types/database'
-import { PaymentMethod } from '@/types/database'
+import { PaymentMethod, Transfer } from '@/types/database'
 import type { AsyncOption, AsyncResult } from '@/types'
 import type { PartialSendTxArgs } from '@/lib/tx'
 import { getSignedTx } from '@/lib/tx'
@@ -15,7 +15,7 @@ export const useTransactions = defineStore('transactions', () => {
   const { db } = storeToRefs(useConn())
 
   const { updateBalance } = useRemoteSigner()
-  const { remoteAddress, remoteSigner } = storeToRefs(useRemoteSigner())
+  const { remoteSigner } = storeToRefs(useRemoteSigner())
 
   const transactions = ref<Transaction[]>([])
 
@@ -47,8 +47,8 @@ export const useTransactions = defineStore('transactions', () => {
     const error = await waitForUnlock()
     if (error)
       return error
-    const { hash, ts, sender, recipient, amount, fee, details, status, raw, rail, railId, railPeerId, transfer } = tx
-    await db.value!.query(SQLQuery.UpsertTx, [hash, ts, sender, recipient, amount, fee, details, status, raw, rail, railId, railPeerId, JSON.stringify(transfer)])
+    const { hash, ts, sender, recipient, value, fee, details, status, raw, rail, railId, railPeerId, transfer } = tx
+    await db.value!.query(SQLQuery.UpsertTx, [hash, ts, sender, recipient, value, fee, details, status, raw, rail, railId, railPeerId, JSON.stringify(transfer)])
   }
 
   onMounted(async () => {
@@ -64,25 +64,29 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error }
     await useNimiqNetwork().client.value!.sendTransaction(signedTx!)
 
-    upsertTx({
-      ...partialTx,
-    })
-    const tx: Omit<NimTransaction, 'id'> = {
+    const tx: Omit<Transaction, 'id'> = {
       ...partialTx,
       fee: signedTx!.fee,
-      remoteAddress: remoteAddress.value,
+      recipient: signedTx!.recipient.toUserFriendlyAddress(),
       ts: Date.now() / 1000,
       status: Nimiq.Client.TransactionState.PENDING,
-      method: PaymentMethod.NIM,
       hash: signedTx!.hash.toString(),
+      sender: signedTx!.sender.toUserFriendlyAddress(),
+      value: signedTx!.value,
+      raw: signedTx!.serialize().toString(),
+      rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
+      railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
+      railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
+      details: signedTx!.data ? Nimiq.BufferUtils.toAscii(signedTx!.data) : undefined,
+      transfer: partialTx.transfer,
+      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
     }
 
-    updateBalance(remoteSigner.value!.balance + tx.amount)
-
-    const insertTxError = await insertTx(tx)
+    const insertTxError = await upsertTx(tx)
     if (insertTxError)
       return { data: undefined, error: insertTxError as string }
 
+    updateBalance(remoteSigner.value!.balance + tx.value)
     return { data: tx, error: undefined }
   }
 

@@ -7,6 +7,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { FiatHandler } from '@/lib/fiat-handler'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
@@ -21,6 +22,10 @@ const bonusBalance = computedAsync(async () => {
 }, 0)
 
 onMounted(async () => {
+  // If phone number is not verified, show the modal
+  if (!bonusWallet.isRegistered())
+    await showModal(Modal.NewPhone)
+
   tasks.value = (await bonusWallet.getTasks()).sort((a, b) => a.order - b.order)
   // Move completed tasks to the end
   tasks.value = tasks.value.sort((a, b) => {
@@ -40,48 +45,58 @@ onMounted(async () => {
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click="() => closeModal()">
-          <IonIcon :icon="close" />
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
   <IonContent class="ion-padding">
     <IonGrid class="flex flex-col gap-y-2">
-      <IonRow class="ion-justify-content-center">
-        <h1 class="text-5xl font-light">
-          {{ bonusBalance }} NIM
+      <IonRow class="flex items-center ion-justify-content-center">
+        <CryptoCityLogo class="h-11 w-9" />
+        <h1 class="text-5xl font-normal">
+          {{ bonusBalance }}
         </h1>
       </IonRow>
       <IonRow class="ion-justify-content-center">
-        <p class="">
-          {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }} €
+        <p class="text-base font-semibold text-space/60">
+          $ {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }}
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">
-        <IonButton fill="clear" class="font-medium" @click="showModal(Modal.ExpiringRewards, { isOnTop: true })">
-          800 NIM expiring soon <IonIcon slot="end" :icon="chevronForwardOutline" />
+        <IonButton fill="clear" class="text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringRewards, { isOnTop: true })">
+          <CryptoCityLogo slot="start" class="h-5 w-[18px] mr-[6px]" />
+          0 expiring soon
+          <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />
         </IonButton>
       </IonRow>
-      <!-- Earn NIM -->
+      <!-- Featured -->
       <IonRow>
-        <p class="mb-4 ml-1 text-lg font-semibold">
-          Earn NIM
+        <p class="ml-1 text-sm font-bold uppercase text-space/60">
+          Featured
         </p>
       </IonRow>
 
       <!-- Referral -->
-      <IonRow>
-        <TaskCard highlight large @click="showModal(Modal.Voucher, { isOnTop: true })">
-          Invite a friend and earn up to 20€ both!
+      <IonRow class="mb-8">
+        <!-- TODO: get amount from API -->
+        <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
+          Invite a friend and earn up to 200 Points both!
         </TaskCard>
       </IonRow>
 
+      <!-- Earn Points -->
+      <IonRow>
+        <p class="ml-1 text-sm font-bold uppercase text-space/60">
+          Earn Points
+        </p>
+      </IonRow>
       <!-- Tasks -->
       <Transition name="slide-fade" mode="out-in">
         <IonRow v-if="isTaskShown" class="grid grid-cols-2 gap-2">
           <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
             <!-- TODO: Do we really need different bg? -->
-            <TaskCard :task="task" class="h-full" :class="{ 'bg-blue-200/80': !(task.order % 3) }">
+            <TaskCard :task="task" class="h-full text-white" style="background: var(--radial-gradient-light-blue);">
               {{ task.description }}
             </TaskCard>
           </IonCol>

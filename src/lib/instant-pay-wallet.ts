@@ -1,10 +1,20 @@
 import type { InjectionKey, Ref } from 'vue'
 import { computed, ref } from 'vue'
 import type { Address } from '@nimiq/core-web'
+import { Wallet } from '@nimiq/core-web'
 import type { StorageManager } from './storage-manager'
-import { TransactionStatus, TransactionType, WalletStatus, WalletType } from './storage-manager'
+import {
+  TransactionStatus,
+  TransactionType,
+  WalletStatus,
+  WalletType,
+} from './storage-manager'
 import type { BonusWallet } from './bonus-wallet'
-import type { InstantPayClient, InstantPayStatus, InstantPayWalletState } from '@/lib/instant-pay-client'
+import type {
+  InstantPayClient,
+  InstantPayStatus,
+  InstantPayWalletState,
+} from '@/lib/instant-pay-client'
 import type { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import type { NimiqWallet } from '@/lib/nimiq-wallet'
 
@@ -29,18 +39,39 @@ export class InstantPayWallet {
   public readonly ready: Ref<boolean> = ref(false)
   public readonly address: Ref<Nimiq.Address | null> = ref(null)
   public readonly balanceRaw: Ref<number> = ref(0)
-  public readonly balance: Ref<number> = computed(() => this.balanceRaw.value / 100000)
+  public readonly balance: Ref<number> = computed(() =>
+    this.balanceRaw.value / 100000,
+  )
+
   public readonly validityStart: Ref<number> = ref(0)
   public readonly validityEnd: Ref<number> = ref(0)
   public readonly timeout: Ref<number> = ref(Number.MAX_VALUE)
-  public readonly valid: Ref<boolean> = computed(() => this.isValid(this.nimiqNetworkClient.head?.value?.height, this.validityStart.value, this.validityEnd.value))
-  public readonly timeouted: Ref<boolean> = computed(() => this.timeout.value !== 0 && this.nimiqNetworkClient.head?.value?.height != null && this.timeout.value < this.nimiqNetworkClient.head?.value?.height)
+  public readonly valid: Ref<boolean> = computed(() =>
+    this.isValid(
+      this.nimiqNetworkClient.head?.value?.height,
+      this.validityStart.value,
+      this.validityEnd.value,
+    ),
+  )
+
+  public readonly timeouted: Ref<boolean> = computed(() =>
+    this.timeout.value !== 0
+    && this.nimiqNetworkClient.head?.value?.height != null
+    && this.timeout.value < this.nimiqNetworkClient.head?.value?.height,
+  )
+
   public readonly transactions: Ref<any[]> = ref([])
 
   private pendingPayment: PendingPayment | null = null
   private nextAddress: Nimiq.Address | null = null
 
-  constructor(private nimiqWallet: NimiqWallet, private nimiqNetworkClient: NimiqNetworkClient, private instantPayClient: InstantPayClient, private bonusWallet: BonusWallet, private storageManager: StorageManager) {
+  constructor(
+    private nimiqWallet: NimiqWallet,
+    private nimiqNetworkClient: NimiqNetworkClient,
+    private instantPayClient: InstantPayClient,
+    private bonusWallet: BonusWallet,
+    private storageManager: StorageManager,
+  ) {
     // TODO: Check if this is necessary with so much promises and awaits
     (async () => {
       await nimiqNetworkClient.awaitInitialized()
@@ -59,6 +90,40 @@ export class InstantPayWallet {
         if (account.balance > 0)
           await this.topUp(address)
       })
+      if (nimiqWallet.address.value) {
+        console.groupCollapsed('📡 InstantPay Top Up')
+        // Get last txs and check if they are in the tx table
+        const txArray = await client.getTransactionsByAddress(nimiqWallet.address.value)
+        console.log('txArray', txArray)
+
+        for (const tx of txArray) {
+          console.log('recipient', tx.recipient.toUserFriendlyAddress(), nimiqWallet.address.value.toUserFriendlyAddress())
+          if (tx.recipient.toUserFriendlyAddress() !== nimiqWallet.address.value.toUserFriendlyAddress())
+            continue
+          // Check if tx is in the table
+          const isTxInTable = await this.storageManager.query(
+            'SELECT * FROM tx WHERE id = ?',
+            [tx.transactionHash.toHex()],
+          )
+          if (isTxInTable.length > 0)
+            continue
+
+          await this.storageManager.run(
+            'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
+            [
+              tx.transactionHash.toHex(),
+              TransactionType.DEPOSIT,
+              tx.timestamp,
+              tx.value,
+              TransactionStatus.MINED,
+              tx.sender.toUserFriendlyAddress(),
+              tx.recipient.toUserFriendlyAddress(),
+            ],
+          )
+          console.log('Transaction saved', tx)
+        }
+        console.groupEnd()
+      }
     })();
     (async () => {
       await this.updateReactive()
@@ -68,14 +133,22 @@ export class InstantPayWallet {
   }
 
   private async topUp(address: Address) {
-    if (!this.valid.value && this.validityStart.value !== 0 && this.validityEnd.value !== 0)
+    if (
+      !this.valid.value && this.validityStart.value !== 0
+      && this.validityEnd.value !== 0
+    )
       return
-    if (this.balanceRaw.value !== 0) {
-      console.log('Wallet not empty, recovering')
-      this.recover()
-      // Wait for recover tx to be mined
-      return
+
+    const instantWallet = await this.getWallet()
+    if (instantWallet) {
+      if (this.balanceRaw.value !== 0) {
+        console.log('Wallet not empty, recovering')
+        this.recover()
+        // Wait for recover tx to be mined
+        return
+      }
     }
+
     console.log('Wallet empty, depositing')
     const client = await this.nimiqNetworkClient.getClient()
     const account = await client.getAccount(address)
@@ -86,24 +159,41 @@ export class InstantPayWallet {
   private async updateReactive() {
     this.ready.value = await this.isReady()
 
-    let wallets = await this.storageManager.query('SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?', [WalletType.INSTANT, WalletStatus.ACTIVE])
-    if (wallets.length === 0)
-      wallets = await this.storageManager.query('SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?', [WalletType.INSTANT, WalletStatus.PENDING])
+    let wallets = await this.storageManager.query(
+      'SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?',
+      [WalletType.INSTANT, WalletStatus.ACTIVE],
+    )
+    if (wallets.length === 0) {
+      wallets = await this.storageManager.query(
+        'SELECT id, balance, start, end FROM wl WHERE type = ? AND status = ?',
+        [WalletType.INSTANT, WalletStatus.PENDING],
+      )
+    }
 
     if (wallets.length === 0) {
       const wallet = await this.getWallet()
       if (!wallet)
         return
-      wallets = [{ id: wallet.address, balance: wallet.balance, start: wallet.validityStart, end: wallet.validityEnd }]
-    }
 
-    this.balanceRaw.value = wallets[0].balance || 0
-    this.validityStart.value = wallets[0].start || 0
-    this.validityEnd.value = wallets[0].end || 0
+      wallets = [{
+        id: wallet.address,
+        balance: wallet.balance,
+        start: wallet.validityStart,
+        end: wallet.validityEnd,
+      }]
+    }
+    console.log('Wallets in DB', wallets)
+
+    this.balanceRaw.value = wallets[wallets.length - 1].balance || 0
+    this.validityStart.value = wallets[wallets.length - 1].start || 0
+    this.validityEnd.value = wallets[wallets.length - 1].end || 0
 
     // eslint-disable-next-line no-console
     console.groupCollapsed(`🛒 Transactions`)
-    const transactions = await this.storageManager.query('SELECT * FROM tx WHERE type = ? ORDER BY ts DESC', [TransactionType.PAYMENT])
+    const transactions = await this.storageManager.query(
+      'SELECT * FROM tx WHERE type = ? OR type = ? ORDER BY ts DESC',
+      [TransactionType.PAYMENT, TransactionType.DEPOSIT],
+    )
     // eslint-disable-next-line no-console
     console.log('Transactions from DB', transactions)
     const today = new Date()
@@ -121,7 +211,13 @@ export class InstantPayWallet {
       }
       return {
         title: tx.peerName ?? txTypeName ?? (`${tx.peerId.substring(0, 9)}…`),
-        datetime: tx.status === TransactionStatus.PENDING ? 'Pending' : date.getTime() > today.getTime() ? 'Today' : date.getTime() > yesterday.getTime() ? 'Yesterday' : date.toLocaleDateString(),
+        datetime: tx.status === TransactionStatus.PENDING
+          ? 'Pending'
+          : date.getTime() > today.getTime()
+            ? 'Today'
+            : date.getTime() > yesterday.getTime()
+              ? 'Yesterday'
+              : date.toLocaleDateString(),
         ...tx,
       }
     })
@@ -133,10 +229,16 @@ export class InstantPayWallet {
     if (wallets[0].id) {
       const address = Nimiq.Address.fromString(wallets[0].id)
       this.address.value = address
-      if (this.address.value == null && address != null || this.address.value != null && (address == null || !this.address.value.equals(address))) {
+      if (
+        this.address.value == null && address != null
+        || this.address.value != null
+          && (address == null || !this.address.value.equals(address))
+      ) {
         if (address != null) {
           const account = await this.nimiqNetworkClient.getAccount(address)
-          this.timeout.value = account instanceof Nimiq.HashedTimeLockedContract ? account.timeout : Number.MAX_VALUE
+          this.timeout.value = account instanceof Nimiq.HashedTimeLockedContract
+            ? account.timeout
+            : Number.MAX_VALUE
         }
         else {
           this.timeout.value = Number.MAX_VALUE
@@ -154,16 +256,24 @@ export class InstantPayWallet {
       // eslint-disable-next-line no-console
       console.groupEnd()
     }
-    return status.status === 'good' && status.blockHeight > ourBlockHeight - MAX_BLOCK_HEIGHT_MISMATCH && status.blockHeight < ourBlockHeight + MAX_BLOCK_HEIGHT_MISMATCH
+    return status.status === 'good'
+      && status.blockHeight > ourBlockHeight - MAX_BLOCK_HEIGHT_MISMATCH
+      && status.blockHeight < ourBlockHeight + MAX_BLOCK_HEIGHT_MISMATCH
   }
 
-  private isValid(headHeight: number | undefined, validityStart: number, validityEnd: number) {
-    return headHeight !== undefined && validityStart < headHeight && validityEnd > headHeight
+  private isValid(
+    headHeight: number | undefined,
+    validityStart: number,
+    validityEnd: number,
+  ) {
+    return headHeight !== undefined && validityStart < headHeight
+      && validityEnd > headHeight
   }
 
   async isReady() {
     const status = await this.instantPayClient.getStatus()
-    const ourBlockHeight = await this.nimiqNetworkClient.getHeadHeightOrPending()
+    const ourBlockHeight = await this.nimiqNetworkClient
+      .getHeadHeightOrPending()
     return this.isStatusReady(status, ourBlockHeight)
   }
 
@@ -172,13 +282,16 @@ export class InstantPayWallet {
     const ourBlockHeight = await this.nimiqNetworkClient.getHeadHeight()
     if (!this.isStatusReady(status, ourBlockHeight))
       throw new Error('Not ready')
+
     return status
   }
 
   async getWallet() {
     // TODO store locally
     if (this.nextAddress != null) {
-      const nextWallet = await this.instantPayClient.getWallet(this.nextAddress)
+      const nextWallet = await this.instantPayClient.getWallet(
+        this.nextAddress,
+      )
       if (nextWallet != null)
         return nextWallet
     }
@@ -193,19 +306,32 @@ export class InstantPayWallet {
       console.log('Wallet update not possible, not ready')
       return
     }
-    const wallets = await this.storageManager.query('SELECT id, start, end, status FROM wl WHERE type = ? AND (status = ? OR status = ?)', [WalletType.INSTANT, WalletStatus.PENDING, WalletStatus.ACTIVE])
+    const wallets = await this.storageManager.query(
+      'SELECT id, start, end, status FROM wl WHERE type = ? AND (status = ? OR status = ?)',
+      [WalletType.INSTANT, WalletStatus.PENDING, WalletStatus.ACTIVE],
+    )
     console.log(wallets)
     for (const wallet of wallets) {
-      if (wallet.status == WalletStatus.PENDING) {
+      if (wallet.status === WalletStatus.PENDING) {
         const instantWallet = await this.instantPayClient.getWallet(wallet.id)
         if (instantWallet != null) {
           await this.storageManager.run(
             'UPDATE wl SET status = ?, start = ?, end = ?, proofSize = ? WHERE id = ?',
-            [WalletStatus.ACTIVE, instantWallet.validityStart, instantWallet.validityEnd, instantWallet.serviceSignatureProofSize, instantWallet.address],
+            [
+              WalletStatus.ACTIVE,
+              instantWallet.validityStart,
+              instantWallet.validityEnd,
+              instantWallet.serviceSignatureProofSize,
+              instantWallet.address,
+            ],
           )
         }
       }
-      if (wallet.status == WalletStatus.ACTIVE && wallet.end - (wallet.end - wallet.start) / 2 < ourBlockHeight + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND) {
+      if (
+        wallet.status === WalletStatus.ACTIVE
+        && wallet.end - (wallet.end - wallet.start) / 2
+          < ourBlockHeight + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND
+      ) {
         try {
           await this.extend()
         }
@@ -216,10 +342,11 @@ export class InstantPayWallet {
     }
   }
 
-  // Never tested
   async completeWithCplData(payment: PendingPayment) {
     try {
-      const res = await fetch(`https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${payment.railId}`)
+      const res = await fetch(
+        `https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${payment.railId}`,
+      )
       const obj = await res.json()
       payment.fiatUnit = obj.fields.fiat_currency_code.stringValue
       payment.fiatAmount = obj.fields.fiat_price.doubleValue
@@ -227,13 +354,16 @@ export class InstantPayWallet {
     }
     catch (e) {
       // Ignore
+      console.error(e)
     }
   }
 
   async preparePayment(payment: PendingPayment) {
+    // TODO: handle this
     if (this.pendingPayment != null)
       throw new Error('Payment pending')
-    if (payment.rail === 'cpl' && payment.railId !== undefined)
+
+    if (payment.rail === 'CPL' && payment.railId !== undefined)
       await this.completeWithCplData(payment)
 
     // TODO: Get more details from payment rail where possible
@@ -248,27 +378,72 @@ export class InstantPayWallet {
     this.pendingPayment = null
   }
 
-  async completePendingPayment(payment: PendingPayment, bonus: boolean = false) {
+  async completePendingPayment(
+    payment: PendingPayment,
+    bonus: boolean = false,
+  ) {
     if (this.pendingPayment !== payment)
       throw new Error('Unexpected pending payment')
+
     if (bonus) {
       try {
-        this.bonusWallet.pay(payment.rail!, payment.railId || payment.message!, payment.address.toUserFriendlyAddress())
+        this.bonusWallet.pay(
+          payment.rail!,
+          payment.railId || payment.message!,
+          payment.address.toUserFriendlyAddress(),
+        )
       }
       catch (e) {
         throw new Error('Bonus payment not possible')
       }
-      await this.storageManager.run(
-        'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,"bonus",?,?,?,?,?,?,?,?,?)',
-        [Math.random().toString(), TransactionType.PAYMENT, Date.now() / 1000, payment.amount, TransactionStatus.UNKNOWN, payment.address, payment.label, payment.rail, payment.railId, payment.railPeerId, payment.fee, payment.fiatAmount, payment.fiatUnit],
-      )
+      try {
+        await this.storageManager.run(
+          'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, peerName, rail, railId, railPeerId, details, fee, fiatAmount, fiatUnit) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+          [
+            Math.random().toString(),
+            TransactionType.PAYMENT,
+            Date.now() / 1000,
+            payment.amount,
+            TransactionStatus.UNKNOWN,
+            'bonus',
+            payment.address.toUserFriendlyAddress(),
+            payment.label,
+            payment.rail,
+            payment.railId,
+            payment.railPeerId,
+            payment.details,
+            payment.fee,
+            payment.fiatAmount,
+            payment.fiatUnit,
+          ],
+        )
+      }
+      catch (e) {
+        console.error('Error saving bonus tx', e)
+      }
     }
     else {
-      const tx = await this.pay(payment.address, payment.amount, payment.message)
+      const tx = await this.pay(
+        payment.address,
+        payment.amount,
+        payment.message,
+      )
       await this.storageManager.run(
         'UPDATE tx SET peerName = ?, rail = ?, railId = ?, railPeerId = ?, details = ?, fee = ?, fiatAmount = ?, fiatUnit = ? WHERE id = ?',
-        [payment.label, payment.rail, payment.railId, payment.railPeerId, payment.details, payment.fee, payment.fiatAmount, payment.fiatUnit, tx.transactionHash.toHex()],
+        [
+          payment.label,
+          payment.rail,
+          payment.railId,
+          payment.railPeerId,
+          payment.details,
+          payment.fee,
+          payment.fiatAmount,
+          payment.fiatUnit,
+          tx.transactionHash.toHex(),
+        ],
       )
+      // TODO: send tx to /api/payment/on-chain
+      console.log('Payment tx', tx)
     }
     this.pendingPayment = null
     await this.updateReactive()
@@ -277,7 +452,9 @@ export class InstantPayWallet {
   private createDepositData(status: InstantPayStatus, wallet: Nimiq.Wallet) {
     const data = new Nimiq.SerialBuffer(78)
     wallet.address.serialize(data)
-    Nimiq.PublicKey.fromAny(status.servicePublicKey).toAddress().serialize(data)
+    Nimiq.PublicKey.fromAny(status.servicePublicKey).toAddress().serialize(
+      data,
+    )
     data.writeUint8(Nimiq.Hash.Algorithm.BLAKE2B)
     data.write(new Uint8Array(32))
     data.writeUint8(1)
@@ -285,16 +462,25 @@ export class InstantPayWallet {
     return data
   }
 
-  private createEarlyResolveProof(wallet: Nimiq.Wallet, tx: Nimiq.Transaction, instantWallet: InstantPayWalletState) {
+  private createEarlyResolveProof(
+    wallet: Nimiq.Wallet,
+    tx: Nimiq.Transaction,
+    instantWallet: InstantPayWalletState,
+  ) {
     const sig = wallet.signTransaction(tx).serialize()
-    const proof = new Nimiq.SerialBuffer(1 + sig.length + instantWallet.serviceSignatureProofSize)
+    const proof = new Nimiq.SerialBuffer(
+      1 + sig.length + instantWallet.serviceSignatureProofSize,
+    )
     proof.writeUint8(Nimiq.HashedTimeLockedContract.ProofType.EARLY_RESOLVE)
     proof.writePos += instantWallet.serviceSignatureProofSize
     proof.write(sig)
     return proof
   }
 
-  private createTimeoutResolveProof(wallet: Nimiq.Wallet, tx: Nimiq.Transaction) {
+  private createTimeoutResolveProof(
+    wallet: Nimiq.Wallet,
+    tx: Nimiq.Transaction,
+  ) {
     const sig = wallet.signTransaction(tx).serialize()
     const proof = new Nimiq.SerialBuffer(1 + sig.length)
     proof.writeUint8(Nimiq.HashedTimeLockedContract.ProofType.TIMEOUT_RESOLVE)
@@ -323,25 +509,54 @@ export class InstantPayWallet {
     tx.proof = wallet.signTransaction(tx).serialize()
     this.nextAddress = tx.recipient
     // eslint-disable-next-line no-console
-    console.log(`New instant wallet address: ${this.nextAddress.toUserFriendlyAddress()}`)
+    console.log(
+      `New instant wallet address: ${this.nextAddress.toUserFriendlyAddress()}`,
+    )
     await this.nimiqNetworkClient.sendTransaction(tx)
     await this.storageManager.run(
       'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
-      [tx.hash().toHex(), TransactionType.DEPOSIT_TO_INSTANT, Date.now() / 1000, tx.value, TransactionStatus.PENDING, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(tx.serializeContent())],
+      [
+        tx.hash().toHex(),
+        TransactionType.DEPOSIT_TO_INSTANT,
+        Date.now() / 1000,
+        tx.value,
+        TransactionStatus.PENDING,
+        tx.sender.toUserFriendlyAddress(),
+        tx.recipient.toUserFriendlyAddress(),
+        Nimiq.BufferUtils.toHex(tx.serializeContent()),
+      ],
     )
     await this.storageManager.run(
       'INSERT OR REPLACE INTO wl(id, type, status, balance) VALUES (?,?,?,?)',
-      [tx.recipient.toUserFriendlyAddress(), WalletType.INSTANT, WalletStatus.PENDING, tx.value],
+      [
+        tx.recipient.toUserFriendlyAddress(),
+        WalletType.INSTANT,
+        WalletStatus.PENDING,
+        tx.value,
+      ],
     )
     // eslint-disable-next-line no-console
     console.groupEnd()
   }
 
-  async pay(recipient: Nimiq.Address, amount: number, message: string | null = null): Promise<Nimiq.ClientTransactionDetails> {
-    console.log(`Send ${amount / 100000} to ${recipient.toUserFriendlyAddress()}`)
+  async pay(
+    recipient: Nimiq.Address,
+    amount: number,
+    message: string | null = null,
+  ): Promise<Nimiq.ClientTransactionDetails> {
+    console.log(
+      `Send ${amount / 100000} to ${recipient.toUserFriendlyAddress()}`,
+    )
     const status = await this.getReadyStatus()
     const instantWallet = await this.getWallet()
-    return this.sendTransactionInternal(status, instantWallet, recipient, amount, TransactionType.PAYMENT, message)
+    return this.sendTransactionInternal(
+      status,
+      instantWallet,
+      recipient,
+      amount,
+      TransactionType.PAYMENT,
+      message,
+    )
   }
 
   async recover() {
@@ -350,11 +565,29 @@ export class InstantPayWallet {
     const ourBlockHeight = await this.nimiqNetworkClient.getHeadHeight()
     const wallet = await this.nimiqWallet.getWallet()
     const instantWallet = await this.getWallet()
-    const account = await this.nimiqNetworkClient.getAccount(instantWallet.address)
-    if (this.isStatusReady(status, ourBlockHeight) && this.isValid(ourBlockHeight, instantWallet.validityStart, instantWallet.validityEnd)) {
-      await this.sendTransactionInternal(status, instantWallet, wallet.address, instantWallet.balance, TransactionType.RECOVER_INSTANT)
+    const account = await this.nimiqNetworkClient.getAccount(
+      instantWallet.address,
+    )
+    if (
+      this.isStatusReady(status, ourBlockHeight)
+      && this.isValid(
+        ourBlockHeight,
+        instantWallet.validityStart,
+        instantWallet.validityEnd,
+      )
+    ) {
+      await this.sendTransactionInternal(
+        status,
+        instantWallet,
+        wallet.address,
+        instantWallet.balance,
+        TransactionType.RECOVER_INSTANT,
+      )
     }
-    else if (account instanceof Nimiq.HashedTimeLockedContract && account.timeout < ourBlockHeight) {
+    else if (
+      account instanceof Nimiq.HashedTimeLockedContract
+      && account.timeout < ourBlockHeight
+    ) {
       const tx = new Nimiq.ExtendedTransaction(
         Nimiq.Address.fromString(instantWallet.address),
         Nimiq.Account.Type.HTLC,
@@ -370,7 +603,16 @@ export class InstantPayWallet {
       await this.nimiqNetworkClient.sendTransaction(tx)
       await this.storageManager.run(
         'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
-        [tx.hash().toHex(), TransactionType.RECOVER_INSTANT, Date.now() / 1000, tx.value, TransactionStatus.PENDING, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(tx.serializeContent())],
+        [
+          tx.hash().toHex(),
+          TransactionType.RECOVER_INSTANT,
+          Date.now() / 1000,
+          tx.value,
+          TransactionStatus.PENDING,
+          tx.sender.toUserFriendlyAddress(),
+          tx.recipient.toUserFriendlyAddress(),
+          Nimiq.BufferUtils.toHex(tx.serializeContent()),
+        ],
       )
     }
     else {
@@ -384,7 +626,9 @@ export class InstantPayWallet {
     const ourBlockHeight = await this.nimiqNetworkClient.getHeadHeight()
     const wallet = await this.nimiqWallet.getWallet()
     const instantWallet = await this.getWallet()
-    const account = await this.nimiqNetworkClient.getAccount(instantWallet.address)
+    const account = await this.nimiqNetworkClient.getAccount(
+      instantWallet.address,
+    )
     const tx = new Nimiq.ExtendedTransaction(
       Nimiq.Address.fromString(instantWallet.address),
       Nimiq.Account.Type.HTLC,
@@ -396,24 +640,55 @@ export class InstantPayWallet {
       Nimiq.Transaction.Flag.CONTRACT_CREATION,
       this.createDepositData(status, wallet),
     )
-    if (this.isStatusReady(status, ourBlockHeight) && this.isValid(ourBlockHeight, instantWallet.validityStart, instantWallet.validityEnd)) {
+    if (
+      this.isStatusReady(status, ourBlockHeight)
+      && this.isValid(
+        ourBlockHeight,
+        instantWallet.validityStart,
+        instantWallet.validityEnd,
+      )
+    ) {
       tx.proof = this.createEarlyResolveProof(wallet, tx, instantWallet)
-      const instantTransactionReceipt = await this.instantPayClient.sendTransaction(instantWallet.address, tx)
-      const signedTransaction = Nimiq.Transaction.fromAny(instantTransactionReceipt.details)
+      const instantTransactionReceipt = await this.instantPayClient
+        .sendTransaction(instantWallet.address, tx)
+      const signedTransaction = Nimiq.Transaction.fromAny(
+        instantTransactionReceipt.details,
+      )
       this.nextAddress = tx.recipient
       await this.nimiqNetworkClient.sendTransaction(signedTransaction)
       await this.storageManager.run(
-        'INSERT OR REPLACE INTO tx(id, type, status, ts, amount, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
-        [tx.hash().toHex(), TransactionType.EXTEND_INSTANT, Date.now() / 1000, tx.value, TransactionStatus.PENDING, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(signedTransaction.serializeContent())],
+        'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
+        [
+          tx.hash().toHex(),
+          TransactionType.EXTEND_INSTANT,
+          Date.now() / 1000,
+          tx.value,
+          TransactionStatus.PENDING,
+          tx.sender.toUserFriendlyAddress(),
+          tx.recipient.toUserFriendlyAddress(),
+          Nimiq.BufferUtils.toHex(signedTransaction.serializeContent()),
+        ],
       )
     }
-    else if (account instanceof Nimiq.HashedTimeLockedContract && account.timeout < ourBlockHeight) {
+    else if (
+      account instanceof Nimiq.HashedTimeLockedContract
+      && account.timeout < ourBlockHeight
+    ) {
       tx.proof = this.createTimeoutResolveProof(wallet, tx)
       this.nextAddress = tx.recipient
       await this.nimiqNetworkClient.sendTransaction(tx)
       await this.storageManager.run(
         'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
-        [tx.hash().toHex(), TransactionType.EXTEND_INSTANT, Date.now() / 1000, tx.value, TransactionStatus.PENDING, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(tx.serializeContent())],
+        [
+          tx.hash().toHex(),
+          TransactionType.EXTEND_INSTANT,
+          Date.now() / 1000,
+          tx.value,
+          TransactionStatus.PENDING,
+          tx.sender.toUserFriendlyAddress(),
+          tx.recipient.toUserFriendlyAddress(),
+          Nimiq.BufferUtils.toHex(tx.serializeContent()),
+        ],
       )
     }
     await this.storageManager.run(
@@ -422,12 +697,32 @@ export class InstantPayWallet {
     )
     await this.storageManager.run(
       'INSERT OR REPLACE INTO wl(id, type, status, balance) VALUES (?,?,?,?)',
-      [tx.recipient.toUserFriendlyAddress(), WalletType.INSTANT, WalletStatus.PENDING, tx.value],
+      [
+        tx.recipient.toUserFriendlyAddress(),
+        WalletType.INSTANT,
+        WalletStatus.PENDING,
+        tx.value,
+      ],
     )
   }
 
-  private async sendTransactionInternal(status: InstantPayStatus, instantWallet: InstantPayWalletState, recipient: Nimiq.Address, amount: number, type: TransactionType = TransactionType.UNKNOWN, message: string | null = null): Promise<Nimiq.ClientTransactionDetails> {
+  private async sendTransactionInternal(
+    status: InstantPayStatus,
+    instantWallet: InstantPayWalletState,
+    recipient: Nimiq.Address,
+    amount: number,
+    type: TransactionType = TransactionType.UNKNOWN,
+    message: string | null = null,
+  ): Promise<Nimiq.ClientTransactionDetails> {
+    console.groupCollapsed('📡 InstantPay Send Transaction Internal')
     const wallet = await this.nimiqWallet.getWallet()
+    console.log('wallet', wallet)
+    console.log('instantWallet', instantWallet)
+    console.log('recipient', recipient.toUserFriendlyAddress())
+    console.log('amount', amount)
+    console.log('status', status)
+    if (message)
+      console.log('message', Nimiq.BufferUtils.fromAscii(message))
     const tx = new Nimiq.ExtendedTransaction(
       Nimiq.Address.fromString(instantWallet.address),
       Nimiq.Account.Type.HTLC,
@@ -437,20 +732,35 @@ export class InstantPayWallet {
       0,
       status.blockHeight,
       0,
-      message == null ? new Uint8Array(0) : Nimiq.BufferUtils.fromAscii(message),
+      message ? Nimiq.BufferUtils.fromAscii(message) : new Uint8Array(0),
     )
     tx.proof = this.createEarlyResolveProof(wallet, tx, instantWallet)
-    const instantTransactionReceipt = await this.instantPayClient.sendTransaction(instantWallet.address, tx)
-    const signedTransaction = Nimiq.Transaction.fromAny(instantTransactionReceipt.details)
-    const result = await this.nimiqNetworkClient.sendTransaction(signedTransaction)
+    const instantTransactionReceipt = await this.instantPayClient
+      .sendTransaction(instantWallet.address, tx)
+    const signedTransaction = Nimiq.Transaction.fromAny(
+      instantTransactionReceipt.details,
+    )
+    const result = await this.nimiqNetworkClient.sendTransaction(
+      signedTransaction,
+    )
     await this.storageManager.run(
       'INSERT OR REPLACE INTO tx(id, type, ts, amount, status, wlId, peerId, raw) VALUES (?,?,?,?,?,?,?,?)',
-      [tx.hash().toHex(), type, Date.now() / 1000, tx.value, TransactionStatus.MINED, tx.sender.toUserFriendlyAddress(), tx.recipient.toUserFriendlyAddress(), Nimiq.BufferUtils.toHex(signedTransaction.serializeContent())],
+      [
+        tx.hash().toHex(),
+        type,
+        Date.now() / 1000,
+        tx.value,
+        TransactionStatus.MINED,
+        tx.sender.toUserFriendlyAddress(),
+        tx.recipient.toUserFriendlyAddress(),
+        Nimiq.BufferUtils.toHex(signedTransaction.serializeContent()),
+      ],
     )
     await this.storageManager.run(
       'UPDATE wl SET balance = balance - ? WHERE id = ?',
       [tx.value, tx.sender.toUserFriendlyAddress()],
     )
+    console.groupEnd()
     return result
   }
 

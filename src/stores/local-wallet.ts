@@ -22,7 +22,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   onMounted(async () => {
     if (!client.value)
-      throw new Error('The client is not defined')
+      return
     await client.value.waitForConsensusEstablished()
 
     // client.value.addHeadChangedListener(async () => {
@@ -45,6 +45,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   }
 
   return {
+    hasLocalWallet: computed(() => !!entropy.value),
     localWallet,
     address,
     publicKey,

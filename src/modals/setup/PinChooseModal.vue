@@ -12,7 +12,7 @@ enum PinType {
 }
 
 const { showModal } = useModal()
-const storageManager = inject(StorageManager.KEY)!
+const storageManager = inject(StorageManager.KEY) as StorageManager
 const pinField = ref()
 const title = ref(PinType.CHOOSE)
 const pin = ref('')
@@ -72,11 +72,9 @@ onMounted(() => {
       <br>
       No personal data needed.
     </template>
-    <form class="self-start mt-[30%]" @submit.prevent>
-      <input
-        ref="pinField" v-model="pin" type="password" inputmode="numeric" class="pin" pattern="[0-9]*" minlength="4"
-        maxlength="4" size="4" placeholder="••••" autofocus="true"
-      >
-    </form>
+    <input
+      ref="pinField" v-model="pin" type="password" inputmode="numeric" class="pin self-start mt-[30%]" pattern="[0-9]*" minlength="4"
+      maxlength="4" size="4" placeholder="••••" autofocus="true"
+    >
   </ModalTemplate>
 </template>

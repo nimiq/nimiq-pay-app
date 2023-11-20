@@ -30,6 +30,7 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 /* Libs */
 import { useConn } from './stores/conn'
+import { useLocalWallet } from './stores/local-wallet'
 
 applyPolyfills().then(() => {
   jeepSqlite(window)
@@ -46,8 +47,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await useConn().init()
 
+  console.log('dbExists', useConn().dbExists)
+
   if (router.currentRoute.value.path === '/') {
-    if (await useConn().dbExists)
+    if (useConn().dbExists && useLocalWallet().hasLocalWallet)
       router.push('/pin')
     else
       router.push('/setup')

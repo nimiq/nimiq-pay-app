@@ -14,7 +14,7 @@ export enum Transfer {
   // then the funds need to be recovered. And then the user can start a new HTLC contract.
   RemoteToLocal = 'remote-to-local',
 
-  // If the server missbehave and doesn't sends the funds before the timeout of the HTLC, then the user can recover the funds. Usually the server will send the funds before the timeout.
+  // If the server misbehave and doesn't sends the funds before the timeout of the HTLC, then the user can recover the funds. Usually the server will send the funds before the timeout.
   RemoteToLocalAfterTimeout = 'remote-to-local-after-timeout',
 
   // A special transaction to extend the validity of the HTLC contract
@@ -56,7 +56,7 @@ export interface BaseTransaction {
   recipient: string
   status: Nimiq.Client.TransactionState
   ts: number
-  amount: number
+  value: number
   fee: number
   hash: string
 }
@@ -70,49 +70,6 @@ export enum PaymentMethod {
   Points = 'points',
 }
 
-export enum WalletType {
-  None = 'none',
-  Raw = 'raw',
-  Instant = 'instant',
-  Bonus = 'bonus',
-}
-
-export enum WalletStatus {
-  None = 'none',
-  Pending = 'pending',
-  Active = 'active',
-  Expired = 'expired',
-  Emptied = 'emptied',
-}
-
-// export type PointsTransaction = BaseTransaction & { method: PaymentMethod.Points }
-// export type NimTransaction = BaseTransaction & { method: PaymentMethod.NIM; hash: string }
-// export type Transaction = PointsTransaction | NimTransaction
-
-// We store the remote Wallet.
-// The only thing we store about the local wallet is the entropy, and from that we can derive the private key
-// and its remote wallet
-export interface Wallet {
-  id: string
-  address: string
-  type: WalletType
-  status: WalletStatus
-  balance: number
-  proofSize: number
-  active: boolean
-
-  /**
-   * The validity of the wallet has started to be valid
-   */
-  start: number
-
-  /**
-   * The validity of the wallet has ended
-   */
-  end: number
-
-}
-
 export interface PriceTable {
   id: number
   currency: MaybeRef<string>
@@ -121,10 +78,6 @@ export interface PriceTable {
 }
 
 export enum SQLQuery {
-  SelectActiveWallet = 'SELECT * FROM wallets WHERE active = 1',
-  InsertWallet = 'INSERT INTO wallets(id, type, status, balance, start, end, proofSize, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  UpdateWallet = 'UPDATE wallets SET type = COALESCE(?, type), status = COALESCE(?, status), balance = COALESCE(?, balance), start = COALESCE(?, start), end = COALESCE(?, end), proofSize = COALESCE(?, proofSize), active = COALESCE(?, active) WHERE address = ?',
-  DeactivateWallet = 'UPDATE wallets SET active = 0 WHERE id = ?',
 
   // InsertTransaction = 'INSERT INTO transactions(id, remoteAddress, peerName, raw, rail, railId, railPeerId, details, recipient, status, transferType, ts, amount, fee, hash, method) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   // GetAllTransactions = 'SELECT * FROM transactions',
@@ -134,11 +87,6 @@ export enum SQLQuery {
 }
 
 export interface SQLQueryArg {
-  [SQLQuery.SelectActiveWallet]: undefined
-  [SQLQuery.InsertWallet]: Omit<Wallet, 'id'>
-  [SQLQuery.UpdateWallet]: Omit<Wallet, 'id'>
-  [SQLQuery.DeactivateWallet]: MaybeRef<string>
-
   // [SQLQuery.InsertTransaction]: Omit<Transaction, 'id'>
   // [SQLQuery.GetAllTransactions]: undefined
 
@@ -147,11 +95,6 @@ export interface SQLQueryArg {
 }
 
 export interface SQLQueryResult {
-  [SQLQuery.SelectActiveWallet]: Wallet | undefined
-  [SQLQuery.InsertWallet]: undefined
-  [SQLQuery.UpdateWallet]: undefined
-  [SQLQuery.DeactivateWallet]: undefined
-
   // [SQLQuery.InsertTransaction]: undefined
   // [SQLQuery.GetAllTransactions]: Transaction[]
 

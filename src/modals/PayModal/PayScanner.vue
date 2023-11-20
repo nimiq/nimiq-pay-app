@@ -18,12 +18,12 @@ async function handleSkip() {
     console.log('Skipping QR code scan')
     await stopScan()
     await instantPayWallet.preparePayment({
-      address: Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
-      amount: Nimiq.Policy.coinsToLunas(1),
-      message: 'Ref #123456789',
+      address: Nimiq.Address.fromString('NQ89 J7V7 PFEY JNB1 CVKU A32G JQN9 U1BA TSE4'),
+      amount: Nimiq.Policy.coinsToLunas(7),
+      message: 'Ref #75VZ',
       label: 'Test Store',
-      rail: 'cpl',
-      railId: undefined,
+      rail: 'CPL',
+      railId: '75VZloGY',
     })
     navigateToPayConfirm()
   }
@@ -59,7 +59,7 @@ async function startScan() {
         railId = gocrypto_id
       }
       else if (message !== null && (message.startsWith('Ref #') && label !== null || cpl_id !== null)) {
-        rail = 'cpl'
+        rail = 'CPL'
         railId = cpl_id || undefined
       }
       await instantPayWallet.preparePayment({ address, amount, message, label, rail, railId })
@@ -95,22 +95,24 @@ onDeactivated(stopScan)
 
 <template>
   <ModalTemplate>
-    <div class="relative w-full h-3/4">
-      <div class="rounded-lg w-[80vw] bg-blue-100 h-[80vw] transition-all" :class="{ 'bg-transparent border-2 border-blue-600 outline outline-white outline-[100vh]': isScanning }" />
-      <p class="absolute mt-16 text-xl font-semibold -translate-x-1/2 left-1/2" @click="handleSkip">
+    <div class="relative w-full h-full">
+      <p class="absolute top-0 z-10 text-2xl font-bold -translate-x-1/2 left-1/2" @click="handleSkip">
         Scan QR code
         <span v-if="isDev" class="block text-sm font-normal text-blue-300">Click here to use mockup</span>
       </p>
+      <div class="absolute -translate-x-1/2 left-1/2 top-1/3 -translate-y-1/3 w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner" :class="{ '!bg-transparent outline outline-white outline-[100vh]': isScanning }">
+        <span class="border_bottom" />
+      </div>
     </div>
   </ModalTemplate>
   <IonFooter>
     <IonToolbar>
-      <div class="p-[0.15rem] mx-auto font-medium bg-blue-100 border-2 border-blue-600 rounded-lg w-fit">
-        <button class="px-6 py-2 text-white bg-blue-600 rounded-lg">
+      <div class="p-[0.15rem] mx-auto font-bold w-fit rounded-[100px] bg-space-space-200 border">
+        <button class="py-4 text-white uppercase px-7 rounded-[100px]" style="background: var(--radial-gradient-light-blue);">
           Scan QR
         </button>
         <!--
-        <button class="px-6 py-2 text-blue-600 rounded-lg">
+          <button class="py-4 text-space/30 uppercase px-7 rounded-[100px]">
           Bluecode
         </button>
         -->
@@ -121,14 +123,60 @@ onDeactivated(stopScan)
 
 <style scoped>
 ion-footer > ion-toolbar {
-  --border-color: rgb(59 130 246);
-  --border-width: 1px 0 0 0;
-  --padding-bottom: 0.5rem;
-  --padding-top: 0.5rem;
-  --border-style: solid;
+  --background: white;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
 }
-
 .footer-md {
   box-shadow: none !important;
 }
+
+.border-corner:before {
+  	display: block;
+  	content: "";
+  	width: 35px;
+  	height: 35px;
+  	position: absolute;
+  	top: -1px;
+  	left: -1px;
+  	border-top: 2px solid var(--colors-darkblue);
+  	border-left: 2px solid var(--colors-darkblue);
+  }
+
+  .border-corner:after {
+  	display: block;
+  	content: "";
+  	width: 35px;
+  	height: 35px;
+  	position: absolute;
+  	top: -1px;
+  	right: -1px;
+  	border-top: 2px solid var(--colors-darkblue);
+  	border-right: 2px solid var(--colors-darkblue);
+  }
+
+  .border-corner span.border_bottom:before {
+  	display: block;
+  	content: "";
+  	width: 35px;
+  	height: 35px;
+  	position: absolute;
+  	bottom: -1px;
+  	left: -1px;
+  	border-bottom: 2px solid var(--colors-darkblue);
+  	border-left: 2px solid var(--colors-darkblue);
+  }
+
+  .border-corner span.border_bottom:after {
+  	display: block;
+  	content: "";
+  	width: 35px;
+  	height: 35px;
+  	position: absolute;
+  	bottom: -1px;
+  	right: -1px;
+  	border-bottom: 2px solid var(--colors-darkblue);
+  	border-right: 2px solid var(--colors-darkblue);
+  }
 </style>

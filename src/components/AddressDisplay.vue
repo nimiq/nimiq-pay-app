@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { IonRippleEffect } from '@ionic/vue'
-import type { ComputedRef } from 'vue'
+import { IonRippleEffect, toastController } from '@ionic/vue'
 import { computed } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 
@@ -21,17 +20,22 @@ const chunks = computed(() => {
   return props.address.replace(/[+ ]/g, '').match(/.{4}/g)!
 })
 
-function handleCopy() {
+async function handleCopy() {
   if (!props.isCopyable)
     return
-  Clipboard.write({
+  await Clipboard.write({
     string: props.address,
+  })
+  await toastController.create({
+    message: 'Address copied to clipboard',
+    duration: 1500,
+    position: 'bottom',
   })
 }
 </script>
 
 <template>
-  <div class="relative overflow-hidden text-3xl text-blue-500 rounded address-display bg-blue-100/60 ion-activatable ripple-parent" @click="handleCopy">
+  <div class="relative overflow-hidden text-2xl rounded text-space/50 address-display ion-activatable ripple-parent" @click="handleCopy">
     <span v-for="(chunk, index) in chunks" :key="chunk + index" class="chunk">{{ chunk }}<span class="space">&nbsp;</span></span>
     <IonRippleEffect />
   </div>
@@ -44,7 +48,7 @@ function handleCopy() {
   flex-wrap: wrap;
   justify-content: space-between;
   max-width: 28.25rem;
-  font-weight: 500;
+  font-weight: 400;
   padding: 0.25rem;
 }
 

@@ -1,74 +1,80 @@
-import { defineStore } from 'pinia'
-import { computedAsync, useStorageAsync } from '@vueuse/core'
-import type { Serializer, StorageLikeAsync } from '@vueuse/core'
-import { computed, ref } from 'vue'
+import { defineStore, storeToRefs } from 'pinia'
+import { computedAsync } from '@vueuse/core'
+import { computed, onMounted, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 import { useRemoteSignerApi } from '@/composables/useApi'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { SQLQuery } from '@/lib/sql-queries'
+import type { RemoteSigner } from '@/lib/sql-queries'
 
-// TODO What's type???
-export enum WalletType {
-  None = 'none',
-  Raw = 'raw',
-  Instant = 'instant',
-  Bonus = 'bonus',
-}
+function useRemoteSignerDb() {
+  const { db, waitForUnlock } = useConn()
+  return {
+    async getActiveRemoteSigner() {
+      await waitForUnlock()
+      const res = await db!.query(SQLQuery.GetActiveRemoteSigner)
+      return res.values?.at(0)?.value as RemoteSigner | undefined
+    },
 
-export enum WalletStatus {
-  None = 'none',
-  Pending = 'pending',
-  Active = 'active',
-  Expired = 'expired',
-  Emptied = 'emptied',
-}
+    async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
+      await waitForUnlock()
+      // When we add a new wallet, we need to deactivate the previous one if the new address is different
+      await db!.run(SQLQuery.DeactivateRemoteSigners)
+      await db!.run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
+    },
 
-// The remote signer interface is the type of the data that we store in the database
-// and in the store. It is not the same as the one returned by the API, which it is
-// get parsed in the useApi.ts file.
-export interface RemoteSigner {
-  address: string
-  balance: number
-  publicKey: string
-  proofSize: number
-  start: number
-  end: number
-  active: boolean
-  status: WalletStatus
-}
+    async updateBalance(address: Nimiq.Address, newBalance: number) {
+      await waitForUnlock()
+      await db!.run(SQLQuery.UpdateRemoteBalance, [newBalance, address])
+    },
 
-const storage: StorageLikeAsync = {
-  async getItem(address) {
-    await useConn().waitForUnlock()
-    const res = await useConn().db!.query(`SELECT * FROM wallet WHERE address = ? AND active = true`, [address])
-    return JSON.stringify(res.values?.at(0)?.value) || ''
-  },
-  async setItem(address, newWalletStr) {
-    await useConn().waitForUnlock()
-    // When we add a new wallet, we need to deactivate the previous one if the new address is different
-    await useConn().db!.run(`UPDATE wallet SET active = false WHERE active = true AND address != ?`, [address])
-
-    // We need to parse the wallet because the useStorageAsync requires to do so
-    const { active, balance, end, proofSize, start, status, publicKey } = JSON.parse(newWalletStr) as Omit<RemoteSigner, 'id'>
-    const args = [address, status, balance, proofSize, active, publicKey, start, end] // TODO Check this logix! some fields are missing
-    await useConn().db!.run(`INSERT INTO wallet (address, type, status, balance, proofSize, active, publicKey, start, end) VALUES (?, 'remote', ?, ?, ?, ?, ?, ?, ?)`, args)
-  },
-  removeItem: () => {},
-}
-
-const serializer: Serializer<RemoteSigner> = {
-  read: value => JSON.parse(value) as RemoteSigner,
-  write: value => JSON.stringify(value),
+    async updateValidity(address: Nimiq.Address, newStart: number, newEnd: number) {
+      await waitForUnlock()
+      await db!.run(SQLQuery.UpdateValidityRemoteSigner, [newStart, newEnd, address])
+    },
+  }
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
   const { head } = useNimiqNetwork()
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
+  const { address: localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateValidity } = useRemoteSignerDb()
 
-  const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)
+  const remoteSigner = ref<RemoteSigner>()
 
-  const remoteAddress = ref<Nimiq.Address>(Nimiq.Address.fromString(''))
-  const currentSigner = computedAsync(() => getRemoteSigner({ address: remoteAddress.value }).then(r => r.data))
-  const remoteSigner = useStorageAsync('remote-signer', currentSigner.value!, storage, { serializer })
+  /**
+   * Initializes the remote signer variables with the following algorithm:
+   * 1. Check if we have a local wallet:
+   *    - If we have, go to next step
+   *    - Otherwise, do nothing
+   * 2. Check if we have a remote signer in the database:
+   *    - If we have, go to next step
+   *    - Otherwise, do nothing
+   * 3. Get the remote signer from the API:
+   *    - If we have it, go to next step
+   *    - Otherwise, do nothing
+   * 4. Update the remote signer in the database
+   * 5. Set the remote signer in the store
+   */
+  async function init() {
+    if (!hasLocalWallet.value)
+      return
+    const remoteSignerDb = await getActiveRemoteSigner()
+    if (!remoteSignerDb)
+      return
+    const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
+    if (error || !remoteSignerApi)
+      return
+    setRemoteSigner(remoteSignerApi)
+    remoteSigner.value = remoteSignerApi
+  }
+
+  onMounted(init)
+
+  const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.status || 0), 0)
+  const remoteAddress = computed(() => remoteSigner.value?.address || '')
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = computed(() => remoteSigner.value?.balance || 0)
@@ -80,15 +86,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const htlcIsActive = computed(() => start.value < head.value!.height && end.value > head.value!.height)
   const htlcHasExpired = computed(() => end.value < head.value!.height)
 
-  // Updates the balance of the current active wallet in the database and in the store
-  const updateBalance = (newBalance: number) => remoteSigner.value = { ...remoteSigner.value, balance: newBalance }
-
-  // Updates the validity of the current active wallet in the database and in the store
-  const updateValidity = (newStart: number, newEnd: number) => remoteSigner.value = { ...remoteSigner.value, start: newStart, end: newEnd }
-
   return {
     remoteAddress,
-    remoteSigner,
+    remoteSigner: readonly(remoteSigner),
     hasSigner: computed(() => !!remoteSigner.value),
     start,
     end,

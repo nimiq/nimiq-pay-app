@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
+import { IonApp, IonFab, IonFabButton, IonIcon, isPlatform } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView, useRouter } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
@@ -8,7 +8,7 @@ import { Modal, useModal } from '@/composables/useModal'
 
 const isDev = import.meta.env.DEV
 
-StatusBar.setBackgroundColor({ color: '#ffffff' })
+StatusBar.setBackgroundColor({ color: '#F8F8F8' })
 StatusBar.setOverlaysWebView({ overlay: false })
 
 useRouter().afterEach(async () => {
@@ -21,11 +21,11 @@ useRouter().afterEach(async () => {
 </script>
 
 <template>
-  <IonApp class="text-space">
+  <IonApp>
     <RouterView />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="() => useModal().showModal(Modal.Dev, { isOnTop: true })">
+      <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>
@@ -34,24 +34,77 @@ useRouter().afterEach(async () => {
 </template>
 
 <style>
+/* TODO: move this to variables or something */
 ion-toolbar {
   --background: transparent;
 }
 
 input.pin {
-  text-align: center;
   font-size: 40px;
-  font-family: monospace;
+  letter-spacing: clamp(10px, 8vw, 10rem);
+  @apply w-full border-0 outline-none text-center caret-transparent ml-8;
 }
 
 input.phone {
   font-size: 20px;
-  font-family: monospace;
 }
 
 ion-modal ion-toolbar {
     --border-color: transparent;
     --background: var(--ion-background-color, #fff);
+}
+
+.sc-ion-buttons-md-s ion-button,
+.sc-ion-buttons-ios-s ion-button {
+  --padding-top: 9px;
+  --padding-bottom: 10px;
+  --padding-start: 12px;
+  --padding-end: 12px;
+}
+
+ion-button {
+  --border-radius: 10rem !important;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 22px;
+  --padding-bottom: 22px;
+  @apply uppercase font-bold;
+}
+
+ion-button:not(.button-clear){
+  --background: var(--radial-gradient-light-blue);
+}
+
+ion-back-button {
+  @apply text-space/30;
+}
+
+ion-toast.notification-alert-toast{
+  --background: #fff;
+  --border-radius: 100px;
+  --box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
+  --width: fit-content;
+  padding-top: 100px;
+}
+
+ion-toast.notification-alert-toast::part(container){
+  padding: 0px 2px;
+}
+
+ion-toast.notification-alert-toast::part(icon) {
+    width: 16px;
+    height: 16px;
+    color: #21BCA5;
+}
+
+ion-toast.toast-error::part(icon) {
+    width: 24px;
+    height: 24px;
+    color: #D13030;
+}
+
+ion-toast.notification-alert-toast::part(message) {
+    @apply text-black text-lg font-semibold;
 }
 
 body.scanner-active ion-app>:not(ion-modal) {
@@ -60,5 +113,10 @@ body.scanner-active ion-app>:not(ion-modal) {
 
 body.scanner-active ion-content, body.scanner-active .ion-page, body.scanner-active ion-modal {
     --background: none;
+}
+
+/* TODO: Remove this */
+p, a, h1, h2, h3, h4, h5, h6, svg {
+  color: #1f2348;
 }
 </style>

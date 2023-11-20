@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { basket, close } from 'ionicons/icons'
-import type { PropType } from 'vue'
+import { type PropType, onMounted } from 'vue'
 import { useModal } from '@/composables/useModal'
-import { TransactionStatus, TransactionType } from '@/lib/storage-manager'
+import { TransactionStatus } from '@/lib/storage-manager'
 
 defineProps({
   tx: {
@@ -14,54 +14,55 @@ defineProps({
 
 const { closeModal } = useModal()
 
-function getDate(ts: number) {
-  const date = new Date(ts * 1e3)
-  return `${date.getDate().toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'long' })}`
-}
+// function getDate(ts: number) {
+//   const date = new Date(ts * 1e3)
+//   return `${date.getDate().toString().padStart(2, '0')} ${date.toLocaleString('default', { month: 'long' })}`
+// }
 </script>
 
 <template>
   <IonHeader class="ion-no-border">
     <IonToolbar>
+      <IonButtons slot="start">
+        <IonBackButton default-href="/" @click.stop="closeModal()" />
+      </IonButtons>
       <IonButtons slot="end">
-        <IonButton @click.stop="() => closeModal()">
-          <IonIcon :icon="close" />
+        <IonButton @click.stop="closeModal()">
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
   <IonContent>
-    <h1 class="flex items-center justify-center mt-4 mb-12 text-4xl font-normal gap-x-2">
-      <IonIcon :icon="basket" />
-      {{ tx.title }}
-    </h1>
-    <div class="mb-8 text-center">
-      <p v-if="tx.fiatAmount" class="text-5xl">
-        {{ tx.fiatAmount.toFixed(2) }}{{ tx.fiatUnit }}
+    <div class="flex items-center justify-center mt-6 mb-8 gap-x-3">
+      <IonIcon :icon="basket" class="w-8 h-8 p-1 rounded-full bg-space/5" />
+      <span class="text-2xl font-bold"> {{ tx.title }} </span>
+    </div>
+    <div class="mb-20 text-center">
+      <p v-if="tx.fiatAmount" class="mb-2 text-3xl uppercase text-space/60">
+        {{ tx.fiatUnit }} {{ tx.fiatAmount.toLocaleString() }}
       </p>
-      <p class="mt-3 text-2xl text-blue-300" :class="{ 'text-5xl text-blue-500': !tx.fiatAmount }">
-        {{ (tx.amount / 1e5).toFixed(2) }} NIM
+      <p class="text-5xl">
+        {{ (tx.amount / 1e5).toLocaleString() }} NIM
       </p>
     </div>
-    <div class="flex items-center justify-center mb-8 text-blue-500 bg-blue-100 h-44">
+    <!--
+      <div class="flex items-center justify-center mb-8 text-blue-500 bg-blue-100 h-44">
       Map Address
     </div>
-    <div class="flex flex-col px-4 text-xl gap-y-8">
-      <p class="flex justify-between">
-        <span class="text-blue-400">Status</span>
+    -->
+    <div class="flex flex-col px-6 text-lg gap-y-8">
+      <p class="flex justify-between text-space/60">
+        <span>Status</span>
         <span>{{ TransactionStatus[tx.status] }}</span>
       </p>
-      <p class="flex justify-between">
-        <span class="text-blue-400">Date</span>
-        <span>{{ getDate(tx.ts) }}</span>
+      <p class="flex justify-between text-space/60">
+        <span>Date</span>
+        <span>{{ (new Date(tx.ts * 1e3)).toLocaleDateString() }}</span>
       </p>
-      <p v-if="tx.location" class="flex justify-between">
-        <span class="text-blue-400">Location</span>
+      <p v-if="tx.location" class="flex justify-between text-space/60">
+        <span>Location</span>
         <span>{{ tx.location }}</span>
-      </p>
-      <p class="flex justify-between">
-        <span class="text-blue-400">Payment</span>
-        <span>{{ tx.amount / 1e5 }} NIM</span>
       </p>
     </div>
   </IonContent>

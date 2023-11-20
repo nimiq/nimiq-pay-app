@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, onMounted, ref, watch } from 'vue'
+import { inject, onMounted, ref, watchEffect } from 'vue'
 import type { Ref } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { IonBackButton, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
@@ -16,10 +16,10 @@ const prefill = bonusWallet.getPrefillAccessCode()
 const code: Ref<number | null> = ref(Number(prefill))
 const nav = (document.querySelector('[data-phone-nav]')) as Nav & HTMLElement
 
-watch(code, (newValue) => {
-  if (newValue?.toString().length === 8)
-      err('This phone number is already used')
-
+watchEffect(() => {
+  if (code.value?.toString().length === 8)
+    handleVerify()
+})
 
 async function handleVerify() {
   try {
@@ -31,7 +31,7 @@ async function handleVerify() {
       showModal(Modal.EnablePushNotifications)
     }
     else if (path === '/app') {
-      await showNotificationAlert({ title: 'CC Points is now active!' })
+      showNotificationAlert('CC points activated')
       showModal(Modal.RewardsIntro)
     }
   }
@@ -55,6 +55,13 @@ function handleResendRequest() {
   nav.pop()
 }
 
+function handleClose() {
+  if (path === '/setup')
+    showModal(Modal.EnablePushNotifications)
+  else
+    showModal(Modal.Rewards)
+}
+
 onMounted(() => {
   setTimeout(() => {
     codeField.value.focus()
@@ -69,34 +76,29 @@ onMounted(() => {
         <IonBackButton />
       </IonButtons>
       <IonButtons slot="end">
-        <IonButton @click="() => closeModal()">
-          <IonIcon :icon="close" />
+        <IonButton @click="handleClose">
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
   <IonContent class="text-center ion-padding">
+    <!-- TODO: redo this -->
     <IonGrid class="mx-6">
-      <h1 class="mb-4">
+      <h1 class="mb-4 text-2xl font-bold">
         Confirm your phone number
       </h1>
-      <p class="mb-8 text-xl font-semibold">
+      <p class="mb-8 text-base text-space/60">
         We've sent you a code, please confirm.
       </p>
-      <form @submit.prevent>
-        <input
-          ref="codeField" v-model="code" type="number" inputmode="numeric" pattern="[0-9]*" minlength="8"
-          maxlength="8" class="w-full p-1 my-2 pin" autofocus="true"
-        >
-      </form>
-      <IonGrid class="flex items-center justify-between">
-        <IonButton fill="clear" class="text-xl font-bold" @click="handleResendRequest">
-          Resend Code
-        </IonButton>
-        <IonButton size="small" class="text-xl font-bold" :disabled="(code || '').toString().length !== 8" @click="handleVerify">
-          Verify
-        </IonButton>
-      </IonGrid>
+      <input
+        ref="codeField" type="number" inputmode="numeric" pattern="[0-9]*" minlength="8"
+        maxlength="8" class="w-full p-1 my-10 text-3xl tracking-widest text-center" autofocus="true"
+        :value="code" @input="code = Number(($event.target as HTMLTextAreaElement).value)"
+      >
+      <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" @click="handleResendRequest">
+        Resend
+      </IonButton>
     </IonGrid>
   </IonContent>
 </template>

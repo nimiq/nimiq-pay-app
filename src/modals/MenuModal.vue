@@ -1,14 +1,26 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonLabel, IonList, IonModal, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { inject, ref } from 'vue'
-import ItemDivider from '@/components/ItemDivider.vue'
+import { onLongPress } from '@vueuse/core'
 import { Modal, useModal } from '@/composables/useModal'
 import { BonusWallet } from '@/lib/bonus-wallet'
+import ItemDivider from '@/components/ItemDivider.vue'
 
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const isPhoneRegistered = bonusWallet.isRegistered()
+const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
+
+function onLongPressCallback() {
+  useModal().showModal(Modal.Dev, { isOnTop: true })
+}
+
+onLongPress(
+  htmlRefHook,
+  onLongPressCallback,
+  { modifiers: { prevent: true }, delay: 3 * 1e3 },
+)
 </script>
 
 <template>
@@ -16,7 +28,7 @@ const { showModal, closeModal } = useModal()
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click.stop="closeModal()">
-          <IonIcon :icon="close" />
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
@@ -26,7 +38,7 @@ const { showModal, closeModal } = useModal()
     <IonItem button :detail="false" @click="showModal(Modal.TopUp, { isSmall: true })">
       Top Up
     </IonItem>
-    <IonItem button :detail="false">
+    <IonItem button :detail="false" @click="showModal(Modal.Withdraw)">
       Withdraw
     </IonItem>
 
@@ -44,11 +56,11 @@ const { showModal, closeModal } = useModal()
 
     <ItemDivider />
 
-    <IonItem button :detail="false">
+    <IonItem ref="htmlRefHook" button :detail="false" @click="showModal(Modal.Settings, { isOnTop: true })">
       Settings
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.Backup)">
-      Back Up
+      Back up account
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
       Log Out
@@ -58,8 +70,7 @@ const { showModal, closeModal } = useModal()
 
 <style scoped>
 ion-item {
-  @apply text-xl font-semibold text-blue-500;
-  --padding-top: 0.25rem;
-  --padding-bottom: 0.25rem;
+  @apply text-lg font-semibold;
+  --padding-bottom: 8px;
 }
 </style>

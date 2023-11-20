@@ -8,7 +8,11 @@ import { Transfer } from '@/types/database'
 export type PartialSendTxArgs = {
   transfer: Transfer.UserPayment
   recipient: string
-  amount: number
+  value: number
+  rail: string
+  railId: string
+  railPeerId?: string
+  peerName: string
   message?: string
 } | {
   transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.ExtendRemote | Transfer.RemoteToLocalAfterTimeout
@@ -18,8 +22,8 @@ export type PartialSendTxArgs = {
 /**
  * Signs any transaction in the wallet.
  *
- * Diferent Transfer types are used to sign different transactions and therefore different
- * arguments are needed for each one. The amount, flag and recipient will be set automatically
+ * Different Transfer types are used to sign different transactions and therefore different
+ * arguments are needed for each one. The value, flag and recipient will be set automatically
  * depending on the Transfer type.
  *
  * Basically, we have two different Transfer Types in the local wallet:
@@ -30,14 +34,14 @@ export type PartialSendTxArgs = {
  * @param args
  * @returns
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ tx: Nimiq.ExtendedTransaction, > {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<Nimiq.ExtendedTransaction> {
   if (partialArgs.transfer === Transfer.UserPayment) {
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* amount */ partialArgs.amount,
+      /* value */ partialArgs.value,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,
@@ -52,7 +56,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* senderType */ Nimiq.Account.Type.BASIC,
       /* recipient */ Nimiq.Address.CONTRACT_CREATION,
       /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* amount */ useLocalWallet().balance,
+      /* value */ useLocalWallet().balance,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
@@ -67,7 +71,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ useLocalWallet().address,
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* amount */ useRemoteSigner().remoteBalance,
+      /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,
@@ -82,7 +86,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ useLocalWallet().address,
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* amount */ useRemoteSigner().remoteBalance,
+      /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,
@@ -97,7 +101,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.CONTRACT_CREATION,
       /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* amount */ useRemoteSigner().remoteBalance,
+      /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
@@ -112,7 +116,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
 }
 
 async function getSignedTxByRemote(tx: ExtendedTransaction) {
-  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress, tx })
+  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress.toUserFriendlyAddress(), tx })
   if (error)
     return { data: undefined, error }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }

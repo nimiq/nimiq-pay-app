@@ -29,20 +29,22 @@ async function handleConfirm() {
     <IonToolbar>
       <IonButtons slot="end">
         <IonButton @click.stop="() => closeModal()">
-          <IonIcon :icon="close" />
+          <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <div class="flex flex-col items-center h-full p-8 text-center gap-y-4">
-    <h1 class="mb-4">
+  <div class="flex flex-col items-center h-full p-8 pt-0 text-center">
+    <h1 class="text-2xl font-bold">
       Are you sure you want to log out?
     </h1>
-    <p class="self-start px-4 mb-8 text-xl text-center">
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do.
+    <p class="self-start mt-4 text-base text-center text-space/60">
+      Log in again with your backup words.
+      <br>
+      Please ensure that you have them available before logging out.
     </p>
 
-    <IonButton class="self-end w-full mt-16 font-semibold" @click="handleConfirm">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="handleConfirm">
       Confirm
     </IonButton>
   </div>

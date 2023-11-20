@@ -17,9 +17,6 @@ dependencies:
   pinia:
     specifier: ^2.1.7
     version: 2.1.7(typescript@4.9.5)(vue@3.3.7)
-  valibot:
-    specifier: ^0.19.0
-    version: 0.19.0
   vue-virtual-scroller:
     specifier: ^2.0.0-beta.8
     version: 2.0.0-beta.8(vue@3.3.7)
@@ -68,8 +65,11 @@ devDependencies:
     specifier: ^5.0.6
     version: 5.0.6(@capacitor/core@5.5.1)
   '@ionic/cli':
-    specifier: ^7.1.1
-    version: 7.1.1
+    specifier: ^7.1.5
+    version: 7.1.5
+  '@ionic/core':
+    specifier: ^7.5.5
+    version: 7.5.5
   '@ionic/vue':
     specifier: ^7.5.1
     version: 7.5.2
@@ -1823,8 +1823,19 @@ packages:
       - supports-color
     dev: true
 
-  /@ionic/cli-framework-prompts@2.1.11:
-    resolution: {integrity: sha512-zTSLrw1gjDc5y4e62HB3JlPqtA8wXlV5QJBMWK1bGqjVSea4pdJ/RlYOT8U/uCZkBkFiZXv8E9/bmm1BTEnfoQ==}
+  /@ionic/cli-framework-output@2.2.7:
+    resolution: {integrity: sha512-/BXeclqu3y+bsBF7VFRS9xtNbrXf2JYCj/LeJoyLpWA9PeXNfvFrn91W2lwS2HVDjEDWKl4Ye6edJDdtn76EnA==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@ionic/utils-terminal': 2.3.4
+      debug: 4.3.4(supports-color@8.1.1)
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /@ionic/cli-framework-prompts@2.1.12:
+    resolution: {integrity: sha512-KlbJbagJ5qBGbsNEvLBtZOQe0vv9Hw3cLumyA6iZ9BztjRYtl9rZQXmKhSzraYiA98/MvIMX/JvNVnF+4Ug6/Q==}
     engines: {node: '>=16.0.0'}
     dependencies:
       '@ionic/utils-terminal': 2.3.4
@@ -1835,17 +1846,17 @@ packages:
       - supports-color
     dev: true
 
-  /@ionic/cli-framework@5.1.4:
-    resolution: {integrity: sha512-SSUG0JGHmf23I1C1zU2LtZYz41o/zNWXOz58Xa4bapAo6DDBGt8LDndTCznKhRzNAqWHOa7+M8ogA4K3paTB3A==}
+  /@ionic/cli-framework@6.0.0:
+    resolution: {integrity: sha512-8tqoaDVerfvDS6UKVs2B6C8NksQ2OljjipUZXRRed1A2LrvD3GYY2MdP2BIfY80TfXil3lFkfj9xhrtaVoLExA==}
     engines: {node: '>=16.0.0'}
     dependencies:
-      '@ionic/cli-framework-output': 2.2.6
+      '@ionic/cli-framework-output': 2.2.7
       '@ionic/utils-array': 2.1.6
       '@ionic/utils-fs': 3.1.7
       '@ionic/utils-object': 2.1.6
       '@ionic/utils-process': 2.1.11
       '@ionic/utils-stream': 3.1.6
-      '@ionic/utils-subprocess': 2.1.12
+      '@ionic/utils-subprocess': 3.0.0
       '@ionic/utils-terminal': 2.3.4
       chalk: 4.1.2
       debug: 4.3.4(supports-color@8.1.1)
@@ -1858,20 +1869,20 @@ packages:
       - supports-color
     dev: true
 
-  /@ionic/cli@7.1.1:
-    resolution: {integrity: sha512-Av9vaFGtOu6PQvKlBFUSMk+XWGWsUDWF9ZeQQ/jcfjYMv1u7BcvUNyw84hnelk/TDz4iWVooO7HFKpTGKkz/0g==}
+  /@ionic/cli@7.1.5:
+    resolution: {integrity: sha512-leqUDVulosXCHS+CjO+OBCDZ9BQGRi+2F+tJc4Rzk0HrsOgMtrl2M5MBa/9lqpWib4mrDsNJQbst9bUFbkHxmw==}
     engines: {node: '>=16.0.0'}
     hasBin: true
     dependencies:
-      '@ionic/cli-framework': 5.1.4
-      '@ionic/cli-framework-output': 2.2.6
-      '@ionic/cli-framework-prompts': 2.1.11
+      '@ionic/cli-framework': 6.0.0
+      '@ionic/cli-framework-output': 2.2.7
+      '@ionic/cli-framework-prompts': 2.1.12
       '@ionic/utils-array': 2.1.6
       '@ionic/utils-fs': 3.1.7
       '@ionic/utils-network': 2.1.6
       '@ionic/utils-process': 2.1.11
       '@ionic/utils-stream': 3.1.6
-      '@ionic/utils-subprocess': 2.1.12
+      '@ionic/utils-subprocess': 3.0.0
       '@ionic/utils-terminal': 2.3.4
       chalk: 4.1.2
       debug: 4.3.4(supports-color@8.1.1)
@@ -1897,6 +1908,14 @@ packages:
     resolution: {integrity: sha512-0O8YgaE7CzrhDLGpnNq2Ia4bR+qFE1uHJHafoNWhoTXkydNnqSMZlxMCvtSetfv9bwLic93lcXYNoZ8I8zV3XA==}
     dependencies:
       '@stencil/core': 4.6.0
+      ionicons: 7.2.1
+      tslib: 2.6.2
+    dev: true
+
+  /@ionic/core@7.5.5:
+    resolution: {integrity: sha512-7Rn3OUz8QCob7yMuCLs5dVLpChscNCm+OqH8lqTzy3N/8VSKHLNPHIHTIa4DQm9HwjtpOB+XCTeIqbdWHkLgnA==}
+    dependencies:
+      '@stencil/core': 4.7.2
       ionicons: 7.2.1
       tslib: 2.6.2
     dev: true
@@ -1969,6 +1988,22 @@ packages:
 
   /@ionic/utils-subprocess@2.1.12:
     resolution: {integrity: sha512-N05Y+dIXBHofKWJTheCMzVqmgY9wFmZcRv/LdNnfXaaA/mxLTyGxQYeig8fvQXTtDafb/siZXcrTkmQ+y6n3Yg==}
+    engines: {node: '>=16.0.0'}
+    dependencies:
+      '@ionic/utils-array': 2.1.6
+      '@ionic/utils-fs': 3.1.7
+      '@ionic/utils-process': 2.1.11
+      '@ionic/utils-stream': 3.1.6
+      '@ionic/utils-terminal': 2.3.4
+      cross-spawn: 7.0.3
+      debug: 4.3.4(supports-color@8.1.1)
+      tslib: 2.6.2
+    transitivePeerDependencies:
+      - supports-color
+    dev: true
+
+  /@ionic/utils-subprocess@3.0.0:
+    resolution: {integrity: sha512-gHdnsxyJWZUGo/XPtyokV1EaoF5ajgDQ9A0RrxPoHuKVArfi35zyQCll54o+KjnjMCzWWL7Q1qpA6mDuRMzyrQ==}
     engines: {node: '>=16.0.0'}
     dependencies:
       '@ionic/utils-array': 2.1.6
@@ -2145,6 +2180,12 @@ packages:
 
   /@stencil/core@4.6.0:
     resolution: {integrity: sha512-5Y6/fP28aspPDRB+Tz5GuB1jRVGuUEk5/rnyE8ACGcuzEOG+zR0A/IHRJSU3XmCxUlVDKfKoO6St5W84oUCVMA==}
+    engines: {node: '>=16.0.0', npm: '>=7.10.0'}
+    hasBin: true
+    dev: true
+
+  /@stencil/core@4.7.2:
+    resolution: {integrity: sha512-sPPDYrXiTbfeUF5CCyfqysXK/yfTHC4xYR1+nHzGkS2vhRSBOLp0oPuB+xkJLKA+K2ZqDJUxpOnDxy1CLWwBXA==}
     engines: {node: '>=16.0.0', npm: '>=7.10.0'}
     hasBin: true
     dev: true
@@ -7617,10 +7658,6 @@ packages:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
     hasBin: true
     dev: true
-
-  /valibot@0.19.0:
-    resolution: {integrity: sha512-vzeuctzVirzoiDN9BTc4GludHaSgFYoy6AnbHOjfBUbX0DibqKuNCr2Ti4ox8eLdBdDSEZSZ3LwXZgjL6aE4RQ==}
-    dev: false
 
   /validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}

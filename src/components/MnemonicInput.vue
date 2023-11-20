@@ -34,6 +34,6 @@ watchEffect(() => emit('loginWords', loginWords.value))
 
 <style scoped>
 input, input:disabled{
-  @apply bg-blue-100 border-0 outline-none py-1 px-2 text-blue-500 text-center opacity-100 font-semibold placeholder:text-blue-500/40;
+  @apply bg-[#F2F2F4] border-0 outline-none py-1 px-2 text-center opacity-100 font-semibold placeholder:text-space-space-500/40;
 }
 </style>

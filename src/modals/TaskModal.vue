@@ -7,6 +7,7 @@ import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 const props = defineProps({
   task: {
@@ -15,7 +16,7 @@ const props = defineProps({
   },
 })
 
-const { showModal, showNotificationAlert } = useModal()
+const { closeModal, showNotificationAlert } = useModal()
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const type: ComputedRef<TaskType> = computed(() => props.task ? JSON.parse(props.task.metadata).type : '')
 const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? JSON.parse(props.task.metadata).options : '')
@@ -27,7 +28,6 @@ const isVideoEnded = ref(false)
 const isAlreadyClaimed = ref(false)
 
 watchEffect(() => {
-  console.log(videoOptions.value)
   if (videoOptions.value) {
     nextTick(() => {
       const player = YouTubePlayer('yt-player', {
@@ -83,8 +83,8 @@ async function handleSubmit() {
       return
   }
 
-  await showNotificationAlert({ title: `You earned ${props.task.reward_amount / 1e5} CC Points` })
-  showModal(Modal.Rewards)
+  showNotificationAlert('You got CC Points')
+  closeModal()
 }
 </script>
 
@@ -93,16 +93,18 @@ async function handleSubmit() {
     <template #title>
       {{ task.description }}
     </template>
-    <div class="self-stretch">
-      <p class="text-center" :class="{ 'mb-8': type !== 'yt-video' }">
-        You earn
-        <br>
-        <span class="text-4xl">{{ task.reward_amount / 1e5 }} NIM</span>
-      </p>
+    <div class="self-stretch max-w-[98vw]">
+      <div class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
+        <span>You earn</span>
+        <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
+        <span>{{ task.reward_amount / 1e5 }}</span>
+      </div>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
-          {{ option }}
+          <p class="text-left whitespace-normal text-space/60">
+            {{ option }}
+          </p>
         </IonRadio>
       </IonRadioGroup>
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />

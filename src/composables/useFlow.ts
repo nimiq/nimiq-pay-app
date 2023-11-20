@@ -2,34 +2,51 @@ import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { useStepper } from '@vueuse/core'
 import { defineComponent, h, markRaw, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { isPlatform, modalController, toastController } from '@ionic/vue'
 import { getSteps } from './utils/steps'
-import { isInputStep, stepComponent } from '@/types/steps'
+import { isInfoStep, isInputStep } from '@/types/steps'
 import type { FlowName, State, Step } from '@/types/steps'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 
 type Component = ReturnType<typeof defineComponent>
 
-function getComponent(state: State, { title, description, beforeNext, step }: Step, next: () => void): Component {
-  const slots = { title: () => title, subtitle: () => description }
+async function getComponent(state: State, { title, description, beforeNext, step, main }: Step, next: () => void): Promise<Component> {
+  const error = ref('No error')
+  const slots = { title: () => title, subtitle: () => description, error: () => error }
 
-  const error = ref('')
-  watch(error, () => Object.assign(slots, { error: error.value ? () => error.value : undefined })) // Same as <template v-if="error">{{ error }}</template>
+  // watch(error, () => {
+  //   Object.assign(slots, { error: error.value })
+  //   console.log({ slots }, 'ere', error.value)
+  // }) // Same as <template v-if="error">{{ error }}</template>
 
-  const mainComponent = () => h(stepComponent[step] as Component, {
+  const mainComponent = () => h(main.component, {
+    ...main.props,
     // All step components should emit an event called 'done' when the user is done with the step
     onDone: async (userInput: string | undefined) => {
-      if (isInputStep(step)) {
+      if (isInfoStep(step)) { next() }
+      else if (isInputStep(step)) {
         state[step].value = userInput!
-        await beforeNext?.(state, { next() { error.value = ''; next() }, err(msg: string) { error.value = msg } })
+        await beforeNext?.(state, { next() { error.value = ''; next() }, err(msg: string) { error.value = msg; console.log('123', error.value) } })
       }
     },
   })
   Object.assign(slots, { default: mainComponent })
+  const component = defineComponent(() => () => h(ModalTemplate, null, slots))
 
-  return defineComponent(() => () => h(ModalTemplate, null, slots))
+  const isFullscreen = false
+  const modalToShow = await modalController.create({
+    component,
+    handle: false,
+    canDismiss: true,
+    initialBreakpoint: isFullscreen ? undefined : 1,
+    breakpoints: isFullscreen ? undefined : [0, 1],
+    // componentProps,
+  })
+  await modalToShow.present()
+  return component
 }
 
-export function useSteps() {
+export function useFlow() {
   const flow = ref<FlowName>()
   const nav = document.querySelector('[data-ion-nav]') as HTMLElement & Nav
 

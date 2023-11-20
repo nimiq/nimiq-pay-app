@@ -1,7 +1,7 @@
 import type { MaybeRef } from 'vue'
 import { toValue as v } from 'vue'
 import type { AsyncResult } from '@/types'
-import { type RemoteSigner, WalletStatus } from '@/stores/remote-signer'
+import type { RemoteSigner } from '@/lib/sql-queries'
 
 const basePointsUrl = new URL('http://bonus-nim.zeromox.com/api')
 const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
@@ -93,11 +93,11 @@ export interface Transaction {
 export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
-  interface GetRemoteSignerArg { address: MaybeRef<string> }
+  interface GetRemoteSignerArg { address: MaybeRef<Nimiq.Address> }
   interface SendTransactionArg { address: MaybeRef<string>; tx: MaybeRef<Nimiq.Transaction | string | object> }
   interface SendRawTransactionArg { address: MaybeRef<string>; rawTx: MaybeRef<string> }
 
-  interface StatusRes { status: 'good' | 'bad' }
+  interface StatusRes { status: 'good' | 'bad'; blockHeight: number; servicePublicKey: string; network: string }
   interface GetRemoteSignerRes { address: string; servicePublicKey: string; serviceSignatureProofSize: number; validityStart: number; validityEnd: number; balance: number }
 
   async function getStatus(): AsyncResult<StatusRes> {
@@ -108,7 +108,7 @@ export function useRemoteSignerApi() {
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
-    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address)}`, baseWalletUrl))
+    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress()}`, baseWalletUrl))
     if (error || !data?.address)
       return { data: undefined, error: error || 'No remote signer found' }
 
@@ -122,7 +122,6 @@ export function useRemoteSignerApi() {
       start: data.validityStart,
       end: data.validityEnd,
       active: true,
-      status: WalletStatus.Active,
     }
     return { data: remoteSigner, error: undefined }
   }

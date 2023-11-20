@@ -1,22 +1,25 @@
 <script setup lang="ts">
 import { IonButton, toastController } from '@ionic/vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { PushNotifications } from '@capacitor/push-notifications'
 import NotificationBell from '@/components/icons/notification-bell.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 
 const router = useRouter()
+const { path } = useRoute()
 
 async function registerNotifications() {
-  let permStatus = await PushNotifications.checkPermissions()
+  // TODO: implement this
 
-  if (permStatus.receive === 'prompt')
-    permStatus = await PushNotifications.requestPermissions()
+  // let permStatus = await PushNotifications.checkPermissions()
 
-  if (permStatus.receive !== 'granted')
-    throw new Error('Permission not granted.')
+  // if (permStatus.receive === 'prompt')
+  //   permStatus = await PushNotifications.requestPermissions()
 
-  await PushNotifications.register()
+  // if (permStatus.receive !== 'granted')
+  //   throw new Error('Permission not granted.')
+
+  // await PushNotifications.register()
 }
 
 async function handlePushButton() {
@@ -28,22 +31,30 @@ async function handlePushButton() {
     (await toastController.create({ message: e.message || e, duration: 2000 })).present()
   }
 }
+
+function handleClose() {
+  if (path !== '/app')
+    router.replace('/app')
+}
 </script>
 
 <template>
-  <ModalTemplate>
+  <ModalTemplate :on-closing="handleClose">
     <template #title>
-      Get notified
+      Enable notifications
     </template>
     <template #subtitle>
-      Get notified about spendings, security, top up, challenges, and more, so you're always in the know
+      Get important info on transactions, top ups, security and more.
     </template>
     <NotificationBell class="w-36 h-36" />
-    <div class="self-end w-full mb-2">
-      <IonButton expand="block" @click="handlePushButton">
-        Enable Push Notifications
+    <div class="self-end w-full">
+      <IonButton expand="block" class="text-base font-bold" @click="handlePushButton">
+        Enable Notifications
       </IonButton>
-      <IonButton fill="clear" expand="block" @click="router.push('/app')">
+      <IonButton
+        fill="clear" expand="block" class="text-base font-bold normal-case"
+        style="--padding-top: 8px; --padding-bottom: 8px;" @click="router.replace('/app')"
+      >
         Skip for now
       </IonButton>
     </div>

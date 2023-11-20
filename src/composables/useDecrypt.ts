@@ -46,7 +46,8 @@ export function useDecrypt() {
       throw new Error('The db does not exist')
 
     // FIXME try to do this without closing the db
-    await closeDb()
+    if (isOpen.value)
+      await closeDb()
 
     const error = hasSecret.value
       ? sqlite.checkEncryptionSecret(pin).then(({ result }) => !result ? 'There was an error' : undefined).catch(() => 'Invalid PIN')
@@ -61,7 +62,7 @@ export function useDecrypt() {
    * Decrypts the database with the pin. If the database has been created but not encrypted yet, it will encrypt it.
    *
    * @param pin
-   * @returns
+   * @returns An error message if there was an error, undefined otherwise
    */
   async function decrypt(pin: string): Promise<Option<string>> {
     if (decrypted.value)

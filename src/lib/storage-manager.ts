@@ -55,6 +55,8 @@ const upgrades: { version: number; statements: string[] }[] = [
 interface InternalStorage {
   pin?: string
   isBackupDone?: boolean
+  isSetupDone?: boolean
+  isFirstRun?: boolean
 }
 
 const InternalStorageKey = { name: '_' } as StorageKey<InternalStorage>
@@ -65,6 +67,7 @@ export enum TransactionType {
   DEPOSIT_TO_INSTANT = 2,
   EXTEND_INSTANT = 3,
   RECOVER_INSTANT = 4,
+  DEPOSIT = 'deposit',
 }
 
 export enum TransactionStatus {
@@ -260,6 +263,7 @@ export class StorageManager {
       }
       await db.close()
     }
+    this.wasUnlocked = true
     this.lastUnlocked = Date.now()
     await this.open()
   }
@@ -313,6 +317,20 @@ export class StorageManager {
     this.newPin = pin
     await this.unlock(pin)
     this.newPin = undefined
+    await this.update(InternalStorageKey, storage => storage.isSetupDone = true)
+  }
+
+  async isSetupDone(): Promise<boolean> {
+    return !!(await this.get(InternalStorageKey)).isSetupDone
+  }
+
+  async isFirstRun(): Promise<boolean> {
+    const isFirstRun = (await this.get(InternalStorageKey)).isFirstRun
+    return isFirstRun ?? true
+  }
+
+  async setFirstRun(value: boolean) {
+    await this.update(InternalStorageKey, storage => storage.isFirstRun = value)
   }
 
   async exists() {
@@ -332,6 +350,9 @@ export class StorageManager {
     await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
     await this.db?.delete()
     this.db = undefined
+    await this.sqlite?.deleteOldDatabases()
+    this.lastUnlocked = 0
+    this.wasUnlocked = false
     return await this.sqlite!.closeAllConnections()
   }
 

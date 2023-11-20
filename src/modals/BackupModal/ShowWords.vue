@@ -2,7 +2,7 @@
 import { IonBackButton, IonButton, IonButtons } from '@ionic/vue'
 import { inject, markRaw } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
-import { computedAsync } from '@vueuse/core'
+import { asyncComputed } from '@vueuse/core'
 import ValidateWords from './ValidateWords.vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -11,7 +11,7 @@ import MnemonicInput from '@/components/MnemonicInput.vue'
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 
-const words = computedAsync(async () => {
+const words = asyncComputed(async () => {
   return await nimiqWallet.getWords()
 }, ['Loading...'])
 </script>
@@ -24,14 +24,16 @@ const words = computedAsync(async () => {
       </IonButtons>
     </template>
     <template #title>
-      Write these 12 Words on Paper
+      Copy the words
     </template>
     <template #subtitle>
-      Anyone with these words can access your account! Keep them safe.
+      Write the words below on a piece of paper in the right order. 
+      <br>
+      Keep it safe and never share it!
     </template>
     <MnemonicInput :recovery-words="words" />
-    <IonButton class="self-end w-full mb-2 text-lg font-bold" @click="nav.push(markRaw(ValidateWords))">
-      Next
+    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">
+      Continue
     </IonButton>
   </ModalTemplate>
 </template>

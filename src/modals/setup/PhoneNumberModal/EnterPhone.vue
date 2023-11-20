@@ -4,7 +4,7 @@ import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import type { Alert } from '@ionic/core/dist/types/components/alert/alert'
 import { inject, markRaw, onMounted, ref } from 'vue'
 import type { Ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import VerifyPhone from './VerifyPhone.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
@@ -54,7 +54,8 @@ const alertButtons = [
 ]
 
 function handleClose() {
-  showModal(Modal.EnablePushNotifications)
+  if (path === '/setup')
+    showModal(Modal.EnablePushNotifications)
 }
 
 function focusInput() {
@@ -67,29 +68,31 @@ onMounted(focusInput)
 </script>
 
 <template>
-  <ModalTemplate>
+  <ModalTemplate :on-closing="handleClose">
     <template #title>
       Verify your phone number
     </template>
     <template #subtitle>
-      It's so easy. Just verify your phone number.
+      It's so easy.
+      <br>
+      Just verify your phone number.
     </template>
-    <div class="self-start mt-8">
-      <form @submit.prevent="() => alert?.present()">
-        <input
-          ref="phoneInput" v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 my-2 phone"
-          size="16"
-        >
-      </form>
-      <p class="text-md">
+    <div class="flex flex-col self-start w-full h-full pt-8">
+      <input
+        ref="phoneInput" v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 px-4 my-2 phone"
+        size="16"
+      >
+      <p class="text-sm font-semibold text-space/50">
         You get an SMS. Standard rates may apply.
       </p>
-      <IonButton v-if="path === '/setup'" fill="clear" class="mx-4 mt-6 text-xl font-bold" @click="handleClose">
-        Skip
-      </IonButton>
-      <IonButton id="present-alert" size="small" class="mx-4 mt-6 text-xl font-bold" :disabled="phoneNumber.length < 4">
-        Verify
-      </IonButton>
+      <div class="flex flex-col justify-center mt-auto">
+        <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
+          Verify
+        </IonButton>
+        <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleClose">
+          Skip for now
+        </IonButton>
+      </div>
     </div>
   </ModalTemplate>
   <IonAlert ref="alert" trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="alertButtons" />

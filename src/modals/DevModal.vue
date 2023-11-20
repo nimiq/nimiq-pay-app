@@ -2,14 +2,18 @@
 import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
 import { inject } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
+import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
+import { StorageManager } from '@/lib/storage-manager'
 
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
+const storageManager = inject(StorageManager.KEY) as StorageManager
+const router = useRouter()
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -23,10 +27,19 @@ async function writeToClipboard(string: string) {
 
   await toast.present()
 };
+
+async function handleClearTx() {
+  // Clear tx table
+  await storageManager.run('DELETE FROM tx')
+  router.go(0)
+}
 </script>
 
 <template>
   <ModalTemplate>
+    <IonButton class="w-full" @click="() => router.go(0)">
+      Reload
+    </IonButton>
     <IonCard>
       <IonCardHeader>
         <IonCardTitle>Nimiq Client</IonCardTitle>
@@ -74,12 +87,6 @@ async function writeToClipboard(string: string) {
         </p>
         <p>Timeouted: <strong>{{ instantPayWallet.timeouted.value }}</strong></p>
         <IonButton
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || instantPayWallet.balance.value === 0"
-          @click="() => console.log('Pay clicked')"
-        >
-          Pay
-        </IonButton>
-        <IonButton
           :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value || instantPayWallet.timeouted.value) || instantPayWallet.balance.value === 0"
           @click="instantPayWallet.recover()"
         >
@@ -93,5 +100,8 @@ async function writeToClipboard(string: string) {
         </IonButton>
       </IonCardContent>
     </IonCard>
+    <IonButton @click="handleClearTx">
+      Clear Tx History
+    </IonButton>
   </ModalTemplate>
 </template>

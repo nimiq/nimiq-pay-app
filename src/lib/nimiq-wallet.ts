@@ -21,6 +21,7 @@ export class NimiqWallet {
   public readonly address: Ref<Nimiq.Address | undefined> = ref(undefined)
   public readonly balanceRaw: Ref<number> = ref(0)
   public readonly balance: Ref<number> = computed(() => this.balanceRaw.value / 100000)
+  public readonly headHeight: Ref<number> = ref(0)
 
   constructor(private nimiqNetworkClient: NimiqNetworkClient, private storageManager: StorageManager) {
     this.privateKeyPromise = (async () => {
@@ -31,6 +32,7 @@ export class NimiqWallet {
         if (this.backupEntropy.value) {
           console.log('⚠️ Using backup entropy ⚠️')
           entropy = this.backupEntropy.value.toHex()
+          this.backupEntropy.value = undefined
         }
         else {
           console.log('⚠️ Generating new wallet ⚠️')
@@ -60,6 +62,7 @@ export class NimiqWallet {
       const client = await this.nimiqNetworkClient.getClient()
       const wallet = await walletPromise
       await client.addHeadChangedListener(async () => {
+        this.headHeight.value = await nimiqNetworkClient.getHeadHeight()
         const account = await client.getAccount(wallet.address)
         this.balanceRaw.value = account.balance
         await this.storageManager.run(
@@ -69,7 +72,7 @@ export class NimiqWallet {
         const pendingTransactions = await this.storageManager.query('SELECT id FROM tx WHERE status = ? OR status = ?', [TransactionStatus.PENDING, TransactionStatus.MINED])
         if (pendingTransactions.length > 0) {
           const receipts = await nimiqNetworkClient.getTransactionReceipts(pendingTransactions.map(tx => tx.id))
-          const currentHeadHeight = await nimiqNetworkClient.getHeadHeight()
+          const currentHeadHeight = this.headHeight.value
           for (const receipt of receipts) {
             await this.storageManager.run(
               'UPDATE tx SET status = ?, block = ?, blockHeight = ? WHERE id = ?',
@@ -89,6 +92,37 @@ export class NimiqWallet {
 
   async getWallet(): Promise<Nimiq.Wallet> {
     return this.walletPromise
+  }
+
+  async claimCashlink(cashlink: string) {
+    if (!cashlink)
+      throw new Error('No Cashlink found')
+    console.groupCollapsed('💰 Claim Cashlink')
+    cashlink = cashlink.split('cashlink/#')[1].replace(/~/g, '').replace(/=*$/, match => Array.from({ length: match.length }).fill('.').join(''))
+    const buf = Nimiq.BufferUtils.fromBase64Url(cashlink)
+    const keyPair = Nimiq.KeyPair.derive(Nimiq.PrivateKey.unserialize(buf))
+    const wallet = new Nimiq.Wallet(keyPair)
+    const client = await this.nimiqNetworkClient.getClient()
+    const { balance } = await client.getAccount(wallet.address)
+    const amount = Math.min(buf.readUint64(), balance)
+    console.log('Cashlink Balance:', balance / 1e5)
+    console.log('Claiming to address:', this.address.value?.toUserFriendlyAddress())
+    console.log('Claiming amount:', amount / 1e5)
+    if (!this.address.value)
+      throw new Error('No Nimiq Wallet address found')
+    if (amount <= 0)
+      throw new Error('Cashlink has no balance')
+
+    console.log('Claiming Cashlink...')
+    const tx = wallet.createTransaction(
+      this.address.value,
+      amount,
+      0,
+      this.headHeight.value,
+    )
+    await client.sendTransaction(tx)
+    console.log('Cashlink claimed')
+    console.groupEnd()
   }
 
   async getWords(): Promise<string[]> {

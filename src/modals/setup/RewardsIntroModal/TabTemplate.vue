@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
-import { useRouter } from 'vue-router'
 import type { Ref } from 'vue'
-import { markRaw, ref, watch } from 'vue'
+import { inject, markRaw, ref, watch } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { useSwipe } from '@vueuse/core'
 import Tab1 from './Tab1.vue'
 import Tab2 from './Tab2.vue'
 import Tab3 from './Tab3.vue'
+import { BonusWallet } from '@/lib/bonus-wallet'
 import { Modal, useModal } from '@/composables/useModal'
 
 const tabList = [
@@ -16,7 +16,8 @@ const tabList = [
   markRaw(Tab3),
 ]
 
-const { showModal } = useModal()
+const { showModal, closeModal } = useModal()
+const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
 const nav = (document.querySelector('[data-reward-info-nav]')) as Nav & HTMLElement
 const swipeable = ref(null)
 const smoothSpring: Ref<number | null> = ref(0)
@@ -24,7 +25,13 @@ const { isSwiping, direction, lengthX } = useSwipe(swipeable, { threshold: 1 })
 const maxSwipe = 40
 
 async function handleGoTo() {
-  await showModal(Modal.Rewards)
+  const activeTab = await getActiveTab()
+  if (tabList[activeTab + 1])
+    nav.push(tabList[activeTab + 1], undefined, { mode: 'ios' })
+  else if (bonusWallet.isRegistered())
+    await showModal(Modal.Rewards)
+  else
+    await showModal(Modal.NewPhone)
 }
 
 async function getActiveTab() {
@@ -62,13 +69,13 @@ watch(isSwiping, async () => {
     <IonHeader class="ion-no-border">
       <IonToolbar />
     </IonHeader>
-    <IonContent ref="swipeable" class="text-center ion-padding" :style="{ right: `${smoothSpring !== null ? smoothSpring : Math.sign(lengthX) * Math.min(Math.abs(lengthX), maxSwipe)}px` }">
+    <IonContent ref="swipeable" class="text-center" :style="{ right: `${smoothSpring !== null ? smoothSpring : Math.sign(lengthX) * Math.min(Math.abs(lengthX), maxSwipe)}px` }">
       <IonGrid class="flex flex-col h-full gap-4 px-4 pb-4">
         <IonRow class="ion-justify-content-center">
-          <h1 class="mb-2">
+          <h1 class="mb-4 text-2xl font-bold">
             <slot name="title" />
           </h1>
-          <p class="px-8 text-lg font-semibold">
+          <p class="px-3 text-base text-space/60">
             <slot name="subtitle" />
           </p>
         </IonRow>
@@ -76,7 +83,7 @@ watch(isSwiping, async () => {
           <slot name="body" />
         </IonRow>
         <IonRow>
-          <IonButton expand="block" class="w-full font-bold" @click="handleGoTo">
+          <IonButton expand="block" class="w-full text-base font-bold" @click="handleGoTo">
             Go to CC Points
           </IonButton>
         </IonRow>

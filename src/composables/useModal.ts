@@ -1,16 +1,18 @@
 import { defineAsyncComponent, ref } from 'vue'
+import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
-import { modalController } from '@ionic/vue'
+import { isPlatform, modalController, toastController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
+import { check, xmark } from '@/components/icons'
 
 export enum Modal {
-  Login = '@/modals/Login.vue',
   Backup = '@/modals/BackupModal/index.vue',
+  CashlinkScanner = '@/modals/deposit/CashlinkScannerModal.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
-  // Login = '@/modals/setup/LoginModal.vue',
+  Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
@@ -21,14 +23,17 @@ export enum Modal {
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Rewards = '@/modals/RewardsModal.vue',
   RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
   TransactionHistory = '@/modals/TransactionHistoryModal.vue',
-  Voucher = '@/modals/VoucherModal.vue',
+  Referral = '@/modals/ReferralModal.vue',
+  Withdraw = '@/modals/WithdrawModal.vue',
 }
 
 function _useModal() {
   const isPresent = ref(false)
+  const allModals: HTMLIonModalElement[] = []
 
   async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
     const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
@@ -43,11 +48,11 @@ function _useModal() {
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
-      case Modal.Login:
-        component = defineAsyncComponent(() => import(Modal.Login))
-        break
       case Modal.Backup:
         component = defineAsyncComponent(() => import(Modal.Backup))
+        break
+      case Modal.CashlinkScanner:
+        component = defineAsyncComponent(() => import(Modal.CashlinkScanner))
         break
       case Modal.DetailedTransaction:
         component = defineAsyncComponent(() => import(Modal.DetailedTransaction))
@@ -58,9 +63,9 @@ function _useModal() {
       case Modal.ExpiringRewards:
         component = defineAsyncComponent(() => import(Modal.ExpiringRewards))
         break
-      // case Modal.Login:
-      //   component = defineAsyncComponent(() => import(Modal.Login))
-      //   break
+      case Modal.Login:
+        component = defineAsyncComponent(() => import(Modal.Login))
+        break
       case Modal.LogoutConfirm:
         component = defineAsyncComponent(() => import(Modal.LogoutConfirm))
         break
@@ -91,6 +96,9 @@ function _useModal() {
       case Modal.RewardsIntro:
         component = defineAsyncComponent(() => import(Modal.RewardsIntro))
         break
+      case Modal.Settings:
+        component = defineAsyncComponent(() => import(Modal.Settings))
+        break
       case Modal.Task:
         component = defineAsyncComponent(() => import(Modal.Task))
         break
@@ -100,12 +108,15 @@ function _useModal() {
       case Modal.TransactionHistory:
         component = defineAsyncComponent(() => import(Modal.TransactionHistory))
         break
-      case Modal.Voucher:
-        component = defineAsyncComponent(() => import(Modal.Voucher))
+      case Modal.Referral:
+        component = defineAsyncComponent(() => import(Modal.Referral))
+        break
+      case Modal.Withdraw:
+        component = defineAsyncComponent(() => import(Modal.Withdraw))
         break
       case Modal.Dev:
-        if (import.meta.env.MODE === 'development')
-          component = defineAsyncComponent(() => import(Modal.Dev))
+        // if (import.meta.env.MODE === 'development')
+        component = defineAsyncComponent(() => import(Modal.Dev))
         break
     }
 
@@ -119,39 +130,23 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
+    // TODO: replace with isWeb
+    if (isFullscreen && isPlatform('android') && !isPlatform('mobileweb'))
+      await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
+    allModals.unshift(modalToShow)
     await modalToShow.present()
   }
 
-  async function showNotificationAlert({ title, message, extra }: { title: string; message?: string; extra?: string }) {
-    return new Promise<void>((resolve) => {
-      modalController.create({
-        component: defineAsyncComponent(() => import('@/components/NotificationAlert.vue')),
-        handle: false,
-        canDismiss: async (data?: any, role?: string) => role !== 'backdrop',
-        componentProps: { title, message, extra },
-      }).then(async (modal) => {
-        if (import.meta.env.MODE === 'development') {
-          // eslint-disable-next-line no-console
-          console.log('showNotificationAlert')
-        }
-        // Adding styles to make it look like a notification
-        modal.style.setProperty('--width', 'fit-content')
-        modal.style.setProperty('--min-width', '250px')
-        modal.style.setProperty('--max-width', '80vw')
-        modal.style.setProperty('--height', 'fit-content')
-        modal.style.setProperty('--border-radius', '18px')
-        modal.style.setProperty('--border-color', 'rgb(59 130 246)')
-        modal.style.setProperty('--border-width', '1.5px')
-        modal.style.setProperty('--border-style', 'solid')
-
-        await modal.present()
-        setTimeout(async () => {
-          await modal.dismiss()
-          resolve()
-        }, 2000)
-      })
+  async function showNotificationAlert(message: string, error = false) {
+    const toast = await toastController.create({
+      message,
+      duration: 3 * 1e3,
+      icon: error ? xmark : check,
+      cssClass: `notification-alert-toast ${error && 'toast-error'}`,
+      position: 'top',
     })
+    await toast.present()
   }
 
   async function closeModal(modalToClose?: HTMLIonModalElement) {
@@ -164,14 +159,21 @@ function _useModal() {
     }
     if (modal)
       await modal.dismiss()
+
+    if (isPlatform('android') && !isPlatform('mobileweb'))
+      await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   }
 
   async function closeAllModals() {
-    let modal = await modalController.getTop()
-    while (modal) {
+    const modal = await modalController.getTop()
+
+    // Close all modals in background
+    allModals.forEach(async (modal) => {
+      if (modal)
+        await modal.dismiss()
+    })
+    if (modal)
       await modal.dismiss()
-      modal = await modalController.getTop()
-    }
   }
 
   return {

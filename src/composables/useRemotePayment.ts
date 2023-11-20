@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFirestoreApi, usePointsApi } from './useApi'
-import { useTxDatabase } from './useDatabase'
 import { TransactionStatus, TransactionType } from '@/types/database'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import type { AsyncOption } from '@/types'
@@ -14,7 +13,7 @@ export enum PaymentRail {
 
 interface BasePendingPayment {
   address: Nimiq.Address
-  amount: number
+  value: number
   fee: number
   fiatAmount?: number
   fiatUnit?: string

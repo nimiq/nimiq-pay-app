@@ -28,6 +28,15 @@ export interface PaymentRequest {
   destination: string
 }
 
+export interface PaymentResponse {
+  valid: boolean
+  reason: string
+  cashback: {
+    percentage: number
+    amount_in_luna: number
+  }
+}
+
 export interface TaskClaimRequest {
   proof: any
 }
@@ -52,6 +61,8 @@ export class BonusClient {
         return null
       if (!response.ok)
         throw new Error(`${response.status}: ${response.statusText}`)
+      if (response.status === 204)
+        return null
       return await response.json()
     }
     catch (e: any) {
@@ -88,6 +99,15 @@ export class BonusClient {
   async doPayment(token: string, type: string, reference: string, destination: string): Promise<void> {
     const request: PaymentRequest = { type, reference, destination }
     await this.fetchJson(`/payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', token },
+      body: JSON.stringify(request),
+    })
+  }
+
+  async verifyPayment(token: string, type: string, reference: string, destination: string): Promise<PaymentResponse> {
+    const request: PaymentRequest = { type, reference, destination }
+    return await this.fetchJson(`/payment/verify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', token },
       body: JSON.stringify(request),

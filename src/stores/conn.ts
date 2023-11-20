@@ -4,11 +4,11 @@ import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } fr
 import { computed, ref, watchEffect } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
-import { migrations } from '@/composables/utils/migrations'
+import { migrations } from '@/lib/sql-queries'
 import type { AsyncOption } from '@/types'
 
 const DB_NAME = 'storage'
-const DB_VERSION = migrations[migrations.length - 1].version
+const DB_VERSION = migrations.at(-1)!.version
 export const useConn = defineStore('conn', () => {
   const { isWeb } = useDevice()
 
@@ -24,7 +24,7 @@ export const useConn = defineStore('conn', () => {
   async function waitForUnlock(): AsyncOption<string> {
     if (locked.value)
       await unlockPromise
-    if (!db.value) {
+    if (!db) {
       console.error('The db instance is not defined')
       return 'The db instance is not defined'
     }
@@ -47,11 +47,6 @@ export const useConn = defineStore('conn', () => {
       await customElements.whenDefined('jeep-sqlite')
       await sqlitePlugin.initWebStore()
     }
-    // @ts-expect-error The function is not defined, but it exists.
-    sqlitePlugin.addListener('sqliteBiometricEvent', async ({ result }: any) => {
-      if (result && hasSecret.value)
-        await open()
-    })
 
     const promises = await Promise.allSettled(migrations.map(({ version, statements }) => sqlite.addUpgradeStatement(DB_NAME, version, statements)))
     const rejected = promises.filter(({ status }) => status === 'rejected') as PromiseRejectedResult[]
@@ -62,17 +57,21 @@ export const useConn = defineStore('conn', () => {
     await init()
     const encrypted = !isWeb // Only encrypt on mobile
     const mode = isWeb ? 'secret' : 'no-encryption'
-    db.value = await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
-    await db.value.open()
+    if (!isOpen.value) {
+      db.value = await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
+      await db.value!.open()
+    }
     resolveUnlockDb()
   }
 
   async function close() {
+    if (!isOpen.value)
+      return
     await waitForUnlock()
     await db.value!.close()
   }
 
-  // FIXME: This should not be neccesary
+  // FIXME: This should not be necessary
   async function commit() {
     await close()
     await open()
