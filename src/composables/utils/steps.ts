@@ -1,5 +1,5 @@
+import { path } from 'node:path'
 import { defineAsyncComponent, h } from 'vue'
-import { storeToRefs } from 'pinia'
 import { modalController } from '@ionic/vue'
 import type { Flow, State, Step } from '@/types/steps'
 import { FlowName, StepName } from '@/types/steps'
@@ -91,6 +91,7 @@ const phoneNumberStep: Step = {
     else
       next()
   },
+  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 }
 
 const phoneNumberConfirmStep: Step = {
@@ -105,6 +106,8 @@ const phoneNumberConfirmStep: Step = {
     else
       next()
   },
+  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
+
 }
 
 const getNotifiedStep: Step = {
@@ -112,6 +115,8 @@ const getNotifiedStep: Step = {
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
   main: h(PhoneInput),
+  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
+
 }
 
 const onBoardingPoints1: Step = {
@@ -201,7 +206,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
     if (err)
       console.error(err)
 
-    await import('vue-router').then(({ useRouter }) => useRouter().push('/app'))
+    await import('vue-router').then(({ useRouter }) => useRouter().replace('/app'))
   },
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
   [FlowName.OnBoardingPoints]: async () => { console.log('On boarding points done'); return Promise.resolve() },
@@ -232,7 +237,8 @@ export function initializeFlow(name: FlowName) {
   }).then(modal => modal.present())
 }
 
-export async function cancelFlow() {
+export async function cancelFlow(beforeCancel: Function) {
+  await beforeCancel()
   const modal = await modalController.getTop()
   await modal.dismiss()
 }

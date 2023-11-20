@@ -1,4 +1,5 @@
 import type { VNode } from 'vue'
+import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 
 export enum FlowName {
   Setup = 'setup',
@@ -59,6 +60,7 @@ interface BaseStep {
   title: string
   description?: string
   main: VNode
+  onCancel?: (state: State, { path }: { path?: string; replace?: (to: RouteLocationRaw) => Promise<void | NavigationFailure | undefined> }) => Promise<void> | undefined
 }
 
 interface ValidateOptions {

@@ -16,7 +16,7 @@ async function handleConfirm() {
   if (storageManager.isBackupDone().value || instantPayWallet.balance.value === 0) {
     // TODO: ask for pin
     await storageManager.deleteDatabase()
-    router.replace('/welcome')
+    router.replace('/setup')
   }
   else {
     showModal(Modal.LogoutWarning, { isOnTop: true, isSmall: true })

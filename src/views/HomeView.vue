@@ -147,7 +147,7 @@ watch(isRecoveryWordsShown, () => {
 
 onMounted(async () => {
   if (!(await storageManager.exists())) {
-    await router.replace('/welcome')
+    await router.replace('/setup')
     return
   }
   if (!storageManager.isUnlocked()) {

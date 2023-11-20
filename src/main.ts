@@ -51,7 +51,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (useConn().dbExists && useLocalWallet().hasLocalWallet)
       router.push('/pin')
     else
-      router.push('/welcome')
+      router.push('/setup')
   }
 
   app.mount('#app')

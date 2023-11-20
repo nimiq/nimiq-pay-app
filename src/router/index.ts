@@ -8,7 +8,7 @@ const routes: Array<RouteRecordRaw> = [
   // { path: '/', redirect: '/pin' },
   { path: '/pin', name: 'Pin', component: PinView },
   { path: '/app', name: 'Home', component: () => import('@/views/HomeView.vue') },
-  { path: '/welcome', name: 'Welcome', component: () => import('@/views/WelcomeView.vue') },
+  { path: '/setup', name: 'Setup', component: () => import('@/views/SetupView.vue') },
 ]
 
 const router = createRouter({
