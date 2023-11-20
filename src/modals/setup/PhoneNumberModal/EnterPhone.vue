@@ -54,7 +54,7 @@ const alertButtons = [
 ]
 
 function handleClose() {
-  if (path === '/setup')
+  if (path === '/welcome')
     showModal(Modal.EnablePushNotifications)
 }
 
@@ -89,7 +89,7 @@ onMounted(focusInput)
         <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
           Verify
         </IonButton>
-        <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleClose">
+        <IonButton v-if="path === '/welcome'" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleClose">
           Skip for now
         </IonButton>
       </div>

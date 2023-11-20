@@ -1,4 +1,4 @@
-import type { Ref, defineAsyncComponent } from 'vue'
+import type { VNode } from 'vue'
 
 export enum FlowName {
   Setup = 'setup',
@@ -9,15 +9,11 @@ export enum FlowName {
   OnBoardingBluecode = 'onBoardingBluecode',
 }
 
-interface FlowOnDoneOptions {
-  goTo: (path: string) => void
-}
-
 export interface Flow {
   name: FlowName
   state: State
   steps: Record<StepName, Step>
-  onDone: (state: State, options: FlowOnDoneOptions) => Promise<void>
+  onDone: (state: State) => Promise<void>
 }
 
 export enum StepName {
@@ -48,7 +44,7 @@ export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | S
 export const isInputStep = (step: StepName): step is InputStepName => inputSteps.includes(step)
 export const isInfoStep = (step: StepName): step is InfoStepName => infoSteps.includes(step)
 
-export type State = Record<InputStepName, Ref<string>>
+export type State = Record<InputStepName, string>
 
 export enum InputComponent {
   Bricks = 'bricks',
@@ -62,10 +58,7 @@ export enum InfoComponent {
 interface BaseStep {
   title: string
   description?: string
-  main: {
-    component: ReturnType<typeof defineAsyncComponent>
-    props?: Record<string, any>
-  }
+  main: VNode
 }
 
 interface ValidateOptions {

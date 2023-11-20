@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { FlowName } from '@/types/steps'
-import { useFlow } from '@/composables/useFlow'
-
-const { flow } = useFlow()
+import { initializeFlow } from '@/composables/utils/steps'
 </script>
 
 <template>
@@ -28,14 +26,14 @@ const { flow } = useFlow()
           </svg>
         </div>
         <div class="w-10/12 mx-auto mt-auto">
-          <IonButton class="w-full text-base" expand="block" @click="flow = FlowName.Setup">
+          <IonButton class="w-full text-base" expand="block" @click="initializeFlow(FlowName.Setup)">
             Get Started
           </IonButton>
           <div class="flex justify-around">
-            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="flow = FlowName.SetupWithPromoCode">
+            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.SetupWithPromoCode)">
               I have a promo code
             </IonButton>
-            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="flow = FlowName.Login">
+            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.Login)">
               Login
             </IonButton>
           </div>

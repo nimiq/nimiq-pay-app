@@ -47,7 +47,7 @@ function handleBlur() {
 
 onMounted(() => {
   if (!dbExists.value)
-    router.replace('/setup')
+    router.replace('/welcome')
   else if (decrypted.value)
     router.replace('/app')
   shown()

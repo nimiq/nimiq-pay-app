@@ -33,7 +33,7 @@ onMounted(() => setTimeout(focusInput, 200))
 </script>
 
 <template>
-  <div>
+  <div class="mt-28">
     <div class="flex gap-x-8">
       <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
     </div>

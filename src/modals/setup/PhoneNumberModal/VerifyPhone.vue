@@ -27,7 +27,7 @@ async function handleVerify() {
       return
 
     await bonusWallet.verify(code.value)
-    if (path === '/setup') {
+    if (path === '/welcome') {
       showModal(Modal.EnablePushNotifications)
     }
     else if (path === '/app') {
@@ -56,7 +56,7 @@ function handleResendRequest() {
 }
 
 function handleClose() {
-  if (path === '/setup')
+  if (path === '/welcome')
     showModal(Modal.EnablePushNotifications)
   else
     showModal(Modal.Rewards)
@@ -96,7 +96,7 @@ onMounted(() => {
         maxlength="8" class="w-full p-1 my-10 text-3xl tracking-widest text-center" autofocus="true"
         :value="code" @input="code = Number(($event.target as HTMLTextAreaElement).value)"
       >
-      <IonButton v-if="path === '/setup'" fill="clear" class="text-base font-bold normal-case" @click="handleResendRequest">
+      <IonButton v-if="path === '/welcome'" fill="clear" class="text-base font-bold normal-case" @click="handleResendRequest">
         Resend
       </IonButton>
     </IonGrid>

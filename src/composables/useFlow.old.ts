@@ -3,7 +3,7 @@ import { useStepper } from '@vueuse/core'
 import { defineComponent, h, markRaw, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { isPlatform, modalController, toastController } from '@ionic/vue'
-import { getSteps } from './utils/steps'
+import { getFlow } from './utils/steps'
 import { isInfoStep, isInputStep } from '@/types/steps'
 import type { FlowName, State, Step } from '@/types/steps'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -56,7 +56,7 @@ export function useFlow() {
     if (!flow.value)
       return
 
-    const { state, steps, onDone: onFlowDone } = getSteps(flow.value!)
+    const { state, steps, onDone: onFlowDone } = getFlow(flow.value!)
     const { goToNext, stepNames, at } = useStepper(steps)
     const size = stepNames.value.length
 

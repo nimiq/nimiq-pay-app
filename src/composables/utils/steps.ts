@@ -1,7 +1,9 @@
-import { defineAsyncComponent, ref } from 'vue'
+import { defineAsyncComponent, h } from 'vue'
 import { storeToRefs } from 'pinia'
+import { modalController } from '@ionic/vue'
 import type { Flow, State, Step } from '@/types/steps'
 import { FlowName, StepName } from '@/types/steps'
+import FlowCmp from '@/components/Flow.vue'
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
@@ -16,13 +18,13 @@ const promoCodeStep: Step = {
   step: StepName.PromoCode,
   title: 'Enter your promo code',
   description: 'If you don\'t have one, you can skip this step.',
-  main: { component: BrickInput },
+  main: h(BrickInput),
   beforeNext: async ({ promoCode }, { next, err }) => {
-    if (!promoCode.value)
+    if (!promoCode)
       err('Please enter a promo code')
-    else if (!REFERRAL_CODE_REGEX.test(promoCode.value))
+    else if (!REFERRAL_CODE_REGEX.test(promoCode))
       err('Invalid promo code')
-    else if (promoCode.value === '123456')
+    else if (promoCode === '123456')
       err('This promo code is already used')
     else
       next()
@@ -32,7 +34,7 @@ const promoCodeStep: Step = {
 const recoveryWordsStep: Step = {
   step: StepName.RecoveryWordsStep,
   title: 'Enter recovery words',
-  main: { component: BrickInput },
+  main: h(BrickInput),
   beforeNext: async (_, { next }) => next(),
 }
 
@@ -40,11 +42,11 @@ const pinCodeStep: Step = {
   step: StepName.PinCode,
   title: 'Choose PIN',
   description: 'Just a PIN.<br>No personal data needed.',
-  main: { component: PinInput, props: { inputLength: 4 } },
+  main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
-    if (!pinCode.value)
+    if (!pinCode)
       err('Please enter a PIN code')
-    else if (!PIN_CODE_REGEX.test(pinCode.value))
+    else if (!PIN_CODE_REGEX.test(pinCode))
       err('Invalid PIN code')
     else
       next()
@@ -55,10 +57,10 @@ const pinCodeConfirmStep: Step = {
   step: StepName.PinCodeConfirm,
   title: 'Confirm your PIN',
   description: 'Just a PIN.<br>No personal data needed.',
-  main: { component: PinInput, props: { inputLength: 4 } },
+  main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
-    if (!pinCodeConfirm.value) { err('Please confirm your PIN code'); return }
-    else if (pinCodeConfirm.value !== pinCode.value) { err('PIN codes do not match'); return }
+    if (!pinCodeConfirm) { err('Please confirm your PIN code'); return }
+    else if (pinCodeConfirm !== pinCode) { err('PIN codes do not match'); return }
 
     // Nuke everything in case there was a previous encryption db
     const { sqlite } = (await import('@/stores/conn')).useConn()
@@ -67,9 +69,9 @@ const pinCodeConfirmStep: Step = {
     console.log(storeToRefs((await import('@/stores/conn')).useConn()))
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
-    const decryptError = await decrypt(pinCode.value)
+    const decryptError = await decrypt(pinCode)
     if (decryptError) { err(decryptError); return }
-    if (!decrypted.value) { err('There was an error'); return }
+    if (!decrypted) { err('There was an error'); return }
     next()
   },
 }
@@ -78,11 +80,11 @@ const phoneNumberStep: Step = {
   step: StepName.PhoneNumber,
   title: 'Verify your phone number',
   description: 'It\'s so easy.<br>Just verify your phone number.',
-  main: { component: PhoneInput },
+  main: h(PhoneInput),
   beforeNext: async ({ phoneNumber }, { next, err }) => {
-    if (!phoneNumber.value)
+    if (!phoneNumber)
       err('Please enter a phone number')
-    else if (!PHONE_NUMBER_REGEX.test(phoneNumber.value))
+    else if (!PHONE_NUMBER_REGEX.test(phoneNumber))
       err('Invalid phone number')
     else
       next()
@@ -93,9 +95,9 @@ const phoneNumberConfirmStep: Step = {
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'We\'ve sent you a code, please confirm',
-  main: { component: BrickInput },
+  main: h(PhoneInput),
   beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
-    if (!phoneNumberConfirm.value)
+    if (!phoneNumberConfirm)
       err('Please enter a verification code')
     // TODO add more logic
     else
@@ -107,77 +109,76 @@ const getNotifiedStep: Step = {
   step: StepName.GetNotified,
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
-  main: { component: BrickInput },
+  main: h(PhoneInput),
 }
 
 const onBoardingPoints1: Step = {
   step: StepName.OnBoardingPoints1,
   title: 'Welcome to Crypto City Points',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingPoints2: Step = {
   step: StepName.OnBoardingPoints2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingPoints3: Step = {
   step: StepName.OnBoardingPoints3,
   title: 'Get CC Points',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingCashback1: Step = {
   step: StepName.OnBoardingCashback1,
   title: 'What\'s Crypto City Points?',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.  ',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingCashback2: Step = {
   step: StepName.OnBoardingCashback2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingCashback3: Step = {
   step: StepName.OnBoardingCashback3,
   title: 'Get CC Points',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingCashback4: Step = {
   step: StepName.OnBoardingCashback4,
   title: 'Find places to pay with and earn CC Points',
-  description: 'The Nimiq crypto map is the perfect tool to find places that support CC Points.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingBluecode1: Step = {
   step: StepName.OnBoardingBluecode1,
   title: 'What\'s Bluecode?',
   description: 'Bluecode is a European payment service that now supports NIM.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingBluecode2: Step = {
   step: StepName.OnBoardingBluecode2,
   title: 'Pay with Bluecode',
   description: 'Create a Bluecode Barcode and show it at the cashier to pay. ',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const onBoardingBluecode3: Step = {
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: { component: OnBoardingScreen },
+  main: h(OnBoardingScreen),
 }
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep]
@@ -192,14 +193,13 @@ const flows: Record<FlowName, Step[]> = {
 }
 
 const onDoneFlows: Record<FlowName, Flow['onDone']> = {
-  [FlowName.Login]: async state => console.log(state.pinCode.value),
-  [FlowName.Setup]: async (state, { goTo }) => {
-    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode.value)
+  [FlowName.Login]: async state => console.log(state.pinCode),
+  [FlowName.Setup]: async (state) => {
+    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode)
     if (err)
       console.error(err)
 
-    console.log('Redirecting to /app')
-    goTo('/app')
+    await import('vue-router').then(({ useRouter }) => useRouter().push('/app'))
   },
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
   [FlowName.OnBoardingPoints]: async () => { console.log('On boarding points done'); return Promise.resolve() },
@@ -207,9 +207,30 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
 }
 
-export function getSteps(name: FlowName): Flow {
+export function getFlow(name: FlowName): Flow {
   const steps = Object.fromEntries(flows[name].map(step => [step.step, step])) as Record<StepName, Step>
-  const state = Object.fromEntries(Object.keys(steps).map(step => [step, ref('')])) as State
+  const state = Object.fromEntries(Object.keys(steps).map(step => [step, ''])) as State
   const onDone = onDoneFlows[name]
   return { name, state, steps, onDone }
+}
+
+/**
+ * It initializes the flow give the name opening a new modal with the flow component
+ * which handles the carousel of steps.
+ */
+export function initializeFlow(name: FlowName) {
+  const isFullscreen = false
+  modalController.create({
+    component: FlowCmp,
+    handle: false,
+    canDismiss: true,
+    initialBreakpoint: isFullscreen ? undefined : 1,
+    breakpoints: isFullscreen ? undefined : [0, 1],
+    componentProps: { flow: getFlow(name) },
+  }).then(modal => modal.present())
+}
+
+export async function cancelFlow() {
+  const modal = await modalController.getTop()
+  await modal.dismiss()
 }
