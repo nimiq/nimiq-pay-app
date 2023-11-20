@@ -23,8 +23,6 @@ const promoCodeStep: Step = {
       err('Please enter a promo code')
     else if (!REFERRAL_CODE_REGEX.test(promoCode))
       err('Invalid promo code')
-    else if (promoCode === '123456')
-      err('This promo code is already used')
     else
       next()
   },
@@ -68,7 +66,6 @@ const pinCodeConfirmStep: Step = {
       await sqlite.deleteOldDatabases()
       await sqlite.clearEncryptionSecret()
     }
-    console.log(storeToRefs((await import('@/stores/conn')).useConn()))
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)
