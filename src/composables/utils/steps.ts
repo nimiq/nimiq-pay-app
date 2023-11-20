@@ -63,10 +63,12 @@ const pinCodeConfirmStep: Step = {
     else if (pinCodeConfirm !== pinCode) { err('PIN codes do not match'); return }
 
     // Nuke everything in case there was a previous encryption db
-    const { sqlite } = (await import('@/stores/conn')).useConn()
-    await sqlite.deleteOldDatabases()
-    await sqlite.clearEncryptionSecret()
-    console.log(storeToRefs((await import('@/stores/conn')).useConn()))
+    const { isWeb } = (await import('@/composables/useDevice')).useDevice()
+    if (!isWeb) {
+      const { sqlite } = (await import('@/stores/conn')).useConn()
+      await sqlite.deleteOldDatabases()
+      await sqlite.clearEncryptionSecret()
+    }
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)

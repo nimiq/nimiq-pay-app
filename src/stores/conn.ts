@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
-import { computed, ref, watchEffect } from 'vue'
+import { computed, onMounted, ref, watchEffect } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
 import { migrations } from '@/lib/sql-queries'
@@ -36,7 +36,7 @@ export const useConn = defineStore('conn', () => {
   watchEffect(() => !locked.value && (lastUnlocked.value = Date.now()))
 
   const dbExists = computedAsync(async () => !!(await sqlite.isDatabase(DB_NAME)).result, false)
-  const hasSecret = computedAsync(async () => !!((await sqlite.isSecretStored()).result), false)
+  const hasSecret = ref(false)
 
   const dbReady = computed(() => dbExists.value && !!db.value)
   const isOpen = computedAsync(async () => dbReady.value && !!((await db.value!.isDBOpen()).result), false)
@@ -85,6 +85,15 @@ export const useConn = defineStore('conn', () => {
       globalThis.document?.location.reload()
   }
 
+  async function resetSecret() {
+    await Promise.allSettled([sqlite.deleteOldDatabases(), sqlite.clearEncryptionSecret()])
+    hasSecret.value = false
+  }
+
+  onMounted(async () => {
+    hasSecret.value = !!((await sqlite.isSecretStored()).result)
+  })
+
   return {
     init,
     db,
@@ -102,5 +111,6 @@ export const useConn = defineStore('conn', () => {
     waitForUnlock,
 
     deleteDatabase,
+    resetSecret,
   }
 })
