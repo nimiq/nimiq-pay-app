@@ -47,8 +47,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await useConn().init()
 
-  console.log('dbExists', useConn().dbExists)
-
   if (router.currentRoute.value.path === '/') {
     if (useConn().dbExists && useLocalWallet().hasLocalWallet)
       router.push('/pin')

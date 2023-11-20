@@ -35,8 +35,8 @@ export const useConn = defineStore('conn', () => {
   const lastUnlocked = ref(0)
   watchEffect(() => !locked.value && (lastUnlocked.value = Date.now()))
 
-  const dbExists = computedAsync(async () => !!(await sqlitePlugin.isDatabase({ database: DB_NAME })).result, false)
-  const hasSecret = computedAsync(async () => dbExists.value && !!((await sqlitePlugin.isSecretStored()).result), false)
+  const dbExists = computedAsync(async () => !!(await sqlite.isDatabase(DB_NAME)).result, false)
+  const hasSecret = computedAsync(async () => !!((await sqlite.isSecretStored()).result), false)
 
   const dbReady = computed(() => dbExists.value && !!db.value)
   const isOpen = computedAsync(async () => dbReady.value && !!((await db.value!.isDBOpen()).result), false)
@@ -54,13 +54,13 @@ export const useConn = defineStore('conn', () => {
   }
 
   async function open() {
-    await init()
+    // await init()
     const encrypted = !isWeb // Only encrypt on mobile
-    const mode = isWeb ? 'secret' : 'no-encryption'
-    if (!isOpen.value) {
-      db.value = await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
-      await db.value!.open()
-    }
+    const mode = encrypted ? 'secret' : 'no-encryption'
+    db.value = (await sqlite.checkConnectionsConsistency()).result && (await sqlite.isConnection(DB_NAME, false)).result
+      ? await sqlite.retrieveConnection(DB_NAME, false)
+      : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
+    await db.value!.open()
     resolveUnlockDb()
   }
 
@@ -77,12 +77,12 @@ export const useConn = defineStore('conn', () => {
     await open()
   }
 
-  async function deleteDatabase() {
-    await waitForUnlock()
+  async function deleteDatabase(reload: boolean = true) {
     await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
     await db.value!.delete()
     await sqlite.closeAllConnections()
-    globalThis.document?.location.reload()
+    if (reload)
+      globalThis.document?.location.reload()
   }
 
   return {

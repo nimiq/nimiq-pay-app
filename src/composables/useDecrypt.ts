@@ -42,19 +42,27 @@ export function useDecrypt() {
   async function decryptMobile(pin: string): Promise<Option<string>> {
     if (isWeb)
       throw new Error('This method is not supported in web.')
-    if (!dbExists.value)
-      throw new Error('The db does not exist')
 
     // FIXME try to do this without closing the db
     if (isOpen.value)
       await closeDb()
 
-    const error = hasSecret.value
-      ? sqlite.checkEncryptionSecret(pin).then(({ result }) => !result ? 'There was an error' : undefined).catch(() => 'Invalid PIN')
-      : sqlite.setEncryptionSecret(pin).then(() => undefined).catch(() => 'There was an error')
-    if (error)
-      return error
+    let error: string | undefined
+    // There's a passphrase stored, but the db doesn't exists yet, so remove it
+    if (!dbExists.value && hasSecret.value) {
+      await sqlite.clearEncryptionSecret()
+      error = await sqlite.setEncryptionSecret(pin).then(() => undefined).catch(() => 'There was an error')
+    }
+    else {
+      error = hasSecret.value
+        ? await sqlite.checkEncryptionSecret(pin).then(({ result }) => !result ? 'There was an error' : undefined).catch(() => 'Invalid PIN')
+        : await sqlite.setEncryptionSecret(pin).then(() => undefined).catch(() => 'There was an error')
+    }
 
+    if (error) {
+      console.error(error)
+      return error
+    }
     await openDb()
   }
 

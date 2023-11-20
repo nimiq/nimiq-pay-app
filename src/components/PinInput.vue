@@ -38,7 +38,7 @@ onMounted(() => setTimeout(focusInput, 200))
       <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
     </div>
     <input
-      ref="inputRef" type="password" inputmode="numeric" class="absolute opacity-0" pattern="[0-9]*"
+      ref="inputRef" type="password" inputmode="numeric" class="absolute opacity-0 -top-40" pattern="[0-9]*"
       :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
       :value="pinCodeInput"
       @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"

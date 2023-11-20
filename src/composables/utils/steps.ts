@@ -1,4 +1,5 @@
 import { defineAsyncComponent, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import type { Flow, State, Step } from '@/types/steps'
 import { FlowName, StepName } from '@/types/steps'
 
@@ -58,6 +59,12 @@ const pinCodeConfirmStep: Step = {
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
     if (!pinCodeConfirm.value) { err('Please confirm your PIN code'); return }
     else if (pinCodeConfirm.value !== pinCode.value) { err('PIN codes do not match'); return }
+
+    // Nuke everything in case there was a previous encryption db
+    const { sqlite } = (await import('@/stores/conn')).useConn()
+    await sqlite.deleteOldDatabases()
+    await sqlite.clearEncryptionSecret()
+    console.log(storeToRefs((await import('@/stores/conn')).useConn()))
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode.value)
@@ -173,8 +180,7 @@ const onBoardingBluecode3: Step = {
   main: { component: OnBoardingScreen },
 }
 
-// TODO Add phone number steps and notification
-const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep]
+const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep]
 
 const flows: Record<FlowName, Step[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],

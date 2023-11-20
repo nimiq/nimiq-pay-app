@@ -26,7 +26,7 @@ async function getComponent(state: State, { title, description, beforeNext, step
       if (isInfoStep(step)) { next() }
       else if (isInputStep(step)) {
         state[step].value = userInput!
-        await beforeNext?.(state, { next() { error.value = ''; next() }, err(msg: string) { error.value = msg; console.log('123', error.value) } })
+        await beforeNext?.(state, { next() { error.value = ''; next() }, err(msg: string) { error.value = msg } })
       }
     },
   })
