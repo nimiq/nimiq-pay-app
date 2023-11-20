@@ -1,4 +1,3 @@
-import { path } from 'node:path'
 import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
 import type { Flow, State, Step } from '@/types/steps'
@@ -69,6 +68,7 @@ const pinCodeConfirmStep: Step = {
       await sqlite.deleteOldDatabases()
       await sqlite.clearEncryptionSecret()
     }
+    console.log(storeToRefs((await import('@/stores/conn')).useConn()))
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps<{
   inputLength: number
@@ -18,18 +18,17 @@ watch(pinCodeInput, (pin) => {
 })
 
 function focusInput() {
-  inputRef?.value?.focus()
+  console.log('focusInput')
 }
 
 function handleInputClick(i: number) {
   //
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
+  inputRef?.value?.focus()
 
-  focusInput()
+  // focusInput()
 }
-
-onMounted(() => setTimeout(focusInput, 200))
 </script>
 
 <template>

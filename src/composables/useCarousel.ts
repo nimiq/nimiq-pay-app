@@ -1,4 +1,4 @@
-import { type ConfigurableWindow, type MaybeRefOrGetter, defaultWindow, unrefElement, useScroll } from '@vueuse/core'
+import { type ConfigurableWindow, type MaybeRefOrGetter, defaultWindow, unrefElement } from '@vueuse/core'
 import type { MaybeRef } from 'vue'
 import { computed, ref, toValue } from 'vue'
 
@@ -13,24 +13,22 @@ export function useCarousel(scroller: MaybeRefOrGetter<HTMLElement | null | unde
   const size = computed(() => elRef.value?.childElementCount || 0)
   const activeIndex = ref(0)
 
-  function calculateActiveIndex() {
-    if (!elRef.value)
-      return
-    activeIndex.value = Math.round(elRef.value.scrollLeft / (toValue(slideWidth) + (columnGap * 2)))
-  }
+  // function calculateActiveIndex() {
+  //   if (!elRef.value)
+  //     return
+  //   activeIndex.value = Math.round(elRef.value.scrollLeft / (toValue(slideWidth) + (columnGap * 2)))
+  // }
 
   function goToSlide(index: number) {
     if (!elRef.value)
       return
-    console.log('goToSlide', index, 'left', (toValue(slideWidth) + (columnGap * 2)) * index, elRef.value)
+    activeIndex.value = index
     elRef.value!.scrollTo({
       top: 0,
       left: (toValue(slideWidth) + (columnGap * 2)) * index,
       behavior: scrollBehavior,
     })
   }
-
-  useScroll(elRef, { throttle: 50, onScroll: calculateActiveIndex, eventListenerOptions: { passive: true } })
 
   return {
     activeIndex,
