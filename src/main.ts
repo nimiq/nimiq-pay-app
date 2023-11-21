@@ -3,6 +3,7 @@ import { IonicVue } from '@ionic/vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
 import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { createPinia } from 'pinia'
+import { CapacitorSQLite } from '@capacitor-community/sqlite'
 import App from './App.vue'
 import router from './router'
 
@@ -31,10 +32,9 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 /* Libs */
 import { useConn } from './stores/conn'
 import { useLocalWallet } from './stores/local-wallet'
+import { useDevice } from './composables/useDevice'
 
-applyPolyfills().then(() => {
-  jeepSqlite(window)
-})
+applyPolyfills().then(() => jeepSqlite(window))
 
 window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
@@ -44,6 +44,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   app.use(VueVirtualScroller)
 
   await router.isReady()
+
+  if (useDevice().isWeb) {
+    document.body.appendChild(document.createElement('jeep-sqlite'))
+    await customElements.whenDefined('jeep-sqlite')
+    await CapacitorSQLite.initWebStore()
+    // eslint-disable-next-line no-console
+    console.log('Web store initialized')
+    await new Promise(resolve => setTimeout(resolve, 300))
+  }
 
   await useConn().init()
 

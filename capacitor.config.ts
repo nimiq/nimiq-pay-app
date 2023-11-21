@@ -24,6 +24,7 @@ const config: CapacitorConfig = {
         biometricTitle: 'Biometric login for Nimiq Pay',
         biometricSubTitle: 'Log in using your biometric',
       },
+      bundledWebRuntime: true,
     },
   },
 }

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
 import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
-import { computed, onMounted, ref, watchEffect } from 'vue'
+import { computed, ref, watchEffect } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
 import { migrations } from '@/lib/sql-queries'
@@ -9,6 +9,7 @@ import type { AsyncOption } from '@/types'
 
 const DB_NAME = 'storage'
 const DB_VERSION = migrations.at(-1)!.version
+
 export const useConn = defineStore('conn', () => {
   const { isWeb } = useDevice()
 
@@ -41,12 +42,6 @@ export const useConn = defineStore('conn', () => {
   const isOpen = computedAsync(async () => dbReady.value && !!((await db.value!.isDBOpen()).result), false)
 
   async function init() {
-    if (isWeb) {
-      document.body.appendChild(document.createElement('jeep-sqlite'))
-      await customElements.whenDefined('jeep-sqlite')
-      await sqlitePlugin.initWebStore()
-    }
-
     const promises = await Promise.allSettled(migrations.map(({ version, statements }) => sqlite.addUpgradeStatement(DB_NAME, version, statements)))
     const rejected = promises.filter(({ status }) => status === 'rejected') as PromiseRejectedResult[]
     rejected.forEach(({ reason }) => console.error(reason))
