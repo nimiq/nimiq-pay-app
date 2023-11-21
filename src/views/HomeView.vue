@@ -155,7 +155,7 @@ onMounted(async () => {
     return
   }
 
-  if (await storageManager.isFirstRun()) {
+  if (await storageManager.isFirstRun() && isPhoneRegistered.value) {
     await storageManager.setFirstRun(false)
     showModal(ModalType.RewardsIntro)
   }
