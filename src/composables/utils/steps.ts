@@ -1,7 +1,7 @@
 import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
-import type { Flow, State, Step } from '@/types/steps'
-import { FlowName, StepName } from '@/types/steps'
+import type { Flow, SkippableStep, State, Step, StepInit } from '@/types/steps'
+import { FlowName, StepName, defaultStepInitOptions } from '@/types/steps'
 import FlowCmp from '@/components/Flow.vue'
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
@@ -13,7 +13,7 @@ const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 
-const promoCodeStep: Step = {
+const promoCodeStep: StepInit = () => ({
   step: StepName.PromoCode,
   title: 'Enter your promo code',
   description: 'If you don\'t have one, you can skip this step.',
@@ -26,16 +26,16 @@ const promoCodeStep: Step = {
     else
       next()
   },
-}
+})
 
-const recoveryWordsStep: Step = {
+const recoveryWordsStep: StepInit = () => ({
   step: StepName.RecoveryWordsStep,
   title: 'Enter recovery words',
   main: h(BrickInput),
   beforeNext: async (_, { next }) => next(),
-}
+})
 
-const pinCodeStep: Step = {
+const pinCodeStep: StepInit = () => ({
   step: StepName.PinCode,
   title: 'Choose PIN',
   description: 'Just a PIN.<br>No personal data needed.',
@@ -48,9 +48,9 @@ const pinCodeStep: Step = {
     else
       next()
   },
-}
+})
 
-const pinCodeConfirmStep: Step = {
+const pinCodeConfirmStep: StepInit = () => ({
   step: StepName.PinCodeConfirm,
   title: 'Confirm your PIN',
   description: 'Just a PIN.<br>No personal data needed.',
@@ -73,13 +73,15 @@ const pinCodeConfirmStep: Step = {
     if (!decrypted) { err('There was an error'); return }
     next()
   },
-}
+})
 
-const phoneNumberStep: Step = {
+const phoneNumberStep: StepInit = ({ skippeable } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   title: 'Verify your phone number',
   description: 'It\'s so easy.<br>Just verify your phone number.',
   main: h(PhoneInput),
+  ...(skippeable ? { skip: skippeable, skipLabel: 'Skip for now' } as SkippableStep : {}),
+  buttonLabel: 'Verify',
   beforeNext: async ({ phoneNumber }, { next, err }) => {
     if (!phoneNumber)
       err('Please enter a phone number')
@@ -89,9 +91,9 @@ const phoneNumberStep: Step = {
       next()
   },
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
-}
+})
 
-const phoneNumberConfirmStep: Step = {
+const phoneNumberConfirmStep: StepInit = () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'We\'ve sent you a code, please confirm',
@@ -105,89 +107,88 @@ const phoneNumberConfirmStep: Step = {
   },
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 
-}
+})
 
-const getNotifiedStep: Step = {
+const getNotifiedStep: StepInit = () => ({
   step: StepName.GetNotified,
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
   main: h(PhoneInput),
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
+})
 
-}
-
-const onBoardingPoints1: Step = {
+const onBoardingPoints1: StepInit = () => ({
   step: StepName.OnBoardingPoints1,
   title: 'Welcome to Crypto City Points',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingPoints2: Step = {
+const onBoardingPoints2: StepInit = () => ({
   step: StepName.OnBoardingPoints2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingPoints3: Step = {
+const onBoardingPoints3: StepInit = () => ({
   step: StepName.OnBoardingPoints3,
   title: 'Get CC Points',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingCashback1: Step = {
+const onBoardingCashback1: StepInit = () => ({
   step: StepName.OnBoardingCashback1,
   title: 'What\'s Crypto City Points?',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.  ',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingCashback2: Step = {
+const onBoardingCashback2: StepInit = () => ({
   step: StepName.OnBoardingCashback2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingCashback3: Step = {
+const onBoardingCashback3: StepInit = () => ({
   step: StepName.OnBoardingCashback3,
   title: 'Get CC Points',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingCashback4: Step = {
+const onBoardingCashback4: StepInit = () => ({
   step: StepName.OnBoardingCashback4,
   title: 'Find places to pay with and earn CC Points',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingBluecode1: Step = {
+const onBoardingBluecode1: StepInit = () => ({
   step: StepName.OnBoardingBluecode1,
   title: 'What\'s Bluecode?',
   description: 'Bluecode is a European payment service that now supports NIM.',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingBluecode2: Step = {
+const onBoardingBluecode2: StepInit = () => ({
   step: StepName.OnBoardingBluecode2,
   title: 'Pay with Bluecode',
   description: 'Create a Bluecode Barcode and show it at the cashier to pay. ',
   main: h(OnBoardingScreen),
-}
+})
 
-const onBoardingBluecode3: Step = {
+const onBoardingBluecode3: StepInit = () => ({
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
   main: h(OnBoardingScreen),
-}
+})
 
-const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep]
+const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ skippeable: 2 }), phoneNumberConfirmStep, getNotifiedStep]
 
-const flows: Record<FlowName, Step[]> = {
+const flows: Record<FlowName, StepInit[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],
   [FlowName.Setup]: [...baseSetupSteps],
   [FlowName.SetupWithPromoCode]: [promoCodeStep, ...baseSetupSteps],
@@ -212,7 +213,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 }
 
 export function getFlow(name: FlowName): Flow {
-  const steps = Object.fromEntries(flows[name].map(step => [step.step, step])) as Record<StepName, Step>
+  const steps = Object.fromEntries(flows[name].map(step => [step().step, step])) as Record<StepName, () => Step>
   const state = Object.fromEntries(Object.keys(steps).map(step => [step, ''])) as State
   const onDone = onDoneFlows[name]
   return { name, state, steps, onDone }

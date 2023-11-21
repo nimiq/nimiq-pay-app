@@ -13,7 +13,7 @@ export enum FlowName {
 export interface Flow {
   name: FlowName
   state: State
-  steps: Record<StepName, Step>
+  steps: Record<StepName, StepInit>
   onDone: (state: State) => Promise<void>
 }
 
@@ -56,27 +56,51 @@ export enum InfoComponent {
   OnBoarding = 'onBoarding',
 }
 
-interface BaseStep {
+export type SkippableStep = {
+  skip: number
+  skipLabel: string
+} | {
+  skip?: undefined
+  skipLabel?: undefined
+}
+
+type BaseStep = {
   title: string
   description?: string
   main: VNode
   onCancel?: (state: State, { path }: { path?: string; replace?: (to: RouteLocationRaw) => Promise<void | NavigationFailure | undefined> }) => Promise<void> | undefined
-}
+  buttonLabel?: string
+} & SkippableStep
 
 interface ValidateOptions {
   next: () => void
   err: (msg: string) => void
 }
-export interface InputStep extends BaseStep {
+export type InputStep = BaseStep & {
   step: InputStepName
 
   // Function that validates the input and calls next() or err() accordingly
   beforeNext: (state: State, options: ValidateOptions) => Promise<void>
 }
 
-export interface InfoStep extends BaseStep {
+export type InfoStep = BaseStep & {
   step: InfoStepName
   beforeNext?: undefined // Just to be explicit, and avoid TS issues
 }
 
 export type Step = InputStep | InfoStep
+
+interface StepInitOptions {
+  /**
+   * Number of steps to skip. This is useful when we want to skip the first step
+   *
+   * @example { skip: 1 } // Skip just the current step
+   * @example { skip: 2 } // Skip the current step and the next one
+   *
+   * @default undefined
+   */
+  skippeable?: number
+}
+
+export type StepInit = (options?: StepInitOptions) => Step
+export const defaultStepInitOptions: StepInitOptions = { skippeable: undefined }
