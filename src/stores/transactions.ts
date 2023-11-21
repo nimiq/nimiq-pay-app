@@ -51,6 +51,13 @@ export const useTransactions = defineStore('transactions', () => {
     await db.value!.query(SQLQuery.UpsertTx, [hash, ts, sender, recipient, value, fee, details, status, raw, rail, railId, railPeerId, JSON.stringify(transfer)])
   }
 
+  async function clearTxHistory() {
+    const error = await waitForUnlock()
+    if (error)
+      return error
+    await db.value!.query(SQLQuery.ClearTxHistory)
+  }
+
   onMounted(async () => {
     const { data: txs, error } = await selectTxs()
     if (error)
@@ -94,5 +101,6 @@ export const useTransactions = defineStore('transactions', () => {
     transactions: readonly(transactions),
     sendTx,
     loadMoreTxs,
+    clearTxHistory,
   }
 })

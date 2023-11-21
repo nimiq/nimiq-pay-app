@@ -27,6 +27,7 @@ export enum SQLQuery {
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, value INTEGER, fee INTEGER, message TEXT, status TEXT, raw TEXT, rail TEXT, railId TEXT, railPeerId TEXT, transfer TEXT)',
   SelectPaginationTransactions = 'SELECT * FROM transactions ORDER BY timestamp DESC LIMIT ? OFFSET ?',
   UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, recipient, value, fee, message, status, raw, rail, railId, railPeerId, transfer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  ClearTxHistory = 'DELETE FROM transactions',
 
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
   GetActiveRemoteSigner = 'SELECT * FROM remote_signers WHERE active = 1',

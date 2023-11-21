@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 
 export function useNimiqNetwork() {
   const client = ref<Nimiq.Client>()
-  const consensus = ref<Nimiq.Consensus>()
+  const consensus = ref<Nimiq.Client.ConsensusState>()
   const head = ref<Nimiq.Block>()
   const height = computedAsync(() => head.value?.height || -1, -1)
 
