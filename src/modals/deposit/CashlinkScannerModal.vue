@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // TODO: refactor with PayScanner into one file
-import { inject, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
+import { inject, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
 import { ModalType, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -11,6 +11,7 @@ const isDev = import.meta.env.DEV
 const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
 const { showModal, showNotificationAlert, closeAllModals } = useModal()
 const isScanning = ref(false)
+const cameraDirection = ref<'back' | 'front'>('back')
 
 async function startScan() {
   await BarcodeScanner.checkPermission({ force: true })
@@ -19,7 +20,10 @@ async function startScan() {
   document.body.classList.add('scanner-active')
   while (true) {
     isDev && console.log('Scanning QR code')
-    const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
+    const result = await BarcodeScanner.startScan({
+      cameraDirection: cameraDirection.value,
+      targetedFormats: ['QR_CODE'],
+    })
     if (!result.hasContent)
       continue
     try {
@@ -31,7 +35,6 @@ async function startScan() {
     }
   }
   await stopScan()
-  isScanning.value = false
   closeAllModals()
 }
 
@@ -52,7 +55,13 @@ async function stopScan() {
   document.body.classList.remove('scanner-active')
   await BarcodeScanner.showBackground()
   await BarcodeScanner.stopScan()
+  isScanning.value = false
 }
+
+watch(cameraDirection, async () => {
+  await BarcodeScanner.stopScan()
+  startScan()
+})
 
 function handleClose() {
   showModal(ModalType.NimTransfer, { isFullscreen: true })
@@ -60,7 +69,7 @@ function handleClose() {
 
 onMounted(async () => {
   isDev && console.log('Preparing barcode scanner')
-  await BarcodeScanner.prepare()
+  await BarcodeScanner.prepare({ cameraDirection: cameraDirection.value })
   setTimeout(() => startScan(), 500)
 })
 onBeforeUnmount(stopScan)
@@ -69,16 +78,17 @@ onDeactivated(stopScan)
 
 <template>
   <ModalTemplate :on-closing="handleClose">
-    <div class="relative w-full h-full">
-      <p class="absolute top-0 z-10 text-2xl font-bold -translate-x-1/2 left-1/2">
-        Scan Cashlink
-      </p>
+    <template #title><span class="relative z-10">Scan Cashlink</span></template>
+    <div class="w-full h-full flex flex-col items-center justify-between">
+      <div></div>
       <div
-        class="absolute -translate-x-1/2 left-1/2 top-1/3 -translate-y-1/3 w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner"
+        class="relative w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner"
         :class="{ '!bg-transparent outline outline-white outline-[100vh]': isScanning }"
       >
         <span class="border_bottom" />
       </div>
+      <ion-button v-if="cameraDirection === 'back'" class="text-white h-0 my-8" @click="cameraDirection = 'front'">Camera: back</ion-button>
+      <ion-button v-if="cameraDirection === 'front'" class="text-white h-0 my-8" @click="cameraDirection = 'back'">Camera: front</ion-button>
     </div>
   </ModalTemplate>
 </template>
