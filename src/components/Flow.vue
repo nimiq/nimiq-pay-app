@@ -66,7 +66,7 @@ function onSkip(stepsToSkip: number) {
       </h2>
       <p class="[text-wrap:pretty] text-center opacity-60" v-html="description" />
       <component :is="main" class="mx-auto" @done="onStepDone" />
-      <p v-if="error" class="text-tomato">
+      <p v-if="error" class="text-tomato text-center">
         {{ error }}
       </p>
       <div v-if="buttonLabel || skip" class="flex flex-col justify-center mt-auto">

@@ -1,9 +1,11 @@
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useConn } from './conn'
 import { useRemoteSigner } from './remote-signer'
+import { useLocalWallet } from './local-wallet'
+import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
 
 export function kv(): StorageLikeAsync {
@@ -43,7 +45,20 @@ export const useApp = defineStore('app', () => {
   const { remoteBalance } = useRemoteSigner()
   const showRecoveryWordsAlert = computed(() => !hasDoneBackup.value && remoteBalance > 0)
 
-  onMounted(() => useSync().syncWallets())
+  /**
+   * Ensures that all the streams which the app relies on are initialized.
+   * This is called from:
+   *    - When the app is initialized AND the local wallet exists
+   *    - When the setup flow is finished
+   */
+  async function init() {
+    await useConn().init()
+    if (!useLocalWallet().hasLocalWallet)
+      return
+    await useNimiqNetwork().init()
+    await useRemoteSigner().init()
+    useSync().syncWallets()
+  }
 
   return {
     phoneNumber,
@@ -54,5 +69,6 @@ export const useApp = defineStore('app', () => {
     selectedFiat,
     pointsToken,
     showRecoveryWordsAlert,
+    init,
   }
 })

@@ -1,6 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
-import { computed, onMounted, readonly, ref } from 'vue'
+import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 import { useRemoteSignerApi } from '@/composables/useApi'
@@ -71,9 +71,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteSigner.value = remoteSignerApi
   }
 
-  onMounted(init)
-
-  const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.status || 0), 0)
+  const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)
   const remoteAddress = computed(() => remoteSigner.value?.address || '')
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
@@ -105,5 +103,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     updateBalance,
     updateValidity,
+
+    init,
   }
 })

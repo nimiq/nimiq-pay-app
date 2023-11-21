@@ -13,6 +13,7 @@ const inputRef = ref<HTMLInputElement | null>(null)
 const pinCodeInput = ref('')
 
 watch(pinCodeInput, (pin) => {
+  console.log(`Pin code is now ${pin}`, pin.length === props.inputLength)
   if (pin.length === props.inputLength)
     emit('done', pin)
 })

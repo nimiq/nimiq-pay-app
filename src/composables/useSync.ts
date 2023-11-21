@@ -12,10 +12,8 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 
 export function useSync() {
   const { client, height: localHeight } = useNimiqNetwork()
-  const { balance: localBalance } = storeToRefs(useLocalWallet())
+  const { balance: localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, hasHtlcExpired, end, start } = storeToRefs(useRemoteSigner())
-
-  const { sendTx } = useTransactions()
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -36,12 +34,12 @@ export function useSync() {
   async function handleFunds() {
     if (localBalance.value === 0 || nodesAreSynced.value)
       return
-    sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
+    useTransactions().sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
   }
 
   function extendValidity() {
     if (htlcCanBeExtended.value)
-      sendTx({ transfer: Transfer.ExtendRemote })
+      useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
   }
 
   /**
@@ -52,13 +50,16 @@ export function useSync() {
    */
   function checkRemoteValidity() {
     if (!hasHtlcExpired.value)
-      sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
+      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
   }
 
   /**
    * Syncs the local and the remote wallet immediately and then every time a new block is mined.
    */
   async function syncWallets() {
+    if (!hasLocalWallet.value)
+      return
+
     await client.value?.waitForConsensusEstablished()
 
     handleFunds()

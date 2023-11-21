@@ -56,6 +56,9 @@ export function useDecrypt() {
       return error
     }
 
+    // eslint-disable-next-line no-console
+    console.log('🔑 Database initialized and encrypted in mobile')
+
     await openDb()
   }
 
