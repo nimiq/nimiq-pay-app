@@ -2,7 +2,7 @@
 import { inject, markRaw, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { IonFooter, IonToolbar } from '@ionic/vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import PayConfirm from './PayConfirm.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -108,12 +108,12 @@ onDeactivated(stopScan)
     <template #subtitle>
       <span v-if="isDev" class="relative z-10 text-sm font-normal text-blue-300" @click="handleSkip">Click here to use mockup</span>
     </template>
-    <div class="w-full h-full flex flex-col items-center justify-between">
+    <div class="flex flex-col items-center justify-between w-full h-full">
       <div class="relative w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner" :class="{ '!bg-transparent outline outline-white outline-[100vh]': isScanning }">
         <span class="border_bottom" />
       </div>
-      <ion-button v-if="cameraDirection === 'back'" class="text-white h-0 my-8" @click="cameraDirection = 'front'">Camera: back</ion-button>
-      <ion-button v-if="cameraDirection === 'front'" class="text-white h-0 my-8" @click="cameraDirection = 'back'">Camera: front</ion-button>
+      <ion-button v-if="cameraDirection === 'back'" class="h-0 my-8 text-white" @click="cameraDirection = 'front'">Camera: back</ion-button>
+      <ion-button v-if="cameraDirection === 'front'" class="h-0 my-8 text-white" @click="cameraDirection = 'back'">Camera: front</ion-button>
     </div>
   </ModalTemplate>
   <IonFooter>

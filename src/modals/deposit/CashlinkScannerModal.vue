@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // TODO: refactor with PayScanner into one file
 import { inject, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { ModalType, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
@@ -79,7 +79,7 @@ onDeactivated(stopScan)
 <template>
   <ModalTemplate :on-closing="handleClose">
     <template #title><span class="relative z-10">Scan Cashlink</span></template>
-    <div class="w-full h-full flex flex-col items-center justify-between">
+    <div class="flex flex-col items-center justify-between w-full h-full">
       <div></div>
       <div
         class="relative w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner"
@@ -87,8 +87,8 @@ onDeactivated(stopScan)
       >
         <span class="border_bottom" />
       </div>
-      <ion-button v-if="cameraDirection === 'back'" class="text-white h-0 my-8" @click="cameraDirection = 'front'">Camera: back</ion-button>
-      <ion-button v-if="cameraDirection === 'front'" class="text-white h-0 my-8" @click="cameraDirection = 'back'">Camera: front</ion-button>
+      <ion-button v-if="cameraDirection === 'back'" class="h-0 my-8 text-white" @click="cameraDirection = 'front'">Camera: back</ion-button>
+      <ion-button v-if="cameraDirection === 'front'" class="h-0 my-8 text-white" @click="cameraDirection = 'back'">Camera: front</ion-button>
     </div>
   </ModalTemplate>
 </template>
