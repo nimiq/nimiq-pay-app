@@ -44,14 +44,11 @@ export const useConn = defineStore('conn', () => {
   async function init() {
     if (useDevice().isWeb) {
       document.body.appendChild(document.createElement('jeep-sqlite'))
-      await customElements.whenDefined('jeep-sqlite')
-      await CapacitorSQLite.initWebStore()
-      // eslint-disable-next-line no-console
-      console.log('Web store initialized')
+      await sqlite.initWebStore()
     }
-    const promises = await Promise.allSettled(migrations.map(({ version, statements }) => sqlite.addUpgradeStatement(DB_NAME, version, statements)))
-    const rejected = promises.filter(({ status }) => status === 'rejected') as PromiseRejectedResult[]
-    rejected.forEach(({ reason }) => console.error(reason))
+
+    for (const { statements, version } of migrations)
+      sqlite.addUpgradeStatement(DB_NAME, version, statements)
   }
 
   async function open() {

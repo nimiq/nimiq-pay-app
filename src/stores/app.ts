@@ -7,6 +7,7 @@ import { useRemoteSigner } from './remote-signer'
 import { useLocalWallet } from './local-wallet'
 import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
+import { useDevice } from '@/composables/useDevice'
 
 export function kv(): StorageLikeAsync {
   const { waitForUnlock } = useConn()
@@ -52,6 +53,10 @@ export const useApp = defineStore('app', () => {
    *    - When the setup flow is finished
    */
   async function init() {
+    // FIXME This is a hack to make sure that the db is unlocked before initializing the rest of the app
+    // This is needed because otherwise the db will raise an error
+    if (useDevice().isWeb)
+      await new Promise(resolve => setTimeout(resolve, 100))
     await useConn().init()
     if (!useLocalWallet().hasLocalWallet)
       return
