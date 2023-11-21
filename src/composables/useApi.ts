@@ -144,8 +144,8 @@ export function useCurrencyPriceApi() {
   interface PriceAtRes { price: number }
 
   return {
-    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/price/${v(currency)}/now`, baseCurrencyPriceUrl)),
-    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/price/${v(currency)}/time/${v(timestamp)}`, baseCurrencyPriceUrl)),
+    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
+    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${v(timestamp)}`, baseCurrencyPriceUrl)),
   }
 }
 

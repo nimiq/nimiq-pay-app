@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { inject, ref } from 'vue'
+import { ref } from 'vue'
 import { onLongPress } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
-import { BonusWallet } from '@/lib/bonus-wallet'
 import ItemDivider from '@/components/ItemDivider.vue'
+import { useApp } from '@/stores/app'
 
-const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
-const isPhoneRegistered = bonusWallet.isRegistered()
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
+const { phoneNumber } = storeToRefs(useApp())
 
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
@@ -43,14 +43,14 @@ onLongPress(
     </IonItem>
 
     <!-- TODO: remove if when BlueCode is added -->
-    <ItemDivider v-if="!isPhoneRegistered" />
+    <ItemDivider v-if="!phoneNumber" />
 
     <!--
     <IonItem button :detail="false">
       Activate Bluecode payments
     </IonItem>
     -->
-    <IonItem v-if="!isPhoneRegistered" button :detail="false" @click="showModal(Modal.NewPhone)">
+    <IonItem v-if="!phoneNumber" button :detail="false" @click="showModal(Modal.NewPhone)">
       Activate Cashback & Rewards
     </IonItem>
 

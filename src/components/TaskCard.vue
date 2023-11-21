@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { type PropType, inject, ref } from 'vue'
+import { type PropType, ref } from 'vue'
 import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
 import { chevronForwardOutline } from 'ionicons/icons'
-import { BonusWallet } from '@/lib/bonus-wallet'
 import { Modal, useModal } from '@/composables/useModal'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import { usePoints } from '@/stores/points'
 
 const props = defineProps({
   progress: {
@@ -29,7 +29,7 @@ const props = defineProps({
   },
 })
 const emit = defineEmits(['click'])
-const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
+const { getTaskById } = usePoints()
 const { showModal } = useModal()
 
 const isLoading = ref(false)
@@ -42,7 +42,13 @@ async function handleClick() {
     return
   }
   isLoading.value = true
-  const task = await bonusWallet.getTask(props.task.id)
+  const { data: task, error} = await getTaskById(props.task.id)
+
+  // TODO: show error
+  if (error) {
+    console.error(error)
+    return
+  }
   isLoading.value = false
   showModal(Modal.Task, { isOnTop: true, componentProps: { task } })
 }

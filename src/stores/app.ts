@@ -14,7 +14,7 @@ export function kv(): StorageLikeAsync {
     async getItem(key) {
       await waitForUnlock()
       const res = await db.value!.query('SELECT value FROM kv WHERE key = ?', [key])
-      return res.values?.at(0)?.value || ''
+      return res.values?.at(0)?.value
     },
     async setItem(key, value) {
       await waitForUnlock()

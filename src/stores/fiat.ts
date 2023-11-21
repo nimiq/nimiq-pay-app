@@ -10,7 +10,7 @@ export const useFiat = defineStore('fiat', () => {
   const { selectedFiat } = storeToRefs(useApp())
   const { getPriceAt, insertPrice } = useFiatDatabase()
   const { locale } = useDevice()
-  const { getPriceAt: priceAt } = useCurrencyPriceApi()
+  const { getPriceAt: priceAtApi, getPriceNow: getPriceNowApi } = useCurrencyPriceApi()
 
   // TODO: add price for new currency if it doesnt exist
   // watch(selectedFiat, () => selectedFiat.value && upsertKV({ key: 'fiatPrice', value: currency.value }))
@@ -28,26 +28,36 @@ export const useFiat = defineStore('fiat', () => {
     if (cachedPrice !== undefined)
       return { data: cachedPrice, error: undefined }
 
-    const { data: price, error } = await getPriceAt(rounded)
-    if (price === undefined)
-      return { data: undefined, error: error || 'Unexpected error' }
+    const { data: priceAt, error } = await getPriceAt(rounded)
+    if (error !== undefined)
+      return { data: undefined, error }
 
-    if (!price.value) {
-      const { data: priceFromApi, error: priceAtError } = await priceAt({ currency: selectedFiat.value, timestamp: rounded })
+    let price = 0
+    console.log('currency', selectedFiat.value, 'ts', rounded)
+    if (!priceAt || !priceAt.value) {
+      const { data: priceFromApi, error: priceAtError } = await priceAtApi({ currency: selectedFiat.value, timestamp: rounded })
       if (priceFromApi === undefined)
         return { data: undefined, error: priceAtError }
-      price.value = priceFromApi.price
+      price = priceFromApi.price
       const error = await insertPrice({ currency: selectedFiat.value, ts: rounded, value: priceFromApi.price })
       if (error)
         return { data: undefined, error }
     }
 
-    prices.value[rounded] = toValue(price.value)
-    return { data: toValue(price.value), error: undefined }
+    prices.value[rounded] = price
+    return { data: price, error: undefined }
+  }
+
+  async function getPriceNow(): AsyncResult<number> {
+    const { data: price, error } = await getPriceNowApi({ currency: selectedFiat.value })
+    if (error !== undefined)
+      return { data: undefined, error }
+    return { data: price.price, error: undefined }
   }
 
   return {
     formatCurrency,
     getPriceAt: getPriceAtTs,
+    getPriceNow,
   }
 })

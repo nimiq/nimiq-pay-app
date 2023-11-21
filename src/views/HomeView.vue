@@ -2,7 +2,7 @@
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward, trendingDown, trendingUp } from 'ionicons/icons'
 import type { Ref } from 'vue'
-import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -20,20 +20,32 @@ import { useFiat } from '@/stores/fiat'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
+import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
-const { phoneNumber, referralCode, hasDoneBackup } = storeToRefs(useApp())
+const { phoneNumber, referralCode, hasDoneBackup, selectedFiat } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { formatCurrency, getPriceAt } = useFiat()
+const { formatCurrency, getPriceAt, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
+const { head } = useNimiqNetwork()
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
+const currentPrice = ref(0)
+// TODO: do we need to update that frequently?
+watch(head, async () => {
+  const { data: price, error } = (await getPriceNow())
+  if (error || !price) {
+    console.error('Error getting price now', error)
+    return
+  }
+  currentPrice.value = price / 1000
+})
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
@@ -135,10 +147,12 @@ watch(isRecoveryWordsShown, () => {
 
 onMounted(async () => {
   if (!dbExists.value) {
+    console.log('No DB found, redirecting to setup')
     await router.replace('/setup')
     return
   }
   if (locked.value) {
+    console.log('DB locked, redirecting to pin')
     await router.replace('/pin')
     return
   }
@@ -148,7 +162,6 @@ onMounted(async () => {
   //   showModal(Modal.RewardsIntro)
   // }
 
-  console.log('price:', await getPriceAt(Date.now() / 1e3))
   scrollToFirstNotification()
 })
 </script>
@@ -197,17 +210,17 @@ onMounted(async () => {
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
-          <!-- <h1 class="mb-2 text-5xl font-normal">
-            {{ fiatHandler.currencyPrefix.value }} {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value
-              * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
+          <h1 class="mb-2 text-5xl font-normal">
+            {{ formatCurrency(remoteBalance * currentPrice) }}
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>
-              {{ Math.floor(instantPayWallet.balance.value).toFixed(2) }} NIM
+              {{ Math.floor(remoteBalance).toFixed(2) }} NIM
             </span>
-            <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" />
-            <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
-          </p> -->
+            <!-- TODO: add price change in last 24 hours -->
+            <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->
+            <!-- <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span> -->
+          </p>
           <IonButton
             fill="clear" class="text-base normal-case text-sky"
             @click="showModal(Modal.TopUp, { isSmall: true })"

@@ -4,6 +4,7 @@ import { basket, close } from 'ionicons/icons'
 import { type PropType, onMounted } from 'vue'
 import { useModal } from '@/composables/useModal'
 import { TransactionStatus } from '@/lib/storage-manager'
+import type { Transaction } from '@/types/nimiq'
 
 defineProps({
   tx: {

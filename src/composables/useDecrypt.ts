@@ -13,7 +13,7 @@ import { useConn } from '@/stores/conn'
 export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
-  const { isOpen, dbExists } = storeToRefs(useConn())
+  const { isOpen } = storeToRefs(useConn())
   const { pinCode } = storeToRefs(useApp())
 
   const decrypted = ref(false)

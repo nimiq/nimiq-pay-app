@@ -1,24 +1,27 @@
 <script setup lang="ts">
 import { IonAlert, IonButton } from '@ionic/vue'
-import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import type { Alert } from '@ionic/core/dist/types/components/alert/alert'
-import { inject, markRaw, onMounted, ref } from 'vue'
+import {  ref } from 'vue'
 import type { Ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+
+const emit = defineEmits({
+  done: (_phoneNumber: string) => true,
+})
 
 const { path } = useRoute()
-const phoneInput = ref()
+const phoneInput: Ref<HTMLInputElement | undefined> = ref()
 const phoneNumber = ref('')
 const alert: Ref<Alert | undefined> = ref()
 
 function handleSubmit() {
   (async () => {
     try {
-      // await bonusWallet.authorize(phoneNumber.value)
+      emit('done', phoneNumber.value)
     }
     catch (e: any) {
-      phoneInput.value.setCustomValidity(e.message || e)
-      phoneInput.value.reportValidity()
+      phoneInput.value?.setCustomValidity(e.message || e)
+      phoneInput.value?.reportValidity()
     }
   })()
   return false
@@ -33,7 +36,7 @@ const alertButtons = [
     text: 'Cancel',
     role: AlertRole.Cancel,
     handler: () => {
-      // focusInput()
+      phoneInput.value?.focus()
     },
   },
   {

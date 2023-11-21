@@ -17,17 +17,13 @@ watch(pinCodeInput, (pin) => {
     emit('done', pin)
 })
 
-function focusInput() {
-  console.log('focusInput')
-}
-
 function handleInputClick(i: number) {
   //
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
   inputRef?.value?.focus()
 
-  // focusInput()
+  inputRef.value?.focus()
 }
 </script>
 
