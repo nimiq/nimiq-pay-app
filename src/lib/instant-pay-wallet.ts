@@ -54,7 +54,7 @@ export class InstantPayWallet {
     ),
   )
 
-  public readonly timeouted: Ref<boolean> = computed(() =>
+  public readonly timedOut: Ref<boolean> = computed(() =>
     this.timeout.value !== 0
     && this.nimiqNetworkClient.head?.value?.height != null
     && this.timeout.value < this.nimiqNetworkClient.head?.value?.height,

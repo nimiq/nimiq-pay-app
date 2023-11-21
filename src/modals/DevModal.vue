@@ -37,10 +37,13 @@ async function handleClearTx() {
 
 <template>
   <ModalTemplate>
-    <IonButton class="w-full" @click="() => router.go(0)">
-      Reload
+    <IonButton
+        class="text-base normal-case"
+        style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
+        @click="() => router.go(0)">
+      Reload app
     </IonButton>
-    <IonCard>
+    <IonCard class="w-full">
       <IonCardHeader>
         <IonCardTitle>Nimiq Client</IonCardTitle>
       </IonCardHeader>
@@ -54,7 +57,7 @@ async function handleClearTx() {
         </p>
       </IonCardContent>
     </IonCard>
-    <IonCard>
+    <IonCard class="w-full">
       <IonCardHeader>
         <IonCardTitle>Base wallet</IonCardTitle>
       </IonCardHeader>
@@ -64,15 +67,16 @@ async function handleClearTx() {
         </p>
         <p>Balance: <code>{{ nimiqWallet.balance.value }} NIM</code></p>
         <IonButton
+          class="text-base normal-case"
+          style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
           :disabled="nimiqNetworkClient.consensusState.value !== 'established' || nimiqWallet.balanceRaw.value === 0"
           @click="instantPayWallet.deposit(nimiqWallet.balanceRaw.value)"
         >
-          Move
-          to instant
+          Move to instant
         </IonButton>
       </IonCardContent>
     </IonCard>
-    <IonCard>
+    <IonCard class="w-full">
       <IonCardHeader>
         <IonCardTitle>Instant wallet</IonCardTitle>
       </IonCardHeader>
@@ -86,22 +90,29 @@ async function handleClearTx() {
             instantPayWallet.validityStart.value }}</strong> to
           <strong>{{ instantPayWallet.validityEnd.value }}</strong>)
         </p>
-        <p>Timeouted: <strong>{{ instantPayWallet.timeouted.value }}</strong></p>
+        <p>Timed out: <strong>{{ instantPayWallet.timedOut.value }}</strong></p>
         <IonButton
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value || instantPayWallet.timeouted.value) || instantPayWallet.balance.value === 0"
+          class="text-base normal-case"
+          style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
+          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value || instantPayWallet.timedOut.value) || instantPayWallet.balance.value === 0"
           @click="instantPayWallet.recover()"
         >
           Recover
         </IonButton>
         <IonButton
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value || instantPayWallet.timeouted.value) || instantPayWallet.balance.value === 0"
+          class="text-base normal-case"
+          style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
+          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value || instantPayWallet.timedOut.value) || instantPayWallet.balance.value === 0"
           @click="instantPayWallet.extend()"
         >
           Extend
         </IonButton>
       </IonCardContent>
     </IonCard>
-    <IonButton @click="handleClearTx">
+    <IonButton
+      class="text-base normal-case mt-5 mb-8"
+      style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
+      @click="handleClearTx">
       Clear Tx History
     </IonButton>
   </ModalTemplate>
