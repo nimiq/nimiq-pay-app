@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^1.0.0-beta.15",
-    "@capacitor-community/barcode-scanner": "^4.0.1",
     "@capacitor-community/sqlite": "^5.4.1",
     "@capacitor/android": "^5.5.0",
     "@capacitor/app": "^5.0.6",
@@ -40,6 +39,7 @@
     "@ionic/vue": "^7.5.1",
     "@ionic/vue-router": "^7.5.1",
     "@nimiq/core-web": "^1.6.2",
+    "@sisou/capacitor-barcode-scanner": "^4.1.0",
     "@types/youtube-player": "^5.5.9",
     "@vitejs/plugin-legacy": "^4.1.1",
     "@vitejs/plugin-vue": "^4.4.0",
