@@ -78,3 +78,31 @@ onMounted(() => {
     >
   </ModalTemplate>
 </template>
+
+<style scoped>
+input.pin {
+  font-size: 40px;
+  padding-left: clamp(10px, 8vw, 10rem);
+  letter-spacing: clamp(10px, 8vw, 10rem);
+  @apply w-full text-center caret-transparent border-0 mx-10;
+}
+
+input.pin.wrong-pin {
+  outline-color: red;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%  { transform: translateX( 3px); }
+  10% { transform: translateX(-3px); }
+  20% { transform: translateX( 3px); }
+  30% { transform: translateX(-3px); }
+  40% { transform: translateX( 3px); }
+  50% { transform: translateX(-3px); }
+  60% { transform: translateX( 3px); }
+  70% { transform: translateX(-3px); }
+  80% { transform: translateX( 3px); }
+  90% { transform: translateX(-3px); }
+  to  { transform: translateX( 0px); }
+}
+</style>
