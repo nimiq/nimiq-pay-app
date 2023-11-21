@@ -1,5 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
+import { until } from '@vueuse/core'
 import { useConn } from './conn'
 import { useApp } from './app'
 import type { AsyncResult } from '@/types'
@@ -13,10 +14,11 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   const { client } = useNimiqNetwork()
 
   const { entropy } = storeToRefs(useApp())
-  const localWallet = computed(() => entropy && new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
+  console.log('entropy', entropy)
+  const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
 
-  const localAddress = computed(() => localWallet.value && localWallet.value.address)
-  const publicKey = computed(() => localWallet.value && localWallet.value.publicKey.toHex())
+  const localAddress = computed(() => localWallet.value.address)
+  const publicKey = computed(() => localWallet.value.publicKey.toHex())
   const localBalance = ref(0)
 
   async function getWords(): AsyncResult<string[]> {
@@ -26,14 +28,18 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
-  // onMounted(async () => {
-  //   await client.value?.waitForConsensusEstablished()
+  onMounted(async () => {
+    await client.value?.waitForConsensusEstablished()
 
-  //   client.value?.addHeadChangedListener(async () => {
-  //     const account = await client.value?.getAccount(localAddress.value)
-  //     localBalance.value = account?.balance || 0
-  //   })
-  // })
+    console.log('localWallet', localWallet)
+    await until(localWallet).toBeTruthy()
+    console.log('entropy', entropy)
+
+    client.value?.addHeadChangedListener(async () => {
+      const account = await client.value?.getAccount(localAddress.value)
+      localBalance.value = account?.balance || 0
+    })
+  })
 
   return {
     hasLocalWallet: computed(() => !!entropy?.value),

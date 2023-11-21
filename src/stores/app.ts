@@ -33,7 +33,7 @@ export function kv(): StorageLikeAsync {
 export const useApp = defineStore('app', () => {
   const phoneNumber = useStorageAsync('phoneNumber', '', kv())
   const referralCode = useStorageAsync('referralCode', '', kv())
-  const pinCode = useStorageAsync('pinCode', '', kv())
+  const pinCode = useStorageAsync('pinCode', '', kv(), { writeDefaults: false })
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv())
   const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv())
   const pointsToken = useStorageAsync('pointsToken', '', kv())
@@ -58,8 +58,6 @@ export const useApp = defineStore('app', () => {
     if (useDevice().isWeb)
       await new Promise(resolve => setTimeout(resolve, 100))
     await useConn().init()
-    if (!useLocalWallet().hasLocalWallet)
-      return
     await useNimiqNetwork().init()
     await useRemoteSigner().init()
     useSync().syncWallets()

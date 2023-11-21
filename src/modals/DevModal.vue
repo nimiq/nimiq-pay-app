@@ -13,7 +13,7 @@ import { Transfer } from '@/types/database'
 
 const router = useRouter()
 const { consensus, head, height } = useNimiqNetwork()
-const { localAddress, localBalance } = storeToRefs(useLocalWallet())
+const { localAddress /* localBalance */ } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
 
@@ -59,8 +59,8 @@ async function handleClearTx() {
         <IonCardTitle>Base wallet</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
-        <p @click="() => writeToClipboard(localAddress.toUserFriendlyAddress() || '')">
-          Address: <code>{{ localAddress.toUserFriendlyAddress() }}</code>
+        <p @click="() => writeToClipboard(localAddress && localAddress.toUserFriendlyAddress() || '')">
+          Address: <code>{{ localAddress && localAddress.toUserFriendlyAddress() }}</code>
         </p>
         <!-- <p>Balance: <code>{{ localBalance }} NIM</code></p>
         <IonButton
