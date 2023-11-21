@@ -115,7 +115,7 @@ export function useRemoteSignerApi() {
     // The response from the server is verbose, and since these fields are used widely in the logic of the app
     // we extract them here and return a simpler object.
     const remoteSigner: RemoteSigner = {
-      address: data.address,
+      address: Nimiq.Address.fromString(data.address),
       balance: data.balance,
       publicKey: data.servicePublicKey,
       proofSize: data.serviceSignatureProofSize,

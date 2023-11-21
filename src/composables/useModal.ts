@@ -3,6 +3,7 @@ import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
 import { isPlatform, modalController, toastController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
+import { useDevice } from './useDevice'
 import { check, xmark } from '@/components/icons'
 
 export enum Modal {
@@ -130,8 +131,8 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
-    // TODO: replace with isWeb
-    if (isFullscreen && isPlatform('android') && !isPlatform('mobileweb'))
+    // TODO: replace with isAndroid
+    if (isFullscreen && useDevice().isAndroid)
       await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
     allModals.unshift(modalToShow)
@@ -160,7 +161,7 @@ function _useModal() {
     if (modal)
       await modal.dismiss()
 
-    if (isPlatform('android') && !isPlatform('mobileweb'))
+    if (useDevice().isAndroid)
       await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   }
 

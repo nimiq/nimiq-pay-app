@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useConn } from './conn'
 import { useApp } from './app'
@@ -18,24 +18,15 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   const address = computed(() => localWallet.value.address)
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
-  const balance = computedAsync(async () => client.value?.getAccount(address.value!)?.then(a => a?.balance) || 0, 0)
+  const balance = ref(0)
 
-  // onMounted(async () => {
-  //   if (!client.value)
-  //     return
-  //   await client.value.waitForConsensusEstablished()
-
-  //   // client.value.addHeadChangedListener(async () => {
-  //   //   const account = await client.value!.getAccount(address.value!)
-  //   //   await upsertWallet({ id: address.value!.toUserFriendlyAddress(), balance: account.balance, type: WalletType.Raw, status: WalletStatus.Active })
-  //   //   const receipts = await client.value!.getTransactionReceiptsByHashes((await selectUnconfirmedTx()).data!)
-  //   //   for (const { blockHeight, blockHash, transactionHash } of receipts) {
-  //   //     const minHeight = head.value!.height + REQUIRED_BLOCK_CONFIRMATIONS
-  //   //     const status = blockHeight > minHeight ? TransactionStatus.CONFIRMED : TransactionStatus.MINED
-  //   //     await updateTx(transactionHash.toHex(), { status, block: blockHash.toHex(), blockHeight })
-  //   //   }
-  //   // })
-  // })
+  onMounted(async () => {
+    client.value.addHeadChangedListener(async () => {
+      console.log('Head changed', address.value)
+      const account = await client.value!.getAccount(address.value!)
+      balance.value = account?.balance || 0
+    })
+  })
 
   async function getWords(): AsyncResult<string[]> {
     await waitForUnlock()

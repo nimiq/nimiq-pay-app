@@ -6,7 +6,7 @@
 // The only thing we store about the local wallet is the entropy, and from that we can derive the private key
 // and its remote wallet
 export interface RemoteSigner {
-  address: string
+  address: Nimiq.Address
   balance: number
   proofSize: number
   publicKey: string
@@ -34,7 +34,7 @@ export enum SQLQuery {
   DeactivateRemoteSigners = 'UPDATE remote_signers SET active = 0',
   InsertRemoteSigner = 'INSERT OR REPLACE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
   UpdateValidityRemoteSigner = 'UPDATE remote_signers SET start = ?, end = ? WHERE address = ?',
-  UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
+  UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE active = 1',
 }
 
 interface Migration {

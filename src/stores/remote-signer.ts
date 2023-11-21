@@ -24,9 +24,9 @@ function useRemoteSignerDb() {
       await db!.run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
     },
 
-    async updateBalance(address: Nimiq.Address, newBalance: number) {
+    async updateBalance(newBalance: number) {
       await waitForUnlock()
-      await db!.run(SQLQuery.UpdateRemoteBalance, [newBalance, address])
+      await db!.run(SQLQuery.UpdateRemoteBalance, [newBalance])
     },
 
     async updateValidity(address: Nimiq.Address, newStart: number, newEnd: number) {
@@ -82,7 +82,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
   const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
-  const hasHtlcExpired = computed(() => end.value < height.value)
+  const hasHtlcExpired = computed(() => remoteAddress && end.value < height.value)
 
   const isRemoteOk = computedAsync(async () => height.value && await getStatus().then(r => r.data?.status === 'good'), false)
 
