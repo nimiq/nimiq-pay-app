@@ -39,12 +39,6 @@ ion-toolbar {
   --background: transparent;
 }
 
-input.pin {
-  font-size: 40px;
-  letter-spacing: clamp(10px, 8vw, 10rem);
-  @apply w-full border-0 outline-none text-center caret-transparent ml-8;
-}
-
 input.phone {
   font-size: 20px;
 }

@@ -10,6 +10,8 @@ const router = useRouter()
 const pinField = ref()
 const pin = ref('')
 
+const pinIsWrong = ref(false)
+
 watch(pin, (newValue) => {
   if (newValue.length === 4)
     handleSubmit()
@@ -18,9 +20,16 @@ watch(pin, (newValue) => {
 async function handleSubmit() {
   if (pin.value.length < 4)
     return false
-  await storageManager.unlock(pin.value)
-  continueToApp()
-  return false
+  try {
+    await storageManager.unlock(pin.value)
+    continueToApp()
+  } catch (e) {
+    pinIsWrong.value = true
+    setTimeout(() => {
+      pinIsWrong.value = false
+      pin.value = ''
+    }, 500)
+  }
 }
 
 function shown() {
@@ -76,6 +85,7 @@ onUnmounted(() => {
           <input
             ref="pinField" v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4"
             maxlength="4" size="4" placeholder="••••" class="pin bg-[#F8F8F8]"
+            :class="{ 'wrong-pin': pinIsWrong }"
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
             autofocus="true"
             @blur="handleBlur"
@@ -85,3 +95,31 @@ onUnmounted(() => {
     </IonContent>
   </IonPage>
 </template>
+
+<style scoped>
+input.pin {
+  font-size: 40px;
+  padding-left: clamp(10px, 8vw, 10rem);
+  letter-spacing: clamp(10px, 8vw, 10rem);
+  @apply w-full text-center caret-transparent border-0 mx-10;
+}
+
+input.pin.wrong-pin {
+  outline-color: red;
+  animation: shake 0.5s;
+}
+
+@keyframes shake {
+  0%  { transform: translateX( 3px); }
+  10% { transform: translateX(-3px); }
+  20% { transform: translateX( 3px); }
+  30% { transform: translateX(-3px); }
+  40% { transform: translateX( 3px); }
+  50% { transform: translateX(-3px); }
+  60% { transform: translateX( 3px); }
+  70% { transform: translateX(-3px); }
+  80% { transform: translateX( 3px); }
+  90% { transform: translateX(-3px); }
+  to  { transform: translateX( 0px); }
+}
+</style>
