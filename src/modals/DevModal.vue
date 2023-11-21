@@ -46,6 +46,7 @@ async function handleClearTx() {
       </IonCardHeader>
       <IonCardContent>
         <p>Initialized: <strong>{{ nimiqNetworkClient.initialized }}</strong></p>
+        <p>Peer count: <strong>{{ nimiqNetworkClient.peerCount }}</strong></p>
         <p>Consensus state: <strong>{{ nimiqNetworkClient.consensusState.value }}</strong></p>
         <p>
           Head <strong>{{ nimiqNetworkClient.head.value?.height }}</strong>:

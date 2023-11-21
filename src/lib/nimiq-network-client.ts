@@ -11,6 +11,7 @@ export class NimiqNetworkClient {
   public readonly initialized: Ref<boolean> = ref(false)
   public readonly consensusState: Ref<Nimiq.Client.ConsensusState> = ref('connecting')
   public readonly head: Ref<Nimiq.Block | null> = ref(null)
+  public readonly peerCount: Ref<number> = ref(0)
 
   constructor() {
     this.clientPromise = initPromise.then(() => {
@@ -23,6 +24,12 @@ export class NimiqNetworkClient {
       await client.addHeadChangedListener(async (blockHash, reason, revertedBlocks, adoptedBlocks) => {
         this.head.value = await client.getBlock(blockHash)
       })
+      // @ts-expect-error Private property access
+      const consensus = await client._consensus as Nimiq.BaseMiniConsensus;
+      consensus.network.on('peers-changed', async () => {
+        const { totalPeerCount } = await client.network.getStatistics();
+        this.peerCount.value = totalPeerCount;
+      });
       const block = await client.getHeadBlock()
       this.initialized.value = true
       this.head.value = block
@@ -34,8 +41,7 @@ export class NimiqNetworkClient {
   }
 
   async awaitConsensus() {
-    await this.getClientWithConsensus().then(() => {
-    })
+    await this.getClientWithConsensus()
   }
 
   async getClient() {
