@@ -36,7 +36,7 @@ async function startScan() {
   document.body.classList.add('scanner-active')
   while (true) {
     isDev && console.log('Scanning QR code')
-    const result = await BarcodeScanner.startScan()
+    const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
     if (!result.hasContent)
       continue
     if (!result.content.startsWith('nimiq:'))
