@@ -38,12 +38,12 @@ function handleClose() {
   </IonHeader>
   <IonContent class="text-center" style="--padding-top: 16px; --padding-bottom: 16px;">
     <IonGrid class="flex flex-col h-full gap-4 mx-6">
-      <IonRow class="ion-justify-content-center">
+      <IonRow v-if="$slots.title" class="ion-justify-content-center">
         <h1 class="text-2xl font-bold">
           <slot name="title" />
         </h1>
       </IonRow>
-      <IonRow class="ion-justify-content-center">
+      <IonRow v-if="$slots.subtitle" class="ion-justify-content-center">
         <p class="text-lg font-normal text-space/60">
           <slot name="subtitle" />
         </p>
