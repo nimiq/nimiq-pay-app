@@ -52,10 +52,6 @@ async function continueToApp() {
 //   pinField.value?.focus()
 // })
 
-function handleBlur() {
-  pinField.value?.focus()
-}
-
 onMounted(async () => {
   if (!(await storageManager.exists()) || !(await storageManager.isSetupDone())) {
     await router.replace('/setup')
@@ -88,7 +84,6 @@ onUnmounted(() => {
             :class="{ 'wrong-pin': pinIsWrong }"
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
             autofocus="true"
-            @blur="handleBlur"
           >
         </IonRow>
       </IonGrid>
