@@ -13,7 +13,7 @@ import { useConn } from '@/stores/conn'
 export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
-  const { isOpen, hasSecret, dbExists } = storeToRefs(useConn())
+  const { isOpen, dbExists } = storeToRefs(useConn())
   const { pinCode } = storeToRefs(useApp())
 
   const decrypted = ref(false)
@@ -47,7 +47,7 @@ export function useDecrypt() {
     if (isOpen.value)
       await closeDb()
 
-    const error = hasSecret.value
+    const error = (await sqlite.isSecretStored()).result
       ? await sqlite.checkEncryptionSecret(pin).then(({ result }) => !result ? 'There was an error' : undefined).catch(() => 'Invalid PIN')
       : await sqlite.setEncryptionSecret(pin).then(() => undefined).catch(() => 'There was an error')
 
@@ -56,7 +56,6 @@ export function useDecrypt() {
       return error
     }
 
-    hasSecret.value = true
     await openDb()
   }
 

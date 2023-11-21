@@ -37,7 +37,7 @@ function useRemoteSignerDb() {
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { head } = useNimiqNetwork()
+  const { height } = useNimiqNetwork()
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { address: localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateValidity } = useRemoteSignerDb()
@@ -83,10 +83,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
-  const htlcIsActive = computed(() => start.value < head.value!.height && end.value > head.value!.height)
-  const htlcHasExpired = computed(() => end.value < head.value!.height)
+  const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
+  const hasHtlcExpired = computed(() => end.value < height.value)
+
+  const isRemoteOk = computedAsync(async () => height.value && await getStatus().then(r => r.data?.status === 'good'), false)
 
   return {
+    isRemoteOk,
     remoteAddress,
     remoteSigner: readonly(remoteSigner),
     hasSigner: computed(() => !!remoteSigner.value),
@@ -97,8 +100,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteProofSize,
     remoteHeight,
 
-    htlcIsActive,
-    htlcHasExpired,
+    isHtlcActive,
+    hasHtlcExpired,
 
     updateBalance,
     updateValidity,

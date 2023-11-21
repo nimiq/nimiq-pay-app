@@ -147,6 +147,7 @@ export const usePoints = defineStore('points', () => {
     verify,
     redeemReferral,
     updatePointsBalance,
+    pointsBalance,
     getAllTasks,
     getTaskById,
     claimTask,

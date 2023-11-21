@@ -13,7 +13,7 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 export function useSync() {
   const { client, height: localHeight } = useNimiqNetwork()
   const { balance: localBalance } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, htlcHasExpired, end, start } = storeToRefs(useRemoteSigner())
+  const { remoteHeight, remoteBalance, hasHtlcExpired, end, start } = storeToRefs(useRemoteSigner())
 
   const { sendTx } = useTransactions()
 
@@ -28,7 +28,7 @@ export function useSync() {
    * If the local wallet gets some funds, move them to the remote wallet immediately.
    *
    * 1. Check if the local wallet has funds and if the remote Nimiq's node and local Nimiq's node are synced.
-   * 2. If there is already an active HTCL between the remote and the local wallet:
+   * 2. If there is already an active HTLC between the remote and the local wallet:
    *    2.1 Liquidate the HTLC by moving the funds from the remote wallet to the local wallet.
    *    2.2 Once the transaction is mined, `handleFunds` will be invoked again and step 3 will be executed.
    * 3. Else move the funds from the local wallet to the remote wallet.
@@ -51,7 +51,7 @@ export function useSync() {
    * Note: This function is just a safety net. The server should never miss the deadline.
    */
   function checkRemoteValidity() {
-    if (!htlcHasExpired.value)
+    if (!hasHtlcExpired.value)
       sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
   }
 

@@ -10,7 +10,7 @@ export const useFiat = defineStore('fiat', () => {
   const { selectedFiat } = storeToRefs(useApp())
   const { getPriceAt, insertPrice } = useFiatDatabase()
   const { locale } = useDevice()
-  const { priceAt } = useCurrencyPriceApi()
+  const { getPriceAt: priceAt } = useCurrencyPriceApi()
 
   // TODO: add price for new currency if it doesnt exist
   // watch(selectedFiat, () => selectedFiat.value && upsertKV({ key: 'fiatPrice', value: currency.value }))
@@ -22,7 +22,7 @@ export const useFiat = defineStore('fiat', () => {
   // The price of NIM every 10 minutes
   const prices = ref<Record<number /* ts */, number /* value */>>({})
 
-  async function getPrice(ts: number): AsyncResult<number> {
+  async function getPriceAtTs(ts: number): AsyncResult<number> {
     const rounded = Math.floor(ts / 600000) * 600
     const cachedPrice = prices.value[rounded]
     if (cachedPrice !== undefined)
@@ -48,6 +48,6 @@ export const useFiat = defineStore('fiat', () => {
 
   return {
     formatCurrency,
-    getPrice,
+    getPriceAt: getPriceAtTs,
   }
 })

@@ -6,38 +6,34 @@ import { computed, inject, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
-import { computedAsync } from '@vueuse/core'
-import { BonusWallet } from '@/lib/bonus-wallet'
-import { StorageManager } from '@/lib/storage-manager'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
-import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
-import { FiatHandler } from '@/lib/fiat-handler'
+import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import TransactionCard from '@/components/TransactionCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { useApp } from '@/stores/app'
+import { useConn } from '@/stores/conn'
+import { usePoints } from '@/stores/points'
+import { useFiat } from '@/stores/fiat'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
+import { useTransactions } from '@/stores/transactions'
 
 const router = useRouter()
-const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
-const storageManager = inject(StorageManager.KEY) as StorageManager
-const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
-const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
-const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
 const { showModal, showNotificationAlert } = useModal()
-const isPromoCodeEntered = bonusWallet.isPromoCodeEntered()
-const isPhoneRegistered = bonusWallet.isRegistered()
+
+const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
+const { phoneNumber, referralCode, hasDoneBackup } = storeToRefs(useApp())
+const { locked, dbExists } = storeToRefs(useConn())
+const { pointsBalance } = storeToRefs(usePoints())
+const { formatCurrency, getPriceAt } = useFiat()
+const { transactions } = storeToRefs(useTransactions())
+
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
-const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
-// TODO: remove this and use a store for pointsBalance
-// This should be updated every time there is a task claimed
-const pointsBalance = computedAsync(async () => {
-  console.log('height:', nimiqNetworkClient.head.value?.height)
-  return await bonusWallet.getParticipantBalance()
-}, 0)
 const isReferralCardShown = ref(true)
+const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
@@ -85,11 +81,11 @@ if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
     console.groupCollapsed('👛 Instant Pay Wallet')
     // eslint-disable-next-line no-console
-    console.log('Ready:', instantPayWallet.ready.value)
+    console.log('Ready:', isRemoteOk.value)
     // eslint-disable-next-line no-console
-    console.log('Valid:', instantPayWallet.valid.value)
+    console.log('Valid:', isHtlcActive.value)
     // eslint-disable-next-line no-console
-    console.log('Balance:', instantPayWallet.balance.value)
+    console.log('Balance:', remoteBalance.value)
     // eslint-disable-next-line no-console
     console.groupEnd()
   })
@@ -103,20 +99,12 @@ watchEffect(async () => {
     return notification.title !== verifyNumberTitle && notification.title !== claimRewardTitle
   })
 
-  // eslint-disable-next-line no-console
-  console.groupCollapsed('👤 User Info')
-  // eslint-disable-next-line no-console
-  console.log('isPhoneRegistered', isPhoneRegistered.value)
-  // eslint-disable-next-line no-console
-  console.log('isPromoCodeEntered', isPromoCodeEntered.value)
-  // eslint-disable-next-line no-console
-  console.groupEnd()
-  if (isPromoCodeEntered.value && isPhoneRegistered.value) {
+  if (referralCode.value && phoneNumber.value) {
     setTimeout(() => {
       showNotificationAlert('CC Points added')
     }, 750)
   }
-  else if (!isPromoCodeEntered.value && !isPhoneRegistered.value) {
+  else if (!referralCode.value && !phoneNumber.value) {
     notificationArray.value.unshift({
       title: verifyNumberTitle,
       subtitle: 'Get cashback and earn rewards',
@@ -124,7 +112,7 @@ watchEffect(async () => {
     })
     scrollToFirstNotification()
   }
-  else if (isPromoCodeEntered.value && !isPhoneRegistered.value) {
+  else if (referralCode.value && !phoneNumber.value) {
     notificationArray.value.unshift({
       title: claimRewardTitle,
       action: () => showModal(Modal.NewPhone),
@@ -146,21 +134,21 @@ watch(isRecoveryWordsShown, () => {
 }, { immediate: true })
 
 onMounted(async () => {
-  if (!(await storageManager.exists())) {
+  if (!dbExists.value) {
     await router.replace('/setup')
     return
   }
-  if (!storageManager.isUnlocked()) {
+  if (locked.value) {
     await router.replace('/pin')
     return
   }
 
-  if (await storageManager.isFirstRun()) {
-    await storageManager.setFirstRun(false)
-    showModal(Modal.RewardsIntro)
-  }
+  // if (await storageManager.isFirstRun()) {
+  //   await storageManager.setFirstRun(false)
+  //   showModal(Modal.RewardsIntro)
+  // }
 
-  // bonusWallet.checkDelayedRedeemVoucher()
+  console.log('price:', await getPriceAt(Date.now() / 1e3))
   scrollToFirstNotification()
 })
 </script>
@@ -194,11 +182,11 @@ onMounted(async () => {
           <IonButton
             class="text-base normal-case"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="isPhoneRegistered ? showModal(Modal.Rewards) : showModal(Modal.NewPhone)"
+            @click="phoneNumber ? showModal(Modal.Rewards) : showModal(Modal.NewPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{
-              isPhoneRegistered ? pointsBalance / 1e5 : 'Earn Points'
+              phoneNumber ? pointsBalance / 1e5 : 'Earn Points'
             }}
           </IonButton>
         </IonButtons>
@@ -209,7 +197,7 @@ onMounted(async () => {
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
-          <h1 class="mb-2 text-5xl font-normal">
+          <!-- <h1 class="mb-2 text-5xl font-normal">
             {{ fiatHandler.currencyPrefix.value }} {{ (Math.floor(instantPayWallet.balance.value * fiatHandler.price.value
               * 100) / 100).toFixed(2) }}{{ fiatHandler.currencySuffix.value }}
           </h1>
@@ -219,7 +207,7 @@ onMounted(async () => {
             </span>
             <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" />
             <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span>
-          </p>
+          </p> -->
           <IonButton
             fill="clear" class="text-base normal-case text-sky"
             @click="showModal(Modal.TopUp, { isSmall: true })"
@@ -230,12 +218,12 @@ onMounted(async () => {
         </IonRow>
 
         <!-- TX History -->
-        <IonList v-if="instantPayWallet.transactions.value.length" lines="none" class="mb-6 bg-transparent">
+        <IonList v-if="transactions.length" lines="none" class="mb-6 bg-transparent">
           <TransactionCard
-            v-for="transaction in instantPayWallet.transactions.value.slice(0, 3)" :key="transaction.id"
+            v-for="transaction in transactions.slice(0, 3)" :key="transaction.hash"
             :tx="transaction"
           />
-          <div v-if="instantPayWallet.transactions.value.length > 3" class="text-center">
+          <div v-if="transactions.length > 3" class="text-center">
             <IonButton
               fill="clear" class="text-base normal-case text-sky"
               @click="showModal(Modal.TransactionHistory)"
@@ -267,7 +255,7 @@ onMounted(async () => {
         <IonRow v-if="isReferralCardShown" class="mb-8">
           <NotificationCard
             class="w-full"
-            @click="isPhoneRegistered ? showModal(Modal.Referral) : showModal(Modal.NewPhone)"
+            @click="phoneNumber ? showModal(Modal.Referral) : showModal(Modal.NewPhone)"
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">
@@ -304,10 +292,10 @@ onMounted(async () => {
       <IonToolbar>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || !(pointsBalance > 0 || instantPayWallet.balance.value > 0)"
+          :disabled="!(isRemoteOk && isHtlcActive) || !(pointsBalance > 0 || remoteBalance > 0)"
           @click="showModal(Modal.Pay, { isFullscreen: true })"
         >
-          Pay
+          Scan To Pay
         </IonButton>
       </IonToolbar>
     </IonFooter>
