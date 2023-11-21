@@ -72,7 +72,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)
-  const remoteAddress = computed(() => remoteSigner.value?.address || '')
+  const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = computed(() => remoteSigner.value?.balance || 0)

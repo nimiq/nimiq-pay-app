@@ -20,10 +20,7 @@ export function useNimiqNetwork() {
 
     head.value = await client.value.getHeadBlock()
 
-    client.value.addConsensusChangedListener((newConsensus) => {
-      console.log('Consensus changed', newConsensus)
-      consensus.value = newConsensus
-    })
+    client.value.addConsensusChangedListener(newConsensus => consensus.value = newConsensus)
     client.value.addHeadChangedListener(async blockHash => head.value = await client.value?.getBlock(blockHash))
   }
 
