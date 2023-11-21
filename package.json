@@ -39,7 +39,7 @@
     "@ionic/vue": "^7.5.1",
     "@ionic/vue-router": "^7.5.1",
     "@nimiq/core-web": "^1.6.2",
-    "@sisou/capacitor-barcode-scanner": "^4.1.0",
+    "@sisou/capacitor-barcode-scanner": "^4.1.1",
     "@types/youtube-player": "^5.5.9",
     "@vitejs/plugin-legacy": "^4.1.1",
     "@vitejs/plugin-vue": "^4.4.0",
