@@ -4,7 +4,6 @@ import type { StorageLikeAsync } from '@vueuse/core'
 import { computed } from 'vue'
 import { useConn } from './conn'
 import { useRemoteSigner } from './remote-signer'
-import { useLocalWallet } from './local-wallet'
 import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
@@ -31,17 +30,18 @@ export function kv(): StorageLikeAsync {
 }
 
 export const useApp = defineStore('app', () => {
-  const phoneNumber = useStorageAsync('phoneNumber', '', kv())
-  const referralCode = useStorageAsync('referralCode', '', kv())
-  const pinCode = useStorageAsync('pinCode', '', kv(), { writeDefaults: false })
-  const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv())
-  const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv())
-  const pointsToken = useStorageAsync('pointsToken', '', kv())
+  const sharedOptions = { writeDefaults: false }
+  const phoneNumber = useStorageAsync('phoneNumber', '', kv(), sharedOptions)
+  const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
+  const pinCode = useStorageAsync('pinCode', '', kv(), sharedOptions)
+  const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
+  const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv(), sharedOptions)
+  const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
 
   // @ts-expect-error 16 is the value we need to have to get the 12 words
   Nimiq.Entropy.SIZE = 16
   // Maybe we should revisit this later. Right now this will be in memory all the times
-  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv())
+  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv(), sharedOptions)
 
   const { remoteBalance } = useRemoteSigner()
   const showRecoveryWordsAlert = computed(() => !hasDoneBackup.value && remoteBalance > 0)
