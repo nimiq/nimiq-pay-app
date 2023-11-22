@@ -225,7 +225,6 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 
 export function getFlow(name: FlowName): Flow {
   const steps = Object.fromEntries(flows[name].map(step => [step().step, step])) as Record<StepName, () => Step>
-  console.log(steps)
   const state = Object.fromEntries(Object.keys(steps).map(step => [step, ''])) as State
   const onDone = onDoneFlows[name]
   return { name, state, steps, onDone }
