@@ -25,9 +25,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     client.value.addHeadChangedListener(async blockHash => head.value = await client.value?.getBlock(blockHash))
 
     // @ts-expect-error Private property access
-    ;(client.value._consensus as Nimiq.BaseMiniConsensus).on('peers-changed', async () => {
-      const { totalPeerCount } = await client.value!.network.getStatistics()
-      peerCount.value = totalPeerCount
+    ;(await client.value._consensus as Nimiq.BaseMiniConsensus).network.on('peers-changed', async () => {
+      const stats = await client.value?.network.getStatistics()
+      peerCount.value = stats?.totalPeerCount || 0
     })
   }
 
