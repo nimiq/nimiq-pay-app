@@ -80,12 +80,6 @@ export const useConn = defineStore('conn', () => {
     await db.value!.close()
   }
 
-  // FIXME: This should not be necessary
-  async function commit() {
-    await close()
-    await open()
-  }
-
   async function deleteDatabase(reload: boolean = true) {
     await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
     await db.value!.delete()
@@ -98,6 +92,27 @@ export const useConn = defineStore('conn', () => {
     await Promise.allSettled([sqlite.deleteOldDatabases(), sqlite.clearEncryptionSecret()])
   }
 
+  interface QueryOptions {
+    single: boolean
+  }
+  async function query<T = any>(query: string, args: any[] = [], options: Partial<QueryOptions> = {}) {
+    const err = await waitForUnlock()
+    if (err)
+      throw new Error(err)
+    const res = await db.value!.query(query, args)
+    return options.single ? res.values?.at(0)?.value as T : res.values?.map(v => v.value) as T
+  }
+
+  async function run(query: string, args: any[] = []) {
+    const err = await waitForUnlock()
+    if (err)
+      throw new Error(err)
+
+    await db.value!.run(query, args)
+    if (isWeb)
+      await sqlite.saveToStore(DB_NAME)
+  }
+
   return {
     init,
     db,
@@ -105,9 +120,11 @@ export const useConn = defineStore('conn', () => {
     dbExists,
 
     isOpen,
-    commit,
     open,
     close,
+
+    run,
+    query,
 
     locked,
     lastUnlocked,

@@ -1,26 +1,14 @@
 import { useStorageAsync } from '@vueuse/core'
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
 import { useConn } from './conn'
+import { SQLQuery } from '@/lib/sql-queries'
 
 export function kv(): StorageLikeAsync {
-  const { waitForUnlock } = useConn()
-  const { db } = storeToRefs(useConn())
-
   return {
-    async getItem(key) {
-      await waitForUnlock()
-      const res = await db.value!.query('SELECT value FROM kv WHERE key = ?', [key])
-      return res.values?.at(0)?.value
-    },
-    async setItem(key, value) {
-      await waitForUnlock()
-      await db.value!.run('INSERT OR REPLACE INTO kv(key, value) VALUES (?, ?)', [key, value])
-    },
-    removeItem: async (key) => {
-      await waitForUnlock()
-      db.value!.run('DELETE FROM kv WHERE key = ?', [key])
-    },
+    getItem: async key => useConn().query<string>(SQLQuery.SelectKv, [key], { single: true }),
+    setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
+    removeItem: async key => useConn().run(SQLQuery.DeleteKv, [key]),
   } satisfies StorageLikeAsync
 }
 

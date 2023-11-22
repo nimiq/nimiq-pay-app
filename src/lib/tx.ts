@@ -35,7 +35,8 @@ export type PartialSendTxArgs = {
  * @returns
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<Nimiq.ExtendedTransaction> {
-  console.log('getSignedTxArgs', {
+  // eslint-disable-next-line no-console
+  console.log('Sending new tx', {
     partialArgs,
     remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
     remoteBalance: useRemoteSigner().remoteBalance,
@@ -136,9 +137,12 @@ async function getSignedTxByRemote(tx: ExtendedTransaction) {
 }
 
 function createDepositData() {
+  const remotePublicKey = useRemoteSigner().remotePublicKey
+  if (!remotePublicKey)
+    throw new Error('Remote public key is undefined')
   const data = new Nimiq.SerialBuffer(78)
   useLocalWallet().localWallet.address.serialize(data)
-  Nimiq.PublicKey.fromAny(useRemoteSigner().remotePublicKey).toAddress().serialize(data)
+  Nimiq.PublicKey.fromAny(remotePublicKey).toAddress().serialize(data)
   data.writeUint8(Nimiq.Hash.Algorithm.BLAKE2B)
   data.write(new Uint8Array(32))
   data.writeUint8(1)
