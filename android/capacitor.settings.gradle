@@ -8,9 +8,6 @@ project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capa
 include ':capacitor-share'
 project(':capacitor-share').projectDir = new File('../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/share/android')
 
-include ':capacitor-community-barcode-scanner'
-project(':capacitor-community-barcode-scanner').projectDir = new File('../node_modules/.pnpm/@capacitor-community+barcode-scanner@4.0.1_@capacitor+core@5.5.1/node_modules/@capacitor-community/barcode-scanner/android')
-
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@5.4.1_@capacitor+core@5.5.1/node_modules/@capacitor-community/sqlite/android')
 
@@ -31,3 +28,6 @@ project(':capacitor-push-notifications').projectDir = new File('../node_modules/
 
 include ':capacitor-status-bar'
 project(':capacitor-status-bar').projectDir = new File('../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/status-bar/android')
+
+include ':sisou-capacitor-barcode-scanner'
+project(':sisou-capacitor-barcode-scanner').projectDir = new File('../node_modules/.pnpm/@sisou+capacitor-barcode-scanner@4.1.1_@capacitor+core@5.5.1/node_modules/@sisou/capacitor-barcode-scanner/android')
