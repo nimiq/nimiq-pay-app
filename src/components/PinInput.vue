@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import type { PropType, Ref } from 'vue'
 import { ref, watch } from 'vue'
 
-const props = defineProps<{
-  inputLength: number
-}>()
+const props = defineProps({
+  errorMsg: { type: Object as () => PropType<Ref<string>> },
+  inputLength: { type: Number, default: 4 },
+})
 
 const emit = defineEmits({
   done: (_pin: string) => true,
@@ -28,15 +30,18 @@ function handleInputClick(i: number) {
 </script>
 
 <template>
-  <div class="mt-28">
-    <div class="flex gap-x-8">
+  <div class="mt-28 mx-auto">
+    <div class="flex gap-x-8 mt-28 mx-auto justify-center">
       <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
     </div>
-    <input
-      ref="inputRef" type="password" inputmode="numeric" class="absolute opacity-0 -top-40" pattern="[0-9]*"
-      :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
-      :value="pinCodeInput"
-      @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"
-    >
+    <p v-if="errorMsg" class="text-tomato text-center">
+      {{ errorMsg }}
+    </p>
   </div>
+  <input
+    ref="inputRef" type="password" inputmode="numeric" class="sr-only" pattern="[0-9]*"
+    :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
+    :value="pinCodeInput"
+    @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"
+  >
 </template>

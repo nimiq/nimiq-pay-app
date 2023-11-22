@@ -24,28 +24,25 @@ export function useCarousel(scroller: MaybeRefOrGetter<HTMLElement | null | unde
       return
     activeIndex.value = index
     elRef.value!.scrollTo({
-      top: 0,
       left: (toValue(slideWidth) + (columnGap * 2)) * index,
       behavior: scrollBehavior,
     })
   }
 
-  function removeSlide(index: number) {
-    if (!elRef.value)
-      return
-    const slide = elRef.value.children[index]
-    if (!slide)
-      return
-    slide.remove()
-    goToSlide(Math.min(index, size.value - 1))
-  }
+  // function removeSlide(index: number) {
+  //   if (!elRef.value)
+  //     return
+  //   const slide = elRef.value.children[index]
+  //   if (!slide)
+  //     return
+  //   slide.remove()
+  //   goToSlide(Math.min(index, size.value - 1))
+  // }
 
   return {
     activeIndex,
     goToSlide,
     nextSlide: () => goToSlide(activeIndex.value + 1),
     prevSlide: () => goToSlide(activeIndex.value - 1),
-    isLast: computed(() => activeIndex.value === size.value - 1),
-    removeSlide,
   }
 }

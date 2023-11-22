@@ -1,17 +1,28 @@
 import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
-import type { Flow, SkippableStep, State, Step, StepInit } from '@/types/steps'
+import { useRouter } from 'vue-router'
+import type { Flow, State, Step, StepInit } from '@/types/steps'
 import { FlowName, StepName, defaultStepInitOptions } from '@/types/steps'
+
+// @ts-expect-error The component is fine
 import FlowCmp from '@/components/Flow.vue'
+
+// @ts-expect-error The component is fine
+const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
+// @ts-expect-error The component is fine
+const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
+// @ts-expect-error The component is fine
+const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
+// @ts-expect-error The component is fine
+const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
+// @ts-expect-error The component is fine
+const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
+
+const router = useRouter()
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
 const PHONE_NUMBER_REGEX = /^\d{4,}$/
-
-const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
-const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
-const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
-const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 
 const promoCodeStep: StepInit = () => ({
   step: StepName.PromoCode,
@@ -75,13 +86,12 @@ const pinCodeConfirmStep: StepInit = () => ({
   },
 })
 
-const phoneNumberStep: StepInit = ({ skippeable } = defaultStepInitOptions) => ({
+const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   title: 'Verify your phone number',
   description: 'It\'s so easy.<br>Just verify your phone number.',
-  main: h(PhoneInput),
-  ...(skippeable ? { skip: skippeable, skipLabel: 'Skip for now' } as SkippableStep : {}),
-  buttonLabel: 'Verify',
+  main: h(PhoneInput, { canSkip: !!stepsToSkip }),
+  stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
     if (!phoneNumber)
       err('Please enter a phone number')
@@ -113,7 +123,8 @@ const getNotifiedStep: StepInit = () => ({
   step: StepName.GetNotified,
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
-  main: h(PhoneInput),
+  stepsToSkip: 1,
+  main: h(AllowNotifications),
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
@@ -186,7 +197,7 @@ const onBoardingBluecode3: StepInit = () => ({
   main: h(OnBoardingScreen),
 })
 
-const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ skippeable: 2 }), phoneNumberConfirmStep, getNotifiedStep]
+const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
 
 const flows: Record<FlowName, StepInit[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],
@@ -199,12 +210,12 @@ const flows: Record<FlowName, StepInit[]> = {
 
 const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.Login]: async state => console.log(state.pinCode),
-  [FlowName.Setup]: async (state) => {
+  [FlowName.Setup]: async (state, { goTo }) => {
     const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode)
     if (err)
       console.error(err)
 
-    await import('vue-router').then(({ useRouter }) => useRouter().replace('/app'))
+    goTo('/app')
   },
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
   [FlowName.OnBoardingPoints]: async () => { console.log('On boarding points done'); return Promise.resolve() },
@@ -214,6 +225,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 
 export function getFlow(name: FlowName): Flow {
   const steps = Object.fromEntries(flows[name].map(step => [step().step, step])) as Record<StepName, () => Step>
+  console.log(steps)
   const state = Object.fromEntries(Object.keys(steps).map(step => [step, ''])) as State
   const onDone = onDoneFlows[name]
   return { name, state, steps, onDone }

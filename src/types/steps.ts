@@ -10,11 +10,15 @@ export enum FlowName {
   OnBoardingBluecode = 'onBoardingBluecode',
 }
 
+interface OnDoneFlowOptions {
+  goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
+}
+
 export interface Flow {
   name: FlowName
   state: State
   steps: Record<StepName, StepInit>
-  onDone: (state: State) => Promise<void>
+  onDone: (state: State, options: OnDoneFlowOptions) => Promise<void>
 }
 
 export enum StepName {
@@ -42,8 +46,8 @@ export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.Pin
 const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3]
 export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3
 
-export const isInputStep = (step: StepName): step is InputStepName => inputSteps.includes(step)
-export const isInfoStep = (step: StepName): step is InfoStepName => infoSteps.includes(step)
+export const isInputStep = (step: Step): step is InputStep => inputSteps.includes(step.step)
+export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
 
 export type State = Record<InputStepName, string>
 
@@ -56,13 +60,7 @@ export enum InfoComponent {
   OnBoarding = 'onBoarding',
 }
 
-export type SkippableStep = {
-  skip: number
-  skipLabel: string
-} | {
-  skip?: undefined
-  skipLabel?: undefined
-}
+export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
 
 type BaseStep = {
   title: string
@@ -92,15 +90,13 @@ export type Step = InputStep | InfoStep
 
 interface StepInitOptions {
   /**
-   * Number of steps to skip. This is useful when we want to skip the first step
-   *
-   * @example { skip: 1 } // Skip just the current step
-   * @example { skip: 2 } // Skip the current step and the next one
+   * Number of steps to skip if the user presses the skip button.
+   * Use 1, to skip just the current step, 2 to skip the current step and the next one, etc.
    *
    * @default undefined
    */
-  skippeable?: number
+  stepsToSkip?: number
 }
 
 export type StepInit = (options?: StepInitOptions) => Step
-export const defaultStepInitOptions: StepInitOptions = { skippeable: undefined }
+export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined }
