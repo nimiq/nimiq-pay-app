@@ -1,5 +1,5 @@
 import { storeToRefs } from 'pinia'
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, until } from '@vueuse/core'
 import { computed } from 'vue'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -12,7 +12,7 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 
 export function useSync() {
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, hasHtlcExpired, end, start } = storeToRefs(useRemoteSigner())
 
   // Whether the remote wallet is synced with the local wallet or not.
@@ -32,6 +32,8 @@ export function useSync() {
    * 3. Else move the funds from the local wallet to the remote wallet.
    */
   async function handleFunds() {
+    const account = await client.value?.getAccount(localAddress.value)
+    localBalance.value = account?.balance || 0
     if (localBalance.value === 0 || nodesAreSynced.value)
       return
     useTransactions().sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
@@ -60,6 +62,7 @@ export function useSync() {
     if (!hasLocalWallet.value)
       return
 
+    await until(client).toBeTruthy()
     await client.value?.waitForConsensusEstablished()
 
     handleFunds()

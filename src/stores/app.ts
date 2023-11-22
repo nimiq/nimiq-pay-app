@@ -36,7 +36,7 @@ export const useApp = defineStore('app', () => {
   // @ts-expect-error 16 is the value we need to have to get the 12 words
   Nimiq.Entropy.SIZE = 16
   // Maybe we should revisit this later. Right now this will be in memory all the times
-  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv(), sharedOptions)
+  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv())
 
   return {
     phoneNumber,

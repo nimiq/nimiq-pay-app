@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { useApp } from './app'
 import type { AsyncResult } from '@/types'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 
 // const REQUIRED_BLOCK_CONFIRMATIONS = 10
 
@@ -23,15 +24,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       return { error: 'The entropy is not defined', data: undefined }
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
-
-  // onMounted(async () => {
-  //   await client.value?.waitForConsensusEstablished()
-
-  //   client.value?.addHeadChangedListener(async () => {
-  //     const account = await client.value?.getAccount(localAddress.value)
-  //     localBalance.value = account?.balance || 0
-  //   })
-  // })
 
   return {
     hasLocalWallet: computed(() => !!entropy?.value),

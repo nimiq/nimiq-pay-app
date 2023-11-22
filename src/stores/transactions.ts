@@ -68,6 +68,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Omit<Transaction, 'id'>> {
     const { data: signedTx, error } = await getSignedTx(partialTx)
+    console.log('signedTx', signedTx, error)
     if (error)
       return { data: undefined, error }
     await client.value!.sendTransaction(signedTx!)

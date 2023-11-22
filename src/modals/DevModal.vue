@@ -62,7 +62,7 @@ async function handleClearTx() {
         <p @click="() => writeToClipboard(localAddress && localAddress.toUserFriendlyAddress() || '')">
           Address: <code>{{ localAddress && localAddress.toUserFriendlyAddress() }}</code>
         </p>
-        <p>Balance: <code>{{ localBalance }} NIM</code></p>
+        <p>Balance: <code>{{ localBalance / 1e5 }} NIM</code></p>
         <IonButton
           :disabled="consensus !== 'established' || localBalance === 0"
           @click="sendTx({ transfer: Transfer.LocalToRemote })"

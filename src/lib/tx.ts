@@ -35,6 +35,16 @@ export type PartialSendTxArgs = {
  * @returns
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<Nimiq.ExtendedTransaction> {
+  console.log('getSignedTxArgs', {
+    partialArgs,
+    remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+    remoteBalance: useRemoteSigner().remoteBalance,
+    remoteHeight: useRemoteSigner().remoteHeight,
+    remotePublicKey: useRemoteSigner().remotePublicKey,
+    remoteProofSize: useRemoteSigner().remoteProofSize,
+    localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
+    localBalance: useLocalWallet().localBalance,
+  })
   if (partialArgs.transfer === Transfer.UserPayment && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
