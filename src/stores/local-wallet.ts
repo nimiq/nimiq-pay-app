@@ -1,6 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
-import { until } from '@vueuse/core'
 import { useConn } from './conn'
 import { useApp } from './app'
 import type { AsyncResult } from '@/types'
@@ -29,7 +28,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   // onMounted(async () => {
   //   await client.value?.waitForConsensusEstablished()
-  //   await until(localWallet).toBeTruthy()
 
   //   client.value?.addHeadChangedListener(async () => {
   //     const account = await client.value?.getAccount(localAddress.value)

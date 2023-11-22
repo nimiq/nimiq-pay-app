@@ -9,29 +9,30 @@ import { SQLQuery } from '@/lib/sql-queries'
 import type { RemoteSigner } from '@/lib/sql-queries'
 
 function useRemoteSignerDb() {
-  const { db, waitForUnlock } = useConn()
+  const { waitForUnlock } = useConn()
+  const { db } = storeToRefs(useConn())
   return {
     async getActiveRemoteSigner() {
       await waitForUnlock()
-      const res = await db!.query(SQLQuery.GetActiveRemoteSigner)
+      const res = await db.value!.query(SQLQuery.GetActiveRemoteSigner)
       return res.values?.at(0)?.value as RemoteSigner | undefined
     },
 
     async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
       await waitForUnlock()
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
-      await db!.run(SQLQuery.DeactivateRemoteSigners)
-      await db!.run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
+      await db.value!.run(SQLQuery.DeactivateRemoteSigners)
+      await db.value!.run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
     },
 
     async updateBalance(newBalance: number) {
       await waitForUnlock()
-      await db!.run(SQLQuery.UpdateRemoteBalance, [newBalance])
+      await db.value!.run(SQLQuery.UpdateRemoteBalance, [newBalance])
     },
 
     async updateValidity(address: Nimiq.Address, newStart: number, newEnd: number) {
       await waitForUnlock()
-      await db!.run(SQLQuery.UpdateValidityRemoteSigner, [newStart, newEnd, address])
+      await db.value!.run(SQLQuery.UpdateValidityRemoteSigner, [newStart, newEnd, address])
     },
   }
 }

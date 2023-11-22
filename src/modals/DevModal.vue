@@ -12,7 +12,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/database'
 
 const router = useRouter()
-const { consensus, head, height } = useNimiqNetwork()
+const { consensus, head, height, peerCount } = useNimiqNetwork()
 const { localAddress /* localBalance */ } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
@@ -47,6 +47,7 @@ async function handleClearTx() {
         <IonCardTitle>Nimiq Client</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
+        <p>Peer count: <strong>{{ peerCount }}</strong></p>
         <p>Consensus state: <strong>{{ consensus }}</strong></p>
         <p>
           Head <strong>{{ height }}</strong>:

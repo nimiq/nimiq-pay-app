@@ -1,11 +1,11 @@
-import { computedAsync } from '@vueuse/core'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export function useNimiqNetwork() {
   const client = ref<Nimiq.Client>()
   const consensus = ref<Nimiq.Client.ConsensusState>()
   const head = ref<Nimiq.Block>()
-  const height = computedAsync(() => head.value?.height || -1, -1)
+  const height = computed(() => head.value?.height || -1)
+  const peerCount = ref(0)
 
   async function init() {
     // TODO: use mainnet in production
@@ -22,6 +22,12 @@ export function useNimiqNetwork() {
 
     client.value.addConsensusChangedListener(newConsensus => consensus.value = newConsensus)
     client.value.addHeadChangedListener(async blockHash => head.value = await client.value?.getBlock(blockHash))
+
+    // @ts-expect-error Private property access
+    ;(client.value._consensus as Nimiq.BaseMiniConsensus).on('peers-changed', async () => {
+      const { totalPeerCount } = await client.value!.network.getStatistics()
+      peerCount.value = totalPeerCount
+    })
   }
 
   return {
@@ -29,6 +35,7 @@ export function useNimiqNetwork() {
     consensus,
     head,
     height,
+    peerCount,
     init,
   }
 }
