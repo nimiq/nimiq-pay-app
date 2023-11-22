@@ -73,11 +73,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)
+  const remotePublicKey = computedAsync(() => getStatus().then(r => r.data?.servicePublicKey || 0), 0)
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = computed(() => remoteSigner.value?.balance || 0)
-  const remotePublicKey = computed(() => remoteSigner.value?.publicKey || '')
   const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
 
   // Checks if the remote is in the validity window, which means that the remote
