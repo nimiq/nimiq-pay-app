@@ -1,7 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
 import { computed } from 'vue'
-import { useNimiqNetwork } from './useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
@@ -11,7 +11,7 @@ const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function useSync() {
-  const { client, height: localHeight } = useNimiqNetwork()
+  const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, hasHtlcExpired, end, start } = storeToRefs(useRemoteSigner())
 

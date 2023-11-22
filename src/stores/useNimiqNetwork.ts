@@ -1,6 +1,7 @@
+import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-export function useNimiqNetwork() {
+export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Nimiq.Client>()
   const consensus = ref<Nimiq.Client.ConsensusState>()
   const head = ref<Nimiq.Block>()
@@ -38,4 +39,4 @@ export function useNimiqNetwork() {
     peerCount,
     init,
   }
-}
+})

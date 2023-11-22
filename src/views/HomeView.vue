@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
-import { chevronForward, trendingDown, trendingUp } from 'ionicons/icons'
+import { chevronForward } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -20,7 +20,7 @@ import { useFiat } from '@/stores/fiat'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
-import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
 
 const router = useRouter()
@@ -32,7 +32,7 @@ const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { formatCurrency, getPriceAt, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
-const { head } = useNimiqNetwork()
+const { head } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)

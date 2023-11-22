@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
-import Nimiq from '@nimiq/core-web'
 import { Clipboard } from '@capacitor/clipboard'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useTransactions } from '@/stores/transactions'
-import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/database'
 
 const router = useRouter()
-const { consensus, head, height, peerCount } = useNimiqNetwork()
+const { consensus, head, height, peerCount } = storeToRefs(useNimiqNetwork())
 const { localAddress /* localBalance */ } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()

@@ -3,16 +3,17 @@ import { onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import type { Transaction } from '@/types/database'
-import { PaymentMethod, Transfer } from '@/types/database'
+import { Transfer } from '@/types/database'
 import type { AsyncOption, AsyncResult } from '@/types'
 import type { PartialSendTxArgs } from '@/lib/tx'
 import { getSignedTx } from '@/lib/tx'
-import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { SQLQuery } from '@/lib/sql-queries'
 
 export const useTransactions = defineStore('transactions', () => {
   const { waitForUnlock } = useConn()
   const { db } = storeToRefs(useConn())
+  const { client } = storeToRefs(useNimiqNetwork())
 
   const { updateBalance } = useRemoteSigner()
   const { remoteSigner } = storeToRefs(useRemoteSigner())
@@ -69,7 +70,7 @@ export const useTransactions = defineStore('transactions', () => {
     const { data: signedTx, error } = await getSignedTx(partialTx)
     if (error)
       return { data: undefined, error }
-    await useNimiqNetwork().client.value!.sendTransaction(signedTx!)
+    await client.value!.sendTransaction(signedTx!)
 
     const tx: Omit<Transaction, 'id'> = {
       ...partialTx,

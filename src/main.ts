@@ -31,9 +31,7 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 /* Libs */
 import { useConn } from './stores/conn'
 import { useLocalWallet } from './stores/local-wallet'
-import { useNimiqNetwork } from './composables/useNimiqNetwork'
-import { useRemoteSigner } from './stores/remote-signer'
-import { useSync } from './composables/useSync'
+import { useNimiqNetwork } from './stores/useNimiqNetwork'
 
 applyPolyfills().then(() => jeepSqlite(window))
 

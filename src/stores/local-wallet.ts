@@ -1,16 +1,14 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { useApp } from './app'
 import type { AsyncResult } from '@/types'
-import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
 
 // const REQUIRED_BLOCK_CONFIRMATIONS = 10
 
 export const useLocalWallet = defineStore('local-wallet', () => {
   const { entropyToMnemonic, mnemonicToExtendedPrivateKey } = Nimiq.MnemonicUtils
   const { waitForUnlock } = useConn()
-  const { client } = useNimiqNetwork()
 
   const { entropy } = storeToRefs(useApp())
   const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))

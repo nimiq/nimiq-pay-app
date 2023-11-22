@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import { useNimiqNetwork } from '../stores/useNimiqNetwork'
 import { useRemoteSignerApi } from './useApi'
-import { useNimiqNetwork } from './useNimiqNetwork'
 import { useTxDatabase, useWalletDatabase } from './useDatabase'
 import { createResolveProof, getExtendedTx } from '@/lib/tx'
 import type { AsyncOption } from '@/types'
