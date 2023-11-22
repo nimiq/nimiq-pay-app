@@ -25,7 +25,7 @@ export const useConn = defineStore('conn', () => {
   async function waitForUnlock(): AsyncOption<string> {
     if (locked.value)
       await unlockPromise
-    if (!db) {
+    if (!db.value) {
       console.error('The db instance is not defined')
       return 'The db instance is not defined'
     }
@@ -42,15 +42,22 @@ export const useConn = defineStore('conn', () => {
   const isOpen = computedAsync(async () => dbReady.value && !!((await db.value!.isDBOpen()).result), false)
 
   async function init() {
-    if (useDevice().isWeb) {
+    if (isWeb) {
+      await customElements.whenDefined('jeep-sqlite')
       document.body.appendChild(document.createElement('jeep-sqlite'))
       await sqlite.initWebStore()
     }
 
     for (const { statements, version } of migrations)
-      sqlite.addUpgradeStatement(DB_NAME, version, statements)
+      await sqlite.addUpgradeStatement(DB_NAME, version, statements)
+
+    if (isWeb) {
+      await open()
+      await sqlite.saveToStore(DB_NAME)
+    }
 
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
+    console.log({ dbExists: dbExists.value })
   }
 
   async function open() {
@@ -63,6 +70,7 @@ export const useConn = defineStore('conn', () => {
     await db.value!.open()
     resolveUnlockDb()
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
+    console.log({ dbExists: dbExists.value })
   }
 
   async function close() {
