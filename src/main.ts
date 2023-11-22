@@ -1,7 +1,8 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
-import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+// import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite';
 import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
@@ -33,7 +34,8 @@ import { useConn } from './stores/conn'
 import { useLocalWallet } from './stores/local-wallet'
 import { useNimiqNetwork } from './stores/useNimiqNetwork'
 
-applyPolyfills().then(() => jeepSqlite(window))
+// applyPolyfills().then(() => jeepSqlite(window))
+customElements.define('jeep-sqlite', JeepSqlite);
 
 window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
