@@ -36,7 +36,7 @@ export const useConn = defineStore('conn', () => {
   const lastUnlocked = ref(0)
   watchEffect(() => !locked.value && (lastUnlocked.value = Date.now()))
 
-  const dbExists = computedAsync(async () => !!(await sqlite.isDatabase(DB_NAME)).result, false)
+  const dbExists = ref(false)
 
   const dbReady = computed(() => dbExists.value && !!db.value)
   const isOpen = computedAsync(async () => dbReady.value && !!((await db.value!.isDBOpen()).result), false)
@@ -49,6 +49,8 @@ export const useConn = defineStore('conn', () => {
 
     for (const { statements, version } of migrations)
       sqlite.addUpgradeStatement(DB_NAME, version, statements)
+
+    dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
 
   async function open() {
@@ -60,6 +62,7 @@ export const useConn = defineStore('conn', () => {
       : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
     await db.value!.open()
     resolveUnlockDb()
+    dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
 
   async function close() {
