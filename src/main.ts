@@ -31,7 +31,9 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 /* Libs */
 import { useConn } from './stores/conn'
 import { useLocalWallet } from './stores/local-wallet'
-import { useApp } from './stores/app'
+import { useNimiqNetwork } from './composables/useNimiqNetwork'
+import { useRemoteSigner } from './stores/remote-signer'
+import { useSync } from './composables/useSync'
 
 applyPolyfills().then(() => jeepSqlite(window))
 
@@ -44,14 +46,27 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   await router.isReady()
 
-  await useApp().init()
+  /**
+   * Ensures that all the streams which the app relies on are initialized.
+   * This is called from:
+   *    - When the app is initialized AND the local wallet exists
+   *    - When the setup flow is finished
+   */
+
+  // sleep 1 s
+  await new Promise(resolve => setTimeout(resolve, 1000))
+
+  await useConn().init()
+  await useNimiqNetwork().init()
+  await useRemoteSigner().init()
+  useSync().syncWallets()
 
   // TODO Maybe move this logic to a route hook
   if (router.currentRoute.value.path === '/') {
     if (useConn().dbExists && useLocalWallet().hasLocalWallet)
-      router.push('/pin')
+      router.replace('/pin')
     else
-      router.push('/setup')
+      router.replace('/setup')
   }
 
   app.mount('#app')

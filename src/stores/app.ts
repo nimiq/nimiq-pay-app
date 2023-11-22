@@ -1,12 +1,7 @@
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
-import { computed } from 'vue'
 import { useConn } from './conn'
-import { useRemoteSigner } from './remote-signer'
-import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
-import { useSync } from '@/composables/useSync'
-import { useDevice } from '@/composables/useDevice'
 
 export function kv(): StorageLikeAsync {
   const { waitForUnlock } = useConn()
@@ -41,27 +36,7 @@ export const useApp = defineStore('app', () => {
   // @ts-expect-error 16 is the value we need to have to get the 12 words
   Nimiq.Entropy.SIZE = 16
   // Maybe we should revisit this later. Right now this will be in memory all the times
-  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv())
-
-  const { remoteBalance } = useRemoteSigner()
-  const showRecoveryWordsAlert = computed(() => !hasDoneBackup.value && remoteBalance > 0)
-
-  /**
-   * Ensures that all the streams which the app relies on are initialized.
-   * This is called from:
-   *    - When the app is initialized AND the local wallet exists
-   *    - When the setup flow is finished
-   */
-  async function init() {
-    // FIXME This is a hack to make sure that the db is unlocked before initializing the rest of the app
-    // This is needed because otherwise the db will raise an error
-    if (useDevice().isWeb)
-      await new Promise(resolve => setTimeout(resolve, 100))
-    await useConn().init()
-    await useNimiqNetwork().init()
-    await useRemoteSigner().init()
-    useSync().syncWallets()
-  }
+  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv(), sharedOptions)
 
   return {
     phoneNumber,
@@ -71,7 +46,5 @@ export const useApp = defineStore('app', () => {
     hasDoneBackup,
     selectedFiat,
     pointsToken,
-    showRecoveryWordsAlert,
-    init,
   }
 })
