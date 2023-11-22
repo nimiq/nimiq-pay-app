@@ -2,7 +2,7 @@
 import { inject, markRaw, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { IonFooter, IonToolbar } from '@ionic/vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import PayConfirm from './PayConfirm.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
@@ -36,7 +36,7 @@ async function startScan() {
   document.body.classList.add('scanner-active')
   while (true) {
     isDev && console.log('Scanning QR code')
-    const result = await BarcodeScanner.startScan()
+    const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
     if (!result.hasContent)
       continue
     if (!result.content.startsWith('nimiq:'))
@@ -86,7 +86,7 @@ function navigateToPayConfirm() {
 
 onMounted(async () => {
   isDev && console.log('Preparing barcode scanner')
-  await BarcodeScanner.prepare()
+  await BarcodeScanner.prepare({ cameraDirection: 'back' })
   setTimeout(() => startScan(), 500)
 })
 onBeforeUnmount(stopScan)

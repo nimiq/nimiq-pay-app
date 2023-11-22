@@ -28,9 +28,6 @@ devDependencies:
   '@antfu/eslint-config':
     specifier: ^1.0.0-beta.15
     version: 1.0.0-beta.29(eslint@8.52.0)(typescript@4.9.5)(vitest@0.34.6)
-  '@capacitor-community/barcode-scanner':
-    specifier: ^4.0.1
-    version: 4.0.1(@capacitor/core@5.5.1)
   '@capacitor-community/sqlite':
     specifier: ^5.4.1
     version: 5.4.1(@capacitor/core@5.5.1)
@@ -79,6 +76,9 @@ devDependencies:
   '@nimiq/core-web':
     specifier: ^1.6.2
     version: 1.6.2
+  '@sisou/capacitor-barcode-scanner':
+    specifier: ^4.1.1
+    version: 4.1.1(@capacitor/core@5.5.1)
   '@total-typescript/ts-reset':
     specifier: ^0.5.1
     version: 0.5.1
@@ -1377,16 +1377,6 @@ packages:
       '@babel/helper-validator-identifier': 7.22.20
       to-fast-properties: 2.0.0
 
-  /@capacitor-community/barcode-scanner@4.0.1(@capacitor/core@5.5.1):
-    resolution: {integrity: sha512-acuhDU2mqskSeCIQMc5TGNnDszXXs4IqEES+3C2JDiq+MkJMTr+B2Dhq4k55hlkRFMOumMhlnbr2R9G6qyFPhw==}
-    peerDependencies:
-      '@capacitor/core': ^5.0.0
-    dependencies:
-      '@capacitor/core': 5.5.1
-      '@zxing/browser': 0.1.4(@zxing/library@0.20.0)
-      '@zxing/library': 0.20.0
-    dev: true
-
   /@capacitor-community/sqlite@5.4.1(@capacitor/core@5.5.1):
     resolution: {integrity: sha512-N2OKk4ja8tpcN6YJZ7JwRGLlZRpZi+zi7Plve/dRennIk7GXok13NlbHRlthwS+mmC8/SAHlQ0ZW2UGoEisgww==}
     engines: {node: '>=16.0.0'}
@@ -2176,6 +2166,16 @@ packages:
 
   /@sinclair/typebox@0.27.8:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
+    dev: true
+
+  /@sisou/capacitor-barcode-scanner@4.1.1(@capacitor/core@5.5.1):
+    resolution: {integrity: sha512-ES2dEZtdxsi0uE8dfYBWZk4QZP/zKZWCs0WzrNg+qxmWmj8XEbDcVTww8obtT/mjDsShVMHUMubywUoRrYB4eg==}
+    peerDependencies:
+      '@capacitor/core': ^5.0.0
+    dependencies:
+      '@capacitor/core': 5.5.1
+      '@zxing/browser': 0.1.4(@zxing/library@0.20.0)
+      '@zxing/library': 0.20.0
     dev: true
 
   /@stencil/core@4.6.0:

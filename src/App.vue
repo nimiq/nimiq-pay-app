@@ -3,7 +3,7 @@ import { IonApp, IonFab, IonFabButton, IonIcon, isPlatform } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView, useRouter } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { Modal, useModal } from '@/composables/useModal'
 
 const isDev = import.meta.env.DEV

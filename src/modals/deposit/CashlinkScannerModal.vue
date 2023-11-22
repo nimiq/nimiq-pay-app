@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // TODO: refactor with PayScanner into one file
 import { inject, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
-import { BarcodeScanner } from '@capacitor-community/barcode-scanner'
+import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { NimiqWallet } from '@/lib/nimiq-wallet'
@@ -19,7 +19,7 @@ async function startScan() {
   document.body.classList.add('scanner-active')
   while (true) {
     isDev && console.log('Scanning QR code')
-    const result = await BarcodeScanner.startScan()
+    const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
     if (!result.hasContent)
       continue
     try {
@@ -60,7 +60,7 @@ function handleClose() {
 
 onMounted(async () => {
   isDev && console.log('Preparing barcode scanner')
-  await BarcodeScanner.prepare()
+  await BarcodeScanner.prepare({ cameraDirection: 'back' })
   setTimeout(() => startScan(), 500)
 })
 onBeforeUnmount(stopScan)
