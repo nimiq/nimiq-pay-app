@@ -36,7 +36,7 @@ export function usePointsApi() {
   interface ClaimReferralArg { id: MaybeRef<string>; token: MaybeRef<string> }
   interface TaskArg { token: MaybeRef<string> }
   interface TaskIdArg { id: MaybeRef<string>; token: MaybeRef<string> }
-  interface ClaimTaskArg { id: MaybeRef<string>; answer: MaybeRef<string>; token: MaybeRef<string> }
+  interface ClaimTaskArg { id: MaybeRef<string>; answer?: MaybeRef<string>; token: MaybeRef<string> }
 
   type AuthorizeRes = string
   interface VerifyRes { token: string }
@@ -45,7 +45,7 @@ export function usePointsApi() {
   interface ParticipantReferralRes { id: string; claims_remaining: number; reward: number }
   interface ReferralIdRes { id: string; claims_remaining: number; reward: number }
   type ClaimReferralRes = undefined
-  type TaskRes = any[]
+  type TaskRes = Task[]
   type TaskIdRes = any
   interface ClaimTaskRes {
     created_at: string

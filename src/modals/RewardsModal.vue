@@ -1,40 +1,57 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
-import { inject, onMounted, ref } from 'vue'
+import { type Ref, onMounted, ref } from 'vue'
 import { computedAsync, until } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
-import { BonusWallet } from '@/lib/bonus-wallet'
-import { FiatHandler } from '@/lib/fiat-handler'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import { useFiat } from '@/stores/fiat'
+import { usePoints } from '@/stores/points'
+import { useApp } from '@/stores/app'
 
-const fiatHandler = inject(FiatHandler.KEY) as FiatHandler
-const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
+const { formatCurrency, getPriceNow, getPriceAt } = useFiat()
+const { pointsBalance } = storeToRefs(usePoints())
+const { phoneNumber } = storeToRefs(useApp())
+const { getAllTasks } = usePoints()
 const { closeModal, showModal } = useModal()
 const tasks = ref<Task[]>([])
 const isTaskShown = ref(false)
-// TODO: save this in db, return initial stated the one from db and after the response from API, update it in db
-// That way the user won't see 0 as balance while fetching the new one
-const bonusBalance = computedAsync(async () => {
-  const balance = await bonusWallet.getParticipantBalance()
-  return balance / 1e5
+const currentPrice: Ref<number> = computedAsync(async () => {
+  const { data, error } = await getPriceNow()
+  if (error || !data) {
+    console.error(error)
+    const { data: lastKnownPrice, error: priceAtError } = await getPriceAt(Date.now())
+    if (priceAtError || !lastKnownPrice) {
+      console.error(priceAtError)
+      return 0
+    }
+    return lastKnownPrice
+  }
+
+  return data
 }, 0)
 
 onMounted(async () => {
   // If phone number is not verified, show the modal
-  if (!bonusWallet.isRegistered())
+  if (!phoneNumber.value)
     await showModal(Modal.NewPhone)
 
-  tasks.value = (await bonusWallet.getTasks()).sort((a, b) => a.order - b.order)
-  // Move completed tasks to the end
-  tasks.value = tasks.value.sort((a, b) => {
-    if (a.status === 'completed' && b.status !== 'completed')
-      return 1
-    if (a.status !== 'completed' && b.status === 'completed')
-      return -1
-    return 0
-  })
+  const { data, error } = await getAllTasks()
+  if (error || !data) {
+    console.error(error)
+    return
+  }
+  tasks.value = data
+    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => {
+      if (a.status === 'completed' && b.status !== 'completed')
+        return 1
+      if (a.status !== 'completed' && b.status === 'completed')
+        return -1
+      return 0
+    })
   await until(tasks).changed({ timeout: 1000 })
   isTaskShown.value = true
 })
@@ -55,12 +72,12 @@ onMounted(async () => {
       <IonRow class="flex items-center ion-justify-content-center">
         <CryptoCityLogo class="h-11 w-9" />
         <h1 class="text-5xl font-normal">
-          {{ bonusBalance }}
+          {{ pointsBalance }}
         </h1>
       </IonRow>
       <IonRow class="ion-justify-content-center">
         <p class="text-base font-semibold text-space/60">
-          $ {{ (Math.floor(bonusBalance * fiatHandler.price.value * 100) / 100).toFixed(2) }}
+          $ {{ formatCurrency(pointsBalance * currentPrice) }}
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">

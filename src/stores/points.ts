@@ -76,7 +76,7 @@ export const usePoints = defineStore('points', () => {
     return { data, error }
   }
 
-  async function claimTask({ id, answer }: { id: string; answer: string }) {
+  async function claimTask({ id, answer }: { id: string; answer?: string }) {
     if (!pointsToken.value)
       return { data: undefined, error: 'Phone number not verified' }
 

@@ -1,18 +1,20 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
-import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonList, IonSearchbar, IonToolbar } from '@ionic/vue'
+import { computed, ref } from 'vue'
+import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonList, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { RecycleScroller } from 'vue-virtual-scroller'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { storeToRefs } from 'pinia'
 import { useModal } from '@/composables/useModal'
 import TransactionCard from '@/components/TransactionCard.vue'
+import { useTransactions } from '@/stores/transactions'
 
 const { closeModal } = useModal()
-const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
+
+const { transactions } = storeToRefs(useTransactions())
 
 const query = ref('')
-const transactions = computed(() => {
-  return instantPayWallet.transactions.value.filter((tx: Transaction) => {
+const transactionsFiltered = computed(() => {
+  return transactions.value.filter((tx) => {
     if (query.value === '')
       return true
     if (tx.title.toLowerCase().includes(query.value))
@@ -21,7 +23,7 @@ const transactions = computed(() => {
       return true
     if (tx.fiatAmount?.toString().toLowerCase().includes(query.value))
       return true
-    if ((tx.amount / 1e5).toString().toLowerCase().includes(query.value))
+    if ((tx.value / 1e5).toString().toLowerCase().includes(query.value))
       return true
     return false
   })
@@ -55,7 +57,7 @@ const transactions = computed(() => {
       >
     </div>
     <IonList lines="none" class="px-4">
-      <RecycleScroller class="h-full" :items="transactions" :item-size="70">
+      <RecycleScroller class="h-full" :items="transactionsFiltered" :item-size="70">
         <template #default="{ item }">
           <TransactionCard :tx="item" />
         </template>

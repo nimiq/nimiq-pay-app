@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner } from '@ionic/vue'
-import { inject, ref } from 'vue'
+import { ref } from 'vue'
 import type { Ref } from 'vue'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { storeToRefs } from 'pinia'
 import { useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
+import { useRemoteSigner } from '@/stores/remote-signer'
 
 const { closeModal, showNotificationAlert } = useModal()
-const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
+const { remoteBalance } = storeToRefs(useRemoteSigner())
 const amount: Ref<number | undefined> = ref()
 const address = ref('')
 const isLoading = ref(false)
@@ -15,7 +16,7 @@ const isLoading = ref(false)
 async function withdraw() {
   if (!amount.value || !address.value || isLoading.value)
     return
-  if (Nimiq.Policy.coinsToLunas(amount.value) > instantPayWallet.balanceRaw.value)
+  if (Nimiq.Policy.coinsToLunas(amount.value) > remoteBalance.value)
     showNotificationAlert('Not enough funds', true)
   // TODO: handle invalid address
   const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)

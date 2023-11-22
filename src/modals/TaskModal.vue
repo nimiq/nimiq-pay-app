@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed, inject, nextTick, ref, watchEffect } from 'vue'
-import type { ComputedRef, PropType, Ref } from 'vue'
+import { computed, nextTick, ref, watchEffect } from 'vue'
+import type { ComputedRef, PropType } from 'vue'
 import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
 import YouTubePlayer from 'youtube-player'
 import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
-import { BonusWallet } from '@/lib/bonus-wallet'
-import { Modal, useModal } from '@/composables/useModal'
+import { useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import { usePoints } from '@/stores/points'
 
 const props = defineProps({
   task: {
@@ -16,11 +16,19 @@ const props = defineProps({
   },
 })
 
+//TODO: move these
+interface Metadata {
+  type: TaskType
+  options: string[]
+  id: string
+  time: number
+}
+
 const { closeModal, showNotificationAlert } = useModal()
-const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
-const type: ComputedRef<TaskType> = computed(() => props.task ? JSON.parse(props.task.metadata).type : '')
-const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? JSON.parse(props.task.metadata).options : '')
-const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? JSON.parse(props.task.metadata) : null)
+const { claimTask } = usePoints()
+const type: ComputedRef<TaskType> = computed(() => props.task && (JSON.parse(props.task.metadata) as Metadata).type)
+const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? (JSON.parse(props.task.metadata) as Metadata).options : [])
+const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? (JSON.parse(props.task.metadata) as Metadata) : null)
 const inputField = ref()
 const radioValueChecked = ref('')
 const isVideoStarted = ref(false)
@@ -48,7 +56,12 @@ watchEffect(() => {
         if (data === PlayerStates.PLAYING && !isVideoStarted.value) {
           isVideoStarted.value = true
           try {
-            const { task_status } = await bonusWallet.claimTask(props.task.id, {})
+            const { data, error } = await claimTask({ id: props.task.id })
+            if (error || !data) {
+              console.error(error)
+              return
+            }
+            const { task_status } = data
             if (task_status === 'completed')
               isAlreadyClaimed.value = true
           }
@@ -77,7 +90,12 @@ async function handleSubmit() {
   if (!answer && type.value !== 'yt-video')
     return
   if (!isAlreadyClaimed.value) {
-    const { task_status } = await bonusWallet.claimTask(props.task.id, { answer })
+    const { data, error } = await claimTask({ id: props.task.id, answer })
+    if (error || !data) {
+      console.error(error)
+      return
+    }
+    const { task_status } = data
     // TODO: show error and handle errors
     if (task_status !== 'completed')
       return
