@@ -49,7 +49,7 @@ async function onStepDone(value: string) {
     state[step.value.step as InputStepName] = value
     const err = (errorMsg: string) => errors![step.value.step as InputStepName] = errorMsg
     await step.value.beforeNext?.(state, { next: goToNext, err })
-    autofocus(200)
+    autofocus(400)
   }
 }
 
@@ -61,7 +61,8 @@ async function autofocus(timeout = 200) {
   }, timeout)
 }
 
-function onSkip(stepsToSkip?: number) {
+function skip() {
+  const { stepsToSkip } = activeStep.value
   if (!stepsToSkip)
     return
   stepsToShow.value = stepsToShow.value.filter((_, i) => i <= activeIndex.value || i >= activeIndex.value + stepsToSkip)
@@ -74,11 +75,11 @@ function onSkip(stepsToSkip?: number) {
     <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
   </button>
   <ul ref="scroller" class="flex overflow-x-hidden hide-scrollbar snap-x snap-mandatory h-full">
-    <li v-for="{ main, step, title, description, stepsToSkip } in steps" :key="step" class="flex flex-col w-screen pt-16 shrink-0 snap-center snap-always gap-y-4 px-8 h-full">
+    <li v-for="{ main, step, title, description } in steps" :key="step" class="flex flex-col w-screen pt-16 shrink-0 snap-center snap-always gap-y-4 px-8 h-full">
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance]" v-html="title" />
       <p class="[text-wrap:pretty] text-center opacity-60" v-html="description" />
       <div class="flex-1 w-full">
-        <component :is="main" :error-msg="error(step)" @autofocus="autofocus" @done="onStepDone" @skip="onSkip(stepsToSkip)" />
+        <component :is="main" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
       </div>
     </li>
   </ul>

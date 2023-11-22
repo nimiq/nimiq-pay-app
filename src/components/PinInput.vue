@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import type { PropType, Ref } from 'vue'
 import { ref, watch } from 'vue'
+import { stepEmits } from '@/types/steps'
 
-const props = defineProps({
-  errorMsg: { type: Object as () => PropType<Ref<string>> },
-  inputLength: { type: Number, default: 4 },
-})
-
-const emit = defineEmits({
-  done: (_pin: string) => true,
-})
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
+const emit = defineEmits(stepEmits)
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const pinCodeInput = ref('')

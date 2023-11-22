@@ -1,4 +1,4 @@
-import type { VNode } from 'vue'
+import type { EmitsOptions, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 
 export enum FlowName {
@@ -100,3 +100,9 @@ interface StepInitOptions {
 
 export type StepInit = (options?: StepInitOptions) => Step
 export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined }
+
+export const stepEmits: EmitsOptions = {
+  done: (_: string) => undefined,
+  skip: () => undefined,
+  autofocus: () => undefined,
+}

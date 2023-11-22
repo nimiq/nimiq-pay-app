@@ -1,17 +1,10 @@
 <script setup lang="ts">
 import { IonAlert, IonButton } from '@ionic/vue'
 import { ref } from 'vue'
+import { stepEmits } from '@/types/steps'
 
-defineProps({
-  errorMsg: { type: String },
-  canSkip: { type: Boolean, default: false },
-})
-
-defineEmits<{
-  done: [phoneNumber: string]
-  skip: []
-  autofocus: []
-}>()
+defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
+defineEmits(stepEmits)
 
 const phoneNumber = ref('')
 </script>
