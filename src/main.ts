@@ -53,18 +53,14 @@ window.addEventListener('DOMContentLoaded', async () => {
    *    - When the setup flow is finished
    */
 
-  // sleep 1 s
-  await new Promise(resolve => setTimeout(resolve, 1000))
-
   await useConn().init()
-  await useNimiqNetwork().init()
-  await useRemoteSigner().init()
-  useSync().syncWallets()
+  useNimiqNetwork().init()
 
   // TODO Maybe move this logic to a route hook
   if (router.currentRoute.value.path === '/') {
     if (useConn().dbExists && useLocalWallet().hasLocalWallet)
       router.replace('/pin')
+
     else
       router.replace('/setup')
   }

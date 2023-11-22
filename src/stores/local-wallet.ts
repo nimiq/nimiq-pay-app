@@ -14,7 +14,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   const { client } = useNimiqNetwork()
 
   const { entropy } = storeToRefs(useApp())
-  console.log('entropy', entropy)
   const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
 
   const localAddress = computed(() => localWallet.value.address)
@@ -28,18 +27,15 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
-  onMounted(async () => {
-    await client.value?.waitForConsensusEstablished()
+  // onMounted(async () => {
+  //   await client.value?.waitForConsensusEstablished()
+  //   await until(localWallet).toBeTruthy()
 
-    console.log('localWallet', localWallet)
-    await until(localWallet).toBeTruthy()
-    console.log('entropy', entropy)
-
-    client.value?.addHeadChangedListener(async () => {
-      const account = await client.value?.getAccount(localAddress.value)
-      localBalance.value = account?.balance || 0
-    })
-  })
+  //   client.value?.addHeadChangedListener(async () => {
+  //     const account = await client.value?.getAccount(localAddress.value)
+  //     localBalance.value = account?.balance || 0
+  //   })
+  // })
 
   return {
     hasLocalWallet: computed(() => !!entropy?.value),

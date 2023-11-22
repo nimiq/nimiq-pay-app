@@ -12,7 +12,7 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 
 export function useSync() {
   const { client, height: localHeight } = useNimiqNetwork()
-  const { balance: localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, hasHtlcExpired, end, start } = storeToRefs(useRemoteSigner())
 
   // Whether the remote wallet is synced with the local wallet or not.

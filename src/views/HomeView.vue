@@ -21,6 +21,7 @@ import { useFiat } from '@/stores/fiat'
 import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/composables/useNimiqNetwork'
+import { useSync } from '@/composables/useSync'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
@@ -147,22 +148,22 @@ watch(isRecoveryWordsShown, () => {
 
 onMounted(async () => {
   if (!dbExists.value) {
+    // eslint-disable-next-line no-console
     console.log('No DB found, redirecting to setup')
     await router.replace('/setup')
     return
   }
   if (locked.value) {
+    // eslint-disable-next-line no-console
     console.log('DB locked, redirecting to pin')
     await router.replace('/pin')
     return
   }
 
-  // if (await storageManager.isFirstRun()) {
-  //   await storageManager.setFirstRun(false)
-  //   showModal(Modal.RewardsIntro)
-  // }
-
   scrollToFirstNotification()
+
+  await useRemoteSigner().init()
+  useSync().syncWallets()
 })
 </script>
 
