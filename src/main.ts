@@ -32,7 +32,8 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 /* Libs */
 import { useConn } from './stores/conn'
-import { useLocalWallet } from './stores/local-wallet'
+import { useDecrypt } from './composables/useDecrypt'
+import { useDevice } from './composables/useDevice'
 import { useNimiqNetwork } from './stores/useNimiqNetwork'
 
 // applyPolyfills().then(() => jeepSqlite(window))
@@ -42,10 +43,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
   app.use(IonicVue)
   app.use(createPinia())
-  app.use(router)
-  app.use(VueVirtualScroller)
-
-  await router.isReady()
 
   /**
    * Ensures that all the streams which the app relies on are initialized.
@@ -57,14 +54,31 @@ window.addEventListener('DOMContentLoaded', async () => {
   await useConn().init()
   useNimiqNetwork().init()
 
-  // TODO Maybe move this logic to a route hook
-  if (router.currentRoute.value.path === '/') {
-    if (useConn().dbExists && useLocalWallet().hasLocalWallet)
-      router.replace('/pin')
+  const { isWeb } = useDevice()
 
-    else
-      router.replace('/setup')
-  }
+  router.beforeEach((to, from, next) => {
+    const isWebAndNoPin = isWeb && !useDecrypt().hasPin()
+    const isMobileAndNoDb = !isWeb && !useConn().dbExists
+
+    // Check if setup is completed
+    if (isWebAndNoPin || isMobileAndNoDb) {
+      if (to.name === 'Setup') return next()
+      return next({ name: 'Setup', replace: true })
+    }
+
+    // Check if the db is unlocked
+    if (!useDecrypt().decrypted.value) {
+      if (to.name === 'Pin') return next()
+      return next({ name: 'Pin', replace: true })
+    }
+
+    return next()
+  })
+
+  app.use(router)
+  app.use(VueVirtualScroller)
+
+  await router.isReady()
 
   app.mount('#app')
 })

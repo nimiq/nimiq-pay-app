@@ -28,7 +28,6 @@ export const useApp = defineStore('app', () => {
   const sharedOptions = { writeDefaults: false }
   const phoneNumber = useStorageAsync('phoneNumber', '', kv(), sharedOptions)
   const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
-  const pinCode = useStorageAsync('pinCode', '', kv(), sharedOptions)
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
@@ -41,7 +40,6 @@ export const useApp = defineStore('app', () => {
   return {
     phoneNumber,
     referralCode,
-    pinCode,
     entropy,
     hasDoneBackup,
     selectedFiat,

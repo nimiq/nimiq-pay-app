@@ -1,9 +1,21 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useApp } from '@/stores/app'
 import type { Option } from '@/types'
 import { useDevice } from '@/composables/useDevice'
 import { useConn } from '@/stores/conn'
+
+const pinHashLocalStorageKey = '_pin'
+
+/**
+ * Hashes an input to SHA-256, encoded as hex
+ */
+async function hash(pin: string): Promise<string> {
+  const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin))
+  return new Uint8Array(digest).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')
+}
+
+// Must be defined outside the useDecrypt scope, to be shared between calls
+const decrypted = ref(false)
 
 /**
  * Once the db is initialized, the database needs to be decrypted to make operations on it
@@ -14,9 +26,6 @@ export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
   const { isOpen } = storeToRefs(useConn())
-  const { pinCode } = storeToRefs(useApp())
-
-  const decrypted = ref(false)
 
   // No encryption on web, but we simulate PIN requirement
   async function decryptWeb(inputPin: string): Promise<Option<string>> {
@@ -26,17 +35,27 @@ export function useDecrypt() {
     if (!isOpen.value)
       await openDb()
 
-    let error: string | undefined
+    let expectedPinHash = window.localStorage.getItem(pinHashLocalStorageKey)
 
-    if (!pinCode.value && !inputPin)
-      error = 'Both expected and the given PIN are empty'
-    else if (!pinCode.value)
-      pinCode.value = inputPin
-    else if (inputPin !== pinCode.value)
-      error = 'Invalid PIN'
+    if (!expectedPinHash && !inputPin) {
+      return 'Both expected and the given PIN are empty'
+    }
+
+    if (inputPin.length !== 4) return `Invalid PIN length ${inputPin.length}`
+
+    const pinHash = await hash(inputPin)
+
+    // If this is the first time the user opens the app, we need to set the PIN
+    if (!expectedPinHash) {
+      // Set PIN
+      localStorage.setItem(pinHashLocalStorageKey, pinHash)
+      expectedPinHash = pinHash
+    }
+
+    if (pinHash !== expectedPinHash) {
+      return 'Invalid PIN'
+    }
     // else {} If the PIN is correct, we don't need to do anything
-
-    return error
   }
 
   async function decryptMobile(pin: string): Promise<Option<string>> {
@@ -48,8 +67,12 @@ export function useDecrypt() {
       await closeDb()
 
     const error = (await sqlite.isSecretStored()).result
-      ? await sqlite.checkEncryptionSecret(pin).then(({ result }) => !result ? 'There was an error' : undefined).catch(() => 'Invalid PIN')
-      : await sqlite.setEncryptionSecret(pin).then(() => undefined).catch(() => 'There was an error')
+      ? await sqlite.checkEncryptionSecret(pin)
+        .then(({ result }) => !result ? 'There was an error' : undefined)
+        .catch(() => 'Invalid PIN')
+      : await sqlite.setEncryptionSecret(pin)
+        .then(() => undefined)
+        .catch(() => 'There was an error')
 
     if (error) {
       console.error(error)
@@ -79,8 +102,14 @@ export function useDecrypt() {
     decrypted.value = true
   }
 
+  function hasPin() {
+    if (!isWeb) throw new Error('This method is not supported in mobile.')
+    return window.localStorage.getItem(pinHashLocalStorageKey) !== null
+  }
+
   return {
     decrypted,
     decrypt,
+    hasPin,
   }
 }

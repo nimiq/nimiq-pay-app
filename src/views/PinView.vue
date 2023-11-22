@@ -22,10 +22,15 @@ async function handleSubmit() {
   if (pin.value.length < 4)
     return false
 
-  await decrypt(pin.value)
+  const error = await decrypt(pin.value)
+  if (error) {
+    alert(error) // TODO: Provide in-app feedback
+    pin.value = ''
+    return
+  }
   pinField.value?.blur()
   Keyboard.hide()
-  router.replace('/app')
+  await router.replace('/app')
 }
 
 function shown() {
