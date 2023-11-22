@@ -35,9 +35,9 @@ export type PartialSendTxArgs = {
  * @returns
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<Nimiq.ExtendedTransaction> {
-  if (partialArgs.transfer === Transfer.UserPayment) {
+  if (partialArgs.transfer === Transfer.UserPayment && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress,
+      /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
       /* recipientType */ Nimiq.Account.Type.BASIC,
@@ -52,11 +52,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useLocalWallet().address,
+      /* sender */ useLocalWallet().localAddress,
       /* senderType */ Nimiq.Account.Type.BASIC,
       /* recipient */ Nimiq.Address.CONTRACT_CREATION,
       /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* value */ useLocalWallet().balance,
+      /* value */ useLocalWallet().localBalance,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
@@ -65,11 +65,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
     tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
     return await getSignedTxByRemote(tx)
   }
-  else if (partialArgs.transfer === Transfer.RemoteToLocal) {
+  else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress,
+      /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
-      /* recipient */ useLocalWallet().address,
+      /* recipient */ useLocalWallet().localAddress,
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
@@ -80,11 +80,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
     tx.proof = createResolveProof({ mode: 'early', tx })
     return await getSignedTxByRemote(tx)
   }
-  else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
+  else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress,
+      /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
-      /* recipient */ useLocalWallet().address,
+      /* recipient */ useLocalWallet().localAddress,
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
@@ -97,7 +97,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
   }
   else if (partialArgs.transfer === Transfer.ExtendRemote) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress,
+      /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.CONTRACT_CREATION,
       /* recipientType */ Nimiq.Account.Type.HTLC,
@@ -116,7 +116,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
 }
 
 async function getSignedTxByRemote(tx: ExtendedTransaction) {
-  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress.toUserFriendlyAddress(), tx })
+  if (!useRemoteSigner().remoteAddress)
+    return { data: undefined, error: 'Remote address is undefined' }
+
+  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(), tx })
   if (error)
     return { data: undefined, error }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }

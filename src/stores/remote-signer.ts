@@ -38,7 +38,7 @@ function useRemoteSignerDb() {
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { height } = useNimiqNetwork()
+  const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateValidity } = useRemoteSignerDb()
@@ -62,19 +62,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   async function init() {
     if (!hasLocalWallet.value)
       return
-    console.log('Initializing remote signer')
     const remoteSignerDb = await getActiveRemoteSigner()
-    console.log('Remote signer from db', remoteSignerDb)
     if (!remoteSignerDb)
       return
-    console.log('Getting remote signer from API')
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
-    console.log('Remote signer from API', remoteSignerApi)
     if (error || !remoteSignerApi)
       return
     setRemoteSigner(remoteSignerApi)
     remoteSigner.value = remoteSignerApi
-    console.log('Remote signer initialized')
   }
 
   const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)

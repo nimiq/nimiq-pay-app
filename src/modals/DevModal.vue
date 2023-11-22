@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
-import Nimiq from '@nimiq/core-web'
 import { Clipboard } from '@capacitor/clipboard'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
@@ -13,7 +12,7 @@ import { Transfer } from '@/types/database'
 
 const router = useRouter()
 const { consensus, head, height, peerCount } = storeToRefs(useNimiqNetwork())
-const { localAddress, /* localBalance */ } = storeToRefs(useLocalWallet())
+const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
 
@@ -63,14 +62,14 @@ async function handleClearTx() {
         <p @click="() => writeToClipboard(localAddress && localAddress.toUserFriendlyAddress() || '')">
           Address: <code>{{ localAddress && localAddress.toUserFriendlyAddress() }}</code>
         </p>
-        <!-- <p>Balance: <code>{{ localBalance }} NIM</code></p>
+        <p>Balance: <code>{{ localBalance }} NIM</code></p>
         <IonButton
-          :disabled="consensus !== Nimiq.Client.ConsensusState.ESTABLISHED || localBalance === 0"
+          :disabled="consensus !== 'established' || localBalance === 0"
           @click="sendTx({ transfer: Transfer.LocalToRemote })"
         >
           Move
           to instant
-        </IonButton> -->
+        </IonButton>
       </IonCardContent>
     </IonCard>
     <IonCard>
