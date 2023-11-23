@@ -5,6 +5,7 @@ export enum FlowName {
   Setup = 'setup',
   SetupWithPromoCode = 'setupWithPromoCode',
   Login = 'login',
+  VerifyPhone = 'verifyPhone',
   OnBoardingPoints = 'onBoardingPoints',
   OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
@@ -50,15 +51,6 @@ export const isInputStep = (step: Step): step is InputStep => inputSteps.include
 export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
 
 export type State = Record<InputStepName, string>
-
-export enum InputComponent {
-  Bricks = 'bricks',
-  Pin = 'pin',
-}
-
-export enum InfoComponent {
-  OnBoarding = 'onBoarding',
-}
 
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
 

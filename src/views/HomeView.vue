@@ -22,6 +22,8 @@ import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
+import { initializeFlow } from '@/composables/utils/steps'
+import { FlowName } from '@/types/steps'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
@@ -196,7 +198,7 @@ onMounted(async () => {
           <IonButton
             class="text-base normal-case"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="phoneNumber ? showModal(Modal.Rewards) : showModal(Modal.NewPhone)"
+            @click="phoneNumber ? showModal(Modal.Rewards) : initializeFlow(FlowName.VerifyPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{

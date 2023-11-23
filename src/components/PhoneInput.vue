@@ -4,9 +4,13 @@ import { ref } from 'vue'
 import { stepEmits } from '@/types/steps'
 
 defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
-defineEmits(stepEmits)
+const emit = defineEmits(stepEmits)
 
 const phoneNumber = ref('')
+
+function handleSubmit() {
+  setTimeout(() => emit('done', phoneNumber.value), 200)
+}
 </script>
 
 <template>
@@ -18,7 +22,10 @@ const phoneNumber = ref('')
     <p class="text-sm font-semibold text-space/50">
       You get an SMS. Standard rates may apply. {{ canSkip }}
     </p>
-    <div class="flex flex-col justify-center mt-auto pb-6">
+    <p v-if="errorMsg">
+      {{ errorMsg }}
+    </p>
+    <div class="flex flex-col justify-center pb-6 mt-auto">
       <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
         Verify
       </IonButton>
@@ -27,5 +34,5 @@ const phoneNumber = ref('')
       </IonButton>
     </div>
   </div>
-  <IonAlert trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="[{ text: 'Cancel', handler: $emit('autofocus') }, { text: 'Continue', handler: () => $emit('done', phoneNumber) }]" />
+  <IonAlert trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="[{ text: 'Cancel', handler: () => $emit('autofocus') }, { text: 'Continue', handler: handleSubmit }]" />
 </template>

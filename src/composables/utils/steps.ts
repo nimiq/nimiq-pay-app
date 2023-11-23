@@ -1,21 +1,15 @@
 import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
-import { useRouter } from 'vue-router'
+import { Modal, useModal } from '@/composables/useModal'
 import type { Flow, State, Step, StepInit } from '@/types/steps'
 import { FlowName, StepName, defaultStepInitOptions } from '@/types/steps'
-
-// @ts-expect-error The component is fine
 import FlowCmp from '@/components/Flow.vue'
 
-// @ts-expect-error The component is fine
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
-// @ts-expect-error The component is fine
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
-// @ts-expect-error The component is fine
+const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue'))
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
-// @ts-expect-error The component is fine
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
-// @ts-expect-error The component is fine
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
@@ -105,7 +99,7 @@ const phoneNumberConfirmStep: StepInit = () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'We\'ve sent you a code, please confirm',
-  main: h(PhoneInput),
+  main: h(CodeInput, { inputLength: 8 }),
   beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
     if (!phoneNumberConfirm)
       err('Please enter a verification code')
@@ -201,12 +195,14 @@ const qrCodeScannerStep: StepInit = () => ({
 })
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
+const onBoardingPointsSteps = [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3]
 
 const flows: Record<FlowName, StepInit[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],
   [FlowName.Setup]: [...baseSetupSteps],
+  [FlowName.VerifyPhone]: [phoneNumberStep, phoneNumberConfirmStep, ...onBoardingPointsSteps],
   [FlowName.SetupWithPromoCode]: [promoCodeStep, ...baseSetupSteps],
-  [FlowName.OnBoardingPoints]: [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3],
+  [FlowName.OnBoardingPoints]: [...onBoardingPointsSteps],
   [FlowName.OnBoardingCashback]: [onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4],
   [FlowName.OnBoardingBluecode]: [onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3],
 }
@@ -220,8 +216,9 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 
     goTo('/app')
   },
+  [FlowName.VerifyPhone]: () => useModal().showModal(Modal.Rewards),
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
-  [FlowName.OnBoardingPoints]: async () => { console.log('On boarding points done'); return Promise.resolve() },
+  [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Rewards),
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
 }

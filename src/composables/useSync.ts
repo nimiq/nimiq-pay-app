@@ -35,6 +35,9 @@ export function useSync() {
    * 3. Else move the funds from the local wallet to the remote wallet.
    */
   async function handleFunds() {
+    console.log(remoteAddress.value)
+    if (!remoteAddress.value) // TODO FIX MEEEE
+      return
     const [localAccount, remoteAccount] = await Promise.all([client.value?.getAccount(localAddress.value), client.value?.getAccount(remoteAddress.value!)])
     const remoteBalance = remoteAccount?.balance || 0
     localBalance.value = localAccount?.balance || 0
