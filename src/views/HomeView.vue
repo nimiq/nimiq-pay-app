@@ -163,7 +163,7 @@ onMounted(async () => {
   scrollToFirstNotification()
 
   await useRemoteSigner().init()
-  useSync().syncWallets()
+  await useSync().syncWallets()
 })
 </script>
 

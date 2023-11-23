@@ -1,102 +1,21 @@
 <script setup lang="ts">
-import { inject, markRaw, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
+import { markRaw, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { IonFooter, IonToolbar } from '@ionic/vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
-import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import PayConfirm from './PayConfirm.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { useQRScanner } from '@/composables/useQRScanner'
 
 const isDev = import.meta.env.DEV
 
-const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
-const nav = (document.querySelector('[data-pay-nav]')) as Nav & HTMLElement
-const isScanning = ref(false)
-
-async function handleSkip() {
-  if (isDev) {
-    console.log('Skipping QR code scan')
-    await stopScan()
-    await instantPayWallet.preparePayment({
-      address: Nimiq.Address.fromString('NQ89 J7V7 PFEY JNB1 CVKU A32G JQN9 U1BA TSE4'),
-      amount: Nimiq.Policy.coinsToLunas(7),
-      message: 'Ref #75VZ',
-      label: 'Test Store',
-      rail: 'CPL',
-      railId: '75VZloGY',
-    })
-    navigateToPayConfirm()
-  }
-}
-
-async function startScan() {
-  await BarcodeScanner.checkPermission({ force: true })
-  await BarcodeScanner.hideBackground()
-  isScanning.value = true
-  document.body.classList.add('scanner-active')
-  while (true) {
-    isDev && console.log('Scanning QR code')
-    const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
-    if (!result.hasContent)
-      continue
-    if (!result.content.startsWith('nimiq:'))
-      continue
-    try {
-      const url = new URL(result.content)
-      const address = Nimiq.Address.fromString(url.pathname)
-      const searchParams = new URLSearchParams(url.search)
-      const amountString = searchParams.get('amount')
-      if (amountString == null)
-        continue
-      const amount = Math.round(Number.parseFloat(amountString) * 100000)
-      const message = searchParams.get('message')
-      const label = searchParams.get('label')
-      const gocrypto_id = searchParams.get('gocrypto_id')
-      const cpl_id = searchParams.get('cpl_id')
-      let rail, railId
-      if (gocrypto_id != null) {
-        rail = 'gocrypto'
-        railId = gocrypto_id
-      }
-      else if (message !== null && (message.startsWith('Ref #') && label !== null || cpl_id !== null)) {
-        rail = 'CPL'
-        railId = cpl_id || undefined
-      }
-      await instantPayWallet.preparePayment({ address, amount, message, label, rail, railId })
-      break
-    }
-    catch (e) {
-      console.log(e)
-    }
-  }
-  await stopScan()
-  isScanning.value = false
-  navigateToPayConfirm()
-}
-
-async function stopScan() {
-  document.body.classList.remove('scanner-active')
-  await BarcodeScanner.showBackground()
-  await BarcodeScanner.stopScan()
-}
-
-function navigateToPayConfirm() {
-  nav.push(markRaw(PayConfirm))
-}
-
-onMounted(async () => {
-  isDev && console.log('Preparing barcode scanner')
-  await BarcodeScanner.prepare({ cameraDirection: 'back' })
-  setTimeout(() => startScan(), 500)
-})
-onBeforeUnmount(stopScan)
-onDeactivated(stopScan)
+const { isScanning, reset, setDummyData } = useQRScanner()
 </script>
 
 <template>
   <ModalTemplate>
     <div class="relative w-full h-full">
-      <p class="absolute top-0 z-10 text-2xl font-bold -translate-x-1/2 left-1/2" @click="handleSkip">
+      <p class="absolute top-0 z-10 text-2xl font-bold -translate-x-1/2 left-1/2" @click="setDummyData">
         Scan QR code
         <span v-if="isDev" class="block text-sm font-normal text-blue-300">Click here to use mockup</span>
       </p>

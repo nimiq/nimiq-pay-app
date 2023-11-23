@@ -93,7 +93,7 @@ export class InstantPayWallet {
       if (nimiqWallet.address.value) {
         console.groupCollapsed('📡 InstantPay Top Up')
         // Get last txs and check if they are in the tx table
-        const txArray = await client.getTransactionsByAddress(nimiqWallet.address.value)
+        const txArray = await client.getTransactionsByAddress(nimiqWallet.address.value.toUserFriendlyAddress(false))
         console.log('txArray', txArray)
 
         for (const tx of txArray) {

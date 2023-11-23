@@ -1,7 +1,6 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { ref, toValue } from 'vue'
 import { useApp } from './app'
-import { useFiatDatabase } from '@/composables/useDatabase'
 import { useDevice } from '@/composables/useDevice'
 import { useCurrencyPriceApi } from '@/composables/useApi'
 import type { AsyncResult } from '@/types'

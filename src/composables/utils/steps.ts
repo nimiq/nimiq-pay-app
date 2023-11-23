@@ -18,8 +18,6 @@ const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoard
 // @ts-expect-error The component is fine
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
 
-const router = useRouter()
-
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
 const PHONE_NUMBER_REGEX = /^\d{4,}$/
@@ -194,6 +192,11 @@ const onBoardingBluecode3: StepInit = () => ({
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
+  main: h(OnBoardingScreen),
+})
+
+const qrCodeScannerStep: StepInit = () => ({
+  title: 'Scan QR code',,
   main: h(OnBoardingScreen),
 })
 

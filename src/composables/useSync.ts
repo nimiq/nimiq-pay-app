@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 import { storeToRefs } from 'pinia'
 import { computedAsync, until } from '@vueuse/core'
 import { computed } from 'vue'
@@ -34,14 +36,17 @@ export function useSync() {
   async function handleFunds() {
     const account = await client.value?.getAccount(localAddress.value)
     localBalance.value = account?.balance || 0
-    if (localBalance.value === 0 || nodesAreSynced.value)
+
+    console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Are nodes synced? ${nodesAreSynced.value}`)
+    if (localBalance.value === 0 || !nodesAreSynced.value)
       return
-    // eslint-disable-next-line no-console
-    console.log('Funds received in local wallet. Moving funds to remote wallet.')
+
+    console.log(`Processing funds received in local wallet. Local balance: ${localBalance.value} NIM. Remote balance: ${remoteBalance.value} NIM. Creating ${remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote} tx`)
     useTransactions().sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
   }
 
   function extendValidity() {
+    console.log(`Should the HTLC be extended? ${htlcCanBeExtended.value}?`)
     if (htlcCanBeExtended.value)
       useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
   }
@@ -53,6 +58,7 @@ export function useSync() {
    * Note: This function is just a safety net. The server should never miss the deadline.
    */
   function checkRemoteValidity() {
+    console.log(`Did the HTLC expire? ${hasHtlcExpired.value}?`)
     if (!hasHtlcExpired.value)
       useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
   }
@@ -71,9 +77,13 @@ export function useSync() {
     checkRemoteValidity()
     extendValidity()
 
-    client.value?.addBlockListener(handleFunds)
-    client.value?.addBlockListener(checkRemoteValidity)
-    client.value?.addBlockListener(extendValidity)
+    client.value?.addBlockListener(() => {
+      console.group(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+      handleFunds()
+      checkRemoteValidity()
+      extendValidity()
+      console.groupEnd()
+    })
   }
 
   return {

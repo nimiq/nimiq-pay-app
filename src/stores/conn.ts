@@ -48,6 +48,10 @@ export const useConn = defineStore('conn', () => {
       await sqlite.initWebStore()
     }
 
+    if (import.meta.env.DEV)
+    // eslint-disable-next-line no-console
+      console.log(`📚 Initializing database`, migrations)
+
     for (const { statements, version } of migrations)
       await sqlite.addUpgradeStatement(DB_NAME, version, statements)
 

@@ -62,13 +62,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Check if setup is completed
     if (isWebAndNoPin || isMobileAndNoDb) {
-      if (to.name === 'Setup') return next()
+      if (to.name === 'Setup')
+        return next()
       return next({ name: 'Setup', replace: true })
     }
 
     // Check if the db is unlocked
     if (!useDecrypt().decrypted.value) {
-      if (to.name === 'Pin') return next()
+      if (to.name === 'Pin')
+        return next()
       return next({ name: 'Pin', replace: true })
     }
 

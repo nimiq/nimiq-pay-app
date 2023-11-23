@@ -37,9 +37,9 @@ export enum SQLQuery {
   UpdateValidityRemoteSigner = 'UPDATE remote_signers SET start = ?, end = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE active = 1',
 
-  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nimPrices (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',
-  InsertPrice = 'INSERT INTO nimPrices (currency, ts, value) VALUES (?, ?, ?)',
-  GetPriceAt = 'SELECT * FROM nimPrices WHERE ts = ? AND currency = ? ORDER BY ts DESC LIMIT 1',
+  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nim_prices (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',
+  InsertPrice = 'INSERT INTO nim_prices (currency, ts, value) VALUES (?, ?, ?)',
+  GetPriceAt = 'SELECT * FROM nim_prices WHERE ts = ? AND currency = ? ORDER BY ts DESC LIMIT 1',
 }
 
 interface Migration {
@@ -54,7 +54,7 @@ export const migrations: Migration[] = [
       SQLQuery.CreateKvTable,
       SQLQuery.CreateTxsTable,
       SQLQuery.CreateRemoteSignersTable,
-      SQLQuery.CreateKvTable,
+      SQLQuery.CreateNimPricesTable,
     ],
   },
 ]

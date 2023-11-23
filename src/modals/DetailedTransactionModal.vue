@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { basket, close } from 'ionicons/icons'
-import { type PropType, onMounted } from 'vue'
+import type { PropType } from 'vue'
 import { useModal } from '@/composables/useModal'
 import type { Transaction } from '@/types/transactions'
 
@@ -58,7 +58,7 @@ const { closeModal } = useModal()
       </p>
       <p class="flex justify-between text-space/60">
         <span>Date</span>
-        <span>{{ (new Date(tx.ts * 1e3)).toLocaleDateString() }}</span>
+        <span>{{ (new Date(tx.timestamp * 1e3)).toLocaleDateString() }}</span>
       </p>
       <p v-if="tx.location" class="flex justify-between text-space/60">
         <span>Location</span>

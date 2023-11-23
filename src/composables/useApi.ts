@@ -94,7 +94,7 @@ export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
   interface GetRemoteSignerArg { address: MaybeRef<Nimiq.Address> }
-  interface SendTransactionArg { address: MaybeRef<string>; tx: MaybeRef<Nimiq.Transaction | string | object> }
+  interface SendTransactionArg { address: MaybeRef<string>; tx: MaybeRef<Nimiq.Transaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>; rawTx: MaybeRef<string> }
 
   interface StatusRes { status: 'good' | 'bad'; blockHeight: number; servicePublicKey: string; network: string }
@@ -108,7 +108,7 @@ export function useRemoteSignerApi() {
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
-    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress()}`, baseWalletUrl))
+    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseWalletUrl))
     if (error || !data?.address)
       return { data: undefined, error: error || 'No remote signer found' }
 
@@ -131,7 +131,7 @@ export function useRemoteSignerApi() {
     getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction>(new URL(`/tx/${v(hash)}`, baseWalletUrl)),
     getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[]>(new URL(`/txs/${v(address)}`, baseWalletUrl)),
     getRemoteSigner,
-    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseWalletUrl), { body: { tx } }),
+    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseWalletUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
     sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseWalletUrl), { body }),
   }
 }

@@ -63,10 +63,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!hasLocalWallet.value)
       return
     // TODO:
-    // const remoteSignerDb = await getActiveRemoteSigner()
-    // if (remoteSignerDb)
-    //   return remoteSignerDb
+    const remoteSignerDb = await getActiveRemoteSigner()
+    if (remoteSignerDb)
+      remoteSigner.value = remoteSignerDb
+    else
+      await updateRemoteSigner()
+  }
 
+  async function updateRemoteSigner() {
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
     if (error || !remoteSignerApi)
       return
@@ -107,6 +111,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     updateBalance,
     updateValidity,
+    updateRemoteSigner,
 
     init,
   }

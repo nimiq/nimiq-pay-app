@@ -62,6 +62,15 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
     return { data: tx, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
+    console.log({
+      localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
+      localBalance: useLocalWallet().localBalance,
+      remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+      remoteBalance: useRemoteSigner().remoteBalance,
+      remoteHeight: useRemoteSigner().remoteHeight,
+      remotePublicKey: useRemoteSigner().remotePublicKey,
+      remoteProofSize: useRemoteSigner().remoteProofSize,
+    })
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useLocalWallet().localAddress,
       /* senderType */ Nimiq.Account.Type.BASIC,
@@ -130,7 +139,7 @@ async function getSignedTxByRemote(tx: ExtendedTransaction) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: 'Remote address is undefined' }
 
-  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(), tx })
+  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(false), tx })
   if (error)
     return { data: undefined, error }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }
