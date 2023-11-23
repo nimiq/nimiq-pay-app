@@ -49,11 +49,10 @@ const notificationArray = ref([
     subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
   },
-
-  {
-    title: 'Buy NIM with Credit Card',
-    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
-  },
+  // {
+  //   title: 'Buy NIM with Credit Card',
+  //   action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
+  // },
 ])
 
 function removeNotification(index: number) {
