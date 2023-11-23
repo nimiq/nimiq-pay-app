@@ -33,8 +33,10 @@ const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isRecoveryWordsShown = computed(() => !storageManager.isBackupDone().value && instantPayWallet.balance.value > 0)
 // TODO: remove this and use a store for pointsBalance
 // This should be updated every time there is a task claimed
+const pointsReloadTrigger = ref(0)
 const pointsBalance = computedAsync(async () => {
   console.log('height:', nimiqNetworkClient.head.value?.height)
+  console.debug('pointsReloadTrigger:', pointsReloadTrigger.value)
   return await bonusWallet.getParticipantBalance()
 }, 0)
 const isReferralCardShown = ref(true)
@@ -163,6 +165,15 @@ onMounted(async () => {
   // bonusWallet.checkDelayedRedeemVoucher()
   scrollToFirstNotification()
 })
+
+function onPointsClick() {
+  if(isPhoneRegistered.value) {
+    pointsReloadTrigger.value++
+    showModal(ModalType.Rewards)
+   } else {
+    showModal(ModalType.NewPhone)
+   }
+}
 </script>
 
 <template>
@@ -194,7 +205,7 @@ onMounted(async () => {
           <IonButton
             class="text-base normal-case"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="isPhoneRegistered ? showModal(ModalType.Rewards) : showModal(ModalType.NewPhone)"
+            @click="onPointsClick"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{
