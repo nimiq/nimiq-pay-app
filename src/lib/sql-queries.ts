@@ -25,9 +25,9 @@ export enum SQLQuery {
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
-  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, message TEXT, status TEXT, raw TEXT, rail TEXT, railPeerId TEXT, transfer TEXT)',
+  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, locationName TEXT)',
   SelectPaginationTransactions = 'SELECT * FROM transactions ORDER BY timestamp DESC LIMIT ? OFFSET ?',
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, recipient, amount, fee, message, status, raw, rail, railPeerId, transfer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, locationName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ClearTxHistory = 'DELETE FROM transactions',
 
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',

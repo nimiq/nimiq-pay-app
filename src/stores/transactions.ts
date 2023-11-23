@@ -2,7 +2,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { onMounted, readonly, ref, watch } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
-import type { PartialSendTxArgs, Transaction } from '@/types/transactions'
+import type { PartialSendTxArgs, Transaction, TransactionSentByUser } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
@@ -59,30 +59,32 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error }
     await client.value!.sendTransaction(signedTx!)
 
-    const plainSignedTx = signedTx!.toPlain()
+    const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message } } = signedTx!.toPlain()
 
     const tx = {
       ...partialTx,
-      fee: signedTx!.fee,
-      recipient: signedTx!.recipient.toUserFriendlyAddress(),
+      fee,
+      recipient,
       timestamp: Date.now() / 1000,
       status: Nimiq.Client.TransactionState.PENDING,
-      hash: signedTx!.hash.toString(),
-      sender: signedTx!.sender.toUserFriendlyAddress(),
-      value: signedTx!.value,
+      hash,
+      sender,
+      amount,
       raw: signedTx!.serialize().toString(),
-      rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
-      railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
-      railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
-      message: signedTx!.data ? Nimiq.BufferUtils.toAscii(signedTx!.data) : undefined,
-      transfer: partialTx.transfer,
-      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
-    }
+      message,
+      // railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
+      // peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
+      // peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${plainSignedTx.sender.substring(0, 9)}...`),
+      // rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
+      // railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
+      // railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
+      // transfer: partialTx.transfer,
+    } as TransactionSentByUser
 
     await upsertTx(tx)
-    // updateBalance(remoteBalance.value + tx.value, remoteAddress.value!)
+    updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
     updateActiveWallet()
-    return { data: await parseTx(tx), error: undefined }
+    return { data: tx, error: undefined }
   }
 
   return {
