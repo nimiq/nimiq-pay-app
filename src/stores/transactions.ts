@@ -93,7 +93,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     await upsertTx(tx)
-    updateBalance(remoteBalance.value + tx.value, remoteAddress.value!)
+    // updateBalance(remoteBalance.value + tx.value, remoteAddress.value!)
     updateActiveWallet()
     return { data: await parseTx(tx), error: undefined }
   }

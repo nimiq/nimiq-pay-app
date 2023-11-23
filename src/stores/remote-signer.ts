@@ -22,15 +22,19 @@ function useRemoteSignerDb() {
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
       await run(SQLQuery.DeactivateRemoteSigners)
       // eslint-disable-next-line no-console
-      console.log(':black_nib:  Deactivated old Remote Signer. Inserting remote signer', address, balance, proofSize, publicKey, start, end, active)
+      console.log('✒️ Deactivated old Remote Signer. Inserting remote signer', { address, balance, proofSize, publicKey, start, end, active })
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
     async updateBalance(newBalance: number, address: Nimiq.Address) {
+      // eslint-disable-next-line no-console
+      console.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
       await run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
     },
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
+      // eslint-disable-next-line no-console
+      console.log(`✒️ Updating active remote signer ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
       await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
     },
   }
@@ -111,7 +115,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
   const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
-  const hasHtlcExpired = computed(() => remoteAddress && end.value < height.value)
+  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
 
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 

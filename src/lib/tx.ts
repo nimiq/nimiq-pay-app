@@ -62,13 +62,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     return { data: tx, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
-    console.log({
-      localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-      localBalance: useLocalWallet().localBalance,
-      remoteBalance: useRemoteSigner().remoteBalance,
-      remoteHeight: useRemoteSigner().remoteHeight,
-      remotePublicKey: useRemoteSigner().remotePublicKey,
-    })
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useLocalWallet().localAddress,
       /* senderType */ Nimiq.Account.Type.BASIC,
@@ -93,7 +86,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     })
     return { data: tx, error: undefined }
   }
-  else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress) {
+  else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress && useRemoteSigner().isHtlcActive) {
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
