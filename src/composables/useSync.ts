@@ -15,7 +15,7 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 export function useSync() {
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { updateActiveWallet } = useRemoteSigner()
 
   // Whether the remote wallet is synced with the local wallet or not.
@@ -35,22 +35,23 @@ export function useSync() {
    * 3. Else move the funds from the local wallet to the remote wallet.
    */
   async function handleFunds() {
-    const account = await client.value?.getAccount(localAddress.value)
-    localBalance.value = account?.balance || 0
+    const [localAccount, remoteAccount] = await Promise.all([client.value?.getAccount(localAddress.value), client.value?.getAccount(remoteAddress.value!)])
+    const remoteBalance = remoteAccount?.balance || 0
+    localBalance.value = localAccount?.balance || 0
 
-    console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Are nodes synced? ${nodesAreSynced.value}`)
+    console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Are nodes synced? ${nodesAreSynced.value}`)
     if (localBalance.value === 0 || !nodesAreSynced.value)
       return
 
-    if (remoteBalance.value > 0) {
-      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx`)
-      if (isHtlcActive && isRemoteOk)
+    if (remoteBalance > 0) {
+      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
+      if (isHtlcActive.value && isRemoteOk.value)
         useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
       else
         console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
     }
     else {
-      console.log(`Creating new HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.LocalToRemote} tx`)
+      console.log(`Creating new HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Creating ${Transfer.LocalToRemote} tx`)
       useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
     }
   }
