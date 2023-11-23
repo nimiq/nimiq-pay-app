@@ -40,42 +40,32 @@
 //   }
 import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-
-interface QRData {
-  address: Nimiq.Address
-  amount: number
-  message?: string
-  label?: string
-  rail?: string
-  railId?: string
-}
+import type { MerchantPaymentInfo } from '@/types/steps'
+import { Rail } from '@/types/transactions'
 
 export function useQRScanner() {
   const isDev = import.meta.env.DEV
 
   const isScanning = ref(false)
-  const data = ref<QRData>()
+  const data = ref<MerchantPaymentInfo>()
 
   function parseData(url: URL) {
     const searchParams = new URLSearchParams(url.search)
-    const address = Nimiq.Address.fromString(url.pathname)
+    const recipient = url.pathname
     const amount = Math.round(Number.parseFloat(searchParams.get('amount') || '0') * 100000)
-    if (!amount || !address)
+    if (!amount || !recipient)
       return
 
     const message = searchParams.get('message') || undefined
     const label = searchParams.get('label') || undefined
 
-    const gocryptoId = searchParams.get('gocrypto_id') || undefined
-    const cplId = searchParams.get('cpl_id') || undefined
-    let providerInfo: Pick<QRData, 'rail' | 'railId'> = {}
-
-    if (gocryptoId)
-      providerInfo = { rail: 'gocrypto', railId: gocryptoId }
-    else if (message && message.startsWith('Ref #') && label || cplId)
-      providerInfo = { rail: 'CPL', railId: cplId }
-
-    data.value = { address, amount, message, label, ...providerInfo }
+    if (searchParams.has(Rail.GoCrypto))
+      data.value = { recipient, amount, message, locationName: label, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)! }
+    else if (searchParams.has(Rail.CryptoPaymentLink))
+      data.value = { recipient, amount, message, locationName: label, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)! }
+    else
+      // This is a fallback. We found the amount and the recipient, but we don't know the rail.
+      data.value = { recipient, amount, message, locationName: label }
   }
 
   const stopScan = async () => {
@@ -112,18 +102,10 @@ export function useQRScanner() {
   function setDummyData() {
     if (!isDev)
       return
-
+    const url = new URL('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=7&message=Ref%20%2375VZ&label=Test%20Store&cpl_id=75VZloGY')
     // eslint-disable-next-line no-console
-    console.log('📷  Setting dummy data')
-
-    data.value = {
-      address: Nimiq.Address.fromString('NQ89 J7V7 PFEY JNB1 CVKU A32G JQN9 U1BA TSE4'),
-      amount: Nimiq.Policy.coinsToLunas(7),
-      message: 'Ref #75VZ',
-      label: 'Test Store',
-      rail: 'CPL',
-      railId: '75VZloGY',
-    }
+    console.log(`📷  Setting dummy data with ${url.href}`)
+    parseData(url)
     stopScan()
   }
 

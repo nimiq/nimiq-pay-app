@@ -19,31 +19,30 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, state, steps: stepsMap } = props.flow
-const stepsToShow = ref(Object.keys(stepsMap) as StepName[])
-const steps = computed(() => stepsToShow.value.map(s => stepsMap[s]()))
+const { onDone: onFlowDone, state, steps } = props.flow
+const stepsToShow = ref(steps.map(s => s.step))
 
 const scroller = ref<HTMLElement>()
 const { nextSlide, activeIndex } = useCarousel(scroller, useWindowSize().width)
 const isLast = computed(() => activeIndex.value === stepsToShow.value.length - 1)
 
-const activeStep = computed(() => steps.value[activeIndex.value])
+const activeStep = computed(() => steps[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
+const step = computed(() => steps[activeIndex.value])
 
 type Errors = Record<InputStepName, string>
-let errors: Errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
-watchEffect(() => errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
+let errors: Errors = reactive(Object.fromEntries(steps.filter(isInputStep).map(s => [s.step, ''])) as Errors)
+watchEffect(() => errors = reactive(Object.fromEntries(steps.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 const error = (step: StepName) => isActiveStepInput.value ? errors![step as InputStepName] : undefined
 
 function goToNext() {
   isLast.value ? onFlowDone(state, { goTo: replace }) : nextSlide()
 }
-const step = computed(() => steps.value[activeIndex.value])
 
 onMounted(autofocus)
 
-async function onStepDone(value: string) {
+async function onStepDone(value: any /* The types are a bit hard for this one */) {
   if (isActiveStepInfo.value) { goToNext() }
   else if (isActiveStepInput.value) {
     state[step.value.step as InputStepName] = value

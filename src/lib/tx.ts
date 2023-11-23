@@ -3,20 +3,8 @@ import type { AsyncResult } from '@/types'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import type { PartialSendTxArgs } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
-
-export type PartialSendTxArgs = {
-  transfer: Transfer.UserPayment
-  recipient: string
-  value: number
-  rail: string
-  railId: string
-  railPeerId?: string
-  peerName: string
-  message?: string
-} | {
-  transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.ExtendRemote | Transfer.RemoteToLocalAfterTimeout
-}
 
 // TODO Check if this function is OK!
 /**
@@ -52,7 +40,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ partialArgs.value,
+      /* value */ partialArgs.amount,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,

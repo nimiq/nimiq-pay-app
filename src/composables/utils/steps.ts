@@ -1,9 +1,12 @@
-import { defineAsyncComponent, h } from 'vue'
+import { defineAsyncComponent, h, ref } from 'vue'
 import { modalController } from '@ionic/vue'
 import { Modal, useModal } from '@/composables/useModal'
-import type { Flow, State, Step, StepInit } from '@/types/steps'
-import { FlowName, StepName, defaultStepInitOptions } from '@/types/steps'
+import type { Flow, State, StepInit } from '@/types/steps'
+import { FlowName, PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
+
+// @ts-expect-error The component is fine
 import FlowCmp from '@/components/Flow.vue'
+import { Transfer } from '@/types/transactions'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -11,6 +14,10 @@ const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue'
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
+// @ts-expect-error The component is fine
+const QRCodeScanner = defineAsyncComponent(() => import('@/components/QRCodeScanner.vue'))
+// @ts-expect-error The component is fine
+const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
@@ -195,9 +202,20 @@ const onBoardingBluecode3: StepInit = () => ({
 })
 
 const qrCodeScannerStep: StepInit = () => ({
+  step: StepName.QRCodeScanner,
   title: 'Scan QR code',
-  main: h(OnBoardingScreen),
+  main: h(QRCodeScanner),
 })
+
+const paymentPreviewStep: StepInit = () => {
+  const title = ref<string>('')
+  return {
+    step: StepName.PaymentPreview,
+    title,
+    main: h(PaymentPreview),
+    async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
+  }
+}
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
 const onBoardingPointsSteps = [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3]
@@ -210,12 +228,13 @@ const flows: Record<FlowName, StepInit[]> = {
   [FlowName.OnBoardingPoints]: [...onBoardingPointsSteps],
   [FlowName.OnBoardingCashback]: [onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4],
   [FlowName.OnBoardingBluecode]: [onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3],
+  [FlowName.NimOrPointsPayment]: [qrCodeScannerStep, paymentPreviewStep],
 }
 
 const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.Login]: async state => console.log(state.pinCode),
   [FlowName.Setup]: async (state, { goTo }) => {
-    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode)
+    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
     if (err)
       console.error(err)
 
@@ -226,11 +245,26 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Points),
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
+  [FlowName.NimOrPointsPayment]: async (state, { goTo }) => {
+    const merchantPaymentInfo = state[StepName.QRCodeScanner]!
+    switch (state[StepName.PaymentPreview]) {
+      case PaymentMethod.Nim:
+        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo })
+        break
+      case PaymentMethod.Points:
+        if (!merchantPaymentInfo.message)
+          throw new Error(`You cannot pay with points without a message. ${JSON.stringify(merchantPaymentInfo)}`)
+
+        // TODO Check this is correct
+        await (await import('@/stores/points')).usePoints().payWithPoints({ type: 'TODO', reference: merchantPaymentInfo.message, destination: merchantPaymentInfo.recipient })
+    }
+    goTo('/app')
+  },
 }
 
 export function getFlow(name: FlowName): Flow {
-  const steps = Object.fromEntries(flows[name].map(step => [step().step, step])) as Record<StepName, () => Step>
-  const state = Object.fromEntries(Object.keys(steps).map(step => [step, ''])) as State
+  const steps = flows[name].map(step => step())
+  const state = Object.fromEntries(Object.keys(steps).map(step => [step, undefined])) as State
   const onDone = onDoneFlows[name]
   return { name, state, steps, onDone }
 }

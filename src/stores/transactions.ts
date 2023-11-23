@@ -2,10 +2,8 @@ import { defineStore, storeToRefs } from 'pinia'
 import { onMounted, readonly, ref, watch } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
-import type { Transaction, TransactionDb } from '@/types/transactions'
-import { Transfer } from '@/types/transactions'
-import type { AsyncOption, AsyncResult } from '@/types'
-import type { PartialSendTxArgs } from '@/lib/tx'
+import type { PartialSendTxArgs, Transaction } from '@/types/transactions'
+import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useFiat } from '@/stores/fiat'
@@ -37,29 +35,18 @@ export const useTransactions = defineStore('transactions', () => {
    * If you need to load more transactions, use loadMoreTxs.
    */
   async function selectTxs(options?: SelectTxsOptions): Promise<Transaction[]> {
-    const res = await query<TransactionDb[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || 30, options?.offset || 0])
-    const txs = await Promise.all(res.map(parseTx))
-    return txs
+    return await query<Transaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || 30, options?.offset || 0])
   }
 
-  async function upsertTx(tx: TransactionDb) {
-    const { hash, timestamp, sender, recipient, value, fee, message, status, raw, rail, railId, railPeerId, transfer } = tx
-    console.log(`📚 Upserting TX.`, tx)
-    await run(SQLQuery.UpsertTx, [hash, timestamp, sender, recipient, value, fee, message, status, raw, rail, railId, railPeerId, transfer])
+  async function upsertTx(tx: Transaction) {
+    const { hash, timestamp, sender, recipient, amount, fee, message, status, raw, rail, railPeerId, transfer, title, locationName } = tx
+    // eslint-disable-next-line no-console
+    console.log(`📚 Upserting transaction`, tx)
+    await run(SQLQuery.UpsertTx, [hash, timestamp, sender, recipient, amount, fee, message, status, raw, rail, railPeerId, transfer, title, locationName])
   }
 
   async function clearTxHistory() {
     await run(SQLQuery.ClearTxHistory)
-  }
-
-  async function parseTx(tx: TransactionDb): Promise<Transaction> {
-    const title = tx.peerName || (tx.transfer === Transfer.UserPayment ? 'Payment' : `${tx.railPeerId?.substring(0, 9)}...`)
-    return {
-      ...tx,
-      ...await getTxPrice(tx),
-      title,
-      location: tx.peerName,
-    }
   }
 
   onMounted(async () => {
@@ -74,22 +61,22 @@ export const useTransactions = defineStore('transactions', () => {
 
     const plainSignedTx = signedTx!.toPlain()
 
-    const tx: TransactionDb = {
+    const tx = {
       ...partialTx,
-      fee: plainSignedTx.fee,
-      recipient: plainSignedTx.recipient,
+      fee: signedTx!.fee,
+      recipient: signedTx!.recipient.toUserFriendlyAddress(),
       timestamp: Date.now() / 1000,
       status: Nimiq.Client.TransactionState.PENDING,
-      hash: plainSignedTx.transactionHash,
-      sender: plainSignedTx.sender,
-      value: plainSignedTx.value,
+      hash: signedTx!.hash.toString(),
+      sender: signedTx!.sender.toUserFriendlyAddress(),
+      value: signedTx!.value,
       raw: signedTx!.serialize().toString(),
       rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
       railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
       railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
-      message: plainSignedTx.data ? plainSignedTx.data.raw : undefined,
+      message: signedTx!.data ? Nimiq.BufferUtils.toAscii(signedTx!.data) : undefined,
       transfer: partialTx.transfer,
-      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${plainSignedTx.sender.substring(0, 9)}...`),
+      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
     }
 
     await upsertTx(tx)

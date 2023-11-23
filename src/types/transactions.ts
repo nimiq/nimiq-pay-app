@@ -1,7 +1,8 @@
-import type { MaybeRef, Ref } from 'vue'
-
 export enum Transfer {
-  // Normal payment from the user to the merchant or another user
+  // Normal payment from the user to the merchant
+  UserPaymentToMerchant = 'user-payment-to-merchant',
+
+  // Normal payment from the user to another user
   UserPayment = 'user-payment',
 
   // The users receives funds from any other user
@@ -21,53 +22,67 @@ export enum Transfer {
   ExtendRemote = 'extend-remote',
 }
 
-export interface BaseTransactionDb {
-  /**
-   * Human merchant name
-   */
-  peerName?: string
+// The different "providers" that we support. Note that the value of each provider is the name of the query parameter that we use to identify the provider.
+// e.g CryptoPaymentLink -> nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
+export enum Rail {
+  CryptoPaymentLink = 'cpl_id',
+  GoCrypto = 'gocrypto_id',
+  Bluecode = 'bluecode',
+}
 
-  /**
-   * Raw transaction
-   */
+export interface BaseTransaction {
   raw?: string
-
-  /**
-   * Also known as the provide e.g 'bluecode', 'cpl'...
-   */
-  rail?: string
-
-  /**
-   * Reference of the payment
-   */
-  railId?: string
-
-  /**
-   * Id of the merchant in Bluecode
-   */
-  railPeerId?: string
-
-  /**
-   * Details of the transaction
-   */
-  message?: string
-
   sender: string
   recipient: string
   status: Nimiq.Client.TransactionState
   timestamp: number
-  value: number
+  amount: number
   fee: number
   hash: string
-}
 
-export type UserTransactionDb = BaseTransactionDb & { transfer: Omit<Transfer, Transfer.UserReceipt> }
-export type ReceiptTransactionDb = BaseTransactionDb & { transfer: Transfer.UserReceipt }
-export type TransactionDb = UserTransactionDb | ReceiptTransactionDb
-
-export type Transaction = TransactionDb & {
+  // The name that will be displayed in the UI. It can be the name of the merchant or a placeholder if unknown.
   title: string
-  fiatAmount: number
-  fiatUnit: string
-  location?: string
 }
+
+export type UserTransaction = BaseTransaction & {
+  transfer: Transfer.UserPayment
+  message?: string
+  rail?: undefined
+  railPeerId?: undefined
+  locationName?: undefined
+}
+
+export type UserReceiptTransaction = BaseTransaction & {
+  transfer: Transfer.UserReceipt
+  message?: string
+  rail?: undefined
+  railPeerId?: undefined
+  locationName?: undefined
+}
+
+export type MerchantTransaction = BaseTransaction & {
+  transfer: Transfer.UserPaymentToMerchant
+  locationName: string
+} & ({
+  rail: Rail.CryptoPaymentLink | Rail.GoCrypto
+  railPeerId: string
+  message: string
+} | {
+  // TODO Finish Bluecode
+  rail: Rail.Bluecode
+  railPeerId: undefined
+  message: undefined
+})
+
+export type SyncTransaction = BaseTransaction & {
+  transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.RemoteToLocalAfterTimeout | Transfer.ExtendRemote
+  message?: undefined
+  rail?: undefined
+  railPeerId?: undefined
+  locationName?: undefined
+}
+
+export type TransactionSentByUser = UserTransaction | MerchantTransaction | SyncTransaction
+export type Transaction = UserTransaction | UserReceiptTransaction | MerchantTransaction | SyncTransaction
+
+export type PartialSendTxArgs = Pick<TransactionSentByUser, 'transfer' | 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'title'>

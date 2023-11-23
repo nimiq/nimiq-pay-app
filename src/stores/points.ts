@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useApp } from './app'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
+import type { AsyncOption } from '@/types'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -42,13 +43,13 @@ export const usePoints = defineStore('points', () => {
       redeemReferral()
   }
 
-  async function updatePointsBalance() {
+  async function updatePointsBalance(): AsyncOption<string> {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return 'Phone number not verified'
 
     const { data, error } = await api.getBalance({ token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error }
+      return error
 
     pointsBalance.value = data.balance
   }
@@ -73,7 +74,7 @@ export const usePoints = defineStore('points', () => {
     if (error || !data)
       return { data: undefined, error }
 
-    return { data, error }
+    return { data, error: undefined }
   }
 
   async function claimTask({ id, answer }: { id: string; answer?: string }) {
@@ -84,8 +85,8 @@ export const usePoints = defineStore('points', () => {
     if (error || !data)
       return { data: undefined, error }
 
-    updatePointsBalance()
-    return { data, error }
+    await updatePointsBalance()
+    return { data, error: undefined }
   }
 
   /**
@@ -100,7 +101,7 @@ export const usePoints = defineStore('points', () => {
     if (error || !data)
       return { data: undefined, error }
 
-    return { data, error }
+    return { data, error: undefined }
   }
 
   /**
@@ -114,7 +115,7 @@ export const usePoints = defineStore('points', () => {
     if (error || !data)
       return { data: undefined, error }
 
-    return { data, error }
+    return { data, error: undefined }
   }
 
   async function redeemReferral() {
