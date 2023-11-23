@@ -157,7 +157,7 @@ onMounted(() => {
             <p v-else-if="canUsePoints === CanUsePointsState.NOT_ENOUGH_POINTS" class="text-space/60">
               You don't have enough CC Points for this purchase.
             </p>
-            <p v-else class="text-space/60">
+            <p v-else-if="isPayingWithPoints" class="text-space/60">
               There is no cashback reward when paying with CC Points.
             </p>
           </Transition>
