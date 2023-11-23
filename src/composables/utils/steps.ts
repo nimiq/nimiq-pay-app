@@ -196,7 +196,7 @@ const onBoardingBluecode3: StepInit = () => ({
 })
 
 const qrCodeScannerStep: StepInit = () => ({
-  title: 'Scan QR code',,
+  title: 'Scan QR code',
   main: h(OnBoardingScreen),
 })
 
