@@ -304,10 +304,10 @@ onMounted(async () => {
       <IonToolbar>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="!(instantPayWallet.ready.value && instantPayWallet.valid.value) || !(pointsBalance > 0 || instantPayWallet.balance.value > 0)"
+          :disabled="pointsBalance === 0 && !(instantPayWallet.ready.value && instantPayWallet.valid.value) && instantPayWallet.balance.value === 0"
           @click="showModal(ModalType.Pay, { isFullscreen: true })"
         >
-          Pay
+          Scan to Pay
         </IonButton>
       </IonToolbar>
     </IonFooter>
