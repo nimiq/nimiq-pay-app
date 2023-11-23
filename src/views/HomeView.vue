@@ -43,7 +43,12 @@ const isReferralCardShown = ref(true)
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
-const notificationArray = ref([
+interface Notification {
+  title: string
+  subtitle?: string
+  action: () => void
+}
+const notificationArray: Ref<Notification[]> = ref([
   {
     title: 'Alpha Testing',
     subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
