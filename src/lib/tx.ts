@@ -34,7 +34,7 @@ export type PartialSendTxArgs = {
  * @param args
  * @returns
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<Nimiq.ExtendedTransaction> {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
   // eslint-disable-next-line no-console
   console.log('Sending new tx', {
     partialArgs,

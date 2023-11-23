@@ -46,7 +46,9 @@ export function useSync() {
   }
 
   function extendValidity() {
-    console.log(`Should the HTLC be extended? ${htlcCanBeExtended.value}?`)
+    if (remoteBalance.value === 0)
+      return
+    console.log(`Should the HTLC be extended? ${htlcCanBeExtended.value}`)
     if (htlcCanBeExtended.value)
       useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
   }
@@ -58,8 +60,10 @@ export function useSync() {
    * Note: This function is just a safety net. The server should never miss the deadline.
    */
   function checkRemoteValidity() {
-    console.log(`Did the HTLC expire? ${hasHtlcExpired.value}?`)
-    if (!hasHtlcExpired.value)
+    if (remoteBalance.value === 0)
+      return
+    console.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
+    if (hasHtlcExpired.value)
       useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
   }
 
