@@ -27,7 +27,7 @@ const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
-const { phoneNumber, referralCode, hasDoneBackup, selectedFiat } = storeToRefs(useApp())
+const { phoneNumber, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { formatCurrency, getPriceAt, getPriceNow } = useFiat()
@@ -52,29 +52,29 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
-    title: 'Buy NIM with Credit Card',
-    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
-  },
-  {
-    title: 'Notification Card 2',
-    subtitle: 'Subtitle',
+    title: 'Alpha Testing',
+    subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
   },
   {
-    title: 'Notification Card 3',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 3 clicked'),
+    title: 'Buy NIM with Credit Card',
+    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
   },
-  {
-    title: 'Notification Card 4',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 4 clicked'),
-  },
-  {
-    title: 'Notification Card 5',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 5 clicked'),
-  },
+  // {
+  //   title: 'Notification Card 3',
+  //   subtitle: 'Subtitle',
+  //   action: () => console.log('Notification Card 3 clicked'),
+  // },
+  // {
+  //   title: 'Notification Card 4',
+  //   subtitle: 'Subtitle',
+  //   action: () => console.log('Notification Card 4 clicked'),
+  // },
+  // {
+  //   title: 'Notification Card 5',
+  //   subtitle: 'Subtitle',
+  //   action: () => console.log('Notification Card 5 clicked'),
+  // },
 ])
 
 function removeNotification(index: number) {
@@ -212,11 +212,11 @@ onMounted(async () => {
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
           <h1 class="mb-2 text-5xl font-normal">
-            {{ formatCurrency(remoteBalance * currentPrice) }}
+            {{ formatCurrency(remoteBalance / 1e5 * currentPrice) }}
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>
-              {{ Math.floor(remoteBalance).toFixed(2) }} NIM
+              {{ Math.floor(remoteBalance / 1e5).toFixed(2) }} NIM
             </span>
             <!-- TODO: add price change in last 24 hours -->
             <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->
@@ -248,13 +248,13 @@ onMounted(async () => {
           </div>
         </IonList>
 
-        <!-- Horizontal Scroll -->
+        <!-- Notification Horizontal Scroll -->
         <IonRow v-if="notificationArray.length">
           <ul
             ref="notificationList"
-            class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
+            class="flex min-w-[100vw] overflow-x-auto hide-scrollbar items-center snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
           >
-            <li v-for="(notification, index) in notificationArray" :key="notification.title">
+            <li v-for="(notification, index) in notificationArray" :key="notification.title" class="h-full">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
                 <template #subtitle>

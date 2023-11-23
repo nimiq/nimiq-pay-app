@@ -3,8 +3,7 @@ import { IonBackButton, IonButton, IonButtons, IonContent, IonHeader, IonIcon, I
 import { basket, close } from 'ionicons/icons'
 import { type PropType, onMounted } from 'vue'
 import { useModal } from '@/composables/useModal'
-import { TransactionStatus } from '@/lib/storage-manager'
-import type { Transaction } from '@/types/nimiq'
+import type { Transaction } from '@/types/transactions'
 
 defineProps({
   tx: {
@@ -44,7 +43,7 @@ const { closeModal } = useModal()
         {{ tx.fiatUnit }} {{ tx.fiatAmount.toLocaleString() }}
       </p>
       <p class="text-5xl">
-        {{ (tx.amount / 1e5).toLocaleString() }} NIM
+        {{ (tx.value / 1e5).toLocaleString() }} NIM
       </p>
     </div>
     <!--
@@ -55,7 +54,7 @@ const { closeModal } = useModal()
     <div class="flex flex-col px-6 text-lg gap-y-8">
       <p class="flex justify-between text-space/60">
         <span>Status</span>
-        <span>{{ TransactionStatus[tx.status] }}</span>
+        <span>{{ tx.status }}</span>
       </p>
       <p class="flex justify-between text-space/60">
         <span>Date</span>

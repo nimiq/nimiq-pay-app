@@ -5,10 +5,19 @@ import { useFiatDatabase } from '@/composables/useDatabase'
 import { useDevice } from '@/composables/useDevice'
 import { useCurrencyPriceApi } from '@/composables/useApi'
 import type { AsyncResult } from '@/types'
+import type { Transaction, TransactionDb } from '@/types/transactions'
+import { useConn } from '@/stores/conn'
+import { SQLQuery } from '@/lib/sql-queries'
+
+export interface PriceTable {
+  currency: string
+  ts: number
+  value: number
+}
 
 export const useFiat = defineStore('fiat', () => {
+  const { run, query } = useConn()
   const { selectedFiat } = storeToRefs(useApp())
-  const { getPriceAt, insertPrice } = useFiatDatabase()
   const { locale } = useDevice()
   const { getPriceAt: priceAtApi, getPriceNow: getPriceNowApi } = useCurrencyPriceApi()
 
@@ -22,30 +31,37 @@ export const useFiat = defineStore('fiat', () => {
   // The price of NIM every 10 minutes
   const prices = ref<Record<number /* ts */, number /* value */>>({})
 
-  async function getPriceAtTs(ts: number): AsyncResult<number> {
+  async function getPriceDb(timestamp: number) {
+    return await query<PriceTable | undefined>(SQLQuery.GetPriceAt, [timestamp, selectedFiat.value], { single: true })
+  }
+
+  /**
+   * Insert a price into the database. The timestamp is rounded to the nearest 10 minutes.
+   */
+  async function insertPrice({ currency, ts, value }: PriceTable) {
+    await run(SQLQuery.InsertPrice, [currency, ts, value])
+  }
+
+  async function getPriceAt(ts: number): AsyncResult<number> {
     const rounded = Math.floor(ts / 600000) * 600
     const cachedPrice = prices.value[rounded]
     if (cachedPrice !== undefined)
       return { data: cachedPrice, error: undefined }
 
-    const { data: priceAt, error } = await getPriceAt(rounded)
-    if (error !== undefined)
-      return { data: undefined, error }
+    const priceDb = await getPriceDb(rounded)
+    if (priceDb)
+      return { data: priceDb.value, error: undefined }
 
-    let price = 0
     console.log('currency', selectedFiat.value, 'ts', rounded)
-    if (!priceAt || !priceAt.value) {
-      const { data: priceFromApi, error: priceAtError } = await priceAtApi({ currency: selectedFiat.value, timestamp: rounded })
-      if (priceFromApi === undefined)
-        return { data: undefined, error: priceAtError }
-      price = priceFromApi.price
-      const error = await insertPrice({ currency: selectedFiat.value, ts: rounded, value: priceFromApi.price })
-      if (error)
-        return { data: undefined, error }
-    }
 
-    prices.value[rounded] = price
-    return { data: price, error: undefined }
+    const { data: priceFromApi, error: priceAtError } = await priceAtApi({ currency: selectedFiat.value, timestamp: rounded })
+    if (priceFromApi === undefined)
+      return { data: undefined, error: priceAtError }
+
+    await insertPrice({ currency: selectedFiat.value, ts: rounded, value: priceFromApi.price })
+
+    prices.value[rounded] = priceFromApi.price
+    return { data: priceFromApi.price, error: undefined }
   }
 
   async function getPriceNow(): AsyncResult<number> {
@@ -55,9 +71,17 @@ export const useFiat = defineStore('fiat', () => {
     return { data: price.price, error: undefined }
   }
 
+  async function getTxPrice({ value, timestamp }: TransactionDb): Promise<Pick<Transaction, 'fiatUnit' | 'fiatAmount'>> {
+    return {
+      fiatUnit: selectedFiat.value,
+      fiatAmount: toValue(await getPriceAt(timestamp)).data! * value,
+    }
+  }
+
   return {
     formatCurrency,
-    getPriceAt: getPriceAtTs,
+    getPriceAt,
     getPriceNow,
+    getTxPrice,
   }
 })

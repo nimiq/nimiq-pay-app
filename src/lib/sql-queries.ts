@@ -1,7 +1,3 @@
-// export type PointsTransaction = BaseTransaction & { method: PaymentMethod.Points }
-// export type NimTransaction = BaseTransaction & { method: PaymentMethod.NIM; hash: string }
-// export type Transaction = PointsTransaction | NimTransaction
-
 // We store the remote Wallet.
 // The only thing we store about the local wallet is the entropy, and from that we can derive the private key
 // and its remote wallet
@@ -41,7 +37,9 @@ export enum SQLQuery {
   UpdateValidityRemoteSigner = 'UPDATE remote_signers SET start = ?, end = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE active = 1',
 
-  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nimPrices (id INTEGER PRIMARY KEY AUTOINCREMENT, currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',
+  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nimPrices (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',
+  InsertPrice = 'INSERT INTO nimPrices (currency, ts, value) VALUES (?, ?, ?)',
+  GetPriceAt = 'SELECT * FROM nimPrices WHERE ts = ? AND currency = ? ORDER BY ts DESC LIMIT 1',
 }
 
 interface Migration {

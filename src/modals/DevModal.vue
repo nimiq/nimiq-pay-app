@@ -8,7 +8,7 @@ import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Transfer } from '@/types/database'
+import { Transfer } from '@/types/transactions'
 
 const router = useRouter()
 const { consensus, head, height, peerCount } = storeToRefs(useNimiqNetwork())
@@ -80,7 +80,7 @@ async function handleClearTx() {
         <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
           Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
         </p>
-        <p>Balance (if valid): <code>{{ remoteBalance }} NIM</code></p>
+        <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
         <p>
           Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
             validityStart }}</strong> to

@@ -5,7 +5,7 @@ import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Transfer } from '@/types/database'
+import { Transfer } from '@/types/transactions'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
@@ -36,6 +36,8 @@ export function useSync() {
     localBalance.value = account?.balance || 0
     if (localBalance.value === 0 || nodesAreSynced.value)
       return
+    // eslint-disable-next-line no-console
+    console.log('Funds received in local wallet. Moving funds to remote wallet.')
     useTransactions().sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
   }
 

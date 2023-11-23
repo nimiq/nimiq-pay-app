@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computedAsync } from '@vueuse/core'
-import { IonButton, toastController } from '@ionic/vue'
+import { IonButton } from '@ionic/vue'
 import { Clipboard } from '@capacitor/clipboard'
 import { Share } from '@capacitor/share'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { usePoints } from '@/stores/points'
+import { useModal } from '@/composables/useModal'
 
+const { showNotificationAlert } = useModal()
 const { getReferralInfo } = usePoints()
 const referralCode = computedAsync(async () => {
   const { data: code, error } = await getReferralInfo()
@@ -23,11 +25,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: referralCode.value?.id,
   })
-  const toast = await toastController.create({
-    message: '✔️ Copied to the clipboard!',
-    duration: 2000,
-  })
-  await toast.present()
+  await showNotificationAlert('Copied to the clipboard!')
 }
 
 function handleShare() {

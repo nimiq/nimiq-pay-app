@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonBackButton, IonButton, IonButtons, IonIcon, toastController } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonIcon } from '@ionic/vue'
 import { qrCodeOutline } from 'ionicons/icons'
 import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
@@ -10,7 +10,7 @@ import AddressDisplay from '@/components/AddressDisplay.vue'
 import NimLogo from '@/components/icons/nimiq-logo.vue'
 import { useLocalWallet } from '@/stores/local-wallet'
 
-const { closeModal, closeAllModals, showModal } = useModal()
+const { closeModal, closeAllModals, showModal, showNotificationAlert } = useModal()
 const { localAddress } = storeToRefs(useLocalWallet())
 
 async function handleOpenWallet() {
@@ -28,13 +28,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: localAddress.value.toUserFriendlyAddress(),
   })
-  const toast = await toastController.create({
-    message: 'Address copied to clipboard',
-    duration: 1500,
-    position: 'bottom',
-  })
-
-  await toast.present()
+  await showNotificationAlert('Address copied to clipboard')
 }
 
 async function handleOpenCashlinkScanner() {

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useFirestoreApi, usePointsApi } from './useApi'
-import { TransactionStatus, TransactionType } from '@/types/database'
+import { TransactionStatus, TransactionType } from '@/types/transactions'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import type { AsyncOption } from '@/types'
 

@@ -3,7 +3,7 @@ import type { AsyncResult } from '@/types'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Transfer } from '@/types/database'
+import { Transfer } from '@/types/transactions'
 
 export type PartialSendTxArgs = {
   transfer: Transfer.UserPayment
@@ -74,7 +74,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<N
       /* data */ createDepositData(),
     )
     tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
-    return await getSignedTxByRemote(tx)
+    return { data: tx, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(

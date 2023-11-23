@@ -3,7 +3,6 @@ import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { useApp } from './app'
 import type { AsyncResult } from '@/types'
-import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 
 // const REQUIRED_BLOCK_CONFIRMATIONS = 10
 

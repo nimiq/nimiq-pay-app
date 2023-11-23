@@ -62,9 +62,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   async function init() {
     if (!hasLocalWallet.value)
       return
-    const remoteSignerDb = await getActiveRemoteSigner()
-    if (!remoteSignerDb)
-      return
+    // TODO:
+    // const remoteSignerDb = await getActiveRemoteSigner()
+    // if (remoteSignerDb)
+    //   return remoteSignerDb
+
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
     if (error || !remoteSignerApi)
       return
@@ -72,8 +74,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteSigner.value = remoteSignerApi
   }
 
-  const remoteHeight = computedAsync(() => getStatus().then(r => r.data?.blockHeight || 0), 0)
-  const remotePublicKey = computedAsync(() => getStatus().then(r => r.data?.servicePublicKey))
+  const status = computedAsync(async () => height.value ? (await getStatus()).data : undefined)
+  const remoteHeight = computed(() => status.value?.blockHeight || 0)
+  const remotePublicKey = computed(() => status.value?.servicePublicKey || undefined)
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
@@ -85,7 +88,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
   const hasHtlcExpired = computed(() => remoteAddress && end.value < height.value)
 
-  const isRemoteOk = computedAsync(async () => height.value && await getStatus().then(r => r.data?.status === 'good'), false)
+  const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
   return {
     isRemoteOk,
