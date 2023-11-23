@@ -55,6 +55,19 @@ const cashbackAmount = computed(() => {
   return pendingPayment.fiatAmount ? paymentDetails.value?.cashback.percentage * pendingPayment.fiatAmount / 100 : paymentDetails.value?.cashback.amount_in_luna / 1e5
 })
 
+const hasEnoughBalance = computedAsync(async () => {
+  return isPayingWithPoints.value
+    ? (await bonusWallet.getParticipantBalance()) >= (pendingPayment?.amount || 0)
+    : instantPayWallet.balanceRaw.value >= (pendingPayment?.amount || 0)
+}, false)
+
+const canPay = computedAsync(async () => {
+  return nimiqNetworkClient.consensusState.value === 'established'
+    && (!isPayingWithPoints.value || isPaymentValid.value)
+    && hasEnoughBalance
+    && (!isPayingWithPoints.value || !paymentDetails.value?.reason)
+}, false)
+
 async function pay() {
   if (pendingPayment === null)
     return
@@ -157,7 +170,7 @@ onMounted(() => {
           Consensus {{ nimiqNetworkClient.consensusState.value }}
         </p>
         <!-- Pay Button -->
-        <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" :disabled="nimiqNetworkClient.consensusState.value !== 'established' || (isPayingWithPoints && !isPaymentValid)" @click="() => pay()">
+        <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" :disabled="!canPay" @click="() => pay()">
           Pay
         </IonButton>
       </div>
