@@ -34,7 +34,7 @@ export enum SQLQuery {
   GetActiveRemoteSigner = 'SELECT * FROM remote_signers WHERE active = 1',
   DeactivateRemoteSigners = 'UPDATE remote_signers SET active = 0',
   InsertRemoteSigner = 'INSERT OR REPLACE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
-  UpdateValidityRemoteSigner = 'UPDATE remote_signers SET start = ?, end = ? WHERE address = ?',
+  UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE active = 1',
 
   CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nim_prices (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',

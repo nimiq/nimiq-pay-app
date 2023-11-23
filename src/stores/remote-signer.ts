@@ -9,30 +9,24 @@ import { SQLQuery } from '@/lib/sql-queries'
 import type { RemoteSigner } from '@/lib/sql-queries'
 
 function useRemoteSignerDb() {
-  const { waitForUnlock } = useConn()
-  const { db } = storeToRefs(useConn())
+  const { run, query } = useConn()
   return {
     async getActiveRemoteSigner() {
-      await waitForUnlock()
-      const res = await db.value!.query(SQLQuery.GetActiveRemoteSigner)
-      return res.values?.at(0)?.value as RemoteSigner | undefined
+      return await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true })
     },
 
     async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
-      await waitForUnlock()
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
-      await db.value!.run(SQLQuery.DeactivateRemoteSigners)
-      await db.value!.run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
+      await run(SQLQuery.DeactivateRemoteSigners)
+      await run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
     },
 
     async updateBalance(newBalance: number) {
-      await waitForUnlock()
-      await db.value!.run(SQLQuery.UpdateRemoteBalance, [newBalance])
+      await run(SQLQuery.UpdateRemoteBalance, [newBalance])
     },
 
-    async updateValidity(address: Nimiq.Address, newStart: number, newEnd: number) {
-      await waitForUnlock()
-      await db.value!.run(SQLQuery.UpdateValidityRemoteSigner, [newStart, newEnd, address])
+    async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
+      await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address])
     },
   }
 }
@@ -41,7 +35,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateValidity } = useRemoteSignerDb()
+  const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
@@ -62,20 +56,31 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   async function init() {
     if (!hasLocalWallet.value)
       return
-    // TODO:
+
     const remoteSignerDb = await getActiveRemoteSigner()
-    if (remoteSignerDb)
+    if (remoteSignerDb) {
       remoteSigner.value = remoteSignerDb
-    else
-      await updateRemoteSigner()
+    }
+    else {
+      const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
+      if (error || !remoteSignerApi)
+        return
+      await updateRemoteSigner(remoteSignerApi)
+    }
   }
 
-  async function updateRemoteSigner() {
-    const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
+  async function updateRemoteSigner(signer: RemoteSigner) {
+    setRemoteSigner(signer)
+    remoteSigner.value = signer
+  }
+
+  async function updateActiveWallet() {
+    if (!remoteSigner.value)
+      return
+    const { data: remoteSignerApi, error } = await getRemoteSigner({ address: remoteSigner.value.address })
     if (error || !remoteSignerApi)
       return
-    setRemoteSigner(remoteSignerApi)
-    remoteSigner.value = remoteSignerApi
+    await _updateActiveWallet(remoteSignerApi)
   }
 
   const status = computedAsync(async () => height.value ? (await getStatus()).data : undefined)
@@ -110,7 +115,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     hasHtlcExpired,
 
     updateBalance,
-    updateValidity,
+    updateActiveWallet,
     updateRemoteSigner,
 
     init,

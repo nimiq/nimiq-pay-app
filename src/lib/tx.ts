@@ -65,11 +65,9 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     console.log({
       localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
       localBalance: useLocalWallet().localBalance,
-      remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
       remoteBalance: useRemoteSigner().remoteBalance,
       remoteHeight: useRemoteSigner().remoteHeight,
       remotePublicKey: useRemoteSigner().remotePublicKey,
-      remoteProofSize: useRemoteSigner().remoteProofSize,
     })
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useLocalWallet().localAddress,
@@ -83,6 +81,16 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ createDepositData(),
     )
     tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
+    const plainData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data)
+    await useRemoteSigner().updateRemoteSigner({
+      active: true,
+      balance: tx.value,
+      publicKey: useRemoteSigner().remotePublicKey!,
+      start: tx.validityStartHeight,
+      address: tx.recipient,
+      end: 'timeout' in plainData ? plainData.timeout : Number.MAX_VALUE,
+      proofSize: tx.proof.length,
+    })
     return { data: tx, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress) {

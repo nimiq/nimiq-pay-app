@@ -19,10 +19,10 @@ export function useSync() {
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
-  const nodesAreSynced = computedAsync(() => remoteHeight.value > localHeight.value - MAX_BLOCK_HEIGHT_MISMATCH && remoteHeight.value < localHeight.value + MAX_BLOCK_HEIGHT_MISMATCH, false)
+  const nodesAreSynced = computedAsync(() => remoteHeight.value > (localHeight.value - MAX_BLOCK_HEIGHT_MISMATCH) && remoteHeight.value < (localHeight.value + MAX_BLOCK_HEIGHT_MISMATCH), false)
 
   // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
-  const htlcCanBeExtended = computed(() => end.value - (end.value - start.value) / 2 > localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA)
+  const htlcCanBeExtended = computed(() => (end.value - (end.value - start.value) / 2) > (localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA))
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -41,7 +41,7 @@ export function useSync() {
     if (localBalance.value === 0 || !nodesAreSynced.value)
       return
 
-    console.log(`Processing funds received in local wallet. Local balance: ${localBalance.value} NIM. Remote balance: ${remoteBalance.value} NIM. Creating ${remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote} tx`)
+    console.log(`Processing funds received in local wallet. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote} tx`)
     useTransactions().sendTx({ transfer: remoteBalance.value > 0 ? Transfer.RemoteToLocal : Transfer.LocalToRemote })
   }
 
@@ -49,6 +49,15 @@ export function useSync() {
     if (remoteBalance.value === 0)
       return
     console.log(`Should the HTLC be extended? ${htlcCanBeExtended.value}`)
+    console.log({
+      end: end.value,
+      start: start.value,
+      localHeight: localHeight.value,
+      MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA,
+      first: (end.value - (end.value - start.value) / 2),
+      second: (localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA),
+      htlcCanBeExtended: (end.value - (end.value - start.value) / 2) > (localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA),
+    })
     if (htlcCanBeExtended.value)
       useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
   }

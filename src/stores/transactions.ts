@@ -18,7 +18,7 @@ export const useTransactions = defineStore('transactions', () => {
   const { client } = storeToRefs(useNimiqNetwork())
 
   const { selectedFiat } = storeToRefs(useApp())
-  const { updateBalance } = useRemoteSigner()
+  const { updateBalance, updateActiveWallet } = useRemoteSigner()
   const { remoteBalance } = storeToRefs(useRemoteSigner())
 
   const { getTxPrice } = useFiat()
@@ -44,7 +44,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function upsertTx(tx: TransactionDb) {
     const { hash, timestamp, sender, recipient, value, fee, message, status, raw, rail, railId, railPeerId, transfer } = tx
-    console.log(`📚 Upserting TX. ${JSON.stringify(tx)}`)
+    console.log(`📚 Upserting TX.`, tx)
     await run(SQLQuery.UpsertTx, [hash, timestamp, sender, recipient, value, fee, message, status, raw, rail, railId, railPeerId, transfer])
   }
 
@@ -72,26 +72,29 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error }
     await client.value!.sendTransaction(signedTx!)
 
+    const plainSignedTx = signedTx!.toPlain()
+
     const tx: TransactionDb = {
       ...partialTx,
-      fee: signedTx!.fee,
-      recipient: signedTx!.recipient.toUserFriendlyAddress(),
+      fee: plainSignedTx.fee,
+      recipient: plainSignedTx.recipient,
       timestamp: Date.now() / 1000,
       status: Nimiq.Client.TransactionState.PENDING,
-      hash: signedTx!.hash.toString(),
-      sender: signedTx!.sender.toUserFriendlyAddress(),
-      value: signedTx!.value,
+      hash: plainSignedTx.transactionHash,
+      sender: plainSignedTx.sender,
+      value: plainSignedTx.value,
       raw: signedTx!.serialize().toString(),
       rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
       railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
       railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
-      message: signedTx!.data ? Nimiq.BufferUtils.toAscii(signedTx!.data) : undefined,
+      message: plainSignedTx.data ? plainSignedTx.data.raw : undefined,
       transfer: partialTx.transfer,
-      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
+      peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${plainSignedTx.sender.substring(0, 9)}...`),
     }
 
     await upsertTx(tx)
     updateBalance(remoteBalance.value + tx.value)
+    updateActiveWallet()
     return { data: await parseTx(tx), error: undefined }
   }
 
