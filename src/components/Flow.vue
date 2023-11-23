@@ -19,21 +19,21 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, state, steps } = props.flow
-const stepsToShow = ref(steps.map(s => s.step))
+const { onDone: onFlowDone, state, steps: stepsInFlow } = props.flow
+const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()
 const { nextSlide, activeIndex } = useCarousel(scroller, useWindowSize().width)
-const isLast = computed(() => activeIndex.value === stepsToShow.value.length - 1)
+const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
-const activeStep = computed(() => steps[activeIndex.value])
+const activeStep = computed(() => stepsInFlow[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
-const step = computed(() => steps[activeIndex.value])
+const step = computed(() => stepsInFlow[activeIndex.value])
 
 type Errors = Record<InputStepName, string>
-let errors: Errors = reactive(Object.fromEntries(steps.filter(isInputStep).map(s => [s.step, ''])) as Errors)
-watchEffect(() => errors = reactive(Object.fromEntries(steps.filter(isInputStep).map(s => [s.step, ''])) as Errors))
+let errors: Errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
+watchEffect(() => errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 const error = (step: StepName) => isActiveStepInput.value ? errors![step as InputStepName] : undefined
 
 function goToNext() {
@@ -61,10 +61,10 @@ async function autofocus(timeout = 200) {
 }
 
 function skip() {
-  const { stepsToSkip } = activeStep.value
+  const { stepsToSkip = 1 } = activeStep.value
   if (!stepsToSkip)
     return
-  stepsToShow.value = stepsToShow.value.filter((_, i) => i <= activeIndex.value || i >= activeIndex.value + stepsToSkip)
+  steps.value = steps.value.filter((_, i) => i <= activeIndex.value || i >= activeIndex.value + stepsToSkip)
   nextTick().then(goToNext)
 }
 </script>

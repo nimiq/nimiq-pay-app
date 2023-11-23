@@ -9,7 +9,7 @@ defineEmits<{ done: []; skip: [] }>()
 <template>
   <div class="flex flex-col items-center w-full h-full">
     <NotificationBell class="w-16 h-16 text-space flex-1" />
-    <div class="flex flex-col justify-center mt-auto pb-6">
+    <div class="flex flex-col justify-center mt-auto pb-6 w-full">
       <IonButton id="present-alert" size="small" class="text-base font-bold" @click="$emit('done')">
         Allow notifications
       </IonButton>

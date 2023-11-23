@@ -25,7 +25,7 @@ function handleSubmit() {
     <p v-if="errorMsg">
       {{ errorMsg }}
     </p>
-    <div class="flex flex-col justify-center pb-6 mt-auto">
+    <div class="flex flex-col justify-center pb-6 mt-auto w-full">
       <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
         Verify
       </IonButton>
