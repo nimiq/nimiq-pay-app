@@ -45,28 +45,14 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
-    title: 'Buy NIM with Credit Card',
-    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
-  },
-  {
-    title: 'Notification Card 2',
-    subtitle: 'Subtitle',
+    title: 'Alpha Testing',
+    subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
   },
+
   {
-    title: 'Notification Card 3',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 3 clicked'),
-  },
-  {
-    title: 'Notification Card 4',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 4 clicked'),
-  },
-  {
-    title: 'Notification Card 5',
-    subtitle: 'Subtitle',
-    action: () => console.log('Notification Card 5 clicked'),
+    title: 'Buy NIM with Credit Card',
+    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
   },
 ])
 
@@ -167,12 +153,13 @@ onMounted(async () => {
 })
 
 function onPointsClick() {
-  if(isPhoneRegistered.value) {
+  if (isPhoneRegistered.value) {
     pointsReloadTrigger.value++
     showModal(ModalType.Rewards)
-   } else {
+  }
+  else {
     showModal(ModalType.NewPhone)
-   }
+  }
 }
 </script>
 
@@ -261,9 +248,9 @@ function onPointsClick() {
         <IonRow v-if="notificationArray.length">
           <ul
             ref="notificationList"
-            class="flex items-end min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
+            class="flex items-center min-w-[100vw] overflow-x-auto hide-scrollbar snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
           >
-            <li v-for="(notification, index) in notificationArray" :key="notification.title">
+            <li v-for="(notification, index) in notificationArray" :key="notification.title" class="h-full">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
                 <template #subtitle>
