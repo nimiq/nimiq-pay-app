@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import type { Option } from '@/types'
 import { useDevice } from '@/composables/useDevice'
 import { useConn } from '@/stores/conn'
+import { useApp } from '@/stores/app'
 
 const pinHashLocalStorageKey = '_pin'
 
@@ -37,11 +38,11 @@ export function useDecrypt() {
 
     let expectedPinHash = window.localStorage.getItem(pinHashLocalStorageKey)
 
-    if (!expectedPinHash && !inputPin) {
+    if (!expectedPinHash && !inputPin)
       return 'Both expected and the given PIN are empty'
-    }
 
-    if (inputPin.length !== 4) return `Invalid PIN length ${inputPin.length}`
+    if (inputPin.length !== 4)
+      return `Invalid PIN length ${inputPin.length}`
 
     const pinHash = await hash(inputPin)
 
@@ -52,9 +53,9 @@ export function useDecrypt() {
       expectedPinHash = pinHash
     }
 
-    if (pinHash !== expectedPinHash) {
+    if (pinHash !== expectedPinHash)
       return 'Invalid PIN'
-    }
+
     // else {} If the PIN is correct, we don't need to do anything
   }
 
@@ -98,12 +99,13 @@ export function useDecrypt() {
     const error = await (isWeb ? decryptWeb(pin) : decryptMobile(pin))
     if (error)
       return error
-
+    await useApp().setEntropy()
     decrypted.value = true
   }
 
   function hasPin() {
-    if (!isWeb) throw new Error('This method is not supported in mobile.')
+    if (!isWeb)
+      throw new Error('This method is not supported in mobile.')
     return window.localStorage.getItem(pinHashLocalStorageKey) !== null
   }
 

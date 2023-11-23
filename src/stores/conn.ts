@@ -61,7 +61,6 @@ export const useConn = defineStore('conn', () => {
     }
 
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
-    console.log({ dbExists: dbExists.value })
   }
 
   async function open() {
@@ -74,7 +73,6 @@ export const useConn = defineStore('conn', () => {
     await db.value!.open()
     resolveUnlockDb()
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
-    console.log({ dbExists: dbExists.value })
   }
 
   async function close() {
@@ -104,6 +102,7 @@ export const useConn = defineStore('conn', () => {
     if (err)
       throw new Error(err)
     const res = await db.value!.query(query, args)
+
     return options.single ? res.values?.at(0)?.value as T : res.values as T
   }
 

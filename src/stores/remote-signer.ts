@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computedAsync, until } from '@vueuse/core'
+import { computedAsync } from '@vueuse/core'
 import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
@@ -49,46 +49,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   const remoteSigner = ref<RemoteSigner>()
 
-  /**
-   * Initializes the remote signer variables with the following algorithm:
-   * 1. Check if we have a local wallet:
-   *    - If we have, go to next step
-   *    - Otherwise, do nothing
-   * 2. Check if we have a remote signer in the database:
-   *    - If we have, go to next step
-   *    - Otherwise, do nothing
-   * 3. Get the remote signer from the API:
-   *    - If we have it, go to next step
-   *    - Otherwise, do nothing
-   * 4. Update the remote signer in the database
-   * 5. Set the remote signer in the store
-   */
-  async function init() {
-    if (!hasLocalWallet.value)
-      return
-
-    const remoteSignerDb = await getActiveRemoteSigner()
-    if (remoteSignerDb) {
-      remoteSigner.value = remoteSignerDb
-    }
-    else {
-      const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
-      if (error || !remoteSignerApi)
-        return
-      await updateRemoteSigner(remoteSignerApi)
-    }
-
-    await until(client).toBeTruthy()
-    client?.addHeadChangedListener(async () => {
-      if (!remoteSigner.value)
-        return
-      const account = await client?.getAccount(remoteSigner.value?.address)
-      if (!account)
-        return
-      await updateBalance(account.balance, remoteSigner.value?.address)
-    })
-  }
-
   async function updateRemoteSigner(signer: RemoteSigner) {
     setRemoteSigner(signer)
     remoteSigner.value = signer
@@ -120,6 +80,46 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
 
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
+
+  /**
+   * Initializes the remote signer variables with the following algorithm:
+   * 1. Check if we have a local wallet:
+   *    - If we have, go to next step
+   *    - Otherwise, do nothing
+   * 2. Check if we have a remote signer in the database:
+   *    - If we have, go to next step
+   *    - Otherwise, do nothing
+   * 3. Get the remote signer from the API:
+   *    - If we have it, go to next step
+   *    - Otherwise, do nothing
+   * 4. Update the remote signer in the database
+   * 5. Set the remote signer in the store
+   */
+  async function init() {
+    if (!hasLocalWallet.value)
+      return
+
+    const remoteSignerDb = await getActiveRemoteSigner()
+    if (remoteSignerDb) {
+      remoteSigner.value = remoteSignerDb
+      return
+    }
+    else {
+      const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
+      if (error || !remoteSignerApi) {
+        // eslint-disable-next-line no-console
+        console.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
+        return
+      }
+
+      await updateRemoteSigner(remoteSignerApi)
+    }
+
+    client!.addHeadChangedListener(async () => {
+      const account = await client!.getAccount(remoteAddress.value!)
+      await updateBalance(account.balance, remoteAddress.value!)
+    })
+  }
 
   return {
     isRemoteOk,

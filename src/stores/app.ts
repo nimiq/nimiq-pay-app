@@ -1,16 +1,16 @@
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
 
-export function kv(): StorageLikeAsync {
+function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<string>(SQLQuery.SelectKv, [key], { single: true }),
     setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
     removeItem: async key => useConn().run(SQLQuery.DeleteKv, [key]),
-  } satisfies StorageLikeAsync
+  }
 }
 
 export const useApp = defineStore('app', () => {
@@ -22,10 +22,18 @@ export const useApp = defineStore('app', () => {
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const phoneNumberVerified = computed(() => !!pointsToken.value)
 
-  // @ts-expect-error 16 is the value we need to have to get the 12 words
-  Nimiq.Entropy.SIZE = 16
-  // Maybe we should revisit this later. Right now this will be in memory all the times
-  const entropy = useStorageAsync('entropy', Nimiq.Entropy.generate().toHex().substring(0, 32), kv())
+  const entropy = ref('')
+  async function setEntropy() {
+    // Maybe we should revisit this later. Right now this will be in memory all the times
+    const entropyDb = await kv().getItem('entropy')
+    if (entropyDb) { entropy.value = entropyDb }
+    else {
+      // @ts-expect-error 16 is the value we need to have to get the 12 words
+      Nimiq.Entropy.SIZE = 16
+      entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
+      await kv().setItem('entropy', entropy.value)
+    }
+  }
 
   return {
     phoneNumber,
@@ -35,5 +43,6 @@ export const useApp = defineStore('app', () => {
     hasDoneBackup,
     selectedFiat,
     pointsToken,
+    setEntropy,
   }
 })

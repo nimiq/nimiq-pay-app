@@ -22,6 +22,7 @@ import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useSync } from '@/composables/useSync'
+import { useDevice } from '@/composables/useDevice'
 import { initializeFlow } from '@/composables/utils/steps'
 import { FlowName } from '@/types/steps'
 
@@ -148,6 +149,8 @@ watchEffect(async () => {
 })
 
 watch(isRecoveryWordsShown, () => {
+  if (useDevice().isWeb)
+    return
   // If no backup done and balance > 0
   if (isRecoveryWordsShown.value) {
     StatusBar.setBackgroundColor({ color: '#dbeafe' })
@@ -174,8 +177,6 @@ onMounted(async () => {
   }
 
   scrollToFirstNotification()
-
-  await useRemoteSigner().init()
   await useSync().syncWallets()
   await updatePointsBalance()
 })
@@ -325,7 +326,7 @@ onMounted(async () => {
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && !(isRemoteOk && isHtlcActive) && remoteBalance === 0"
-          @click="showModal(Modal.Pay, { isFullscreen: true })"
+          @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
           Scan To Pay
         </IonButton>

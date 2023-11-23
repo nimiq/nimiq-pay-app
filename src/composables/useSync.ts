@@ -46,8 +46,8 @@ export function useSync() {
     if (localBalance.value === 0 || !nodesAreSynced.value)
       return
 
-    if (remoteBalance > 0) {
-      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
+    if (remoteBalance.value > 0) {
+      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx, isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
       if (isHtlcActive.value && isRemoteOk.value)
         useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
       else
@@ -90,9 +90,13 @@ export function useSync() {
     await until(client).toBeTruthy()
     await client.value?.waitForConsensusEstablished()
 
+    await useRemoteSigner().init()
+
+    console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     handleFunds()
     checkRemoteValidity()
     extendValidity()
+    console.groupEnd()
 
     client.value?.addBlockListener(async () => {
       console.group(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)

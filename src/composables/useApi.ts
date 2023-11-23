@@ -108,6 +108,7 @@ export function useRemoteSignerApi() {
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
+    console.trace()
     const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseWalletUrl))
     if (error || !data?.address)
       return { data: undefined, error: error || 'No remote signer found' }

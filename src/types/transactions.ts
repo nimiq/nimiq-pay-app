@@ -39,9 +39,6 @@ export interface BaseTransaction {
   amount: number
   fee: number
   hash: string
-
-  // The name that will be displayed in the UI. It can be the name of the merchant or a placeholder if unknown.
-  title: string
 }
 
 export type UserTransaction = BaseTransaction & {
@@ -50,6 +47,7 @@ export type UserTransaction = BaseTransaction & {
   rail?: undefined
   railPeerId?: undefined
   locationName?: undefined
+  title: string
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
@@ -58,11 +56,13 @@ export type UserReceiptTransaction = BaseTransaction & {
   rail?: undefined
   railPeerId?: undefined
   locationName?: undefined
+  title: string
 }
 
 export type MerchantTransaction = BaseTransaction & {
   transfer: Transfer.UserPaymentToMerchant
   locationName: string
+  title: string
 } & ({
   rail: Rail.CryptoPaymentLink | Rail.GoCrypto
   railPeerId: string
@@ -76,7 +76,8 @@ export type MerchantTransaction = BaseTransaction & {
 
 export type SyncTransaction = BaseTransaction & {
   transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.RemoteToLocalAfterTimeout | Transfer.ExtendRemote
-  message?: undefined
+  message?: string
+  title?: undefined
   rail?: undefined
   railPeerId?: undefined
   locationName?: undefined
@@ -85,4 +86,6 @@ export type SyncTransaction = BaseTransaction & {
 export type TransactionSentByUser = UserTransaction | MerchantTransaction | SyncTransaction
 export type Transaction = UserTransaction | UserReceiptTransaction | MerchantTransaction | SyncTransaction
 
-export type PartialSendTxArgs = Pick<TransactionSentByUser, 'transfer' | 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'title'>
+export type PartialSendTxArgs =
+  Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'title'>
+  | Pick<SyncTransaction, 'transfer'>

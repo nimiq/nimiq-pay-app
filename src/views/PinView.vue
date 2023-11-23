@@ -6,12 +6,14 @@ import { Keyboard } from '@capacitor/keyboard'
 import { storeToRefs } from 'pinia'
 import { useConn } from '@/stores/conn'
 import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
 
 const { dbExists } = storeToRefs(useConn())
 const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
 const pinField = ref()
 const pin = ref('')
+const { isWeb } = useDevice()
 
 watch(pin, (newValue) => {
   if (newValue.length === 4)
@@ -29,7 +31,8 @@ async function handleSubmit() {
     return
   }
   pinField.value?.blur()
-  Keyboard.hide()
+  if (!isWeb)
+    Keyboard.hide()
   await router.replace('/app')
 }
 
@@ -37,7 +40,8 @@ function shown() {
   setTimeout(() => {
     pinField.value?.focus()
   }, 200)
-  Keyboard.show()
+  if (!isWeb)
+    Keyboard.show()
 }
 
 // Prevent the keyboard from hiding

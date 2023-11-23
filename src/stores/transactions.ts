@@ -35,14 +35,19 @@ export const useTransactions = defineStore('transactions', () => {
    * If you need to load more transactions, use loadMoreTxs.
    */
   async function selectTxs(options?: SelectTxsOptions): Promise<Transaction[]> {
-    return await query<Transaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || 30, options?.offset || 0])
+    const txs = await query<Transaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || 30, options?.offset || 0])
+    // eslint-disable-next-line no-console
+    console.log(`📚 Selected ${txs.length} transactions`, txs)
+    return txs
   }
 
   async function upsertTx(tx: Transaction) {
-    const { hash, timestamp, sender, recipient, amount, fee, message, status, raw, rail, railPeerId, transfer, title, locationName } = tx
     // eslint-disable-next-line no-console
     console.log(`📚 Upserting transaction`, tx)
-    await run(SQLQuery.UpsertTx, [hash, timestamp, sender, recipient, amount, fee, message, status, raw, rail, railPeerId, transfer, title, locationName])
+    await run(
+      SQLQuery.UpsertTx,
+      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.locationName],
+    )
   }
 
   async function clearTxHistory() {
@@ -60,28 +65,14 @@ export const useTransactions = defineStore('transactions', () => {
     await client.value!.sendTransaction(signedTx!)
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message } } = signedTx!.toPlain()
-
-    const tx = {
-      ...partialTx,
-      fee,
-      recipient,
-      timestamp: Date.now() / 1000,
-      status: Nimiq.Client.TransactionState.PENDING,
-      hash,
-      sender,
-      amount,
-      raw: signedTx!.serialize().toString(),
-      message,
-      // railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
-      // peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${signedTx!.sender.toUserFriendlyAddress().substring(0, 9)}...`),
-      // peerName: partialTx.transfer === Transfer.UserPayment ? partialTx.peerName : (`${plainSignedTx.sender.substring(0, 9)}...`),
-      // rail: partialTx.transfer === Transfer.UserPayment ? partialTx.rail : undefined,
-      // railId: partialTx.transfer === Transfer.UserPayment ? partialTx.railId : undefined,
-      // railPeerId: partialTx.transfer === Transfer.UserPayment ? partialTx.railPeerId : undefined,
-      // transfer: partialTx.transfer,
-    } as TransactionSentByUser
+    const raw = signedTx!.serialize().toString()
+    const timestamp = Math.floor(Date.now() / 1000)
+    const status = Nimiq.Client.TransactionState.PENDING
+    const tx = { ...partialTx, fee, recipient, timestamp, status, hash, sender, amount, raw, message } as TransactionSentByUser
 
     await upsertTx(tx)
+    transactions.value = [tx, ...transactions.value]
+
     updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
     updateActiveWallet()
     return { data: tx, error: undefined }
