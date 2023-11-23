@@ -9,6 +9,7 @@ import VerifyPhone from './VerifyPhone.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
+import router from '../../../router'
 
 const { showModal } = useModal()
 const { path } = useRoute()
@@ -55,7 +56,8 @@ const alertButtons = [
 
 function handleClose() {
   if (path === '/setup')
-    showModal(ModalType.EnablePushNotifications)
+    // showModal(ModalType.EnablePushNotifications)
+    router.replace('/app')
 }
 
 function focusInput() {

@@ -7,6 +7,7 @@ import { close } from 'ionicons/icons'
 import { useRoute } from 'vue-router'
 import { BonusWallet } from '@/lib/bonus-wallet'
 import { ModalType, useModal } from '@/composables/useModal'
+import router from '../../../router'
 
 const { showModal, closeModal, showNotificationAlert } = useModal()
 const { path } = useRoute()
@@ -28,7 +29,8 @@ async function handleVerify() {
 
     await bonusWallet.verify(code.value)
     if (path === '/setup') {
-      showModal(ModalType.EnablePushNotifications)
+      // showModal(ModalType.EnablePushNotifications)
+      router.replace('/app')
     }
     else if (path === '/app') {
       showNotificationAlert('CC points activated')
@@ -57,7 +59,8 @@ function handleResendRequest() {
 
 function handleClose() {
   if (path === '/setup')
-    showModal(ModalType.EnablePushNotifications)
+    // showModal(ModalType.EnablePushNotifications)
+    router.replace('/app')
   else
     showModal(ModalType.Rewards)
 }
