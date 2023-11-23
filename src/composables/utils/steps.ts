@@ -85,12 +85,14 @@ const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptions) => 
   main: h(PhoneInput, { canSkip: !!stepsToSkip }),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
-    if (!phoneNumber)
-      err('Please enter a phone number')
-    else if (!PHONE_NUMBER_REGEX.test(phoneNumber))
-      err('Invalid phone number')
-    else
-      next()
+    if (!phoneNumber) { err('Please enter a phone number') }
+    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) { err('Invalid phone number') }
+    else {
+      const res = await (await import('@/stores/points')).usePoints().authorize(phoneNumber)
+      if (res && res.error)
+        err(res.error || 'Error authorizing phone number')
+      else next()
+    }
   },
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })

@@ -3,10 +3,10 @@ import { toValue as v } from 'vue'
 import type { AsyncResult } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 
-const basePointsUrl = new URL('http://bonus-nim.zeromox.com/api')
+const basePointsUrl = new URL('https://bonus-nim.zeromox.com')
 const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
-const firestoreUrl = new URL('https://firestore.googleapis.com/v1/projects/checkout-service-staging-0/databases/(default)')
+const firestoreUrl = new URL('https://firestore.googleapis.com')
 
 const baseHeaders = { 'Content-Type': 'application/json' }
 
@@ -58,16 +58,16 @@ export function usePointsApi() {
   }
 
   return {
-    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('/participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
-    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
-    getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('/participant/balance', basePointsUrl), { token: v(token) }),
-    payWithPoints: ({ type, reference, destination, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('/payment', basePointsUrl), { token: v(token), body: { type: v(type), reference: v(reference), destination: v(destination) } }),
-    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('/participant/referral', basePointsUrl), { token: v(token) }),
-    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`/referral/${v(id)}`, basePointsUrl)),
-    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`/referral/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
-    getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('/task', basePointsUrl), { token: v(token) }),
-    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`/task/${v(id)}`, basePointsUrl), { token: v(token) }),
-    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`/task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
+    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('api/participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
+    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
+    getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
+    payWithPoints: ({ type, reference, destination, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(type), reference: v(reference), destination: v(destination) } }),
+    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/referral', basePointsUrl), { token: v(token) }),
+    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/referral/${v(id)}`, basePointsUrl)),
+    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`api/referral/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
+    getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('api/task', basePointsUrl), { token: v(token) }),
+    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`api/task/${v(id)}`, basePointsUrl), { token: v(token) }),
+    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`api/task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
   }
 }
 
@@ -154,6 +154,6 @@ export function useFirestoreApi() {
   interface OrderByIdRes { fiat_currency_code: string; fiat_price: number }
 
   return {
-    getOrderById: ({ id }: OrderByIdArg) => api<OrderByIdRes>(new URL(`/documents/orders/${v(id)}`, firestoreUrl)),
+    getOrderById: ({ id }: OrderByIdArg) => api<OrderByIdRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, firestoreUrl)),
   }
 }

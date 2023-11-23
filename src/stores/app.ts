@@ -1,6 +1,7 @@
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
+import { computed } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
 
@@ -19,6 +20,7 @@ export const useApp = defineStore('app', () => {
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
+  const phoneNumberVerified = computed(() => !!pointsToken.value)
 
   // @ts-expect-error 16 is the value we need to have to get the 12 words
   Nimiq.Entropy.SIZE = 16
@@ -27,6 +29,7 @@ export const useApp = defineStore('app', () => {
 
   return {
     phoneNumber,
+    phoneNumberVerified,
     referralCode,
     entropy,
     hasDoneBackup,

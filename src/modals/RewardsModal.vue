@@ -13,7 +13,7 @@ import { useApp } from '@/stores/app'
 
 const { formatCurrency, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance } = storeToRefs(usePoints())
-const { phoneNumber } = storeToRefs(useApp())
+const { phoneNumberVerified } = storeToRefs(useApp())
 const { getAllTasks } = usePoints()
 const { closeModal, showModal } = useModal()
 const tasks = ref<Task[]>([])
@@ -35,7 +35,7 @@ const currentPrice: Ref<number> = computedAsync(async () => {
 
 onMounted(async () => {
   // If phone number is not verified, show the modal
-  if (!phoneNumber.value)
+  if (!phoneNumberVerified.value)
     await showModal(Modal.NewPhone)
 
   const { data, error } = await getAllTasks()

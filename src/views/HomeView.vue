@@ -29,7 +29,7 @@ const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
-const { phoneNumber, referralCode, hasDoneBackup } = storeToRefs(useApp())
+const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { formatCurrency, getPriceNow } = useFiat()
@@ -114,12 +114,12 @@ watchEffect(async () => {
     return notification.title !== verifyNumberTitle && notification.title !== claimRewardTitle
   })
 
-  if (referralCode.value && phoneNumber.value) {
+  if (referralCode.value && phoneNumberVerified.value) {
     setTimeout(() => {
       showNotificationAlert('CC Points added')
     }, 750)
   }
-  else if (!referralCode.value && !phoneNumber.value) {
+  else if (!referralCode.value && !phoneNumberVerified.value) {
     notificationArray.value.unshift({
       title: verifyNumberTitle,
       subtitle: 'Get cashback and earn rewards',
@@ -127,7 +127,7 @@ watchEffect(async () => {
     })
     scrollToFirstNotification()
   }
-  else if (referralCode.value && !phoneNumber.value) {
+  else if (referralCode.value && !phoneNumberVerified.value) {
     notificationArray.value.unshift({
       title: claimRewardTitle,
       action: () => showModal(Modal.NewPhone),
@@ -198,11 +198,11 @@ onMounted(async () => {
           <IonButton
             class="text-base normal-case"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="phoneNumber ? showModal(Modal.Rewards) : initializeFlow(FlowName.VerifyPhone)"
+            @click="phoneNumberVerified ? showModal(Modal.Rewards) : initializeFlow(FlowName.VerifyPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{
-              phoneNumber ? pointsBalance / 1e5 : 'Earn Points'
+              phoneNumberVerified ? pointsBalance / 1e5 : 'Earn Points'
             }}
           </IonButton>
         </IonButtons>
@@ -271,7 +271,7 @@ onMounted(async () => {
         <IonRow v-if="isReferralCardShown" class="mb-8">
           <NotificationCard
             class="w-full"
-            @click="phoneNumber ? showModal(Modal.Referral) : showModal(Modal.NewPhone)"
+            @click="phoneNumberVerified ? showModal(Modal.Referral) : showModal(Modal.NewPhone)"
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">

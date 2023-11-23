@@ -10,7 +10,7 @@ import { useApp } from '@/stores/app'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
-const { phoneNumber } = storeToRefs(useApp())
+const { phoneNumberVerified } = storeToRefs(useApp())
 
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
@@ -43,14 +43,14 @@ onLongPress(
     </IonItem>
 
     <!-- TODO: remove if when BlueCode is added -->
-    <ItemDivider v-if="!phoneNumber" />
+    <ItemDivider v-if="!phoneNumberVerified" />
 
     <!--
     <IonItem button :detail="false">
       Activate Bluecode payments
     </IonItem>
     -->
-    <IonItem v-if="!phoneNumber" button :detail="false" @click="showModal(Modal.NewPhone)">
+    <IonItem v-if="!phoneNumberVerified" button :detail="false" @click="showModal(Modal.NewPhone)">
       Activate Cashback & Rewards
     </IonItem>
 
