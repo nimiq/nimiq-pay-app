@@ -306,7 +306,7 @@ onMounted(async () => {
       <IonToolbar>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="!(isRemoteOk && isHtlcActive) || !(pointsBalance > 0 || remoteBalance > 0)"
+          :disabled="pointsBalance === 0 && !(isRemoteOk && isHtlcActive) && remoteBalance === 0"
           @click="showModal(Modal.Pay, { isFullscreen: true })"
         >
           Scan To Pay
