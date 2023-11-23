@@ -16,6 +16,7 @@ export function useSync() {
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
+  const { updateActiveWallet } = useRemoteSigner()
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -42,9 +43,11 @@ export function useSync() {
       return
 
     if (remoteBalance.value > 0) {
-      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx, isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
+      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx`)
       if (isHtlcActive && isRemoteOk)
         useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
+      else
+        console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
     }
     else {
       console.log(`Creating new HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.LocalToRemote} tx`)
@@ -87,8 +90,10 @@ export function useSync() {
     checkRemoteValidity()
     extendValidity()
 
-    client.value?.addBlockListener(() => {
+    client.value?.addBlockListener(async () => {
       console.group(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+      await updateActiveWallet()
+
       handleFunds()
       checkRemoteValidity()
       extendValidity()

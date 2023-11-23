@@ -22,7 +22,7 @@ function useRemoteSignerDb() {
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
       await run(SQLQuery.DeactivateRemoteSigners)
       // eslint-disable-next-line no-console
-      console.log('✒️ Deactivated old Remote Signer. Inserting remote signer', { address, balance, proofSize, publicKey, start, end, active })
+      console.log('✒️ Updating Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active })
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
@@ -34,7 +34,7 @@ function useRemoteSignerDb() {
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
       // eslint-disable-next-line no-console
-      console.log(`✒️ Updating active remote signer ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
+      console.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
       await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
     },
   }
@@ -100,6 +100,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: remoteSigner.value.address })
     if (error || !remoteSignerApi)
       return
+    remoteSigner.value = remoteSignerApi
     await _updateActiveWallet(remoteSignerApi)
   }
 
@@ -109,6 +110,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
+  // TODO: maybe get this from blockchain?
   const remoteBalance = computed(() => remoteSigner.value?.balance || 0)
   const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
 
