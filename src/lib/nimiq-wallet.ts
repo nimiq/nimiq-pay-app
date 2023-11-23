@@ -24,7 +24,7 @@ export class NimiqWallet {
   public readonly headHeight: Ref<number> = ref(0)
 
   constructor(private nimiqNetworkClient: NimiqNetworkClient, private storageManager: StorageManager) {
-    this.privateKeyPromise = (async () => {
+    this.privateKeyPromise = nimiqNetworkClient.awaitInitialized().then(async () => {
       let { entropy } = await this.storageManager.get(WalletStorageKey)
       console.groupCollapsed('🔑 Getting Private Key')
       console.log('Entropy:', entropy)
@@ -49,7 +49,7 @@ export class NimiqWallet {
       const mnemonic = Nimiq.MnemonicUtils.entropyToMnemonic(entropy)
       console.groupEnd()
       return Nimiq.MnemonicUtils.mnemonicToExtendedPrivateKey(mnemonic).derivePath(`m/44'/242'/0'/0'`).privateKey
-    })()
+    })
 
     const walletPromise = this.walletPromise = nimiqNetworkClient.awaitInitialized().then(async () => {
       const privateKey = await this.privateKeyPromise
