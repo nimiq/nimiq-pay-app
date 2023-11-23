@@ -30,7 +30,7 @@ const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner(
 const { phoneNumber, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { formatCurrency, getPriceAt, getPriceNow } = useFiat()
+const { formatCurrency, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { head } = storeToRefs(useNimiqNetwork())
 

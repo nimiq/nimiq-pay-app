@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, until } from '@vueuse/core'
 import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
@@ -12,26 +12,32 @@ function useRemoteSignerDb() {
   const { run, query } = useConn()
   return {
     async getActiveRemoteSigner() {
-      return await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true })
+      const res = await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true })
+      if (res)
+        res.address = Nimiq.Address.fromUserFriendlyAddress(res.address as unknown as string) // Deserialize address from db
+      return res
     },
 
     async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
       await run(SQLQuery.DeactivateRemoteSigners)
-      await run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
+      // eslint-disable-next-line no-console
+      console.log(':black_nib:  Deactivated old Remote Signer. Inserting remote signer', address, balance, proofSize, publicKey, start, end, active)
+      await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
-    async updateBalance(newBalance: number) {
-      await run(SQLQuery.UpdateRemoteBalance, [newBalance])
+    async updateBalance(newBalance: number, address: Nimiq.Address) {
+      await run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
     },
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
-      await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address])
+      await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
     },
   }
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
+  const { client } = useNimiqNetwork()
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
@@ -67,6 +73,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         return
       await updateRemoteSigner(remoteSignerApi)
     }
+
+    await until(client).toBeTruthy()
+    client?.addHeadChangedListener(async () => {
+      if (!remoteSigner.value)
+        return
+      const account = await client?.getAccount(remoteSigner.value?.address)
+      if (!account)
+        return
+      await updateBalance(account.balance, remoteSigner.value?.address)
+    })
   }
 
   async function updateRemoteSigner(signer: RemoteSigner) {

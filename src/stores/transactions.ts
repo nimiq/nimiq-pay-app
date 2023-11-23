@@ -19,7 +19,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   const { selectedFiat } = storeToRefs(useApp())
   const { updateBalance, updateActiveWallet } = useRemoteSigner()
-  const { remoteBalance } = storeToRefs(useRemoteSigner())
+  const { remoteBalance, remoteAddress } = storeToRefs(useRemoteSigner())
 
   const { getTxPrice } = useFiat()
 
@@ -93,7 +93,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     await upsertTx(tx)
-    updateBalance(remoteBalance.value + tx.value)
+    updateBalance(remoteBalance.value + tx.value, remoteAddress.value!)
     updateActiveWallet()
     return { data: await parseTx(tx), error: undefined }
   }

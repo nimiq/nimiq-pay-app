@@ -3,18 +3,21 @@ import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastC
 import { Clipboard } from '@capacitor/clipboard'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
+import { onMounted } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
+import { useConn } from '@/stores/conn'
 
 const router = useRouter()
 const { consensus, head, height, peerCount } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
+const { query } = useConn()
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -34,6 +37,11 @@ async function handleClearTx() {
   await clearTxHistory()
   router.go(0)
 }
+
+onMounted(async () => {
+  const res = await query('SELECT * FROM remote_signers')
+  console.log('Remote Signers Table', res.length, res)
+})
 </script>
 
 <template>
