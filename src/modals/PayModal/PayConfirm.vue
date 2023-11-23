@@ -9,6 +9,7 @@ import PayScanner from './PayScanner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { InstantPayWallet } from '@/lib/instant-pay-wallet'
 import { BonusWallet } from '@/lib/bonus-wallet'
+import { NimiqNetworkClient } from '@/lib/nimiq-network-client'
 import { useModal } from '@/composables/useModal'
 import InfoIcon from '@/components/icons/info.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -25,6 +26,7 @@ const nav = (document.querySelector('[data-pay-nav]')) as Nav & HTMLElement
 
 const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const bonusWallet = inject(BonusWallet.KEY) as BonusWallet
+const nimiqNetworkClient = inject(NimiqNetworkClient.KEY) as NimiqNetworkClient
 const pendingPayment = instantPayWallet.getPendingPayment()
 const router = useRouter()
 const isPayingWithPoints = ref(false)
@@ -151,8 +153,11 @@ onMounted(() => {
         <p v-if="isPayingWithPoints && paymentDetails?.reason" class="mt-auto text-red-500 -top-6">
           {{ paymentDetails?.reason }}
         </p>
+        <p v-if="nimiqNetworkClient.consensusState.value !== 'established'" class="mt-auto text-red-500 -top-6">
+          Consensus {{ nimiqNetworkClient.consensusState.value }}
+        </p>
         <!-- Pay Button -->
-        <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" :disabled="isPayingWithPoints && !isPaymentValid" @click="() => pay()">
+        <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" :disabled="nimiqNetworkClient.consensusState.value !== 'established' || (isPayingWithPoints && !isPaymentValid)" @click="() => pay()">
           Pay
         </IonButton>
       </div>
