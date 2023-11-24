@@ -85,54 +85,52 @@ onMounted(async () => {
         </IonButton>
       </IonCardContent>
     </IonCard>
+    <IonCard class="w-full">
+      <IonCardHeader>
+        <IonCardTitle>Tx Listener</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="flex flex-col">
+          <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
+          <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
+          <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
+          <span>State: {{ txInMemPool?.state }} </span>
+          <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
+          <span>Network: {{ txInMemPool?.network }}</span>
+        </p>
+      </IonCardContent>
+    </IonCard>
     <IonCard>
-      <IonCard>
-        <IonCardHeader>
-          <IonCardTitle>Tx Listener</IonCardTitle>
-        </IonCardHeader>
-        <IonCardContent>
-          <p class="flex flex-col">
-            <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
-            <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
-            <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
-            <span>State: {{ txInMemPool?.state }} </span>
-            <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
-            <span>Network: {{ txInMemPool?.network }}</span>
-          </p>
-        </IonCardContent>
-      </IonCard>
-      <IonCard>
-        <IonCardHeader>
-          <IonCardTitle>Instant wallet</IonCardTitle>
-        </IonCardHeader>
-        <IonCardContent>
-          <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
-            Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
-          </p>
-          <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
-          <p>
-            Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
-              validityStart }}</strong> to
-            <strong>{{ validityEnd }}</strong>)
-          </p>
-          <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>
-          <IonButton
-            :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
-            @click="sendTx({ transfer: Transfer.RemoteToLocal })"
-          >
-            Recover
-          </IonButton>
-          <IonButton
-            :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
-            @click="sendTx({ transfer: Transfer.ExtendRemote })"
-          >
-            Extend
-          </IonButton>
-        </IonCardContent>
-      </IonCard>
-      <IonButton @click="handleClearTx">
-        Clear Tx History
-      </IonButton>
-    </ioncard>
+      <IonCardHeader>
+        <IonCardTitle>Instant wallet</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
+          Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
+        </p>
+        <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
+        <p>
+          Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
+            validityStart }}</strong> to
+          <strong>{{ validityEnd }}</strong>)
+        </p>
+        <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>
+        <IonButton
+          :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
+          @click="sendTx({ transfer: Transfer.RemoteToLocal })"
+        >
+          Recover
+        </IonButton>
+        <IonButton
+          :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
+          @click="sendTx({ transfer: Transfer.ExtendRemote })"
+        >
+          Extend
+        </IonButton>
+      </IonCardContent>
+    </IonCard>
+    <IonButton @click="handleClearTx">
+      Clear Tx History
+    </IonButton>
   </ModalTemplate>
 </template>
