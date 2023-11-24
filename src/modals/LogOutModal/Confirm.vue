@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { inject } from 'vue'
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { useRouter } from 'vue-router'
-import { StorageManager } from '@/lib/storage-manager'
-import { InstantPayWallet } from '@/lib/instant-pay-wallet'
+import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
+import { useApp } from '@/stores/app'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useConn } from '@/stores/conn'
 
-const storageManager = inject(StorageManager.KEY) as StorageManager
-const instantPayWallet = inject(InstantPayWallet.KEY) as InstantPayWallet
 const { closeModal, showModal } = useModal()
 const router = useRouter()
+const { hasDoneBackup } = storeToRefs(useApp())
+const { localBalance } = storeToRefs(useLocalWallet())
+const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
-  if (storageManager.isBackupDone().value || instantPayWallet.balance.value === 0) {
+  if (hasDoneBackup.value || localBalance.value === 0) {
     // TODO: ask for pin
-    await storageManager.deleteDatabase()
+    await deleteDatabase()
     router.replace('/setup')
   }
   else {

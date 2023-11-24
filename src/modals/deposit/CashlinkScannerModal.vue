@@ -1,14 +1,17 @@
 <script setup lang="ts">
 // TODO: refactor with PayScanner into one file
-import { inject, onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onDeactivated, onMounted, ref } from 'vue'
 import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
+import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { NimiqWallet } from '@/lib/nimiq-wallet'
+import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 const isDev = import.meta.env.DEV
 
-const nimiqWallet = inject(NimiqWallet.KEY) as NimiqWallet
+const { claimCashlink: _claimCashlink } = useNimiqNetwork()
+const { localAddress } = storeToRefs(useLocalWallet())
 const { showModal, showNotificationAlert, closeAllModals } = useModal()
 const isScanning = ref(false)
 
@@ -39,7 +42,8 @@ async function claimCashlink(cashlink: string) {
   if (!cashlink)
     return null
   try {
-    await nimiqWallet.claimCashlink(cashlink)
+    // TODO: add to tx history as pending
+    await _claimCashlink(cashlink, localAddress.value)
   }
   catch (e) {
     console.error('Error parsing Cashlink:', e)

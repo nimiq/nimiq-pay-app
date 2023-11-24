@@ -31,6 +31,30 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     })
   }
 
+  async function claimCashlink(cashlink: string, address: Nimiq.Address) {
+    if (!cashlink)
+      throw new Error('No Cashlink found')
+
+    cashlink = cashlink.split('cashlink/#')[1].replace(/~/g, '').replace(/=*$/, match => Array.from({ length: match.length }).fill('.').join(''))
+    const buf = Nimiq.BufferUtils.fromBase64Url(cashlink)
+    const keyPair = Nimiq.KeyPair.derive(Nimiq.PrivateKey.unserialize(buf))
+    const wallet = new Nimiq.Wallet(keyPair)
+    const { balance } = await client.value!.getAccount(wallet.address)
+    const amount = Math.min(buf.readUint64(), balance)
+    if (!address)
+      throw new Error('No Nimiq Wallet address found')
+    if (amount <= 0)
+      throw new Error('Cashlink has no balance')
+
+    const tx = wallet.createTransaction(
+      address,
+      amount,
+      0,
+      height.value,
+    )
+    await client.value!.sendTransaction(tx)
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -38,5 +62,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     height,
     peerCount,
     init,
+    claimCashlink,
   }
 })
