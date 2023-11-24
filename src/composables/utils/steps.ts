@@ -1,7 +1,7 @@
-import { defineAsyncComponent, h } from 'vue'
+import { defineAsyncComponent, h, ref } from 'vue'
 import { modalController } from '@ionic/vue'
 import { Modal, useModal } from '@/composables/useModal'
-import type { Flow, State, StepInit } from '@/types/steps'
+import type { Flow, StepInit } from '@/types/steps'
 import { FlowName, PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
 
 // @ts-expect-error The component is fine
@@ -208,11 +208,12 @@ const qrCodeScannerStep: StepInit = () => ({
 })
 
 const paymentPreviewStep: StepInit = () => {
+  const title = ref('')
   return {
     step: StepName.PaymentPreview,
-    title: 'Paument',
+    title,
     main: h(PaymentPreview),
-    // async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
+    async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
   }
 }
 
@@ -261,13 +262,6 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   },
 }
 
-export function getFlow(name: FlowName): Flow {
-  const steps = flows[name].map(step => step())
-  const state = Object.fromEntries(Object.keys(steps).map(step => [step, undefined])) as State
-  const onDone = onDoneFlows[name]
-  return { name, state, steps, onDone }
-}
-
 /**
  * It initializes the flow give the name opening a new modal with the flow component
  * which handles the carousel of steps.
@@ -280,7 +274,7 @@ export function initializeFlow(name: FlowName) {
     canDismiss: true,
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
-    componentProps: { flow: getFlow(name) },
+    componentProps: { flow: { name, state: {}, steps: flows[name].map(s => s()), onDone: onDoneFlows[name] } },
   }).then(modal => modal.present())
 }
 

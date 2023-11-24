@@ -12,12 +12,11 @@ const emit = defineEmits(stepEmits)
 
 const { getPriceTag } = useFiat()
 
-const state = computed(() => props.state[StepName.QRCodeScanner])
-const amount = computed(() => state.value?.amount || 0)
-const fee = computed(() => state.value?.fee || 0)
+const amount = computed(() => props.state[StepName.QRCodeScanner]?.amount || 0)
+const fee = computed(() => props.state[StepName.QRCodeScanner]?.fee || 0)
 const nimAmount = computed(() => amount.value / 1e5)
 const feeNimAmount = computed(() => fee.value / 1e5)
-const fiatPriceTag = computedAsync(() => getPriceTag(amount.value))
+const fiatPriceTag = computedAsync(() => getPriceTag(nimAmount.value))
 </script>
 
 <template>
@@ -28,7 +27,7 @@ const fiatPriceTag = computedAsync(() => getPriceTag(amount.value))
           <span class="text-3xl uppercase text-space/60">{{ fiatPriceTag }}</span>
           <InfoIcon class="w-4 h-4 stroke-2 opacity-60" />
         </div>
-        <p class="text-5xl">
+        <p class="text-5xl text-center">
           {{ nimAmount }} NIM
         </p>
         <p class="text-base font-semibold text-space/60">

@@ -179,7 +179,6 @@ onMounted(async () => {
 
   scrollToFirstNotification()
   await useSync().syncWallets()
-  // initializeFlow(FlowName.NimOrPointsPayment)
   if (phoneNumberVerified.value) {
     updatePointsBalance()
     updateTasks()

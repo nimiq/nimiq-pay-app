@@ -6,7 +6,7 @@ import { close } from 'ionicons/icons'
 import { IonIcon } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/types/steps'
-import type { Flow, InputStepName, StepName } from '@/types/steps'
+import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/types/steps'
 import { useCarousel } from '@/composables/useCarousel'
 import { cancelFlow } from '@/composables/utils/steps'
 
@@ -37,17 +37,22 @@ watchEffect(() => errors = reactive(Object.fromEntries(steps.value.filter(isInpu
 const error = (step: StepName) => isActiveStepInput.value ? errors![step as InputStepName] : undefined
 
 function goToNext() {
+  console.log('goToNext', state)
   isLast.value ? onFlowDone(state, { goTo: replace }) : nextSlide()
 }
 
 onMounted(autofocus)
 
-async function onStepDone(value: any /* The types are a bit hard for this one */) {
+async function onStepDone(value: OnDoneStepValue) {
   if (isActiveStepInfo.value) { goToNext() }
   else if (isActiveStepInput.value) {
+    // @ts-expect-error If the emit value is well typed, this should work
     state[step.value.step as InputStepName] = value
     const err = (errorMsg: string) => errors![step.value.step as InputStepName] = errorMsg
-    await step.value.beforeNext?.(state, { next: goToNext, err })
+    if (step.value.beforeNext)
+      await step.value.beforeNext?.(state, { next: goToNext, err })
+    else
+      goToNext()
     autofocus(400)
   }
 }

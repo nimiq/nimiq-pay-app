@@ -12,7 +12,7 @@ const { isScanning, setDummyData } = useQRScanner({ onScan: data => emit('done',
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full">
+  <div class="flex flex-col self-start w-full h-full relative">
     <button v-if="isDev" class="block text-sm font-normal text-space/80 underline z-10" @click="setDummyData">
       Click here to use mockup data
     </button>
@@ -38,51 +38,41 @@ ion-footer > ion-toolbar {
   box-shadow: none !important;
 }
 
-.border-corner:before {
-  	display: block;
-  	content: "";
-  	width: 35px;
-  	height: 35px;
-  	position: absolute;
-  	top: -1px;
-  	left: -1px;
-  	border-top: 2px solid var(--colors-darkblue);
-  	border-left: 2px solid var(--colors-darkblue);
-  }
+.border-corner {
+	&:before, &:after, & span.border_bottom::before, & span.border_bottom::after {
+		display: block;
+		content: "";
+		width: 35px;
+		height: 35px;
+		position: absolute;
+	}
 
-  .border-corner:after {
-  	display: block;
-  	content: "";
-  	width: 35px;
-  	height: 35px;
-  	position: absolute;
-  	top: -1px;
-  	right: -1px;
-  	border-top: 2px solid var(--colors-darkblue);
-  	border-right: 2px solid var(--colors-darkblue);
-  }
+	&:after {
+		top: -1px;
+		right: -1px;
+		border-top: 2px solid var(--colors-darkblue);
+		border-right: 2px solid var(--colors-darkblue);
+	}
 
-  .border-corner span.border_bottom:before {
-  	display: block;
-  	content: "";
-  	width: 35px;
-  	height: 35px;
-  	position: absolute;
-  	bottom: -1px;
-  	left: -1px;
-  	border-bottom: 2px solid var(--colors-darkblue);
-  	border-left: 2px solid var(--colors-darkblue);
-  }
+	&:before {
+		bottom: -1px;
+		left: -1px;
+		border-bottom: 2px solid var(--colors-darkblue);
+		border-left: 2px solid var(--colors-darkblue);
+	}
 
-  .border-corner span.border_bottom:after {
-  	display: block;
-  	content: "";
-  	width: 35px;
-  	height: 35px;
-  	position: absolute;
-  	bottom: -1px;
-  	right: -1px;
-  	border-bottom: 2px solid var(--colors-darkblue);
-  	border-right: 2px solid var(--colors-darkblue);
-  }
+	& span.border_bottom::after {
+		top: -1px;
+		left: -1px;
+		border-top: 2px solid var(--colors-darkblue);
+		border-left: 2px solid var(--colors-darkblue);
+	}
+
+	& span.border_bottom::before {
+		bottom: -1px;
+		right: -1px;
+		border-bottom: 2px solid var(--colors-darkblue);
+		border-right: 2px solid var(--colors-darkblue);
+	}
+}
 </style>

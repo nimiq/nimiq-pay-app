@@ -102,8 +102,10 @@ export interface StepInitOptions {
 export type StepInit = (options?: StepInitOptions) => Step
 export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined }
 
+export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod
+
 export const stepEmits: EmitsOptions = {
-  done: (_: string) => undefined,
+  done: (_: OnDoneStepValue) => undefined,
   skip: () => undefined,
   autofocus: () => undefined,
 }

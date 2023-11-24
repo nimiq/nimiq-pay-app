@@ -82,9 +82,10 @@ export function useQRScanner({ onScan }: UseQRScannerOptions) {
       // This is a fallback. We found the amount and the recipient, but we don't know the rail.
       data = { recipient, amount, message, fee, locationName: label }
 
-    onScan?.(data)
-    isScanning.value = false
+    setTimeout(stopScan, 500)
     await stopScan()
+    onScan(data)
+    isScanning.value = false
   }
 
   async function startScan() {
