@@ -1,4 +1,4 @@
-import type { EmitsOptions, MaybeRef, VNode } from 'vue'
+import type { EmitsOptions, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 import type { Transaction } from './transactions'
 
@@ -65,7 +65,7 @@ export type State = {
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
 
 type BaseStep = {
-  title: MaybeRef<string>
+  title: string
   description?: string
   main: VNode
   onCancel?: (state: State, { path }: { path?: string; replace?: (to: RouteLocationRaw) => Promise<void | NavigationFailure | undefined> }) => Promise<void> | undefined
@@ -112,7 +112,7 @@ export const stepEmits: EmitsOptions = {
   autofocus: () => undefined,
 }
 
-export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'fee'>
+export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'fee'>
 
 export enum PaymentMethod {
   NIM = 'nim',

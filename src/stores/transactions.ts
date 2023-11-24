@@ -47,7 +47,7 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Upserting transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
-      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.locationName],
+      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx],
     )
   }
 

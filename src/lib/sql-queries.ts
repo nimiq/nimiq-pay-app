@@ -26,8 +26,8 @@ export enum SQLQuery {
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, locationName TEXT)',
-  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, locationName FROM transactions ORDER BY timestamp DESC LIMIT ? OFFSET ?',
-  UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, locationName) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+  UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ClearTxHistory = 'DELETE FROM transactions',
 
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
@@ -47,6 +47,7 @@ interface Migration {
   statements: string[]
 }
 
+// TODO Merge migrations into one
 export const migrations: Migration[] = [
   {
     version: 1,
@@ -55,6 +56,13 @@ export const migrations: Migration[] = [
       SQLQuery.CreateTxsTable,
       SQLQuery.CreateRemoteSignersTable,
       SQLQuery.CreateNimPricesTable,
+    ],
+  },
+  {
+    version: 2,
+    statements: [
+      'ALTER TABLE transactions RENAME COLUMN locationName TO shopName',
+      'ALTER TABLE transactions ADD COLUMN shopCategory TEXT',
     ],
   },
 ]

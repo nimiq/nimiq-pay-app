@@ -8,7 +8,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/types/steps'
 import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/types/steps'
 import { useCarousel } from '@/composables/useCarousel'
-import { cancelFlow } from '@/composables/utils/steps'
 
 const props = defineProps({
   flow: {
@@ -36,12 +35,19 @@ let errors: Errors = reactive(Object.fromEntries(steps.value.filter(isInputStep)
 watchEffect(() => errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 const error = (step: StepName) => isActiveStepInput.value ? errors![step as InputStepName] : undefined
 
-function goToNext() {
-  console.log('goToNext', state)
-  isLast.value ? onFlowDone(state, { path, goTo: replace, isCancelled: false }) : nextSlide()
+async function goToNext() {
+  if (isLast.value) {
+    onFlowDone(state, { goTo: replace, path, isCancelled: false })
+    return
+  }
+  await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state)
+  nextSlide()
 }
 
-onMounted(autofocus)
+onMounted(async () => {
+  await steps.value.at(0)?.beforeDisplay?.(state)
+  autofocus()
+})
 
 async function onStepDone(value: OnDoneStepValue) {
   if (isActiveStepInfo.value) { goToNext() }
@@ -80,14 +86,14 @@ function onCancel() {
 
 <template>
   <button class="fixed top-4 right-4" @click.stop="onCancel">
-    <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6 z-10" />
+    <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
   </button>
-  <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="{ main, step, title, description, stepsToSkip } in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always gap-y-4">
-      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] z-10" v-html="title" />
-      <p class="[text-wrap:pretty] text-center opacity-60 z-10" v-html="description" />
-      <div class="flex-1 w-full">
-        <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state }" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
+  <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory bg-white">
+    <li v-for="{ main, step, title, description, stepsToSkip } in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
+      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
+      <p v-if="description" class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
+      <div class="flex-1 w-full flex flex-col">
+        <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
       </div>
     </li>
   </ul>

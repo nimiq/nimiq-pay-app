@@ -1,5 +1,6 @@
-import { defineAsyncComponent, h, ref } from 'vue'
+import { defineAsyncComponent, h, reactive } from 'vue'
 import { modalController } from '@ionic/vue'
+import { renderToString } from 'vue/server-renderer'
 import { Modal, useModal } from '@/composables/useModal'
 import type { Flow, StepInit } from '@/types/steps'
 import { FlowName, PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
@@ -15,6 +16,7 @@ const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoard
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
+const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
@@ -204,12 +206,17 @@ const qrCodeScannerStep: StepInit = () => ({
 })
 
 const paymentPreviewStep: StepInit = () => {
-  const title = ref('')
+  let titleCmp = 'Payment preview' // Fall back
   return {
     step: StepName.PaymentPreview,
-    title,
+    get title() { return titleCmp },
     main: h(PaymentPreview),
-    async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
+    async beforeDisplay({ qrCodeScanner }) {
+      if (!qrCodeScanner)
+        return
+      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: qrCodeScanner.shopCategory }))
+      titleCmp = `${iconInHTML} ${qrCodeScanner.shopName || 'Payment preview'}`
+    },
   }
 }
 
@@ -249,7 +256,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
     console.log('Payment preview', merchantPaymentInfo)
     switch (state[StepName.PaymentPreview]) {
       case PaymentMethod.NIM:
-        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo, title: merchantPaymentInfo.locationName || 'Payment' })
+        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo, title: merchantPaymentInfo.shopName || 'Payment' })
         break
       case PaymentMethod.Points:
         if (!merchantPaymentInfo.message)
@@ -274,7 +281,7 @@ export function initializeFlow(name: FlowName) {
     canDismiss: true,
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
-    componentProps: { flow: { name, state: {}, steps: flows[name].map(s => s()), onDone: onDoneFlows[name] } },
+    componentProps: { flow: { name, state: reactive({}), steps: flows[name].map(s => s()), onDone: onDoneFlows[name] } },
   }).then(modal => modal.present())
 }
 

@@ -30,6 +30,21 @@ export enum Rail {
   Bluecode = 'bluecode',
 }
 
+export enum ShopCategory {
+  CarsBikes = 'cars_bikes',
+  Cash = 'cash',
+  ComputerElectronics = 'computer_electronics',
+  Entertainment = 'entertainment',
+  FoodDrinks = 'food_drinks',
+  HealthBeauty = 'health_beauty',
+  HotelLodging = 'hotel_lodging',
+  LeisureActivities = 'leisure_activities',
+  RestaurantBar = 'restaurant_bar',
+  Shop = 'shop',
+  SportsFitness = 'sports_fitness',
+  Miscellaneous = 'miscellaneous',
+}
+
 export interface BaseTransaction {
   raw?: string
   sender: string
@@ -46,7 +61,8 @@ export type UserTransaction = BaseTransaction & {
   message?: string
   rail?: undefined
   railPeerId?: undefined
-  locationName?: undefined
+  shopName?: undefined
+  shopCategory?: undefined
   title: string
 }
 
@@ -55,13 +71,15 @@ export type UserReceiptTransaction = BaseTransaction & {
   message?: string
   rail?: undefined
   railPeerId?: undefined
-  locationName?: undefined
+  shopName?: undefined
+  shopCategory?: undefined
   title: string
 }
 
 export type MerchantTransaction = BaseTransaction & {
   transfer: Transfer.UserPaymentToMerchant
-  locationName: string
+  shopName: string
+  shopCategory: ShopCategory
   title: string
 } & ({
   rail: Rail.CryptoPaymentLink | Rail.GoCrypto
@@ -80,13 +98,14 @@ export type SyncTransaction = BaseTransaction & {
   title?: undefined
   rail?: undefined
   railPeerId?: undefined
-  locationName?: undefined
+  shopName?: undefined
+  shopCategory?: undefined
 }
 
 export type TransactionSentByUser = UserTransaction | MerchantTransaction | SyncTransaction
 export type Transaction = UserTransaction | UserReceiptTransaction | MerchantTransaction | SyncTransaction
 
 export type PartialSendTxArgs =
-  Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'title'>
+  Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'title'>
   | Pick<SyncTransaction, 'transfer'>
   // | Pick<SyncTransaction<Transfer.LocalToRemote>, 'transfer' | 'amount'>
