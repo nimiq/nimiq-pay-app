@@ -247,8 +247,9 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
   [FlowName.NimOrPointsPayment]: async (state, { goTo }) => {
     const merchantPaymentInfo = state[StepName.QRCodeScanner]!
+    console.log('Payment preview', merchantPaymentInfo)
     switch (state[StepName.PaymentPreview]) {
-      case PaymentMethod.Nim:
+      case PaymentMethod.NIM:
         await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo, title: merchantPaymentInfo.locationName || 'Payment' })
         break
       case PaymentMethod.Points:

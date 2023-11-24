@@ -2,6 +2,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { onMounted, readonly, ref, watch } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
+import { useLocalWallet } from './local-wallet'
 import type { PartialSendTxArgs, Transaction, TransactionSentByUser } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
@@ -59,6 +60,17 @@ export const useTransactions = defineStore('transactions', () => {
   })
 
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction> {
+    // eslint-disable-next-line no-console
+    console.log('✈️  Sending new tx', {
+      partialTx,
+      remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+      remoteBalance: useRemoteSigner().remoteBalance,
+      remoteHeight: useRemoteSigner().remoteHeight,
+      remotePublicKey: useRemoteSigner().remotePublicKey,
+      remoteProofSize: useRemoteSigner().remoteProofSize,
+      localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
+      localBalance: useLocalWallet().localBalance,
+    })
     const { data: signedTx, error } = await getSignedTx(partialTx)
     if (error)
       return { data: undefined, error }
@@ -69,6 +81,9 @@ export const useTransactions = defineStore('transactions', () => {
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
     const tx = { ...partialTx, fee, recipient, timestamp, status, hash, sender, amount, raw, message } as TransactionSentByUser
+
+    // eslint-disable-next-line no-console
+    console.log(`✈️ Sending transaction`, tx)
 
     await upsertTx(tx)
     transactions.value = [tx, ...transactions.value]

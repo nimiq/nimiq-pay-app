@@ -113,6 +113,6 @@ export const stepEmits: EmitsOptions = {
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'fee'>
 
 export enum PaymentMethod {
-  Nim = 'nim',
+  NIM = 'nim',
   Points = 'points',
 }

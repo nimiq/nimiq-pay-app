@@ -6,7 +6,6 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import type { PartialSendTxArgs } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
 
-// TODO Check if this function is OK!
 /**
  * Signs any transaction in the wallet.
  *
@@ -23,17 +22,6 @@ import { Transfer } from '@/types/transactions'
  * @returns
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
-  // eslint-disable-next-line no-console
-  console.log('Sending new tx', {
-    partialArgs,
-    remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-    remoteBalance: useRemoteSigner().remoteBalance,
-    remoteHeight: useRemoteSigner().remoteHeight,
-    remotePublicKey: useRemoteSigner().remotePublicKey,
-    remoteProofSize: useRemoteSigner().remoteProofSize,
-    localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-    localBalance: useLocalWallet().localBalance,
-  })
   if (partialArgs.transfer === Transfer.UserPayment && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
@@ -47,7 +35,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return { data: tx, error: undefined }
+    return await getSignedTxByRemote(tx)
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     const tx = new Nimiq.ExtendedTransaction(

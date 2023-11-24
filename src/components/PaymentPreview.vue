@@ -4,7 +4,7 @@ import { type PropType, computed } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import InfoIcon from '@/components/icons/info.vue'
 import type { State } from '@/types/steps'
-import { StepName, stepEmits } from '@/types/steps'
+import { PaymentMethod, StepName, stepEmits } from '@/types/steps'
 import { useFiat } from '@/stores/fiat'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
@@ -38,7 +38,7 @@ const fiatPriceTag = computedAsync(() => getPriceTag(nimAmount.value))
       </div>
     </div>
     <div class="flex flex-col items-center self-end justify-between w-full h-full">
-      <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" @click="emit('done')">
+      <IonButton size="large" expand="block" class="w-11/12 max-w-xs min-w-[10rem]" @click="emit('done', PaymentMethod.NIM)">
         Pay
       </IonButton>
     </div>
