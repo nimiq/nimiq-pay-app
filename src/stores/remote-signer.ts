@@ -81,6 +81,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     await _updateActiveWallet(remoteSignerApi)
   }
 
+  async function updateRemoteFromApi() {
+    const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
+    if (error || !remoteSignerApi) {
+      // eslint-disable-next-line no-console
+      console.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
+      return
+    }
+    await updateRemoteSigner(remoteSignerApi)
+  }
+
   /**
    * Initializes the remote signer variables with the following algorithm:
    * 1. Check if we have a local wallet:
@@ -105,19 +115,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
     }
     else {
-      const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
-      if (error || !remoteSignerApi) {
-        // eslint-disable-next-line no-console
-        console.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
-        return
-      }
-
-      await updateRemoteSigner(remoteSignerApi)
+      await updateRemoteFromApi()
     }
 
     client!.addHeadChangedListener(async () => {
       const account = await client!.getAccount(remoteAddress.value!)
       await updateBalance(account.balance, remoteAddress.value!)
+
+      // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
+      if (remoteBalance.value === 0 && height.value % 10 === 0)
+        await updateRemoteFromApi()
     })
   }
 

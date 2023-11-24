@@ -105,12 +105,6 @@ export const usePoints = defineStore('points', () => {
 
     await updatePointsBalance()
     await updateTasks()
-    // Mark task as completed
-    // tasks.value = tasks.value?.map((task) => {
-    //   if (task.id === id)
-    //     task.status = 'completed'
-    //   return task
-    // })
     return { data, error: undefined }
   }
 
