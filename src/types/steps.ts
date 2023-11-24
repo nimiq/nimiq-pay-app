@@ -57,7 +57,7 @@ export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(s
 export type State = {
   // All the InputSteps have a value in the state
   // By default, the value is a string, but it can differ for each step
-  [K in StepName]?: (K extends StepName.QRCodeScanner ? MerchantPaymentInfo : K extends StepName.PaymentPreview ? PaymentMethod : string)
+  [K in StepName]?: (K extends StepName.QRCodeScanner ? PaymentRequestData : K extends StepName.PaymentPreview ? PaymentMethod : string)
 }
 
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
@@ -108,7 +108,7 @@ export const stepEmits: EmitsOptions = {
   autofocus: () => undefined,
 }
 
-export type MerchantPaymentInfo = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId'>
+export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'fee'>
 
 export enum PaymentMethod {
   Nim = 'nim',

@@ -1,39 +1,30 @@
 <script setup lang="ts">
-import { IonFooter, IonToolbar } from '@ionic/vue'
-import ModalTemplate from '@/components/ModalTemplate.vue'
+import type { PropType } from 'vue'
+import { type State, stepEmits } from '@/types/steps'
 import { useQRScanner } from '@/composables/useQRScanner'
+
+defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
+const emit = defineEmits(stepEmits)
 
 const isDev = import.meta.env.DEV
 
-const { isScanning, reset, setDummyData } = useQRScanner()
+const { isScanning, setDummyData } = useQRScanner({ onScan: data => emit('done', data) })
 </script>
 
 <template>
-  <ModalTemplate>
-    <div class="relative w-full h-full">
-      <p class="absolute top-0 z-10 text-2xl font-bold -translate-x-1/2 left-1/2" @click="setDummyData">
-        Scan QR code
-        <span v-if="isDev" class="block text-sm font-normal text-blue-300">Click here to use mockup</span>
-      </p>
-      <div class="absolute -translate-x-1/2 left-1/2 top-1/3 -translate-y-1/3 w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner" :class="{ '!bg-transparent outline outline-white outline-[100vh]': isScanning }">
-        <span class="border_bottom" />
-      </div>
+  <div class="flex flex-col self-start w-full h-full">
+    <button v-if="isDev" class="block text-sm font-normal text-space/80 underline z-10" @click="setDummyData">
+      Click here to use mockup data
+    </button>
+    <div class="absolute -translate-x-1/2 left-1/2 top-1/3 -translate-y-1/3 w-[80vw] bg-gray-100 h-[80vw] transition-all border-corner" :class="{ '!bg-transparent outline outline-white outline-[100vh]': isScanning }">
+      <span class="border_bottom" />
     </div>
-  </ModalTemplate>
-  <IonFooter>
-    <IonToolbar>
-      <div class="p-[0.15rem] mx-auto font-bold w-fit rounded-[100px] bg-space-space-200 border">
-        <button class="py-4 text-white uppercase px-7 rounded-[100px]" style="background: var(--radial-gradient-light-blue);">
-          Scan QR
-        </button>
-        <!--
-          <button class="py-4 text-space/30 uppercase px-7 rounded-[100px]">
-          Bluecode
-        </button>
-        -->
-      </div>
-    </IonToolbar>
-  </IonFooter>
+    <!-- <div class="flex flex-col justify-center mt-auto pb-6 w-full">
+      <IonButton id="present-alert" size="small" class="text-base font-bold">
+        Scan QR
+      </IonButton>
+    </div> -->
+  </div>
 </template>
 
 <style scoped>

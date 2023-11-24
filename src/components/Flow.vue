@@ -71,14 +71,14 @@ function skip() {
 
 <template>
   <button class="fixed top-4 right-4" @click.stop="cancelFlow(() => step.onCancel?.(state, { path, replace }))">
-    <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
+    <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6 z-10" />
   </button>
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="{ main, step, title, description } in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always gap-y-4">
-      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance]" v-html="title" />
-      <p class="[text-wrap:pretty] text-center opacity-60" v-html="description" />
+    <li v-for="{ main, step, title, description, stepsToSkip } in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always gap-y-4">
+      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] z-10" v-html="title" />
+      <p class="[text-wrap:pretty] text-center opacity-60 z-10" v-html="description" />
       <div class="flex-1 w-full">
-        <component :is="main" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
+        <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state }" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
       </div>
     </li>
   </ul>

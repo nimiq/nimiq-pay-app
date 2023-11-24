@@ -55,7 +55,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* senderType */ Nimiq.Account.Type.BASIC,
       /* recipient */ Nimiq.Address.CONTRACT_CREATION,
       /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* value */ useLocalWallet().localBalance,
+      /* value */ partialArgs.amount,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,

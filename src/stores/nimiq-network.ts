@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import type { AsyncResult } from '@/types'
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Nimiq.Client>()
@@ -55,6 +56,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     await client.value!.sendTransaction(tx)
   }
 
+  async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account> {
+    if (!address)
+      return { data: undefined, error: 'No address' }
+    const account = await client.value?.getAccount(address)
+    if (!account)
+      return { data: undefined, error: 'No account' }
+    return { data: account, error: undefined }
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -63,5 +73,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     peerCount,
     init,
     claimCashlink,
+    getAccount,
   }
 })

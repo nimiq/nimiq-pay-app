@@ -3,7 +3,7 @@
 import { storeToRefs } from 'pinia'
 import { computedAsync, until } from '@vueuse/core'
 import { computed } from 'vue'
-import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
@@ -13,8 +13,9 @@ const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function useSync() {
+  const { getAccount } = useNimiqNetwork()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { updateActiveWallet } = useRemoteSigner()
 
@@ -35,28 +36,29 @@ export function useSync() {
    * 3. Else move the funds from the local wallet to the remote wallet.
    */
   async function handleFunds() {
-    console.log(remoteAddress.value)
-    if (!remoteAddress.value) // TODO FIX MEEEE
-      return
-    const [localAccount, remoteAccount] = await Promise.all([client.value?.getAccount(localAddress.value), client.value?.getAccount(remoteAddress.value!)])
-    const remoteBalance = remoteAccount?.balance || 0
-    localBalance.value = localAccount?.balance || 0
-
-    console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Are nodes synced? ${nodesAreSynced.value}`)
-    if (localBalance.value === 0 || !nodesAreSynced.value)
+    const localBalance = (await getAccount(localAddress.value)).data?.balance || 0
+    if (localBalance === 0)
       return
 
-    if (remoteBalance.value > 0) {
-      console.log(`Liquidating HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance.value / 1e5} NIM. Creating ${Transfer.RemoteToLocal} tx, isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
-      if (isHtlcActive.value && isRemoteOk.value)
-        useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
-      else
-        console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
+    const remoteBalance = (await getAccount(remoteAddress.value!)).data?.balance || 0
+
+    console.log(`Local balance: ${localBalance / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}}`)
+    console.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value })
+
+    if (remoteBalance === 0) {
+      useTransactions().sendTx({ transfer: Transfer.LocalToRemote, amount: localBalance })
+      return
     }
-    else {
-      console.log(`Creating new HTLC. Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. Creating ${Transfer.LocalToRemote} tx`)
-      useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    if (!nodesAreSynced.value)
+      return
+
+    if (isHtlcActive.value && isRemoteOk.value) {
+      useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
+      return
     }
+
+    console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
   }
 
   function extendValidity() {

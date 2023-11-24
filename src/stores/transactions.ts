@@ -5,7 +5,7 @@ import { useConn } from './conn'
 import type { PartialSendTxArgs, Transaction, TransactionSentByUser } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
-import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useFiat } from '@/stores/fiat'
 import { useApp } from '@/stores/app'
 

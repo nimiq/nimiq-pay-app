@@ -20,11 +20,11 @@ import { useFiat } from '@/stores/fiat'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
-import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
-import { initializeFlow } from '@/composables/utils/steps'
 import { FlowName } from '@/types/steps'
+import { initializeFlow } from '@/composables/utils/steps'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()
@@ -178,6 +178,7 @@ onMounted(async () => {
 
   scrollToFirstNotification()
   await useSync().syncWallets()
+  initializeFlow(FlowName.NimOrPointsPayment)
   await updatePointsBalance()
 })
 </script>

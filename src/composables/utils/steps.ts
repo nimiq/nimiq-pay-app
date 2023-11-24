@@ -1,4 +1,4 @@
-import { defineAsyncComponent, h, ref } from 'vue'
+import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
 import { Modal, useModal } from '@/composables/useModal'
 import type { Flow, State, StepInit } from '@/types/steps'
@@ -15,7 +15,7 @@ const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vu
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
 // @ts-expect-error The component is fine
-const QRCodeScanner = defineAsyncComponent(() => import('@/components/QRCodeScanner.vue'))
+const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
 // @ts-expect-error The component is fine
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 
@@ -204,16 +204,15 @@ const onBoardingBluecode3: StepInit = () => ({
 const qrCodeScannerStep: StepInit = () => ({
   step: StepName.QRCodeScanner,
   title: 'Scan QR code',
-  main: h(QRCodeScanner),
+  main: h(QRScanner),
 })
 
 const paymentPreviewStep: StepInit = () => {
-  const title = ref<string>('')
   return {
     step: StepName.PaymentPreview,
-    title,
+    title: 'Paument',
     main: h(PaymentPreview),
-    async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
+    // async beforeDisplay({ qrCodeScanner }) { title.value = qrCodeScanner?.locationName || 'Payment preview' }, // TODO Add icon
   }
 }
 
@@ -249,7 +248,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
     const merchantPaymentInfo = state[StepName.QRCodeScanner]!
     switch (state[StepName.PaymentPreview]) {
       case PaymentMethod.Nim:
-        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo })
+        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo, title: merchantPaymentInfo.locationName || 'Payment' })
         break
       case PaymentMethod.Points:
         if (!merchantPaymentInfo.message)

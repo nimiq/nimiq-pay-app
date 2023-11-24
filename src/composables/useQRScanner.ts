@@ -40,38 +40,51 @@
 //   }
 import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import type { MerchantPaymentInfo } from '@/types/steps'
+import type { PaymentRequestData } from '@/types/steps'
 import { Rail } from '@/types/transactions'
 
-export function useQRScanner() {
+interface UseQRScannerOptions {
+  onScan: (data: PaymentRequestData) => void
+}
+
+export function useQRScanner({ onScan }: UseQRScannerOptions) {
   const isDev = import.meta.env.DEV
 
   const isScanning = ref(false)
-  const data = ref<MerchantPaymentInfo>()
 
-  function parseData(url: URL) {
+  const stopScan = async () => {
+    await BarcodeScanner.showBackground()
+    isScanning.value = false
+    document.body.classList.remove('scanner-active')
+  }
+
+  async function parseData(url: URL) {
+    // eslint-disable-next-line no-console
+    console.log(`📷  Setting data from QR: ${url.href}`)
+
     const searchParams = new URLSearchParams(url.search)
     const recipient = url.pathname
     const amount = Math.round(Number.parseFloat(searchParams.get('amount') || '0') * 100000)
     if (!amount || !recipient)
       return
 
+    const fee = 0
+
     const message = searchParams.get('message') || undefined
     const label = searchParams.get('label') || undefined
 
+    let data: PaymentRequestData
     if (searchParams.has(Rail.GoCrypto))
-      data.value = { recipient, amount, message, locationName: label, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)! }
+      data = { recipient, amount, message, fee, locationName: label, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)! }
     else if (searchParams.has(Rail.CryptoPaymentLink))
-      data.value = { recipient, amount, message, locationName: label, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)! }
+      data = { recipient, amount, message, fee, locationName: label, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)! }
     else
       // This is a fallback. We found the amount and the recipient, but we don't know the rail.
-      data.value = { recipient, amount, message, locationName: label }
-  }
+      data = { recipient, amount, message, fee, locationName: label }
 
-  const stopScan = async () => {
-    await BarcodeScanner.showBackground()
+    onScan?.(data)
     isScanning.value = false
-    document.body.classList.remove('scanner-active')
+    await stopScan()
   }
 
   async function startScan() {
@@ -81,11 +94,9 @@ export function useQRScanner() {
 
     isScanning.value = true
 
-    while (!data.value) {
-      if (isDev)
-        // eslint-disable-next-line no-console
-        console.log('📷  Scanning QR code')
-
+    // eslint-disable-next-line no-console
+    console.log('📷  Scanning QR code')
+    while (isScanning.value) {
       const result = await BarcodeScanner.startScan({ cameraDirection: 'back' })
       if (!result.hasContent || !result.content.startsWith('nimiq:'))
         continue
@@ -95,29 +106,15 @@ export function useQRScanner() {
       catch (e) { console.log(e) }
       // await instantPayWallet.preparePayment({ address, amount, message, label, rail, railId })
     }
-
-    await stopScan()
   }
 
   function setDummyData() {
     if (!isDev)
       return
-    const url = new URL('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=7&message=Ref%20%2375VZ&label=Test%20Store&cpl_id=75VZloGY')
-    // eslint-disable-next-line no-console
-    console.log(`📷  Setting dummy data with ${url.href}`)
-    parseData(url)
-    stopScan()
-  }
-
-  function reset() {
-    data.value = undefined
+    parseData(new URL('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=7&message=Ref%20%2375VZ&label=Test%20Store&cpl_id=75VZloGY'))
   }
 
   onMounted(async () => {
-    if (isDev)
-      // eslint-disable-next-line no-console
-      console.log('📷  Preparing barcode scanner')
-
     await BarcodeScanner.prepare({ cameraDirection: 'back' })
     setTimeout(startScan, 500)
   })
@@ -128,7 +125,6 @@ export function useQRScanner() {
     isScanning,
     startScan,
     stopScan,
-    reset,
 
     setDummyData,
   }

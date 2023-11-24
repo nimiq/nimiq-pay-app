@@ -34,7 +34,7 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import { useConn } from './stores/conn'
 import { useDecrypt } from './composables/useDecrypt'
 import { useDevice } from './composables/useDevice'
-import { useNimiqNetwork } from './stores/useNimiqNetwork'
+import { useNimiqNetwork } from './stores/nimiq-network'
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)

@@ -4,9 +4,9 @@ import { useApp } from './app'
 import { useDevice } from '@/composables/useDevice'
 import { useCurrencyPriceApi } from '@/composables/useApi'
 import type { AsyncResult } from '@/types'
-import type { Transaction, TransactionDb } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { SQLQuery } from '@/lib/sql-queries'
+import type { Transaction } from '@/types/transactions'
 
 export interface PriceTable {
   currency: string
@@ -41,7 +41,7 @@ export const useFiat = defineStore('fiat', () => {
     await run(SQLQuery.InsertPrice, [currency, ts, value])
   }
 
-  async function getPriceAt(ts: number): AsyncResult<number> {
+  async function getPriceAt(ts: number, amount = 1): AsyncResult<number> {
     const rounded = Math.floor(ts / 600000) * 600
     const cachedPrice = prices.value[rounded]
     if (cachedPrice !== undefined)
@@ -58,10 +58,13 @@ export const useFiat = defineStore('fiat', () => {
     await insertPrice({ currency: selectedFiat.value, ts: rounded, value: priceFromApi.price })
 
     prices.value[rounded] = priceFromApi.price
-    return { data: priceFromApi.price, error: undefined }
+
+    // eslint-disable-next-line no-console
+    console.log(`🤑  Fiat API`, { ts, priceFromApi, currency: selectedFiat.value, amount, total: priceFromApi.price * amount })
+    return { data: priceFromApi.price * amount, error: undefined }
   }
 
-  async function getPriceNow(): AsyncResult<number> {
+  async function getPriceNow(amount = 1): AsyncResult<number> {
     // TODO: parallelize
     const { data: priceCurrency, error } = await getPriceNowApi({ currency: selectedFiat.value })
     const { data: priceNIM, error: priceNIMError } = await getPriceNowApi({ currency: 'NIM' })
@@ -70,14 +73,26 @@ export const useFiat = defineStore('fiat', () => {
     if (priceNIMError !== undefined)
       return { data: undefined, error: priceNIMError }
 
-    return { data: priceCurrency.price * priceNIM.price, error: undefined }
+    return { data: priceCurrency.price * priceNIM.price * amount, error: undefined }
   }
 
-  async function getTxPrice({ value, timestamp }: TransactionDb): Promise<Pick<Transaction, 'fiatUnit' | 'fiatAmount'>> {
+  async function getTxPrice({ timestamp }: Transaction): Promise<{ fiatUnit: string; fiatAmount: number }> {
     return {
       fiatUnit: selectedFiat.value,
-      fiatAmount: toValue(await getPriceAt(timestamp)).data! * value,
+      fiatAmount: toValue(await getPriceAt(timestamp)).data!,
     }
+  }
+
+  async function formatAmount(amount: number) {
+    const formatter = new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value })
+    return formatter.format(amount)
+  }
+
+  async function getPriceTag(amount: number) {
+    const { data: fiatAmount, error } = await getPriceNow(amount)
+    if (error)
+      return ''
+    return formatAmount(fiatAmount!)
   }
 
   return {
@@ -85,5 +100,6 @@ export const useFiat = defineStore('fiat', () => {
     getPriceAt,
     getPriceNow,
     getTxPrice,
+    getPriceTag,
   }
 })
