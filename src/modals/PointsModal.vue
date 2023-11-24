@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
-import { type Ref, onMounted, ref } from 'vue'
-import { computedAsync, until } from '@vueuse/core'
+import { type Ref, onMounted } from 'vue'
+import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
@@ -12,12 +12,10 @@ import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 
 const { formatCurrency, getPriceNow, getPriceAt } = useFiat()
-const { pointsBalance } = storeToRefs(usePoints())
+const { pointsBalance, tasks } = storeToRefs(usePoints())
 const { phoneNumberVerified } = storeToRefs(useApp())
-const { getAllTasks, updatePointsBalance } = usePoints()
+const { updatePointsBalance, updateTasks } = usePoints()
 const { closeModal, showModal } = useModal()
-const tasks = ref<Task[]>([])
-const isTaskShown = ref(false)
 const currentPrice: Ref<number> = computedAsync(async () => {
   const { data, error } = await getPriceNow()
   if (error || !data) {
@@ -39,28 +37,9 @@ async function handleRefresh(event: CustomEvent) {
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
-    updateTasks()
+    updateTasks(),
   ])
   event.detail.complete()
-}
-
-async function updateTasks() {
-  const { data, error } = await getAllTasks()
-  if (error || !data) {
-    console.error(error)
-    return
-  }
-  tasks.value = data
-    .sort((a, b) => a.order - b.order)
-    .sort((a, b) => {
-      if (a.status === 'completed' && b.status !== 'completed')
-        return 1
-      if (a.status !== 'completed' && b.status === 'completed')
-        return -1
-      return 0
-    })
-  await until(tasks).changed({ timeout: 1000 })
-  isTaskShown.value = true
 }
 
 onMounted(async () => {
@@ -131,7 +110,7 @@ onMounted(async () => {
       </IonRow>
       <!-- Tasks -->
       <Transition name="slide-fade" mode="out-in">
-        <IonRow v-if="isTaskShown" class="grid grid-cols-2 gap-2">
+        <IonRow v-if="tasks" class="grid grid-cols-2 gap-2">
           <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
             <!-- TODO: Do we really need different bg? -->
             <TaskCard :task="task" class="h-full text-white" style="background: var(--radial-gradient-light-blue);">

@@ -33,7 +33,7 @@ const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner(
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { updatePointsBalance } = usePoints()
+const { updatePointsBalance, updateTasks } = usePoints()
 const { formatCurrency, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { head } = storeToRefs(useNimiqNetwork())
@@ -180,7 +180,10 @@ onMounted(async () => {
   scrollToFirstNotification()
   await useSync().syncWallets()
   // initializeFlow(FlowName.NimOrPointsPayment)
-  await updatePointsBalance()
+  if (phoneNumberVerified.value) {
+    updatePointsBalance()
+    updateTasks()
+  }
 })
 </script>
 

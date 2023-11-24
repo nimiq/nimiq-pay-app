@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { type Ref, ref } from 'vue'
 import { useApp } from './app'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -11,6 +11,7 @@ export const usePoints = defineStore('points', () => {
   const { phoneNumber, pointsToken, referralCode } = storeToRefs(useApp())
   const accessCode = ref('')
   const pointsBalance = ref(0)
+  const tasks: Ref<Task[] | undefined> = ref(undefined)
 
   /**
    * Send wallet public key and phone number to get access code
@@ -77,6 +78,23 @@ export const usePoints = defineStore('points', () => {
     return { data, error: undefined }
   }
 
+  async function updateTasks() {
+    const { data, error } = await getAllTasks()
+    if (error || !data) {
+      console.error(error)
+      return
+    }
+    tasks.value = data
+      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => {
+        if (a.status === 'completed' && b.status !== 'completed')
+          return 1
+        if (a.status !== 'completed' && b.status === 'completed')
+          return -1
+        return 0
+      })
+  }
+
   async function claimTask({ id, answer }: { id: string; answer?: string }) {
     if (!pointsToken.value)
       return { data: undefined, error: 'Phone number not verified' }
@@ -86,6 +104,13 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error }
 
     await updatePointsBalance()
+    await updateTasks()
+    // Mark task as completed
+    // tasks.value = tasks.value?.map((task) => {
+    //   if (task.id === id)
+    //     task.status = 'completed'
+    //   return task
+    // })
     return { data, error: undefined }
   }
 
@@ -151,6 +176,8 @@ export const usePoints = defineStore('points', () => {
     pointsBalance,
     getAllTasks,
     getTaskById,
+    updateTasks,
+    tasks,
     claimTask,
     getReferralInfo,
     getReferralInfoById,
