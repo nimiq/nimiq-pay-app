@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
 import { type Ref, onMounted, ref } from 'vue'
 import { computedAsync, until } from '@vueuse/core'
@@ -14,7 +14,7 @@ import { useApp } from '@/stores/app'
 const { formatCurrency, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance } = storeToRefs(usePoints())
 const { phoneNumberVerified } = storeToRefs(useApp())
-const { getAllTasks } = usePoints()
+const { getAllTasks, updatePointsBalance } = usePoints()
 const { closeModal, showModal } = useModal()
 const tasks = ref<Task[]>([])
 const isTaskShown = ref(false)
@@ -33,11 +33,18 @@ const currentPrice: Ref<number> = computedAsync(async () => {
   return data
 }, 0)
 
-onMounted(async () => {
-  // If phone number is not verified, show the modal
-  if (!phoneNumberVerified.value)
-    await showModal(Modal.NewPhone)
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
+async function handleRefresh(event: CustomEvent) {
+  await Promise.all([
+    sleep(2000),
+    updatePointsBalance(),
+    updateTasks()
+  ])
+  event.detail.complete()
+}
+
+async function updateTasks() {
   const { data, error } = await getAllTasks()
   if (error || !data) {
     console.error(error)
@@ -54,6 +61,16 @@ onMounted(async () => {
     })
   await until(tasks).changed({ timeout: 1000 })
   isTaskShown.value = true
+}
+
+onMounted(async () => {
+  // If phone number is not verified, show the modal
+  if (!phoneNumberVerified.value)
+    await showModal(Modal.NewPhone)
+
+  await updatePointsBalance()
+
+  await updateTasks()
 })
 </script>
 
@@ -68,16 +85,20 @@ onMounted(async () => {
     </IonToolbar>
   </IonHeader>
   <IonContent class="ion-padding">
+    <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
+      <IonRefresherContent />
+    </IonRefresher>
+
     <IonGrid class="flex flex-col gap-y-2">
       <IonRow class="flex items-center ion-justify-content-center">
         <CryptoCityLogo class="h-11 w-9" />
         <h1 class="text-5xl font-normal">
-          {{ pointsBalance }}
+          {{ pointsBalance / 1e5 }}
         </h1>
       </IonRow>
       <IonRow class="ion-justify-content-center">
         <p class="text-base font-semibold text-space/60">
-          $ {{ formatCurrency(pointsBalance * currentPrice) }}
+          {{ formatCurrency(pointsBalance / 1e5 * currentPrice) }}
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">

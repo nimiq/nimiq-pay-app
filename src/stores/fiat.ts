@@ -51,8 +51,6 @@ export const useFiat = defineStore('fiat', () => {
     if (priceDb)
       return { data: priceDb.value, error: undefined }
 
-    console.log('currency', selectedFiat.value, 'ts', rounded)
-
     const { data: priceFromApi, error: priceAtError } = await priceAtApi({ currency: selectedFiat.value, timestamp: rounded })
     if (priceFromApi === undefined)
       return { data: undefined, error: priceAtError }
@@ -64,10 +62,15 @@ export const useFiat = defineStore('fiat', () => {
   }
 
   async function getPriceNow(): AsyncResult<number> {
-    const { data: price, error } = await getPriceNowApi({ currency: selectedFiat.value })
+    // TODO: parallelize
+    const { data: priceCurrency, error } = await getPriceNowApi({ currency: selectedFiat.value })
+    const { data: priceNIM, error: priceNIMError } = await getPriceNowApi({ currency: 'NIM' })
     if (error !== undefined)
       return { data: undefined, error }
-    return { data: price.price, error: undefined }
+    if (priceNIMError !== undefined)
+      return { data: undefined, error: priceNIMError }
+
+    return { data: priceCurrency.price * priceNIM.price, error: undefined }
   }
 
   async function getTxPrice({ value, timestamp }: TransactionDb): Promise<Pick<Transaction, 'fiatUnit' | 'fiatAmount'>> {

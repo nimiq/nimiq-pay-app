@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
@@ -32,6 +32,7 @@ const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner(
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
+const { updatePointsBalance } = usePoints()
 const { formatCurrency, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { head } = storeToRefs(useNimiqNetwork())
@@ -89,6 +90,16 @@ function scrollToFirstNotification() {
     left: notificationList.value.scrollWidth * -1,
     behavior: 'smooth',
   })
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function handleRefresh(event: CustomEvent) {
+  await Promise.all([
+    sleep(2000),
+    updatePointsBalance(),
+  ])
+  event.detail.complete()
 }
 
 if (import.meta.env.DEV) {
@@ -166,6 +177,7 @@ onMounted(async () => {
 
   await useRemoteSigner().init()
   await useSync().syncWallets()
+  await updatePointsBalance()
 })
 </script>
 
@@ -209,6 +221,10 @@ onMounted(async () => {
       </IonToolbar>
     </IonHeader>
     <IonContent class="ion-padding scroll-smooth">
+      <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
+        <IonRefresherContent />
+      </IonRefresher>
+
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
