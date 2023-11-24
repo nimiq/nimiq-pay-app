@@ -3,7 +3,7 @@ import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastC
 import { Clipboard } from '@capacitor/clipboard'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
+import { type Ref, onMounted, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -13,11 +13,12 @@ import { Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 
 const router = useRouter()
-const { consensus, head, height, peerCount } = storeToRefs(useNimiqNetwork())
+const { consensus, head, height, peerCount, client } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
+const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -41,6 +42,10 @@ async function handleClearTx() {
 onMounted(async () => {
   const res = await query('SELECT * FROM remote_signers')
   console.log('Remote Signers Table', res.length, res)
+
+  client.value?.addTransactionListener(async (tx) => {
+    txInMemPool.value = tx
+  }, [localAddress.value])
 })
 </script>
 
@@ -81,36 +86,53 @@ onMounted(async () => {
       </IonCardContent>
     </IonCard>
     <IonCard>
-      <IonCardHeader>
-        <IonCardTitle>Instant wallet</IonCardTitle>
-      </IonCardHeader>
-      <IonCardContent>
-        <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
-          Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
-        </p>
-        <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
-        <p>
-          Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
-            validityStart }}</strong> to
-          <strong>{{ validityEnd }}</strong>)
-        </p>
-        <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>
-        <IonButton
-          :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
-          @click="sendTx({ transfer: Transfer.RemoteToLocal })"
-        >
-          Recover
-        </IonButton>
-        <IonButton
-          :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
-          @click="sendTx({ transfer: Transfer.ExtendRemote })"
-        >
-          Extend
-        </IonButton>
-      </IonCardContent>
-    </IonCard>
-    <IonButton @click="handleClearTx">
-      Clear Tx History
-    </IonButton>
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Tx Listener</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <p class="flex flex-col">
+            <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
+            <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
+            <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
+            <span>State: {{ txInMemPool?.state }} </span>
+            <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
+            <span>Network: {{ txInMemPool?.network }}</span>
+          </p>
+        </IonCardContent>
+      </IonCard>
+      <IonCard>
+        <IonCardHeader>
+          <IonCardTitle>Instant wallet</IonCardTitle>
+        </IonCardHeader>
+        <IonCardContent>
+          <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
+            Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
+          </p>
+          <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
+          <p>
+            Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
+              validityStart }}</strong> to
+            <strong>{{ validityEnd }}</strong>)
+          </p>
+          <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>
+          <IonButton
+            :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
+            @click="sendTx({ transfer: Transfer.RemoteToLocal })"
+          >
+            Recover
+          </IonButton>
+          <IonButton
+            :disabled="!(isRemoteOk || hasHtlcExpired) || remoteBalance === 0"
+            @click="sendTx({ transfer: Transfer.ExtendRemote })"
+          >
+            Extend
+          </IonButton>
+        </IonCardContent>
+      </IonCard>
+      <IonButton @click="handleClearTx">
+        Clear Tx History
+      </IonButton>
+    </ioncard>
   </ModalTemplate>
 </template>

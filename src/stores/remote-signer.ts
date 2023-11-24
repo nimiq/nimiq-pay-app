@@ -49,6 +49,22 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   const remoteSigner = ref<RemoteSigner>()
 
+  const status = computedAsync(async () => height.value ? (await getStatus()).data : undefined)
+  const remoteHeight = computed(() => status.value?.blockHeight || 0)
+  const remotePublicKey = computed(() => status.value?.servicePublicKey || undefined)
+  const remoteAddress = computed(() => remoteSigner.value?.address)
+  const start = computed(() => remoteSigner.value?.start || 0)
+  const end = computed(() => remoteSigner.value?.end || 0)
+  const remoteBalance = ref(0)
+  const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
+
+  // Checks if the remote is in the validity window, which means that the remote
+  // wallet and the local wallet have currently an active HTLC.
+  const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
+  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
+
+  const isRemoteOk = computed(() => status.value?.status === 'good' || false)
+
   async function updateRemoteSigner(signer: RemoteSigner) {
     setRemoteSigner(signer)
     remoteSigner.value = signer
@@ -61,25 +77,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (error || !remoteSignerApi)
       return
     remoteSigner.value = remoteSignerApi
+    remoteBalance.value = remoteSignerApi.balance || 0
     await _updateActiveWallet(remoteSignerApi)
   }
-
-  const status = computedAsync(async () => height.value ? (await getStatus()).data : undefined)
-  const remoteHeight = computed(() => status.value?.blockHeight || 0)
-  const remotePublicKey = computed(() => status.value?.servicePublicKey || undefined)
-  const remoteAddress = computed(() => remoteSigner.value?.address)
-  const start = computed(() => remoteSigner.value?.start || 0)
-  const end = computed(() => remoteSigner.value?.end || 0)
-  // TODO: maybe get this from blockchain?
-  const remoteBalance = computed(() => remoteSigner.value?.balance || 0)
-  const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
-
-  // Checks if the remote is in the validity window, which means that the remote
-  // wallet and the local wallet have currently an active HTLC.
-  const isHtlcActive = computed(() => start.value < height.value && end.value > height.value)
-  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
-
-  const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
   /**
    * Initializes the remote signer variables with the following algorithm:

@@ -99,6 +99,7 @@ async function handleRefresh(event: CustomEvent) {
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
+    useSync().updateBalances(),
   ])
   event.detail.complete()
 }
@@ -178,7 +179,7 @@ onMounted(async () => {
 
   scrollToFirstNotification()
   await useSync().syncWallets()
-  initializeFlow(FlowName.NimOrPointsPayment)
+  // initializeFlow(FlowName.NimOrPointsPayment)
   await updatePointsBalance()
 })
 </script>

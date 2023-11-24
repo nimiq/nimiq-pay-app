@@ -5,17 +5,20 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import { useApp } from '@/stores/app'
-import { useLocalWallet } from '@/stores/local-wallet'
+import { useRemoteSigner } from '@/stores/remote-signer'
 import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 const { closeModal, showModal } = useModal()
 const router = useRouter()
 const { hasDoneBackup } = storeToRefs(useApp())
+const { remoteBalance } = storeToRefs(useRemoteSigner())
 const { localBalance } = storeToRefs(useLocalWallet())
 const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
-  if (hasDoneBackup.value || localBalance.value === 0) {
+  console.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
+  if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
     await deleteDatabase()
     router.replace('/setup')

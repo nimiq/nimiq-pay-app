@@ -74,8 +74,8 @@ export type MerchantTransaction = BaseTransaction & {
   message: undefined
 })
 
-export type SyncTransaction<T = Transfer> = BaseTransaction & {
-  transfer: T
+export type SyncTransaction = BaseTransaction & {
+  transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.RemoteToLocalAfterTimeout | Transfer.ExtendRemote
   message?: string
   title?: undefined
   rail?: undefined
@@ -88,5 +88,5 @@ export type Transaction = UserTransaction | UserReceiptTransaction | MerchantTra
 
 export type PartialSendTxArgs =
   Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'locationName' | 'rail' | 'railPeerId' | 'title'>
-  | Pick<SyncTransaction<Transfer.RemoteToLocal | Transfer.ExtendRemote | Transfer.RemoteToLocalAfterTimeout>, 'transfer'>
-  | Pick<SyncTransaction<Transfer.LocalToRemote>, 'transfer' | 'amount'>
+  | Pick<SyncTransaction, 'transfer'>
+  // | Pick<SyncTransaction<Transfer.LocalToRemote>, 'transfer' | 'amount'>

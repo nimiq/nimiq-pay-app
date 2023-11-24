@@ -5,7 +5,7 @@ import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { useNimiqNetwork } from '@/stores/useNimiqNetwork'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 
 const isDev = import.meta.env.DEV

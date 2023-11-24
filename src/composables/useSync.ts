@@ -15,7 +15,7 @@ const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_
 export function useSync() {
   const { getAccount } = useNimiqNetwork()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { updateActiveWallet } = useRemoteSigner()
 
@@ -36,17 +36,16 @@ export function useSync() {
    * 3. Else move the funds from the local wallet to the remote wallet.
    */
   async function handleFunds() {
-    const localBalance = (await getAccount(localAddress.value)).data?.balance || 0
-    if (localBalance === 0)
+    if (localBalance.value === 0)
       return
 
     const remoteBalance = (await getAccount(remoteAddress.value!)).data?.balance || 0
 
-    console.log(`Local balance: ${localBalance / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}}`)
+    console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
     console.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value })
 
     if (remoteBalance === 0) {
-      useTransactions().sendTx({ transfer: Transfer.LocalToRemote, amount: localBalance })
+      useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
       return
     }
 
@@ -83,6 +82,20 @@ export function useSync() {
   }
 
   /**
+   * Updates the local and the remote wallet balances.
+   */
+  async function updateBalances() {
+    if (localAddress.value)
+      localBalance.value = (await getAccount(localAddress.value)).data?.balance || 0
+    else
+      console.log('Local address not found')
+    if (remoteAddress.value)
+      remoteBalance.value = (await getAccount(remoteAddress.value!)).data?.balance || 0
+    else
+      console.log('Remote address not found')
+  }
+
+  /**
    * Syncs the local and the remote wallet immediately and then every time a new block is mined.
    */
   async function syncWallets() {
@@ -95,23 +108,26 @@ export function useSync() {
     await useRemoteSigner().init()
 
     console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    await updateBalances()
     handleFunds()
     checkRemoteValidity()
     extendValidity()
     console.groupEnd()
 
     client.value?.addBlockListener(async () => {
-      console.group(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+      console.log(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
       await updateActiveWallet()
+
+      await updateBalances()
 
       handleFunds()
       checkRemoteValidity()
       extendValidity()
-      console.groupEnd()
     })
   }
 
   return {
     syncWallets,
+    updateBalances,
   }
 }
