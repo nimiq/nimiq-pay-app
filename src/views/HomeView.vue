@@ -36,14 +36,14 @@ const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks } = usePoints()
 const { formatCurrency, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
-const { head } = storeToRefs(useNimiqNetwork())
+const { height, consensus } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
 const currentPrice = ref(0)
 // TODO: do we need to update that frequently?
-watch(head, async () => {
+watch(height, async () => {
   const { data: price, error } = (await getPriceNow())
   if (error || !price) {
     console.error('Error getting price now', error)
@@ -177,19 +177,26 @@ onMounted(async () => {
     return
   }
 
-  scrollToFirstNotification()
-  await useSync().syncWallets()
   if (phoneNumberVerified.value) {
     updatePointsBalance()
     updateTasks()
   }
+
+  scrollToFirstNotification()
+  await useSync().syncWallets()
+  // initializeFlow(FlowName.NimOrPointsPayment)
 })
 </script>
 
 <template>
   <IonPage class="bg-[#F8F8F8]">
     <IonHeader class="ion-no-border">
-      <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
+      <IonToolbar v-if="height > 1 && consensus !== 'established'" class="px-1 bg-tomato/10" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
+        <p class="px-2 font-semibold text-tomato">
+          Consensus lost. You won't be able to make payments using NIM.
+        </p>
+      </IonToolbar>
+      <IonToolbar v-else-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
         <div slot="start" class="flex items-center gap-2 ml-2">
           <div class="w-3 h-3 bg-blue-600 rounded-full" />
           <p class="font-semibold">
