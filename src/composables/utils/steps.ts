@@ -221,9 +221,9 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 
     goTo('/app')
   },
-  [FlowName.VerifyPhone]: () => useModal().showModal(Modal.Rewards),
+  [FlowName.VerifyPhone]: () => useModal().showModal(Modal.Points),
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
-  [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Rewards),
+  [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Points),
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
 }

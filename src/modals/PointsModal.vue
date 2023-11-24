@@ -81,7 +81,7 @@ onMounted(async () => {
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">
-        <IonButton fill="clear" class="text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringRewards, { isOnTop: true })">
+        <IonButton fill="clear" class="text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
           <CryptoCityLogo slot="start" class="h-5 w-[18px] mr-[6px]" />
           0 expiring soon
           <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />

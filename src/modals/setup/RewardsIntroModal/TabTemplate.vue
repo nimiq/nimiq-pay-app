@@ -29,7 +29,7 @@ async function handleGoTo() {
   if (tabList[activeTab + 1])
     nav.push(tabList[activeTab + 1], undefined, { mode: 'ios' })
   else if (bonusWallet.isRegistered())
-    await showModal(Modal.Rewards)
+    await showModal(Modal.Points)
   else
     await showModal(Modal.NewPhone)
 }

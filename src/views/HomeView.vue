@@ -198,7 +198,7 @@ onMounted(async () => {
           <IonButton
             class="text-base normal-case"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="phoneNumberVerified ? showModal(Modal.Rewards) : initializeFlow(FlowName.VerifyPhone)"
+            @click="phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{

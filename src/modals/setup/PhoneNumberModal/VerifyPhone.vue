@@ -32,7 +32,7 @@ async function handleVerify() {
     }
     else if (path === '/app') {
       showNotificationAlert('CC points activated')
-      showModal(Modal.RewardsIntro)
+      showModal(Modal.PointsIntro)
     }
   }
   catch (e: any) {
@@ -59,7 +59,7 @@ function handleClose() {
   if (path === '/setup')
     showModal(Modal.EnablePushNotifications)
   else
-    showModal(Modal.Rewards)
+    showModal(Modal.Points)
 }
 
 onMounted(() => {

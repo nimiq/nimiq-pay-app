@@ -12,7 +12,7 @@ export enum Modal {
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
-  ExpiringRewards = '@/modals/ExpiringRewardsModal.vue',
+  ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
@@ -22,8 +22,8 @@ export enum Modal {
   NimTransfer = '@/modals/deposit/NimTransferModal.vue',
   Pay = '@/modals/PayModal/index.vue',
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
-  Rewards = '@/modals/RewardsModal.vue',
-  RewardsIntro = '@/modals/setup/RewardsIntroModal/index.vue',
+  Points = '@/modals/PointsModal.vue',
+  PointsIntro = '@/modals/setup/PointsIntroModal/index.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
@@ -61,8 +61,8 @@ function _useModal() {
       case Modal.EnablePushNotifications:
         component = defineAsyncComponent(() => import(Modal.EnablePushNotifications))
         break
-      case Modal.ExpiringRewards:
-        component = defineAsyncComponent(() => import(Modal.ExpiringRewards))
+      case Modal.ExpiringPoints:
+        component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
         break
       case Modal.Login:
         component = defineAsyncComponent(() => import(Modal.Login))
@@ -91,11 +91,11 @@ function _useModal() {
       case Modal.PromoCode:
         component = defineAsyncComponent(() => import(Modal.PromoCode))
         break
-      case Modal.Rewards:
-        component = defineAsyncComponent(() => import(Modal.Rewards))
+      case Modal.Points:
+        component = defineAsyncComponent(() => import(Modal.Points))
         break
-      case Modal.RewardsIntro:
-        component = defineAsyncComponent(() => import(Modal.RewardsIntro))
+      case Modal.PointsIntro:
+        component = defineAsyncComponent(() => import(Modal.PointsIntro))
         break
       case Modal.Settings:
         component = defineAsyncComponent(() => import(Modal.Settings))

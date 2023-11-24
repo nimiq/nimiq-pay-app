@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       iosIsEncryption: true,
-      iosKeychainPrefix: 'nimiq-pay-sqlite',
+      iosKeychainPrefix: 'nim-pay-sqlite',
       iosBiometric: {
         biometricAuth: false,
         biometricTitle: 'Biometric login for NIM Pay',
