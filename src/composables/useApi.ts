@@ -28,7 +28,7 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
 
 export function usePointsApi() {
   interface AuthorizeArg { publicKey: MaybeRef<string>; phoneNumber: MaybeRef<string> }
-  interface VerifyArg { phoneNumber: MaybeRef<string>; accessCode: MaybeRef<number> }
+  interface VerifyArg { phoneNumber: MaybeRef<string>; accessCode: MaybeRef<string> }
   interface BalanceArg { token: MaybeRef<string> }
   interface PayWithPointsArg { type: MaybeRef<string>; reference?: MaybeRef<string>; destination: MaybeRef<string>; token: MaybeRef<string> }
   interface ParticipantReferralArg { token: MaybeRef<string> }
@@ -62,9 +62,9 @@ export function usePointsApi() {
     verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
     getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
     payWithPoints: ({ type, reference, destination, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(type), reference: v(reference), destination: v(destination) } }),
-    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/referral', basePointsUrl), { token: v(token) }),
-    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/referral/${v(id)}`, basePointsUrl)),
-    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`api/referral/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
+    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/voucher', basePointsUrl), { token: v(token) }),
+    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/voucher/${v(id)}`, basePointsUrl)),
+    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`api/voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
     getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('api/task', basePointsUrl), { token: v(token) }),
     getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`api/task/${v(id)}`, basePointsUrl), { token: v(token) }),
     claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`api/task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),

@@ -7,13 +7,15 @@ import { usePoints } from '@/stores/points'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
 
-const emit = defineEmits(stepEmits)
+defineEmits(stepEmits)
 
 const { accessCode } = storeToRefs(usePoints())
 
 const pinCodeInput = ref<string[]>([])
 
 watch(accessCode, () => {
+  if (!accessCode.value)
+    return
   // TODO: this is not going to be in production
   setTimeout(() => pinCodeInput.value = accessCode.value.toString().padStart(props.inputLength, '0').split(''), 500)
 })
@@ -25,7 +27,7 @@ watch(accessCode, () => {
       id="pin-input"
       v-model="pinCodeInput"
       class="flex items-center gap-2"
-      @complete="() => emit('done', pinCodeInput.join(''))"
+      @complete="() => $emit('done', pinCodeInput.join(''))"
     >
       <PinInputInput
         v-for="(id, index) in inputLength "

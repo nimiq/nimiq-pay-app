@@ -31,12 +31,12 @@ async function handleCopy() {
 function handleShare() {
   Share.share({
     // Title if sharing via email
-    title: 'Nimiq Pay App',
+    title: 'NIM Pay App',
     // Text to share via all the apps
-    text: `Hey! Join me on Nimiq Pay App and earn CryptoCity Points to pay for your purchases! Use my code ${referralCode.value?.id} to earn ${referralCode.value?.reward || 0 / 1e5} NIM in CryptoCity Points at registration.`,
-    url: 'https://www.nimiq.com/',
+    text: `Hey! Join me on NIM Pay App and earn CryptoCity Points to pay for your purchases! Use my code ${referralCode.value?.id} to earn ${(referralCode.value?.reward || 0) / 1e5} NIM in CryptoCity Points at registration.`,
+    url: 'https://nimpay.app',
     // Title for the share modal. Only on Android
-    dialogTitle: 'Nimiq Pay App',
+    dialogTitle: 'NIM Pay App',
   })
 }
 </script>
@@ -44,10 +44,10 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      Invite a friend and get {{ referralCode?.reward || 0 / 1e5 }} NIM each
+      Invite a friend and get {{ (referralCode?.reward || 0) / 1e5 }} NIM each
     </template>
     <p class="self-start text-space/60">
-      Crypto adoption needs you! Bring a friend and you both get {{ referralCode?.reward || 0 / 1e5 }} NIM in CC Points.
+      Crypto adoption needs you! Bring a friend and you both get {{ (referralCode?.reward || 0) / 1e5 }} NIM in CC Points.
     </p>
     <Transition name="slide-fade" mode="out-in">
       <p v-if="!referralCode" class="text-4xl font-semibold">

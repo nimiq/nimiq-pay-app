@@ -103,11 +103,14 @@ const phoneNumberConfirmStep: StepInit = () => ({
   description: 'We\'ve sent you a code, please confirm',
   main: h(CodeInput, { inputLength: 8 }),
   beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
-    if (!phoneNumberConfirm)
-      err('Please enter a verification code')
-    // TODO add more logic
-    else
-      next()
+    if (!phoneNumberConfirm) { err('Please enter a verification code') }
+    else {
+      const res = await (await import('@/stores/points')).usePoints().verify(phoneNumberConfirm)
+      if (res && res.error)
+        err(res.error || 'Error verifying phone number')
+      else
+        next()
+    }
   },
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 

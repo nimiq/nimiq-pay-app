@@ -22,7 +22,7 @@ async function withdraw() {
   const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)
   try {
     isLoading.value = true
-    await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'Nimiq Pay App Withdraw' })
+    await instantPayWallet.preparePayment({ address: withdrawAddress, amount: Nimiq.Policy.coinsToLunas(amount.value), label: 'Withdrawal', message: 'NIM Pay App Withdraw' })
     const payment = instantPayWallet.getPendingPayment()
     // TODO: handle null payment
     if (payment === null)

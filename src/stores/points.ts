@@ -28,7 +28,7 @@ export const usePoints = defineStore('points', () => {
    * Check if access code from SMS matches server code
    * Gets the token that is used for all other requests
    */
-  async function verify(accessCodeInput: number) {
+  async function verify(accessCodeInput: string) {
     if (!phoneNumber.value)
       return { data: undefined, error: 'No phone number' }
 
