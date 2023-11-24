@@ -15,6 +15,8 @@ export enum FlowName {
 
 interface OnDoneFlowOptions {
   goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
+  isCancelled: boolean
+  path: string
 }
 
 export interface Flow {

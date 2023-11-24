@@ -4,7 +4,6 @@ import { Modal, useModal } from '@/composables/useModal'
 import type { Flow, StepInit } from '@/types/steps'
 import { FlowName, PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
 
-// @ts-expect-error The component is fine
 import FlowCmp from '@/components/Flow.vue'
 import { Transfer } from '@/types/transactions'
 
@@ -14,9 +13,7 @@ const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue'
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
-// @ts-expect-error The component is fine
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
-// @ts-expect-error The component is fine
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
@@ -120,7 +117,6 @@ const phoneNumberConfirmStep: StepInit = () => ({
     }
   },
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
-
 })
 
 const getNotifiedStep: StepInit = () => ({
@@ -240,7 +236,10 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
 
     goTo('/app')
   },
-  [FlowName.VerifyPhone]: () => useModal().showModal(Modal.Points),
+  [FlowName.VerifyPhone]: async (_state, { goTo, path }) => {
+    console.log('Verify phone done')
+    useModal().showModal(Modal.Points)
+  },
   [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
   [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Points),
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },

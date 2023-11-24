@@ -38,7 +38,7 @@ const error = (step: StepName) => isActiveStepInput.value ? errors![step as Inpu
 
 function goToNext() {
   console.log('goToNext', state)
-  isLast.value ? onFlowDone(state, { goTo: replace }) : nextSlide()
+  isLast.value ? onFlowDone(state, { path, goTo: replace, isCancelled: false }) : nextSlide()
 }
 
 onMounted(autofocus)
@@ -72,10 +72,14 @@ function skip() {
   steps.value = steps.value.filter((_, i) => i <= activeIndex.value || i >= activeIndex.value + stepsToSkip)
   nextTick().then(goToNext)
 }
+
+function onCancel() {
+  onFlowDone(state, { path, goTo: replace, isCancelled: true })
+}
 </script>
 
 <template>
-  <button class="fixed top-4 right-4" @click.stop="cancelFlow(() => step.onCancel?.(state, { path, replace }))">
+  <button class="fixed top-4 right-4" @click.stop="onCancel">
     <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6 z-10" />
   </button>
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
