@@ -23,7 +23,7 @@ export interface Flow {
   name: FlowName
   state: State
   steps: Step[]
-  onDone: (state: State, options: OnDoneFlowOptions) => Promise<void>
+  onDone: (state: State, options: OnDoneFlowOptions) => Promise<any>
 }
 
 export enum StepName {

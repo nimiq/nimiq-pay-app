@@ -217,8 +217,26 @@ const paymentPreviewStep: StepInit = () => {
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: qrCodeScanner.shopCategory }))
       titleCmp = `${iconInHTML} ${qrCodeScanner.shopName || 'Payment preview'}`
     },
+    beforeNext: async ({ paymentPreview: method, qrCodeScanner: request }, { next, err }) => {
+      // eslint-disable-next-line no-console
+      console.log(`🤑  Initializing payment process with ${method}`, request)
+
+      switch (method) {
+        case PaymentMethod.NIM:
+          await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...request!, title: request?.shopName || 'Payment' })
+          next()
+          break
+        case PaymentMethod.Points:
+          if (!request?.message || !request?.rail)
+            throw new Error(`You cannot pay with points without a message nor rail. Request: ${JSON.stringify(request)}`)
+
+          await (await import('@/stores/points')).usePoints().payWithPoints({ rail: request.rail!, reference: request.message, recipient: request.recipient })
+      }
+    },
   }
 }
+
+export const closeModal = () => modalController.getTop().then(m => m.dismiss())
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
 const onBoardingPointsSteps = [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3]
@@ -242,8 +260,9 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
       console.error(err)
 
     goTo('/app')
+    closeModal()
   },
-  [FlowName.VerifyPhone]: async (_state, { goTo, path }) => {
+  [FlowName.VerifyPhone]: async (_state) => {
     console.log('Verify phone done')
     useModal().showModal(Modal.Points)
   },
@@ -251,22 +270,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Points),
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
-  [FlowName.NimOrPointsPayment]: async (state, { goTo }) => {
-    const merchantPaymentInfo = state[StepName.QRCodeScanner]!
-    console.log('Payment preview', merchantPaymentInfo)
-    switch (state[StepName.PaymentPreview]) {
-      case PaymentMethod.NIM:
-        await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...merchantPaymentInfo, title: merchantPaymentInfo.shopName || 'Payment' })
-        break
-      case PaymentMethod.Points:
-        if (!merchantPaymentInfo.message)
-          throw new Error(`You cannot pay with points without a message. ${JSON.stringify(merchantPaymentInfo)}`)
-
-        // TODO Check this is correct
-        await (await import('@/stores/points')).usePoints().payWithPoints({ type: 'TODO', reference: merchantPaymentInfo.message, destination: merchantPaymentInfo.recipient })
-    }
-    goTo('/app')
-  },
+  [FlowName.NimOrPointsPayment]: closeModal, // The payment itself is handled in the step
 }
 
 /**
@@ -285,8 +289,7 @@ export function initializeFlow(name: FlowName) {
   }).then(modal => modal.present())
 }
 
-export async function cancelFlow(beforeCancel: Function) {
+export async function cancelFlow(beforeCancel: () => Promise<void>) {
   await beforeCancel()
-  const modal = await modalController.getTop()
-  await modal.dismiss()
+  closeModal()
 }

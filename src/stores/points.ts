@@ -4,6 +4,7 @@ import { useApp } from './app'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import type { AsyncOption } from '@/types'
+import type { Rail } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -150,11 +151,11 @@ export const usePoints = defineStore('points', () => {
     await updatePointsBalance()
   }
 
-  async function payWithPoints({ type, reference, destination }: { type: string; reference: string; destination: string }) {
+  async function payWithPoints({ rail, reference, recipient }: { rail: Rail; reference: string; recipient: string }) {
     if (!pointsToken.value)
       return { data: undefined, error: 'Phone number not verified' }
 
-    const { data, error } = await api.payWithPoints({ type, reference, destination, token: pointsToken.value })
+    const { data, error } = await api.payWithPoints({ rail, reference, recipient, token: pointsToken.value })
     if (error || !data)
       return { data: undefined, error }
 

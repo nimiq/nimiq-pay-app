@@ -47,7 +47,7 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Upserting transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
-      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx],
+      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
     )
   }
 
@@ -61,7 +61,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction> {
     // eslint-disable-next-line no-console
-    console.log('✈️  Sending new tx', {
+    console.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
       remoteBalance: useRemoteSigner().remoteBalance,

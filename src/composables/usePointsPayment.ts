@@ -18,7 +18,6 @@ interface UsePointsPaymentOptions {
   fiatAmount: MaybeRef<number>
   rail: MaybeRef<Rail | undefined>
   reference: MaybeRef<string | undefined>
-
 }
 
 export function usePointsPayment({ fiatAmount, rail, recipient, reference }: UsePointsPaymentOptions) {
@@ -33,12 +32,6 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
    * If the payment is valid, it will set the cashback amount
    */
   async function checkPointsPaymentValidity() {
-    if (usePoints().pointsBalance < toValue(fiatAmount)) {
-      pointsState.value = PointsState.InsufficientPoints
-      message.value = 'You don\'t have enough CC Points for this purchase.'
-      return
-    }
-
     if (!toValue(rail) || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
       message.value = 'This payment is not eligible for CC Points.'
@@ -52,6 +45,12 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
       return
     }
 
+    if (usePoints().pointsBalance < toValue(fiatAmount)) {
+      pointsState.value = PointsState.InsufficientPoints
+      message.value = 'You don\'t have enough CC Points for this purchase.'
+      return
+    }
+
     const { cashback: { percentage }, reason, valid } = data!
     if (!valid) {
       pointsState.value = PointsState.Error
@@ -59,7 +58,7 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
       return
     }
 
-    cashback.value = percentage * fiatAmount / 100
+    cashback.value = percentage * toValue(fiatAmount) / 100
     message.value = `You will receive ${cashback.value.toFixed(2)} CC Points back.`
   }
 

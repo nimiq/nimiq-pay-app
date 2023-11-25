@@ -31,7 +31,7 @@ export function usePointsApi() {
   interface AuthorizeArg { publicKey: MaybeRef<string>; phoneNumber: MaybeRef<string> }
   interface VerifyArg { phoneNumber: MaybeRef<string>; accessCode: MaybeRef<string> }
   interface BalanceArg { token: MaybeRef<string> }
-  interface PayWithPointsArg { type: MaybeRef<string>; reference?: MaybeRef<string>; destination: MaybeRef<string>; token: MaybeRef<string> }
+  interface PayWithPointsArg { token: MaybeRef<string>; rail: MaybeRef<Rail>; reference?: MaybeRef<string>; recipient: MaybeRef<string> }
   interface VerifyPaymentArg { token: MaybeRef<string>; rail: MaybeRef<Rail>; reference: MaybeRef<string>; recipient: MaybeRef<string> }
   interface ParticipantReferralArg { token: MaybeRef<string> }
   interface ReferralIdArg { id: MaybeRef<string> }
@@ -63,6 +63,7 @@ export function usePointsApi() {
 
   // Just remap the JSON object from the API to a TS object
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
+    console.log('verifyPayment', { token, rail, reference, recipient })
     const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (error)
       return { data: undefined, error: error || 'Payment not valid' }
@@ -73,7 +74,7 @@ export function usePointsApi() {
     authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('api/participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
     verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
     getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
-    payWithPoints: ({ type, reference, destination, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(type), reference: v(reference), destination: v(destination) } }),
+    payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
     verifyPayment,
     getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/voucher', basePointsUrl), { token: v(token) }),
     getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/voucher/${v(id)}`, basePointsUrl)),

@@ -22,8 +22,8 @@ const payment = computed(() => props.state[StepName.QRCodeScanner] || { amount: 
 
 const nimAmount = computed(() => payment.value.amount / 1e5)
 const feeNimAmount = computed(() => payment.value.fee / 1e5)
-const fiatAmount = computed(() => payment.value.amount * priceNow.value)
-const fiatFee = computed(() => payment.value.fee * priceNow.value)
+const fiatAmount = computed(() => nimAmount.value * priceNow.value)
+const fiatFee = computed(() => feeNimAmount.value * priceNow.value)
 const canPayWithNim = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 const rail = computed(() => payment.value.rail)
 const recipient = computed(() => payment.value.recipient)

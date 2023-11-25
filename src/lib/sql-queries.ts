@@ -9,12 +9,12 @@ export interface RemoteSigner {
   active: boolean
 
   /**
-   * The validity of the wallet has started to be valid
+   * The block of validity of the wallet has started to be valid
    */
   start: number
 
   /**
-   * The validity of the wallet has ended
+   * The block of validity of the wallet has ended
    */
   end: number
 }
@@ -25,8 +25,8 @@ export enum SQLQuery {
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
-  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, locationName TEXT)',
-  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT PRIMARY KEY, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, shopName TEXT, shopCategory TEXT)',
+  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
   UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ClearTxHistory = 'DELETE FROM transactions',
 
