@@ -34,7 +34,7 @@ const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp(
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks } = usePoints()
-const { formatCurrency, getPriceNow } = useFiat()
+const { formatFiat, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 
@@ -242,7 +242,7 @@ onMounted(async () => {
         <!-- Balance -->
         <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
           <h1 class="mb-2 text-5xl font-normal">
-            {{ formatCurrency(remoteBalance / 1e5 * currentPrice) }}
+            {{ formatFiat(remoteBalance / 1e5 * currentPrice) }}
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>

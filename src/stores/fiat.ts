@@ -23,8 +23,12 @@ export const useFiat = defineStore('fiat', () => {
   // TODO: add price for new currency if it doesnt exist
   // watch(selectedFiat, () => selectedFiat.value && upsertKV({ key: 'fiatPrice', value: currency.value }))
 
-  function formatCurrency(value: number) {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value }).format(value)
+  function formatFiat(amount: number) {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value }).format(amount)
+  }
+
+  function formatCrypto(amount: number, currency: string) {
+    return `${amount.toLocaleString(locale)} ${currency}`
   }
 
   // The price of NIM every 10 minutes
@@ -83,23 +87,11 @@ export const useFiat = defineStore('fiat', () => {
     }
   }
 
-  async function formatAmount(amount: number) {
-    const formatter = new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value })
-    return formatter.format(amount)
-  }
-
-  async function getPriceTag(amount: number) {
-    const { data: fiatAmount, error } = await getPriceNow(amount)
-    if (error)
-      return ''
-    return formatAmount(fiatAmount!)
-  }
-
   return {
-    formatCurrency,
+    formatFiat,
+    formatCrypto,
     getPriceAt,
     getPriceNow,
     getTxPrice,
-    getPriceTag,
   }
 })

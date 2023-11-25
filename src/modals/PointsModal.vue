@@ -11,7 +11,7 @@ import { useFiat } from '@/stores/fiat'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 
-const { formatCurrency, getPriceNow, getPriceAt } = useFiat()
+const { formatFiat, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance, tasks } = storeToRefs(usePoints())
 const { phoneNumberVerified } = storeToRefs(useApp())
 const { updatePointsBalance, updateTasks } = usePoints()
@@ -77,7 +77,7 @@ onMounted(async () => {
       </IonRow>
       <IonRow class="ion-justify-content-center">
         <p class="text-base font-semibold text-space/60">
-          {{ formatCurrency(pointsBalance / 1e5 * currentPrice) }}
+          {{ formatFiat(pointsBalance / 1e5 * currentPrice) }}
         </p>
       </IonRow>
       <IonRow class="mb-4 ion-justify-content-center">

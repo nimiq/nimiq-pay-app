@@ -2,6 +2,7 @@ import type { MaybeRef } from 'vue'
 import { toValue as v } from 'vue'
 import type { AsyncResult } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
+import type { Rail } from '@/types/transactions'
 
 const basePointsUrl = new URL('https://bonus-nim.zeromox.com')
 const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
@@ -31,6 +32,7 @@ export function usePointsApi() {
   interface VerifyArg { phoneNumber: MaybeRef<string>; accessCode: MaybeRef<string> }
   interface BalanceArg { token: MaybeRef<string> }
   interface PayWithPointsArg { type: MaybeRef<string>; reference?: MaybeRef<string>; destination: MaybeRef<string>; token: MaybeRef<string> }
+  interface VerifyPaymentArg { token: MaybeRef<string>; rail: MaybeRef<Rail>; reference: MaybeRef<string>; recipient: MaybeRef<string> }
   interface ParticipantReferralArg { token: MaybeRef<string> }
   interface ReferralIdArg { id: MaybeRef<string> }
   interface ClaimReferralArg { id: MaybeRef<string>; token: MaybeRef<string> }
@@ -40,8 +42,10 @@ export function usePointsApi() {
 
   type AuthorizeRes = string
   interface VerifyRes { token: string }
+  interface VerifyPaymentRes { valid: boolean; reason: string; cashback: { percentage: number; amountInLuna: number } }
   interface BalanceRes { balance: number }
   type PayWithPointsRes = undefined
+
   interface ParticipantReferralRes { id: string; claims_remaining: number; reward: number }
   interface ReferralIdRes { id: string; claims_remaining: number; reward: number }
   type ClaimReferralRes = undefined
@@ -57,11 +61,20 @@ export function usePointsApi() {
     updated_at: string
   }
 
+  // Just remap the JSON object from the API to a TS object
+  async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
+    const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
+    if (error)
+      return { data: undefined, error: error || 'Payment not valid' }
+    return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined }
+  }
+
   return {
     authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('api/participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
     verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
     getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
     payWithPoints: ({ type, reference, destination, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(type), reference: v(reference), destination: v(destination) } }),
+    verifyPayment,
     getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/voucher', basePointsUrl), { token: v(token) }),
     getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/voucher/${v(id)}`, basePointsUrl)),
     claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`api/voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
