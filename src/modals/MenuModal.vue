@@ -7,6 +7,8 @@ import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import ItemDivider from '@/components/ItemDivider.vue'
 import { useApp } from '@/stores/app'
+import { initializeFlow } from '@/composables/utils/steps'
+import { FlowName } from '@/types/steps'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
@@ -38,7 +40,7 @@ onLongPress(
     <IonItem button :detail="false" @click="showModal(Modal.TopUp, { isSmall: true })">
       Top Up
     </IonItem>
-    <IonItem button :detail="false" @click="showModal(Modal.Withdraw)">
+    <IonItem button :detail="false" @click="initializeFlow(FlowName.NimWithdraw)">
       Withdraw
     </IonItem>
 

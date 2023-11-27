@@ -1,9 +1,10 @@
-import { defineAsyncComponent, h, reactive } from 'vue'
+import { defineAsyncComponent, h } from 'vue'
 import { modalController } from '@ionic/vue'
 import { renderToString } from 'vue/server-renderer'
+import { QRScannerDataFormat } from '../useQRScanner'
 import { Modal, useModal } from '@/composables/useModal'
-import type { Flow, StepInit } from '@/types/steps'
-import { FlowName, PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
+import type { Flow, PaymentRequestData, State, StepInit } from '@/types/steps'
+import { FlowName, PaymentMethod, StepName, defaultStepInitOptions, inputSteps } from '@/types/steps'
 
 import FlowCmp from '@/components/Flow.vue'
 import { Transfer } from '@/types/transactions'
@@ -17,6 +18,9 @@ const AllowNotifications = defineAsyncComponent(() => import('@/components/Allow
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
+const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
+const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
+const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
@@ -26,7 +30,7 @@ const promoCodeStep: StepInit = () => ({
   step: StepName.PromoCode,
   title: 'Enter your promo code',
   description: 'If you don\'t have one, you can skip this step.',
-  main: h(BrickInput),
+  main: BrickInput,
   beforeNext: async ({ promoCode }, { next, err }) => {
     if (!promoCode)
       err('Please enter a promo code')
@@ -40,7 +44,7 @@ const promoCodeStep: StepInit = () => ({
 const recoveryWordsStep: StepInit = () => ({
   step: StepName.RecoveryWordsStep,
   title: 'Enter recovery words',
-  main: h(BrickInput),
+  main: BrickInput,
   beforeNext: async (_, { next }) => next(),
 })
 
@@ -126,7 +130,7 @@ const getNotifiedStep: StepInit = () => ({
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
   stepsToSkip: 1,
-  main: h(AllowNotifications),
+  main: AllowNotifications,
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
@@ -155,54 +159,60 @@ const onBoardingCashback1: StepInit = () => ({
   step: StepName.OnBoardingCashback1,
   title: 'What\'s Crypto City Points?',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.  ',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingCashback2: StepInit = () => ({
   step: StepName.OnBoardingCashback2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingCashback3: StepInit = () => ({
   step: StepName.OnBoardingCashback3,
   title: 'Get CC Points',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingCashback4: StepInit = () => ({
   step: StepName.OnBoardingCashback4,
   title: 'Find places to pay with and earn CC Points',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingBluecode1: StepInit = () => ({
   step: StepName.OnBoardingBluecode1,
   title: 'What\'s Bluecode?',
   description: 'Bluecode is a European payment service that now supports NIM.',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingBluecode2: StepInit = () => ({
   step: StepName.OnBoardingBluecode2,
   title: 'Pay with Bluecode',
   description: 'Create a Bluecode Barcode and show it at the cashier to pay. ',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
 const onBoardingBluecode3: StepInit = () => ({
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
   description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: h(OnBoardingScreen),
+  main: OnBoardingScreen,
 })
 
-const qrCodeScannerStep: StepInit = () => ({
+const qrCodeScannerStep: StepInit<{ expect: QRScannerDataFormat }> = options => ({
   step: StepName.QRCodeScanner,
   title: 'Scan QR code',
-  main: h(QRScanner),
+  main: h(QRScanner, options?.props),
+  beforeNext: async (_, { next, prev }) => {
+    if (options?.props?.expect === QRScannerDataFormat.PaymentRequest)
+      next()
+    else // For Top Up and Withdrawal, we go back to the previous step
+      prev()
+  },
 })
 
 const paymentPreviewStep: StepInit = () => {
@@ -214,10 +224,15 @@ const paymentPreviewStep: StepInit = () => {
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner)
         return
-      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: qrCodeScanner.shopCategory }))
-      titleCmp = `${iconInHTML} ${qrCodeScanner.shopName || 'Payment preview'}`
+      const { shopName: title = 'Payment preview', shopCategory: category } = qrCodeScanner as PaymentRequestData
+      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category }))
+      titleCmp = `${iconInHTML} ${title}`
     },
-    beforeNext: async ({ paymentPreview: method, qrCodeScanner: request }, { next, err }) => {
+    beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next }) => {
+      if (_request instanceof String)
+        throw new Error(`Request is a string: ${_request}`)
+      const request = _request as PaymentRequestData
+
       // eslint-disable-next-line no-console
       console.log(`🤑  Initializing payment process with ${method}`, request)
 
@@ -236,6 +251,55 @@ const paymentPreviewStep: StepInit = () => {
   }
 }
 
+const nimWithdrawalSelectionStep: StepInit = () => ({
+  step: StepName.NimWithdrawalSelection,
+  title: 'Withdraw NIM',
+  main: NimWithdraw,
+  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err }) => {
+    const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
+    const { formatCrypto } = (await import('@/stores/fiat')).useFiat()
+    if (amount < remoteBalance) { err(`You don't have enough NIM. Your current balance is ${formatCrypto(remoteBalance, 'NIM')}`) }
+
+    else if (amount && recipient) {
+      alert('TODO I am not implemented yet 🤑')
+      // Didnt try it yet! But something like this should work
+      const title = 'Withdraw? (this text will be in the transaction list of the sender, not in the message of the transaction)'
+      await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+    }
+
+    // User clicked "Add NIM address, let him go, by calling next()"
+    else { next() }
+  },
+})
+
+const nimAddressInputStep: StepInit = () => ({
+  step: StepName.NimAddressInput,
+  title: 'Nim address input',
+  description: 'Witdhraw description?.',
+  main: NimAddressInput,
+  beforeNext: async ({ nimAddressInput }, { next, prev }) => {
+    // The NIM Address Step is a special step:
+    //   - if the address is ok, then we would go to the previous slide
+    //   - if the address is empty, then the user clicked "Scan QR code"
+
+    // TODO Validate address
+    console.log(nimAddressInput)
+
+    // Once the address is validated, go back to the previous step, which is the payment preview
+    if (nimAddressInput)
+      prev()
+    else
+      next()
+  },
+})
+
+const nimAddressDisplay: StepInit = () => ({
+  step: StepName.NimAddressDisplay,
+  title: 'Send NIM to top up',
+  description: 'Send a transaction to the address below. Top up as much as you like.',
+  main: NimAddressDisplay,
+})
+
 export const closeModal = () => modalController.getTop().then(m => m.dismiss())
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
@@ -249,7 +313,9 @@ const flows: Record<FlowName, StepInit[]> = {
   [FlowName.OnBoardingPoints]: [...onBoardingPointsSteps],
   [FlowName.OnBoardingCashback]: [onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4],
   [FlowName.OnBoardingBluecode]: [onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3],
-  [FlowName.NimOrPointsPayment]: [qrCodeScannerStep, paymentPreviewStep],
+  [FlowName.NimOrPointsPayment]: [() => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.PaymentRequest } }), paymentPreviewStep],
+  [FlowName.NimWithdraw]: [nimWithdrawalSelectionStep, nimAddressInputStep, () => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.NimiqAddress } })],
+  [FlowName.NimTopUp]: [nimAddressDisplay, () => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.NimCashlink } })],
 }
 
 const onDoneFlows: Record<FlowName, Flow['onDone']> = {
@@ -271,7 +337,12 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
   [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
   [FlowName.NimOrPointsPayment]: closeModal, // The payment itself is handled in the step
+  [FlowName.NimWithdraw]: closeModal, // The payment itself is handled in the step
+  [FlowName.NimTopUp]: closeModal,
 }
+
+const flowsThatCanGoBack = [FlowName.NimWithdraw]
+const canGoBack = (flow: FlowName) => flowsThatCanGoBack.includes(flow)
 
 /**
  * It initializes the flow give the name opening a new modal with the flow component
@@ -279,13 +350,17 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
  */
 export function initializeFlow(name: FlowName) {
   const isFullscreen = false
+
+  // Initialize all the steps to undefined
+  const state = Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State
+  const flow: Flow = { name, state, steps: flows[name].map(s => s()), onDone: onDoneFlows[name], canGoBack: canGoBack(name) }
   modalController.create({
     component: FlowCmp,
     handle: false,
     canDismiss: true,
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
-    componentProps: { flow: { name, state: reactive({}), steps: flows[name].map(s => s()), onDone: onDoneFlows[name] } },
+    componentProps: { flow },
   }).then(modal => modal.present())
 }
 

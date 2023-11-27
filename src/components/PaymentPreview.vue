@@ -3,7 +3,7 @@ import { IonButton, IonToggle } from '@ionic/vue'
 import { type PropType, computed, ref } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import InfoIcon from '@/components/icons/info.vue'
-import type { Flow } from '@/types/steps'
+import type { Flow, PaymentRequestData } from '@/types/steps'
 import { PaymentMethod, StepName, stepEmits } from '@/types/steps'
 import { useFiat } from '@/stores/fiat'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
@@ -15,10 +15,10 @@ const emit = defineEmits(stepEmits)
 
 const { getPriceNow, formatFiat, formatCrypto } = useFiat()
 
-// TODO Check error
+// TODO Check error from API
 const priceNow = computedAsync(() => getPriceNow().then(({ data }) => data!))
 
-const payment = computed(() => props.state[StepName.QRCodeScanner] || { amount: 0, fee: 0, recipient: '' })
+const payment = computed<PaymentRequestData>(() => props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '' })
 
 const nimAmount = computed(() => payment.value.amount / 1e5)
 const feeNimAmount = computed(() => payment.value.fee / 1e5)

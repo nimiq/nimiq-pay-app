@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { useWindowSize } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-import { IonIcon } from '@ionic/vue'
+import { IonBackButton, IonIcon } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/types/steps'
 import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/types/steps'
@@ -18,17 +18,19 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, state, steps: stepsInFlow } = props.flow
+const { onDone: onFlowDone, state, steps: stepsInFlow, canGoBack } = props.flow
 const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()
-const { nextSlide, activeIndex } = useCarousel(scroller, useWindowSize().width)
+const { nextSlide, activeIndex, prevSlide } = useCarousel(scroller, useWindowSize().width)
 const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
 const activeStep = computed(() => stepsInFlow[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
 const step = computed(() => stepsInFlow[activeIndex.value])
+
+const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
 
 type Errors = Record<InputStepName, string>
 let errors: Errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
@@ -56,7 +58,7 @@ async function onStepDone(value: OnDoneStepValue) {
     state[step.value.step as InputStepName] = value
     const err = (errorMsg: string) => errors![step.value.step as InputStepName] = errorMsg
     if (step.value.beforeNext)
-      await step.value.beforeNext?.(state, { next: goToNext, err })
+      await step.value.beforeNext?.(state, { next: goToNext, err, prev: prevSlide })
     else
       goToNext()
     autofocus(400)
@@ -85,16 +87,18 @@ function onCancel() {
 </script>
 
 <template>
-  <button class="fixed top-4 right-4" @click.stop="onCancel">
-    <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
-  </button>
+  <div class="fixed h-max inset-4 left-6 flex">
+    <IonBackButton v-if="allowBack" class="flex" @click.prevent="prevSlide" />
+    <button class="ml-auto" @click.stop="onCancel">
+      <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
+    </button>
+  </div>
+
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory bg-white">
-    <li v-for="{ main, step, title, description, stepsToSkip } in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
+    <li v-for="({ main, step, title, description, stepsToSkip }, i) in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
       <p v-if="description" class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
-      <div class="flex-1 w-full flex flex-col">
-        <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
-      </div>
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, isVisible: activeIndex === i }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
     </li>
   </ul>
 </template>

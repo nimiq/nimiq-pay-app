@@ -254,7 +254,7 @@ onMounted(async () => {
           </p>
           <IonButton
             fill="clear" class="text-base normal-case text-sky"
-            @click="showModal(Modal.TopUp, { isSmall: true })"
+            @click="initializeFlow(FlowName.NimTopUp)"
           >
             Top up
             <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />

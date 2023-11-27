@@ -11,6 +11,8 @@ export enum FlowName {
   OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
   NimOrPointsPayment = 'payment',
+  NimWithdraw = 'nimWithdraw',
+  NimTopUp = 'nimTopUp',
 }
 
 interface OnDoneFlowOptions {
@@ -24,6 +26,7 @@ export interface Flow {
   state: State
   steps: Step[]
   onDone: (state: State, options: OnDoneFlowOptions) => Promise<any>
+  canGoBack: boolean
 }
 
 export enum StepName {
@@ -46,20 +49,30 @@ export enum StepName {
   OnBoardingBluecode3 = 'onBoardingBluecode3',
   QRCodeScanner = 'qrCodeScanner',
   PaymentPreview = 'paymentPreview',
+  NimWithdrawalSelection = 'nimWithdrawalSelection',
+  NimAddressInput = 'nimAddressInput',
+  NimAddressDisplay = 'nimAddressDisplay',
 }
 
-const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview]
-export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview
-const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3]
-export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3
+export const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput]
+export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview | StepName.NimWithdrawalSelection | StepName.NimAddressInput
+const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay]
+export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay
 
 export const isInputStep = (step: Step): step is InputStep => inputSteps.includes(step.step)
 export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
 
-export type State = {
-  // All the InputSteps have a value in the state
-  // By default, the value is a string, but it can differ for each step
-  [K in StepName]?: (K extends StepName.QRCodeScanner ? PaymentRequestData : K extends StepName.PaymentPreview ? PaymentMethod : string)
+export interface State {
+  [StepName.PromoCode]: string
+  [StepName.PinCode]: string
+  [StepName.PinCodeConfirm]: string
+  [StepName.PhoneNumber]: string
+  [StepName.PhoneNumberConfirm]: string
+  [StepName.RecoveryWordsStep]: string[]
+  [StepName.QRCodeScanner]: PaymentRequestData | string
+  [StepName.PaymentPreview]: PaymentMethod
+  [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
+  [StepName.NimAddressInput]: string
 }
 
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
@@ -73,15 +86,16 @@ type BaseStep = {
   beforeDisplay?: (state: State) => Promise<void> | undefined
 } & SkippableStep
 
-interface ValidateOptions {
+interface BeforeNextOptions {
   next: () => void
+  prev: () => void
   err: (msg: string) => void
 }
 export type InputStep = BaseStep & {
   step: InputStepName
 
-  // Function that validates the input and calls next() or err() accordingly
-  beforeNext?: (state: State, options: ValidateOptions) => Promise<void>
+  // Function that validates the input and calls any of the callbacks
+  beforeNext?: (state: State, options: BeforeNextOptions) => Promise<void>
 }
 
 export type InfoStep = BaseStep & {
@@ -91,7 +105,7 @@ export type InfoStep = BaseStep & {
 
 export type Step = InputStep | InfoStep
 
-export interface StepInitOptions {
+export interface StepInitOptions<Props = undefined> {
   /**
    * Number of steps to skip if the user presses the skip button.
    * Use 1, to skip just the current step, 2 to skip the current step and the next one, etc.
@@ -99,10 +113,12 @@ export interface StepInitOptions {
    * @default undefined
    */
   stepsToSkip?: number
+
+  props?: Props
 }
 
-export type StepInit = (options?: StepInitOptions) => Step
-export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined }
+export type StepInit<Props = undefined> = (options?: StepInitOptions<Props>) => Step
+export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined, props: undefined }
 
 export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod
 
@@ -113,6 +129,11 @@ export const stepEmits: EmitsOptions = {
 }
 
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'fee'>
+
+export interface NimWithdrawalSelection {
+  amount: number
+  recipient: string
+}
 
 export enum PaymentMethod {
   NIM = 'nim',
