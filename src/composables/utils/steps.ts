@@ -1,4 +1,4 @@
-import { defineAsyncComponent, h } from 'vue'
+import { defineAsyncComponent, h, reactive } from 'vue'
 import { modalController } from '@ionic/vue'
 import { renderToString } from 'vue/server-renderer'
 import { QRScannerDataFormat } from '../useQRScanner'
@@ -258,16 +258,15 @@ const nimWithdrawalSelectionStep: StepInit = () => ({
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/stores/fiat')).useFiat()
-    if (amount < remoteBalance) { err(`You don't have enough NIM. Your current balance is ${formatCrypto(remoteBalance, 'NIM')}`) }
 
+    if (amount > remoteBalance) { err(`You don't have enough NIM. Your current balance is ${formatCrypto(remoteBalance, 'NIM')}`) }
     else if (amount && recipient) {
-      alert('TODO I am not implemented yet 🤑')
       // Didnt try it yet! But something like this should work
       const title = 'Withdraw? (this text will be in the transaction list of the sender, not in the message of the transaction)'
       await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+      next()
     }
-
-    // User clicked "Add NIM address, let him go, by calling next()"
+    // User clicked "Add NIM address", let him go, by calling next()
     else { next() }
   },
 })
@@ -341,7 +340,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.NimTopUp]: closeModal,
 }
 
-const flowsThatCanGoBack = [FlowName.NimWithdraw]
+const flowsThatCanGoBack = [FlowName.NimWithdraw, FlowName.NimTopUp]
 const canGoBack = (flow: FlowName) => flowsThatCanGoBack.includes(flow)
 
 /**
@@ -352,7 +351,7 @@ export function initializeFlow(name: FlowName) {
   const isFullscreen = false
 
   // Initialize all the steps to undefined
-  const state = Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State
+  const state = reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State)
   const flow: Flow = { name, state, steps: flows[name].map(s => s()), onDone: onDoneFlows[name], canGoBack: canGoBack(name) }
   modalController.create({
     component: FlowCmp,

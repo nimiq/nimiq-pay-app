@@ -21,8 +21,8 @@ watchEffect(() => props.isVisible ? startScan() : stopScan())
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full relative mt-8">
-    <button v-if="isDev && expect !== QRScannerDataFormat.NimCashlink" class="block text-sm font-normal text-space/80 underline mb-6" @click="setDummyData">
+  <div class="relative flex flex-col self-start w-full h-full mt-8">
+    <button v-if="isDev && expect !== QRScannerDataFormat.NimCashlink" class="block mb-6 text-sm font-normal underline text-space/80" @click="setDummyData">
       Click here to use mockup data
     </button>
     <div class="relative w-full aspect-square">

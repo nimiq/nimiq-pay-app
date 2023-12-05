@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { ref, watch } from 'vue'
+import { ref, toRefs, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import type { State } from '@/types/steps'
 import { stepEmits } from '@/types/steps'
@@ -9,20 +9,16 @@ const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean
 defineEmits(stepEmits)
 
 const address = ref<string>()
-watch(() => props.state, ({ qrCodeScanner }) => address.value = qrCodeScanner as string || '', { deep: true })
-
-// The state is not reactive, so we need to watch it and update the state manually
-// eslint-disable-next-line vue/no-mutating-props
-watch(address, value => props.state.qrCodeScanner = value || '')
+watch(() => toRefs(props.state), ({ qrCodeScanner }) => address.value = qrCodeScanner.value as string || '', { deep: true })
 </script>
 
 <template>
   <div class="flex flex-col self-start w-full h-full pt-8">
-    <div class="mt-28 mx-auto">
-      <div class="flex gap-x-8 mt-28 mx-auto justify-center">
+    <div class="mx-auto mt-28">
+      <div class="flex justify-center mx-auto gap-x-8 mt-28">
         <input v-model="address" type="text">
       </div>
-      <p v-if="errorMsg" class="text-tomato text-center">
+      <p v-if="errorMsg" class="text-center text-tomato">
         {{ errorMsg }}
       </p>
       <button @click="$emit('done')">
@@ -36,7 +32,7 @@ watch(address, value => props.state.qrCodeScanner = value || '')
       </p>
     </div>
 
-    <IonButton :disabled="!address" size="small" class="text-base font-bold mt-auto w-full" @click="$emit('done', address)">
+    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="$emit('done', address)">
       Save
     </IonButton>
   </div>

@@ -33,9 +33,9 @@ const step = computed(() => stepsInFlow[activeIndex.value])
 const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
 
 type Errors = Record<InputStepName, string>
-let errors: Errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
-watchEffect(() => errors = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
-const error = (step: StepName) => isActiveStepInput.value ? errors![step as InputStepName] : undefined
+const errors = ref<Errors>(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
+watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
+const error = (step: StepName) => isActiveStepInput.value ? errors.value![step as InputStepName] : undefined
 
 async function goToNext() {
   if (isLast.value) {
@@ -56,7 +56,7 @@ async function onStepDone(value: OnDoneStepValue) {
   else if (isActiveStepInput.value) {
     // @ts-expect-error If the emit value is well typed, this should work
     state[step.value.step as InputStepName] = value
-    const err = (errorMsg: string) => errors![step.value.step as InputStepName] = errorMsg
+    const err = (errorMsg: string) => errors.value![step.value.step as InputStepName] = errorMsg
     if (step.value.beforeNext)
       await step.value.beforeNext?.(state, { next: goToNext, err, prev: prevSlide })
     else
@@ -87,18 +87,18 @@ function onCancel() {
 </script>
 
 <template>
-  <div class="fixed h-max inset-4 left-6 flex">
+  <div class="fixed flex h-max inset-4 left-6">
     <IonBackButton v-if="allowBack" class="flex" @click.prevent="prevSlide" />
     <button class="ml-auto" @click.stop="onCancel">
       <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
     </button>
   </div>
 
-  <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory bg-white">
+  <ul ref="scroller" class="flex h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory">
     <li v-for="({ main, step, title, description, stepsToSkip }, i) in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
       <p v-if="description" class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, isVisible: activeIndex === i }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, isVisible: activeIndex === i, state }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
     </li>
   </ul>
 </template>
