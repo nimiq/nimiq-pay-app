@@ -13,7 +13,6 @@ def capacitor_pods
   pod 'CapacitorCordova', :path => '../../node_modules/.pnpm/@capacitor+ios@5.5.1_@capacitor+core@5.5.1/node_modules/@capacitor/ios'
   pod 'CapacitorBrowser', :path => '../../node_modules/.pnpm/@capacitor+browser@5.1.0_@capacitor+core@5.5.1/node_modules/@capacitor/browser'
   pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/share'
-  pod 'CapacitorCommunityBarcodeScanner', :path => '../../node_modules/.pnpm/@capacitor-community+barcode-scanner@4.0.1_@capacitor+core@5.5.1/node_modules/@capacitor-community/barcode-scanner'
   pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@5.4.1_@capacitor+core@5.5.1/node_modules/@capacitor-community/sqlite'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/app'
   pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/clipboard'
@@ -21,6 +20,7 @@ def capacitor_pods
   pod 'CapacitorKeyboard', :path => '../../node_modules/.pnpm/@capacitor+keyboard@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/keyboard'
   pod 'CapacitorPushNotifications', :path => '../../node_modules/.pnpm/@capacitor+push-notifications@5.1.0_@capacitor+core@5.5.1/node_modules/@capacitor/push-notifications'
   pod 'CapacitorStatusBar', :path => '../../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/status-bar'
+  pod 'SisouCapacitorBarcodeScanner', :path => '../../node_modules/.pnpm/@sisou+capacitor-barcode-scanner@4.1.1_@capacitor+core@5.5.1/node_modules/@sisou/capacitor-barcode-scanner'
 end
 
 target 'App' do

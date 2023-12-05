@@ -47,7 +47,6 @@ interface Migration {
   statements: string[]
 }
 
-// TODO Merge migrations into one
 export const migrations: Migration[] = [
   {
     version: 1,
@@ -56,13 +55,6 @@ export const migrations: Migration[] = [
       SQLQuery.CreateTxsTable,
       SQLQuery.CreateRemoteSignersTable,
       SQLQuery.CreateNimPricesTable,
-    ],
-  },
-  {
-    version: 2,
-    statements: [
-      'ALTER TABLE transactions RENAME COLUMN locationName TO shopName',
-      'ALTER TABLE transactions ADD COLUMN shopCategory TEXT',
     ],
   },
 ]

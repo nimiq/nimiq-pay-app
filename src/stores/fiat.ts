@@ -20,11 +20,11 @@ export const useFiat = defineStore('fiat', () => {
   const { locale } = useDevice()
   const { getPriceAt: priceAtApi, getPriceNow: getPriceNowApi } = useCurrencyPriceApi()
 
-  // TODO: add price for new currency if it doesnt exist
+  // TODO: add price for new currency if it doesn't exist
   // watch(selectedFiat, () => selectedFiat.value && upsertKV({ key: 'fiatPrice', value: currency.value }))
 
   function formatFiat(amount: number) {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value }).format(amount)
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: selectedFiat.value, currencyDisplay: 'narrowSymbol', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount)
   }
 
   function formatCrypto(amount: number, currency: string) {

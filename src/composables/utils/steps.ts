@@ -253,7 +253,7 @@ const paymentPreviewStep: StepInit = () => {
 
 const nimWithdrawalSelectionStep: StepInit = () => ({
   step: StepName.NimWithdrawalSelection,
-  title: 'Withdraw NIM',
+  title: 'Withdraw',
   main: NimWithdraw,
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance

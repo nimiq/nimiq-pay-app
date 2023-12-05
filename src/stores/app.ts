@@ -20,6 +20,7 @@ export const useApp = defineStore('app', () => {
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
+  const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
   const phoneNumberVerified = computed(() => !!pointsToken.value)
 
   const entropy = ref('')
@@ -44,5 +45,6 @@ export const useApp = defineStore('app', () => {
     selectedFiat,
     pointsToken,
     setEntropy,
+    withdrawalAddress,
   }
 })

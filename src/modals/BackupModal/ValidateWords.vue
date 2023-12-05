@@ -98,7 +98,7 @@ onMounted(updateRandomWord)
         </p>
       </div>
       <div class="grid grid-cols-3 gap-4">
-        <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded" @click="() => handleGuess(word)">
+        <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded whitespace-nowrap" @click="() => handleGuess(word)">
           {{ word }}
         </div>
       </div>
