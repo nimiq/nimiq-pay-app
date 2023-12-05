@@ -90,13 +90,13 @@ function withdraw() {
 
   <div class="flex mt-auto mb-4 justify-evenly">
     <button class="amount-button">
-      {{ formatFiat(25) }}
+      {{ formatFiat(25, true) }}
     </button>
     <button class="amount-button">
-      {{ formatFiat(50) }}
+      {{ formatFiat(50, true) }}
     </button>
     <button class="amount-button">
-      {{ formatFiat(100) }}
+      {{ formatFiat(100, true) }}
     </button>
     <button class="amount-button">
       All
