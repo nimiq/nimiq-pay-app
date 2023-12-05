@@ -34,7 +34,7 @@ const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp(
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks } = usePoints()
-const { formatFiat, getPriceNow } = useFiat()
+const { formatFiat, formatCrypto, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 
@@ -246,7 +246,7 @@ onMounted(async () => {
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>
-              {{ Math.floor(remoteBalance / 1e5).toFixed(2) }} NIM
+              {{ formatCrypto(remoteBalance / 1e5, 'NIM') }}
             </span>
             <!-- TODO: add price change in last 24 hours -->
             <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->

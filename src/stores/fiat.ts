@@ -28,7 +28,7 @@ export const useFiat = defineStore('fiat', () => {
   }
 
   function formatCrypto(amount: number, currency: string) {
-    return `${amount.toLocaleString(locale)} ${currency}`
+    return `${amount.toLocaleString(locale, { maximumFractionDigits: 2 })} ${currency}`
   }
 
   // The price of NIM every 10 minutes

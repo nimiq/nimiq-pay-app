@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { IonButton } from '@ionic/vue'
 import type { State } from '@/types/steps'
-import { stepEmits } from '@/types/steps'
+import { StepName, stepEmits } from '@/types/steps'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
 const props = defineProps({
@@ -12,16 +12,20 @@ const props = defineProps({
   state: { type: Object as PropType<State>, required: true },
   isVisible: { type: Boolean },
 })
-defineEmits(stepEmits)
+const emit = defineEmits(stepEmits)
 
-const address = ref<string>()
-watch(() => props.state, ({ nimAddressInput }) => address.value = nimAddressInput || '', { deep: true })
+const address = computed(() => props.state[StepName.NimAddressInput])
 
 const amount = ref<number>()
-
-const hasEnoughAmount = computed(() => amount.value || 0 * 1e5 <= useRemoteSigner().remoteBalance)
+const amountInLuna = computed(() => amount.value || 0 * 1e5)
+const hasEnoughAmount = computed(() => useRemoteSigner().remoteBalance >= amountInLuna.value)
 
 const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? 'Not enought funds' : ''))
+const disabled = computed(() => !address.value || amountInLuna.value <= 0 || !hasEnoughAmount.value)
+
+function withdraw() {
+  emit('done', { amount: amount.value, recipient: address.value })
+}
 </script>
 
 <template>
@@ -34,7 +38,7 @@ const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? 
   <input v-model="amount" placeholder="amount">
 
   <div class="flex flex-col justify-center pb-6 mt-auto w-full">
-    <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="!address || amount === 0 || !hasEnoughAmount">
+    <IonButton size="small" class="text-base font-bold" :disabled="disabled" @click="withdraw">
       Withdraw
     </IonButton>
   </div>
