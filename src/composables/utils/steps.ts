@@ -331,10 +331,10 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
     console.log('Verify phone done')
     useModal().showModal(Modal.Points)
   },
-  [FlowName.SetupWithPromoCode]: async () => { console.log('Setup with promo code done'); return Promise.resolve() },
+  [FlowName.SetupWithPromoCode]: closeModal,
   [FlowName.OnBoardingPoints]: () => useModal().showModal(Modal.Points),
-  [FlowName.OnBoardingCashback]: async () => { console.log('On boarding cashback done'); return Promise.resolve() },
-  [FlowName.OnBoardingBluecode]: async () => { console.log('On boarding bluecode done'); return Promise.resolve() },
+  [FlowName.OnBoardingCashback]: closeModal,
+  [FlowName.OnBoardingBluecode]: closeModal,
   [FlowName.NimOrPointsPayment]: closeModal, // The payment itself is handled in the step
   [FlowName.NimWithdraw]: closeModal, // The payment itself is handled in the step
   [FlowName.NimTopUp]: closeModal,
