@@ -1,3 +1,4 @@
+import type { VNode } from 'vue'
 import { defineAsyncComponent, h, reactive } from 'vue'
 import { modalController } from '@ionic/vue'
 import { renderToString } from 'vue/server-renderer'
@@ -9,18 +10,18 @@ import { FlowName, PaymentMethod, StepName, defaultStepInitOptions, inputSteps }
 import FlowCmp from '@/components/Flow.vue'
 import { Transfer } from '@/types/transactions'
 
-const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
-const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
-const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue'))
-const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
-const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
-const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue'))
-const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
-const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
-const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
-const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
-const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
-const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
+const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
+const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue')) as unknown as VNode
+const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue')) as unknown as VNode
+const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue')) as unknown as VNode
+const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue')) as unknown as VNode
+const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue')) as unknown as VNode
+const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue')) as unknown as VNode
+const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue')) as unknown as VNode
+const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue')) as unknown as VNode
+const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue')) as unknown as VNode
+const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue')) as unknown as VNode
+const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue')) as unknown as VNode
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
