@@ -1,6 +1,7 @@
-import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import type { MaybeRef } from 'vue'
-import { onBeforeUnmount, ref, toValue } from 'vue'
+import { computed, toValue } from 'vue'
+import { ready, scan } from 'qr-scanner-wechat'
+import { useIntervalFn } from '@vueuse/core'
 import type { PaymentRequestData } from '@/types/steps'
 import { Rail, ShopCategory } from '@/types/transactions'
 import { nimAddressRegex, nimCashlinkRegex } from '@/lib'
@@ -21,21 +22,15 @@ interface UseQRScannerOptions<T = QRScannerDataFormat> {
   ) => void
 
   // DOM element where the camera will be attached
-  target?: MaybeRef<HTMLElement | undefined>
+  videoEl: MaybeRef<HTMLVideoElement>
 }
 
-export function useQRScanner({ onScan, expect, target }: UseQRScannerOptions) {
+export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
+  const video = computed(() => toValue(videoEl))
+
   const isDev = import.meta.env.DEV
 
-  const isScanning = ref(false)
-  const error = ref('')
-
-  const stopScan = async () => {
-    await BarcodeScanner.showBackground()
-    await BarcodeScanner.stopScan()
-    isScanning.value = false
-    document.body.classList.remove('scanner-active')
-  }
+  const { resume: resumeScan, pause: pauseScan, isActive: isScanning } = useIntervalFn(scanFrame, 100, { immediate: false })
 
   // Parses different URL formats and puts the data in a PaymentRequestData object
   //    Nimiq links: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
@@ -74,9 +69,8 @@ export function useQRScanner({ onScan, expect, target }: UseQRScannerOptions) {
       // This is a fallback. We found the amount and the recipient, but we don't know the rail.
       data = { recipient, amount, message, fee, shopName, shopCategory }
 
-    setTimeout(stopScan, 500)
     onScan(data)
-    isScanning.value = false
+    pauseScan()
   }
 
   async function parseNimAddress(content: string) {
@@ -86,9 +80,8 @@ export function useQRScanner({ onScan, expect, target }: UseQRScannerOptions) {
     if (!nimAddressRegex.test(content))
       return
 
-    setTimeout(stopScan, 500)
     onScan(content)
-    isScanning.value = false
+    pauseScan()
   }
 
   async function parseCashlink(cashlink: string) {
@@ -98,47 +91,54 @@ export function useQRScanner({ onScan, expect, target }: UseQRScannerOptions) {
     if (!nimCashlinkRegex.test(cashlink))
       return
 
-    setTimeout(stopScan, 500)
+    pauseScan()
     onScan(cashlink)
-    isScanning.value = false
   }
 
-  async function startScan() {
-    relocateVideo()
-    await BarcodeScanner.prepare({ cameraDirection: 'back' })
-    await BarcodeScanner.checkPermission({ force: true })
-    await BarcodeScanner.hideBackground()
-    await BarcodeScanner.resumeScanning()
-    document.body.classList.add('scanner-active')
+  async function setupVideoStream() {
+    if (!video.value)
+      return
 
-    isScanning.value = true
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        width: 512,
+        height: 512,
+        facingMode: 'environment', // Select the back camera
+      },
+    })
 
-    // eslint-disable-next-line no-console
-    console.log('📷  Scanning QR code')
+    video.value.srcObject = stream
+    video.value.play()
 
-    while (isScanning.value) {
-      const { content, hasContent, err } = await BarcodeScanner.startScan({ cameraDirection: 'back' })
-        .then(r => ({ ...r, err: '' })).catch(err => ({ content: '', hasContent: false, err: err.message }))
-      if (err) { error.value = err; return }
-      if (!hasContent)
-        continue
-      switch (expect) {
-        case QRScannerDataFormat.NimiqAddress:
-          parseNimAddress(content)
-          break
-        case QRScannerDataFormat.PaymentRequest:
-          parsePaymentRequest(content)
-          break
-        case QRScannerDataFormat.NimCashlink:
-          parseCashlink(content)
-          break
-      }
-    }
+    video.value.setAttribute('autoplay', 'true')
+    video.value.setAttribute('muted', 'true')
+    video.value.setAttribute('playsinline', 'true')
+  }
+
+  async function scanFrame() {
+    const canvas = document.createElement('canvas')
+    canvas.width = video.value.videoWidth
+    canvas.height = video.value.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx!.drawImage(video.value, 0, 0, canvas.width, canvas.height)
+    const { text: result } = await scan(canvas)
+
+    if (!result)
+      return
+
+    if (expect === QRScannerDataFormat.NimCashlink)
+      parseCashlink(result)
+    else if (expect === QRScannerDataFormat.NimiqAddress)
+      parseNimAddress(result)
+    else if (expect === QRScannerDataFormat.PaymentRequest)
+      parsePaymentRequest(result)
   }
 
   function setDummyData() {
     if (!isDev)
       return
+
     switch (expect) {
       case QRScannerDataFormat.NimCashlink:
         // eslint-disable-next-line no-alert
@@ -153,40 +153,23 @@ export function useQRScanner({ onScan, expect, target }: UseQRScannerOptions) {
     }
   }
 
-  const defaultVideoContainerStyles = 'position:absolute; top: 0; left: 0; width:100%; height: 100%; background-color: black;'
-  /**
-   * This function sets up a MutationObserver to watch for changes in the DOM.
-   * When the scanner is mounted, it is mounted at the end of the body with an
-   * absolute position and covering the whole screen.
-   * We just watch the body for changes, and when the scanner is mounted, a
-   * specific element (a div with a video and a certain style) is added to the body,
-   * it modifies the video's style, moves the video to a different container, and hides the original element.
-   */
-  function relocateVideo() {
-    if (!toValue(target))
-      return
-    const observer = new MutationObserver(() => {
-      const element = document.body.querySelector(`[style="${defaultVideoContainerStyles}"]`) as HTMLDivElement
-      if (!element)
-        return
-      observer.disconnect()
-      const video = element.querySelector('video')
-      video!.style!.objectFit = 'cover'
-      toValue(target)?.appendChild(video!)
-      // remove element from DOM
-      element.remove()
-    })
-    observer.observe(document.body, { childList: true, subtree: true })
+  async function startScan() {
+    await setupVideoStream()
+    resumeScan()
   }
 
-  onBeforeUnmount(stopScan)
+  async function stopScan() {
+    pauseScan()
+    const mediaStream = video.value.srcObject as MediaStream
+    mediaStream?.getTracks().forEach(track => track.stop())
+    video.value.srcObject = null
+  }
 
   return {
+    ready,
     isScanning,
     startScan,
     stopScan,
-    error,
-    nimAddressRegex,
 
     setDummyData,
   }

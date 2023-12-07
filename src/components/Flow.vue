@@ -98,7 +98,7 @@ function onCancel() {
     <li v-for="({ main, step, title, description, stepsToSkip }, i) in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
       <p v-if="description" class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, isVisible: activeIndex === i, state }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state }" :state="state" :error-msg="error(step)" v-on="{ autofocus, done: onStepDone, skip }" />
     </li>
   </ul>
 </template>
