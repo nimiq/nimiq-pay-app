@@ -8,11 +8,11 @@ import { check, xmark } from '@/components/icons'
 
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
-  CashlinkScanner = '@/modals/deposit/CashlinkScannerModal.vue',
+  // CashlinkScanner = '@/modals/deposit/CashlinkScannerModal.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
-  ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
+  // ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
@@ -23,7 +23,7 @@ export enum Modal {
   Pay = '@/modals/PayModal/index.vue',
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Points = '@/modals/PointsModal.vue',
-  PointsIntro = '@/modals/setup/PointsIntroModal/index.vue',
+  // PointsIntro = '@/modals/setup/PointsIntroModal/index.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
@@ -52,18 +52,18 @@ function _useModal() {
       case Modal.Backup:
         component = defineAsyncComponent(() => import(Modal.Backup))
         break
-      case Modal.CashlinkScanner:
+      /* case Modal.CashlinkScanner:
         component = defineAsyncComponent(() => import(Modal.CashlinkScanner))
-        break
+        break */
       case Modal.DetailedTransaction:
         component = defineAsyncComponent(() => import(Modal.DetailedTransaction))
         break
       case Modal.EnablePushNotifications:
         component = defineAsyncComponent(() => import(Modal.EnablePushNotifications))
         break
-      case Modal.ExpiringPoints:
+      /* case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
-        break
+        break */
       case Modal.Login:
         component = defineAsyncComponent(() => import(Modal.Login))
         break
@@ -94,9 +94,9 @@ function _useModal() {
       case Modal.Points:
         component = defineAsyncComponent(() => import(Modal.Points))
         break
-      case Modal.PointsIntro:
+      /* case Modal.PointsIntro:
         component = defineAsyncComponent(() => import(Modal.PointsIntro))
-        break
+        break */
       case Modal.Settings:
         component = defineAsyncComponent(() => import(Modal.Settings))
         break
