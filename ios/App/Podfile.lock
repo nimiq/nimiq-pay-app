@@ -22,8 +22,6 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (5.0.6):
     - Capacitor
-  - SisouCapacitorBarcodeScanner (4.1.1):
-    - Capacitor
   - SQLCipher (4.5.5):
     - SQLCipher/standard (= 4.5.5)
   - SQLCipher/common (4.5.5)
@@ -43,7 +41,6 @@ DEPENDENCIES:
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@5.1.0_@capacitor+core@5.5.1/node_modules/@capacitor/push-notifications`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/status-bar`)"
-  - "SisouCapacitorBarcodeScanner (from `../../node_modules/.pnpm/@sisou+capacitor-barcode-scanner@4.1.1_@capacitor+core@5.5.1/node_modules/@sisou/capacitor-barcode-scanner`)"
 
 SPEC REPOS:
   trunk:
@@ -73,8 +70,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/share"
   CapacitorStatusBar:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.5.1/node_modules/@capacitor/status-bar"
-  SisouCapacitorBarcodeScanner:
-    :path: "../../node_modules/.pnpm/@sisou+capacitor-barcode-scanner@4.1.1_@capacitor+core@5.5.1/node_modules/@sisou/capacitor-barcode-scanner"
 
 SPEC CHECKSUMS:
   Capacitor: 9da0a2415e3b6098511f8b5ffdb578d91ee79f8f
@@ -88,10 +83,9 @@ SPEC CHECKSUMS:
   CapacitorPushNotifications: b31e326c6e4eb216a622041d6ca21a973f34943f
   CapacitorShare: cd41743331cb71d217c029de54b681cbd91e0fcc
   CapacitorStatusBar: 565c0a1ebd79bb40d797606a8992b4a105885309
-  SisouCapacitorBarcodeScanner: af90e0286e05859173806c2c8aca83c71956f521
   SQLCipher: f2e96b3822e3006b379181a0e4fd145f6de29b56
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 4f02c73baefcf18769c95ddb9da434c5d18d99cb
+PODFILE CHECKSUM: c717af70a815df808fb67e3b868a9b315b4e6ff0
 
 COCOAPODS: 1.13.0

@@ -18,7 +18,6 @@ dependencies {
     implementation project(':capacitor-keyboard')
     implementation project(':capacitor-push-notifications')
     implementation project(':capacitor-status-bar')
-    implementation project(':sisou-capacitor-barcode-scanner')
 
 }
 
