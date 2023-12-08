@@ -15,8 +15,8 @@ watch(() => toRefs(props.state), ({ qrCodeScanner }) => address.value = qrCodeSc
 
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
-    <div class="mx-auto">
-      <AddressInput />
+    <div class="w-full mx-auto">
+      <AddressInput :address="address" @update:address="(v: string) => address = v" />
 
       <p v-if="errorMsg" class="text-center text-tomato">
         {{ errorMsg }}
