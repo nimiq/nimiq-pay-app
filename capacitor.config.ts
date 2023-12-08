@@ -6,6 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     androidScheme: 'https',
+    allowNavigation: ['*'],
+    cleartext: true,
   },
   loggingBehavior: 'debug',
   appendUserAgent: 'NIM Pay',
