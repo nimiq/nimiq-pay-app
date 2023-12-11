@@ -2,36 +2,46 @@
 import type { PropType } from 'vue'
 import { ref, toRefs, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
 import type { State } from '@/types/steps'
 import { stepEmits } from '@/types/steps'
+import { useApp } from '@/stores/app'
 import AddressInput from '@/components/AddressInput.vue'
+import QRIcon from '@/components/icons/qr.vue'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
-defineEmits(stepEmits)
+const emit = defineEmits(stepEmits)
 
+const { withdrawalAddress } = storeToRefs(useApp())
 const address = ref<string>()
 watch(() => toRefs(props.state), ({ qrCodeScanner }) => address.value = qrCodeScanner.value as string || '', { deep: true })
+
+function handleSave() {
+  if (!address.value)
+    return
+  withdrawalAddress.value = address.value
+  emit('done', address.value)
+}
 </script>
 
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
-    <div class="w-full mx-auto">
+    <div class="w-3/4 m-auto">
+      <p class="mb-6 text-sm font-bold text-center uppercase text-space/60">
+        Enter Address
+      </p>
       <AddressInput :address="address" @update:address="(v: string) => address = v" />
+      <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')"/>
 
-      <p v-if="errorMsg" class="text-center text-tomato">
-        {{ errorMsg }}
-      </p>
-      <button @click="$emit('done')">
-        Scan QR code
-      </button>
-
-      <p class="mt-10 text-lg">
-        {{ address }}
-      </p>
+      <!-- <button @click="$emit('done')">
+      </button> -->
       <!-- TODO: Fun fact! Opening the camera, then close it and then open it again does not work. Alberto, add it to the list 🦈 -->
     </div>
 
-    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="$emit('done', address)">
+    <p class="mt-8 text-center text-tomato">
+      {{ errorMsg }}
+    </p>
+    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">
       Save
     </IonButton>
   </div>

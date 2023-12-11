@@ -274,22 +274,23 @@ const nimWithdrawalSelectionStep: StepInit = () => ({
 
 const nimAddressInputStep: StepInit = () => ({
   step: StepName.NimAddressInput,
-  title: 'Nim address input',
-  description: 'Witdhraw description?.',
+  title: 'Send NIM to this address',
+  description: 'Copy or scan the address',
   main: NimAddressInput,
-  beforeNext: async ({ nimAddressInput }, { next, prev }) => {
+  beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
     // The NIM Address Step is a special step:
     //   - if the address is ok, then we would go to the previous slide
     //   - if the address is empty, then the user clicked "Scan QR code"
 
-    // TODO Validate address
-    console.log(nimAddressInput)
-
     // Once the address is validated, go back to the previous step, which is the payment preview
-    if (nimAddressInput)
-      prev()
-    else
-      next()
+    if (nimAddressInput) {
+      const { ValidationUtils } = (await import('@nimiq/utils'))
+      if (!ValidationUtils.isValidAddress(nimAddressInput))
+        err('Invalid Nimiq address')
+      else
+        prev()
+    }
+    else { next() }
   },
 })
 

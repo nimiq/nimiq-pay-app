@@ -40,9 +40,14 @@ function handleInput() {
       const input = document.getElementsByName(`block-${i}${j}`)[0] as HTMLInputElement
       if (input.value.length === 4) {
         if (i === 3 && j === 3) {
-          input.blur()
-          getAddressFromInputs()
-          return
+          // Only blur if writing in the last input
+          const row = Number.parseInt(input.name.split('-')[1][0])
+          const column = Number.parseInt(input.name.split('-')[1][1])
+          if (row === 3 && column === 3) {
+            input.blur()
+            getAddressFromInputs()
+            return
+          }
         }
         const nextInput = document.getElementsByName(`block-${j === 3 ? i + 1 : i}${j === 3 ? 1 : j + 1}`)[0] as HTMLInputElement
         nextInput.focus()
@@ -145,12 +150,12 @@ function addressStringToArray(address: string) {
 </script>
 
 <template>
-  <div v-for="i in 3" :key="i" class="grid grid-cols-[repeat(5,minmax(0,auto))] my-2">
+  <div v-for="i in 3" :key="i" class="grid grid-cols-[repeat(5,minmax(0,auto))] my-2 justify-center">
     <template v-for="j in 3" :key="i.toString() + j.toString()">
       <input
         :name="`block-${i}${j}`" :value="address[i - 1 + j - 1]"
         maxlength="4" minlength="4" autocapitalize="characters"
-        class="uppercase border-[1.5px] border-space-space-400 rounded p-2 min-w-[5rem] text-xl text-center"
+        class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[66px] text-2xl text-center focus:outline-none focus:border-sky/40"
         @input="handleInput" @keydown="handleDelete" @paste="handlePaste"
       >
       <div v-if="j !== 3" class="w-2 h-[1.5px] my-auto bg-space/20" />
