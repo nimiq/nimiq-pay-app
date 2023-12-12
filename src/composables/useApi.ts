@@ -172,24 +172,31 @@ export function useFirestoreApi() {
   }
 }
 
+export enum FetchStatus {
+  Idle = 'idle',
+  Loading = 'loading',
+  Error = 'error',
+  Success = 'success',
+}
+
 export interface UseFetchOptions {
   immediate?: boolean
 }
 export function useFetch<T>(fn: () => Promise<Result<T>>, { immediate = true }: UseFetchOptions = {}) {
-  const loading = ref(false)
+  const state = ref<FetchStatus>(FetchStatus.Idle)
   const data = ref<T>()
   const error = ref<string>()
 
   async function fetch() {
-    loading.value = true
+    state.value = FetchStatus.Loading
     const { data: _data, error: _error } = await fn()
     data.value = _data
     error.value = _error
-    loading.value = false
+    state.value = _error ? FetchStatus.Error : FetchStatus.Success
   }
 
   if (immediate)
     fetch()
 
-  return { loading: readonly(loading), error: readonly(error), data: readonly(data), fetch }
+  return { state: readonly(state), error: readonly(error), data: readonly(data), fetch }
 }
