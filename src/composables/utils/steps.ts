@@ -1,5 +1,5 @@
-import type { VNode } from 'vue'
-import { defineAsyncComponent, h, reactive } from 'vue'
+import type { Ref, VNode } from 'vue'
+import { defineAsyncComponent, h, reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
 import { renderToString } from 'vue/server-renderer'
 import { QRScannerDataFormat } from '../useQRScanner'
@@ -8,6 +8,7 @@ import type { Flow, PaymentRequestData, State, StepInit } from '@/types/steps'
 import { FlowName, PaymentMethod, StepName, defaultStepInitOptions, inputSteps } from '@/types/steps'
 
 import FlowCmp from '@/components/Flow.vue'
+import type { ExternalTransaction } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
@@ -22,6 +23,7 @@ const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categ
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue')) as unknown as VNode
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue')) as unknown as VNode
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue')) as unknown as VNode
+const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue')) as unknown as VNode
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
@@ -221,7 +223,7 @@ const paymentPreviewStep: StepInit = () => {
   return {
     step: StepName.PaymentPreview,
     get title() { return titleCmp },
-    main: h(PaymentPreview),
+    main: PaymentPreview,
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner)
         return
@@ -301,6 +303,28 @@ const nimAddressDisplay: StepInit = () => ({
   main: NimAddressDisplay,
 })
 
+const transactionList: StepInit = () => ({
+  step: StepName.TransactionList,
+  title: 'Transaction list',
+  main: h('div', 'Transaction list'),
+})
+
+const transactionDetail: StepInit = () => {
+  const titleCmp = ref<string>('Payment preview')
+  const tx = ref() as Ref<ExternalTransaction>
+  return {
+    step: StepName.PaymentPreview,
+    get title() { return titleCmp.value },
+    main: h(TransactionDetails, { tx }),
+    async beforeDisplay({ tx: selectedTx }) {
+      const { shopName: title = 'Payment preview', shopCategory: category } = selectedTx
+      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category }))
+      titleCmp.value = `${iconInHTML} ${title}`
+      tx.value = selectedTx
+    },
+  }
+}
+
 export const closeModal = () => modalController.getTop().then(m => m.dismiss())
 
 const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
@@ -317,6 +341,8 @@ const flows: Record<FlowName, StepInit[]> = {
   [FlowName.NimOrPointsPayment]: [() => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.PaymentRequest } }), paymentPreviewStep],
   [FlowName.NimWithdraw]: [nimWithdrawalSelectionStep, nimAddressInputStep, () => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.NimiqAddress } })],
   [FlowName.NimTopUp]: [nimAddressDisplay, () => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.NimCashlink } })],
+  [FlowName.ViewTransactions]: [transactionList, transactionDetail],
+  [FlowName.ViewTransactionDetail]: [transactionDetail],
 }
 
 const onDoneFlows: Record<FlowName, Flow['onDone']> = {
@@ -340,21 +366,24 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.NimOrPointsPayment]: closeModal, // The payment itself is handled in the step
   [FlowName.NimWithdraw]: closeModal, // The payment itself is handled in the step
   [FlowName.NimTopUp]: closeModal,
+  [FlowName.ViewTransactions]: closeModal,
+  [FlowName.ViewTransactionDetail]: closeModal,
 }
 
-const flowsThatCanGoBack = [FlowName.NimWithdraw, FlowName.NimTopUp]
+const flowsThatCanGoBack = [FlowName.NimWithdraw, FlowName.NimTopUp, FlowName.ViewTransactions]
 const canGoBack = (flow: FlowName) => flowsThatCanGoBack.includes(flow)
 
 /**
  * It initializes the flow give the name opening a new modal with the flow component
  * which handles the carousel of steps.
  */
-export function initializeFlow(name: FlowName) {
+export async function initializeFlow(name: FlowName, initialState?: Partial<State>) {
   const isFullscreen = false
 
   // Initialize all the steps to undefined
-  const state = reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State)
+  const state = reactive({ ...Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State, ...initialState })
   const flow: Flow = { name, state, steps: flows[name].map(s => s()), onDone: onDoneFlows[name], canGoBack: canGoBack(name) }
+  await flow.steps.at(0)?.beforeDisplay?.(state)
   modalController.create({
     component: FlowCmp,
     handle: false,

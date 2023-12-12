@@ -16,13 +16,13 @@ import SportsFitnessIcon from '@/components/icons/categories/sports_fitness.vue'
 defineProps({
   category: {
     type: String as () => ShopCategory,
-    required: true,
+    default: ShopCategory.Shop,
   },
 })
 </script>
 
 <template>
-  <div class="rounded-full aspect-square p-1 text-space bg-space/[0.06]">
+  <div class="rounded-full aspect-square text-space bg-space/[0.06] w-8 h-8">
     <CarsBikesIcon v-if="category === ShopCategory.CarsBikes" />
     <CashIcon v-else-if="category === ShopCategory.Cash" />
     <ComputerElectronicsIcon v-else-if="category === ShopCategory.ComputerElectronics" />

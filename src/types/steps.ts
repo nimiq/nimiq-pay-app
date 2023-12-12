@@ -1,6 +1,6 @@
 import type { EmitsOptions, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
-import type { Transaction } from './transactions'
+import type { ExternalTransaction, Transaction } from './transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -13,6 +13,8 @@ export enum FlowName {
   NimOrPointsPayment = 'payment',
   NimWithdraw = 'nimWithdraw',
   NimTopUp = 'nimTopUp',
+  ViewTransactions = 'viewTransactions',
+  ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
 }
 
 interface OnDoneFlowOptions {
@@ -52,12 +54,14 @@ export enum StepName {
   NimWithdrawalSelection = 'nimWithdrawalSelection',
   NimAddressInput = 'nimAddressInput',
   NimAddressDisplay = 'nimAddressDisplay',
+  TransactionList = 'transactionList',
+  TransactionDetail = 'transactionDetail',
 }
 
-export const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput]
-export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview | StepName.NimWithdrawalSelection | StepName.NimAddressInput
-const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay]
-export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay
+export const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList]
+export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview | StepName.NimWithdrawalSelection | StepName.NimAddressInput | StepName.TransactionList
+const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail]
+export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay | StepName.TransactionList | StepName.TransactionDetail
 
 export const isInputStep = (step: Step): step is InputStep => inputSteps.includes(step.step)
 export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
@@ -73,6 +77,7 @@ export interface State {
   [StepName.PaymentPreview]: PaymentMethod
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string
+  tx: ExternalTransaction // User selects a transaction from the list
 }
 
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
@@ -120,10 +125,11 @@ export interface StepInitOptions<Props = undefined> {
 export type StepInit<Props = undefined> = (options?: StepInitOptions<Props>) => Step
 export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined, props: undefined }
 
-export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod
+export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction
 
 export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => undefined,
+  select: (_: OnDoneStepValue) => undefined, // Just an alias for done
   skip: () => undefined,
   autofocus: () => undefined,
 }

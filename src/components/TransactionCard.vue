@@ -42,7 +42,7 @@ onMounted(() => {
       </div>
       <div class="ml-auto text-right">
         <p v-if="tx.fiatAmount" class="text-base font-bold">
-          {{ direction * tx.fiatAmount }} {{ tx.fiatUnit?.toLocaleUpperCase() }}
+          {{ direction * tx.fiatAmount }} {{ tx.fiatCurrency?.toLocaleUpperCase() }}
         </p>
         <p :class="tx.fiatAmount ? 'text-sm font-semibold text-space/50' : '!text-space !text-base !font-bold'">
           {{ (direction * tx.amount / 1e5).toFixed(2) }} NIM

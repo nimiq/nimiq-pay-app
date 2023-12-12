@@ -1,30 +1,24 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { onMounted, readonly, ref, watch } from 'vue'
+import { computed, onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
+import { isExternalTx } from '@/types/transactions'
 import type { PartialSendTxArgs, Transaction, TransactionSentByUser } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useFiat } from '@/stores/fiat'
-import { useApp } from '@/stores/app'
-
 import { SQLQuery } from '@/lib/sql-queries'
 
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
 
-  const { selectedFiat } = storeToRefs(useApp())
   const { updateBalance, updateActiveWallet } = useRemoteSigner()
   const { remoteBalance, remoteAddress } = storeToRefs(useRemoteSigner())
 
-  const { getTxPrice } = useFiat()
-
   const transactions = ref<Transaction[]>([])
-  // Update the value of each transaction when the fiat currency changes
-  watch(selectedFiat, () => transactions.value.forEach(async tx => Object.assign(tx, await getTxPrice(tx))))
+  const externalTransactions = computed(() => readonly(transactions.value).filter(isExternalTx))
 
   interface SelectTxsOptions {
     limit?: number
@@ -95,6 +89,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   return {
     transactions: readonly(transactions),
+    externalTransactions,
     sendTx,
     loadMoreTxs: () => selectTxs({ offset: transactions.value.length }),
     clearTxHistory,

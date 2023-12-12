@@ -8,6 +8,7 @@ import { PaymentMethod, StepName, stepEmits } from '@/types/steps'
 import { useFiat } from '@/stores/fiat'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true } })
@@ -35,17 +36,12 @@ const paymentMethod = ref<PaymentMethod>(PaymentMethod.NIM)
 </script>
 
 <template>
-  <div class="flex flex-col justify-center items-center gap-y-2 mt-8">
-    <div class="flex items-center justify-center gap-x-2">
-      <span class="text-3xl uppercase text-space/60">{{ formatFiat(fiatAmount) }}</span>
-      <InfoIcon class="w-4 h-4 stroke-2 opacity-40" />
-    </div>
-    <p class="text-5xl text-center">
-      {{ nimAmount }} NIM
-    </p>
-    <p class="text-base font-semibold text-space/60 mt-2">
-      Fees might apply {{ feeNimAmount > 0 ? '~' : '' }}{{ formatFiat(fiatFee) }}
-    </p>
+  <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
+    <TransactionAmounts :payment="payment">
+      <template #fee>
+        Fees might apply {{ feeNimAmount > 0 ? '~' : '' }}{{ formatFiat(fiatFee) }}
+      </template>
+    </TransactionAmounts>
 
     <Transition name="slide-fade" mode="out-in">
       <!-- v-if="cashback && instantPayWallet.balanceRaw.value > (pendingPayment?.amount || 0)" -->
@@ -59,7 +55,7 @@ const paymentMethod = ref<PaymentMethod>(PaymentMethod.NIM)
       </div>
     </Transition>
   </div>
-  <div class="flex flex-col items-center w-full mt-auto pb-6">
+  <div class="flex flex-col items-center w-full pb-6 mt-auto">
     <IonToggle
       v-if="canPayWithNim || pointsState === PointsState.Ok" :disabled="pointsState !== PointsState.Ok"
       label-placement="end" class="mb-4"

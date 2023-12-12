@@ -16,7 +16,7 @@ interface BasePendingPayment {
   value: number
   fee: number
   fiatAmount?: number
-  fiatUnit?: string
+  fiatCurrency?: string
   message?: string
   details?: string
   label?: string
@@ -54,7 +54,7 @@ export function useRemotePayment() {
         throw new Error(error)
       payment.value = {
         ...newPayment,
-        fiatUnit: data!.fields.fiat_currency_code.stringValue,
+        fiatCurrency: data!.fields.fiat_currency_code.stringValue,
         fiatAmount: data!.fields.fiat_price.doubleValue,
         details: data!.fields.item_description.stringValue,
       }

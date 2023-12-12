@@ -145,7 +145,7 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
         alert('Not implemented yet')
         break
       case QRScannerDataFormat.NimiqAddress:
-        parseNimAddress('NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4')
+        parseNimAddress('NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L')
         break
       case QRScannerDataFormat.PaymentRequest:
         parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=7&message=Ref%20%2375VZ&label=Test%20Store&cpl_id=75VZloGY')

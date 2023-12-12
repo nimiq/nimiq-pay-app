@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonList, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward } from 'ionicons/icons'
 import type { Ref } from 'vue'
 import { computed, onMounted, ref, watch, watchEffect } from 'vue'
@@ -8,14 +8,15 @@ import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
-import TransactionCard from '@/components/TransactionCard.vue'
+import TransactionList from '@/components/TransactionList.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
-import { useFiat } from '@/stores/fiat'
+import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
+import QuickButton from '@/components/QuickButton.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -34,23 +35,22 @@ const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp(
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks } = usePoints()
-const { formatFiat, formatCrypto, getPriceNow } = useFiat()
 const { transactions } = storeToRefs(useTransactions())
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
-const currentPrice = ref(0)
+// const currentPrice = ref(0)
 // TODO: do we need to update that frequently?
-watch(height, async () => {
-  const { data: price, error } = (await getPriceNow())
-  if (error || !price) {
-    console.error('Error getting price now', error)
-    return
-  }
-  currentPrice.value = price / 1000
-})
+// watch(height, async () => {
+//   const { data: price, error } = (await getPriceNow())
+//   if (error || !price) {
+//     console.error('Error getting price now', error)
+//     return
+//   }
+//   currentPrice.value = price / 1000
+// })
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
@@ -237,21 +237,35 @@ onMounted(async () => {
         <IonRefresherContent />
       </IonRefresher>
 
+      <TheHomeAmounts class="mt-[72px]" />
+
+      <QuickButton show-chevron @click="initializeFlow(FlowName.NimOrPointsPayment)">
+        Top Up
+      </QuickButton>
+
+      <TransactionList :max="3" @select="initializeFlow(FlowName.ViewTransactionDetail, { tx: $event })">
+        <template #bottom="{ listSize }">
+          <QuickButton v-if="listSize > 3" @click="initializeFlow(FlowName.ViewTransactions)">
+            See all
+          </QuickButton>
+        </template>
+      </TransactionList>
+
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col gap-y-2">
         <!-- Balance -->
-        <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
+        <!-- <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
           <h1 class="mb-2 text-5xl font-normal">
             {{ formatFiat(remoteBalance / 1e5 * currentPrice) }}
           </h1>
           <p class="text-base font-semibold text-space/60">
             <span>
               {{ formatCrypto(remoteBalance / 1e5, 'NIM') }}
-            </span>
-            <!-- TODO: add price change in last 24 hours -->
-            <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->
-            <!-- <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span> -->
-          </p>
+            </span> -->
+        <!-- TODO: add price change in last 24 hours -->
+        <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->
+        <!-- <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span> -->
+        <!-- </p>
           <IonButton
             fill="clear" class="text-base normal-case text-sky"
             @click="initializeFlow(FlowName.NimTopUp)"
@@ -259,10 +273,11 @@ onMounted(async () => {
             Top up
             <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
-        </IonRow>
+        </IonRow> -->
 
         <!-- TX History -->
-        <IonList v-if="transactions.length" lines="none" class="mb-6 bg-transparent">
+
+        <!-- <IonList v-if="transactions.length" lines="none" class="mb-6 bg-transparent">
           <TransactionCard
             v-for="transaction in transactions.slice(0, 3)" :key="transaction.hash"
             :tx="transaction"
@@ -276,7 +291,7 @@ onMounted(async () => {
               <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
             </IonButton>
           </div>
-        </IonList>
+        </IonList> -->
 
         <!-- Notification Horizontal Scroll -->
         <IonRow v-if="notificationArray.length">

@@ -37,9 +37,10 @@ export enum SQLQuery {
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
 
-  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS nim_prices (currency TEXT NOT NULL, ts INTEGER NOT NULL, value INTEGER NOT NULL)',
-  InsertPrice = 'INSERT INTO nim_prices (currency, ts, value) VALUES (?, ?, ?)',
-  GetPriceAt = 'SELECT * FROM nim_prices WHERE ts = ? AND currency = ? ORDER BY ts DESC LIMIT 1',
+  CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS prices (fiat TEXT NOT NULL, checkpoint INTEGER NOT NULL, price INTEGER NOT NULL, crypto TEXT)',
+  InsertPrice = 'INSERT INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
+  GetPriceAt = 'SELECT * FROM prices WHERE checkpoint = ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
+  GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
 }
 
 interface Migration {

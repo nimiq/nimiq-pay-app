@@ -1,6 +1,7 @@
 import type { MaybeRef } from 'vue'
-import { toValue as v } from 'vue'
-import type { AsyncResult } from '@/types'
+import { readonly, ref, toValue as v } from 'vue'
+import { useThrottleFn } from '@vueuse/core'
+import type { AsyncResult, Result } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
 
@@ -63,7 +64,6 @@ export function usePointsApi() {
 
   // Just remap the JSON object from the API to a TS object
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
-    console.log('verifyPayment', { token, rail, reference, recipient })
     const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (error)
       return { data: undefined, error: error || 'Payment not valid' }
@@ -158,7 +158,7 @@ export function useCurrencyPriceApi() {
   interface PriceAtRes { price: number }
 
   return {
-    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
+    getPriceNow: useThrottleFn(({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)), 200),
     getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${v(timestamp)}`, baseCurrencyPriceUrl)),
   }
 }
@@ -170,4 +170,26 @@ export function useFirestoreApi() {
   return {
     getOrderById: ({ id }: OrderByIdArg) => api<OrderByIdRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, firestoreUrl)),
   }
+}
+
+export interface UseFetchOptions {
+  immediate?: boolean
+}
+export function useFetch<T>(fn: () => Promise<Result<T>>, { immediate = true }: UseFetchOptions = {}) {
+  const loading = ref(false)
+  const data = ref<T>()
+  const error = ref<string>()
+
+  async function fetch() {
+    loading.value = true
+    const { data: _data, error: _error } = await fn()
+    data.value = _data
+    error.value = _error
+    loading.value = false
+  }
+
+  if (immediate)
+    fetch()
+
+  return { loading: readonly(loading), error: readonly(error), data: readonly(data), fetch }
 }

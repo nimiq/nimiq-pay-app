@@ -102,8 +102,25 @@ export type SyncTransaction = BaseTransaction & {
   shopCategory?: undefined
 }
 
-export type TransactionSentByUser = UserTransaction | MerchantTransaction | SyncTransaction
-export type Transaction = UserTransaction | UserReceiptTransaction | MerchantTransaction | SyncTransaction
+// Transactions that are sent by the user and the recipient is another user
+export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction
+
+// Transaction that the user sent to another user or interally to the HTLC contract
+export type TransactionSentByUser = ExternalTransactionSentByUser | SyncTransaction
+
+// Transactions that are received by the user and the sender is another user. Just a normal payment or transfer.
+export type ExternalTransaction = ExternalTransactionSentByUser | UserReceiptTransaction
+
+// Any transaction. Payment/Transfer or HTLC contract
+export type Transaction = ExternalTransaction | SyncTransaction
+
+export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserReceipt].includes(tx.transfer)
+}
+
+export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUser {
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant].includes(tx.transfer)
+}
 
 export type PartialSendTxArgs =
   Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'title'>

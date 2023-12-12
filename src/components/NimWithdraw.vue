@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType, Ref } from 'vue'
-import { computed, ref, toRef, watch, watchEffect } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { IonButton, IonIcon } from '@ionic/vue'
 import {
   SelectContent,
@@ -21,14 +21,14 @@ import { storeToRefs } from 'pinia'
 import type { State } from '@/types/steps'
 import { StepName, stepEmits } from '@/types/steps'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useFiat } from '@/stores/fiat'
 import { useApp } from '@/stores/app'
 import AmountInput from '@/components/AmountInput.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
-const { formatFiat } = useFiat()
+const { formatFiat } = useCurrencyFormatter()
 const amount: Ref<number | undefined> = ref()
 const amountInLuna = computed(() => (amount.value || 0) * 1e5)
 const state = toRef(props, 'state')
@@ -156,13 +156,13 @@ function withdraw() {
 
   <div class="flex mt-auto mb-4 justify-evenly">
     <button class="amount-button">
-      {{ formatFiat(25, true) }}
+      {{ formatFiat(25, { short: true }) }}
     </button>
     <button class="amount-button">
-      {{ formatFiat(50, true) }}
+      {{ formatFiat(50, { short: true }) }}
     </button>
     <button class="amount-button">
-      {{ formatFiat(100, true) }}
+      {{ formatFiat(100, { short: true }) }}
     </button>
     <button class="amount-button">
       All

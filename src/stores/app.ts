@@ -5,6 +5,15 @@ import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
 
+export enum Fiat {
+  USD = 'USD',
+  EUR = 'EUR',
+}
+
+export enum Crypto {
+  NIM = 'NIM',
+}
+
 function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<string>(SQLQuery.SelectKv, [key], { single: true }),
@@ -18,7 +27,7 @@ export const useApp = defineStore('app', () => {
   const phoneNumber = useStorageAsync('phoneNumber', '', kv(), sharedOptions)
   const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
-  const selectedFiat = useStorageAsync('selectedFiat', 'USD', kv(), sharedOptions)
+  const selectedFiat = useStorageAsync<Fiat>('selectedFiat', Fiat.USD, kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
   const phoneNumberVerified = computed(() => !!pointsToken.value)
