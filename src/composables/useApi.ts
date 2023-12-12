@@ -150,6 +150,11 @@ export function useRemoteSignerApi() {
   }
 }
 
+// Detects if it is sec and converts to ms. We assume that the timestamps are always from the 2020s.
+function toMs(maybeSec: number) {
+  return maybeSec < 1000000000000 /* 17:46:40 20/11/2001 GMT */ ? maybeSec * 1000 : maybeSec
+}
+
 export function useCurrencyPriceApi() {
   interface PriceNowArg { currency: MaybeRef<string> }
   interface PriceAtArg { currency: MaybeRef<string>; timestamp: MaybeRef<number> }
@@ -159,7 +164,7 @@ export function useCurrencyPriceApi() {
 
   return {
     getPriceNow: useThrottleFn(({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)), 200),
-    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${v(timestamp)}`, baseCurrencyPriceUrl)),
+    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
   }
 }
 

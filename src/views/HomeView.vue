@@ -239,7 +239,7 @@ onMounted(async () => {
 
       <TheHomeAmounts class="mt-[72px]" />
 
-      <QuickButton show-chevron @click="initializeFlow(FlowName.NimOrPointsPayment)">
+      <QuickButton show-chevron @click="initializeFlow(FlowName.NimTopUp)">
         Top Up
       </QuickButton>
 
@@ -252,7 +252,7 @@ onMounted(async () => {
       </TransactionList>
 
       <!-- TODO: replace with an html grid -->
-      <IonGrid class="flex flex-col gap-y-2">
+      <IonGrid class="flex flex-col mt-10 gap-y-2">
         <!-- Balance -->
         <!-- <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
           <h1 class="mb-2 text-5xl font-normal">

@@ -7,7 +7,6 @@ defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type
 </script>
 
 <template>
-  {{ tx }}
   <div v-if="tx" class="flex flex-col items-center justify-center mt-8">
     <TransactionAmounts :tx="tx" />
 

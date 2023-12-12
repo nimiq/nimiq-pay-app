@@ -21,8 +21,8 @@ interface UsePriceNow {
 }
 
 interface UsePriceAt {
-  timestamp: number
-  reactiveToNetwork: undefined
+  timestamp?: number
+  reactiveToNetwork?: undefined
 }
 
 type UsePriceTime = UsePriceNow | UsePriceAt
@@ -36,9 +36,6 @@ type UsePriceOption = UsePriceTime & {
 
   // The formatter options to use when formatting the price
   formatter?: Pick<FormatFiatOptions, 'short' | 'locale' | 'isPayment'> | Pick<FormatCryptoOptions, 'locale'>
-
-  // Reactive
-  reactive?: boolean
 
   // Fetch the price immediately
   // @default true
@@ -129,7 +126,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   }
 
   async function getFiatPrice() {
-    state.value = PriceStatus.Loading
+    state.value = closestPreviousPrice.value ? PriceStatus.LoadingWithFallback : PriceStatus.Loading
 
     // First check if we have the price in the database
     const hasPrice = await getPricesFromDb()
