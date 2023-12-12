@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
+import { type PropType, computed, toValue } from 'vue'
 import TransactionAmounts from './TransactionAmounts.vue'
 import type { ExternalTransaction } from '@/types/transactions'
+import { useTime } from '@/composables/useTime'
 
-defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
+const datetime = computed(() => useTime().formatTime(toValue(props.tx)?.timestamp))
 </script>
 
 <template>
@@ -24,9 +26,7 @@ defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type
       </div>
 
       <div>Date</div>
-      <div>
-        {{ new Date(tx.timestamp).toLocaleString() }}
-      </div>
+      <div>{{ datetime }}</div>
 
       <!-- TODO Add the geo location name -->
     </div>
