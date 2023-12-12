@@ -164,6 +164,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     getFiatPrice,
 
     loading: computed(() => state.value === PriceStatus.Loading || state.value === PriceStatus.LoadingWithFallback),
+    state,
 
     price,
 
