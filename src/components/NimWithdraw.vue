@@ -91,7 +91,7 @@ function withdraw() {
       aria-label="Select withdrawal address"
     >
       <NimiqLogo class="w-6 h-6" />
-      <SelectValue :placeholder="address" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" />
+      <SelectValue :placeholder="address || 'Select an address...'" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'normal-case text-left': !address }" />
       <IonIcon :icon="chevronForward" size="large" class="w-6 h-full ml-auto will-change-[transform] transition-transform" :class="{ 'rotate-90': isSelectOpen }" />
     </SelectTrigger>
 
@@ -113,6 +113,7 @@ function withdraw() {
             >
               <!-- We need to have this as hidden, not rendering it causes the Select to break -->
               <SelectItem
+                v-if="option"
                 class="text-lg font-semibold text-space/60 px-4 py-3 leading-4 select-none data-[disabled]:text-space/20 data-[disabled]:pointer-events-none"
                 :class="{ hidden: option === address }"
                 :value="option"
