@@ -10,7 +10,7 @@ export interface PriceTable {
   crypto: MaybeRef<string>
 
   // The price of 1 NIM in the fiat currency
-  price: number
+  price: MaybeRef<number>
 
   // The timestamp of the price. It is rounded to the nearest 10 minutes
   checkpoint: number
@@ -20,7 +20,7 @@ export function usePriceDb() {
   const { run, query } = useConn()
 
   async function insertPrice({ fiat, crypto, checkpoint, price }: PriceTable) {
-    await run(SQLQuery.InsertPrice, [toValue(fiat), checkpoint, price, toValue(crypto)])
+    await run(SQLQuery.InsertPrice, [toValue(fiat), checkpoint, toValue(price), toValue(crypto)])
   }
 
   async function getPriceDb({ crypto, fiat, checkpoint }: Pick<PriceTable, 'fiat' | 'checkpoint' | 'crypto'>) {

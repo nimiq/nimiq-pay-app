@@ -117,13 +117,13 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     const [priceData, fallbackPriceData] = await Promise.all([price, fallbackPrice])
 
     if (priceData) {
-      priceDb.value = priceData.price
+      priceDb.value = toValue(priceData.price)
       state.value = PriceStatus.Success
       return true
     }
 
     if (fallbackPriceData) {
-      closestPreviousPrice.value = fallbackPriceData?.price
+      closestPreviousPrice.value = toValue(fallbackPriceData?.price)
       state.value = PriceStatus.LoadingWithFallback
     }
   }
@@ -149,7 +149,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     state.value = PriceStatus.Success
 
     // If the write to the database fails, we don't care
-    await insertPrice({ fiat: fiatCurrency, checkpoint, price: price.value, crypto: cryptoCurrency })
+    await insertPrice({ fiat: fiatCurrency, checkpoint, price, crypto: cryptoCurrency })
   }
 
   if (reactiveToNetwork)
