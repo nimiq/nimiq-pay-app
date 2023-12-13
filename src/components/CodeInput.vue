@@ -4,12 +4,14 @@ import { PinInputInput, PinInputRoot } from 'radix-vue'
 import { storeToRefs } from 'pinia'
 import { stepEmits } from '@/types/steps'
 import { usePoints } from '@/stores/points'
+import { useApp } from '@/stores/app'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
 
 defineEmits(stepEmits)
 
 const { accessCode } = storeToRefs(usePoints())
+const { phoneNumber } = storeToRefs(useApp())
 
 const pinCodeInput = ref<string[]>([])
 
@@ -22,6 +24,9 @@ watch(accessCode, () => {
 </script>
 
 <template>
+  <p class="[text-wrap:pretty] text-center opacity-60 underline">
+    {{ phoneNumber }}
+  </p>
   <div class="flex justify-center w-full mt-16">
     <PinInputRoot
       id="pin-input"

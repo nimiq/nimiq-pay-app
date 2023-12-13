@@ -7,10 +7,20 @@ const emit = defineEmits(stepEmits)
 
 const inputRef = ref<HTMLInputElement | null>(null)
 const pinCodeInput = ref('')
+const wiggle = ref(false)
 
 watch(pinCodeInput, (pin) => {
-  if (pin.length === props.inputLength)
+  if (pin.length === props.inputLength) {
+    wiggle.value = false
     emit('done', pin)
+  }
+})
+
+watch(() => props.errorMsg, (msg) => {
+  if (msg) {
+    wiggle.value = true
+    pinCodeInput.value = ''
+  }
 })
 
 function handleInputClick(i: number) {
@@ -24,11 +34,11 @@ function handleInputClick(i: number) {
 </script>
 
 <template>
-  <div class="mt-28 mx-auto">
-    <div class="flex gap-x-8 mt-28 mx-auto justify-center">
+  <div class="mx-auto mt-28">
+    <div class="flex justify-center mx-auto gap-x-8 mt-28" :class="{'animate-wiggle': wiggle}">
       <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
     </div>
-    <p v-if="errorMsg" class="text-tomato text-center">
+    <p v-if="errorMsg" class="mt-12 text-base text-center text-pumpkin">
       {{ errorMsg }}
     </p>
   </div>

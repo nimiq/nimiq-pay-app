@@ -19,13 +19,13 @@ function handleSubmit() {
       v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 px-4 my-2 phone"
       size="16"
     >
-    <p class="text-sm font-semibold text-space/50">
-      You get an SMS. Standard rates may apply. {{ canSkip }}
+    <p class="mt-1 text-sm font-semibold text-center text-space/50">
+      Standard rates may apply.
     </p>
     <p v-if="errorMsg">
       {{ errorMsg }}
     </p>
-    <div class="flex flex-col justify-center pb-6 mt-auto w-full">
+    <div class="flex flex-col justify-center w-full pb-2 mt-auto">
       <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
         Verify
       </IonButton>

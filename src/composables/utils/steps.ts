@@ -16,7 +16,7 @@ const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
 const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue')) as unknown as VNode
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue')) as unknown as VNode
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue')) as unknown as VNode
-const AllowNotifications = defineAsyncComponent(() => import('@/components/AllowNotifications.vue')) as unknown as VNode
+const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue')) as unknown as VNode
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue')) as unknown as VNode
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue')) as unknown as VNode
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue')) as unknown as VNode
@@ -53,8 +53,8 @@ const recoveryWordsStep: StepInit = () => ({
 
 const pinCodeStep: StepInit = () => ({
   step: StepName.PinCode,
-  title: 'Choose PIN',
-  description: 'Just a PIN.<br>No personal data needed.',
+  title: 'Choose a PIN',
+  description: 'Protect your NIM Pay app with a pin.',
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
     if (!pinCode)
@@ -69,11 +69,11 @@ const pinCodeStep: StepInit = () => ({
 const pinCodeConfirmStep: StepInit = () => ({
   step: StepName.PinCodeConfirm,
   title: 'Confirm your PIN',
-  description: 'Just a PIN.<br>No personal data needed.',
+  description: 'Protect your NIM Pay app with a pin.',
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
     if (!pinCodeConfirm) { err('Please confirm your PIN code'); return }
-    else if (pinCodeConfirm !== pinCode) { err('PIN codes do not match'); return }
+    else if (pinCodeConfirm !== pinCode) { err('PIN did not match'); return }
 
     // Nuke everything in case there was a previous encryption db
     const { isWeb } = (await import('@/composables/useDevice')).useDevice()
@@ -94,7 +94,7 @@ const pinCodeConfirmStep: StepInit = () => ({
 const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   title: 'Verify your phone number',
-  description: 'It\'s so easy.<br>Just verify your phone number.',
+  description: 'You will receive a SMS with a verification code',
   main: h(PhoneInput, { canSkip: !!stepsToSkip }),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
@@ -113,7 +113,7 @@ const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptions) => 
 const phoneNumberConfirmStep: StepInit = () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
-  description: 'We\'ve sent you a code, please confirm',
+  description: 'Enter the code from the SMS sent to',
   main: h(CodeInput, { inputLength: 8 }),
   beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
     if (!phoneNumberConfirm) { err('Please enter a verification code') }
@@ -133,7 +133,7 @@ const getNotifiedStep: StepInit = () => ({
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
   stepsToSkip: 1,
-  main: AllowNotifications,
+  main: EnableNotifications,
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
@@ -327,8 +327,8 @@ const transactionDetail: StepInit = () => {
 
 export const closeModal = () => modalController.getTop().then(m => m.dismiss())
 
-const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep]
 const onBoardingPointsSteps = [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3]
+const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, ...onBoardingPointsSteps]
 
 const flows: Record<FlowName, StepInit[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],
