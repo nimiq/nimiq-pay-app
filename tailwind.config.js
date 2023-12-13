@@ -25,8 +25,8 @@ export default {
           to: { opacity: 1, transform: 'translateX(0)' },
         },
         wiggle: {
-          '0%, 100%': { transform: 'translateX(-2px)' },
-          '50%': { transform: 'translateX(2px)' },
+          '0%, 100%': { transform: 'translateX(-5px)' },
+          '50%': { transform: 'translateX(5px)' },
         },
       },
       animation: {
@@ -34,7 +34,7 @@ export default {
         slideLeftAndFade: 'slideLeftAndFade 250ms cubic-bezier(0.16, 1, 0.3, 1)',
         slideUpAndFade: 'slideUpAndFade 250ms cubic-bezier(0.16, 1, 0.3, 1)',
         slideRightAndFade: 'slideRightAndFade 250ms cubic-bezier(0.16, 1, 0.3, 1)',
-        wiggle: 'wiggle 100ms ease-in-out 500ms',
+        wiggle: 'wiggle 250ms ease-in-out',
       },
     },
   },
