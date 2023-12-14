@@ -28,7 +28,7 @@ const TransactionDetails = defineAsyncComponent(() => import('@/components/Trans
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
-const PHONE_NUMBER_REGEX = /^\d{4,}$/
+const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4})[-.\s]?(\d{1,4})[-.\s]?(\d{1,9})/
 
 const promoCodeStep: StepInit = () => ({
   step: StepName.PromoCode,
@@ -138,25 +138,9 @@ const getNotifiedStep: StepInit = () => ({
   onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
-const onBoardingPoints1: StepInit = () => ({
-  step: StepName.OnBoardingPoints1,
-  title: 'Welcome to Crypto City Points',
-  description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.',
-  main: h(OnBoardingScreen),
-})
-
-const onBoardingPoints2: StepInit = () => ({
-  step: StepName.OnBoardingPoints2,
-  title: 'Pay with CC Points',
-  description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
-  main: h(OnBoardingScreen),
-})
-
-const onBoardingPoints3: StepInit = () => ({
-  step: StepName.OnBoardingPoints3,
-  title: 'Get CC Points',
-  description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
-  main: h(OnBoardingScreen),
+const onBoardingPoints: StepInit = () => ({
+  step: StepName.OnBoardingPoints,
+  main: OnBoardingScreen,
 })
 
 const onBoardingCashback1: StepInit = () => ({
@@ -176,7 +160,7 @@ const onBoardingCashback2: StepInit = () => ({
 const onBoardingCashback3: StepInit = () => ({
   step: StepName.OnBoardingCashback3,
   title: 'Get CC Points',
-  description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
+  description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
   main: OnBoardingScreen,
 })
 
@@ -203,7 +187,7 @@ const onBoardingBluecode2: StepInit = () => ({
 const onBoardingBluecode3: StepInit = () => ({
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
-  description: 'Get CC Points as cash back rewards or complete challenges to earn them.',
+  description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
   main: OnBoardingScreen,
 })
 
@@ -330,15 +314,14 @@ const transactionDetail: StepInit = () => {
 
 export const closeModal = () => modalController.getTop().then(m => m.dismiss())
 
-const onBoardingPointsSteps = [onBoardingPoints1, onBoardingPoints2, onBoardingPoints3]
-const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, ...onBoardingPointsSteps]
+const baseSetupSteps = [pinCodeStep, pinCodeConfirmStep, () => phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints]
 
 const flows: Record<FlowName, StepInit[]> = {
   [FlowName.Login]: [recoveryWordsStep, ...baseSetupSteps],
   [FlowName.Setup]: [...baseSetupSteps],
-  [FlowName.VerifyPhone]: [phoneNumberStep, phoneNumberConfirmStep, ...onBoardingPointsSteps],
+  [FlowName.VerifyPhone]: [phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints],
   [FlowName.SetupWithPromoCode]: [promoCodeStep, ...baseSetupSteps],
-  [FlowName.OnBoardingPoints]: [...onBoardingPointsSteps],
+  [FlowName.OnBoardingPoints]: [onBoardingPoints],
   [FlowName.OnBoardingCashback]: [onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4],
   [FlowName.OnBoardingBluecode]: [onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3],
   [FlowName.NimOrPointsPayment]: [() => qrCodeScannerStep({ props: { expect: QRScannerDataFormat.PaymentRequest } }), paymentPreviewStep],
@@ -373,7 +356,7 @@ const onDoneFlows: Record<FlowName, Flow['onDone']> = {
   [FlowName.ViewTransactionDetail]: closeModal,
 }
 
-const flowsThatCanGoBack = [FlowName.NimWithdraw, FlowName.NimTopUp, FlowName.ViewTransactions]
+const flowsThatCanGoBack = [FlowName.Setup, FlowName.NimWithdraw, FlowName.NimTopUp, FlowName.ViewTransactions]
 const canGoBack = (flow: FlowName) => flowsThatCanGoBack.includes(flow)
 
 /**

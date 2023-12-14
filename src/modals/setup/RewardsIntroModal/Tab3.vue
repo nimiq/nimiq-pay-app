@@ -8,7 +8,7 @@ import TabTemplate from './TabTemplate.vue'
       Get CC Points
     </template>
     <template #subtitle>
-      Get CC Points as cash back rewards or complete challenges to earn them.
+      Get CC Points as cashback rewards or complete challenges to earn them.
     </template>
     <template #body>
       <div class="w-full bg-space-space-300 h-3/4" />

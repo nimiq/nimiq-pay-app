@@ -10,7 +10,6 @@ export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
   const { publicKey } = storeToRefs(useLocalWallet())
   const { phoneNumber, pointsToken, referralCode } = storeToRefs(useApp())
-  const accessCode = ref('')
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
 
@@ -19,12 +18,11 @@ export const usePoints = defineStore('points', () => {
    * Access code is sent to phone number via SMS
    */
   async function authorize(phoneNumberInput: string) {
-    const { data, error } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
-    if (error || !data)
+    const { error } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
+    if (error)
       return { data: undefined, error }
 
     phoneNumber.value = phoneNumberInput
-    accessCode.value = data
   }
 
   /**
@@ -163,7 +161,6 @@ export const usePoints = defineStore('points', () => {
   }
 
   return {
-    accessCode,
     authorize,
     verify,
     redeemReferral,

@@ -57,6 +57,10 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
+    title: 'Open On Boarding',
+    action: () => initializeFlow(FlowName.OnBoardingPoints),
+  },
+  {
     title: 'Alpha Testing',
     subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
@@ -137,14 +141,14 @@ watchEffect(async () => {
     notificationArray.value.unshift({
       title: verifyNumberTitle,
       subtitle: 'Get cashback and earn rewards',
-      action: () => showModal(Modal.NewPhone),
+      action: () => initializeFlow(FlowName.VerifyPhone),
     })
     scrollToFirstNotification()
   }
   else if (referralCode.value && !phoneNumberVerified.value) {
     notificationArray.value.unshift({
       title: claimRewardTitle,
-      action: () => showModal(Modal.NewPhone),
+      action: () => initializeFlow(FlowName.VerifyPhone),
     })
     scrollToFirstNotification()
   }
@@ -185,7 +189,6 @@ onMounted(async () => {
 
   scrollToFirstNotification()
   await useSync().syncWallets()
-  // initializeFlow(FlowName.NimOrPointsPayment)
 })
 </script>
 

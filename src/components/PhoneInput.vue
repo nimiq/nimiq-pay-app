@@ -1,16 +1,41 @@
 <script setup lang="ts">
 import { IonAlert, IonButton } from '@ionic/vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { stepEmits } from '@/types/steps'
 
-defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
 const emit = defineEmits(stepEmits)
 
 const phoneNumber = ref('')
+const errorMessage = ref('')
+interface JSONData { statusCode: number; error: string; message: string }
 
 function handleSubmit() {
   setTimeout(() => emit('done', phoneNumber.value), 200)
 }
+
+watch(phoneNumber, () => {
+  // If phone number doesn't start with '+'', add it
+  if (phoneNumber.value && !phoneNumber.value.startsWith('+'))
+    phoneNumber.value = `+${phoneNumber.value}`
+})
+
+watch(() => props.errorMsg, () => {
+  const { errorMsg } = props
+  if (!errorMsg)
+    return
+  const start_index = errorMsg.indexOf('. Data ') + '. Data '.length
+  const json_data_str = errorMsg.substring(start_index)
+
+  let json_data: JSONData
+  try {
+    json_data = JSON.parse(json_data_str) as JSONData
+    errorMessage.value = json_data.message
+  }
+  catch (error) {
+    console.error(`Error parsing JSON: ${(error as Error).message}`)
+  }
+})
 </script>
 
 <template>
@@ -22,8 +47,8 @@ function handleSubmit() {
     <p class="mt-1 text-sm font-semibold text-center text-space/50">
       Standard rates may apply.
     </p>
-    <p v-if="errorMsg">
-      {{ errorMsg }}
+    <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin">
+      {{ errorMessage }}
     </p>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
       <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">

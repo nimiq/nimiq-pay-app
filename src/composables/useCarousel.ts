@@ -22,6 +22,8 @@ export function useCarousel(scroller: MaybeRefOrGetter<HTMLElement | null | unde
     if (!elRef.value)
       return
     activeIndex.value = index
+    // TODO: control scroll duration
+    // we can do that with https://vueuse.org/shared/useInterval/
     elRef.value!.scrollTo({
       left: (toValue(slideWidth) + (columnGap * 2)) * index,
       behavior: scrollBehavior,

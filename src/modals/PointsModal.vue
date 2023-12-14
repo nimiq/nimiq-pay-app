@@ -10,6 +10,8 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { useFiat } from '@/stores/fiat'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
+import { FlowName } from '@/types/steps'
+import { initializeFlow } from '@/composables/utils/steps'
 
 const { formatFiat, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance, tasks } = storeToRefs(usePoints())
@@ -45,7 +47,7 @@ async function handleRefresh(event: CustomEvent) {
 onMounted(async () => {
   // If phone number is not verified, show the modal
   if (!phoneNumberVerified.value)
-    await showModal(Modal.NewPhone)
+    initializeFlow(FlowName.VerifyPhone)
 
   await updatePointsBalance()
 

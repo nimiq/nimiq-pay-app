@@ -26,6 +26,9 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
   if (!response.ok)
     return { error: `Error fetching API ${url.href}: ${response.status} ${response.statusText}. Response ${JSON.stringify(response)}. Data ${JSON.stringify(await response.json())}`, data: undefined }
 
+  if (response.status === 204)
+    return { data: undefined, error: undefined }
+
   return { data: await response.json() as T, error: undefined }
 }
 
