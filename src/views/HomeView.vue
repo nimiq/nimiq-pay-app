@@ -353,7 +353,7 @@ onMounted(async () => {
       <IonToolbar>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="pointsBalance === 0 && !(isRemoteOk && isHtlcActive) && remoteBalance === 0"
+          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
           Scan To Pay
