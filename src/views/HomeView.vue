@@ -8,7 +8,7 @@ import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
-import TransactionList from '@/components/TransactionList.vue'
+import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -41,6 +41,7 @@ const { height, consensus } = storeToRefs(useNimiqNetwork())
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
+
 // const currentPrice = ref(0)
 // TODO: do we need to update that frequently?
 // watch(height, async () => {
@@ -239,17 +240,19 @@ onMounted(async () => {
 
       <TheHomeAmounts class="mt-[72px]" />
 
-      <QuickButton show-chevron @click="initializeFlow(FlowName.NimTopUp)">
+      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
         Top Up
       </QuickButton>
 
-      <TransactionList :max="3" @select="initializeFlow(FlowName.ViewTransactionDetail, { tx: $event })">
-        <template #bottom="{ listSize }">
-          <QuickButton v-if="listSize > 3" @click="initializeFlow(FlowName.ViewTransactions)">
-            See all
-          </QuickButton>
-        </template>
-      </TransactionList>
+      <ol v-if="transactions.length">
+        <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash">
+          <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />
+        </li>
+      </ol>
+
+      <QuickButton v-if="transactions.length > 3" center @click="initializeFlow(FlowName.ViewTransactions)">
+        See all
+      </QuickButton>
 
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">

@@ -1,7 +1,7 @@
 import { defineAsyncComponent, ref } from 'vue'
 import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
-import { createAnimation, modalController, toastController } from '@ionic/vue'
+import { modalController, toastController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 import { useDevice } from './useDevice'
 import { check, xmark } from '@/components/icons'

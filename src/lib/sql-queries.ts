@@ -27,6 +27,7 @@ export enum SQLQuery {
 
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, shopName TEXT, shopCategory TEXT)',
   SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+  SelectAllTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC',
   UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ClearTxHistory = 'DELETE FROM transactions',
 
@@ -37,10 +38,21 @@ export enum SQLQuery {
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
 
+  // These queries are used to ensure the correct state of the remote signers
+  GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
+  GetDeactivatedRemoteSignersWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0 AND active = 0',
+
   CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS prices (fiat TEXT NOT NULL, checkpoint INTEGER NOT NULL, price INTEGER NOT NULL, crypto TEXT)',
   InsertPrice = 'INSERT INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
   GetPriceAt = 'SELECT * FROM prices WHERE checkpoint = ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
   GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
+}
+
+export const DEFAULT_LIMIT = 30
+
+export interface DbPagination {
+  limit?: number
+  offset?: number
 }
 
 interface Migration {

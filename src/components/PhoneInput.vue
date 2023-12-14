@@ -34,5 +34,5 @@ function handleSubmit() {
       </IonButton>
     </div>
   </div>
-  <IonAlert trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="[{ text: 'Cancel', handler: () => $emit('autofocus') }, { text: 'Continue', handler: handleSubmit }]" />
+  <IonAlert trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="[{ text: 'Cancel', handler: () => $emit('focus') }, { text: 'Continue', handler: handleSubmit }]" />
 </template>

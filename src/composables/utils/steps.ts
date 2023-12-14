@@ -23,6 +23,7 @@ const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categ
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue')) as unknown as VNode
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue')) as unknown as VNode
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue')) as unknown as VNode
+const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue')) as unknown as VNode
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue')) as unknown as VNode
 
 const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
@@ -241,7 +242,7 @@ const paymentPreviewStep: StepInit = () => {
 
       switch (method) {
         case PaymentMethod.NIM:
-          await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, ...request!, title: request?.shopName || 'Payment' })
+          await (await import('@/stores/transactions')).useTransactions().sendTx({ ...request!, title: request?.shopName || 'Payment' })
           next()
           break
         case PaymentMethod.Points:
@@ -303,11 +304,13 @@ const nimAddressDisplay: StepInit = () => ({
   main: NimAddressDisplay,
 })
 
-const transactionList: StepInit = () => ({
-  step: StepName.TransactionList,
-  title: 'Transaction list',
-  main: h('div', 'Transaction list'),
-})
+const transactionList: StepInit = () => {
+  return {
+    step: StepName.TransactionList,
+    main: TransactionList,
+    autofocus: false, // Don't autofocus on the search bar
+  }
+}
 
 const transactionDetail: StepInit = () => {
   const titleCmp = ref<string>('Payment preview')
@@ -316,7 +319,7 @@ const transactionDetail: StepInit = () => {
     step: StepName.PaymentPreview,
     get title() { return titleCmp.value },
     main: h(TransactionDetails, { tx }),
-    async beforeDisplay({ tx: selectedTx }) {
+    async beforeDisplay({ transactionList: selectedTx }) {
       const { shopName: title = 'Payment preview', shopCategory: category } = selectedTx
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category }))
       titleCmp.value = `${iconInHTML} ${title}`

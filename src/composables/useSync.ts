@@ -3,11 +3,15 @@
 import { storeToRefs } from 'pinia'
 import { computedAsync, until } from '@vueuse/core'
 import { computed } from 'vue'
+import { usePrice } from './usePrice'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useRemoteSigner } from '@/stores/remote-signer'
+import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
+import { useConn } from '@/stores/conn'
+import type { RemoteSigner } from '@/lib/sql-queries'
+import { SQLQuery } from '@/lib/sql-queries'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
@@ -107,6 +111,8 @@ export function useSync() {
 
     await useRemoteSigner().init()
 
+    verifyRemoteSignersDb()
+
     console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await updateBalances()
     handleFunds()
@@ -124,10 +130,72 @@ export function useSync() {
       checkRemoteValidity()
       extendValidity()
     })
+
+    client.value?.addTransactionListener((tx) => {
+      if (tx.sender.equals(localAddress.value))
+        return
+      console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
+      useTransactions().addReceiptTransaction({
+        transfer: Transfer.UserReceipt,
+        amount: tx.value,
+        sender: tx.sender.toHex(),
+        recipient: tx.recipient.toHex(),
+        hash: tx.transactionHash.toHex(),
+        status: Nimiq.Client.TransactionState.MINED,
+        timestamp: tx.timestamp,
+        title: 'Receipt',
+        message: Nimiq.BufferUtils.toAscii(tx.data.raw),
+        fee: tx.fee,
+      })
+    }, [useLocalWallet().localAddress])
+  }
+
+  /**
+   * Sends all the funds from the remote signer to the local signer.
+   */
+  async function drainRemoteSigner({ address, balance }: RemoteSigner) {
+    const amount = await useNimiqNetwork().getAccount(address).then(account => account.data?.balance || balance)
+    useTransactions().sendTx({ transfer: Transfer.RemoteToLocalImmediateReclaim, sender: address, amount })
+
+    console.log('📡 Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
+  }
+
+  /**
+   * This function ensures that there is only one active remote signer with a balance greater than zero.
+   * If there are multiple, it initiates transactions to transfer the balance from the remote to the local signer.
+   * useSync composable later will take care of the rest.
+   */
+  async function ensureSingleRemoteSignerWithBalance() {
+    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetRemoteSignerWithBalance)
+    if (remoteSigners.length <= 1)
+      return
+
+    console.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
+    remoteSigners.forEach(drainRemoteSigner)
+  }
+
+  /**
+   * This function ensures that there are no deactivated remote signers with a balance greater than zero.
+   * If there are, it initiates transactions to transfer the balance from the remote to the local signer.
+   */
+  async function ensureDeactivatedRemoteSignersWithoutBalance() {
+    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetDeactivatedRemoteSignersWithBalance).then(parseAddress)
+    if (remoteSigners.length === 0)
+      return
+
+    console.log('😱 There are deactivated remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
+    remoteSigners.forEach(drainRemoteSigner)
+  }
+
+  async function verifyRemoteSignersDb() {
+    await ensureSingleRemoteSignerWithBalance()
+    await ensureDeactivatedRemoteSignersWithoutBalance()
   }
 
   return {
     syncWallets,
     updateBalances,
+
+    verifyRemoteSignersDb,
   }
 }

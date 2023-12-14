@@ -10,7 +10,6 @@ export type UseCarouselOptions = ConfigurableWindow & {
 export function useCarousel(scroller: MaybeRefOrGetter<HTMLElement | null | undefined>, slideWidth: MaybeRef<number>, options: UseCarouselOptions = {}) {
   const { window = defaultWindow, columnGap = 0, scrollBehavior = 'smooth' } = options
   const elRef = computed(() => unrefElement(scroller) || window?.document?.documentElement)
-  const size = computed(() => elRef.value?.childElementCount || 0)
   const activeIndex = ref(0)
 
   // function calculateActiveIndex() {

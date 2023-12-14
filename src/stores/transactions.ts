@@ -4,11 +4,27 @@ import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
 import { isExternalTx } from '@/types/transactions'
-import type { PartialSendTxArgs, Transaction, TransactionSentByUser } from '@/types/transactions'
+import type { type ExternalTransaction, type PartialSendTxArgs, type Transaction, type TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { SQLQuery } from '@/lib/sql-queries'
+import type { DbPagination } from '@/lib/sql-queries'
+import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
+import { useTransactionSearch } from '@/composables/useTransactionSearch'
+
+export enum TransactionListState {
+  // There are no transactions to show
+  Empty = 'empty',
+
+  // Showing the transactions that are in the database
+  Showing = 'showing',
+
+  // There are transaction in the database, but the search query does not match any of them
+  NoResults = 'no-results',
+
+  // There are transactions in the database, and the search query matches some of them
+  ShowingResults = 'showing-results',
+}
 
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
@@ -17,20 +33,14 @@ export const useTransactions = defineStore('transactions', () => {
   const { updateBalance, updateActiveWallet } = useRemoteSigner()
   const { remoteBalance, remoteAddress } = storeToRefs(useRemoteSigner())
 
-  const transactions = ref<Transaction[]>([])
-  const externalTransactions = computed(() => readonly(transactions.value).filter(isExternalTx))
-
-  interface SelectTxsOptions {
-    limit?: number
-    offset?: number
-  }
+  const transactions = ref<ExternalTransaction[]>([])
 
   /**
    * Select transactions from the database using a basic pagination system. Loads the newest transactions first.
    * If you need to load more transactions, use loadMoreTxs.
    */
-  async function selectTxs(options?: SelectTxsOptions): Promise<Transaction[]> {
-    const txs = await query<Transaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || 30, options?.offset || 0])
+  async function selectTxs(options?: DbPagination) {
+    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || DEFAULT_LIMIT, options?.offset || 0])
     // eslint-disable-next-line no-console
     console.log(`📚 Selected ${txs.length} transactions`, txs)
     return txs
@@ -49,10 +59,6 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  onMounted(async () => {
-    transactions.value = await selectTxs()
-  })
-
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction> {
     // eslint-disable-next-line no-console
     console.log('✈️  Preparing new transaction', {
@@ -66,8 +72,10 @@ export const useTransactions = defineStore('transactions', () => {
       localBalance: useLocalWallet().localBalance,
     })
     const { data: signedTx, error } = await getSignedTx(partialTx)
-    if (error)
+    if (error) {
+      console.error('Error while signing transaction', error)
       return { data: undefined, error }
+    }
     await client.value!.sendTransaction(signedTx!)
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message } } = signedTx!.toPlain()
@@ -80,18 +88,56 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`✈️ Sending transaction`, tx)
 
     await upsertTx(tx)
-    transactions.value = [tx, ...transactions.value]
+
+    if (isExternalTx(tx))
+      transactions.value = [tx, ...transactions.value]
 
     updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
     updateActiveWallet()
     return { data: tx, error: undefined }
   }
 
+  const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch()
+
+  onMounted(async () => {
+    transactions.value = await selectTxs()
+  })
+
+  async function addReceiptTransaction(tx: UserReceiptTransaction) {
+    await upsertTx(tx)
+    transactions.value = [tx, ...transactions.value]
+  }
+
+  const status = computed(() => {
+    if (transactions.value.length === 0)
+      return TransactionListState.Empty
+    else if (searchQuery.value && filteredTransactions.value.length === 0)
+      return TransactionListState.NoResults
+    else if (searchQuery.value && filteredTransactions.value.length > 0)
+      return TransactionListState.ShowingResults
+    else
+      return TransactionListState.Showing
+  })
+
   return {
     transactions: readonly(transactions),
-    externalTransactions,
     sendTx,
-    loadMoreTxs: () => selectTxs({ offset: transactions.value.length }),
+    addReceiptTransaction,
     clearTxHistory,
+
+    // Search for transactions
+    transactionsToShow: computed(() => searchQuery.value ? filteredTransactions.value : transactions.value),
+    allTransactions,
+    filteredTransactions,
+    searchQuery,
+
+    status,
+
+    // Function to run when the user scrolls to the bottom of the list
+    loadMoreTxs: () => { selectTxs({ offset: transactions.value.length }) },
+
+    // A function that returns true if there are more transactions to load
+    // FIXME: This is not exactly true, because if there is exactly DEFAULT_LIMIT transactions, it will return true, but there are no more transactions to load
+    canLoadMore: () => searchQuery.value ? false : transactions.value.length % DEFAULT_LIMIT === 0,
   }
 })

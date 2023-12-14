@@ -1,7 +1,7 @@
 import type { MaybeRef } from 'vue'
 import { readonly, ref, toValue as v } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
-import { useTime } from './useTime'
+import { toMs } from './useTime'
 import type { AsyncResult, Result } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
@@ -24,7 +24,7 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
     return { error: response, data: undefined }
 
   if (!response.ok)
-    return { error: `$Error fetching Points API ${url.href}: ${response.status} ${response.statusText}. Response ${JSON.stringify(response)}. Data ${JSON.stringify(await response.json())}`, data: undefined }
+    return { error: `Error fetching API ${url.href}: ${response.status} ${response.statusText}. Response ${JSON.stringify(response)}. Data ${JSON.stringify(await response.json())}`, data: undefined }
 
   return { data: await response.json() as T, error: undefined }
 }
@@ -160,7 +160,7 @@ export function useCurrencyPriceApi() {
 
   return {
     getPriceNow: useThrottleFn(({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)), 200),
-    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${useTime().toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
+    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
   }
 }
 

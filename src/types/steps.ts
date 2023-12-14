@@ -1,6 +1,6 @@
 import type { EmitsOptions, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
-import type { ExternalTransaction, Transaction } from './transactions'
+import type { ExternalTransaction, Transaction, Transfer } from './transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -61,7 +61,7 @@ export enum StepName {
 export const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList]
 export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview | StepName.NimWithdrawalSelection | StepName.NimAddressInput | StepName.TransactionList
 const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints1, StepName.OnBoardingPoints2, StepName.OnBoardingPoints3, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail]
-export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay | StepName.TransactionList | StepName.TransactionDetail
+export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints1 | StepName.OnBoardingPoints2 | StepName.OnBoardingPoints3 | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay | StepName.TransactionDetail
 
 export const isInputStep = (step: Step): step is InputStep => inputSteps.includes(step.step)
 export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
@@ -77,18 +77,19 @@ export interface State {
   [StepName.PaymentPreview]: PaymentMethod
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string
-  tx: ExternalTransaction // User selects a transaction from the list
+  [StepName.TransactionList]: ExternalTransaction // User selects a transaction
 }
 
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
 
 type BaseStep = {
-  title: string
+  title?: string
   description?: string
   main: VNode
   onCancel?: (state: State, { path }: { path?: string; replace?: (to: RouteLocationRaw) => Promise<void | NavigationFailure | undefined> }) => Promise<void> | undefined
   buttonLabel?: string
   beforeDisplay?: (state: State) => Promise<void> | undefined
+  autofocus?: boolean
 } & SkippableStep
 
 interface BeforeNextOptions {
@@ -131,10 +132,12 @@ export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => undefined,
   select: (_: OnDoneStepValue) => undefined, // Just an alias for done
   skip: () => undefined,
-  autofocus: () => undefined,
+  focus: () => undefined,
 }
 
-export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'fee'>
+export type PaymentRequestData =
+  Pick<Transaction, 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'fee'>
+  & { transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant }
 
 export interface NimWithdrawalSelection {
   amount: number

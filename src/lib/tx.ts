@@ -62,13 +62,34 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     })
     return { data: tx, error: undefined }
   }
-  else if (partialArgs.transfer === Transfer.RemoteToLocal && useRemoteSigner().remoteAddress && useRemoteSigner().isHtlcActive) {
+  else if (partialArgs.transfer === Transfer.RemoteToLocal) {
+    if (!useRemoteSigner().isHtlcActive)
+      return { error: `There is no active HTLC`, data: undefined }
+    const sender = useRemoteSigner().remoteAddress
+    if (!sender)
+      return { error: `There is no sender address provided. Sender: ${sender}`, data: undefined }
+
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
+      /* sender */ sender,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ useLocalWallet().localAddress,
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ useRemoteSigner().remoteBalance,
+      /* fee */ 0,
+      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* flags */ Nimiq.Transaction.Flag.NONE,
+      /* data */ new Uint8Array(0),
+    )
+    tx.proof = createResolveProof({ mode: 'early', tx })
+    return await getSignedTxByRemote(tx)
+  }
+  else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
+    const tx = new Nimiq.ExtendedTransaction(
+      /* sender */ partialArgs.sender,
+      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* recipient */ useLocalWallet().localAddress,
+      /* recipientType */ Nimiq.Account.Type.BASIC,
+      /* value */ partialArgs.amount,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,

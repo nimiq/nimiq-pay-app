@@ -1,33 +1,62 @@
 <script setup lang="ts">
-import { useVirtualList } from '@vueuse/core'
+import { useInfiniteScroll, useVirtualList } from '@vueuse/core'
+import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
 import TransactionItem from './TransactionItem.vue'
-import { useTransactions } from '@/stores/transactions'
-import { stepEmits } from '@/types/steps'
+import QuickButton from './QuickButton.vue'
+import { TransactionListState, useTransactions } from '@/stores/transactions'
 
-const props = defineProps({
-  max: {
-    type: Number,
-    default: () => Number.POSITIVE_INFINITY,
-  },
-})
-defineEmits(stepEmits)
+const { loadMoreTxs, canLoadMore } = useTransactions()
+const { searchQuery, transactionsToShow: transactions, status } = storeToRefs(useTransactions())
 
-const { externalTransactions } = storeToRefs(useTransactions())
-const transactions = computed(() => externalTransactions.value.slice(0, props.max))
-const { list, containerProps, wrapperProps } = useVirtualList(transactions, { itemHeight: 37 })
+const itemHeight = 37 /* Height */ + 24 /* padding-y */
+
+const { list, containerProps, wrapperProps } = useVirtualList(transactions, { itemHeight })
+
+const wrapperEl = ref<HTMLOListElement>()
+const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: itemHeight * 5, canLoadMore })
 </script>
 
 <template>
-  <div v-bind="containerProps">
-    <ol v-if="transactions.length" ref="wrapperProps">
-      <li v-for="transaction in list" :key="transaction.index">
-        <button class="w-full" @click="$emit('select', transaction.data)">
-          <TransactionItem :tx="transaction.data" />
-        </button>
-      </li>
-    </ol>
+  <div class="flex flex-col h-full">
+    <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60">
+      All transactions
+    </h2>
+
+    <!-- TODO Lupa -->
+    <input v-model="searchQuery" type="text" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" placeholder="Search" @select.stop.prevent>
+
+    <div v-if="status === TransactionListState.NoResults" class="pt-10">
+      <p>
+        No transactions found for "<span class="italic font-bold">{{ searchQuery }}</span>"
+      </p>
+      <QuickButton @click="searchQuery = ''">
+        Reset search
+      </QuickButton>
+    </div>
+
+    <div
+      v-else
+      v-bind="containerProps"
+      class="relative flex-1 pb-10" :style="{
+        '--gap-right': '6px', // The gap between screen border and the scrollbar
+        '--padding-right': '32px', // This is the default padding-x for the modal
+        '--gap-content-and-scrollbar': 'calc(var(--padding-right) - var(--gap-right))',
+        'margin-right': 'calc(var(--gap-content-and-scrollbar) * -1)',
+        'padding-right': 'var(--gap-content-and-scrollbar)',
+        'width': 'calc(100% + var(--gap-content-and-scrollbar))',
+      }"
+    >
+      <div class="sticky inset-x-0 h-10 pointer-events-none -top-0.5 bg-gradient-to-b from-white to-transparent via-white/80" />
+      <ol v-bind="wrapperProps" ref="wrapperEl">
+        <li v-for="({ data: transaction, index }) in list" :key="index">
+          <TransactionItem :tx="transaction" @click="$emit('select', transaction)" />
+        </li>
+      </ol>
+    </div>
+
+    <div v-if="isLoading" class="flex justify-center mt-4">
+      Loading
+    </div>
   </div>
-  <slot name="bottom" :list-size="externalTransactions.length" />
 </template>

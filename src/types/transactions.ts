@@ -15,6 +15,10 @@ export enum Transfer {
   // then the funds need to be recovered. And then the user can start a new HTLC contract.
   RemoteToLocal = 'remote-to-local',
 
+  // In case something goes wrong in the logic of the app in the database, the app initializes a process to recover the funds from the HTLC contract.
+  // This is an safety mechanism to ensure that the funds are not lost.
+  RemoteToLocalImmediateReclaim = 'remote-to-local-immediate-reclaim',
+
   // If the server misbehave and doesn't sends the funds before the timeout of the HTLC, then the user can recover the funds. Usually the server will send the funds before the timeout.
   RemoteToLocalAfterTimeout = 'remote-to-local-after-timeout',
 
@@ -92,8 +96,7 @@ export type MerchantTransaction = BaseTransaction & {
   message: undefined
 })
 
-export type SyncTransaction = BaseTransaction & {
-  transfer: Transfer.LocalToRemote | Transfer.RemoteToLocal | Transfer.RemoteToLocalAfterTimeout | Transfer.ExtendRemote
+interface SyncTransactionBase {
   message?: string
   title?: undefined
   rail?: undefined
@@ -101,6 +104,13 @@ export type SyncTransaction = BaseTransaction & {
   shopName?: undefined
   shopCategory?: undefined
 }
+
+export type LocalToRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.LocalToRemote }
+export type RemoteToLocalTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.RemoteToLocal }
+export type RemoteToLocalAfterTimeoutTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.RemoteToLocalAfterTimeout }
+export type RemoteToLocalImmediateReclaimTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.RemoteToLocalImmediateReclaim }
+export type ExtendRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.ExtendRemote }
+export type SyncTransaction = LocalToRemoteTx | RemoteToLocalTx | RemoteToLocalAfterTimeoutTx | ExtendRemoteTx
 
 // Transactions that are sent by the user and the recipient is another user
 export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction
@@ -123,6 +133,9 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 }
 
 export type PartialSendTxArgs =
-  Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'title'>
-  | Pick<SyncTransaction, 'transfer'>
-  // | Pick<SyncTransaction<Transfer.LocalToRemote>, 'transfer' | 'amount'>
+  | Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'title'>
+  | Pick<LocalToRemoteTx, 'transfer'>
+  | Pick<ExtendRemoteTx, 'transfer'>
+  | Pick<RemoteToLocalAfterTimeoutTx, 'transfer'>
+  | Pick<RemoteToLocalTx, 'transfer'>
+  | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }

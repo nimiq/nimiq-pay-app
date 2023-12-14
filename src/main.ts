@@ -1,6 +1,5 @@
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
-import VueVirtualScroller from 'vue-virtual-scroller'
 
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
@@ -26,9 +25,6 @@ import '@ionic/vue/css/display.css'
 
 /* Theme variables */
 import './theme/variables.css'
-
-/* Vue Virtual Scroller */
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 /* Libs */
 import { useConn } from './stores/conn'
@@ -78,7 +74,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   })
 
   app.use(router)
-  app.use(VueVirtualScroller)
 
   await router.isReady()
 

@@ -3,7 +3,7 @@ import { computed, toValue } from 'vue'
 import { ready, scan } from 'qr-scanner-wechat'
 import { useIntervalFn } from '@vueuse/core'
 import type { PaymentRequestData } from '@/types/steps'
-import { Rail, ShopCategory } from '@/types/transactions'
+import { Rail, ShopCategory, Transfer } from '@/types/transactions'
 import { nimAddressRegex, nimCashlinkRegex } from '@/lib'
 
 export enum QRScannerDataFormat {
@@ -62,12 +62,12 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
 
     let data: PaymentRequestData
     if (searchParams.has(Rail.GoCrypto))
-      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)! }
+      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)!, transfer: Transfer.UserPaymentToMerchant }
     else if (searchParams.has(Rail.CryptoPaymentLink))
-      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)! }
+      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)!, transfer: Transfer.UserPaymentToMerchant }
     else
       // This is a fallback. We found the amount and the recipient, but we don't know the rail.
-      data = { recipient, amount, message, fee, shopName, shopCategory }
+      data = { recipient, amount, message, fee, shopName, shopCategory, transfer: Transfer.UserPayment }
 
     onScan(data)
     pauseScan()
@@ -148,7 +148,7 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
         parseNimAddress('NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L')
         break
       case QRScannerDataFormat.PaymentRequest:
-        parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=7&message=Ref%20%2375VZ&label=Test%20Store&cpl_id=75VZloGY')
+        parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=1&message=Ref%20%2375VZ&label=Alberto%20test&cpl_id=75VZloGY')
         break
     }
   }

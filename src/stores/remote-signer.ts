@@ -8,14 +8,19 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { SQLQuery } from '@/lib/sql-queries'
 import type { RemoteSigner } from '@/lib/sql-queries'
 
+export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined>(remoteSigners: T): T {
+  if (!remoteSigners)
+    return undefined as T
+  if (Array.isArray(remoteSigners))
+    return remoteSigners.map(parseAddress) as T
+  return { ...remoteSigners, address: Nimiq.Address.fromUserFriendlyAddress(remoteSigners.address as unknown as string) }
+}
+
 function useRemoteSignerDb() {
   const { run, query } = useConn()
   return {
     async getActiveRemoteSigner() {
-      const res = await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true })
-      if (res)
-        res.address = Nimiq.Address.fromUserFriendlyAddress(res.address as unknown as string) // Deserialize address from db
-      return res
+      return await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true }).then(parseAddress)
     },
 
     async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
@@ -94,14 +99,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   /**
    * Initializes the remote signer variables with the following algorithm:
    * 1. Check if we have a local wallet:
-   *    - If we have, go to next step
-   *    - Otherwise, do nothing
+   *    - If we don't have, do nothing
    * 2. Check if we have a remote signer in the database:
-   *    - If we have, go to next step
-   *    - Otherwise, do nothing
    * 3. Get the remote signer from the API:
-   *    - If we have it, go to next step
-   *    - Otherwise, do nothing
    * 4. Update the remote signer in the database
    * 5. Set the remote signer in the store
    */
@@ -109,20 +109,22 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!hasLocalWallet.value)
       return
 
-    const remoteSignerDb = await getActiveRemoteSigner()
-    if (remoteSignerDb) {
-      remoteSigner.value = remoteSignerDb
+    remoteSigner.value = await getActiveRemoteSigner()
+
+    if (remoteSigner.value)
       return
-    }
-    else {
-      await updateRemoteFromApi()
-    }
+
+    // eslint-disable-next-line no-console
+    console.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+
+    await updateRemoteFromApi()
 
     client!.addHeadChangedListener(async () => {
       const account = await client!.getAccount(remoteAddress.value!)
       await updateBalance(account.balance, remoteAddress.value!)
 
       // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
+      // Mainly for the case when the user recovers the wallet from the words
       if (remoteBalance.value === 0 && height.value % 10 === 0)
         await updateRemoteFromApi()
     })
