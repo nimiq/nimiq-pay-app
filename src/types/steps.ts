@@ -31,6 +31,12 @@ export interface Flow {
   canGoBack: boolean
 }
 
+export interface FlowInitOptions {
+  initialState?: Partial<State>
+}
+
+export type FlowInit = (options?: FlowInitOptions) => Flow
+
 export enum StepName {
   PromoCode = 'promoCode',
   PinCode = 'pinCode',

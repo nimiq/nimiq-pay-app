@@ -25,7 +25,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
 import { FlowName } from '@/types/steps'
-import { initializeFlow } from '@/composables/utils/steps'
+import { initializeFlow } from '@/composables/flows'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()

@@ -11,7 +11,7 @@ import { useFiat } from '@/stores/fiat'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { FlowName } from '@/types/steps'
-import { initializeFlow } from '@/composables/utils/steps'
+import { initializeFlow } from '@/composables/flows'
 
 const { formatFiat, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance, tasks } = storeToRefs(usePoints())
