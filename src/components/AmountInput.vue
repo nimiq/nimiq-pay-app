@@ -91,7 +91,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex items-baseline justify-center w-full transition-colors duration-200 text-7xl text-space/50" :class="{ '!text-space': inputValue > 0, '!text-sky': isFocussed }">
+  <div class="flex items-baseline justify-center w-full transition-colors duration-200 text-7xl" :class="isFocussed ? 'text-sky' : inputValue > 0 ? 'text-space' : 'text-space/50'">
     <form ref="fullWidth" class="relative flex h-full max-w-full p-1 overflow-hidden" @submit.prevent="">
       <span ref="widthPlaceholder" class="width-finder"> 0 </span>
       <span ref="widthValue" class="width-finder">{{ formattedValue || '' }}</span>
