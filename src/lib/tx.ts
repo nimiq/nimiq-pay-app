@@ -96,7 +96,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ new Uint8Array(0),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx)
+    return await getSignedTxByRemote(tx, { address: partialArgs.sender })
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout && useRemoteSigner().remoteAddress) {
     const tx = new Nimiq.ExtendedTransaction(
@@ -133,11 +133,16 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
   }
 }
 
-async function getSignedTxByRemote(tx: ExtendedTransaction) {
+interface GetSignedTxByRemoteArgs {
+  // The address of the HTLC contract
+  address?: Nimiq.Address
+}
+
+async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: 'Remote address is undefined' }
 
-  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(false), tx })
+  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
   if (error)
     return { data: undefined, error }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }
