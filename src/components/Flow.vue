@@ -18,7 +18,7 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, state, steps: stepsInFlow, canGoBack } = props.flow
+const { onDone: onFlowDone, state, steps: stepsInFlow, canGoBack = false } = props.flow
 const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()

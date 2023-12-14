@@ -115,7 +115,6 @@ const viewTransactionDetailFlow: FlowInit = () => ({
   state: emptyState(),
   steps: [transactionDetail()],
   onDone: closeModal,
-  canGoBack: true,
 })
 
 const flows = {

@@ -28,7 +28,7 @@ export interface Flow {
   state: State
   steps: Step[]
   onDone: (state: State, options: OnDoneFlowOptions) => Promise<any>
-  canGoBack: boolean
+  canGoBack?: boolean
 }
 
 export interface FlowInitOptions {
