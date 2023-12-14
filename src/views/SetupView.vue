@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
-import { FlowName } from '@/types/steps'
+import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/composables/flows'
 </script>
 

@@ -2,7 +2,7 @@ import type { MaybeRef } from 'vue'
 import { computed, toValue } from 'vue'
 import { ready, scan } from 'qr-scanner-wechat'
 import { useIntervalFn } from '@vueuse/core'
-import type { PaymentRequestData } from '@/types/steps'
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { Rail, ShopCategory, Transfer } from '@/types/transactions'
 import { nimAddressRegex, nimCashlinkRegex } from '@/lib'
 
@@ -30,7 +30,7 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
 
   const isDev = import.meta.env.DEV
 
-  const { resume: resumeScan, pause: pauseScan, isActive: isScanning } = useIntervalFn(scanFrame, 100, { immediate: false })
+  const { resume: resumeScan, pause: pauseScan, isActive: isScanning } = useIntervalFn(scanFrame, 300, { immediate: false })
 
   // Parses different URL formats and puts the data in a PaymentRequestData object
   //    Nimiq links: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217

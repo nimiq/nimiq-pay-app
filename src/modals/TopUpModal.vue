@@ -3,7 +3,7 @@ import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vu
 import { close } from 'ionicons/icons'
 import { useModal } from '@/composables/useModal'
 import InfoIcon from '@/components/icons/info.vue'
-import { FlowName } from '@/types/steps'
+import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/composables/flows'
 
 const { showModal, closeModal } = useModal()

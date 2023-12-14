@@ -5,8 +5,8 @@ import { useWindowSize } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonIcon } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
-import { isInfoStep, isInputStep } from '@/types/steps'
-import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/types/steps'
+import { isInfoStep, isInputStep } from '@/lib/flows/steps.types'
+import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/lib/flows/steps.types'
 import { useCarousel } from '@/composables/useCarousel'
 
 const props = defineProps({
@@ -18,7 +18,7 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, state, steps: stepsInFlow, canGoBack = false } = props.flow
+const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true } = props.flow
 const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()
@@ -38,9 +38,8 @@ watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(
 const error = (step: StepName) => isActiveStepInput.value && isInputStep(activeStep.value) ? errors.value![step as InputStepName] : undefined
 
 async function goToNext() {
-  console.log('goToNext')
   if (isLast.value) {
-    onFlowDone(state, { goTo: replace, path, isCancelled: false })
+    onFlowDone!(state, { goTo: replace, path })
     return
   }
   await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state)
@@ -85,7 +84,7 @@ function skip() {
 }
 
 function onCancel() {
-  onFlowDone(state, { path, goTo: replace, isCancelled: true })
+  onFlowCancel!(state, { path, goTo: replace })
 }
 </script>
 

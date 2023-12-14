@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonAlert, IonButton } from '@ionic/vue'
 import { ref, watch } from 'vue'
-import { stepEmits } from '@/types/steps'
+import { stepEmits } from '@/lib/flows/steps.types'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
 const emit = defineEmits(stepEmits)

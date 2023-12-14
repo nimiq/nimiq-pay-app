@@ -8,7 +8,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import ItemDivider from '@/components/ItemDivider.vue'
 import { useApp } from '@/stores/app'
 import { initializeFlow } from '@/composables/flows'
-import { FlowName } from '@/types/steps'
+import { FlowName } from '@/lib/flows/steps.types'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()

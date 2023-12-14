@@ -3,8 +3,8 @@ import type { PropType } from 'vue'
 import { ref, toRefs, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import type { State } from '@/types/steps'
-import { stepEmits } from '@/types/steps'
+import type { State } from '@/lib/flows/steps.types'
+import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import AddressInput from '@/components/AddressInput.vue'
 import QRIcon from '@/components/icons/qr.vue'
@@ -31,7 +31,7 @@ function handleSave() {
         Enter Address
       </p>
       <AddressInput :address="address" @update:address="(v: string) => address = v" />
-      <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')"/>
+      <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')" />
 
       <!-- <button @click="$emit('done')">
       </button> -->

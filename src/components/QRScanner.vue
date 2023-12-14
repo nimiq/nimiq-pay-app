@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import type { PropType, Ref } from 'vue'
-import { type State, stepEmits } from '@/types/steps'
+import { type State, stepEmits } from '@/lib/flows/steps.types'
 import { QRScannerDataFormat, useQRScanner } from '@/composables/useQRScanner'
 
 const props = defineProps({

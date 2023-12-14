@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { PinInputInput, PinInputRoot } from 'radix-vue'
 import { storeToRefs } from 'pinia'
-import { stepEmits } from '@/types/steps'
+import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
 defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })

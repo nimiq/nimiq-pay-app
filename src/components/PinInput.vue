@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { stepEmits } from '@/types/steps'
+import { stepEmits } from '@/lib/flows/steps.types'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
 const emit = defineEmits(stepEmits)

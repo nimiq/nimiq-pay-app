@@ -1,9 +1,9 @@
 import type { Ref, VNode } from 'vue'
 import { defineAsyncComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { QRScannerDataFormat } from '../useQRScanner'
-import type { PaymentRequestData, StepInit } from '@/types/steps'
-import { PaymentMethod, StepName, defaultStepInitOptions } from '@/types/steps'
+import { QRScannerDataFormat } from '@/composables/useQRScanner'
+import type { PaymentRequestData, StepInit } from '@/lib/flows/steps.types'
+import { PaymentMethod, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 
 import type { ExternalTransaction } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'

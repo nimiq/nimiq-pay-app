@@ -2,7 +2,7 @@
 import type { PropType } from 'vue'
 import { computed, onMounted, toValue, useSlots } from 'vue'
 import type { ExternalTransaction } from '@/types/transactions'
-import type { PaymentRequestData } from '@/types/steps'
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({ tx: { type: Object as PropType<ExternalTransaction> }, payment: { type: Object as PropType<PaymentRequestData> } })

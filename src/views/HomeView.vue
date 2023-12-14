@@ -24,8 +24,8 @@ import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
-import { FlowName } from '@/types/steps'
-import { initializeFlow } from '@/composables/flows'
+import { FlowName } from '@/lib/flows/steps.types'
+import { initializeFlow } from '@/lib/flows'
 
 const router = useRouter()
 const { showModal, showNotificationAlert } = useModal()

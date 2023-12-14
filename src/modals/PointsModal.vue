@@ -10,7 +10,7 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { useFiat } from '@/stores/fiat'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
-import { FlowName } from '@/types/steps'
+import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/composables/flows'
 
 const { formatFiat, getPriceNow, getPriceAt } = useFiat()

@@ -1,6 +1,6 @@
 import type { EmitsOptions, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
-import type { ExternalTransaction, Transaction, Transfer } from './transactions'
+import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -17,9 +17,8 @@ export enum FlowName {
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
 }
 
-interface OnDoneFlowOptions {
+interface FlowHooksOptions {
   goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
-  isCancelled: boolean
   path: string
 }
 
@@ -27,15 +26,28 @@ export interface Flow {
   name: FlowName
   state: State
   steps: Step[]
-  onDone: (state: State, options: OnDoneFlowOptions) => Promise<any>
+
+  // Function that will be called when the flow is supposed to be closed.
+  // If it is not set, the flow will be closed automatically when the last step is done.
+  onDone?: (state: State, options: FlowHooksOptions) => Promise<any>
+
+  // Function that will be called when the flow is cancelled.
+  // If it is not set, the flow will be closed automatically when the last step is done.
+  onCancel?: (state: State, options: FlowHooksOptions) => Promise<any>
+
+  // Wether the user can go back or not
+  // @default true
   canGoBack?: boolean
 }
 
 export interface FlowInitOptions {
   initialState?: Partial<State>
+
+  // Function that will be called when the flow is closed
+  closeFn: () => Promise<any>
 }
 
-export type FlowInit = (options?: FlowInitOptions) => Flow
+export type FlowInit = (options: FlowInitOptions) => Flow
 
 export enum StepName {
   PromoCode = 'promoCode',
