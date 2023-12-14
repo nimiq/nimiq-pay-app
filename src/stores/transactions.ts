@@ -72,11 +72,13 @@ export const useTransactions = defineStore('transactions', () => {
       localBalance: useLocalWallet().localBalance,
     })
     const { data: signedTx, error } = await getSignedTx(partialTx)
+    console.log('Signed transaction', signedTx)
     if (error) {
       console.error('Error while signing transaction', error)
       return { data: undefined, error }
     }
-    await client.value!.sendTransaction(signedTx!)
+    const details = await client.value!.sendTransaction(signedTx!)
+    console.log('Transaction relayed', details)
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message } } = signedTx!.toPlain()
     const raw = signedTx!.serialize().toString()

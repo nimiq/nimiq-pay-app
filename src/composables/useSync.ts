@@ -65,10 +65,11 @@ export function useSync() {
   }
 
   function extendValidity() {
-    if (remoteBalance.value === 0)
-      return
-    if (htlcCanBeExtended.value)
-      useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
+    // TODO: this is not working
+    // if (remoteBalance.value === 0)
+    //   return
+    // if (htlcCanBeExtended.value)
+    //   useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
   }
 
   /**
@@ -131,6 +132,7 @@ export function useSync() {
       extendValidity()
     })
 
+    // TODO: use this only for incoming tx, not mined ones
     client.value?.addTransactionListener((tx) => {
       if (tx.sender.equals(localAddress.value))
         return

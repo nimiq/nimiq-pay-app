@@ -248,7 +248,9 @@ export const nimWithdrawalSelectionStep: StepInit = () => ({
     else if (amount && recipient) {
       // Didnt try it yet! But something like this should work
       const title = 'Withdraw? (this text will be in the transaction list of the sender, not in the message of the transaction)'
+      console.log('Sending withdrawal transaction', { amount, recipient, title })
       await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+      console.log('Withdrawal transaction sent')
       next()
     }
     // User clicked "Add NIM address", let him go, by calling next()

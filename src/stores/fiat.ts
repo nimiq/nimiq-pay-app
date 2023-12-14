@@ -77,6 +77,8 @@ export const useFiat = defineStore('fiat', () => {
     if (priceNIMError !== undefined)
       return { data: undefined, error: priceNIMError }
 
+    console.log(`🤑  Fiat API`, { priceCurrency, priceNIM, amount, total: priceCurrency.price * priceNIM.price * amount })
+
     return { data: priceCurrency.price * priceNIM.price * amount, error: undefined }
   }
 

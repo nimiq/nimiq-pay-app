@@ -162,7 +162,7 @@ export function useCurrencyPriceApi() {
   interface PriceAtRes { price: number }
 
   return {
-    getPriceNow: useThrottleFn(({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)), 200),
+    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
     getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
   }
 }

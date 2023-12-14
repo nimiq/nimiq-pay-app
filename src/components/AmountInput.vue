@@ -8,6 +8,10 @@ const props = defineProps({
     type: Number,
     default: 0,
   },
+  decimals: {
+    type: Number,
+    default: 2,
+  },
 })
 
 const emit = defineEmits({
@@ -21,7 +25,7 @@ const input = ref<HTMLInputElement | null>(null)
 const widthPlaceholder = ref<HTMLSpanElement | null>(null)
 const widthValue = ref<HTMLSpanElement | null>(null)
 
-const decimals = 2
+const { decimals } = props
 const liveValue = ref('')
 const lastEmittedValue = ref(0)
 const width = ref(80)
