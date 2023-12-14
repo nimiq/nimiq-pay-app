@@ -8,11 +8,15 @@ import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
 export enum PriceStatus {
-  Initial = 'Initial',
-  Loading = 'Loading',
-  LoadingWithFallback = 'LoadingWithFallback',
-  Error = 'Error',
-  Success = 'Success',
+  Initial = 'initial',
+  Loading = 'loading',
+  Error = 'error',
+
+  // Using the closest previous price from the database as a fallback meanwhile the latest price is being loaded from the API
+  ClosestPrice = 'closest_price',
+
+  // Using the right price from the database
+  Loaded = 'loaded',
 }
 
 interface UsePriceNow {
@@ -82,10 +86,15 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   const price = computed(() => priceDb.value || (priceCryptoUsd.value?.price || -1) * (priceFiatUsd.value?.price || -1))
 
-  const fiatTotal = computed(() => price.value * amountInNim.value)
+  // A value as fallback which is the nearest oldest price we have in the database
+  const closestPreviousPrice = ref<number>()
+
+  const usingClosestPreviousPrice = computed(() => state.value === PriceStatus.ClosestPrice)
+  const fiatTotal = computed(() => usingClosestPreviousPrice.value ? (closestPreviousPrice.value || 0) * amountInNim.value : price.value * amountInNim.value)
   const fiat = reactive({
     total: fiatTotal,
     usd: computed(() => fiatTotal.value * (priceFiatUsd.value?.price || -1)),
+    usingClosestPreviousPrice,
     currency: fiatCurrency,
     formatted: computed(() => formatFiat(fiatTotal.value, { currency: fiatCurrency, ...options.formatter })),
   })
@@ -98,15 +107,6 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     formatted: computed(() => formatCrypto(amountInLuna.value, { currency: cryptoCurrency, ...options.formatter })),
   })
 
-  // A value as fallback which is the nearest oldest price we have in the database
-  const closestPreviousPrice = ref<number>()
-  const closestPreviousFiatPrice = reactive({
-    total: computed(() => closestPreviousPrice.value ? closestPreviousPrice.value * amountInNim.value : undefined),
-    usd: computed(() => closestPreviousPrice.value ? closestPreviousPrice.value * amountInNim.value / (priceFiatUsd.value?.price || -1) : undefined),
-    currency: fiatCurrency,
-    formatted: computed(() => closestPreviousPrice.value ? formatFiat(closestPreviousPrice.value * amountInNim.value, { currency: fiatCurrency, ...options.formatter }) : undefined),
-  })
-
   async function getPricesFromDb() {
     const price = getPriceDb({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
     const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
@@ -115,18 +115,18 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
     if (priceData) {
       priceDb.value = toValue(priceData.price)
-      state.value = PriceStatus.Success
+      state.value = PriceStatus.Loaded
       return true
     }
 
     if (fallbackPriceData) {
       closestPreviousPrice.value = toValue(fallbackPriceData?.price)
-      state.value = PriceStatus.LoadingWithFallback
+      state.value = PriceStatus.ClosestPrice
     }
   }
 
   async function getFiatPrice() {
-    state.value = closestPreviousPrice.value ? PriceStatus.LoadingWithFallback : PriceStatus.Loading
+    state.value = closestPreviousPrice.value ? PriceStatus.ClosestPrice : PriceStatus.Loading
 
     // First check if we have the price in the database
     const hasPrice = await getPricesFromDb()
@@ -143,7 +143,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
       return
     }
 
-    state.value = PriceStatus.Success
+    state.value = PriceStatus.Loaded
 
     // If the write to the database fails, we don't care
     await insertPrice({ fiat: fiatCurrency, checkpoint, price, crypto: cryptoCurrency })
@@ -159,14 +159,11 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   return {
     getFiatPrice,
-
-    loading: computed(() => state.value === PriceStatus.Loading || state.value === PriceStatus.LoadingWithFallback),
     state,
 
     price,
 
     fiat,
-    closestPreviousFiatPrice,
     crypto,
   }
 }
