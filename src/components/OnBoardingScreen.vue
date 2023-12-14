@@ -8,6 +8,10 @@ import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
 import CompletedTasksSvg from '@/assets/graphics/completed-tasks.svg'
 
+const props = defineProps({
+  isVisible: Boolean,
+})
+
 defineEmits({
   done: () => true,
 })
@@ -34,9 +38,10 @@ const steps = ref([
   },
 ])
 
+const isAnimating = ref(false)
 const interval = 5 * 1e3
 const msBeforeNextSlide = ref(interval)
-const { counter, reset, pause, resume } = useInterval(interval, { controls: true })
+const { counter, reset, pause, resume, isActive } = useInterval(interval, { controls: true, immediate: false })
 
 const scroller = ref<HTMLElement>()
 const { nextSlide, activeIndex, goToSlide } = useCarousel(scroller, useWindowSize().width)
@@ -60,16 +65,30 @@ watch(counter, (value) => {
     value,
     activeIndex: activeIndex.value,
     steps: steps.value.length,
+    isActive: isActive.value,
   })
   if (value !== 0)
     next()
 })
+
+watch(() => props.isVisible, (value) => {
+  if (value) {
+    reset()
+    resume()
+  }
+}, { immediate: true })
+
+onMounted(() => {
+  setTimeout(() => {
+    isAnimating.value = true
+  }, 100)
+})
 </script>
 
 <template>
-  <div class="absolute flex justify-center translate-x-1/2 top-4 right-1/2 gap-x-2">
+  <div v-if="isVisible" class="absolute flex justify-center translate-x-1/2 top-4 right-1/2 gap-x-2">
     <div v-for="(_, i) in steps.length" :key="i" class="overflow-hidden h-[6px] w-16 flex rounded-xl bg-space-space-300">
-      <div :style="`transition-duration: ${msBeforeNextSlide}ms`" class="bg-keppel will-change-[width] transition-[width] ease-in w-0" :class="{ '!w-full': activeIndex >= i && counter < steps.length }" />
+      <div :style="`transition-duration: ${msBeforeNextSlide}ms`" class="bg-keppel will-change-[width] transition-[width] ease-in" :class="activeIndex >= i && counter < steps.length && isAnimating ? 'w-full' : 'w-0'" />
     </div>
   </div>
   <ul ref="scroller" class="flex h-full -mx-8 overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2" @pointerdown="pause" @pointerup="resume">
