@@ -38,6 +38,7 @@ watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(
 const error = (step: StepName) => isActiveStepInput.value && isInputStep(activeStep.value) ? errors.value![step as InputStepName] : undefined
 
 async function goToNext() {
+  console.log('goToNext')
   if (isLast.value) {
     onFlowDone(state, { goTo: replace, path, isCancelled: false })
     return

@@ -39,8 +39,12 @@ const verifyPhoneFlow: FlowInit = () => ({
   name: FlowName.VerifyPhone,
   state: emptyState(),
   steps: [phoneNumberStep(), phoneNumberConfirmStep(), onBoardingPoints()],
-  onDone: async (_state) => {
-    console.log('Verify phone done')
+  onDone: async (_state, { isCancelled }) => {
+    closeModal()
+
+    if (isCancelled)
+      return
+
     useModal().showModal(Modal.Points)
   },
   canGoBack: true,
