@@ -57,10 +57,6 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
-    title: 'Open On Boarding',
-    action: () => initializeFlow(FlowName.OnBoardingPoints),
-  },
-  {
     title: 'Alpha Testing',
     subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
