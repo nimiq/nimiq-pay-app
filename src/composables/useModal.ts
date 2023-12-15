@@ -21,7 +21,6 @@ export enum Modal {
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
-  TransactionHistory = '@/modals/TransactionHistoryModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   Withdraw = '@/modals/WithdrawModal.vue',
 }
@@ -84,9 +83,6 @@ function _useModal() {
         break
       case Modal.TopUp:
         component = defineAsyncComponent(() => import(Modal.TopUp))
-        break
-      case Modal.TransactionHistory:
-        component = defineAsyncComponent(() => import(Modal.TransactionHistory))
         break
       case Modal.Referral:
         component = defineAsyncComponent(() => import(Modal.Referral))

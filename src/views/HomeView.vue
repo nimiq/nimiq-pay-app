@@ -257,46 +257,6 @@ onMounted(async () => {
 
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
-        <!-- Balance -->
-        <!-- <IonRow class="flex flex-col items-center justify-center h-[30vh] transition-all">
-          <h1 class="mb-2 text-5xl font-normal">
-            {{ formatFiat(remoteBalance / 1e5 * currentPrice) }}
-          </h1>
-          <p class="text-base font-semibold text-space/60">
-            <span>
-              {{ formatCrypto(remoteBalance / 1e5, 'NIM') }}
-            </span> -->
-        <!-- TODO: add price change in last 24 hours -->
-        <!-- <IonIcon slot="start" :icon="fiatHandler.priceChange.value > 0 ? trendingUp : trendingDown" class="ml-4" /> -->
-        <!-- <span class="ml-1">{{ Math.round(fiatHandler.priceChange.value * 10000) / 100 }}%</span> -->
-        <!-- </p>
-          <IonButton
-            fill="clear" class="text-base normal-case text-sky"
-            @click="initializeFlow(FlowName.NimTopUp)"
-          >
-            Top up
-            <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
-          </IonButton>
-        </IonRow> -->
-
-        <!-- TX History -->
-
-        <!-- <IonList v-if="transactions.length" lines="none" class="mb-6 bg-transparent">
-          <TransactionCard
-            v-for="transaction in transactions.slice(0, 3)" :key="transaction.hash"
-            :tx="transaction"
-          />
-          <div v-if="transactions.length > 3" class="text-center">
-            <IonButton
-              fill="clear" class="text-base normal-case text-sky"
-              @click="showModal(Modal.TransactionHistory)"
-            >
-              See all
-              <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
-            </IonButton>
-          </div>
-        </IonList> -->
-
         <!-- Notification Horizontal Scroll -->
         <IonRow v-if="notificationArray.length">
           <ul
@@ -318,7 +278,7 @@ onMounted(async () => {
         <IonRow v-if="isReferralCardShown" class="mb-8">
           <NotificationCard
             class="w-full"
-            @click="phoneNumberVerified ? showModal(Modal.Referral) : showModal(Modal.NewPhone)"
+            @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">
@@ -358,7 +318,7 @@ onMounted(async () => {
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
-          Scan To Pay
+          Pay
         </IonButton>
       </IonToolbar>
     </IonFooter>
