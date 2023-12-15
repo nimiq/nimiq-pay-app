@@ -59,6 +59,11 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
+    title: 'Welcome to Nimiq',
+    subtitle: 'Your wallet is ready to use',
+    action: () => initializeFlow(FlowName.OnBoardingPoints),
+  },
+  {
     title: 'Alpha Testing',
     subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
     action: () => console.log('Notification Card 2 clicked'),
@@ -193,12 +198,7 @@ onMounted(async () => {
 <template>
   <IonPage class="bg-[#F8F8F8]">
     <IonHeader class="ion-no-border">
-      <IonToolbar v-if="height > 1 && consensus !== 'established'" class="px-1 bg-tomato/10" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
-        <p class="px-2 font-semibold text-tomato">
-          Consensus lost. You won't be able to make payments using NIM.
-        </p>
-      </IonToolbar>
-      <IonToolbar v-else-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
+      <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
         <div slot="start" class="flex items-center gap-2 ml-2">
           <div class="w-3 h-3 bg-blue-600 rounded-full" />
           <p class="font-semibold">
@@ -251,7 +251,7 @@ onMounted(async () => {
         </li>
       </ol>
 
-      <QuickButton v-if="transactions.length > 3" center @click="initializeFlow(FlowName.ViewTransactions)">
+      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
         See all
       </QuickButton>
 
