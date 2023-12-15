@@ -1,10 +1,14 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { until } from '@vueuse/core'
 import type { AsyncResult } from '@/types'
+import { useToast } from '@/composables/useToast'
+
+const { setToast, clearToast } = useToast()
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Nimiq.Client>()
-  const consensus = ref<Nimiq.Client.ConsensusState>()
+  const consensus = ref<Nimiq.Client.ConsensusState>('connecting')
   const head = ref<Nimiq.Block>()
   const height = computed(() => head.value?.height || -1)
   const peerCount = ref(0)
@@ -22,8 +26,23 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     head.value = await client.value.getHeadBlock()
 
-    client.value.addConsensusChangedListener(newConsensus => consensus.value = newConsensus)
+    client.value.addConsensusChangedListener((newConsensus) => {
+      if (newConsensus === 'established')
+        clearToast()
+      // If consensus was established before, but now is not, show error toast
+      else if (consensus.value === 'established')
+        setToast({ message: `Consensus lost, ${newConsensus}`, keepOpen: true, error: true })
+
+      consensus.value = newConsensus
+    })
     client.value.addHeadChangedListener(async blockHash => head.value = await client.value?.getBlock(blockHash))
+
+    try {
+      await until(consensus).toBe('established', { timeout: 30 * 1e3, throwOnTimeout: true })
+    }
+    catch {
+      setToast({ message: `Consensus ${consensus.value}`, error: true, keepOpen: true })
+    }
 
     // @ts-expect-error Private property access
     ;(await client.value._consensus as Nimiq.BaseMiniConsensus).network.on('peers-changed', async () => {
