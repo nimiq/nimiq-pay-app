@@ -246,8 +246,7 @@ export const nimWithdrawalSelectionStep: StepInit = () => ({
 
     if (amount > remoteBalance) { err(`You don't have enough NIM. Your current balance is ${formatCrypto(remoteBalance, 'NIM')}`) }
     else if (amount && recipient) {
-      // Didnt try it yet! But something like this should work
-      const title = 'Withdraw? Tu mae'
+      const title = 'Withdrawal'
       await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
       next()
     }

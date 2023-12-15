@@ -1,29 +1,23 @@
 import { defineAsyncComponent, ref } from 'vue'
 import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
-import { modalController, toastController } from '@ionic/vue'
+import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 import { useDevice } from './useDevice'
-import { check, xmark } from '@/components/icons'
 
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
-  // CashlinkScanner = '@/modals/deposit/CashlinkScannerModal.vue',
   Dev = '@/modals/DevModal.vue',
   DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
   EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
-  // ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
+  ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
   NewPin = '@/modals/setup/PinChooseModal.vue',
-  NewPhone = '@/modals/setup/PhoneNumberModal/index.vue',
-  NimTransfer = '@/modals/deposit/NimTransferModal.vue',
-  Pay = '@/modals/PayModal/index.vue',
   PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Points = '@/modals/PointsModal.vue',
-  // PointsIntro = '@/modals/setup/PointsIntroModal/index.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   TopUp = '@/modals/TopUpModal.vue',
@@ -52,18 +46,15 @@ function _useModal() {
       case Modal.Backup:
         component = defineAsyncComponent(() => import(Modal.Backup))
         break
-      /* case Modal.CashlinkScanner:
-        component = defineAsyncComponent(() => import(Modal.CashlinkScanner))
-        break */
       case Modal.DetailedTransaction:
         component = defineAsyncComponent(() => import(Modal.DetailedTransaction))
         break
       case Modal.EnablePushNotifications:
         component = defineAsyncComponent(() => import(Modal.EnablePushNotifications))
         break
-      /* case Modal.ExpiringPoints:
+      case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
-        break */
+        break
       case Modal.Login:
         component = defineAsyncComponent(() => import(Modal.Login))
         break
@@ -79,24 +70,12 @@ function _useModal() {
       case Modal.NewPin:
         component = defineAsyncComponent(() => import(Modal.NewPin))
         break
-      case Modal.NewPhone:
-        component = defineAsyncComponent(() => import(Modal.NewPhone))
-        break
-      case Modal.NimTransfer:
-        component = defineAsyncComponent(() => import(Modal.NimTransfer))
-        break
-      case Modal.Pay:
-        component = defineAsyncComponent(() => import(Modal.Pay))
-        break
       case Modal.PromoCode:
         component = defineAsyncComponent(() => import(Modal.PromoCode))
         break
       case Modal.Points:
         component = defineAsyncComponent(() => import(Modal.Points))
         break
-      /* case Modal.PointsIntro:
-        component = defineAsyncComponent(() => import(Modal.PointsIntro))
-        break */
       case Modal.Settings:
         component = defineAsyncComponent(() => import(Modal.Settings))
         break
@@ -116,7 +95,6 @@ function _useModal() {
         component = defineAsyncComponent(() => import(Modal.Withdraw))
         break
       case Modal.Dev:
-        // if (import.meta.env.MODE === 'development')
         component = defineAsyncComponent(() => import(Modal.Dev))
         break
     }
@@ -136,30 +114,6 @@ function _useModal() {
 
     allModals.unshift(modalToShow)
     await modalToShow.present()
-  }
-
-  async function showNotificationAlert(message: string, error = false) {
-    // FIXME: animation not working
-    // const enterAnimation = (baseEl: HTMLElement) => {
-    //   const root = baseEl.shadowRoot
-    //   const slideAnimation = createAnimation().addElement(root!.querySelector('.notification-alert-toast')!).fromTo('transform', 'translateY(-100%)', 'translateY(0)')
-
-    //   return createAnimation()
-    //     .addElement(baseEl)
-    //     .duration(500)
-    //     .addAnimation(slideAnimation)
-    // }
-
-    const toast = await toastController.create({
-      message,
-      duration: 3 * 1e3,
-      icon: error ? xmark : check,
-      cssClass: `notification-alert-toast ${error && 'toast-error'}`,
-      position: 'top',
-      // animated: true,
-      // enterAnimation,
-    })
-    await toast.present()
   }
 
   async function closeModal(modalToClose?: HTMLIonModalElement) {
@@ -194,7 +148,6 @@ function _useModal() {
     closeAllModals,
     isPresent,
     showModal,
-    showNotificationAlert,
   }
 }
 

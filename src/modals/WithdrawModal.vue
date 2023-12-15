@@ -4,12 +4,14 @@ import { onMounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import AmountInput from '@/components/AmountInput.vue'
 import { useFiat } from '@/stores/fiat'
 
-const { closeModal, showNotificationAlert } = useModal()
+const { closeModal } = useModal()
+const { setToast } = useToast()
 const { getPriceNow } = useFiat()
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 const amount: Ref<number | undefined> = ref()
@@ -21,7 +23,7 @@ async function withdraw() {
   if (!amount.value || !address.value || isLoading.value)
     return
   if (Nimiq.Policy.coinsToLunas(amount.value) > remoteBalance.value)
-    showNotificationAlert('Not enough funds', true)
+    setToast({ message: 'Not enough funds', error: true })
   // TODO: handle invalid address
   const withdrawAddress = Nimiq.Address.fromUserFriendlyAddress(address.value)
   try {
@@ -34,7 +36,7 @@ async function withdraw() {
     // await instantPayWallet.completePendingPayment(payment)
     isLoading.value = false
     // TODO: handle not successful
-    showNotificationAlert('Withdrawal successful')
+    setToast({ message: 'Withdrawal successful' })
     closeModal()
   }
   catch (e) {

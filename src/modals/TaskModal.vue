@@ -5,6 +5,7 @@ import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
 import YouTubePlayer from 'youtube-player'
 import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { usePoints } from '@/stores/points'
@@ -24,7 +25,8 @@ interface Metadata {
   time: number
 }
 
-const { closeModal, showNotificationAlert } = useModal()
+const { closeModal } = useModal()
+const { setToast } = useToast()
 const { claimTask } = usePoints()
 const type: ComputedRef<TaskType> = computed(() => props.task && (JSON.parse(props.task.metadata) as Metadata).type)
 const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? (JSON.parse(props.task.metadata) as Metadata).options : [])
@@ -101,7 +103,7 @@ async function handleSubmit() {
       return
   }
 
-  showNotificationAlert('You got CC Points')
+  setToast({ message: 'You got CC Points'})
   closeModal()
 }
 </script>

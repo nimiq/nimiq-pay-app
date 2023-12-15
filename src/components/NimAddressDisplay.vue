@@ -8,13 +8,13 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import AddressDisplay from '@/components/AddressDisplay.vue'
 import NimLogo from '@/components/icons/nimiq-logo.vue'
 import { walletUrl } from '@/lib/index'
-import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 
 defineProps({ address: { type: String } })
 
 defineEmits(stepEmits)
 
-const { showNotificationAlert } = useModal()
+const { setToast } = useToast()
 
 const address = useLocalWallet().localAddress.toUserFriendlyAddress()
 
@@ -32,7 +32,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: address,
   })
-  await showNotificationAlert('Address copied to clipboard')
+  await setToast({message: 'Address copied to clipboard'})
 }
 </script>
 

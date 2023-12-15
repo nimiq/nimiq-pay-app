@@ -5,9 +5,9 @@ import { Clipboard } from '@capacitor/clipboard'
 import { Share } from '@capacitor/share'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { usePoints } from '@/stores/points'
-import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 
-const { showNotificationAlert } = useModal()
+const { setToast } = useToast()
 const { getReferralInfo } = usePoints()
 const referralCode = computedAsync(async () => {
   const { data: code, error } = await getReferralInfo()
@@ -25,7 +25,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: referralCode.value?.id,
   })
-  await showNotificationAlert('Copied to the clipboard!')
+  await setToast({ message: 'Copied to the clipboard!' })
 }
 
 function handleShare() {

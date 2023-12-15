@@ -8,6 +8,7 @@ import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
@@ -28,7 +29,8 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 
 const router = useRouter()
-const { showModal, showNotificationAlert } = useModal()
+const { showModal } = useModal()
+const { setToast } = useToast()
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
@@ -130,7 +132,7 @@ watchEffect(async () => {
 
   if (referralCode.value && phoneNumberVerified.value) {
     setTimeout(() => {
-      showNotificationAlert('CC Points added')
+      setToast({ message: 'CC Points added' })
     }, 750)
   }
   else if (!referralCode.value && !phoneNumberVerified.value) {

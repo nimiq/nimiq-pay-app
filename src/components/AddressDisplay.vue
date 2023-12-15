@@ -2,7 +2,7 @@
 import { IonRippleEffect } from '@ionic/vue'
 import { computed } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
-import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   address: {
@@ -15,7 +15,7 @@ const props = defineProps({
   },
 })
 
-const { showNotificationAlert } = useModal()
+const { setToast } = useToast()
 
 const chunks = computed(() => {
   if (!props.address)
@@ -29,7 +29,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: props.address,
   })
-  await showNotificationAlert('Address copied to clipboard')
+  await setToast({ message: 'Address copied to clipboard' })
 }
 </script>
 

@@ -6,11 +6,13 @@ import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { storeToRefs } from 'pinia'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useApp } from '@/stores/app'
 
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
-const { showNotificationAlert, closeModal } = useModal()
+const { closeModal } = useModal()
+const { setToast } = useToast()
 const { getWords } = useLocalWallet()
 const { hasDoneBackup } = storeToRefs(useApp())
 
@@ -59,14 +61,14 @@ async function handleGuess(word: string) {
     successCount.value = 0
     usedIndexes.value = []
     // TODO: improve this
-    showNotificationAlert('Wrong word!')
+    setToast({ message: 'Wrong word!' })
     setTimeout(() => {
       nav.pop()
     }, 1000)
   }
   if (successCount.value === 3) {
     hasDoneBackup.value = true
-    showNotificationAlert('Back up successful')
+    setToast({ message: 'Back up successful' })
     closeModal()
   }
   else {

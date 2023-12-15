@@ -10,3 +10,10 @@ interface Task {
 }
 
 type TaskType = 'question' | 'text-input' | 'yt-video'
+
+interface Toast {
+  message: string
+  error?: boolean
+  keepOpen?: boolean
+  duration?: number
+}
