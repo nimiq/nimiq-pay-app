@@ -4,7 +4,7 @@ import { close } from 'ionicons/icons'
 import { useModal } from '@/composables/useModal'
 import InfoIcon from '@/components/icons/info.vue'
 import { FlowName } from '@/lib/flows/steps.types'
-import { initializeFlow } from '@/composables/flows'
+import { initializeFlow } from '@/lib/flows'
 
 const { showModal, closeModal } = useModal()
 </script>

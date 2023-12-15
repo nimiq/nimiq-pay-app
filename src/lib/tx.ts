@@ -22,13 +22,15 @@ import { Transfer } from '@/types/transactions'
  * @returns
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
-  if (partialArgs.transfer === Transfer.UserPayment && useRemoteSigner().remoteAddress) {
+  if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
+    if (!useRemoteSigner().remoteAddress)
+      return { error: 'Remote address is undefined', data: undefined }
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ partialArgs.amount,
+      /* value */ Math.ceil(partialArgs.amount),
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,
@@ -141,8 +143,9 @@ interface GetSignedTxByRemoteArgs {
 async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: 'Remote address is undefined' }
-
+  console.log('Signing transaction by remote', tx, address)
   const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
+  console.log({ receipt, error })
   if (error)
     return { data: undefined, error }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }
@@ -167,14 +170,12 @@ interface CreateResolveProofArgs {
   tx: Nimiq.Transaction
 }
 
-const proofTypes = Nimiq.HashedTimeLockedContract.ProofType
-
 export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
   const sig = useLocalWallet().localWallet.signTransaction(tx).serialize()
   const isEarly = mode === 'early'
   const proofLen = 1 + sig.length + (isEarly ? useRemoteSigner().remoteProofSize : 0)
   const proof = new Nimiq.SerialBuffer(proofLen)
-  proof.writeUint8(isEarly ? proofTypes.EARLY_RESOLVE : proofTypes.TIMEOUT_RESOLVE)
+  proof.writeUint8(isEarly ? Nimiq.HashedTimeLockedContract.ProofType.EARLY_RESOLVE : Nimiq.HashedTimeLockedContract.ProofType.TIMEOUT_RESOLVE)
   proof.writePos += isEarly ? useRemoteSigner().remoteProofSize : 0
   proof.write(sig)
   return proof

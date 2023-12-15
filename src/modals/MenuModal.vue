@@ -7,7 +7,7 @@ import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import ItemDivider from '@/components/ItemDivider.vue'
 import { useApp } from '@/stores/app'
-import { initializeFlow } from '@/composables/flows'
+import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
