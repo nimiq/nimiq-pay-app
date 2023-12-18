@@ -12,6 +12,7 @@ import MiscellaneousIcon from '@/components/icons/categories/miscellaneous.vue'
 import RestaurantBarIcon from '@/components/icons/categories/restaurant_bar.vue'
 import ShopIcon from '@/components/icons/categories/shop.vue'
 import SportsFitnessIcon from '@/components/icons/categories/sports_fitness.vue'
+import DepositIcon from '@/components/icons/categories/deposit.vue'
 
 defineProps({
   category: {
@@ -35,5 +36,6 @@ defineProps({
     <RestaurantBarIcon v-else-if="category === ShopCategory.RestaurantBar" />
     <ShopIcon v-else-if="category === ShopCategory.Shop" />
     <SportsFitnessIcon v-else-if="category === ShopCategory.SportsFitness" />
+    <DepositIcon v-else-if="category === ShopCategory.Deposit" />
   </div>
 </template>
