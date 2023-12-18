@@ -210,7 +210,7 @@ export const paymentPreviewStep: StepInit = () => {
       if (!qrCodeScanner)
         return
       const { shopName: title = 'Payment preview', shopCategory: category } = qrCodeScanner as PaymentRequestData
-      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category }))
+      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px: height: 40px', category }))
       titleCmp = `${iconInHTML} ${title}`
     },
     beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next }) => {
@@ -227,10 +227,12 @@ export const paymentPreviewStep: StepInit = () => {
           next()
           break
         case PaymentMethod.Points:
-          if (!request?.message || !request?.rail)
-            throw new Error(`You cannot pay with points without a message nor rail. Request: ${JSON.stringify(request)}`)
+          if (!request?.rail || !request?.railPeerId)
+            throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
 
-          await (await import('@/stores/points')).usePoints().payWithPoints({ rail: request.rail!, reference: request.message, recipient: request.recipient })
+          await (await import('@/stores/points')).usePoints().payWithPoints({ rail: request.rail!, reference: request.railPeerId, recipient: request.recipient })
+          next()
+          break
       }
     },
   }

@@ -6,6 +6,7 @@ import type { Rail } from '@/types/transactions'
 import { usePoints } from '@/stores/points'
 
 export enum PointsState {
+  NotRegistered = 'not_registered',
   NotEligibleForPayment = 'not_eligible_for_payment',
   InsufficientPoints = 'insufficient_points',
   Loading = 'loading',
@@ -32,6 +33,11 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
    * If the payment is valid, it will set the cashback amount
    */
   async function checkPointsPaymentValidity() {
+    if (useApp().pointsToken === undefined) {
+      pointsState.value = PointsState.NotRegistered
+      return
+    }
+
     if (!toValue(rail) || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
       message.value = 'This payment is not eligible for CC Points.'
@@ -51,20 +57,20 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
       return
     }
 
-    const { cashback: { percentage }, reason, valid } = data!
+    const { cashback: { amountInLuna }, reason, valid } = data!
     if (!valid) {
       pointsState.value = PointsState.Error
       message.value = reason
       return
     }
 
-    cashback.value = percentage * toValue(fiatAmount) / 100
-    message.value = `You will receive ${cashback.value.toFixed(2)} CC Points back.`
+    cashback.value = amountInLuna
+    message.value = `This purchase gets you ${(amountInLuna / 1e5).toFixed(2)} in Points.`
+    pointsState.value = PointsState.Ok
   }
 
-  onMounted(checkPointsPaymentValidity)
-
   return {
+    checkPointsPaymentValidity,
     pointsState,
     cashback,
     hasCashback,

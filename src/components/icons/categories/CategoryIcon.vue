@@ -22,7 +22,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="rounded-full aspect-square text-space bg-space/[0.06] w-8 h-8">
+  <div class="rounded-full aspect-square text-space bg-space/[0.06] w-8">
     <CarsBikesIcon v-if="category === ShopCategory.CarsBikes" />
     <CashIcon v-else-if="category === ShopCategory.Cash" />
     <ComputerElectronicsIcon v-else-if="category === ShopCategory.ComputerElectronics" />

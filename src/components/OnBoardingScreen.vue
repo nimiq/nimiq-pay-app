@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useInterval, useWindowSize } from '@vueuse/core'
 import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
+import { useModal, Modal } from '@/composables/useModal'
 
 import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
@@ -12,9 +13,7 @@ const props = defineProps({
   isVisible: Boolean,
 })
 
-defineEmits({
-  done: () => true,
-})
+const { showModal } = useModal()
 
 const steps = ref([
   {
@@ -41,7 +40,7 @@ const steps = ref([
 const isAnimating = ref(false)
 const interval = 5 * 1e3
 const msBeforeNextSlide = ref(interval)
-const { counter, reset, pause, resume, isActive } = useInterval(interval, { controls: true, immediate: false })
+const { counter, reset, pause, resume } = useInterval(interval, { controls: true, immediate: false })
 
 const scroller = ref<HTMLElement>()
 const { nextSlide, activeIndex, goToSlide } = useCarousel(scroller, useWindowSize().width)
@@ -61,12 +60,6 @@ function next() {
 }
 
 watch(counter, (value) => {
-  console.log({
-    value,
-    activeIndex: activeIndex.value,
-    steps: steps.value.length,
-    isActive: isActive.value,
-  })
   if (value !== 0)
     next()
 })
@@ -96,7 +89,7 @@ onMounted(() => {
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
       <p class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
       <img v-if="svg" class="w-2/3 m-auto" :src="svg" :class="{ '!w-full !pl-0': isSvgFullWidth }">
-      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done')">
+      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => showModal(Modal.Points)">
         {{ button }}
       </IonButton>
     </li>

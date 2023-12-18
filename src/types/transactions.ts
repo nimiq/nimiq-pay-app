@@ -30,6 +30,7 @@ export enum Transfer {
 // e.g CryptoPaymentLink -> nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
 export enum Rail {
   CryptoPaymentLink = 'cpl_id',
+  CryptoPaymentLink_Short = 'CPL',
   GoCrypto = 'gocrypto_id',
   Bluecode = 'bluecode',
 }
@@ -86,7 +87,7 @@ export type MerchantTransaction = BaseTransaction & {
   shopCategory: ShopCategory
   title: string
 } & ({
-  rail: Rail.CryptoPaymentLink | Rail.GoCrypto
+  rail: Rail.CryptoPaymentLink_Short | Rail.GoCrypto
   railPeerId: string
   message: string
 } | {

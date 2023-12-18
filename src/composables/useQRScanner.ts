@@ -64,7 +64,7 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
     if (searchParams.has(Rail.GoCrypto))
       data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)!, transfer: Transfer.UserPaymentToMerchant }
     else if (searchParams.has(Rail.CryptoPaymentLink))
-      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.CryptoPaymentLink, railPeerId: searchParams.get(Rail.CryptoPaymentLink)!, transfer: Transfer.UserPaymentToMerchant }
+      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.CryptoPaymentLink_Short, railPeerId: searchParams.get(Rail.CryptoPaymentLink)!, transfer: Transfer.UserPaymentToMerchant }
     else
       // This is a fallback. We found the amount and the recipient, but we don't know the rail.
       data = { recipient, amount, message, fee, shopName, shopCategory, transfer: Transfer.UserPayment }
@@ -148,7 +148,7 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
         parseNimAddress('NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L')
         break
       case QRScannerDataFormat.PaymentRequest:
-        parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=1&message=Ref%20%2375VZ&label=Alberto%20test&cpl_id=75VZloGY')
+        parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA')
         break
     }
   }

@@ -124,7 +124,7 @@ export const usePoints = defineStore('points', () => {
 
   /**
    * Same as getReferralCode but for a specific referral code
-   * and witouth needing to authoratize the petition with the token.
+   * and without needing to authorize the petition with the token.
    * Used to get the info before the user has created an account
    */
   async function getReferralInfoById(id: string) {

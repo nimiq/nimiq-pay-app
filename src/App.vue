@@ -121,6 +121,6 @@ body.scanner-active ion-content, body.scanner-active .ion-page, body.scanner-act
 
 /* TODO: Remove this */
 p, a, h1, h2, h3, h4, h5, h6, svg {
-  color: #1f2348;
+  @apply text-space;
 }
 </style>

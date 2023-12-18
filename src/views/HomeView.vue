@@ -22,7 +22,6 @@ import QuickButton from '@/components/QuickButton.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import { useTransactions } from '@/stores/transactions'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -38,22 +37,11 @@ const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
-const { height, consensus } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
 
-// const currentPrice = ref(0)
-// TODO: do we need to update that frequently?
-// watch(height, async () => {
-//   const { data: price, error } = (await getPriceNow())
-//   if (error || !price) {
-//     console.error('Error getting price now', error)
-//     return
-//   }
-//   currentPrice.value = price / 1000
-// })
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
