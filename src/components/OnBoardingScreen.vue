@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useInterval, useWindowSize } from '@vueuse/core'
 import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
-import { useModal, Modal } from '@/composables/useModal'
+import {stepEmits} from '@/lib/flows/steps.types'
 
 import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
@@ -13,7 +13,7 @@ const props = defineProps({
   isVisible: Boolean,
 })
 
-const { showModal } = useModal()
+defineEmits(stepEmits)
 
 const steps = ref([
   {
@@ -89,7 +89,7 @@ onMounted(() => {
       <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
       <p class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
       <img v-if="svg" class="w-2/3 m-auto" :src="svg" :class="{ '!w-full !pl-0': isSvgFullWidth }">
-      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => showModal(Modal.Points)">
+      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done')">
         {{ button }}
       </IonButton>
     </li>

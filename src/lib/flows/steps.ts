@@ -105,7 +105,6 @@ export const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptio
       else next()
     }
   },
-  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
 export const phoneNumberConfirmStep: StepInit = () => ({
@@ -123,7 +122,6 @@ export const phoneNumberConfirmStep: StepInit = () => ({
         next()
     }
   },
-  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
 export const getNotifiedStep: StepInit = () => ({
@@ -132,7 +130,6 @@ export const getNotifiedStep: StepInit = () => ({
   description: 'Get important info on transactions, top ups, security and more.',
   stepsToSkip: 1,
   main: EnableNotifications,
-  onCancel: async (_state, { path, replace }) => { path === '/setup' && await replace?.('/app') },
 })
 
 export const onBoardingPoints: StepInit = () => ({

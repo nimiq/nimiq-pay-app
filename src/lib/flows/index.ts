@@ -28,6 +28,13 @@ const setupFlow: FlowInit = ({ closeFn }) => ({
 
     goTo('/app')
     closeFn()
+    useModal().showModal(Modal.Points)
+  },
+  onCancel: async (state, { goTo }) => {
+    if (state.pinCode)
+      goTo('/app')
+
+    closeFn()
   },
 })
 
@@ -48,6 +55,7 @@ const onBoardingPointsFlow: FlowInit = () => ({
   name: FlowName.OnBoardingPoints,
   state: emptyState(),
   steps: [onBoardingPoints()],
+  onDone: async () => useModal().showModal(Modal.Points),
 })
 
 const onBoardingCashbackFlow: FlowInit = () => ({
