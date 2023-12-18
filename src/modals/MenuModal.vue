@@ -37,10 +37,10 @@ onLongPress(
   </IonHeader>
 
   <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
-    <IonItem button :detail="false" @click="showModal(Modal.TopUp, { isSmall: true })">
+    <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimTopUp) }">
       Top Up
     </IonItem>
-    <IonItem button :detail="false" @click="initializeFlow(FlowName.NimWithdraw)">
+    <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimWithdraw) }">
       Withdraw
     </IonItem>
 
@@ -52,7 +52,7 @@ onLongPress(
       Activate Bluecode payments
     </IonItem>
     -->
-    <IonItem v-if="!phoneNumberVerified" button :detail="false" @click="showModal(Modal.NewPhone)">
+    <IonItem v-if="!phoneNumberVerified" button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.VerifyPhone) }">
       Activate Cashback & Rewards
     </IonItem>
 

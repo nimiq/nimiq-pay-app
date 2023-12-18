@@ -27,7 +27,7 @@ const { closeModal } = useModal()
         </IonItem>
 
         <IonItem>
-          <IonSelect label="Currency" placeholder="USD">
+          <IonSelect label="Currency" placeholder="USD" class="text-lg font-semibold">
             <IonSelectOption value="usd">
               USD
             </IonSelectOption>
