@@ -84,6 +84,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account, error: undefined }
   }
 
+  async function getAccountTransactions(address: Nimiq.Address | undefined, limit = 30) {
+    if (!address)
+      return { data: [], error: 'No address' }
+    const transactions = await client.value?.getTransactionsByAddress(address, limit)
+    if (!transactions)
+      return { data: [], error: 'No transactions' }
+    return { data: transactions, error: undefined }
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -93,5 +102,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     init,
     claimCashlink,
     getAccount,
+    getAccountTransactions,
   }
 })

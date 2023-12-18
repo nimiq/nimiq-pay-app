@@ -28,7 +28,9 @@ export enum SQLQuery {
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT, timestamp INTEGER, sender TEXT, recipient TEXT, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, shopName TEXT, shopCategory TEXT)',
   SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
   SelectAllTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC',
+  GetAllUserReceipts = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer = \'user-receipt\' ORDER BY timestamp DESC',
   UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpdateTxStatus = 'UPDATE transactions SET status = ? WHERE hash = ?',
   ClearTxHistory = 'DELETE FROM transactions',
 
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',

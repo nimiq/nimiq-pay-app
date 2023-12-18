@@ -8,6 +8,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
+import type { UserReceiptTransaction } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import type { RemoteSigner } from '@/lib/sql-queries'
@@ -17,7 +18,7 @@ const MAX_BLOCK_HEIGHT_MISMATCH = 5
 const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function useSync() {
-  const { getAccount } = useNimiqNetwork()
+  const { getAccount, getAccountTransactions } = useNimiqNetwork()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
@@ -124,18 +125,23 @@ export function useSync() {
     client.value?.addBlockListener(async () => {
       console.log(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
       await updateActiveWallet()
-
       await updateBalances()
+      await updateTransactionHistory()
 
       handleFunds()
       checkRemoteValidity()
       extendValidity()
     })
 
-    // TODO: use this only for incoming tx, not mined ones
     client.value?.addTransactionListener((tx) => {
-      if (tx.sender.equals(localAddress.value))
+      console.log('📬  New transaction received', tx)
+      // Only handle pending transactions, mined ones are handled by the block listener
+      if (tx.state !== Nimiq.Client.TransactionState.PENDING)
         return
+      // Ignore transactions sent by the local wallet or the remote signer
+      if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
+        return
+
       console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
@@ -143,13 +149,50 @@ export function useSync() {
         sender: tx.sender.toHex(),
         recipient: tx.recipient.toHex(),
         hash: tx.transactionHash.toHex(),
-        status: Nimiq.Client.TransactionState.MINED,
+        status: tx.state,
         timestamp: tx.timestamp,
-        title: 'Receipt',
+        title: 'Top Up',
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
       })
     }, [useLocalWallet().localAddress])
+  }
+
+  /**
+   * Updates the transaction history.
+   */
+  async function updateTransactionHistory() {
+    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+    const accountTxs = await getAccountTransactions(localAddress.value!)
+    console.log('📡 Updating transaction history', { dbTxs, accountTxs })
+    await Promise.all(accountTxs.data.map(async (tx) => {
+      if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
+        return
+
+      const dbTx = dbTxs.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
+      if (dbTx) {
+        // Check if the status in db was pending
+        if (dbTx.status === Nimiq.Client.TransactionState.PENDING && tx.state !== Nimiq.Client.TransactionState.PENDING) {
+          console.log(`📬  Transaction ${tx.transactionHash.toHex()} mined with ${usePrice(tx.value).crypto.formatted}`)
+          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state })
+        }
+        return
+      }
+
+      console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
+      useTransactions().addReceiptTransaction({
+        transfer: Transfer.UserReceipt,
+        amount: tx.value,
+        sender: tx.sender.toHex(),
+        recipient: tx.recipient.toHex(),
+        hash: tx.transactionHash.toHex(),
+        status: tx.state,
+        timestamp: tx.timestamp,
+        title: 'Top Up',
+        message: Nimiq.BufferUtils.toAscii(tx.data.raw),
+        fee: tx.fee,
+      })
+    }))
   }
 
   /**

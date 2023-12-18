@@ -108,6 +108,10 @@ export const useTransactions = defineStore('transactions', () => {
     transactions.value = [tx, ...transactions.value]
   }
 
+  async function updateTransactionStatus({ hash, status }: { hash: string; status: Nimiq.Client.TransactionState }) {
+    await run(SQLQuery.UpdateTxStatus, [status, hash])
+  }
+
   const status = computed(() => {
     if (transactions.value.length === 0)
       return TransactionListState.Empty
@@ -123,6 +127,7 @@ export const useTransactions = defineStore('transactions', () => {
     transactions: readonly(transactions),
     sendTx,
     addReceiptTransaction,
+    updateTransactionStatus,
     clearTxHistory,
 
     // Search for transactions
