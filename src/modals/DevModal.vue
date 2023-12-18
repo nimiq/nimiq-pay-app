@@ -11,6 +11,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
+import { Client } from '@/types/nimiq'
 
 const router = useRouter()
 const { consensus, head, height, peerCount, client } = storeToRefs(useNimiqNetwork())
@@ -19,6 +20,7 @@ const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, is
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
+const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number }[]> = ref([])
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -39,9 +41,24 @@ async function handleClearTx() {
   router.go(0)
 }
 
+async function getAllHtlcs() {
+  const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
+  console.log('All Transactions', transactions?.map(tx => tx.toPlain()))
+  const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+  console.log('HTLC Transactions', htlcTransactions?.map(tx => tx.toPlain()))
+  htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
+    return {
+      address: tx.recipient.toUserFriendlyAddress(),
+      validityStart: tx.validityStartHeight,
+      value: tx.value / 1e5,
+    }
+  }) || []
+}
+
 onMounted(async () => {
   const res = await query('SELECT * FROM remote_signers')
   console.log('Remote Signers Table', res.length, res)
+  getAllHtlcs()
 
   client.value?.addTransactionListener(async (tx) => {
     txInMemPool.value = tx
@@ -85,21 +102,7 @@ onMounted(async () => {
         </IonButton>
       </IonCardContent>
     </IonCard>
-    <IonCard class="w-full">
-      <IonCardHeader>
-        <IonCardTitle>Tx Listener</IonCardTitle>
-      </IonCardHeader>
-      <IonCardContent>
-        <p class="flex flex-col">
-          <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
-          <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
-          <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
-          <span>State: {{ txInMemPool?.state }} </span>
-          <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
-          <span>Network: {{ txInMemPool?.network }}</span>
-        </p>
-      </IonCardContent>
-    </IonCard>
+
     <IonCard>
       <IonCardHeader>
         <IonCardTitle>Instant wallet</IonCardTitle>
@@ -129,6 +132,37 @@ onMounted(async () => {
         </IonButton>
       </IonCardContent>
     </IonCard>
+
+    <IonCard class="w-full">
+      <IonCardHeader>
+        <IonCardTitle>Tx Listener</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="flex flex-col">
+          <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
+          <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
+          <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
+          <span>State: {{ txInMemPool?.state }} </span>
+          <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
+          <span>Network: {{ txInMemPool?.network }}</span>
+        </p>
+      </IonCardContent>
+    </IonCard>
+
+    <IonCard class="w-full">
+      <IonCardHeader>
+        <IonCardTitle>Previous HTLC from blockchain</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p v-for="htlc in htlcsFromBlockchain" :key="htlc.address" class="flex flex-col">
+          <span>Address: {{ htlc.address }}</span>
+          <span>Value (not current one): {{ htlc.value }} NIM</span>
+          <span>Valid from: {{ htlc.validityStart }}</span>
+          <span>-----</span>
+        </p>
+      </IonCardContent>
+    </IonCard>
+
     <IonButton @click="handleClearTx">
       Clear Tx History
     </IonButton>

@@ -29,7 +29,7 @@ export enum SQLQuery {
   SelectPaginationTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
   SelectAllTransactions = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC',
   GetAllUserReceipts = 'SELECT hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer = \'user-receipt\' ORDER BY timestamp DESC',
-  UpsertTx = 'INSERT INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, recipient, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   UpdateTxStatus = 'UPDATE transactions SET status = ? WHERE hash = ?',
   ClearTxHistory = 'DELETE FROM transactions',
 

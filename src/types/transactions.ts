@@ -39,6 +39,7 @@ export enum ShopCategory {
   CarsBikes = 'cars_bikes',
   Cash = 'cash',
   ComputerElectronics = 'computer_electronics',
+  Deposit = 'deposit',
   Entertainment = 'entertainment',
   FoodDrinks = 'food_drinks',
   HealthBeauty = 'health_beauty',
@@ -77,7 +78,7 @@ export type UserReceiptTransaction = BaseTransaction & {
   rail?: undefined
   railPeerId?: undefined
   shopName?: undefined
-  shopCategory?: undefined
+  shopCategory?: ShopCategory
   title: string
 }
 

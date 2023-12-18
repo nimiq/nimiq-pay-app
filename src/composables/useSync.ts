@@ -9,7 +9,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import type { UserReceiptTransaction } from '@/types/transactions'
-import { Transfer } from '@/types/transactions'
+import { ShopCategory, Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -154,6 +154,7 @@ export function useSync() {
         title: 'Top Up',
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
+        shopCategory: ShopCategory.Deposit,
       })
     }, [useLocalWallet().localAddress])
   }
@@ -191,6 +192,7 @@ export function useSync() {
         title: 'Top Up',
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
+        shopCategory: ShopCategory.Deposit,
       })
     }))
   }
