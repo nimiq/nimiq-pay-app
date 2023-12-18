@@ -8,6 +8,7 @@ import { SQLQuery } from '@/lib/sql-queries'
 export enum Fiat {
   USD = 'USD',
   EUR = 'EUR',
+  CRC = 'CRC',
 }
 
 export enum Crypto {

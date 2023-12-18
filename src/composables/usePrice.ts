@@ -79,7 +79,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const priceDb = ref<number>()
   const { data: priceCryptoUsd, fetch: fetchCryptoUsdPrice, error: errorCryptoUsdApi } = useFetch(() => priceFn(toValue(cryptoCurrency)))
   const { data: priceFiatUsd, fetch: fetchFiatUsdPrice, error: errorFiatUsdApi } = useFetch(
-    () => toValue(fiatCurrency) === Fiat.USD ? Promise.resolve({ data: { price: 1 }, error: undefined }) : priceFn(Fiat.USD),
+    () => toValue(fiatCurrency) === Fiat.USD ? Promise.resolve({ data: { price: 1 }, error: undefined }) : priceFn(toValue(fiatCurrency)),
   )
 
   watch([errorCryptoUsdApi, errorFiatUsdApi], console.error) // TODO Handle error
@@ -151,6 +151,9 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   if (reactiveToNetwork)
     watch(height, getFiatPrice)
+
+  // Update if the fiat changes
+  watch(selectedFiat, getFiatPrice)
 
   onMounted(() => {
     if (immediate)
