@@ -1,7 +1,7 @@
 {
   "name": "nim-pay",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.9",
   "private": true,
   "description": "An Ionic project",
   "scripts": {
