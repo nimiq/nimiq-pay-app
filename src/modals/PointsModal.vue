@@ -71,23 +71,22 @@ onMounted(async () => {
     </IonRefresher>
 
     <IonGrid class="flex flex-col gap-y-2">
-      <IonRow class="flex items-center ion-justify-content-center">
-        <CryptoCityLogo class="h-11 w-9" />
-        <h1 class="text-5xl font-normal">
+      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] mb-6">
+        Crypto City Points
+      </h2>
+      <IonRow class="flex flex-col items-center justify-center mb-10 gap-y-2">
+        <h1 class="flex items-center text-5xl font-normal gap-x-2">
+          <CryptoCityLogo class="h-11 w-9" />
           {{ pointsBalance / 1e5 }}
         </h1>
-      </IonRow>
-      <IonRow class="ion-justify-content-center">
         <p class="text-base font-semibold text-space/60">
           {{ formatFiat(pointsBalance / 1e5 * currentPrice) }}
         </p>
-      </IonRow>
-      <IonRow class="mb-4 ion-justify-content-center">
-        <IonButton fill="clear" class="text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
+        <button class="flex items-center text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
           <CryptoCityLogo slot="start" class="h-5 w-[18px] mr-[6px]" />
           0 expiring soon
           <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />
-        </IonButton>
+        </button>
       </IonRow>
       <!-- Featured -->
       <IonRow>
