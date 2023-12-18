@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType, Ref } from 'vue'
 import { computed, onMounted, ref, toRef, watch } from 'vue'
-import { IonButton, IonIcon } from '@ionic/vue'
+import { IonButton, IonIcon, IonSpinner } from '@ionic/vue'
 import {
   SelectContent,
   SelectGroup,
@@ -77,8 +77,13 @@ const hasEnoughAmount = computed(() => amountInLuna.value <= remoteBalance.value
 
 const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? 'Not enough funds' : ''))
 const disabled = computed(() => !address.value || amountInLuna.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
+const loading = ref(false)
 
 function withdraw() {
+  if (loading.value)
+    return
+
+  loading.value = true
   emit('done', { amount: amountInLuna.value, recipient: selected.value })
 }
 
@@ -197,7 +202,12 @@ onMounted(() => {
 
   <div class="flex flex-col justify-center w-full pb-6">
     <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="disabled" @click="withdraw">
-      Withdraw
+      <template v-if="loading">
+        <IonSpinner class="text-white" name="dots" />
+      </template>
+      <template v-else>
+        Pay
+      </template>
     </IonButton>
   </div>
 </template>
