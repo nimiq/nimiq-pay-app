@@ -5,6 +5,9 @@ import { storeToRefs } from 'pinia'
 import TransactionItem from './TransactionItem.vue'
 import QuickButton from './QuickButton.vue'
 import { TransactionListState, useTransactions } from '@/stores/transactions'
+import { stepEmits } from '@/lib/flows/steps.types'
+
+defineEmits(stepEmits)
 
 const { loadMoreTxs, canLoadMore } = useTransactions()
 const { searchQuery, transactionsToShow: transactions, status } = storeToRefs(useTransactions())

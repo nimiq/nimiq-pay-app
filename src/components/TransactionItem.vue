@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import { IonRippleEffect } from '@ionic/vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
 import { isPaymentTx } from '@/types/transactions'
@@ -18,7 +19,7 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3">
+  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden">
     <CategoryIcon :category="tx.shopCategory" />
     <div class="flex flex-col items-start gap-1">
       <h3>{{ tx.title }}</h3>
@@ -28,5 +29,6 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
       <span class="leading-none">{{ fiat.formatted }}</span>
       <time class="leading-none text-space/50 tabular-nums">{{ crypto.formatted }}</time>
     </div>
+    <IonRippleEffect />
   </button>
 </template>
