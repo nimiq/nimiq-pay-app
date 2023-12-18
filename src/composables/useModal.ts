@@ -101,8 +101,6 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
-    if (isFullscreen && useDevice().isAndroid)
-      await StatusBar.setBackgroundColor({ color: '#ffffff' })
 
     allModals.unshift(modalToShow)
     await modalToShow.present()
@@ -118,9 +116,6 @@ function _useModal() {
     }
     if (modal)
       await modal.dismiss()
-
-    if (useDevice().isAndroid)
-      await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   }
 
   async function closeAllModals() {
