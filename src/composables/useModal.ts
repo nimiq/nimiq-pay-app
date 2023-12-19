@@ -1,27 +1,19 @@
 import { defineAsyncComponent, ref } from 'vue'
-import { StatusBar } from '@capacitor/status-bar'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
-import { useDevice } from './useDevice'
 
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
   Dev = '@/modals/DevModal.vue',
-  DetailedTransaction = '@/modals/DetailedTransactionModal.vue',
-  EnablePushNotifications = '@/modals/setup/PushNotificationEnableModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
-  Login = '@/modals/setup/LoginModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
-  NewPin = '@/modals/setup/PinChooseModal.vue',
-  PromoCode = '@/modals/setup/PromoCodeModal.vue',
   Points = '@/modals/PointsModal.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
-  Withdraw = '@/modals/WithdrawModal.vue',
 }
 
 function _useModal() {
@@ -44,17 +36,8 @@ function _useModal() {
       case Modal.Backup:
         component = defineAsyncComponent(() => import(Modal.Backup))
         break
-      case Modal.DetailedTransaction:
-        component = defineAsyncComponent(() => import(Modal.DetailedTransaction))
-        break
-      case Modal.EnablePushNotifications:
-        component = defineAsyncComponent(() => import(Modal.EnablePushNotifications))
-        break
       case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
-        break
-      case Modal.Login:
-        component = defineAsyncComponent(() => import(Modal.Login))
         break
       case Modal.LogoutConfirm:
         component = defineAsyncComponent(() => import(Modal.LogoutConfirm))
@@ -64,12 +47,6 @@ function _useModal() {
         break
       case Modal.Menu:
         component = defineAsyncComponent(() => import(Modal.Menu))
-        break
-      case Modal.NewPin:
-        component = defineAsyncComponent(() => import(Modal.NewPin))
-        break
-      case Modal.PromoCode:
-        component = defineAsyncComponent(() => import(Modal.PromoCode))
         break
       case Modal.Points:
         component = defineAsyncComponent(() => import(Modal.Points))
@@ -82,9 +59,6 @@ function _useModal() {
         break
       case Modal.Referral:
         component = defineAsyncComponent(() => import(Modal.Referral))
-        break
-      case Modal.Withdraw:
-        component = defineAsyncComponent(() => import(Modal.Withdraw))
         break
       case Modal.Dev:
         component = defineAsyncComponent(() => import(Modal.Dev))
