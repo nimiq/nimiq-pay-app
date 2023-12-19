@@ -164,7 +164,10 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     getFiatPrice,
     state,
 
-    price,
+    price: {
+      nim: price,
+      luna: computed(() => price.value * 1e5),
+    },
 
     fiat,
     crypto,

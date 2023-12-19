@@ -102,7 +102,6 @@ type BaseStep = {
   title?: string
   description?: string
   main: VNode
-  onCancel?: (state: State, { path }: { path?: string; replace?: (to: RouteLocationRaw) => Promise<void | NavigationFailure | undefined> }) => Promise<void> | undefined
   buttonLabel?: string
   beforeDisplay?: (state: State) => Promise<void> | undefined
   autofocus?: boolean

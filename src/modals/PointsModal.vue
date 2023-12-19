@@ -1,37 +1,22 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
-import { type Ref, onMounted } from 'vue'
-import { computedAsync } from '@vueuse/core'
+import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import { useFiat } from '@/stores/fiat'
+import { usePrice } from '@/composables/usePrice'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 
-const { formatFiat, getPriceNow, getPriceAt } = useFiat()
 const { pointsBalance, tasks } = storeToRefs(usePoints())
+const { fiat } = usePrice(pointsBalance)
 const { phoneNumberVerified } = storeToRefs(useApp())
 const { updatePointsBalance, updateTasks } = usePoints()
 const { closeModal, showModal } = useModal()
-const currentPrice: Ref<number> = computedAsync(async () => {
-  const { data, error } = await getPriceNow()
-  if (error || !data) {
-    console.error(error)
-    const { data: lastKnownPrice, error: priceAtError } = await getPriceAt(Date.now())
-    if (priceAtError || !lastKnownPrice) {
-      console.error(priceAtError)
-      return 0
-    }
-    return lastKnownPrice
-  }
-
-  return data
-}, 0)
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -80,7 +65,7 @@ onMounted(async () => {
           {{ pointsBalance / 1e5 }}
         </h1>
         <p class="text-base font-semibold text-space/60">
-          {{ formatFiat(pointsBalance / 1e5 * currentPrice) }}
+          {{ fiat.formatted }}
         </p>
         <button class="flex items-center text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
           <CryptoCityLogo slot="start" class="h-5 w-[18px] mr-[6px]" />

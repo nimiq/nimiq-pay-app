@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { PropType, Ref } from 'vue'
-import { computed, onMounted, ref, toRef, watch } from 'vue'
+import type { PropType } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { IonButton, IonIcon, IonSpinner } from '@ionic/vue'
 import {
   SelectContent,
@@ -24,8 +24,8 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import AmountInput from '@/components/AmountInput.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import { usePrice } from '@/composables/usePrice'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
-import { useFiat } from '@/stores/fiat'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 
@@ -35,12 +35,16 @@ const emit = defineEmits(stepEmits)
 const decimals = 6
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
-const { getPriceNow } = useFiat()
+
+const fiatAmount = ref(0)
+const { crypto, price } = usePrice(fiatAmount)
+
 const { formatFiat } = useCurrencyFormatter()
-const currentPrice = ref(0)
-const amount: Ref<number | undefined> = ref()
-const amountInLuna = computed(() => ((amount.value || 0) / (10 ** decimals) / currentPrice.value * 1e5) || 0)
-const maxAmount = computed(() => remoteBalance.value * currentPrice.value / 1e5)
+
+const maxFiatAmount = computed(() => remoteBalance.value * price.luna.value)
+const hasEnoughAmount = computed(() => crypto.totalLuna <= maxFiatAmount.value)
+
+const maxAmount = computed(() => Math.floor(maxFiatAmount.value / (10 ** decimals)))
 
 const state = toRef(props, 'state')
 const { withdrawalAddress } = storeToRefs(useApp())
@@ -73,10 +77,8 @@ watch(selected, (value) => {
   selected.value = address.value
 })
 
-const hasEnoughAmount = computed(() => amountInLuna.value <= remoteBalance.value)
-
 const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? 'Not enough funds' : ''))
-const disabled = computed(() => !address.value || amountInLuna.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
+const disabled = computed(() => !address.value || crypto.totalLuna <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
 const loading = ref(false)
 
 function withdraw() {
@@ -84,30 +86,15 @@ function withdraw() {
     return
 
   loading.value = true
-  emit('done', { amount: amountInLuna.value, recipient: selected.value })
+  emit('done', { amount: crypto.totalLuna, recipient: selected.value })
 }
-
-async function updatePrice() {
-  const { data, error } = await getPriceNow()
-  if (error) {
-    console.error(error)
-    // TODO: maybe remove this?
-    setTimeout(updatePrice, 5000)
-    return
-  }
-  currentPrice.value = data || currentPrice.value
-}
-
-onMounted(() => {
-  updatePrice()
-})
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center mt-6 mb-8 gap-y-2">
-    <AmountInput v-model="amount" :decimals="decimals" />
+    <AmountInput v-model="fiatAmount" :decimals="decimals" />
     <p class="text-base font-semibold text-space/60">
-      {{ (amountInLuna / 1e5).toLocaleString() }} NIM
+      {{ crypto.formatted }}
     </p>
   </div>
 
@@ -186,16 +173,16 @@ onMounted(() => {
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
   <div class="flex mt-auto mb-4 justify-evenly">
-    <button class="amount-button" @click="() => amount = 25 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25 * (10 ** decimals)">
       {{ formatFiat(25, { short: true }) }}
     </button>
-    <button class="amount-button" @click="() => amount = 50 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50 * (10 ** decimals)">
       {{ formatFiat(50, { short: true }) }}
     </button>
-    <button class="amount-button" @click="() => amount = 100 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * (10 ** decimals)">
       {{ formatFiat(100, { short: true }) }}
     </button>
-    <button class="amount-button" @click="() => amount = maxAmount * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">
       All
     </button>
   </div>
@@ -211,9 +198,3 @@ onMounted(() => {
     </IonButton>
   </div>
 </template>
-
-<style scoped>
-.amount-button {
- @apply px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60
-}
-</style>
