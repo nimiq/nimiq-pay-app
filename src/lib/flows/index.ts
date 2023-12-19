@@ -94,9 +94,9 @@ const viewTransactionsFlow: FlowInit = () => ({
   steps: [transactionList(), transactionDetail()],
 })
 
-const viewTransactionDetailFlow: FlowInit = () => ({
+const viewTransactionDetailFlow: FlowInit = ({ initialState }) => ({
   name: FlowName.ViewTransactionDetail,
-  state: emptyState(),
+  state: { ...emptyState(), ...initialState },
   steps: [transactionDetail()],
 })
 
@@ -129,6 +129,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
 
   // Initialize all the steps to undefined
   const flow = { ...defaultHooks, ...flows[name]({ initialState, closeFn }) }
+  console.log(`🌊 Initializing flow ${name}`, flow)
   await flow.steps.at(0)?.beforeDisplay?.(flow.state)
 
   modalController.create({

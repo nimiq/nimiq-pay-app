@@ -5,9 +5,10 @@ import { type ExternalTransaction, Transfer } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
-const datetime = computed(() => useFormatTime(toValue(props.tx)?.timestamp))
+const tx = computed(() => toValue(props.tx))
+const datetime = computed(() => useFormatTime(tx.value.timestamp))
 
-const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
+const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerchant)
 </script>
 
 <template>

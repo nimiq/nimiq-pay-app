@@ -299,8 +299,8 @@ export const transactionDetail: StepInit = () => {
     get title() { return titleCmp.value },
     main: h(TransactionDetails, { tx }),
     async beforeDisplay({ transactionList: selectedTx }) {
-      const { shopName: title = 'Payment preview', shopCategory: category } = selectedTx
-      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category }))
+      const title = selectedTx.shopName || selectedTx.title || 'Transaction'
+      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: selectedTx.shopCategory }))
       titleCmp.value = `${iconInHTML} ${title}`
       tx.value = selectedTx
     },
