@@ -19,6 +19,10 @@ export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined
 function useRemoteSignerDb() {
   const { run, query } = useConn()
   return {
+    async getAllRemoteSigners() {
+      return await query<RemoteSigner[]>(SQLQuery.GetAllRemoteSigners).then(parseAddress)
+    },
+
     async getActiveRemoteSigner() {
       return await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true }).then(parseAddress)
     },
@@ -46,11 +50,11 @@ function useRemoteSignerDb() {
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { client } = useNimiqNetwork()
+  const { client, getAccount } = useNimiqNetwork()
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { getActiveRemoteSigner, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet } = useRemoteSignerDb()
+  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
@@ -97,6 +101,33 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   /**
+   * Fetches all the remote signers from the database and updates their balance from the blockchain
+   */
+  async function updateSignersTableBalance() {
+    const remoteSigners = await getAllRemoteSigners()
+    if (!remoteSigners)
+      return
+    // Don't check if validity end is more than 2.5 weeks in the past, because those wallets are already extended and not used anymore
+    const oneWeekAgo = height.value - 2.5 /* weeks */ * 7 /* days */ * 24 /* hours */ * 60 /* minutes */ * 1 /* blocks per minute */
+    const remoteSignersToCheck = remoteSigners.filter(remoteSigner => remoteSigner.end > (height.value - oneWeekAgo))
+
+    if (remoteSignersToCheck.length === 0)
+      return
+
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('📡 Updating remote signers table balance')
+    await Promise.all(remoteSignersToCheck.map(async (remoteSigner) => {
+      const { data, error } = await getAccount(remoteSigner.address)
+      if (error || !data)
+        return
+
+      await updateBalance(data.balance, remoteSigner.address)
+    }))
+    // eslint-disable-next-line no-console
+    console.groupEnd()
+  }
+
+  /**
    * Initializes the remote signer variables with the following algorithm:
    * 1. Check if we have a local wallet:
    *    - If we don't have, do nothing
@@ -110,6 +141,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
 
     remoteSigner.value = await getActiveRemoteSigner()
+    await updateSignersTableBalance()
 
     if (remoteSigner.value)
       return
@@ -148,6 +180,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     updateBalance,
     updateActiveWallet,
     updateRemoteSigner,
+    updateSignersTableBalance,
 
     init,
   }

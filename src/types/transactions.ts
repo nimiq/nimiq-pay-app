@@ -54,7 +54,9 @@ export enum ShopCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
+  senderType: Nimiq.Account.Type
   recipient: string
+  recipientType: Nimiq.Account.Type
   status: Nimiq.Client.TransactionState
   timestamp: number
   amount: number
@@ -80,6 +82,7 @@ export type UserReceiptTransaction = BaseTransaction & {
   shopName?: undefined
   shopCategory?: ShopCategory
   title: string
+  senderType: Nimiq.Account.Type
 }
 
 export type MerchantTransaction = BaseTransaction & {
@@ -117,7 +120,7 @@ export type SyncTransaction = LocalToRemoteTx | RemoteToLocalTx | RemoteToLocalA
 // Transactions that are sent by the user and the recipient is another user
 export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction
 
-// Transaction that the user sent to another user or interally to the HTLC contract
+// Transaction that the user sent to another user or internally to the HTLC contract
 export type TransactionSentByUser = ExternalTransactionSentByUser | SyncTransaction
 
 // Transactions that are received by the user and the sender is another user. Just a normal payment or transfer.

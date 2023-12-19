@@ -20,7 +20,7 @@ const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, is
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
-const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number }[]> = ref([])
+const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number; }[]> = ref([])
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({

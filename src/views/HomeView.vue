@@ -96,6 +96,8 @@ async function handleRefresh(event: CustomEvent) {
     sleep(2000),
     updatePointsBalance(),
     useSync().updateBalances(),
+    useSync().updateTransactionHistory(),
+    useSync().verifyRemoteSignersDb(),
   ])
   event.detail.complete()
 }

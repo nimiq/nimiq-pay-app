@@ -98,7 +98,7 @@ export function useSync() {
     if (remoteAddress.value)
       remoteBalance.value = (await getAccount(remoteAddress.value!)).data?.balance || 0
     else
-      console.log('Remote address not found')
+      console.warn('Remote address not found')
   }
 
   /**
@@ -113,7 +113,7 @@ export function useSync() {
 
     await useRemoteSigner().init()
 
-    verifyRemoteSignersDb()
+    await verifyRemoteSignersDb()
 
     console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await updateBalances()
@@ -147,7 +147,9 @@ export function useSync() {
         transfer: Transfer.UserReceipt,
         amount: tx.value,
         sender: tx.sender.toHex(),
+        senderType: tx.senderType,
         recipient: tx.recipient.toHex(),
+        recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
         timestamp: tx.timestamp,
@@ -185,7 +187,9 @@ export function useSync() {
         transfer: Transfer.UserReceipt,
         amount: tx.value,
         sender: tx.sender.toHex(),
+        senderType: tx.senderType,
         recipient: tx.recipient.toHex(),
+        recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
         timestamp: tx.timestamp,
@@ -235,6 +239,7 @@ export function useSync() {
   }
 
   async function verifyRemoteSignersDb() {
+    await useRemoteSigner().updateSignersTableBalance()
     await ensureSingleRemoteSignerWithBalance()
     await ensureDeactivatedRemoteSignersWithoutBalance()
   }
@@ -242,6 +247,7 @@ export function useSync() {
   return {
     syncWallets,
     updateBalances,
+    updateTransactionHistory,
 
     verifyRemoteSignersDb,
   }

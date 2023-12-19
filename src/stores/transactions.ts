@@ -41,9 +41,13 @@ export const useTransactions = defineStore('transactions', () => {
    */
   async function selectTxs(options?: DbPagination) {
     const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || DEFAULT_LIMIT, options?.offset || 0])
+    // TODO: Temporary, don't handle tx from HTLCs if tx is UserReceiptTransaction
+    const filteredTxs = txs.filter(tx => 'senderType' in tx && tx.senderType !== Nimiq.Account.Type.HTLC)
+
     // eslint-disable-next-line no-console
     console.log(`📚 Selected ${txs.length} transactions`, txs)
-    return txs
+    console.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
+    return filteredTxs
   }
 
   async function upsertTx(tx: Transaction) {
@@ -51,7 +55,7 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Upserting transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
-      [tx.hash, tx.timestamp, tx.sender, tx.recipient, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
     )
   }
 
@@ -78,11 +82,14 @@ export const useTransactions = defineStore('transactions', () => {
     }
     await client.value!.sendTransaction(signedTx!)
 
-    const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message } } = signedTx!.toPlain()
+    const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()
     const raw = signedTx!.serialize().toString()
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
-    const tx = { ...partialTx, fee, recipient, timestamp, status, hash, sender, amount, raw, message } as TransactionSentByUser
+    // TODO:
+    // eslint-disable-next-line ts/ban-ts-comment
+    // @ts-expect-error
+    const tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message } as TransactionSentByUser
 
     // eslint-disable-next-line no-console
     console.log(`✈️ Sending transaction`, tx)

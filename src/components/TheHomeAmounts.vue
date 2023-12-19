@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePrice } from '@/composables/usePrice'
 import { useRemoteSigner } from '@/stores/remote-signer'
