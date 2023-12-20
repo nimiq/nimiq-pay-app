@@ -17,7 +17,7 @@ export enum Crypto {
 
 function kv(): StorageLikeAsync {
   return {
-    getItem: async key => useConn().query<string>(SQLQuery.SelectKv, [key], { single: true }),
+    getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
     setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
     removeItem: async key => useConn().run(SQLQuery.DeleteKv, [key]),
   }

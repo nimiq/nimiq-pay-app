@@ -56,8 +56,10 @@ async function getAllHtlcs() {
 }
 
 onMounted(async () => {
-  const res = await query('SELECT * FROM remote_signers')
-  console.log('Remote Signers Table', res.length, res)
+  const remoteSignerTable = await query('SELECT * FROM remote_signers')
+  console.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
+  const activeSigner = await query('SELECT * FROM remote_signers WHERE active = 1')
+  console.log('Active Signer', activeSigner)
   getAllHtlcs()
 
   const priceTable = await query('SELECT * FROM prices')

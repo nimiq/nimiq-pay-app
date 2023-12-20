@@ -103,7 +103,7 @@ export const useConn = defineStore('conn', () => {
       throw new Error(err)
     const res = await db.value!.query(query, args)
 
-    return options.single ? res.values?.at(0)?.value as T : res.values as T
+    return options.single ? res.values?.at(0) as T : res.values as T
   }
 
   async function run(query: string, args: any[] = []) {
