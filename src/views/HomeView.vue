@@ -303,11 +303,18 @@ onMounted(async () => {
     <!-- Footer -->
     <IonFooter>
       <IonToolbar>
-        <IonButton
+          <!-- TODO: add info icon -->
+          <!-- TODO: update minutes when blocks are less than 10 mins -->
+          <Transition name="slide-fade">
+            <p v-if="!isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
+              Wait 10 minutes to pay after Top Up
+            </p>
+          </Transition>
+          <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
-        >
+          >
           Pay
         </IonButton>
       </IonToolbar>
