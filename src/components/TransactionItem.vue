@@ -22,12 +22,14 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
   <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden">
     <CategoryIcon :category="tx.shopCategory" />
     <div class="flex flex-col items-start gap-1">
-      <h3>{{ tx.title }}</h3>
-      <time class="leading-none text-space/50 tabular-nums">{{ formatted }}</time>
+      <h3 class="text-base font-semibold">
+        {{ tx.title }}
+      </h3>
+      <time class="text-sm font-semibold leading-none text-space/50 tabular-nums">{{ formatted }}</time>
     </div>
-    <div class="flex flex-col items-end gap-1.5 ml-auto">
-      <span class="leading-none">{{ fiat.formatted }}</span>
-      <time class="leading-none text-space/50 tabular-nums">{{ crypto.formatted }}</time>
+    <div class="flex flex-col items-end ml-auto gap-y-1">
+      <span class="text-base font-bold">{{ fiat.formatted }}</span>
+      <time class="text-sm font-semibold leading-none text-space/50 tabular-nums">{{ crypto.formatted }}</time>
     </div>
     <IonRippleEffect />
   </button>
