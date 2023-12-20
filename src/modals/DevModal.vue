@@ -43,9 +43,8 @@ async function handleClearTx() {
 
 async function getAllHtlcs() {
   const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
-  console.log('All Transactions', transactions?.map(tx => tx.toPlain()))
+  console.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
   const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
-  console.log('HTLC Transactions', htlcTransactions?.map(tx => tx.toPlain()))
   htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
     return {
       address: tx.recipient.toUserFriendlyAddress(),
@@ -56,11 +55,15 @@ async function getAllHtlcs() {
 }
 
 onMounted(async () => {
+  getAllHtlcs()
+
   const remoteSignerTable = await query('SELECT * FROM remote_signers')
   console.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
   const activeSigner = await query('SELECT * FROM remote_signers WHERE active = 1')
   console.log('Active Signer', activeSigner)
-  getAllHtlcs()
+
+  const transacions = await query('SELECT * FROM transactions')
+  console.log('Transactions from DB', transacions)
 
   const priceTable = await query('SELECT * FROM prices')
   console.log('Price table', priceTable)

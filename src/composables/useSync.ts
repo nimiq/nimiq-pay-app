@@ -158,7 +158,8 @@ export function useSync() {
         recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
-        timestamp: tx.timestamp,
+        // Timestamp is not available for pending transactions
+        timestamp: Math.ceil(Date.now() / 1000),
         title: 'Top Up',
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
@@ -181,9 +182,9 @@ export function useSync() {
       const dbTx = dbTxs.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
       if (dbTx) {
         // Check if the status in db was pending
-        if (dbTx.status === Nimiq.Client.TransactionState.PENDING && tx.state !== Nimiq.Client.TransactionState.PENDING) {
+        if ((dbTx.status === Nimiq.Client.TransactionState.PENDING && tx.state !== Nimiq.Client.TransactionState.PENDING) || (dbTx.timestamp !== tx.timestamp)) {
           console.log(`📬  Transaction ${tx.transactionHash.toHex()} mined with ${usePrice(tx.value).crypto.formatted}`)
-          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state })
+          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
         }
         return
       }

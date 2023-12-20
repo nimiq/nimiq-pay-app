@@ -52,7 +52,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function upsertTx(tx: Transaction) {
     // eslint-disable-next-line no-console
-    console.log(`📚 Upserting transaction`, tx)
+    console.log(`📚 Upsert-ing transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
       [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
@@ -115,8 +115,8 @@ export const useTransactions = defineStore('transactions', () => {
     transactions.value = [tx, ...transactions.value]
   }
 
-  async function updateTransactionStatus({ hash, status }: { hash: string; status: Nimiq.Client.TransactionState }) {
-    await run(SQLQuery.UpdateTxStatus, [status, hash])
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
+    await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
   }
 
   const status = computed(() => {
