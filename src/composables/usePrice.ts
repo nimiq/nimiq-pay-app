@@ -84,7 +84,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   watch([errorCryptoUsdApi, errorFiatUsdApi], console.error) // TODO Handle error
 
-  const price = computed(() => priceDb.value || (priceCryptoUsd.value?.price || -1) * (priceFiatUsd.value?.price || -1))
+  const price = computed(() => priceDb.value || (priceCryptoUsd.value?.price || 0) * (priceFiatUsd.value?.price || 0))
 
   // A value as fallback which is the nearest oldest price we have in the database
   const closestPreviousPrice = ref<number>()
@@ -93,7 +93,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const fiatTotal = computed(() => usingClosestPreviousPrice.value ? (closestPreviousPrice.value || 0) * amountInNim.value : price.value * amountInNim.value)
   const fiat = reactive({
     total: fiatTotal,
-    usd: computed(() => fiatTotal.value * (priceFiatUsd.value?.price || -1)),
+    usd: computed(() => fiatTotal.value * (priceFiatUsd.value?.price || 0)),
     usingClosestPreviousPrice,
     currency: fiatCurrency,
     formatted: computed(() => formatFiat(fiatTotal.value, { currency: fiatCurrency, ...options.formatter })),
@@ -102,16 +102,17 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const crypto = reactive({
     total: amountInNim,
     totalLuna: amountInLuna,
-    usd: computed(() => amountInNim.value * (priceCryptoUsd.value?.price || -1)),
+    usd: computed(() => amountInNim.value * (priceCryptoUsd.value?.price || 0)),
     currency: cryptoCurrency,
     formatted: computed(() => formatCrypto(amountInLuna.value, { currency: cryptoCurrency, ...options.formatter })),
   })
 
   async function getPricesFromDb() {
-    const price = getPriceDb({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
-    const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
+    const price = getPriceDb({ checkpoint, fiat: toValue(fiatCurrency), crypto: cryptoCurrency })
+    const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: toValue(fiatCurrency), crypto: cryptoCurrency })
 
     const [priceData, fallbackPriceData] = await Promise.all([price, fallbackPrice])
+    console.log('💲 Price from DB', { priceData, fallbackPriceData })
 
     if (priceData) {
       priceDb.value = toValue(priceData.price)

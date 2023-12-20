@@ -20,7 +20,7 @@ const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, is
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
-const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number; }[]> = ref([])
+const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number }[]> = ref([])
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -59,6 +59,9 @@ onMounted(async () => {
   const res = await query('SELECT * FROM remote_signers')
   console.log('Remote Signers Table', res.length, res)
   getAllHtlcs()
+
+  const priceTable = await query('SELECT * FROM prices')
+  console.log('Price table', priceTable)
 
   client.value?.addTransactionListener(async (tx) => {
     txInMemPool.value = tx

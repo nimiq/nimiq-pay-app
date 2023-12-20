@@ -133,13 +133,19 @@ export function useSync() {
       extendValidity()
     })
 
-    client.value?.addTransactionListener((tx) => {
+    client.value?.addTransactionListener(async (tx) => {
       console.log('📬  New transaction received', tx)
       // Only handle pending transactions, mined ones are handled by the block listener
       if (tx.state !== Nimiq.Client.TransactionState.PENDING)
         return
       // Ignore transactions sent by the local wallet or the remote signer
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
+        return
+
+      // Check if tx is already in DB
+      const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+      const isTxInDB = dbTxs.some(dbTx => dbTx.hash === tx.transactionHash.toHex())
+      if (isTxInDB)
         return
 
       console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)

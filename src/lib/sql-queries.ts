@@ -46,7 +46,7 @@ export enum SQLQuery {
   GetDeactivatedRemoteSignersWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0 AND active = 0',
 
   CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS prices (fiat TEXT NOT NULL, checkpoint INTEGER NOT NULL, price INTEGER NOT NULL, crypto TEXT)',
-  InsertPrice = 'INSERT INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
+  InsertPrice = 'INSERT OR REPLACE INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
   GetPriceAt = 'SELECT * FROM prices WHERE checkpoint = ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
   GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
 }
