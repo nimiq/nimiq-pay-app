@@ -117,6 +117,9 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
+    const tx = transactions.value.find(tx => tx.hash === hash)
+    if (tx)
+      tx.status = status
   }
 
   const status = computed(() => {
