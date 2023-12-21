@@ -73,7 +73,6 @@ export function useSync() {
   async function extendValidity() {
     if (remoteBalance.value === 0 || !isHtlcActive.value)
       return
-    console.trace()
     console.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
     if (htlcCanBeExtended.value) {
       const { error } = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
