@@ -143,18 +143,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteSigner.value = await getActiveRemoteSigner()
     await updateSignersTableBalance()
 
-    if (remoteSigner.value)
-      return
-
-    // eslint-disable-next-line no-console
-    console.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+    if (!remoteSigner.value)
+      // eslint-disable-next-line no-console
+      console.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
 
     await updateRemoteFromApi()
 
     client!.addHeadChangedListener(async () => {
-      const account = await client!.getAccount(remoteAddress.value!)
-      await updateBalance(account.balance, remoteAddress.value!)
-
       // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
       // Mainly for the case when the user recovers the wallet from the words
       if (remoteBalance.value === 0 && height.value % 10 === 0)

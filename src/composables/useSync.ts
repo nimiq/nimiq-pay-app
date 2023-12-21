@@ -4,9 +4,9 @@ import { storeToRefs } from 'pinia'
 import { computedAsync, until } from '@vueuse/core'
 import { computed } from 'vue'
 import { usePrice } from './usePrice'
+import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import type { UserReceiptTransaction } from '@/types/transactions'
 import { ShopCategory, Transfer } from '@/types/transactions'
@@ -15,7 +15,8 @@ import type { RemoteSigner } from '@/lib/sql-queries'
 import { SQLQuery } from '@/lib/sql-queries'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
-const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
+// export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 10075
+export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function useSync() {
   const { getAccount, getAccountTransactions } = useNimiqNetwork()
@@ -50,7 +51,9 @@ export function useSync() {
     console.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value })
 
     if (remoteBalance === 0) {
-      useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+      const { error } = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+      if (error)
+        console.error('Error while creating HTLC', error)
       return
     }
 
@@ -58,19 +61,25 @@ export function useSync() {
       return
 
     if (isHtlcActive.value && isRemoteOk.value) {
-      useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
+      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
+      if (error)
+        console.error('Error while liquidating HTLC', error)
       return
     }
 
     console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
   }
 
-  function extendValidity() {
-    // TODO: this is not working
-    // if (remoteBalance.value === 0)
-    //   return
-    // if (htlcCanBeExtended.value)
-    //   useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
+  async function extendValidity() {
+    if (remoteBalance.value === 0 || !isHtlcActive.value)
+      return
+    console.trace()
+    console.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
+    if (htlcCanBeExtended.value) {
+      const { error } = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
+      if (error)
+        console.error('Error while extending HTLC validity', error)
+    }
   }
 
   /**
@@ -79,12 +88,15 @@ export function useSync() {
    *
    * Note: This function is just a safety net. The server should never miss the deadline.
    */
-  function checkRemoteValidity() {
+  async function checkRemoteValidity() {
     if (remoteBalance.value === 0)
       return
     console.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
-    if (hasHtlcExpired.value)
-      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
+    if (hasHtlcExpired.value) {
+      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
+      if (error)
+        console.error('Error while recovering funds from Remote', error)
+    }
   }
 
   /**
@@ -113,24 +125,19 @@ export function useSync() {
 
     await useRemoteSigner().init()
 
+    await updateBalances()
     await verifyRemoteSignersDb()
 
     console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
-    await updateBalances()
-    handleFunds()
-    checkRemoteValidity()
-    extendValidity()
+    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
     console.groupEnd()
 
     client.value?.addBlockListener(async () => {
       console.log(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
       await updateActiveWallet()
       await updateBalances()
-      await updateTransactionHistory()
 
-      handleFunds()
-      checkRemoteValidity()
-      extendValidity()
+      await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory()])
     })
 
     client.value?.addTransactionListener(async (tx) => {
@@ -152,9 +159,9 @@ export function useSync() {
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
-        sender: tx.sender.toHex(),
+        sender: tx.sender.toUserFriendlyAddress(),
         senderType: tx.senderType,
-        recipient: tx.recipient.toHex(),
+        recipient: tx.recipient.toUserFriendlyAddress(),
         recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
@@ -164,6 +171,7 @@ export function useSync() {
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,
+        proofSize: tx.proof.raw.length,
       })
     }, [useLocalWallet().localAddress])
   }
@@ -174,7 +182,7 @@ export function useSync() {
   async function updateTransactionHistory() {
     const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
     const accountTxs = await getAccountTransactions(localAddress.value!)
-    console.log('📡 Updating transaction history', { dbTxs, accountTxs })
+
     await Promise.all(accountTxs.data.map(async (tx) => {
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
         return
@@ -183,7 +191,7 @@ export function useSync() {
       if (dbTx) {
         // Check if the status in db was pending
         if ((dbTx.status === Nimiq.Client.TransactionState.PENDING && tx.state !== Nimiq.Client.TransactionState.PENDING) || (dbTx.timestamp !== tx.timestamp)) {
-          console.log(`📬  Transaction ${tx.transactionHash.toHex()} mined with ${usePrice(tx.value).crypto.formatted}`)
+          console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} mined with ${usePrice(tx.value).crypto.formatted}`)
           useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
         }
         return
@@ -193,9 +201,9 @@ export function useSync() {
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
-        sender: tx.sender.toHex(),
+        sender: tx.sender.toUserFriendlyAddress(),
         senderType: tx.senderType,
-        recipient: tx.recipient.toHex(),
+        recipient: tx.recipient.toUserFriendlyAddress(),
         recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
@@ -204,6 +212,7 @@ export function useSync() {
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,
+        proofSize: tx.proof.raw.length,
       })
     }))
   }

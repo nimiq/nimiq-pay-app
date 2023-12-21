@@ -3,7 +3,7 @@ import { computed, onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
-import { isExternalTx } from '@/types/transactions'
+import { Transfer, isExternalTx } from '@/types/transactions'
 import type { ExternalTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
@@ -30,7 +30,7 @@ export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
 
-  const { updateBalance, updateActiveWallet } = useRemoteSigner()
+  const { updateBalance } = useRemoteSigner()
   const { remoteBalance, remoteAddress } = storeToRefs(useRemoteSigner())
 
   const transactions = ref<ExternalTransaction[]>([])
@@ -46,6 +46,7 @@ export const useTransactions = defineStore('transactions', () => {
 
     // eslint-disable-next-line no-console
     console.log(`📚 Selected ${txs.length} transactions`, txs)
+    // eslint-disable-next-line no-console
     console.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
     return filteredTxs
   }
@@ -80,7 +81,11 @@ export const useTransactions = defineStore('transactions', () => {
       console.error('Error while signing transaction', error)
       return { data: undefined, error }
     }
-    await client.value!.sendTransaction(signedTx!)
+    const details = await client.value!.sendTransaction(signedTx!)
+    if (details.state === 'invalidated') {
+      console.error('Transaction was invalidated', details)
+      return { data: undefined, error: 'Transaction was invalidated' }
+    }
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()
     const raw = signedTx!.serialize().toString()
@@ -89,7 +94,7 @@ export const useTransactions = defineStore('transactions', () => {
     // TODO:
     // eslint-disable-next-line ts/ban-ts-comment
     // @ts-expect-error
-    const tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message } as TransactionSentByUser
+    const tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
 
     // eslint-disable-next-line no-console
     console.log(`✈️ Sending transaction`, tx)
@@ -99,8 +104,28 @@ export const useTransactions = defineStore('transactions', () => {
     if (isExternalTx(tx))
       transactions.value = [tx, ...transactions.value]
 
-    updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
-    updateActiveWallet()
+    if (tx.transfer === Transfer.LocalToRemote || tx.transfer === Transfer.ExtendRemote) {
+      if (details) {
+        const plain = details?.toPlain()
+        const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(details.data.raw)
+        useRemoteSigner().updateRemoteSigner({
+          active: true,
+          balance: plain.value,
+          publicKey: useRemoteSigner().remotePublicKey!,
+          start: plain.validityStartHeight,
+          address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
+          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+          proofSize: tx.proofSize,
+        })
+      }
+      else {
+        console.error('Transaction details are undefined, cannot update remote signer', tx)
+      }
+    }
+    else {
+      updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
+    }
+
     return { data: tx, error: undefined }
   }
 

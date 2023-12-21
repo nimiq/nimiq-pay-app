@@ -52,16 +52,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ createDepositData(),
     )
     tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
-    const plainData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data)
-    await useRemoteSigner().updateRemoteSigner({
-      active: true,
-      balance: tx.value,
-      publicKey: useRemoteSigner().remotePublicKey!,
-      start: tx.validityStartHeight,
-      address: tx.recipient,
-      end: 'timeout' in plainData ? plainData.timeout : Number.MAX_VALUE,
-      proofSize: tx.proof.length,
-    })
     return { data: tx, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
@@ -128,7 +118,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ createDepositData(),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return { data: tx, error: undefined }
+    return await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
   }
   else {
     return { data: undefined, error: 'Invalid transfer type' }
@@ -143,8 +133,10 @@ interface GetSignedTxByRemoteArgs {
 async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: 'Remote address is undefined' }
-  console.log('Signing transaction by remote', tx, address)
+  // eslint-disable-next-line no-console
+  console.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
+  // eslint-disable-next-line no-console
   console.log({ receipt, error })
   if (error)
     return { data: undefined, error }

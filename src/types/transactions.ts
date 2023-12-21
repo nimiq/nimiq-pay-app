@@ -1,3 +1,5 @@
+import type { ClientTransactionDetails } from './nimiq'
+
 export enum Transfer {
   // Normal payment from the user to the merchant
   UserPaymentToMerchant = 'user-payment-to-merchant',
@@ -62,6 +64,7 @@ export interface BaseTransaction {
   amount: number
   fee: number
   hash: string
+  proofSize: number
 }
 
 export type UserTransaction = BaseTransaction & {

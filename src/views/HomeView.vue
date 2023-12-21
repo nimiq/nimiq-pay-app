@@ -97,8 +97,8 @@ async function handleRefresh(event: CustomEvent) {
     updatePointsBalance(),
     useSync().updateBalances(),
     useSync().updateTransactionHistory(),
-    useSync().verifyRemoteSignersDb(),
   ])
+  await useSync().verifyRemoteSignersDb()
   event.detail.complete()
 }
 
@@ -307,7 +307,7 @@ onMounted(async () => {
           <!-- TODO: update minutes when blocks are less than 10 mins -->
           <Transition name="slide-fade">
             <p v-if="!isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-              Wait 10 minutes to pay after Top Up
+              Wait ~10 minutes to pay after Top Up
             </p>
           </Transition>
           <IonButton
