@@ -128,7 +128,7 @@ export function useSync() {
     await verifyRemoteSignersDb()
 
     console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
-    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
+    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
     console.groupEnd()
 
     client.value?.addBlockListener(async () => {
@@ -136,7 +136,7 @@ export function useSync() {
       await updateActiveWallet()
       await updateBalances()
 
-      await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory()])
+      await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
     })
 
     client.value?.addTransactionListener(async (tx) => {
@@ -176,7 +176,7 @@ export function useSync() {
   }
 
   /**
-   * Updates the transaction history.
+   * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
     const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
@@ -187,14 +187,8 @@ export function useSync() {
         return
 
       const dbTx = dbTxs.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
-      if (dbTx) {
-        // Check if the status in db was pending
-        if ((dbTx.status === Nimiq.Client.TransactionState.PENDING && tx.state !== Nimiq.Client.TransactionState.PENDING) || (dbTx.timestamp !== tx.timestamp)) {
-          console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} mined with ${usePrice(tx.value).crypto.formatted}`)
-          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
-        }
+      if (dbTx)
         return
-      }
 
       console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
       useTransactions().addReceiptTransaction({
@@ -213,6 +207,31 @@ export function useSync() {
         shopCategory: ShopCategory.Deposit,
         proofSize: tx.proof.raw.length,
       })
+    }))
+  }
+
+  /**
+   * Updates the transactions in the db if they have a different status or timestamp.
+   */
+  async function updateTransactionsInDb() {
+    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
+
+    await Promise.all(dbTxs.map(async (dbTx) => {
+      // If tx is confirmed, we can guarantee that the status and timestamp in the db are correct
+      // so we don't need to check it and that prevents us from making an unnecessary request to the blockchain
+      // that can get us rate limited
+      if (dbTx.status === Nimiq.Client.TransactionState.CONFIRMED)
+        return
+
+      const tx = await client.value?.getTransaction(dbTx.hash)
+      if (!tx)
+        return
+
+      // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
+      if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
+        console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
+        useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
+      }
     }))
   }
 
