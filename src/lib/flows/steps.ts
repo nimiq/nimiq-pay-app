@@ -111,7 +111,7 @@ export const phoneNumberConfirmStep: StepInit = () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'Enter the code from the SMS sent to',
-  main: h(CodeInput, { inputLength: 8 }),
+  main: h(CodeInput, { inputLength: 6 }),
   beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
     if (!phoneNumberConfirm) { err('Please enter a verification code') }
     else {
