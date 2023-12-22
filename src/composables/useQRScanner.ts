@@ -34,8 +34,8 @@ export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
 
   // Parses different URL formats and puts the data in a PaymentRequestData object
   //    Nimiq links: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
-  //    GoCrypto: TODO
-  //    Bluecode: TODO
+  //    TODO: GoCrypto
+  //    TODO: Bluecode
   async function parsePaymentRequest(content: string) {
     if (expect !== QRScannerDataFormat.PaymentRequest)
       return
