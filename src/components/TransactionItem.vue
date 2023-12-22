@@ -19,7 +19,7 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' }">
+  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed' }">
     <CategoryIcon :category="tx.shopCategory" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
@@ -27,7 +27,7 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time class="text-space/50 tabular-nums">{{ formatted }} </time>
-        <span v-if="tx.status !== 'mined'" class="italic text-pumpkin/90">{{ tx.status }}</span>
+        <span v-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">{{ tx.status }}</span>
       </div>
     </div>
     <div class="flex flex-col items-end ml-auto gap-y-1">
