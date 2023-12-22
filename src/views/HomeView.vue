@@ -284,9 +284,10 @@ onMounted(async () => {
           </p>
         </IonRow>
         <IonRow>
-          <div class="flex items-center justify-center w-full mt-2 bg-blue-200 rounded-lg h-72">
-            <span class="text-blue-50">Map</span>
-          </div>
+          <!-- TODO: interacting with map disable until we find a nice way to do it -->
+          <a class="w-full mt-2 bg-white rounded-lg h-72" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
+            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/" />
+          </a>
         </IonRow>
         <IonRow class="ion-justify-content-center">
           <IonButton
@@ -303,18 +304,18 @@ onMounted(async () => {
     <!-- Footer -->
     <IonFooter>
       <IonToolbar>
-          <!-- TODO: add info icon -->
-          <!-- TODO: update minutes when blocks are less than 10 mins -->
-          <Transition name="slide-fade">
-            <p v-if="!isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-              Wait ~10 minutes to pay after Top Up
-            </p>
-          </Transition>
-          <IonButton
+        <!-- TODO: add info icon -->
+        <!-- TODO: update minutes when blocks are less than 10 mins -->
+        <Transition name="slide-fade">
+          <p v-if="!isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
+            Wait ~10 minutes to pay after Top Up
+          </p>
+        </Transition>
+        <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
-          >
+        >
           Pay
         </IonButton>
       </IonToolbar>
