@@ -1,5 +1,3 @@
-export const nimAddressRegex = /^NQ[0-9A-Z\s]{34}$/
-
 // TODO Fetch the network from the client
 export const nimiqDomainUrl = import.meta.env.DEV ? 'nimiq-testnet.com' : 'nimiq.com'
 

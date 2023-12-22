@@ -1,172 +1,67 @@
-import type { MaybeRef } from 'vue'
-import { computed, toValue } from 'vue'
-import { ready, scan } from 'qr-scanner-wechat'
-import { useIntervalFn } from '@vueuse/core'
+import { ref } from 'vue'
+import {
+  type BarcodeScannedEvent,
+  BarcodeScanner,
+} from '@capacitor-mlkit/barcode-scanning'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { Rail, ShopCategory, Transfer } from '@/types/transactions'
-import { nimAddressRegex, nimCashlinkRegex } from '@/lib'
-
-export enum QRScannerDataFormat {
-  NimiqAddress = 'nimiqAddress',
-  PaymentRequest = 'paymentRequest',
-  NimCashlink = 'nimCashlink',
-}
+import { QRScannerDataFormat, parseRawString } from '@/lib/qr-parsers'
 
 interface UseQRScannerOptions<T = QRScannerDataFormat> {
   // The type of data we expect to scan
   expect: T
-
-  // Callback function to handle the scanned data
-  onScan: (
-    data: T extends QRScannerDataFormat.PaymentRequest ? PaymentRequestData : string
-  ) => void
-
-  // DOM element where the camera will be attached
-  videoEl: MaybeRef<HTMLVideoElement>
 }
 
-export function useQRScanner({ onScan, expect, videoEl }: UseQRScannerOptions) {
-  const video = computed(() => toValue(videoEl))
+export function useQRScanner({ expect }: UseQRScannerOptions) {
+  const isScanning = ref(false)
+  type Data = typeof expect extends QRScannerDataFormat.PaymentRequest ? PaymentRequestData : string
+  const data = ref<Data>()
+  const error = ref<string>()
 
-  const isDev = import.meta.env.DEV
-
-  const { resume: resumeScan, pause: pauseScan, isActive: isScanning } = useIntervalFn(scanFrame, 300, { immediate: false })
-
-  // Parses different URL formats and puts the data in a PaymentRequestData object
-  //    Nimiq links: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
-  //    TODO: GoCrypto
-  //    TODO: Bluecode
-  async function parsePaymentRequest(content: string) {
-    if (expect !== QRScannerDataFormat.PaymentRequest)
-      return
-
-    const url = new URL(content)
-
-    // eslint-disable-next-line no-console
-    console.log(`📷  QR data: ${url.href}`)
-
-    const searchParams = new URLSearchParams(url.search)
-    const recipient = url.pathname
-    const amount = Math.round(Number.parseFloat(searchParams.get('amount') || '0') * 100000)
-    if (!amount || !recipient)
-      return
-
-    // There is no fee in nimiq:... links
-    const fee = 0
-
-    // At the moment, we don't have a way of fetching the shop category from the Crypto Map
-    const shopCategory = ShopCategory.Shop
-
-    const message = searchParams.get('message') || undefined
-    const shopName = searchParams.get('label') || undefined
-
-    let data: PaymentRequestData
-    if (searchParams.has(Rail.GoCrypto))
-      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.GoCrypto, railPeerId: searchParams.get(Rail.GoCrypto)!, transfer: Transfer.UserPaymentToMerchant }
-    else if (searchParams.has(Rail.CryptoPaymentLink))
-      data = { recipient, amount, message, fee, shopName, shopCategory, rail: Rail.CryptoPaymentLink_Short, railPeerId: searchParams.get(Rail.CryptoPaymentLink)!, transfer: Transfer.UserPaymentToMerchant }
-    else
-      // This is a fallback. We found the amount and the recipient, but we don't know the rail.
-      data = { recipient, amount, message, fee, shopName, shopCategory, transfer: Transfer.UserPayment }
-
-    onScan(data)
-    pauseScan()
+  function reset() {
+    isScanning.value = false
+    data.value = undefined
+    error.value = undefined
   }
 
-  async function parseNimAddress(content: string) {
-    if (expect !== QRScannerDataFormat.NimiqAddress)
+  async function onScan(result: BarcodeScannedEvent) {
+    const { data: parsed, error: parsedError } = parseRawString(expect, result.barcode.displayValue)
+    if (parsedError) {
+      error.value = parsedError
       return
-
-    if (!nimAddressRegex.test(content))
-      return
-
-    onScan(content)
-    pauseScan()
-  }
-
-  async function parseCashlink(cashlink: string) {
-    if (expect !== QRScannerDataFormat.NimCashlink)
-      return
-
-    if (!nimCashlinkRegex.test(cashlink))
-      return
-
-    pauseScan()
-    onScan(cashlink)
-  }
-
-  async function setupVideoStream() {
-    if (!video.value)
-      return
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        width: 512,
-        height: 512,
-        facingMode: 'environment', // Select the back camera
-      },
-    })
-
-    video.value.srcObject = stream
-    video.value.play()
-
-    video.value.setAttribute('autoplay', 'true')
-    video.value.setAttribute('muted', 'true')
-    video.value.setAttribute('playsinline', 'true')
-  }
-
-  async function scanFrame() {
-    const canvas = document.createElement('canvas')
-    canvas.width = video.value.videoWidth
-    canvas.height = video.value.videoHeight
-    const ctx = canvas.getContext('2d')
-    ctx!.drawImage(video.value, 0, 0, canvas.width, canvas.height)
-    const { text: result } = await scan(canvas)
-
-    if (!result)
-      return
-
-    if (expect === QRScannerDataFormat.NimCashlink)
-      parseCashlink(result)
-    else if (expect === QRScannerDataFormat.NimiqAddress)
-      parseNimAddress(result)
-    else if (expect === QRScannerDataFormat.PaymentRequest)
-      parsePaymentRequest(result)
-  }
-
-  function setDummyData() {
-    if (!isDev)
-      return
-
-    switch (expect) {
-      case QRScannerDataFormat.NimCashlink:
-        // eslint-disable-next-line no-alert
-        alert('Not implemented yet')
-        break
-      case QRScannerDataFormat.NimiqAddress:
-        parseNimAddress('NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L')
-        break
-      case QRScannerDataFormat.PaymentRequest:
-        parsePaymentRequest('nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA')
-        break
     }
-  }
 
-  async function startScan() {
-    await setupVideoStream()
-    resumeScan()
+    data.value = parsed as Data
+    await stopScan()
   }
 
   async function stopScan() {
-    pauseScan()
-    const mediaStream = video.value.srcObject as MediaStream
-    mediaStream?.getTracks().forEach(track => track.stop())
-    video.value.srcObject = null
+    await BarcodeScanner.removeAllListeners()
+    await BarcodeScanner.stopScan()
+    reset()
+  }
+
+  async function startScan() {
+    reset()
+    await BarcodeScanner.addListener('barcodeScanned', onScan)
+    await BarcodeScanner.startScan()
+    isScanning.value = true
+  }
+
+  // setDummyData is only used in development mode to test the scanner. In production, it will be a no-op function.
+  let setDummyData = () => {}
+  if (import.meta.env.DEV) {
+    const dummyData = {
+      [QRScannerDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
+      [QRScannerDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
+      [QRScannerDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
+    }
+    setDummyData = () => data.value = parseRawString(expect, dummyData[expect]).data! as Data
   }
 
   return {
-    ready,
+    error,
+    data,
+
     isScanning,
     startScan,
     stopScan,

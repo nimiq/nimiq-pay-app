@@ -1,23 +1,22 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
     "jsx": "preserve",
+    "lib": ["ESNext", "DOM"],
     "useDefineForClassFields": true,
     "module": "ESNext",
     "moduleResolution": "Node",
     "paths": {
       "@/*": ["./src/*"]
     },
+    "resolveJsonModule": true,
     "typeRoots": [
-      "src/types/nimiq.d.ts",
       "src/types/nimiq.d.ts"
     ],
-    "resolveJsonModule": true,
-    "noEmit": true,
-    "isolatedModules": true,
-    "esModuleInterop": true,
     "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
     "skipLibCheck": true
   },
   "references": [{ "path": "./tsconfig.node.json" }],

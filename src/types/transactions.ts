@@ -1,5 +1,3 @@
-import type { ClientTransactionDetails } from './nimiq'
-
 export enum Transfer {
   // Normal payment from the user to the merchant
   UserPaymentToMerchant = 'user-payment-to-merchant',
@@ -31,9 +29,8 @@ export enum Transfer {
 // The different "providers" that we support. Note that the value of each provider is the name of the query parameter that we use to identify the provider.
 // e.g CryptoPaymentLink -> nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
 export enum Rail {
-  CryptoPaymentLink = 'cpl_id',
-  CryptoPaymentLink_Short = 'CPL',
-  GoCrypto = 'gocrypto_id',
+  CryptoPaymentLink = 'CPL',
+  GoCrypto = 'GoCrypto',
   Bluecode = 'bluecode',
 }
 
@@ -94,7 +91,7 @@ export type MerchantTransaction = BaseTransaction & {
   shopCategory: ShopCategory
   title: string
 } & ({
-  rail: Rail.CryptoPaymentLink_Short | Rail.GoCrypto
+  rail: Rail.CryptoPaymentLink | Rail.GoCrypto
   railPeerId: string
   message: string
 } | {

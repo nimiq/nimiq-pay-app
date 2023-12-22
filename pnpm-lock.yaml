@@ -4,7 +4,13 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  jeep-sqlite: 2.5.6
+
 dependencies:
+  '@capacitor-mlkit/barcode-scanning':
+    specifier: ^5.3.0
+    version: 5.3.0(@capacitor/core@5.6.0)
   '@capacitor/browser':
     specifier: ^5.1.0
     version: 5.1.0(@capacitor/core@5.6.0)
@@ -41,8 +47,8 @@ devDependencies:
     specifier: 1.0.0-beta.29
     version: 1.0.0-beta.29(eslint@8.56.0)(typescript@4.9.5)(vitest@0.34.6)
   '@capacitor-community/sqlite':
-    specifier: ^5.5.0
-    version: 5.5.0(@capacitor/core@5.6.0)
+    specifier: ^5.5.1-2
+    version: 5.5.1-2(@capacitor/core@5.6.0)
   '@capacitor/android':
     specifier: ^5.6.0
     version: 5.6.0(@capacitor/core@5.6.0)
@@ -122,8 +128,8 @@ devDependencies:
     specifier: ^7.2.2
     version: 7.2.2
   jeep-sqlite:
-    specifier: ^2.5.5
-    version: 2.5.5
+    specifier: 2.5.6
+    version: 2.5.6
   jsdom:
     specifier: ^21.1.2
     version: 21.1.2
@@ -1401,15 +1407,23 @@ packages:
       '@babel/helper-validator-identifier': 7.22.20
       to-fast-properties: 2.0.0
 
-  /@capacitor-community/sqlite@5.5.0(@capacitor/core@5.6.0):
-    resolution: {integrity: sha512-CUKmlODvKUoFFVHUVM+iPLSXN8U4zR33eDOcJURkPNrDLRe4jSk0wPHkK1aWdycLpAf0mT8j0SRKXpvPd4e8pg==}
+  /@capacitor-community/sqlite@5.5.1-2(@capacitor/core@5.6.0):
+    resolution: {integrity: sha512-V61ynQvzTfAL1YZRUR+eDj9c6SgbqkUFtSWZn2ija/zGQYubfN3LIwnnr3J071nvX3VpWHXpvi8ID+ZZD2Su4w==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       '@capacitor/core': ^5.0.0
     dependencies:
       '@capacitor/core': 5.6.0
-      jeep-sqlite: 2.5.5
+      jeep-sqlite: 2.5.6
     dev: true
+
+  /@capacitor-mlkit/barcode-scanning@5.3.0(@capacitor/core@5.6.0):
+    resolution: {integrity: sha512-ML1nEzcvegeOTu3AxufWYwLmvxkkeKbToyTuMHmpFlIYn69qVdAzwGrN39Kh3+jUwZ4cLy7KTCf27/p6ShT8ag==}
+    peerDependencies:
+      '@capacitor/core': ^5.0.0
+    dependencies:
+      '@capacitor/core': 5.6.0
+    dev: false
 
   /@capacitor/android@5.6.0(@capacitor/core@5.6.0):
     resolution: {integrity: sha512-6O7xV6K6c8WvQzKxOe7fnhRyoVpS3TNDXy1FyfhvOvclBvu+1JddSdFvW4e4dSL60s2c00sCzNRgYhm+cn0/dQ==}
@@ -5348,14 +5362,14 @@ packages:
       minimatch: 3.1.2
     dev: true
 
-  /jeep-sqlite@2.5.5:
-    resolution: {integrity: sha512-WjDKG+/pdXkpGn5mw1B4R+Gumno/+w+NqNwngtOyP4jflPJ/QcESyT9kA4sJHJbNHx54cxTn28KVODe5Cq9oBg==}
+  /jeep-sqlite@2.5.6:
+    resolution: {integrity: sha512-2nK1zzix8cLh3eeJ4kEGQhow9GIQvUpxPJaEB0gZu43sMmrLR4F8QzF9eRpfcJORll8UNvptHBMqtEOKi6IUOw==}
     dependencies:
       '@stencil/core': 4.9.0
       browser-fs-access: 0.33.1
       jszip: 3.10.1
       localforage: 1.10.0
-      sql.js: 1.9.0
+      sql.js: 1.8.0
     dev: true
 
   /jest-worker@26.6.2:
@@ -7158,8 +7172,8 @@ packages:
     engines: {node: '>= 10.x'}
     dev: true
 
-  /sql.js@1.9.0:
-    resolution: {integrity: sha512-+QMN8NU5KJxofT+lEaSLYdhh+Pdq7ZYS6X5bSbpmD+4SKFf+qBmr+coKT07LZ+keUNh1sf3Nz9dQwD8WNI2i/Q==}
+  /sql.js@1.8.0:
+    resolution: {integrity: sha512-3HD8pSkZL+5YvYUI8nlvNILs61ALqq34xgmF+BHpqxe68yZIJ1H+sIVIODvni25+CcxHUxDyrTJUL0lE/m7afw==}
     dev: true
 
   /ssh-config@1.1.6:
