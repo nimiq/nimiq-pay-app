@@ -98,6 +98,10 @@ function withdraw() {
     </p>
   </div>
 
+  <button @click="$emit('done', '')">
+    Go next
+  </button>
+
   <!-- Address Selector -->
   <SelectRoot v-model="selected" @update:open="x => isSelectOpen = x">
     <SelectTrigger
@@ -122,10 +126,7 @@ function withdraw() {
 
         <SelectViewport>
           <SelectGroup>
-            <template
-              v-for="(option, index) in options"
-              :key="index"
-            >
+            <template v-for="option in options" :key="option">
               <!-- We need to have this as hidden, not rendering it causes the Select to break -->
               <SelectItem
                 v-if="option"

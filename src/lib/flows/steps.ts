@@ -1,7 +1,7 @@
 import type { Ref, VNode } from 'vue'
 import { defineAsyncComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { QRScannerDataFormat } from '@/composables/useQRScanner'
+import { QRScannerDataFormat } from '../qr-parsers'
 import type { PaymentRequestData, StepInit } from '@/lib/flows/steps.types'
 import { PaymentMethod, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 
@@ -189,6 +189,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRScannerDataFormat }> = opti
   step: StepName.QRCodeScanner,
   title: 'Scan QR code',
   main: h(QRScanner, options?.props),
+  canDismiss: false,
   beforeNext: async (_, { next, prev }) => {
     if (options?.props?.expect === QRScannerDataFormat.PaymentRequest)
       next()

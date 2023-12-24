@@ -1,7 +1,7 @@
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
+import { QRScannerDataFormat } from '../qr-parsers'
 import { getNotifiedStep, nimAddressDisplay, nimAddressInputStep, nimWithdrawalSelectionStep, onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3, onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4, onBoardingPoints, paymentPreviewStep, phoneNumberConfirmStep, phoneNumberStep, pinCodeConfirmStep, pinCodeStep, promoCodeStep, qrCodeScannerStep, recoveryWordsStep, transactionDetail, transactionList } from './steps'
-import { QRScannerDataFormat } from '@/composables/useQRScanner'
 import { Modal, useModal } from '@/composables/useModal'
 import type { Flow, FlowInit, State } from '@/lib/flows/steps.types'
 import { FlowName, inputSteps } from '@/lib/flows/steps.types'
@@ -116,7 +116,7 @@ const flows = {
 }
 
 /**
- * It initializes the flow give the name opening a new modal with the flow component
+ * It initializes the flow given the name opening a new modal with the flow component
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, initialState?: Partial<State>) {
@@ -125,17 +125,20 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
   // Close the modal
   const closeFn = () => modalController.getTop().then(m => m.dismiss())
 
-  const defaultHooks: Pick<Flow, 'onDone' | 'onCancel'> = { onDone: closeFn, onCancel: closeFn }
+  const activeStepIndex = ref(0)
+  const defaultInitialFlowValues: Pick<Flow, 'onDone' | 'onCancel' | 'activeStepIndex'> = { onDone: closeFn, onCancel: closeFn, activeStepIndex }
 
-  // Initialize all the steps to undefined
-  const flow = { ...defaultHooks, ...flows[name]({ initialState, closeFn }) }
+  const flow: Flow = { ...defaultInitialFlowValues, ...flows[name]({ initialState, closeFn }) }
+
+  // eslint-disable-next-line no-console
   console.log(`🌊 Initializing flow ${name}`, flow)
+
   await flow.steps.at(0)?.beforeDisplay?.(flow.state)
 
   modalController.create({
     component: FlowCmp,
     handle: false,
-    canDismiss: true,
+    canDismiss: async () => flow.steps.at(activeStepIndex.value)?.canDismiss ?? true,
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
     componentProps: { flow },

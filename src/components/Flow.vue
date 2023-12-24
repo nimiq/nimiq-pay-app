@@ -18,11 +18,11 @@ const props = defineProps({
 
 const { path } = useRoute()
 const { replace } = useRouter()
-const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true } = props.flow
+const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true, activeStepIndex: activeIndex } = props.flow
 const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()
-const { nextSlide, activeIndex, prevSlide } = useCarousel(scroller, useWindowSize().width)
+const { nextSlide, prevSlide } = useCarousel(scroller, useWindowSize().width, { activeIndex })
 const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
 const activeStep = computed(() => stepsInFlow[activeIndex.value])
@@ -89,17 +89,17 @@ function onCancel() {
 </script>
 
 <template>
-  <div class="fixed flex h-max inset-4 left-6">
+  <div class="fixed z-10 flex h-max inset-4 left-6">
     <IonBackButton v-if="allowBack" class="flex" @click.prevent="prevSlide" />
-    <button class="ml-auto" @click.stop="onCancel">
+    <button v-if="activeStep.canDismiss" class="ml-auto" @click.stop="onCancel">
       <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
     </button>
   </div>
 
-  <ul ref="scroller" class="flex h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" :key="step" class="flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
-      <h2 v-if="title" class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] flex gap-x-3 items-center justify-center" v-html="title" />
-      <p v-if="description" class="[text-wrap:pretty] text-center opacity-60 mt-4" v-html="description" />
+  <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
+    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" :key="step" class="relative flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
+      <h2 v-if="title" class="z-10 flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
+      <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60" v-html="description" />
       <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
   </ul>

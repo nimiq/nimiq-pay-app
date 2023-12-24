@@ -1,4 +1,4 @@
-import type { EmitsOptions, VNode } from 'vue'
+import type { EmitsOptions, MaybeRef, Ref, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
@@ -26,6 +26,7 @@ export interface Flow {
   name: FlowName
   state: State
   steps: Step[]
+  activeStepIndex: Ref<number>
 
   // Function that will be called when the flow is supposed to be closed.
   // If it is not set, the flow will be closed automatically when the last step is done.
@@ -38,6 +39,7 @@ export interface Flow {
   // Wether the user can go back or not
   // @default true
   canGoBack?: boolean
+
 }
 
 export interface FlowInitOptions {
@@ -47,7 +49,7 @@ export interface FlowInitOptions {
   closeFn: () => Promise<any>
 }
 
-export type FlowInit = (options: FlowInitOptions) => Flow
+export type FlowInit = (options: FlowInitOptions) => Omit<Flow, 'activeStepIndex'>
 
 export enum StepName {
   PromoCode = 'promoCode',
@@ -105,6 +107,7 @@ type BaseStep = {
   buttonLabel?: string
   beforeDisplay?: (state: State) => Promise<void> | undefined
   autofocus?: boolean
+  canDismiss?: boolean
 } & SkippableStep
 
 interface BeforeNextOptions {

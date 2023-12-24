@@ -17,7 +17,7 @@ const pinCodeInput = ref<string[]>([])
 </script>
 
 <template>
-  <p class="[text-wrap:pretty] text-center opacity-60 underline">
+  <p class="text-pretty text-center opacity-60 underline">
     {{ phoneNumber }}
   </p>
   <div class="flex justify-center w-full mt-16">

@@ -1,16 +1,15 @@
-import { type ConfigurableWindow, type MaybeRefOrGetter, defaultWindow, unrefElement } from '@vueuse/core'
-import type { MaybeRef } from 'vue'
+import type { MaybeRef, Ref } from 'vue'
 import { computed, ref, toValue } from 'vue'
 
-export type UseCarouselOptions = ConfigurableWindow & {
+export interface UseCarouselOptions {
   columnGap?: number
   scrollBehavior?: ScrollBehavior
+  activeIndex?: Ref<number>
 }
 
-export function useCarousel(scroller: MaybeRefOrGetter<HTMLElement | null | undefined>, slideWidth: MaybeRef<number>, options: UseCarouselOptions = {}) {
-  const { window = defaultWindow, columnGap = 0, scrollBehavior = 'smooth' } = options
-  const elRef = computed(() => unrefElement(scroller) || window?.document?.documentElement)
-  const activeIndex = ref(0)
+export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, slideWidth: MaybeRef<number>, options: UseCarouselOptions = {}) {
+  const { columnGap = 0, scrollBehavior = 'smooth', activeIndex = ref(0) } = options
+  const elRef = computed(() => toValue(scroller))
 
   // function calculateActiveIndex() {
   //   if (!elRef.value)

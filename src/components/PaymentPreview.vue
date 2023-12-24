@@ -68,7 +68,7 @@ function handlePay() {
       <!-- v-if="cashback && instantPayWallet.balanceRaw.value > (pendingPayment?.amount || 0)" -->
       <div
         v-if="hasCashback"
-        class="flex items-baseline mt-8 font-semibold gap-x-1.5 transition-colors [text-wrap:pretty] text-center px-16"
+        class="flex items-baseline mt-8 font-semibold gap-x-1.5 transition-colors text-pretty text-center px-16"
         :class="{ '[&>*]:opacity-60 ': paymentMethod === PaymentMethod.Points }"
       >
         <InfoIcon class="w-6 stroke-2" />
@@ -92,19 +92,19 @@ function handlePay() {
 
     <div class="mb-6 font-semibold text-center min-h-[4rem]">
       <Transition name="slide-fade" mode="out-in">
-        <p v-if="!canPayWithNim && pointsState !== PointsState.Ok" class="text-pumpkin [text-wrap:pretty]">
+        <p v-if="!canPayWithNim && pointsState !== PointsState.Ok" class="text-pumpkin text-pretty">
           You don't have enough NIM for this purchase.
         </p>
-        <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60[text-wrap:pretty]">
+        <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
           You don't have enough Points for this purchase.
         </p>
-        <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 [text-wrap:pretty]">
+        <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 text-pretty">
           You can't pay with Points for this purchase.
         </p>
-        <p v-else-if="pointsState === PointsState.Error" class="text-pumpkin [text-wrap:pretty]">
+        <p v-else-if="pointsState === PointsState.Error" class="text-pumpkin text-pretty">
           {{ pointsMessage }}
         </p>
-        <p v-else-if="hasCashback" class="opacity-60 [text-wrap:pretty]">
+        <p v-else-if="hasCashback" class="opacity-60 text-pretty">
           There is no cashback reward when paying with Points.
         </p>
       </transition>

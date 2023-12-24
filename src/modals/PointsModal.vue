@@ -56,7 +56,7 @@ onMounted(async () => {
     </IonRefresher>
 
     <IonGrid class="flex flex-col gap-y-2">
-      <h2 class="max-w-sm font-bold text-2xl text-center [text-wrap:balance] mb-6">
+      <h2 class="max-w-sm font-bold text-2xl text-center text-balance mb-6">
         Crypto City Points
       </h2>
       <IonRow class="flex flex-col items-center justify-center mb-10 gap-y-2">
