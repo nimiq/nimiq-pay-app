@@ -91,7 +91,7 @@ function onCancel() {
 <template>
   <div class="fixed z-10 flex h-max inset-4 left-6">
     <IonBackButton v-if="allowBack" class="flex" @click.prevent="prevSlide" />
-    <button v-if="activeStep.canDismiss" class="ml-auto" @click.stop="onCancel">
+    <button v-if="activeStep.canDismiss !== false" class="ml-auto" @click.stop="onCancel">
       <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
     </button>
   </div>

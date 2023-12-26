@@ -1,12 +1,13 @@
 import type { Ref, VNode } from 'vue'
 import { defineAsyncComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { QRScannerDataFormat } from '../qr-parsers'
+import { QRDataFormat } from '../../composables/useStringParser'
 import type { PaymentRequestData, StepInit } from '@/lib/flows/steps.types'
-import { PaymentMethod, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 
 import type { ExternalTransaction } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
+import { PaymentMethod } from '@/types/database'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue')) as unknown as VNode
@@ -15,7 +16,7 @@ const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vu
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue')) as unknown as VNode
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue')) as unknown as VNode
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue')) as unknown as VNode
-const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue')) as unknown as VNode
+const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue')) as unknown as VNode // TODO This is not being used.
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue')) as unknown as VNode
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue')) as unknown as VNode
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue')) as unknown as VNode
@@ -27,7 +28,7 @@ const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
 const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4})[-.\s]?(\d{1,4})[-.\s]?(\d{1,9})/
 
-export const promoCodeStep: StepInit = () => ({
+export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
   title: 'Enter your promo code',
   description: 'If you don\'t have one, you can skip this step.',
@@ -42,14 +43,14 @@ export const promoCodeStep: StepInit = () => ({
   },
 })
 
-export const recoveryWordsStep: StepInit = () => ({
+export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
   title: 'Enter recovery words',
   main: BrickInput,
   beforeNext: async (_, { next }) => next(),
 })
 
-export const pinCodeStep: StepInit = () => ({
+export const pinCodeStep: StepInit = async () => ({
   step: StepName.PinCode,
   title: 'Choose a PIN',
   description: 'Protect your NIM Pay app with a pin.',
@@ -64,7 +65,7 @@ export const pinCodeStep: StepInit = () => ({
   },
 })
 
-export const pinCodeConfirmStep: StepInit = () => ({
+export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
   title: 'Confirm your PIN',
   description: 'Protect your NIM Pay app with a pin.',
@@ -89,7 +90,7 @@ export const pinCodeConfirmStep: StepInit = () => ({
   },
 })
 
-export const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptions) => ({
+export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   title: 'Verify your phone number',
   description: 'You will receive a SMS with a verification code',
@@ -107,7 +108,7 @@ export const phoneNumberStep: StepInit = ({ stepsToSkip } = defaultStepInitOptio
   },
 })
 
-export const phoneNumberConfirmStep: StepInit = () => ({
+export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'Enter the code from the SMS sent to',
@@ -124,7 +125,7 @@ export const phoneNumberConfirmStep: StepInit = () => ({
   },
 })
 
-export const getNotifiedStep: StepInit = () => ({
+export const getNotifiedStep: StepInit = async () => ({
   step: StepName.GetNotified,
   title: 'Enable notifications',
   description: 'Get important info on transactions, top ups, security and more.',
@@ -132,73 +133,76 @@ export const getNotifiedStep: StepInit = () => ({
   main: EnableNotifications,
 })
 
-export const onBoardingPoints: StepInit = () => ({
+export const onBoardingPoints: StepInit = async () => ({
   step: StepName.OnBoardingPoints,
   main: OnBoardingScreen,
 })
 
-export const onBoardingCashback1: StepInit = () => ({
+export const onBoardingCashback1: StepInit = async () => ({
   step: StepName.OnBoardingCashback1,
   title: 'What\'s Crypto City Points?',
   description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.  ',
   main: OnBoardingScreen,
 })
 
-export const onBoardingCashback2: StepInit = () => ({
+export const onBoardingCashback2: StepInit = async () => ({
   step: StepName.OnBoardingCashback2,
   title: 'Pay with CC Points',
   description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
   main: OnBoardingScreen,
 })
 
-export const onBoardingCashback3: StepInit = () => ({
+export const onBoardingCashback3: StepInit = async () => ({
   step: StepName.OnBoardingCashback3,
   title: 'Get CC Points',
   description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
   main: OnBoardingScreen,
 })
 
-export const onBoardingCashback4: StepInit = () => ({
+export const onBoardingCashback4: StepInit = async () => ({
   step: StepName.OnBoardingCashback4,
   title: 'Find places to pay with and earn CC Points',
   main: OnBoardingScreen,
 })
 
-export const onBoardingBluecode1: StepInit = () => ({
+export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
   title: 'What\'s Bluecode?',
   description: 'Bluecode is a European payment service that now supports NIM.',
   main: OnBoardingScreen,
 })
 
-export const onBoardingBluecode2: StepInit = () => ({
+export const onBoardingBluecode2: StepInit = async () => ({
   step: StepName.OnBoardingBluecode2,
   title: 'Pay with Bluecode',
   description: 'Create a Bluecode Barcode and show it at the cashier to pay. ',
   main: OnBoardingScreen,
 })
 
-export const onBoardingBluecode3: StepInit = () => ({
+export const onBoardingBluecode3: StepInit = async () => ({
   step: StepName.OnBoardingBluecode3,
   title: 'Verify your ID',
   description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
   main: OnBoardingScreen,
 })
 
-export const qrCodeScannerStep: StepInit<{ expect: QRScannerDataFormat }> = options => ({
-  step: StepName.QRCodeScanner,
-  title: 'Scan QR code',
-  main: h(QRScanner, options?.props),
-  canDismiss: false,
-  beforeNext: async (_, { next, prev }) => {
-    if (options?.props?.expect === QRScannerDataFormat.PaymentRequest)
-      next()
-    else // For Top Up and Withdrawal, we go back to the previous step
-      prev()
-  },
-})
+export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
+  const { isWeb } = (await import('@/composables/useDevice')).useDevice()
+  return {
+    step: StepName.QRCodeScanner,
+    title: 'Scan QR code',
+    main: h(QRScanner, options?.props),
+    canDismiss: !isWeb,
+    beforeNext: async (_, { next, prev }) => {
+      if (options?.props?.expect === QRDataFormat.PaymentRequest)
+        next()
+      else // For Top Up and Withdrawal, we go back to the previous step
+        prev()
+    },
+  }
+}
 
-export const paymentPreviewStep: StepInit = () => {
+export const paymentPreviewStep: StepInit = async () => {
   let titleCmp = 'Payment preview' // Fall back
   return {
     step: StepName.PaymentPreview,
@@ -236,7 +240,7 @@ export const paymentPreviewStep: StepInit = () => {
   }
 }
 
-export const nimWithdrawalSelectionStep: StepInit = () => ({
+export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
   title: 'Withdraw',
   main: NimWithdraw,
@@ -255,7 +259,7 @@ export const nimWithdrawalSelectionStep: StepInit = () => ({
   },
 })
 
-export const nimAddressInputStep: StepInit = () => ({
+export const nimAddressInputStep: StepInit = async () => ({
   step: StepName.NimAddressInput,
   title: 'Send NIM to this address',
   description: 'Copy or scan the address',
@@ -277,14 +281,14 @@ export const nimAddressInputStep: StepInit = () => ({
   },
 })
 
-export const nimAddressDisplay: StepInit = () => ({
+export const nimAddressDisplay: StepInit = async () => ({
   step: StepName.NimAddressDisplay,
   title: 'Send NIM to top up',
   description: 'Send a transaction to the address below. Top up as much as you like.',
   main: NimAddressDisplay,
 })
 
-export const transactionList: StepInit = () => {
+export const transactionList: StepInit = async () => {
   return {
     step: StepName.TransactionList,
     main: TransactionList,
@@ -292,7 +296,7 @@ export const transactionList: StepInit = () => {
   }
 }
 
-export const transactionDetail: StepInit = () => {
+export const transactionDetail: StepInit = async () => {
   const titleCmp = ref<string>('Payment preview')
   const tx = ref() as Ref<ExternalTransaction>
   return {

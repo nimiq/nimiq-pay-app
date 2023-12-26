@@ -98,10 +98,6 @@ function withdraw() {
     </p>
   </div>
 
-  <button @click="$emit('done', '')">
-    Go next
-  </button>
-
   <!-- Address Selector -->
   <SelectRoot v-model="selected" @update:open="x => isSelectOpen = x">
     <SelectTrigger

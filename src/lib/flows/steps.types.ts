@@ -1,4 +1,4 @@
-import type { EmitsOptions, MaybeRef, Ref, VNode } from 'vue'
+import type { EmitsOptions, Ref, VNode } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
@@ -49,7 +49,7 @@ export interface FlowInitOptions {
   closeFn: () => Promise<any>
 }
 
-export type FlowInit = (options: FlowInitOptions) => Omit<Flow, 'activeStepIndex'>
+export type FlowInit = (options: FlowInitOptions) => Promise<Omit<Flow, 'activeStepIndex'>>
 
 export enum StepName {
   PromoCode = 'promoCode',
@@ -141,7 +141,7 @@ export interface StepInitOptions<Props = undefined> {
   props?: Props
 }
 
-export type StepInit<Props = undefined> = (options?: StepInitOptions<Props>) => Step
+export type StepInit<Props = undefined> = (options?: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined, props: undefined }
 
 export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction

@@ -1,38 +1,54 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { PropType, Ref, computed } from 'vue'
+import type { PropType, Ref } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
-import { type QRScannerData, useQRScanner } from '@/composables/useQRScanner'
+import type { QRData } from '@/composables/useQRScanner'
 import { useToast } from '@/composables/useToast'
-import { QRScannerDataFormat } from '@/lib/qr-parsers'
+import { QRDataFormat } from '@/composables/useStringParser'
+import { useDevice } from '@/composables/useDevice'
+import { QRScannerState, useQRScanner } from '@/composables/useQRScanner'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },
   errorMsg: { type: String },
   canSkip: { type: Boolean },
   state: { type: Object as PropType<State>, required: true },
-  expect: { type: String as PropType<QRScannerDataFormat>, required: true },
+  expect: { type: String as PropType<QRDataFormat>, required: true },
 })
 const emit = defineEmits(stepEmits)
 
 const cameraFeedContainer = ref() as Ref<HTMLDivElement>
 
-const onData = (data: QRScannerData<typeof props.expect>) => emit('done', data)
+const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const onError = (error: string) => useToast().setToast({ message: error })
+const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-const { setDummyData, startScan, stopScan } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
-
-watch(() => props.isVisible, isVisible => (isVisible) ? startScan() : stopScan())
+watch(() => props.isVisible, isVisible => (isVisible) ? start() : setTimeout(stop, 300))
 
 const isDev = import.meta.env.DEV
+const { isWeb } = useDevice()
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full mt-8">
-    <button v-if="isDev && expect !== QRScannerDataFormat.NimCashlink" class="z-10 block mb-6 text-sm font-normal underline text-space/80" @click="setDummyData">
+  <div class="mt-8 px-0.5">
+    <button v-if="isDev && expect !== QRDataFormat.NimCashlink" class="text-center w-full z-10 block mb-6 text-sm font-normal underline text-space/80" @click="setDummyData">
       Click here to use mockup data
     </button>
 
-    <div ref="cameraFeedContainer" />
+    <div v-if="isWeb" ref="cameraFeedContainer" class="relative aspect-square" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
+      <video autoplay muted playsinline :controls="false" :class="{ 'opacity-0': state !== QRScannerState.Scanning }" />
+      <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
+        <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
+      </svg>
+    </div>
+    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center w-full">
+      <div class="relative" style="--px: 96px; border: var(--px) solid white; border-top-width: calc(50vh - var(--px)); border-bottom-width: calc(50vh - var(--px));">
+        <div class="aspect-square" style="width: calc(100vw - var(--px));">
+          <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
+            <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
+          </svg>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

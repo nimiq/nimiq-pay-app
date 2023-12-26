@@ -1,153 +1,150 @@
-import type { MaybeRef } from 'vue'
-import { nextTick, ref, toValue } from 'vue'
-import {
-  type BarcodeScannedEvent,
-  BarcodeScanner,
-} from '@capacitor-mlkit/barcode-scanning'
-import { modalController } from '@ionic/vue'
+import type { scan as Scan } from 'qr-scanner-wechat'
+import type { Ref } from 'vue'
+import { ref } from 'vue'
+import { useDevice } from './useDevice'
+import { QRDataFormat } from './useStringParser'
+import { useCameraFeed } from './useCameraFeed'
+import { useStringParser } from '@/composables/useStringParser'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { QRScannerDataFormat, parseRawString } from '@/lib/qr-parsers'
 
-export type QRScannerData<T = QRScannerDataFormat> = T extends QRScannerDataFormat.PaymentRequest ? PaymentRequestData : string
-
-interface UseQRScannerOptions<T = QRScannerDataFormat> {
-  // The type of data we expect to scan
-  expect: T
-
-  onData?: (data: QRScannerData<T>) => any
-
-  onError?: (error: string) => any
-
-  // The element that will contain the camera feed
-  cameraFeedContainer: MaybeRef<HTMLElement>
+export enum QRScannerState {
+  Idle = 'idle',
+  Scanning = 'scanning',
+  NoPermission = 'no-permission',
 }
 
-export function useQRScanner({ expect, cameraFeedContainer, onData, onError }: UseQRScannerOptions) {
-  const isScanning = ref(false)
-  const { setUpCameraFeed, tearDownCameraFeed } = useCameraFeed(cameraFeedContainer)
+export type QRData<T = QRDataFormat> = T extends QRDataFormat.PaymentRequest ? PaymentRequestData : string
 
-  function reset() {
-    isScanning.value = false
-  }
+interface UseQRScannerOptions<T = QRDataFormat> {
+  onData: (data: QRData<T>) => any
+  onError: (error: string) => any
+  expect: QRDataFormat
+  cameraFeedContainer: Ref<HTMLElement>
+}
 
-  async function onScan(result: BarcodeScannedEvent) {
-    const { data: parsed, error: parsedError } = parseRawString(expect, result.barcode.displayValue)
-    if (parsedError) {
-      onError?.(parsedError)
+export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: UseQRScannerOptions) {
+  const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
+  const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
+  const state = ref(QRScannerState.Idle)
+
+  async function start() {
+    const video = await setUpCameraFeed()
+    if (!hasPermission.value) {
+      state.value = QRScannerState.NoPermission
       return
     }
-
-    onData?.(parsed as any)
-    await stopScan()
+    startScan({ video })
+    state.value = QRScannerState.Scanning
   }
 
-  async function stopScan() {
-    // eslint-disable-next-line no-console
-    console.log('📷 Stopping scan')
-
+  async function stop() {
     await tearDownCameraFeed()
-
-    await BarcodeScanner.removeAllListeners()
-    await BarcodeScanner.stopScan()
-    reset()
-  }
-
-  async function startScan() {
-    // eslint-disable-next-line no-console
-    console.log('📷 Starting scan')
-
-    await setUpCameraFeed()
-
-    reset()
-    await BarcodeScanner.addListener('barcodeScanned', onScan)
-    await BarcodeScanner.startScan()
-    isScanning.value = true
+    stopScan()
+    state.value = QRScannerState.Idle
   }
 
   // setDummyData is only used in development mode to test the scanner. In production, it will be a no-op function.
   let setDummyData = () => { }
   if (import.meta.env.DEV) {
-    const dummyData = {
-      [QRScannerDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
-      [QRScannerDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
-      [QRScannerDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
-    }
-    setDummyData = () => onData?.(parseRawString(expect, dummyData[expect]).data! as any)
+    setDummyData = () => onData({
+      [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
+      [QRDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
+      [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
+    }[expect])
+  }
+
+  async function parseString(raw: string) {
+    const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
+    if (expect === QRDataFormat.NimiqAddress)
+      return getNimAddress(raw)
+    else if (expect === QRDataFormat.PaymentRequest)
+      return getPaymentRequestData(raw)
+    else if (expect === QRDataFormat.NimCashlink)
+      return getCashlink(raw)
+    else
+      return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined }
   }
 
   return {
-    isScanning,
-    startScan,
-    stopScan,
-
+    start,
+    stop,
+    state,
     setDummyData,
   }
 }
 
-/**
- * In Ionic, the camera feed is displayed behind the WebView.
- * This composable will open a "hole" in the WebView to display the camera feed and close it when the camera is closed.
- *
- * @param cameraFeedContainer
- * @returns
- */
-function useCameraFeed(cameraFeedContainer: MaybeRef<HTMLElement>) {
-  // The important elements to manipulate. In the DOM they are nested like this:
-  // <ion-app>
-  //  <ion-modal> # modalWrapper - It is a WebComponent, which have a shadow root
-  //    <ion-backdrop> # backdrop
-  //    <div role="dialog"> # dialog
-  const domElements = async () => ({
-    mainView: document.querySelector('ion-app > div') as HTMLElement,
-    dialog: await modalController.getTop().then(m => m?.shadowRoot?.querySelector('div[role="dialog"]') as HTMLElement),
-    backdrop: await modalController.getTop().then(m => m?.shadowRoot?.querySelector('ion-backdrop') as HTMLElement),
-  })
+interface UseQRScannerDeviceOptions {
+  parseString: (raw: string) => any
+  onError: (error: string) => any
+}
 
-  const html = String.raw
-  const cameraFeedHtml = html`
-    <div style="position: absolute; inset: 0px; display: grid; place-content: center; width: 100%;">
-    <div style="--px: 96px; position: relative; border: var(--px) solid white; border-top-width: calc(50vh - var(--px)); border-bottom-width: calc(50vh - var(--px));">
-        <div style="width: calc(100vw - var(--px)); aspect-ratio: 1 / 1;">
-        <svg style="position: absolute; inset: -2px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
-          <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
-        </svg>
-      </div>
-    </div>
-  `
+interface StartScannerOptions {
+  video: HTMLVideoElement | void
+}
 
-  /**
-   * The camera feed is displayed behind the WebView. This function will open a "hole" in the WebView to display the camera feed.
-   * First, we make a hole in the Modal and then we make the main view invisible.
-   * To fake the modal, we create an huge white outline around the hole and make the element inside transparent.
-   */
-  async function setUpCameraFeed() {
-    const { mainView, dialog, backdrop } = await domElements()
+function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
+  let stopScan: Function = () => { } // We need to initialize this function to avoid TS errors
+  let resumeScan: Function
 
-    if (!mainView || !toValue(cameraFeedContainer) || !dialog || !backdrop)
-      throw new Error(`There is an element missing: ${JSON.stringify({ mainView, cameraFeedContainer, dialog, backdrop })}`)
+  async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
+    const canvas = document.createElement('canvas')
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d')
+    ctx!.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const { text: result } = await scan(canvas)
 
-    // modalController.getTop()?.presentingElement?.style.setProperty('--background', 'transparent')
-    mainView.style.setProperty('display', 'none')
-    backdrop.style.setProperty('display', 'none')
-    dialog.style.setProperty('--background', 'transparent')
-    dialog.style.setProperty('border-top', 'calc((var(--ion-safe-area-top) + 10px)) solid #a9a9a9')
-    toValue(cameraFeedContainer).innerHTML = cameraFeedHtml
+    if (result)
+      parseString(result)
   }
 
-  async function tearDownCameraFeed() {
-    const { mainView, dialog, backdrop } = await domElements()
-    if (!mainView || !dialog || !backdrop)
-      throw new Error(`There is an element missing: ${JSON.stringify({ mainView, cameraFeedContainer, dialog, backdrop })}`)
+  async function startScan({ video }: StartScannerOptions) {
+    if (resumeScan) {
+      resumeScan()
+      return
+    }
 
-    mainView.style.removeProperty('display')
-    backdrop.style.removeProperty('display')
-    dialog.style.removeProperty('--background')
-    dialog.style.removeProperty('border-top')
-    toValue(cameraFeedContainer).innerHTML = ''
+    const { ready, scan } = await import('qr-scanner-wechat')
+
+    // The first time, we need to download the model, so it will take some time
+    let maxMs = 10_000
+    while (!ready() && maxMs > 0) {
+      await new Promise(r => setTimeout(r, 100))
+      maxMs -= 100
+    }
+    if (maxMs <= 0) {
+      onError?.('The QR scanner is not ready yet. Please try again.')
+      return
+    }
+
+    const { useIntervalFn } = await import('@vueuse/core')
+
+    const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: false })
+    stopScan = pause
+    resumeScan = resume
   }
 
   return {
-    setUpCameraFeed,
-    tearDownCameraFeed,
+    startScan,
+    stopScan,
+  }
+}
+
+function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
+  async function startScan(_options: StartScannerOptions) {
+    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
+    await BarcodeScanner.addListener('barcodeScanned', ({ barcode }) => parseString(barcode.displayValue))
+    await BarcodeScanner.startScan()
+  }
+
+  async function stopScan() {
+    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
+    await BarcodeScanner.removeAllListeners()
+    await BarcodeScanner.stopScan()
+  }
+
+  return {
+    startScan,
+    stopScan,
   }
 }
