@@ -3,7 +3,7 @@ import { computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { useWindowSize } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-import { IonBackButton, IonIcon } from '@ionic/vue'
+import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/lib/flows/steps.types'
@@ -89,16 +89,22 @@ function onCancel() {
 </script>
 
 <template>
-  <div class="fixed z-10 flex h-max inset-4 left-6">
-    <IonBackButton v-if="allowBack" class="flex" @click.prevent="prevSlide" />
-    <button v-if="activeStep.canDismiss !== false" class="ml-auto" tabindex="-1" @click.stop="onCancel">
-      <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-6 h-6" />
-    </button>
-  </div>
+  <IonHeader class="pt-1 ion-no-border">
+    <IonToolbar>
+      <IonButtons slot="start">
+        <IonBackButton v-if="allowBack" default-href="/" @click.prevent="prevSlide" />
+      </IonButtons>
+      <IonButtons slot="end">
+        <IonButton v-if="activeStep.canDismiss !== false" tabindex="-1" @click.stop="onCancel">
+          <IonIcon :icon="close" size="large" class="text-white bg-[#DADADA] rounded-full w-6 h-6 p-[2px]" />
+        </IonButton>
+      </IonButtons>
+    </IonToolbar>
+  </IonHeader>
 
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" :key="step" class="relative flex flex-col w-screen h-full px-8 pt-16 shrink-0 snap-center snap-always">
-      <h2 v-if="title" class="z-10 flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
+    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" :key="step" class="relative flex flex-col w-screen h-full px-8 pt-4 shrink-0 snap-center snap-always">
+      <h2 v-if="title" class="z-10 flex items-center justify-center max-w-sm mt-2 text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60" v-html="description" />
       <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
