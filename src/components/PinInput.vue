@@ -35,7 +35,7 @@ function handleInputClick(i: number) {
 
 <template>
   <div class="mx-auto mt-28">
-    <div class="flex justify-center mx-auto gap-x-8 mt-28" :class="{'animate-wiggle': wiggle}">
+    <div class="flex justify-center px-2 py-4 mx-auto mt-24 gap-x-8" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()">
       <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
     </div>
     <p v-if="errorMsg" class="mt-12 text-base text-center text-pumpkin">
