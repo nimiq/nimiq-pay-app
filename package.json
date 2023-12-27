@@ -6,7 +6,9 @@
   "description": "An Ionic project",
   "scripts": {
     "dev:android": "ionic cap run android --livereload --external --watch",
+    "dev:a": "pnpm run dev:android",
     "dev:ios": "ionic cap run ios --livereload --external --watch",
+    "dev:i": "pnpm run dev:ios",
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "release": "ionic cap build --prod",

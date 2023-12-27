@@ -17,7 +17,7 @@ function _useToast() {
   //     .addAnimation(slideAnimation)
   // }
 
-  async function setToast({ message, error, keepOpen, duration = 5 * 1e3 }: Toast) {
+  async function setToast({ message, error, keepOpen, duration = 3 * 1e3 }: Toast) {
     clearToast()
 
     toast.value = await toastController.create({

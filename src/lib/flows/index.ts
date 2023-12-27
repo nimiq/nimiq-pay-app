@@ -10,11 +10,26 @@ import FlowCmp from '@/components/Flow.vue'
 
 const emptyState = () => reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State)
 
-const loginFlow: FlowInit = async () => ({
+const loginFlow: FlowInit = async ({ closeFn }) => ({
   name: FlowName.Login,
   state: emptyState(),
   steps: await Promise.all([recoveryWordsStep(), pinCodeStep(), pinCodeConfirmStep(), phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep(), getNotifiedStep(), onBoardingPoints()]),
   canGoBack: true,
+  onDone: async (state, { goTo }) => {
+    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
+    if (err)
+      console.error(err)
+
+    goTo('/app')
+    closeFn()
+    useModal().showModal(Modal.Points)
+  },
+  onCancel: async (state, { goTo }) => {
+    if (state.pinCode)
+      goTo('/app')
+
+    closeFn()
+  },
 })
 
 const setupFlow: FlowInit = async ({ closeFn }) => ({

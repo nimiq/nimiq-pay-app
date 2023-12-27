@@ -1,12 +1,12 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useApp } from './app'
-import type { AsyncResult } from '@/types'
+import type { AsyncResult, Result } from '@/types'
 
 export const useLocalWallet = defineStore('local-wallet', () => {
-  const { entropyToMnemonic, mnemonicToExtendedPrivateKey } = Nimiq.MnemonicUtils
+  const { entropyToMnemonic, mnemonicToExtendedPrivateKey, mnemonicToEntropy } = Nimiq.MnemonicUtils
 
-  const { entropy } = storeToRefs(useApp())
+  const { entropy, hasDoneBackup } = storeToRefs(useApp())
   const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
 
   const localAddress = computed(() => localWallet.value.address)
@@ -19,6 +19,19 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
+  function importWords(words: string[]): Result<void> {
+    try {
+      // eslint-disable-next-line ts/ban-ts-comment
+      // @ts-expect-error
+      Nimiq.Entropy.SIZE = 16
+      entropy.value = mnemonicToEntropy(words).toHex()
+      return { data: undefined, error: undefined }
+    }
+    catch (error) {
+      return { error: (error as Error).message || 'Unknown error importing words', data: undefined }
+    }
+  }
+
   return {
     hasLocalWallet: computed(() => !!entropy?.value),
     localWallet,
@@ -26,5 +39,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     publicKey,
     localBalance,
     getWords,
+    importWords,
   }
 })

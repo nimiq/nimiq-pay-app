@@ -47,7 +47,14 @@ export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
   title: 'Enter recovery words',
   main: BrickInput,
-  beforeNext: async (_, { next }) => next(),
+  beforeNext: async ({ recoveryWordsStep }, { next, err }) => {
+    const { importWords } = (await import('@/stores/local-wallet')).useLocalWallet()
+    const { error } = importWords(recoveryWordsStep)
+    if (error)
+      err(error)
+    else
+      next()
+  },
 })
 
 export const pinCodeStep: StepInit = async () => ({
@@ -56,12 +63,13 @@ export const pinCodeStep: StepInit = async () => ({
   description: 'Protect your NIM Pay app with a pin.',
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
-    if (!pinCode)
-      err('Please enter a PIN code')
-    else if (!PIN_CODE_REGEX.test(pinCode))
+    if (!pinCode) { err('Please enter a PIN code') }
+    else if (!PIN_CODE_REGEX.test(pinCode)) {
+      if (import.meta.env.DEV)
+        debugger
       err('Invalid PIN code')
-    else
-      next()
+    }
+    else { next() }
   },
 })
 

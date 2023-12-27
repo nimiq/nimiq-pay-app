@@ -35,6 +35,12 @@ export const useApp = defineStore('app', () => {
 
   const entropy = ref('')
   async function setEntropy() {
+    // This case only happen when importing from words (login)
+    if (entropy.value) {
+      await Promise.all([kv().setItem('entropy', entropy.value), kv().setItem('hasDoneBackup', 'true')])
+      hasDoneBackup.value = true
+      return
+    }
     // Maybe we should revisit this later. Right now this will be in memory all the times
     const entropyDb = await kv().getItem('entropy')
     if (entropyDb) { entropy.value = entropyDb }

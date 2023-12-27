@@ -92,6 +92,7 @@ function scrollToFirstNotification() {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
+  // TODO: add a loading variable from useSync and don't refresh if already loading
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
