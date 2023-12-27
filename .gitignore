@@ -33,3 +33,4 @@ npm-debug.log*
 /www
 
 android/.idea
+AndroidManifest.xml.orig
