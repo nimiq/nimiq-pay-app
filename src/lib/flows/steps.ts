@@ -13,6 +13,7 @@ const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.v
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue')) as unknown as VNode
 const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue')) as unknown as VNode
 const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue')) as unknown as VNode
+const GenericInput = defineAsyncComponent(() => import('@/components/GenericInput.vue')) as unknown as VNode
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue')) as unknown as VNode
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue')) as unknown as VNode
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue')) as unknown as VNode
@@ -24,22 +25,21 @@ const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAdd
 const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue')) as unknown as VNode
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue')) as unknown as VNode
 
-const REFERRAL_CODE_REGEX = /^[a-zA-Z0-9]{6}$/
 const PIN_CODE_REGEX = /^\d{4}$/
 const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4})[-.\s]?(\d{1,4})[-.\s]?(\d{1,9})/
 
 export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
   title: 'Enter your promo code',
-  description: 'If you don\'t have one, you can skip this step.',
-  main: BrickInput,
+  description: 'Enter your referral promo code.',
+  main: GenericInput,
   beforeNext: async ({ promoCode }, { next, err }) => {
-    if (!promoCode)
-      err('Please enter a promo code')
-    else if (!REFERRAL_CODE_REGEX.test(promoCode))
-      err('Invalid promo code')
-    else
+    if (!promoCode) { err('Please enter a promo code') }
+    else {
+      const { setReferralCode } = (await import('@/stores/app')).useApp()
+      setReferralCode(promoCode)
       next()
+    }
   },
 })
 

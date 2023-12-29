@@ -8,7 +8,6 @@ import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
 import { Modal, useModal } from '@/composables/useModal'
-import { useToast } from '@/composables/useToast'
 import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
@@ -29,13 +28,12 @@ import { initializeFlow } from '@/lib/flows'
 
 const router = useRouter()
 const { showModal } = useModal()
-const { setToast } = useToast()
 
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { updatePointsBalance, updateTasks } = usePoints()
+const { updatePointsBalance, updateTasks, redeemReferral } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
@@ -127,9 +125,7 @@ watchEffect(async () => {
   })
 
   if (referralCode.value && phoneNumberVerified.value) {
-    setTimeout(() => {
-      setToast({ message: 'CC Points added' })
-    }, 750)
+    redeemReferral()
   }
   else if (!referralCode.value && !phoneNumberVerified.value) {
     notificationArray.value.unshift({

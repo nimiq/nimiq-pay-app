@@ -2,6 +2,7 @@ import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
 import { computed, ref } from 'vue'
+import { usePoints } from './points'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
 
@@ -33,8 +34,11 @@ export const useApp = defineStore('app', () => {
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
   const phoneNumberVerified = computed(() => !!pointsToken.value)
 
+  const pendingReferralCode = ref('')
   const entropy = ref('')
   async function setEntropy() {
+    if (pendingReferralCode.value)
+      await kv().setItem('referralCode', pendingReferralCode.value)
     // This case only happen when importing from words (login)
     if (entropy.value) {
       await Promise.all([kv().setItem('entropy', entropy.value), kv().setItem('hasDoneBackup', 'true')])
@@ -52,10 +56,15 @@ export const useApp = defineStore('app', () => {
     }
   }
 
+  async function setReferralCode(referralCode: string) {
+    pendingReferralCode.value = referralCode
+  }
+
   return {
     phoneNumber,
     phoneNumberVerified,
     referralCode,
+    setReferralCode,
     entropy,
     hasDoneBackup,
     selectedFiat,

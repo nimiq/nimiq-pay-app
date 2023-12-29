@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { type Ref, ref } from 'vue'
 import { useApp } from './app'
+import { useToast } from '@/composables/useToast'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import type { AsyncOption } from '@/types'
@@ -146,7 +147,10 @@ export const usePoints = defineStore('points', () => {
 
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''
-    await updatePointsBalance()
+    setTimeout(() => {
+      updatePointsBalance()
+      useToast().setToast({ message: 'CC Points added' })
+    }, 750)
   }
 
   async function payWithPoints({ rail, reference, recipient }: { rail: Rail; reference: string; recipient: string }) {
