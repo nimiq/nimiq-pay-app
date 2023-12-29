@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
 import type { PropType } from 'vue'
-import { useWindowSize } from '@vueuse/core'
+import { useIntersectionObserver, useWindowSize } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -46,6 +46,7 @@ async function goToNext() {
   nextSlide()
 }
 
+// TODO revise this
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
 onMounted(async () => shouldAutofocus.value && focus())
@@ -60,19 +61,7 @@ async function onStepDone(value: OnDoneStepValue) {
       await step.value.beforeNext?.(state, { next: goToNext, err, prev: prevSlide })
     else
       goToNext()
-
-    const nextStep = steps.value.at(activeIndex.value + 1)
-    if (nextStep && isInputStep(nextStep) && nextStep.autofocus)
-      focus(400)
   }
-}
-
-// Autofocus the first input found in step.main if there is any
-async function focus(timeout = 200) {
-  setTimeout(() => {
-    const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement | null
-    input?.focus()
-  }, timeout)
 }
 
 function skip() {
@@ -86,6 +75,27 @@ function skip() {
 function onCancel() {
   onFlowCancel!(state, { path, goTo: replace })
 }
+
+const scrollerItems = ref<HTMLElement[]>([])
+
+// We track the intersection of each step with a number from 0 to 1.
+// The intersection list contains only the steps that have been already displayed.
+const interesections = ref<number[]>([])
+useIntersectionObserver(scrollerItems, ([{ intersectionRatio, target }]) => {
+  const index = scrollerItems.value.indexOf(target as HTMLElement)
+  interesections.value[index] = intersectionRatio
+  if (intersectionRatio === 1 && index === activeIndex.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
+    focus()
+}, { threshold: [0, 0.5, 1] })
+
+// Since the intersection observer only tracks the steps that have been already displayed,
+// we need to fill the rest of the array with 0s.
+const visibility = computed(() => interesections.value.concat(Array(steps.value.length - interesections.value.length).fill(0)))
+
+function focus() {
+  const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement
+  input?.focus()
+}
 </script>
 
 <template>
@@ -95,7 +105,7 @@ function onCancel() {
         <IonBackButton v-if="allowBack" default-href="/" @click.prevent="prevSlide" />
       </IonButtons>
       <IonButtons slot="end">
-        <IonButton v-if="activeStep.canDismiss !== false" tabindex="-1" @click.stop="onCancel">
+        <IonButton v-if="activeStep.canDismiss !== false" @click.stop="onCancel">
           <IonIcon :icon="close" size="large" class="text-white bg-[#DADADA] rounded-full w-6 h-6 p-[2px]" />
         </IonButton>
       </IonButtons>
@@ -103,10 +113,10 @@ function onCancel() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" :key="step" class="relative flex flex-col w-screen h-full px-8 pt-4 shrink-0 snap-center snap-always">
-      <h2 v-if="title" class="z-10 flex items-center justify-center max-w-sm mt-2 text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
+    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col w-screen h-full px-8 pt-4 shrink-0 snap-center snap-always">
+      <h2 v-if="title" class="z-10 flex items-center justify-center mt-2 text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60" v-html="description" />
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step, visibility: visibility[activeIndex] }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
   </ul>
 </template>

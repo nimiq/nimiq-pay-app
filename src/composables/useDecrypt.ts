@@ -11,7 +11,9 @@ const pinHashLocalStorageKey = '_pin'
  * Hashes an input to SHA-256, encoded as hex
  */
 async function hash(pin: string): Promise<string> {
-  const digest = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin))
+  // FIXME I am not sure this is working fine on iOS and Safari. Could we check it?
+  // https://forums.appgyver.com/t/error-in-crypto-subtle-on-ios-preview/12946
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin))
   return new Uint8Array(digest).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')
 }
 

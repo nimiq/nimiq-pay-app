@@ -20,13 +20,15 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, slideWi
   function goToSlide(index: number) {
     if (!elRef.value)
       return
+
     activeIndex.value = index
-    // TODO: control scroll duration
-    // we can do that with https://vueuse.org/shared/useInterval/
-    elRef.value!.scrollTo({
+
+    // For some reason in Safari, the scrollLeft value is not updated immediately after the scroll event
+    // so we need to wait a tick before scrolling
+    window.requestAnimationFrame(() => elRef.value!.scrollTo({
       left: (toValue(slideWidth) + (columnGap * 2)) * index,
       behavior: scrollBehavior,
-    })
+    }))
   }
 
   // function removeSlide(index: number) {
