@@ -74,12 +74,12 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   const checkpoint = Math.floor(timestamp / 600000) * 600
 
-  const priceFn = (currency: Fiat | Crypto) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
+  const priceFn = (currency: MaybeRef<Fiat | Crypto>) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
 
   const priceDb = ref<number>()
-  const { data: priceCryptoUsd, fetch: fetchCryptoUsdPrice, error: errorCryptoUsdApi } = useFetch(() => priceFn(toValue(cryptoCurrency)))
+  const { data: priceCryptoUsd, fetch: fetchCryptoUsdPrice, error: errorCryptoUsdApi } = useFetch(() => priceFn(cryptoCurrency))
   const { data: priceFiatUsd, fetch: fetchFiatUsdPrice, error: errorFiatUsdApi } = useFetch(
-    () => toValue(fiatCurrency) === Fiat.USD ? Promise.resolve({ data: { price: 1 }, error: undefined }) : priceFn(toValue(fiatCurrency)),
+    () => toValue(fiatCurrency) === Fiat.USD ? Promise.resolve({ data: { price: 1 }, error: undefined }) : priceFn(fiatCurrency),
   )
 
   watch([errorCryptoUsdApi, errorFiatUsdApi], console.error) // TODO Handle error
@@ -108,8 +108,8 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   })
 
   async function getPricesFromDb() {
-    const price = getPriceDb({ checkpoint, fiat: toValue(fiatCurrency), crypto: cryptoCurrency })
-    const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: toValue(fiatCurrency), crypto: cryptoCurrency })
+    const price = getPriceDb({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
+    const fallbackPrice = getClosestPreviousPrice({ checkpoint, fiat: fiatCurrency, crypto: cryptoCurrency })
 
     const [priceData, fallbackPriceData] = await Promise.all([price, fallbackPrice])
 
@@ -123,6 +123,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
       closestPreviousPrice.value = toValue(fallbackPriceData?.price)
       state.value = PriceStatus.ClosestPrice
     }
+    return false
   }
 
   async function getFiatPrice() {
@@ -154,7 +155,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     watch(height, getFiatPrice)
 
   // Update if the fiat changes
-  watch(selectedFiat, getFiatPrice)
+  watch(selectedFiat, () => { priceDb.value = 0; getFiatPrice() })
 
   onMounted(() => {
     if (immediate)
