@@ -25,10 +25,12 @@ import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 const router = useRouter()
 const { showModal } = useModal()
 
+const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
@@ -304,7 +306,7 @@ onMounted(async () => {
         <!-- TODO: add info icon -->
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
-          <p v-if="!isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
+          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
             Wait ~10 minutes to pay after Top Up
           </p>
         </Transition>
