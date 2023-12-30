@@ -169,7 +169,7 @@ function withdraw() {
 
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
-  <div class="flex mt-auto mb-4 justify-evenly">
+  <div class="flex w-full mt-auto mb-4 justify-evenly">
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25 * (10 ** decimals)">
       {{ formatFiat(25, { short: true }) }}
     </button>
