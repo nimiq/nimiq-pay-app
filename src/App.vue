@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
-import { RouterView, useRouter } from 'vue-router'
+import { RouterView } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
 
-// import { BarcodeScanner } from '@sisou/capacitor-barcode-scanner'
 import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
 
@@ -14,14 +13,6 @@ if (!useDevice().isWeb) {
   StatusBar.setBackgroundColor({ color: '#F8F8F8' })
   StatusBar.setOverlaysWebView({ overlay: false })
 }
-
-useRouter().afterEach(async () => {
-  await useModal().closeModal()
-  // Just in case the barcode has started scanning and the app has been navigated away from
-  document.body.classList.remove('scanner-active')
-  // await BarcodeScanner.showBackground()
-  // await BarcodeScanner.stopScan()
-})
 </script>
 
 <template>
