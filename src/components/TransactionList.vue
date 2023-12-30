@@ -21,7 +21,7 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col w-full h-full">
     <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60">
       All transactions
     </h2>
