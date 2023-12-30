@@ -31,8 +31,11 @@ async function handleRefresh(event: CustomEvent) {
 
 onMounted(async () => {
   // If phone number is not verified, show the modal
-  if (!phoneNumberVerified.value)
+  if (!phoneNumberVerified.value) {
+    await closeModal()
     initializeFlow(FlowName.VerifyPhone)
+    return
+  }
 
   await updatePointsBalance()
 
@@ -56,7 +59,7 @@ onMounted(async () => {
     </IonRefresher>
 
     <IonGrid class="flex flex-col gap-y-2">
-      <h2 class="max-w-sm font-bold text-2xl text-center text-balance mb-6">
+      <h2 class="max-w-sm mb-6 text-2xl font-bold text-center text-balance">
         Crypto City Points
       </h2>
       <IonRow class="flex flex-col items-center justify-center mb-10 gap-y-2">

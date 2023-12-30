@@ -43,7 +43,12 @@ const setupFlow: FlowInit = async ({ closeFn }) => ({
 
     goTo('/app')
     closeFn()
-    useModal().showModal(Modal.Points)
+    const { phoneNumberVerified } = await (await import('@/stores/app')).useApp()
+    if (phoneNumberVerified) { useModal().showModal(Modal.Points) }
+    else {
+      await useModal().closeModal()
+      initializeFlow(FlowName.VerifyPhone)
+    }
   },
   onCancel: async (state, { goTo }) => {
     if (state.pinCode)
@@ -70,7 +75,14 @@ const onBoardingPointsFlow: FlowInit = async () => ({
   name: FlowName.OnBoardingPoints,
   state: emptyState(),
   steps: await Promise.all([onBoardingPoints()]),
-  onDone: async () => useModal().showModal(Modal.Points),
+  onDone: async () => {
+    const { phoneNumberVerified } = await (await import('@/stores/app')).useApp()
+    if (phoneNumberVerified) { useModal().showModal(Modal.Points) }
+    else {
+      await useModal().closeModal()
+      initializeFlow(FlowName.VerifyPhone)
+    }
+  },
 })
 
 const onBoardingCashbackFlow: FlowInit = async () => ({

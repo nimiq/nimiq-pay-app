@@ -113,7 +113,7 @@ function focus() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full h-full px-8 pt-4 shrink-0 snap-center snap-always">
+    <li v-for="({ main, step, title, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-4 shrink-0 snap-center snap-always">
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-2 text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60" v-html="description" />
       <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step, visibility: visibility[activeIndex] }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />

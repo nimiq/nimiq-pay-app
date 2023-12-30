@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useInterval, useWindowSize } from '@vueuse/core'
 import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
-import {stepEmits} from '@/lib/flows/steps.types'
+import { stepEmits } from '@/lib/flows/steps.types'
 
 import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
@@ -84,12 +84,12 @@ onMounted(() => {
       <div :style="`transition-duration: ${msBeforeNextSlide}ms`" class="bg-keppel will-change-[width] transition-[width] ease-in" :class="activeIndex >= i && counter < steps.length && isAnimating ? 'w-full' : 'w-0'" />
     </div>
   </div>
-  <ul ref="scroller" class="flex h-full -mx-8 overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2" @pointerdown="pause" @pointerup="resume">
+  <ul ref="scroller" class="flex w-screen h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2" @pointerdown="pause" @pointerup="resume">
     <li v-for="{ title, description, svg, isSvgFullWidth, button }, i in steps" :key="i" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
-      <h2 class="max-w-sm font-bold text-2xl text-center text-balance flex gap-x-3 items-center justify-center" v-html="title" />
-      <p class="text-pretty text-center opacity-60 mt-4" v-html="description" />
+      <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
+      <p class="mt-4 text-center text-pretty opacity-60" v-html="description" />
       <img v-if="svg" class="w-2/3 m-auto" :src="svg" :class="{ '!w-full !pl-0': isSvgFullWidth }">
-      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done')">
+      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done', false)">
         {{ button }}
       </IonButton>
     </li>
