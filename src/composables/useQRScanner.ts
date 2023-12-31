@@ -1,6 +1,7 @@
 import type { scan as Scan } from 'qr-scanner-wechat'
 import type { Ref } from 'vue'
 import { ref } from 'vue'
+import { useThrottleFn } from '@vueuse/core'
 import { useDevice } from './useDevice'
 import { QRDataFormat } from './useStringParser'
 import { useCameraFeed } from './useCameraFeed'
@@ -133,12 +134,13 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
   async function startScan(_options: StartScannerOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.addListener('barcodeScanned', async ({ barcode }) => {
+    await BarcodeScanner.addListener('barcodeScanned', useThrottleFn(async ({ barcode }) => {
+      console.log('barcodeScanned', barcode)
       const { data, error } = await parseString(barcode.displayValue)
       if (error)
         console.error(data.error)
       return { data, error }
-    })
+    }, 1000))
     await BarcodeScanner.startScan()
   }
 
