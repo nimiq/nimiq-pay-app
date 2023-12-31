@@ -73,8 +73,11 @@ export function useStringParser() {
     const shopName = searchParams.get('label') || undefined
     const transfer = Transfer.UserPaymentToMerchant
     const rail = Rail.CryptoPaymentLink
-    const railPeerId = searchParams.get(Rail.CryptoPaymentLink)!
+    const railPeerId = searchParams.get(CPL_URL_PARAM_ID) || undefined
     const shopCategory = ShopCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
+
+    if (!railPeerId)
+      return { error: 'Invalid Crypto Payment Link. Missing cpl_id.', data: undefined }
 
     const data: PaymentRequestData = { recipient, amount, message, fee, shopName, shopCategory, rail, railPeerId, transfer }
     return { data, error: undefined }

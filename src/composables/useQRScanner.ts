@@ -133,7 +133,12 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
   async function startScan(_options: StartScannerOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.addListener('barcodeScanned', ({ barcode }) => parseString(barcode.displayValue))
+    await BarcodeScanner.addListener('barcodeScanned', async ({ barcode }) => {
+      const { data, error } = await parseString(barcode.displayValue)
+      if (error)
+        console.error(data.error)
+      return { data, error }
+    })
     await BarcodeScanner.startScan()
   }
 
