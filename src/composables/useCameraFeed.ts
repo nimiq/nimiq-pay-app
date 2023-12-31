@@ -50,12 +50,12 @@ function useCameraFeedMobile(cameraFeedContainer: Ref<HTMLElement>) {
   async function tearDownCameraFeed() {
     const { mainView, dialog, backdrop } = await domElements()
     if (!mainView || !dialog || !backdrop)
-      throw new Error(`There is an element missing: ${JSON.stringify({ mainView, cameraFeedContainer, dialog, backdrop })}`)
+      console.error('There is an element missing', { mainView, dialog, backdrop })
 
-    mainView.style.removeProperty('display')
-    backdrop.style.removeProperty('display')
-    dialog.style.removeProperty('--background')
-    dialog.style.removeProperty('border-top')
+    mainView?.style.removeProperty('display')
+    backdrop?.style.removeProperty('display')
+    dialog?.style.removeProperty('--background')
+    dialog?.style.removeProperty('border-top')
   }
 
   return {
