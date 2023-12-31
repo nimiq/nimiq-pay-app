@@ -1,0 +1,15 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+#: src/views/SetupView.vue:24
+msgid "Get Started"
+msgstr ""
+
+#: src/views/SetupView.vue:28
+msgid "I have a promo code"
+msgstr ""
+
+#: src/views/SetupView.vue:31
+msgid "Login"
+msgstr ""

@@ -26,16 +26,16 @@ import { initializeFlow } from '@/lib/flows'
           </svg>
         </div>
         <div class="w-10/12 mx-auto mt-auto">
-          <IonButton class="w-full text-base" expand="block" @click="initializeFlow(FlowName.Setup)">
-            Get Started
-          </IonButton>
+          <IonButton class="w-full text-base" expand="block" @click="initializeFlow(FlowName.Setup)">{{
+            $t('Get Started')
+          }}</IonButton>
           <div class="flex justify-around">
-            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.SetupWithPromoCode)">
-              I have a promo code
-            </IonButton>
-            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.Login)">
-              Login
-            </IonButton>
+            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.SetupWithPromoCode)">{{
+              $t('I have a promo code')
+            }}</IonButton>
+            <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.Login)">{{
+              $t('Login')
+            }}</IonButton>
           </div>
         </div>
       </div>

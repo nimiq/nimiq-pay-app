@@ -4,12 +4,16 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import checker from 'vite-plugin-checker'
+import poLoader from 'webpack-i18n-tools/loader/rollup'
+import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     vue({ script: { defineModel: true } }),
     checker({ vueTsc: true }),
+    poLoader(),
+    poOptimizer(),
     legacy(),
     VitePWA({ registerType: 'autoUpdate' }),
   ],
@@ -21,5 +25,10 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+  },
+  define: {
+    __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component
+    __VUE_I18N_LEGACY_API__: true, // We use the legacy api, which is also vue-i18n's default
+    __INTLIFY_PROD_DEVTOOLS__: false,
   },
 })
