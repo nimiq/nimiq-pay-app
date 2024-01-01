@@ -5,6 +5,5 @@ export function useDevice() {
     isWeb: Capacitor.getPlatform() === 'web',
     isAndroid: Capacitor.getPlatform() === 'android',
     isIOS: Capacitor.getPlatform() === 'ios',
-    locale: navigator.language,
   }
 }

@@ -1,7 +1,10 @@
 import { useNow } from '@vueuse/core'
 import { ref } from 'vue'
-import { useDevice } from './useDevice'
+import { storeToRefs } from 'pinia'
+import { useApp } from '@/stores/app'
 import { toMs } from './useTime'
+
+const { language } = storeToRefs(useApp())
 
 type Unit = Intl.RelativeTimeFormatUnitSingular
 const DEFAULT_UNITS: { unit: Unit; max: number; value: number }[] = [
@@ -17,7 +20,7 @@ const DEFAULT_UNITS: { unit: Unit; max: number; value: number }[] = [
 export interface UseRelativeTimeOptions {
   /**
    * The locale to use when formatting the relative time.
-   * @default useDevice().locale
+   * @default storeToRefs(useApp()).language.value
    */
   locale?: string
 
@@ -27,7 +30,7 @@ export interface UseRelativeTimeOptions {
    */
   timestamp?: number
 }
-export function useRelativeTime({ timestamp: _timestamp = Date.now(), locale = useDevice().locale }: UseRelativeTimeOptions = {}) {
+export function useRelativeTime({ timestamp: _timestamp = Date.now(), locale = language.value }: UseRelativeTimeOptions = {}) {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
   const now = useNow()
 

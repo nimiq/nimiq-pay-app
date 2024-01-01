@@ -1,8 +1,6 @@
 import { type MaybeRef, toValue } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useDevice } from './useDevice'
-import type { Fiat } from '@/stores/app'
-import { Crypto, useApp } from '@/stores/app'
+import { Crypto, useApp, type Fiat } from '@/stores/app'
 
 export interface FormatFiatOptions {
   /**
@@ -36,8 +34,7 @@ export interface FormatCryptoOptions {
 }
 
 export function useCurrencyFormatter() {
-  const { locale: deviceLocale } = useDevice()
-  const { selectedFiat } = storeToRefs(useApp())
+  const { language, selectedFiat } = storeToRefs(useApp())
 
   const baseFormatterOptions = {
     style: 'currency',
@@ -46,7 +43,7 @@ export function useCurrencyFormatter() {
 
   function formatFiat(amount: number, options: FormatFiatOptions) {
     const currency = toValue(options.currency || selectedFiat)
-    const locale = toValue(options.locale || deviceLocale)
+    const locale = toValue(options.locale || language)
     const digitsOptions = options.short ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }
     const formatter = new Intl.NumberFormat(locale, { currency, ...baseFormatterOptions, ...digitsOptions })
     return `${options.isPayment ? '- ' : ''}${formatter.format(amount)}`
@@ -55,7 +52,7 @@ export function useCurrencyFormatter() {
   function formatCrypto(amountInLuna: number, options?: FormatCryptoOptions) {
     const currency = toValue(options?.currency || Crypto.NIM)
     const amountInNim = amountInLuna / 1e5 // Convert to NIM
-    const locale = toValue(options?.locale || deviceLocale)
+    const locale = toValue(options?.locale || language)
     return `${amountInNim.toLocaleString(locale, { maximumFractionDigits: 2 })} ${currency}`
   }
 
