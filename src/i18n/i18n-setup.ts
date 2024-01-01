@@ -7,6 +7,10 @@ import { useApp } from '@/stores/app'
 const DEFAULT_LANGUAGE = 'en'
 export const SUPPORTED_LANGUAGES = [DEFAULT_LANGUAGE] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
+export const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
+  en: 'English',
+};
+
 const loadedLanguages: SupportedLanguage[] = []
 
 // Note: additional config is applied at compile time in vite.config.ts, see
