@@ -1,4 +1,6 @@
 import { createI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
+import { useApp } from '@/stores/app'
 
 // import { setLanguage as setVueComponentsLanguage } from '@nimiq/vue3-components'
 
@@ -34,26 +36,16 @@ export async function setLanguage(lang: string): Promise<SupportedLanguage> {
     loadedLanguages.push(supportedLang)
   }
 
-  // TODO persist language change
-  // Cookie.setCookie('lang', lang, {
-  //   samesite: 'lax',
-  //   path: '/',
-  // })
+  const { language: storedLanguage } = storeToRefs(useApp())
+  storedLanguage.value = supportedLang;
   i18n.locale = supportedLang
   document.documentElement.setAttribute('lang', supportedLang)
   return supportedLang
 }
 
-// Return the persisted language. Fallback to the browser language
-export function detectLanguage(): SupportedLanguage {
-  const persistedLang = '' // Cookie.getCookie('lang') // TODO read persisted language
-  const fallbackLang = window.navigator.language.split('-')[0]
-
-  return isSupportedLanguage(persistedLang)
-    ? persistedLang
-    : isSupportedLanguage(fallbackLang)
-      ? fallbackLang
-      : DEFAULT_LANGUAGE
+export function guessUserLanguage(): SupportedLanguage {
+  const userLang = window.navigator.language.split('-')[0]
+  return isSupportedLanguage(userLang) ? userLang : DEFAULT_LANGUAGE
 }
 
 function isSupportedLanguage(lang: string): lang is SupportedLanguage {
@@ -62,9 +54,9 @@ function isSupportedLanguage(lang: string): lang is SupportedLanguage {
 
 // If the user changed the language in another window/tab then load and enable new language
 function onTabFocus() {
-  const lang = detectLanguage()
-  if (i18n.locale !== lang)
-    setLanguage(lang)
+  const { language: storedLanguage } = storeToRefs(useApp())
+  if (i18n.locale !== storedLanguage.value)
+    setLanguage(storedLanguage.value)
 }
 
 window.addEventListener('focus', onTabFocus)

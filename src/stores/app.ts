@@ -2,9 +2,9 @@ import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import type { StorageLikeAsync } from '@vueuse/core'
 import { computed, ref } from 'vue'
-import { usePoints } from './points'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
+import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
 
 export enum Fiat {
   USD = 'USD',
@@ -30,6 +30,7 @@ export const useApp = defineStore('app', () => {
   const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync<Fiat>('selectedFiat', Fiat.USD, kv(), sharedOptions)
+  const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
   const phoneNumberVerified = computed(() => !!pointsToken.value)
@@ -68,6 +69,7 @@ export const useApp = defineStore('app', () => {
     entropy,
     hasDoneBackup,
     selectedFiat,
+    language,
     pointsToken,
     setEntropy,
     withdrawalAddress,

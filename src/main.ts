@@ -3,10 +3,11 @@ import { IonicVue } from '@ionic/vue'
 
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
-import { createPinia } from 'pinia'
+import { createPinia, storeToRefs } from 'pinia'
+import { useApp } from '@/stores/app'
+import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import App from './App.vue'
 import router from './router'
-import { detectLanguage, i18nRegistration, setLanguage } from './i18n/i18n-setup'
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
@@ -36,14 +37,15 @@ import { useNimiqNetwork } from './stores/nimiq-network'
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
 
-// load and set the initial language
-setLanguage(detectLanguage())
-
 window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
   app.use(IonicVue)
   app.use(createPinia())
   app.use(i18nRegistration)
+
+  // load and set the initial language
+  const { language } = storeToRefs(useApp())
+  setLanguage(language.value)
 
   /**
    * Ensures that all the streams which the app relies on are initialized.
@@ -81,7 +83,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // This router navigation guard is to prevent switching to the new route before the language file finished loading.
   // If there are any routes which do not require translations, they can be skipped here.
   router.beforeResolve((to, from, next) => {
-    setLanguage(detectLanguage()).then(() => next())
+    setLanguage(language.value).then(() => next())
   })
 
   app.use(router)
