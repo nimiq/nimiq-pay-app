@@ -47,23 +47,28 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   // setDummyData is only used in development mode to test the scanner. In production, it will be a no-op function.
   let setDummyData = () => { }
   if (import.meta.env.DEV) {
-    setDummyData = () => onData({
-      [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
-      [QRDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
-      [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
-    }[expect])
+    setDummyData = () => {
+      const dummyData = {
+        [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
+        [QRDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
+        [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
+      }[expect]
+      parseString(dummyData)
+    }
   }
 
   async function parseString(raw: string) {
     const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
-    if (expect === QRDataFormat.NimiqAddress)
-      return getNimAddress(raw)
-    else if (expect === QRDataFormat.PaymentRequest)
-      return getPaymentRequestData(raw)
-    else if (expect === QRDataFormat.NimCashlink)
-      return getCashlink(raw)
-    else
-      return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined }
+    if (expect === QRDataFormat.NimiqAddress) { return getNimAddress(raw) }
+    else if (expect === QRDataFormat.PaymentRequest) {
+      const { data, error } = getPaymentRequestData(raw)
+      if (error || !data)
+        return { error, data: undefined }
+      onData(data)
+    }
+    else if (expect === QRDataFormat.NimCashlink) { return getCashlink(raw) }
+    else { return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined } }
+    return { error: undefined, data: undefined }
   }
 
   return {
@@ -135,11 +140,11 @@ function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
   async function startScan(_options: StartScannerOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
     await BarcodeScanner.addListener('barcodeScanned', useThrottleFn(async ({ barcode }) => {
+      // eslint-disable-next-line no-console
       console.log('barcodeScanned', barcode)
-      const { data, error } = await parseString(barcode.displayValue)
+      const { error } = await parseString(barcode.displayValue)
       if (error)
-        console.error(data.error)
-      return { data, error }
+        console.error(error)
     }, 1000))
     await BarcodeScanner.startScan()
   }

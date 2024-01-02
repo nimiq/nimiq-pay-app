@@ -33,7 +33,7 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
    * If the payment is valid, it will set the cashback amount
    */
   async function checkPointsPaymentValidity() {
-    if (useApp().pointsToken === undefined) {
+    if (!useApp().pointsToken) {
       pointsState.value = PointsState.NotRegistered
       return
     }

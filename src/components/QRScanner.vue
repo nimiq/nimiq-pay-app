@@ -33,7 +33,7 @@ onBeforeUnmount(stop)
 
 <template>
   <div v-if="isVisible" class="mt-8 px-0.5">
-    <button v-if="isDev && expect !== QRDataFormat.NimCashlink" class="z-10 block w-full mb-6 text-sm font-normal text-center underline text-space/80" @click="setDummyData">
+    <button v-if="isDev && expect !== QRDataFormat.NimCashlink" class="absolute z-10 block w-full mb-6 text-sm font-normal text-center underline -translate-x-1/2 left-1/2 text-space/80" @click="setDummyData">
       Click here to use mockup data
     </button>
 

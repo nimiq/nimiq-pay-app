@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
-import { type PropType, computed, ref, watchEffect } from 'vue'
+import { type PropType, computed, onMounted, ref, watchEffect } from 'vue'
 import { watchOnce } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import InfoIcon from '@/components/icons/info.vue'
@@ -13,7 +13,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePrice } from '@/composables/usePrice'
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true }, isVisible: { type: Boolean, required: true } })
 const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())
