@@ -15,6 +15,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
+import {useNimiqNetwork} from "@/stores/nimiq-network";
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
 
@@ -37,6 +38,7 @@ const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, redeemReferral } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
+const {consensus } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -312,7 +314,7 @@ onMounted(async () => {
         </Transition>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
-          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || remoteBalance === 0)"
+          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
           Pay
