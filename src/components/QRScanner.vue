@@ -32,7 +32,7 @@ onBeforeUnmount(stop)
 </script>
 
 <template>
-  <div v-if="isVisible" class="mt-8 px-0.5">
+  <div class="mt-8 px-0.5">
     <button v-if="isDev && expect !== QRDataFormat.NimCashlink" class="absolute z-10 block w-full mb-6 text-sm font-normal text-center underline -translate-x-1/2 left-1/2 text-space/80" @click="setDummyData">
       Click here to use mockup data
     </button>
@@ -43,9 +43,9 @@ onBeforeUnmount(stop)
         <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
       </svg>
     </div>
-    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid w-full place-content-center">
-      <div class="relative" style="--px: 96px; border: var(--px) solid white; border-top-width: calc(50vh - var(--px)); border-bottom-width: calc(50vh - var(--px));">
-        <div class="aspect-square" style="width: calc(100vw - var(--px));">
+    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center">
+      <div class="relative w-screen" style="--px: 48px; border: var(--px) solid white; border-top-width: calc(50vh - var(--px)); border-bottom-width: calc(50vh - var(--px));">
+        <div class="aspect-square">
           <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
