@@ -12,10 +12,10 @@ const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerch
 </script>
 
 <template>
-  <div v-if="tx" class="flex flex-col items-center justify-center gap-10 mt-8">
+  <div v-if="tx" class="flex flex-col items-center justify-center w-full gap-10 mt-8">
     <TransactionAmounts :tx="tx" />
 
-    <div v-if="showMap" class="grid w-[calc(100vw-16px)]  border rounded-md border-space/10">
+    <div v-if="showMap" class="grid w-[calc(100vw-18px)]  border rounded-md border-space/10">
       <!-- TODO Replace the box below this with the map -->
       <div class="bg-space/[0.06] grid place-content-center text-space font-bold font-mono h-60">
         🚧 Map Preview 🚧
