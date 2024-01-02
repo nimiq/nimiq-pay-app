@@ -120,9 +120,10 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
   title: 'Confirm your phone number',
   description: 'Enter the code from the SMS sent to',
-  main: h(CodeInput, { inputLength: 6 }),
-  beforeNext: async ({ phoneNumberConfirm }, { next, err }) => {
+  main: h(CodeInput, { inputLength: 6, backButtonText: 'Resend' }),
+  beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
     if (!phoneNumberConfirm) { err('Please enter a verification code') }
+    else if (phoneNumberConfirm === 'back') { prev() } // User clicked "Resend"
     else {
       const res = await (await import('@/stores/points')).usePoints().verify(phoneNumberConfirm)
       if (res && res.error)
