@@ -136,7 +136,7 @@ export function useSync() {
       await updateActiveWallet()
       await updateBalances()
 
-      await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
+      await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionsInDb()])
     })
 
     client.value?.addTransactionListener(async (tx) => {
