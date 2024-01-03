@@ -52,7 +52,7 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
     >
       <div class="sticky inset-x-0 h-10 pointer-events-none -top-0.5 bg-gradient-to-b from-white to-transparent via-white/80" />
       <ol v-bind="wrapperProps" ref="wrapperEl">
-        <li v-for="({ data: transaction, index }) in list" :key="index">
+        <li v-for="({ data: transaction }) in list" :key="transaction.hash" :data-hash="transaction.hash">
           <TransactionItem :tx="transaction" @click="$emit('select', transaction)" />
         </li>
       </ol>

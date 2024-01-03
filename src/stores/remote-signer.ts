@@ -177,6 +177,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     updateRemoteSigner,
     updateSignersTableBalance,
 
+    getAllRemoteSigners,
+
     init,
   }
 })
