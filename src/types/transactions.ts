@@ -34,6 +34,8 @@ export enum Rail {
   Bluecode = 'bluecode',
 }
 
+export const PointsHashPrefix = 'PointsPayment#'
+
 export enum ShopCategory {
   CarsBikes = 'cars_bikes',
   Cash = 'cash',
@@ -93,12 +95,12 @@ export type MerchantTransaction = BaseTransaction & {
 } & ({
   rail: Rail.CryptoPaymentLink | Rail.GoCrypto
   railPeerId: string
-  message: string
+  message?: string
 } | {
   // TODO Finish Bluecode
   rail: Rail.Bluecode
   railPeerId: undefined
-  message: undefined
+  message?: string
 })
 
 interface SyncTransactionBase {

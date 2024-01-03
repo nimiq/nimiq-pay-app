@@ -4,7 +4,7 @@ import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
 import { Transfer, isExternalTx } from '@/types/transactions'
-import type { ExternalTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -143,6 +143,11 @@ export const useTransactions = defineStore('transactions', () => {
       transactions.value = [tx, ...transactions.value]
   }
 
+  async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
+    await upsertTx(tx)
+    transactions.value = [tx, ...transactions.value]
+  }
+
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
     const tx = transactions.value.find(tx => tx.hash === hash)
@@ -165,6 +170,7 @@ export const useTransactions = defineStore('transactions', () => {
     transactions: readonly(transactions),
     sendTx,
     addReceiptTransaction,
+    addPaymentToMerchantTransaction,
     updateTransactionStatus,
     clearTxHistory,
 

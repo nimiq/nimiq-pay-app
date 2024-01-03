@@ -9,10 +9,12 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import type { UserReceiptTransaction } from '@/types/transactions'
-import { ShopCategory, Transfer } from '@/types/transactions'
+import { PointsHashPrefix, ShopCategory, Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import { SQLQuery } from '@/lib/sql-queries'
+import { usePoints } from '@/stores/points'
+import { useFirestoreApi } from '@/composables/useApi'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 // export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 10075
@@ -102,6 +104,7 @@ export function useSync() {
    * Updates the local and the remote wallet balances.
    */
   async function updateBalances() {
+    usePoints().updatePointsBalance()
     if (localAddress.value)
       localBalance.value = (await getAccount(localAddress.value)).data?.balance || 0
     else
@@ -223,14 +226,37 @@ export function useSync() {
       if (dbTx.status === Nimiq.Client.TransactionState.CONFIRMED)
         return
 
-      const tx = await client.value?.getTransaction(dbTx.hash)
-      if (!tx)
-        return
+      if (dbTx.hash.includes(PointsHashPrefix)) {
+        if (!dbTx.railPeerId) {
+          console.error('Reference not found', dbTx)
+          return
+        }
+        const { data, error } = await useFirestoreApi().getOrderById({ id: dbTx.railPeerId })
+        if (error) {
+          console.error(error)
+          return
+        }
 
-      // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
-      if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
-        console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
-        useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
+        const txStatus = data?.fields.status.stringValue as Nimiq.Client.TransactionState
+        if (!txStatus) {
+          console.error('No status from CPL API')
+          return
+        }
+        if (dbTx.status !== txStatus) {
+          console.log(`📬  Updating transaction ${dbTx.hash} ${txStatus}`)
+          useTransactions().updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
+        }
+      }
+      else {
+        const tx = await client.value?.getTransaction(dbTx.hash)
+        if (!tx)
+          return
+
+        // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
+        if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
+          console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
+          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
+        }
       }
     }))
   }

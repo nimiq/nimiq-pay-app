@@ -1,15 +1,17 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { type Ref, ref } from 'vue'
 import { useApp } from './app'
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { useToast } from '@/composables/useToast'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useTransactions } from '@/stores/transactions'
 import type { AsyncOption } from '@/types'
-import type { Rail } from '@/types/transactions'
+import { PointsHashPrefix, Rail, ShopCategory, Transfer } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
-  const { publicKey } = storeToRefs(useLocalWallet())
+  const { publicKey, localAddress } = storeToRefs(useLocalWallet())
   const { phoneNumber, pointsToken, referralCode } = storeToRefs(useApp())
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
@@ -153,15 +155,40 @@ export const usePoints = defineStore('points', () => {
     }, 750)
   }
 
-  async function payWithPoints({ rail, reference, recipient }: { rail: Rail; reference: string; recipient: string }) {
+  async function payWithPoints(request: PaymentRequestData) {
     if (!pointsToken.value)
       return { data: undefined, error: 'Phone number not verified' }
 
-    const { data, error } = await api.payWithPoints({ rail, reference, recipient, token: pointsToken.value })
-    if (error || !data)
+    const { rail, railPeerId, recipient, amount, fee, shopCategory, shopName, message } = request
+    const { error } = await api.payWithPoints({ rail: rail!, reference: railPeerId, recipient, token: pointsToken.value })
+    if (error)
       return { data: undefined, error }
 
+    // eslint-disable-next-line no-console
+    console.log(`📚 Upsert-ing points transaction`, request)
+    useTransactions().addPaymentToMerchantTransaction({
+      transfer: Transfer.UserPaymentToMerchant,
+      amount,
+      sender: localAddress.value.toUserFriendlyAddress(),
+      senderType: Nimiq.Account.Type.BASIC,
+      recipient,
+      recipientType: Nimiq.Account.Type.BASIC,
+      hash: `${PointsHashPrefix}${Date.now().toString()}${Math.random().toString()}`,
+      status: Nimiq.Client.TransactionState.PENDING,
+      timestamp: Math.ceil(Date.now() / 1000),
+      title: shopName || 'Points Payment',
+      message,
+      fee,
+      shopCategory: shopCategory || ShopCategory.Shop,
+      shopName: shopName || 'Shop',
+      proofSize: -1,
+      raw: JSON.stringify(request),
+      // Payments using points are only possible with CPL
+      rail: Rail.CryptoPaymentLink,
+      railPeerId: railPeerId!,
+    })
     await updatePointsBalance()
+    return { data: undefined, error: undefined }
   }
 
   return {

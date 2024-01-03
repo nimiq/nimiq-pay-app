@@ -224,7 +224,7 @@ export const paymentPreviewStep: StepInit = async () => {
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px: height: 40px', category }))
       titleCmp = `${iconInHTML} ${title}`
     },
-    beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next }) => {
+    beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next, err }) => {
       if (_request instanceof String)
         throw new Error(`Request is a string: ${_request}`)
       const request = _request as PaymentRequestData
@@ -234,16 +234,21 @@ export const paymentPreviewStep: StepInit = async () => {
 
       switch (method) {
         case PaymentMethod.NIM:
+          // TODO: handle error
           await (await import('@/stores/transactions')).useTransactions().sendTx({ ...request!, title: request?.shopName || 'Payment' })
           next()
           break
-        case PaymentMethod.Points:
+        case PaymentMethod.Points: {
           if (!request?.rail || !request?.railPeerId)
             throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
 
-          await (await import('@/stores/points')).usePoints().payWithPoints({ rail: request.rail!, reference: request.railPeerId, recipient: request.recipient })
-          next()
+          const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
+          if (error)
+            err(error)
+          else
+            next()
           break
+        }
       }
     },
   }

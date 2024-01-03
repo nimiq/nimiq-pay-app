@@ -169,7 +169,7 @@ export function useCurrencyPriceApi() {
 
 export function useFirestoreApi() {
   interface OrderByIdArg { id: MaybeRef<string> }
-  interface OrderByIdRes { fiat_currency_code: { stringValue: string }; fiat_price: { doubleValue: number }; item_description: { stringValue: string } }
+  interface OrderByIdRes { fields: { fiat_currency_code: { stringValue: string }; fiat_price: { doubleValue: number }; item_description: { stringValue: string }; status: { stringValue: string } } }
 
   return {
     getOrderById: ({ id }: OrderByIdArg) => api<OrderByIdRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, firestoreUrl)),

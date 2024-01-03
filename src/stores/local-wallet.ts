@@ -6,7 +6,7 @@ import type { AsyncResult, Result } from '@/types'
 export const useLocalWallet = defineStore('local-wallet', () => {
   const { entropyToMnemonic, mnemonicToExtendedPrivateKey, mnemonicToEntropy } = Nimiq.MnemonicUtils
 
-  const { entropy, hasDoneBackup } = storeToRefs(useApp())
+  const { entropy } = storeToRefs(useApp())
   const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
 
   const localAddress = computed(() => localWallet.value.address)
