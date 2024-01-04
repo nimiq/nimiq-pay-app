@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import type { PropType, Ref } from 'vue'
+import { type PropType, type Ref, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
-import type { QRData } from '@/composables/useQRScanner'
 import { useToast } from '@/composables/useToast'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { useDevice } from '@/composables/useDevice'
-import { QRScannerState, useQRScanner } from '@/composables/useQRScanner'
+import { type QRData, QRScannerState, useQRScanner } from '@/composables/useQRScanner'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },

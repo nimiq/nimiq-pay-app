@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watchEffect } from 'vue'
-import type { ComputedRef, PropType } from 'vue'
+import { type ComputedRef, type PropType, computed, nextTick, ref, watchEffect } from 'vue'
 import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
 import YouTubePlayer from 'youtube-player'
 import PlayerStates from 'youtube-player/dist/constants/PlayerStates'

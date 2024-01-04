@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
 import { chevronForward } from 'ionicons/icons'
-import type { Ref } from 'vue'
-import { computed, onMounted, ref, watch, watchEffect } from 'vue'
+import { type Ref, computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'

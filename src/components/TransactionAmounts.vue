@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import { computed, onMounted, toValue, useSlots } from 'vue'
+import { type PropType, computed, onMounted, toValue, useSlots } from 'vue'
 import type { ExternalTransaction } from '@/types/transactions'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { usePrice } from '@/composables/usePrice'

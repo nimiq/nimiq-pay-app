@@ -1,5 +1,4 @@
-import type { MaybeRef, Ref } from 'vue'
-import { computed, ref, toValue } from 'vue'
+import { type MaybeRef, type Ref, computed, ref, toValue } from 'vue'
 
 export interface UseCarouselOptions {
   columnGap?: number

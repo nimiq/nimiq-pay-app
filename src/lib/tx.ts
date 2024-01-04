@@ -4,8 +4,7 @@ import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { i18n } from '@/i18n/i18n-setup'
-import type { PartialSendTxArgs } from '@/types/transactions'
-import { Transfer } from '@/types/transactions'
+import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
 
 /**
  * Signs any transaction in the wallet.

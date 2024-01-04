@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { IonBackButton, IonButtons } from '@ionic/vue'
-import type { Ref } from 'vue'
-import { onMounted, ref } from 'vue'
+import { type Ref, onMounted, ref } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { storeToRefs } from 'pinia'
 import ModalTemplate from '@/components/ModalTemplate.vue'

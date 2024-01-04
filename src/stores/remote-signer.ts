@@ -5,8 +5,7 @@ import { useConn } from './conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { SQLQuery } from '@/lib/sql-queries'
-import type { RemoteSigner } from '@/lib/sql-queries'
+import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 
 export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined>(remoteSigners: T): T {
   if (!remoteSigners)

@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import { computed, ref, toRef, watch } from 'vue'
+import { type PropType, computed, ref, toRef, watch } from 'vue'
 import { IonButton, IonIcon, IonSpinner } from '@ionic/vue'
 import {
   SelectContent,
@@ -18,8 +17,7 @@ import {
 } from 'radix-vue'
 import { chevronForward } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import type { State } from '@/lib/flows/steps.types'
-import { StepName, stepEmits } from '@/lib/flows/steps.types'
+import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import AmountInput from '@/components/AmountInput.vue'

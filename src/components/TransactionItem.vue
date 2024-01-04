@@ -3,8 +3,7 @@ import type { PropType } from 'vue'
 import { IonRippleEffect } from '@ionic/vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { isPaymentTx } from '@/types/transactions'
-import type { ExternalTransaction } from '@/types/transactions'
+import { type ExternalTransaction, isPaymentTx } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({

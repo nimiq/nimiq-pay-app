@@ -3,8 +3,7 @@ import { modalController } from '@ionic/vue'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { getNotifiedStep, nimAddressDisplay, nimAddressInputStep, nimWithdrawalSelectionStep, onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3, onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4, onBoardingPoints, paymentPreviewStep, phoneNumberConfirmStep, phoneNumberStep, pinCodeConfirmStep, pinCodeStep, promoCodeStep, qrCodeScannerStep, recoveryWordsStep, transactionDetail, transactionList } from './steps'
 import { Modal, useModal } from '@/composables/useModal'
-import type { Flow, FlowInit, State } from '@/lib/flows/steps.types'
-import { FlowName, inputSteps } from '@/lib/flows/steps.types'
+import { type Flow, type FlowInit, FlowName, type State, inputSteps } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 

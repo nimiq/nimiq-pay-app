@@ -30,7 +30,7 @@ msgstr ""
 msgid "All transactions"
 msgstr ""
 
-#: src/views/HomeView.vue:58
+#: src/views/HomeView.vue:57
 msgid "Alpha Testing"
 msgstr ""
 
@@ -42,7 +42,7 @@ msgstr ""
 msgid "Back up account"
 msgstr ""
 
-#: src/modals/BackupModal/ValidateWords.vue:72
+#: src/modals/BackupModal/ValidateWords.vue:71
 msgid "Back up successful"
 msgstr ""
 
@@ -54,7 +54,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/steps.ts:206
+#: src/lib/flows/steps.ts:202
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr ""
 
@@ -66,7 +66,7 @@ msgstr ""
 msgid "Bring a friend and get {amount} Points each!"
 msgstr ""
 
-#: src/views/HomeView.vue:63
+#: src/views/HomeView.vue:62
 msgid "Buy NIM with Credit Card"
 msgstr ""
 
@@ -74,7 +74,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:80
+#: src/composables/useQRScanner.ts:79
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -86,7 +86,7 @@ msgstr ""
 msgid "CC Points added"
 msgstr ""
 
-#: src/lib/flows/steps.ts:65
+#: src/lib/flows/steps.ts:61
 msgid "Choose a PIN"
 msgstr ""
 
@@ -103,11 +103,11 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: src/lib/flows/steps.ts:142
+#: src/lib/flows/steps.ts:138
 msgid "Confirm your phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:83
+#: src/lib/flows/steps.ts:79
 msgid "Confirm your PIN"
 msgstr ""
 
@@ -136,7 +136,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:314
+#: src/lib/flows/steps.ts:310
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -148,7 +148,7 @@ msgstr ""
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
-#: src/lib/flows/steps.ts:213
+#: src/lib/flows/steps.ts:209
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
@@ -160,7 +160,7 @@ msgstr ""
 msgid "Crypto City Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:179
+#: src/lib/flows/steps.ts:175
 msgid "Crypto City Points (or CC Points) are a bonus currency worth the same as NIM."
 msgstr ""
 
@@ -178,7 +178,7 @@ msgid "Earn Points"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:6
-#: src/lib/flows/steps.ts:165
+#: src/lib/flows/steps.ts:161
 msgid "Enable notifications"
 msgstr ""
 
@@ -190,35 +190,35 @@ msgstr ""
 msgid "Enter PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:51
+#: src/lib/flows/steps.ts:47
 msgid "Enter recovery words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:143
+#: src/lib/flows/steps.ts:139
 msgid "Enter the code from the SMS sent to"
 msgstr ""
 
-#: src/lib/flows/steps.ts:34
+#: src/lib/flows/steps.ts:30
 msgid "Enter your promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:35
+#: src/lib/flows/steps.ts:31
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useApi.ts:21
+#: src/composables/useApi.ts:20
 msgid "Error {method} {url}: {error}"
 msgstr ""
 
-#: src/lib/flows/steps.ts:134
+#: src/lib/flows/steps.ts:130
 msgid "Error authorizing phone number"
 msgstr ""
 
-#: src/composables/useApi.ts:32
+#: src/composables/useApi.ts:31
 msgid "Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}"
 msgstr ""
 
-#: src/lib/flows/steps.ts:156
+#: src/lib/flows/steps.ts:152
 msgid "Error verifying phone number"
 msgstr ""
 
@@ -238,24 +238,24 @@ msgstr ""
 msgid "Find places that accept crypto!"
 msgstr ""
 
-#: src/lib/flows/steps.ts:199
+#: src/lib/flows/steps.ts:195
 msgid "Find places to pay with and earn CC Points"
 msgstr ""
 
-#: src/views/HomeView.vue:128
+#: src/views/HomeView.vue:127
 msgid "Get cashback and earn rewards"
 msgstr ""
 
-#: src/lib/flows/steps.ts:192
+#: src/lib/flows/steps.ts:188
 msgid "Get CC Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:193
-#: src/lib/flows/steps.ts:220
+#: src/lib/flows/steps.ts:189
+#: src/lib/flows/steps.ts:216
 msgid "Get CC Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
-#: src/lib/flows/steps.ts:166
+#: src/lib/flows/steps.ts:162
 msgid "Get important info on transactions, top ups, security and more."
 msgstr ""
 
@@ -306,7 +306,7 @@ msgid "Invalid Crypto Payment Link. Missing cpl_id."
 msgstr ""
 
 #: src/composables/useStringParser.ts:20
-#: src/lib/flows/steps.ts:325
+#: src/lib/flows/steps.ts:321
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -314,7 +314,7 @@ msgstr ""
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:129
+#: src/lib/flows/steps.ts:125
 msgid "Invalid phone number"
 msgstr ""
 
@@ -323,7 +323,7 @@ msgstr ""
 msgid "Invalid PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:75
+#: src/lib/flows/steps.ts:71
 msgid "Invalid PIN code"
 msgstr ""
 
@@ -339,7 +339,7 @@ msgstr ""
 msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
 msgstr ""
 
-#: src/lib/tx.ts:124
+#: src/lib/tx.ts:123
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -420,7 +420,7 @@ msgstr ""
 msgid "No referral code set"
 msgstr ""
 
-#: src/composables/useApi.ts:145
+#: src/composables/useApi.ts:144
 msgid "No remote signer found"
 msgstr ""
 
@@ -432,7 +432,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/components/NimWithdraw.vue:81
+#: src/components/NimWithdraw.vue:79
 msgid "Not enough funds"
 msgstr ""
 
@@ -450,15 +450,15 @@ msgstr ""
 msgid "Pay"
 msgstr ""
 
-#: src/lib/flows/steps.ts:212
+#: src/lib/flows/steps.ts:208
 msgid "Pay with Bluecode"
 msgstr ""
 
-#: src/lib/flows/steps.ts:185
+#: src/lib/flows/steps.ts:181
 msgid "Pay with CC Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:186
+#: src/lib/flows/steps.ts:182
 msgid "Pay with CC Points instead of NIM wherever they're accepted."
 msgstr ""
 
@@ -470,18 +470,18 @@ msgstr ""
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/lib/flows/steps.ts:267
+#: src/lib/flows/steps.ts:263
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:87
+#: src/composables/useApi.ts:86
 msgid "Payment not valid"
 msgstr ""
 
 #. Fall back
-#: src/lib/flows/steps.ts:243
-#: src/lib/flows/steps.ts:251
-#: src/lib/flows/steps.ts:349
+#: src/lib/flows/steps.ts:239
+#: src/lib/flows/steps.ts:247
+#: src/lib/flows/steps.ts:345
 msgid "Payment preview"
 msgstr ""
 
@@ -495,27 +495,27 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/steps.ts:92
+#: src/lib/flows/steps.ts:88
 msgid "PIN did not match"
 msgstr ""
 
-#: src/lib/flows/steps.ts:88
+#: src/lib/flows/steps.ts:84
 msgid "Please confirm your PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:126
+#: src/lib/flows/steps.ts:122
 msgid "Please enter a phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:70
+#: src/lib/flows/steps.ts:66
 msgid "Please enter a PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:39
+#: src/lib/flows/steps.ts:35
 msgid "Please enter a promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:147
+#: src/lib/flows/steps.ts:143
 msgid "Please enter a verification code"
 msgstr ""
 
@@ -527,8 +527,8 @@ msgstr ""
 msgid "Points Payment"
 msgstr ""
 
-#: src/lib/flows/steps.ts:66
-#: src/lib/flows/steps.ts:84
+#: src/lib/flows/steps.ts:62
+#: src/lib/flows/steps.ts:80
 msgid "Protect your NIM Pay app with a pin."
 msgstr ""
 
@@ -536,12 +536,12 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
-#: src/lib/tx.ts:135
-#: src/lib/tx.ts:27
+#: src/lib/tx.ts:134
+#: src/lib/tx.ts:26
 msgid "Remote address is undefined"
 msgstr ""
 
-#: src/lib/flows/steps.ts:144
+#: src/lib/flows/steps.ts:140
 msgid "Resend"
 msgstr ""
 
@@ -557,7 +557,7 @@ msgstr ""
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:228
+#: src/lib/flows/steps.ts:224
 msgid "Scan QR code"
 msgstr ""
 
@@ -577,15 +577,15 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:336
+#: src/lib/flows/steps.ts:332
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:313
+#: src/lib/flows/steps.ts:309
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:335
+#: src/lib/flows/steps.ts:331
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -615,7 +615,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/composables/useApi.ts:138
+#: src/composables/useApi.ts:137
 msgid "Status not good"
 msgstr ""
 
@@ -635,7 +635,7 @@ msgstr ""
 msgid "The entropy is not defined"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:135
+#: src/composables/useQRScanner.ts:134
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
@@ -647,7 +647,7 @@ msgstr ""
 msgid "There is no \"Forgot password\""
 msgstr ""
 
-#: src/lib/tx.ts:59
+#: src/lib/tx.ts:58
 msgid "There is no active HTLC"
 msgstr ""
 
@@ -655,13 +655,13 @@ msgstr ""
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
-#: src/lib/tx.ts:62
+#: src/lib/tx.ts:61
 msgid "There is no sender address provided. Sender: {sender}"
 msgstr ""
 
 #: src/composables/useDecrypt.ts:75
 #: src/composables/useDecrypt.ts:79
-#: src/lib/flows/steps.ts:111
+#: src/lib/flows/steps.ts:107
 msgid "There was an error"
 msgstr ""
 
@@ -669,11 +669,11 @@ msgstr ""
 msgid "These Points are made for spending. Get out there and drive crypto adoption."
 msgstr ""
 
-#: src/views/HomeView.vue:59
+#: src/views/HomeView.vue:58
 msgid "This is in alpha, please report any bugs and remember to use only TestNIM"
 msgstr ""
 
-#: src/composables/usePointsPayment.ts:44
+#: src/composables/usePointsPayment.ts:43
 msgid "This payment is not eligible for CC Points."
 msgstr ""
 
@@ -681,7 +681,7 @@ msgstr ""
 msgid "This promo code has been claimed too many times"
 msgstr ""
 
-#: src/composables/usePointsPayment.ts:69
+#: src/composables/usePointsPayment.ts:68
 msgid "This purchase gets you {amount} in Points."
 msgstr ""
 
@@ -689,18 +689,18 @@ msgstr ""
 msgid "To credit card / bank account"
 msgstr ""
 
-#: src/composables/useSync.ts:173
-#: src/composables/useSync.ts:208
+#: src/composables/useSync.ts:171
+#: src/composables/useSync.ts:206
 #: src/modals/MenuModal.vue:14
 #: src/views/HomeView.vue:46
 msgid "Top Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:356
+#: src/lib/flows/steps.ts:352
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:88
+#: src/stores/transactions.ts:86
 msgid "Transaction was invalidated"
 msgstr ""
 
@@ -720,12 +720,12 @@ msgstr ""
 msgid "Verify"
 msgstr ""
 
-#: src/lib/flows/steps.ts:219
+#: src/lib/flows/steps.ts:215
 msgid "Verify your ID"
 msgstr ""
 
-#: src/lib/flows/steps.ts:120
-#: src/views/HomeView.vue:127
+#: src/lib/flows/steps.ts:116
+#: src/views/HomeView.vue:126
 msgid "Verify your phone number"
 msgstr ""
 
@@ -737,15 +737,15 @@ msgstr ""
 msgid "Welcome to Crypto City Points"
 msgstr ""
 
-#: src/views/HomeView.vue:53
+#: src/views/HomeView.vue:52
 msgid "Welcome to Nimiq"
 msgstr ""
 
-#: src/lib/flows/steps.ts:205
+#: src/lib/flows/steps.ts:201
 msgid "What's Bluecode?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:178
+#: src/lib/flows/steps.ts:174
 msgid "What's Crypto City Points?"
 msgstr ""
 
@@ -753,12 +753,12 @@ msgstr ""
 msgid "What's the {index}th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:289
+#: src/lib/flows/steps.ts:285
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
 
-#: src/lib/flows/steps.ts:302
+#: src/lib/flows/steps.ts:298
 msgid "Withdrawal"
 msgstr ""
 
@@ -768,7 +768,7 @@ msgid ""
 "Keep it safe and never share it!"
 msgstr ""
 
-#: src/modals/BackupModal/ValidateWords.vue:65
+#: src/modals/BackupModal/ValidateWords.vue:64
 msgid "Wrong word!"
 msgstr ""
 
@@ -780,7 +780,7 @@ msgstr ""
 msgid "You can't pay with Points for this purchase."
 msgstr ""
 
-#: src/composables/usePointsPayment.ts:57
+#: src/composables/usePointsPayment.ts:56
 msgid "You don't have enough CC Points for this purchase."
 msgstr ""
 
@@ -788,7 +788,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:296
+#: src/lib/flows/steps.ts:292
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
@@ -800,15 +800,15 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/modals/TaskModal.vue:107
+#: src/modals/TaskModal.vue:106
 msgid "You got CC Points"
 msgstr ""
 
-#: src/views/HomeView.vue:132
+#: src/views/HomeView.vue:131
 msgid "You have 5€ reward to claim!"
 msgstr ""
 
-#: src/lib/flows/steps.ts:121
+#: src/lib/flows/steps.ts:117
 msgid "You will receive a SMS with a verification code"
 msgstr ""
 
@@ -820,6 +820,6 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/views/HomeView.vue:54
+#: src/views/HomeView.vue:53
 msgid "Your wallet is ready to use"
 msgstr ""

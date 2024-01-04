@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
-import type { PropType } from 'vue'
+import { type PropType, computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
 import { useIntersectionObserver, useWindowSize } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'

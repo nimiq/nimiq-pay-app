@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
-import type { PropType, Ref } from 'vue'
+import { type PropType, type Ref, ref, watchEffect } from 'vue'
 
 defineProps({
   recoveryWords: {

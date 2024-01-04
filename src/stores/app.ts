@@ -1,6 +1,5 @@
-import { useStorageAsync } from '@vueuse/core'
+import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import type { StorageLikeAsync } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'

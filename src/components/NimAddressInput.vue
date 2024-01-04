@@ -1,10 +1,8 @@
 <script setup lang="ts">
-import type { PropType } from 'vue'
-import { ref, toRefs, watch } from 'vue'
+import { type PropType, ref, toRefs, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import type { State } from '@/lib/flows/steps.types'
-import { stepEmits } from '@/lib/flows/steps.types'
+import { type State, stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import AddressInput from '@/components/AddressInput.vue'
 import QRIcon from '@/components/icons/qr.vue'

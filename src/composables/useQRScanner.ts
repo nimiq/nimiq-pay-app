@@ -1,6 +1,5 @@
 import type { scan as Scan } from 'qr-scanner-wechat'
-import type { Ref } from 'vue'
-import { ref } from 'vue'
+import { type Ref, ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import { useDevice } from './useDevice'
 import { QRDataFormat, useStringParser } from './useStringParser'

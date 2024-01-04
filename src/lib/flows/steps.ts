@@ -1,13 +1,9 @@
-import type { Ref, VNode } from 'vue'
-import { defineAsyncComponent, h, ref } from 'vue'
+import { type Ref, type VNode, defineAsyncComponent, h, ref } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { QRDataFormat } from '../../composables/useStringParser'
-import type { PaymentRequestData, StepInit } from '@/lib/flows/steps.types'
-import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-
-import type { ExternalTransaction } from '@/types/transactions'
-import { Transfer } from '@/types/transactions'
+import { type ExternalTransaction, Transfer } from '@/types/transactions'
 import { PaymentMethod } from '@/types/database'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode

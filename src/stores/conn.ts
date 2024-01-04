@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
-import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
+import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
 import { computed, ref, watchEffect } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
