@@ -5,8 +5,11 @@ import { useThrottleFn } from '@vueuse/core'
 import { useDevice } from './useDevice'
 import { QRDataFormat, useStringParser } from './useStringParser'
 import { useCameraFeed } from './useCameraFeed'
+import { useToast } from './useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 export enum QRScannerState {
   Idle = 'idle',
@@ -66,7 +69,15 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
         return { error, data: undefined }
       onData(data)
     }
-    else if (expect === QRDataFormat.NimCashlink) { return getCashlink(raw) }
+    else if (expect === QRDataFormat.NimCashlink) {
+      const { data, error } = getCashlink(raw)
+      if (error || !data)
+        return { error, data: undefined }
+      // TODO: move this to step
+      await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
+      useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
+      onData('')
+    }
     // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
     else { return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined } }
   }
@@ -143,6 +154,7 @@ function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
       // eslint-disable-next-line no-console
       console.log('barcodeScanned', barcode)
       const { error } = await parseString(barcode.displayValue)
+      // TODO: show error to user
       if (error)
         console.error(error)
     }, 1000))

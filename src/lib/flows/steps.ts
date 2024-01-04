@@ -206,6 +206,8 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
     beforeNext: async (_, { next, prev }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest)
         next()
+      else if (options?.props?.expect === QRDataFormat.NimCashlink)
+        next()
       else // For Top Up and Withdrawal, we go back to the previous step
         prev()
     },

@@ -1,5 +1,5 @@
 import { ValidationUtils } from '@nimiq/utils'
-import { nimCashlinkRegex } from '../lib'
+import { nimCashlinkRegex } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'

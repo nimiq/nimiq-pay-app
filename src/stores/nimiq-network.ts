@@ -4,6 +4,7 @@ import { until } from '@vueuse/core'
 import type { AsyncResult } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { isDev } from '@/lib'
 
 const { setToast, clearToast } = useToast()
 
@@ -15,12 +16,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const peerCount = ref(0)
 
   async function init() {
-    // TODO: use mainnet in production
-    // import.meta.env.DEV
-    // ? Nimiq.GenesisConfig.test()
-    // : Nimiq.GenesisConfig.main()
-
-    Nimiq.GenesisConfig.test()
+    isDev
+      ? Nimiq.GenesisConfig.test()
+      : Nimiq.GenesisConfig.main()
 
     await Nimiq.WasmHelper.doImport()
     client.value = Nimiq.Client.Configuration.builder().instantiateClient()
@@ -73,6 +71,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       0,
       height.value,
     )
+    // eslint-disable-next-line no-console
+    console.log('Claiming Cashlink', tx.toPlain())
     await client.value!.sendTransaction(tx)
   }
 
