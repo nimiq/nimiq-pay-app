@@ -7,7 +7,7 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
-export enum PriceStatus {
+enum PriceStatus {
   Initial = 'initial',
   Loading = 'loading',
   Error = 'error',
@@ -155,7 +155,10 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     watch(height, getFiatPrice)
 
   // Update if the fiat changes
-  watch(selectedFiat, () => { priceDb.value = 0; getFiatPrice() })
+  watch(selectedFiat, () => {
+    priceDb.value = 0
+    getFiatPrice()
+  })
 
   onMounted(() => {
     if (immediate)

@@ -62,7 +62,9 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
 
   async function parseString(raw: string) {
     const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
-    if (expect === QRDataFormat.NimiqAddress) { return getNimAddress(raw) }
+    if (expect === QRDataFormat.NimiqAddress) {
+      return getNimAddress(raw)
+    }
     else if (expect === QRDataFormat.PaymentRequest) {
       const { data, error } = getPaymentRequestData(raw)
       if (error || !data)

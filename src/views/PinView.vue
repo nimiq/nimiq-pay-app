@@ -26,6 +26,7 @@ async function handleSubmit() {
 
   const error = await decrypt(pin.value)
   if (error) {
+    // eslint-disable-next-line no-alert
     alert(error) // TODO: Provide in-app feedback
     pin.value = ''
     return

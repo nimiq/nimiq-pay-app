@@ -4,5 +4,5 @@ export as namespace Nimiq;
 export = _Nimiq
 
 declare global {
-  var Nimiq: typeof _Nimiq
+  const Nimiq: typeof _Nimiq
 }

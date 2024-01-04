@@ -20,7 +20,12 @@ export const useConn = defineStore('conn', () => {
   // Once the db is unlocked, this function is resolved and all the waiting promises are resolved.
   let resolveUnlockDb: () => void
   // The promise that resolves when the db is unlocked. When resolved, it sets locked to false.
-  const unlockPromise = new Promise<void>((resolve) => { resolveUnlockDb = () => { locked.value = false; resolve() } })
+  const unlockPromise = new Promise<void>((resolve) => {
+    resolveUnlockDb = () => {
+      locked.value = false
+      resolve()
+    }
+  })
   // If the db is locked, it will return the promise that resolves when the db is unlocked.
   async function waitForUnlock(): AsyncOption<string> {
     if (locked.value)

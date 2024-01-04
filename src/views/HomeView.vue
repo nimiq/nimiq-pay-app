@@ -57,7 +57,7 @@ const notificationArray = ref([
   {
     get title() { return i18n.t('Alpha Testing') },
     get subtitle() { return i18n.t('This is in alpha, please report any bugs and remember to use only TestNIM') },
-    action: () => console.log('Notification Card 2 clicked'),
+    action: () => console.log('Notification Card 2 clicked'), // eslint-disable-line no-console
   },
   {
     get title() { return i18n.t('Buy NIM with Credit Card') },
@@ -255,7 +255,7 @@ onMounted(async () => {
             <li v-for="(notification, index) in notificationArray" :key="notification.title" class="h-full">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
-                <template #subtitle>
+                <template v-if="notification.subtitle" #subtitle>
                   {{ notification.subtitle }}
                 </template>
               </NotificationCard>

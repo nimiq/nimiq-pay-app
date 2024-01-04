@@ -19,8 +19,7 @@ import { Transfer } from '@/types/transactions'
  *  - Sync: Any other transaction that is needed to keep the HTLC alive. See the Transfer enum
  *    for more information.
  *
- * @param args
- * @returns
+ * @param partialArgs
  */
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {

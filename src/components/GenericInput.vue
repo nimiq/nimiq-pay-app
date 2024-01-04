@@ -23,7 +23,9 @@ watch(referralCode, async (newValue) => {
 
       const { reward, claims_remaining } = data
 
-      if (claims_remaining === 0) { throw new Error(i18n.t('This promo code has been claimed too many times')) }
+      if (claims_remaining === 0) {
+        throw new Error(i18n.t('This promo code has been claimed too many times'))
+      }
       else if (claims_remaining > 0) {
         codeField.value.blur()
         rewardAmount.value = reward

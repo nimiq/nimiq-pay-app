@@ -14,20 +14,20 @@ export enum TransactionType {
   ExtendRemote = 'extend-remote',
 }
 
-export enum WalletType {
-  Unknown = 'unknown',
-  Raw = 'raw',
-  Instant = 'instant',
-  Bonus = 'bonus',
-}
+// export enum WalletType {
+//   Unknown = 'unknown',
+//   Raw = 'raw',
+//   Instant = 'instant',
+//   Bonus = 'bonus',
+// }
 
-export enum WalletStatus {
-  Unknown = 'unknown',
-  Pending = 'pending',
-  Active = 'active',
-  Expired = 'expired',
-  Emptied = 'emptied',
-}
+// export enum WalletStatus {
+//   Unknown = 'unknown',
+//   Pending = 'pending',
+//   Active = 'active',
+//   Expired = 'expired',
+//   Emptied = 'emptied',
+// }
 
 export interface Kv {
   'pin': string // Only used in Web

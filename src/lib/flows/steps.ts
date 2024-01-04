@@ -35,7 +35,9 @@ export const promoCodeStep: StepInit = async () => ({
   get description() { return i18n.t('Enter your referral promo code.') },
   main: GenericInput,
   beforeNext: async ({ promoCode }, { next, err }) => {
-    if (!promoCode) { err(i18n.t('Please enter a promo code')) }
+    if (!promoCode) {
+      err(i18n.t('Please enter a promo code'))
+    }
     else {
       const { setReferralCode } = (await import('@/stores/app')).useApp()
       setReferralCode(promoCode)
@@ -64,10 +66,12 @@ export const pinCodeStep: StepInit = async () => ({
   get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
-    if (!pinCode) { err(i18n.t('Please enter a PIN code')) }
+    if (!pinCode) {
+      err(i18n.t('Please enter a PIN code'))
+    }
     else if (!PIN_CODE_REGEX.test(pinCode)) {
       if (import.meta.env.DEV)
-        debugger
+        debugger // eslint-disable-line no-debugger,no-restricted-syntax
       err(i18n.t('Invalid PIN code'))
     }
     else { next() }
@@ -80,8 +84,14 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
-    if (!pinCodeConfirm) { err(i18n.t('Please confirm your PIN code')); return }
-    else if (pinCodeConfirm !== pinCode) { err(i18n.t('PIN did not match')); return }
+    if (!pinCodeConfirm) {
+      err(i18n.t('Please confirm your PIN code'))
+      return
+    }
+    else if (pinCodeConfirm !== pinCode) {
+      err(i18n.t('PIN did not match'))
+      return
+    }
 
     // Nuke everything in case there was a previous encryption db
     const { isWeb } = (await import('@/composables/useDevice')).useDevice()
@@ -93,8 +103,14 @@ export const pinCodeConfirmStep: StepInit = async () => ({
 
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)
-    if (decryptError) { err(decryptError); return }
-    if (!decrypted) { err(i18n.t('There was an error')); return }
+    if (decryptError) {
+      err(decryptError)
+      return
+    }
+    if (!decrypted) {
+      err(i18n.t('There was an error'))
+      return
+    }
     next()
   },
 })
@@ -106,8 +122,12 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
   main: h(PhoneInput, { canSkip: !!stepsToSkip }),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
-    if (!phoneNumber) { err(i18n.t('Please enter a phone number')) }
-    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) { err(i18n.t('Invalid phone number')) }
+    if (!phoneNumber) {
+      err(i18n.t('Please enter a phone number'))
+    }
+    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) {
+      err(i18n.t('Invalid phone number'))
+    }
     else {
       const res = await (await import('@/stores/points')).usePoints().authorize(phoneNumber)
       if (res && res.error)
@@ -123,8 +143,13 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   get description() { return i18n.t('Enter the code from the SMS sent to') },
   main: h(CodeInput, { inputLength: 6, backButtonText: i18n.t('Resend') }),
   beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
-    if (!phoneNumberConfirm) { err(i18n.t('Please enter a verification code')) }
-    else if (phoneNumberConfirm === 'back') { prev() } // User clicked "Resend"
+    if (!phoneNumberConfirm) {
+      err(i18n.t('Please enter a verification code'))
+    }
+    else if (phoneNumberConfirm === 'back') {
+      // User clicked "Resend"
+      prev()
+    }
     else {
       const res = await (await import('@/stores/points')).usePoints().verify(phoneNumberConfirm)
       if (res && res.error)
@@ -185,7 +210,7 @@ export const onBoardingBluecode1: StepInit = async () => ({
 export const onBoardingBluecode2: StepInit = async () => ({
   step: StepName.OnBoardingBluecode2,
   get title() { return i18n.t('Pay with Bluecode') },
-  get description() { return i18n.t('Create a Bluecode Barcode and show it at the cashier to pay. ') },
+  get description() { return i18n.t('Create a Bluecode Barcode and show it at the cashier to pay.') },
   main: OnBoardingScreen,
 })
 

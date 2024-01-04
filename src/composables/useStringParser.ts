@@ -34,8 +34,12 @@ export function useStringParser() {
   // TODO Bluecode
   function getPaymentRequestData(content: string): Result<PaymentRequestData> {
     let url: URL
-    try { url = new URL(content) }
-    catch (e) { return { error: i18n.t('Invalid URL: {url}', { url: content }), data: undefined } }
+    try {
+      url = new URL(content)
+    }
+    catch (e) {
+      return { error: i18n.t('Invalid URL: {url}', { url: content }), data: undefined }
+    }
 
     const rail = getRailFromUrl(url)
     if (rail === Rail.CryptoPaymentLink)

@@ -28,7 +28,6 @@ const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 const activeStep = computed(() => stepsInFlow[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
-const step = computed(() => stepsInFlow[activeIndex.value])
 
 const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
 
@@ -52,13 +51,15 @@ const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.
 onMounted(async () => shouldAutofocus.value && focus())
 
 async function onStepDone(value: OnDoneStepValue) {
-  if (isActiveStepInfo.value) { goToNext() }
+  if (isActiveStepInfo.value) {
+    goToNext()
+  }
   else if (isActiveStepInput.value) {
     // @ts-expect-error If the emit value is well typed, this should work
-    state[step.value.step as InputStepName] = value
-    const err = (errorMsg: string) => errors.value![step.value.step as InputStepName] = errorMsg
-    if (step.value.beforeNext)
-      await step.value.beforeNext?.(state, { next: goToNext, err, prev: prevSlide })
+    state[activeStep.value.step as InputStepName] = value
+    const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
+    if (activeStep.value.beforeNext)
+      await activeStep.value.beforeNext?.(state, { next: goToNext, err, prev: prevSlide })
     else
       goToNext()
   }

@@ -50,7 +50,7 @@ function useCameraFeedMobile(cameraFeedContainer: Ref<HTMLElement>) {
   async function tearDownCameraFeed() {
     const { mainView, dialog, backdrop } = await domElements()
     if (!mainView || !dialog || !backdrop)
-      console.error('There is an element missing', { mainView, dialog, backdrop }) // no translation as not user-facing
+      console.error('There is an element missing', { mainView, dialog, backdrop })
 
     mainView?.style.removeProperty('display')
     backdrop?.style.removeProperty('display')
@@ -89,7 +89,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
 
     video.srcObject = stream
     video.play()
-    console.log('video', video)
+    console.log('video', video) // eslint-disable-line no-console
     return video
   }
 

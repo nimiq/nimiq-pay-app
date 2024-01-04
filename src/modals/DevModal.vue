@@ -45,6 +45,7 @@ async function handleClearTx() {
 
 async function getAllHtlcs() {
   const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
+  // eslint-disable-next-line no-console
   console.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
   const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
   htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
@@ -60,14 +61,18 @@ onMounted(async () => {
   getAllHtlcs()
 
   const remoteSignerTable = await query('SELECT * FROM remote_signers')
+  // eslint-disable-next-line no-console
   console.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
   const activeSigner = await query('SELECT * FROM remote_signers WHERE active = 1')
+  // eslint-disable-next-line no-console
   console.log('Active Signer', activeSigner)
 
   const transacions = await query('SELECT * FROM transactions')
+  // eslint-disable-next-line no-console
   console.log('Transactions from DB', transacions)
 
   const priceTable = await query('SELECT * FROM prices')
+  // eslint-disable-next-line no-console
   console.log('Price table', priceTable)
 
   client.value?.addTransactionListener(async (tx) => {

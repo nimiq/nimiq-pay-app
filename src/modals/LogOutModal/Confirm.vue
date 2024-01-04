@@ -17,6 +17,7 @@ const { localBalance } = storeToRefs(useLocalWallet())
 const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
+  // eslint-disable-next-line no-console
   console.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin

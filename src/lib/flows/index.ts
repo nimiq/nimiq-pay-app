@@ -44,7 +44,9 @@ const setupFlow: FlowInit = async ({ closeFn }) => ({
     goTo('/app')
     closeFn()
     const { phoneNumberVerified } = await (await import('@/stores/app')).useApp()
-    if (phoneNumberVerified) { useModal().showModal(Modal.Points) }
+    if (phoneNumberVerified) {
+      useModal().showModal(Modal.Points)
+    }
     else {
       await useModal().closeModal()
       initializeFlow(FlowName.VerifyPhone)
@@ -76,8 +78,11 @@ const onBoardingPointsFlow: FlowInit = async () => ({
   state: emptyState(),
   steps: await Promise.all([onBoardingPoints()]),
   onDone: async () => {
-    const { phoneNumberVerified } = await (await import('@/stores/app')).useApp()
-    if (phoneNumberVerified) { useModal().showModal(Modal.Points) }
+    const store = await import('@/stores/app')
+    const { phoneNumberVerified } = store.useApp()
+    if (phoneNumberVerified) {
+      useModal().showModal(Modal.Points)
+    }
     else {
       await useModal().closeModal()
       initializeFlow(FlowName.VerifyPhone)
@@ -167,6 +172,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
     component: FlowCmp,
     handle: false,
     canDismiss: async () => {
+      // eslint-disable-next-line no-console
       console.log('🌊 canDismiss', activeStepIndex.value, flow.steps.at(activeStepIndex.value)?.canDismiss)
       return flow.steps.at(activeStepIndex.value)?.canDismiss ?? true
     },
