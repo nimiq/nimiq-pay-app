@@ -4,8 +4,6 @@ import { IonicVue } from '@ionic/vue'
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 import { createPinia, storeToRefs } from 'pinia'
-import { useApp } from '@/stores/app'
-import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import App from './App.vue'
 import router from './router'
 
@@ -29,10 +27,12 @@ import '@ionic/vue/css/display.css'
 import './theme/variables.css'
 
 /* Libs */
-import { useConn } from './stores/conn'
-import { useDecrypt } from './composables/useDecrypt'
-import { useDevice } from './composables/useDevice'
-import { useNimiqNetwork } from './stores/nimiq-network'
+import { useConn } from '@/stores/conn'
+import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
+import { useApp } from '@/stores/app'
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)

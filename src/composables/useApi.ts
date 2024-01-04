@@ -1,6 +1,5 @@
 import type { MaybeRef } from 'vue'
 import { readonly, ref, toValue as v } from 'vue'
-import { useThrottleFn } from '@vueuse/core'
 import { toMs } from './useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResult, Result } from '@/types'
@@ -20,10 +19,10 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
   const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error {method} {url}: {error}', {
-      method,
-      url: url.href,
-      error,
-    }))
+    method,
+    url: url.href,
+    error,
+  }))
 
   if (typeof response === 'string')
     return { error: response, data: undefined }

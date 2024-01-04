@@ -30,15 +30,19 @@ const words = asyncComputed(async () => {
         <IonBackButton default-href="/" @click.prevent="nav.pop()" />
       </IonButtons>
     </template>
-    <template #title>{{ $t('Copy the words') }}</template>
+    <template #title>
+      {{ $t('Copy the words') }}
+    </template>
     <template #subtitle>
       <span class="whitespace-pre-line">{{
         $t('Write the words below on a piece of paper in the right order.\nKeep it safe and never share it!')
       }}</span>
     </template>
     <MnemonicInput :recovery-words="words" />
-    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">{{
-      $t('Continue')
-    }}</IonButton>
+    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">
+      {{
+        $t('Continue')
+      }}
+    </IonButton>
   </ModalTemplate>
 </template>

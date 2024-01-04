@@ -1,6 +1,6 @@
 import { type MaybeRef, toValue } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Crypto, useApp, type Fiat } from '@/stores/app'
+import { Crypto, type Fiat, useApp } from '@/stores/app'
 
 export interface FormatFiatOptions {
   /**

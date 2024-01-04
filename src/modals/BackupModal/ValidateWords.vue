@@ -87,14 +87,18 @@ onMounted(updateRandomWord)
         <IonBackButton default-href="/" @click.prevent="nav.pop()" />
       </IonButtons>
     </template>
-    <template #title>{{ $t('Test your backup') }}</template>
+    <template #title>
+      {{ $t('Test your backup') }}
+    </template>
     <div class="flex flex-col h-full gap-y-8">
       <div v-if="randomIndex !== null" class="mt-[40%]">
         <p class="mb-6 text-6xl font-semibold">
           {{ randomIndex + 1 }}
         </p>
         <!-- TODO: show first, second... instead of number -->
-        <p class="text-lg font-medium">{{ $t('What\'s the {index}th word?', { index: randomIndex + 1 }) }}</p>
+        <p class="text-lg font-medium">
+          {{ $t('What\'s the {index}th word?', { index: randomIndex + 1 }) }}
+        </p>
       </div>
       <div class="grid grid-cols-3 gap-4">
         <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded whitespace-nowrap" @click="() => handleGuess(word)">

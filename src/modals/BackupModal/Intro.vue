@@ -11,8 +11,12 @@ const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 
 <template>
   <ModalTemplate>
-    <template #title>{{ $t('There is no "Forgot password"') }}</template>
-    <template #subtitle>{{ $t('Create a backup. It\'s the only way to recover your account.') }}</template>
+    <template #title>
+      {{ $t('There is no "Forgot password"') }}
+    </template>
+    <template #subtitle>
+      {{ $t('Create a backup. It\'s the only way to recover your account.') }}
+    </template>
     <div class="self-end">
       <div class="flex items-start justify-center font-semibold gap-x-2 text-space/60">
         <InfoIcon class="h-6 w-6 stroke-[1.5] text-space/60" />

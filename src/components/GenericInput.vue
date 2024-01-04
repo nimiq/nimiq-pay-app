@@ -53,9 +53,13 @@ watch(referralCode, async (newValue) => {
     {{ errorMessage || errorMsg }}
   </p>
   <div v-if="rewardAmount" class="w-full">
-    <p class="text-center">{{ $t('You are going to get {amount} NIM', { amount: rewardAmount / 1e5 }) }}</p>
+    <p class="text-center">
+      {{ $t('You are going to get {amount} NIM', { amount: rewardAmount / 1e5 }) }}
+    </p>
   </div>
-  <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">{{
-    $t('Claim Promo Code')
-  }}</IonButton>
+  <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">
+    {{
+      $t('Claim Promo Code')
+    }}
+  </IonButton>
 </template>

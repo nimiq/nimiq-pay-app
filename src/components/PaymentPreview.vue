@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
-import { type PropType, computed, onMounted, ref, watchEffect } from 'vue'
+import { type PropType, computed, ref, watchEffect } from 'vue'
 import { watchOnce } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import InfoIcon from '@/components/icons/info.vue'
@@ -59,7 +59,9 @@ function handlePay() {
 <template>
   <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
     <TransactionAmounts :payment="payment">
-      <template #fee>{{ $t('Fees might apply ~{fee}', { fee: fiatFee.formatted }) }}</template>
+      <template #fee>
+        {{ $t('Fees might apply ~{fee}', { fee: fiatFee.formatted }) }}
+      </template>
     </TransactionAmounts>
 
     <Transition name="slide-fade" mode="out-in">
@@ -81,31 +83,39 @@ function handlePay() {
       :checked="isPayingWithPointsForced"
       @ion-change="(e) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
     >
-      <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
+      <I18nT keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
           {{ crypto.formatted }}
         </template>
-      </i18n-t>
+      </I18nT>
     </IonToggle>
 
     <div class="mb-6 font-semibold text-center min-h-[4rem]">
       <Transition name="slide-fade" mode="out-in">
-        <p v-if="!canPayWithNim && pointsState !== PointsState.Ok" class="text-pumpkin text-pretty">{{
-          $t('You don\'t have enough NIM for this purchase.')
-        }}</p>
-        <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">{{
-          $t('You don\'t have enough Points for this purchase.')
-        }}</p>
-        <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 text-pretty">{{
-          $t('You can\'t pay with Points for this purchase.')
-        }}</p>
+        <p v-if="!canPayWithNim && pointsState !== PointsState.Ok" class="text-pumpkin text-pretty">
+          {{
+            $t('You don\'t have enough NIM for this purchase.')
+          }}
+        </p>
+        <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
+          {{
+            $t('You don\'t have enough Points for this purchase.')
+          }}
+        </p>
+        <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 text-pretty">
+          {{
+            $t('You can\'t pay with Points for this purchase.')
+          }}
+        </p>
         <p v-else-if="pointsState === PointsState.Error" class="text-pumpkin text-pretty">
           {{ pointsMessage }}
         </p>
-        <p v-else-if="hasCashback" class="opacity-60 text-pretty">{{
-          $t('There is no cashback reward when paying with Points.')
-        }}</p>
+        <p v-else-if="hasCashback" class="opacity-60 text-pretty">
+          {{
+            $t('There is no cashback reward when paying with Points.')
+          }}
+        </p>
       </transition>
     </div>
 
@@ -113,7 +123,9 @@ function handlePay() {
       <template v-if="loading">
         <IonSpinner class="text-white" name="dots" />
       </template>
-      <template v-else>{{ $t('Pay') }}</template>
+      <template v-else>
+        {{ $t('Pay') }}
+      </template>
     </IonButton>
   </div>
 </template>

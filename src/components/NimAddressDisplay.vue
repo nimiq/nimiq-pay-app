@@ -33,7 +33,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: address,
   })
-  await setToast({message: i18n.t('Address copied to clipboard')})
+  await setToast({ message: i18n.t('Address copied to clipboard') })
 }
 </script>
 
@@ -50,10 +50,14 @@ async function handleCopy() {
       </IonButton>
     </div>
     <div class="w-full mt-auto">
-      <IonButton expand="block" class="text-base" @click="openWallet">{{ $t('Open Wallet') }}</IonButton>
-      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">{{
-        $t('Copy address')
-      }}</IonButton>
+      <IonButton expand="block" class="text-base" @click="openWallet">
+        {{ $t('Open Wallet') }}
+      </IonButton>
+      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
+        {{
+          $t('Copy address')
+        }}
+      </IonButton>
     </div>
   </div>
 </template>

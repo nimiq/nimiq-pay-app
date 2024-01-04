@@ -15,7 +15,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
-import { useNimiqNetwork } from "@/stores/nimiq-network";
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { i18n } from '@/i18n/i18n-setup'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
@@ -132,7 +132,7 @@ watchEffect(async () => {
     get title() { return i18n.t('You have 5€ reward to claim!') },
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
-  notificationArray.value = notificationArray.value.filter((notification) =>
+  notificationArray.value = notificationArray.value.filter(notification =>
     notification.title !== verifyNumberNotification.title && notification.title !== claimRewardsNotification.title)
 
   if (referralCode.value && phoneNumberVerified.value) {
@@ -192,13 +192,17 @@ onMounted(async () => {
       <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
         <div slot="start" class="flex items-center gap-2 ml-2">
           <div class="w-3 h-3 bg-blue-600 rounded-full" />
-          <p class="font-semibold">{{ $t('There is no "forgot password"') }}</p>
+          <p class="font-semibold">
+            {{ $t('There is no "forgot password"') }}
+          </p>
         </div>
         <IonButtons slot="end">
           <IonButton
             fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)"
             size="small" @click="showModal(Modal.Backup)"
-          >{{ $t('Recovery Words') }}</IonButton>
+          >
+            {{ $t('Recovery Words') }}
+          </IonButton>
         </IonButtons>
       </IonToolbar>
       <IonToolbar class="px-2">
@@ -226,7 +230,9 @@ onMounted(async () => {
 
       <TheHomeAmounts class="mt-[72px]" />
 
-      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">{{ $t('Top Up') }}</QuickButton>
+      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
+        {{ $t('Top Up') }}
+      </QuickButton>
 
       <ol v-if="transactions.length">
         <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash">
@@ -234,9 +240,11 @@ onMounted(async () => {
         </li>
       </ol>
 
-      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">{{
-        $t('See all')
-      }}</QuickButton>
+      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
+        {{
+          $t('See all')
+        }}
+      </QuickButton>
 
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
@@ -272,12 +280,14 @@ onMounted(async () => {
 
         <!-- Map -->
         <IonRow>
-          <p class="ml-1 text-lg font-semibold">{{ $t('Find places that accept crypto!') }}</p>
+          <p class="ml-1 text-lg font-semibold">
+            {{ $t('Find places that accept crypto!') }}
+          </p>
         </IonRow>
         <IonRow>
           <!-- TODO: interacting with map disable until we find a nice way to do it -->
           <a class="w-full mt-2 bg-white rounded-lg h-72" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
-            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/"></iframe>
+            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/" />
           </a>
         </IonRow>
         <IonRow class="ion-justify-content-center">
@@ -298,15 +308,19 @@ onMounted(async () => {
         <!-- TODO: add info icon -->
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
-          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">{{
-            $t('Wait ~10 minutes to pay after Top Up')
-          }}</p>
+          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
+            {{
+              $t('Wait ~10 minutes to pay after Top Up')
+            }}
+          </p>
         </Transition>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
-        >{{ $t('Pay') }}</IonButton>
+        >
+          {{ $t('Pay') }}
+        </IonButton>
       </IonToolbar>
     </IonFooter>
   </IonPage>

@@ -27,7 +27,9 @@ function handleSave() {
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
     <div class="w-3/4 m-auto">
-      <p class="mb-6 text-sm font-bold text-center uppercase text-space/60">{{ $t('Enter Address') }}</p>
+      <p class="mb-6 text-sm font-bold text-center uppercase text-space/60">
+        {{ $t('Enter Address') }}
+      </p>
       <AddressInput @update:address="(v: string) => address = v" />
       <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')" />
 
@@ -39,8 +41,10 @@ function handleSave() {
     <p class="mt-8 text-center text-tomato">
       {{ errorMsg }}
     </p>
-    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">{{
-      $t('Save')
-    }}</IonButton>
+    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">
+      {{
+        $t('Save')
+      }}
+    </IonButton>
   </div>
 </template>

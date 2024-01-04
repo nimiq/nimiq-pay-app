@@ -4,7 +4,7 @@ import type { StorageLikeAsync } from '@vueuse/core'
 import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
-import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
+import { type SupportedLanguage, guessUserLanguage } from '@/i18n/i18n-setup'
 
 export enum Fiat {
   USD = 'USD',

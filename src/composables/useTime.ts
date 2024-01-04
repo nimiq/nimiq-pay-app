@@ -1,4 +1,4 @@
-import { toValue, type MaybeRef } from 'vue'
+import { type MaybeRef, toValue } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useApp } from '@/stores/app'
 

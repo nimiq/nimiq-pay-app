@@ -22,8 +22,8 @@ watchEffect(() => emit('loginWords', loginWords.value))
   <div class="grid grid-cols-3 gap-2">
     <input
       v-for="(word, i) in recoveryWords"
-      :tabindex="recoveryWords.length - i"
-      :key="word + i" class="lowercase"
+      :key="word + i"
+      :tabindex="recoveryWords.length - i" class="lowercase"
       type="text"
       :value="word"
       :disabled="!!word"

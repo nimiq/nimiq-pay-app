@@ -42,7 +42,7 @@ async function handleClick() {
     return
   }
   isLoading.value = true
-  const { data: task, error} = await getTaskById(props.task.id)
+  const { data: task, error } = await getTaskById(props.task.id)
 
   // TODO: show error
   if (error) {

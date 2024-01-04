@@ -1,8 +1,8 @@
 import { useNow } from '@vueuse/core'
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useApp } from '@/stores/app'
 import { toMs } from './useTime'
+import { useApp } from '@/stores/app'
 
 const { language } = storeToRefs(useApp())
 

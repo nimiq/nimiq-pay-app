@@ -143,9 +143,11 @@ function withdraw() {
               value="nim"
               @click.stop="() => $emit('done', '')"
             >
-              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">{{
-                $t('Add NIM address')
-              }}</SelectItemText>
+              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
+                {{
+                  $t('Add NIM address')
+                }}
+              </SelectItemText>
             </SelectItem>
             <SelectSeparator class="h-[1.5px] bg-space-space-400" />
 
@@ -154,9 +156,11 @@ function withdraw() {
               value="cc"
               :disabled="true"
             >
-              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">{{
-                $t('To credit card / bank account')
-              }}</SelectItemText>
+              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
+                {{
+                  $t('To credit card / bank account')
+                }}
+              </SelectItemText>
             </SelectItem>
           </SelectGroup>
         </SelectViewport>
@@ -180,9 +184,11 @@ function withdraw() {
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * (10 ** decimals)">
       {{ formatFiat(100, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">{{
-      $t('All')
-    }}</button>
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">
+      {{
+        $t('All')
+      }}
+    </button>
   </div>
 
   <div class="flex flex-col justify-center w-full pb-6">
@@ -190,7 +196,9 @@ function withdraw() {
       <template v-if="loading">
         <IonSpinner class="text-white" name="dots" />
       </template>
-      <template v-else>{{ $t('Pay') }}</template>
+      <template v-else>
+        {{ $t('Pay') }}
+      </template>
     </IonButton>
   </div>
 </template>

@@ -27,7 +27,9 @@ const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerch
       class="grid justify-between w-full grid-cols-[1fr,auto] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
       <div>{{ $t('Status') }}</div>
-      <div class="capitalize">{{ tx.status || $t('Unknown') }}</div>
+      <div class="capitalize">
+        {{ tx.status || $t('Unknown') }}
+      </div>
 
       <div>{{ $t('Date') }}</div>
       <div>{{ datetime }}</div>

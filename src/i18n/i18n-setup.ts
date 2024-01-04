@@ -9,7 +9,7 @@ export const SUPPORTED_LANGUAGES = [DEFAULT_LANGUAGE] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 export const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
   en: 'English',
-};
+}
 
 const loadedLanguages: SupportedLanguage[] = []
 
@@ -41,7 +41,7 @@ export async function setLanguage(lang: string): Promise<SupportedLanguage> {
   }
 
   const { language: storedLanguage } = storeToRefs(useApp())
-  storedLanguage.value = supportedLang;
+  storedLanguage.value = supportedLang
   i18n.locale = supportedLang
   document.documentElement.setAttribute('lang', supportedLang)
   return supportedLang

@@ -18,7 +18,7 @@ const props = defineProps({
   },
 })
 
-//TODO: move these
+// TODO: move these
 interface Metadata {
   type: TaskType
   options: string[]
@@ -115,12 +115,12 @@ async function handleSubmit() {
       {{ task.description }}
     </template>
     <div class="self-stretch max-w-[98vw]">
-      <i18n-t keypath="You earn {amount}" tag="div" class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
+      <I18nT keypath="You earn {amount}" tag="div" class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
           {{ task.reward_amount / 1e5 }}
         </template>
-      </i18n-t>
+      </I18nT>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
@@ -131,8 +131,10 @@ async function handleSubmit() {
       </IonRadioGroup>
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
     </div>
-    <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">{{
-      $t('Submit')
-    }}</IonButton>
+    <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
+      {{
+        $t('Submit')
+      }}
+    </IonButton>
   </ModalTemplate>
 </template>

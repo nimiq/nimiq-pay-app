@@ -37,7 +37,7 @@ function handleShare() {
     text: i18n.t(
       'Hey! Join me on NIM Pay App and earn CryptoCity Points to pay for your purchases! '
         + 'Use my code {code} to earn {amount} NIM in CryptoCity Points at registration.',
-      { code: referralCode.value?.id, amount: (referralCode.value?.reward || 0) / 1e5 }
+      { code: referralCode.value?.id, amount: (referralCode.value?.reward || 0) / 1e5 },
     ),
     url: 'https://nimpay.app',
     // Title for the share modal. Only on Android
@@ -48,17 +48,23 @@ function handleShare() {
 
 <template>
   <ModalTemplate>
-    <template #title>{{
-      $t('Invite a friend and get {amount} NIM each', { amount: (referralCode?.reward || 0) / 1e5 })
-    }}</template>
-    <p class="self-start text-space/60">{{
-      $t(
-        'Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points.',
-        { amount: (referralCode?.reward || 0) / 1e5 },
-      )
-    }}</p>
+    <template #title>
+      {{
+        $t('Invite a friend and get {amount} NIM each', { amount: (referralCode?.reward || 0) / 1e5 })
+      }}
+    </template>
+    <p class="self-start text-space/60">
+      {{
+        $t(
+          'Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points.',
+          { amount: (referralCode?.reward || 0) / 1e5 },
+        )
+      }}
+    </p>
     <Transition name="slide-fade" mode="out-in">
-      <p v-if="!referralCode" class="text-4xl font-semibold">{{ $t('Loading...') }}</p>
+      <p v-if="!referralCode" class="text-4xl font-semibold">
+        {{ $t('Loading...') }}
+      </p>
       <p v-else class="flex flex-col text-3xl font-semibold">
         {{ referralCode?.id }}
         <!-- TODO: replace 10 with data from API -->
@@ -70,12 +76,16 @@ function handleShare() {
       </p>
     </Transition>
     <div class="flex flex-col self-end w-full">
-      <IonButton v-if="canShare" expand="block" strong :disabled="!referralCode" @click="handleShare">{{
-        $t('Invite a Friend')
-      }}</IonButton>
-      <IonButton fill="clear" class="text-base normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">{{
-        $t('Copy code')
-      }}</IonButton>
+      <IonButton v-if="canShare" expand="block" strong :disabled="!referralCode" @click="handleShare">
+        {{
+          $t('Invite a Friend')
+        }}
+      </IonButton>
+      <IonButton fill="clear" class="text-base normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
+        {{
+          $t('Copy code')
+        }}
+      </IonButton>
     </div>
   </ModalTemplate>
 </template>
