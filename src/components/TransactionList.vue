@@ -22,20 +22,18 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
 
 <template>
   <div class="flex flex-col w-full h-full">
-    <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60">
-      All transactions
-    </h2>
+    <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60">{{ $t('All transactions') }}</h2>
 
     <!-- TODO Lupa -->
-    <input v-model="searchQuery" type="text" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" placeholder="Search" @select.stop.prevent>
+    <input v-model="searchQuery" type="text" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" :placeholder="$t('Search')" @select.stop.prevent>
 
     <div v-if="status === TransactionListState.NoResults" class="pt-10">
-      <p>
-        No transactions found for "<span class="italic font-bold">{{ searchQuery }}</span>"
-      </p>
-      <QuickButton @click="searchQuery = ''">
-        Reset search
-      </QuickButton>
+      <i18n-t keypath='No transactions found for "{searchQuery}"' tag="p">
+        <template #searchQuery>
+          <span class="italic font-bold">{{ searchQuery }}</span>
+        </template>
+      </i18n-t>
+      <QuickButton @click="searchQuery = ''">{{ $t('Reset search') }}</QuickButton>
     </div>
 
     <div
@@ -58,8 +56,6 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
       </ol>
     </div>
 
-    <div v-if="isLoading" class="flex justify-center mt-4">
-      Loading
-    </div>
+    <div v-if="isLoading" class="flex justify-center mt-4">{{ $t('Loading') }}</div>
   </div>
 </template>

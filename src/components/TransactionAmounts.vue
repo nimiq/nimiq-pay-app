@@ -9,7 +9,7 @@ const props = defineProps({ tx: { type: Object as PropType<ExternalTransaction> 
 
 onMounted(() => {
   if (!props.tx && !props.payment)
-    throw new Error('TransactionAmounts: Missing tx or payment prop')
+    throw new Error('TransactionAmounts: Missing tx or payment prop') // no translation as not user-facing
 })
 
 const amount = computed<number>(() => toValue(props.tx)?.amount || props.payment?.amount || 0)

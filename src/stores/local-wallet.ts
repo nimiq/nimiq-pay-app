@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useApp } from './app'
+import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResult, Result } from '@/types'
 
 export const useLocalWallet = defineStore('local-wallet', () => {
@@ -15,7 +16,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   async function getWords(): AsyncResult<string[]> {
     if (!entropy.value)
-      return { error: 'The entropy is not defined', data: undefined }
+      return { error: i18n.t('The entropy is not defined'), data: undefined }
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
@@ -28,7 +29,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       return { data: undefined, error: undefined }
     }
     catch (error) {
-      return { error: (error as Error).message || 'Unknown error importing words', data: undefined }
+      return { error: (error as Error).message || i18n.t('Unknown error importing words'), data: undefined }
     }
   }
 

@@ -25,7 +25,7 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
       {{ errorMsg }}
     </p>
   </div>
-  <IonButton expand="block" class="w-full mt-auto mb-4 font-bold" @click="$emit('done', loginWords)">
-    Confirm
-  </IonButton>
+  <IonButton expand="block" class="w-full mt-auto mb-4 font-bold" @click="$emit('done', loginWords)">{{
+    $t('Confirm')
+  }}</IonButton>
 </template>

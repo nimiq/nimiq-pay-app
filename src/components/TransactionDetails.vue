@@ -15,7 +15,7 @@ const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerch
   <div v-if="tx" class="flex flex-col items-center justify-center w-full gap-10 mt-8">
     <TransactionAmounts :tx="tx" />
 
-    <div v-if="showMap" class="grid w-[calc(100vw-18px)]  border rounded-md border-space/10">
+    <div v-if="showMap" class="grid w-[calc(100vw-18px)] border rounded-md border-space/10">
       <!-- TODO Replace the box below this with the map -->
       <div class="bg-space/[0.06] grid place-content-center text-space font-bold font-mono h-60">
         🚧 Map Preview 🚧
@@ -26,12 +26,10 @@ const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerch
       v-if="tx"
       class="grid justify-between w-full grid-cols-[1fr,auto] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
-      <div>Status</div>
-      <div class="capitalize">
-        {{ tx.status || 'Unknown' }}
-      </div>
+      <div>{{ $t('Status') }}</div>
+      <div class="capitalize">{{ tx.status || $t('Unknown') }}</div>
 
-      <div>Date</div>
+      <div>{{ $t('Date') }}</div>
       <div>{{ datetime }}</div>
 
       <!-- TODO Add the geo location name -->

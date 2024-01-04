@@ -15,7 +15,8 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
-import {useNimiqNetwork} from "@/stores/nimiq-network";
+import { useNimiqNetwork } from "@/stores/nimiq-network";
+import { i18n } from '@/i18n/i18n-setup'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
 
@@ -38,7 +39,7 @@ const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, redeemReferral } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
-const {consensus } = storeToRefs(useNimiqNetwork())
+const { consensus } = storeToRefs(useNimiqNetwork())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -49,32 +50,32 @@ const referralRewardAmount = 10
 // TODO: get this from somewhere
 const notificationArray = ref([
   {
-    title: 'Welcome to Nimiq',
-    subtitle: 'Your wallet is ready to use',
+    get title() { return i18n.t('Welcome to Nimiq') },
+    get subtitle() { return i18n.t('Your wallet is ready to use') },
     action: () => initializeFlow(FlowName.OnBoardingPoints),
   },
   {
-    title: 'Alpha Testing',
-    subtitle: 'This is in alpha, please report any bugs and remember to use only TestNIM',
+    get title() { return i18n.t('Alpha Testing') },
+    get subtitle() { return i18n.t('This is in alpha, please report any bugs and remember to use only TestNIM') },
     action: () => console.log('Notification Card 2 clicked'),
   },
   {
-    title: 'Buy NIM with Credit Card',
+    get title() { return i18n.t('Buy NIM with Credit Card') },
     action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
   },
   // {
-  //   title: 'Notification Card 3',
-  //   subtitle: 'Subtitle',
+  //   get title() { return i18n.t('Notification Card 3') },
+  //   get subtitle() { return i18n.t('Subtitle') },
   //   action: () => console.log('Notification Card 3 clicked'),
   // },
   // {
-  //   title: 'Notification Card 4',
-  //   subtitle: 'Subtitle',
+  //   get title() { return i18n.t('Notification Card 4') },
+  //   get subtitle() { return i18n.t('Subtitle') },
   //   action: () => console.log('Notification Card 4 clicked'),
   // },
   // {
-  //   title: 'Notification Card 5',
-  //   subtitle: 'Subtitle',
+  //   get title() { return i18n.t('Notification Card 5') },
+  //   get subtitle() { return i18n.t('Subtitle') },
   //   action: () => console.log('Notification Card 5 clicked'),
   // },
 ])
@@ -121,29 +122,28 @@ if (import.meta.env.DEV) {
 }
 
 watchEffect(async () => {
-  const verifyNumberTitle = 'Verify your phone number'
-  const claimRewardTitle = 'You have 5€ reward to claim!'
-  // Remove custom notifications and add them later if necessary
-  notificationArray.value = notificationArray.value.filter((notification) => {
-    return notification.title !== verifyNumberTitle && notification.title !== claimRewardTitle
-  })
+  // Remove number verification and reward notifications and re-add them later if necessary
+  const verifyNumberNotification = {
+    get title() { return i18n.t('Verify your phone number') },
+    get subtitle() { return i18n.t('Get cashback and earn rewards') },
+    action: () => initializeFlow(FlowName.VerifyPhone),
+  }
+  const claimRewardsNotification = {
+    get title() { return i18n.t('You have 5€ reward to claim!') },
+    action: () => initializeFlow(FlowName.VerifyPhone),
+  }
+  notificationArray.value = notificationArray.value.filter((notification) =>
+    notification.title !== verifyNumberNotification.title && notification.title !== claimRewardsNotification.title)
 
   if (referralCode.value && phoneNumberVerified.value) {
     redeemReferral()
   }
   else if (!referralCode.value && !phoneNumberVerified.value) {
-    notificationArray.value.unshift({
-      title: verifyNumberTitle,
-      subtitle: 'Get cashback and earn rewards',
-      action: () => initializeFlow(FlowName.VerifyPhone),
-    })
+    notificationArray.value.unshift(verifyNumberNotification)
     scrollToFirstNotification()
   }
   else if (referralCode.value && !phoneNumberVerified.value) {
-    notificationArray.value.unshift({
-      title: claimRewardTitle,
-      action: () => initializeFlow(FlowName.VerifyPhone),
-    })
+    notificationArray.value.unshift(claimRewardsNotification)
     scrollToFirstNotification()
   }
 })
@@ -192,17 +192,13 @@ onMounted(async () => {
       <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
         <div slot="start" class="flex items-center gap-2 ml-2">
           <div class="w-3 h-3 bg-blue-600 rounded-full" />
-          <p class="font-semibold">
-            There is no 'forgot password'
-          </p>
+          <p class="font-semibold">{{ $t('There is no "forgot password"') }}</p>
         </div>
         <IonButtons slot="end">
           <IonButton
             fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)"
             size="small" @click="showModal(Modal.Backup)"
-          >
-            Recovery Words
-          </IonButton>
+          >{{ $t('Recovery Words') }}</IonButton>
         </IonButtons>
       </IonToolbar>
       <IonToolbar class="px-2">
@@ -218,9 +214,7 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
-            {{
-              phoneNumberVerified ? pointsBalance / 1e5 : 'Earn Points'
-            }}
+            {{ phoneNumberVerified ? pointsBalance / 1e5 : $t('Earn Points') }}
           </IonButton>
         </IonButtons>
       </IonToolbar>
@@ -232,9 +226,7 @@ onMounted(async () => {
 
       <TheHomeAmounts class="mt-[72px]" />
 
-      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
-        Top Up
-      </QuickButton>
+      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">{{ $t('Top Up') }}</QuickButton>
 
       <ol v-if="transactions.length">
         <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash">
@@ -242,9 +234,9 @@ onMounted(async () => {
         </li>
       </ol>
 
-      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
-        See all
-      </QuickButton>
+      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">{{
+        $t('See all')
+      }}</QuickButton>
 
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
@@ -272,17 +264,15 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
             @close="isReferralCardShown = false"
           >
-            <span class="text-lg text-pumpkin">
-              Bring a friend and get {{ referralRewardAmount }} Points each!
-            </span>
+            <span class="text-lg text-pumpkin">{{
+              $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount })
+            }}</span>
           </NotificationCard>
         </IonRow>
 
         <!-- Map -->
         <IonRow>
-          <p class="ml-1 text-lg font-semibold">
-            Find places that accept crypto!
-          </p>
+          <p class="ml-1 text-lg font-semibold">{{ $t('Find places that accept crypto!') }}</p>
         </IonRow>
         <IonRow>
           <!-- TODO: interacting with map disable until we find a nice way to do it -->
@@ -295,7 +285,7 @@ onMounted(async () => {
             fill="clear" class="text-base normal-case"
             @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })"
           >
-            Go to Crypto Map
+            {{ $t('Go to Crypto Map') }}
             <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
         </IonRow>
@@ -308,17 +298,15 @@ onMounted(async () => {
         <!-- TODO: add info icon -->
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
-          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            Wait ~10 minutes to pay after Top Up
-          </p>
+          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">{{
+            $t('Wait ~10 minutes to pay after Top Up')
+          }}</p>
         </Transition>
         <IonButton
           class="w-3/4 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
-        >
-          Pay
-        </IonButton>
+        >{{ $t('Pay') }}</IonButton>
       </IonToolbar>
     </IonFooter>
   </IonPage>

@@ -4,6 +4,7 @@ import type { Option } from '@/types'
 import { useDevice } from '@/composables/useDevice'
 import { useConn } from '@/stores/conn'
 import { useApp } from '@/stores/app'
+import { i18n } from '@/i18n/i18n-setup'
 
 const pinHashLocalStorageKey = '_pin'
 
@@ -33,7 +34,7 @@ export function useDecrypt() {
   // No encryption on web, but we simulate PIN requirement
   async function decryptWeb(inputPin: string): Promise<Option<string>> {
     if (!isWeb)
-      throw new Error('This method is not supported in mobile.')
+      throw new Error('This method is not supported in mobile.') // no translation as not user-facing
 
     if (!isOpen.value)
       await openDb()
@@ -41,10 +42,10 @@ export function useDecrypt() {
     let expectedPinHash = window.localStorage.getItem(pinHashLocalStorageKey)
 
     if (!expectedPinHash && !inputPin)
-      return 'Both expected and the given PIN are empty'
+      return i18n.t('Both expected and the given PIN are empty')
 
     if (inputPin.length !== 4)
-      return `Invalid PIN length ${inputPin.length}`
+      return i18n.t('Invalid PIN length {length}', { length: inputPin.length })
 
     const pinHash = await hash(inputPin)
 
@@ -56,14 +57,14 @@ export function useDecrypt() {
     }
 
     if (pinHash !== expectedPinHash)
-      return 'Invalid PIN'
+      return i18n.t('Invalid PIN')
 
     // else {} If the PIN is correct, we don't need to do anything
   }
 
   async function decryptMobile(pin: string): Promise<Option<string>> {
     if (isWeb)
-      throw new Error('This method is not supported in web.')
+      throw new Error('This method is not supported in web.') // no translation as not user-facing
 
     // FIXME try to do this without closing the db
     if (isOpen.value)
@@ -71,11 +72,11 @@ export function useDecrypt() {
 
     const error = (await sqlite.isSecretStored()).result
       ? await sqlite.checkEncryptionSecret(pin)
-        .then(({ result }) => !result ? 'There was an error' : undefined)
-        .catch(() => 'Invalid PIN')
+        .then(({ result }) => !result ? i18n.t('There was an error') : undefined)
+        .catch(() => i18n.t('Invalid PIN'))
       : await sqlite.setEncryptionSecret(pin)
         .then(() => undefined)
-        .catch(() => 'There was an error')
+        .catch(() => i18n.t('There was an error'))
 
     if (error) {
       console.error(error)
@@ -107,7 +108,7 @@ export function useDecrypt() {
 
   function hasPin() {
     if (!isWeb)
-      throw new Error('This method is not supported in mobile.')
+      throw new Error('This method is not supported in mobile.') // no translation as not user-facing
     return window.localStorage.getItem(pinHashLocalStorageKey) !== null
   }
 

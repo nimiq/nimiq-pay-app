@@ -26,6 +26,7 @@ import AmountInput from '@/components/AmountInput.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import { usePrice } from '@/composables/usePrice'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 
@@ -77,7 +78,7 @@ watch(selected, (value) => {
   selected.value = address.value
 })
 
-const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? 'Not enough funds' : ''))
+const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? i18n.t('Not enough funds') : ''))
 const disabled = computed(() => !address.value || crypto.totalLuna <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
 const loading = ref(false)
 
@@ -103,10 +104,10 @@ function withdraw() {
     <SelectTrigger
       class="flex gap-x-3 items-center w-full p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400 relative"
       :class="{ 'rounded-b-none': isSelectOpen }"
-      aria-label="Select withdrawal address"
+      :aria-label="$t('Select withdrawal address')"
     >
       <NimiqLogo class="w-6 h-6" />
-      <SelectValue :placeholder="address || 'Select an address...'" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'normal-case text-left': !address }" />
+      <SelectValue :placeholder="address || $t('Select an address...')" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'normal-case text-left': !address }" />
       <IonIcon :icon="chevronForward" size="large" class="w-6 h-full ml-auto will-change-[transform] transition-transform" :class="{ 'rotate-90': isSelectOpen }" />
     </SelectTrigger>
 
@@ -142,9 +143,9 @@ function withdraw() {
               value="nim"
               @click.stop="() => $emit('done', '')"
             >
-              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
-                Add NIM address
-              </SelectItemText>
+              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">{{
+                $t('Add NIM address')
+              }}</SelectItemText>
             </SelectItem>
             <SelectSeparator class="h-[1.5px] bg-space-space-400" />
 
@@ -153,9 +154,9 @@ function withdraw() {
               value="cc"
               :disabled="true"
             >
-              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
-                To credit card / bank account
-              </SelectItemText>
+              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">{{
+                $t('To credit card / bank account')
+              }}</SelectItemText>
             </SelectItem>
           </SelectGroup>
         </SelectViewport>
@@ -179,9 +180,9 @@ function withdraw() {
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * (10 ** decimals)">
       {{ formatFiat(100, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">
-      All
-    </button>
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">{{
+      $t('All')
+    }}</button>
   </div>
 
   <div class="flex flex-col justify-center w-full pb-6">
@@ -189,9 +190,7 @@ function withdraw() {
       <template v-if="loading">
         <IonSpinner class="text-white" name="dots" />
       </template>
-      <template v-else>
-        Pay
-      </template>
+      <template v-else>{{ $t('Pay') }}</template>
     </IonButton>
   </div>
 </template>

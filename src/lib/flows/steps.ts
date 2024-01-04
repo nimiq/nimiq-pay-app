@@ -4,6 +4,7 @@ import { renderToString } from 'vue/server-renderer'
 import { QRDataFormat } from '../../composables/useStringParser'
 import type { PaymentRequestData, StepInit } from '@/lib/flows/steps.types'
 import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { i18n } from '@/i18n/i18n-setup'
 
 import type { ExternalTransaction } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
@@ -30,11 +31,11 @@ const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4
 
 export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
-  title: 'Enter your promo code',
-  description: 'Enter your referral promo code.',
+  get title() { return i18n.t('Enter your promo code') },
+  get description() { return i18n.t('Enter your referral promo code.') },
   main: GenericInput,
   beforeNext: async ({ promoCode }, { next, err }) => {
-    if (!promoCode) { err('Please enter a promo code') }
+    if (!promoCode) { err(i18n.t('Please enter a promo code')) }
     else {
       const { setReferralCode } = (await import('@/stores/app')).useApp()
       setReferralCode(promoCode)
@@ -45,7 +46,7 @@ export const promoCodeStep: StepInit = async () => ({
 
 export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
-  title: 'Enter recovery words',
+  get title() { return i18n.t('Enter recovery words') },
   main: BrickInput,
   beforeNext: async ({ recoveryWordsStep }, { next, err }) => {
     const { importWords } = (await import('@/stores/local-wallet')).useLocalWallet()
@@ -59,15 +60,15 @@ export const recoveryWordsStep: StepInit = async () => ({
 
 export const pinCodeStep: StepInit = async () => ({
   step: StepName.PinCode,
-  title: 'Choose a PIN',
-  description: 'Protect your NIM Pay app with a pin.',
+  get title() { return i18n.t('Choose a PIN') },
+  get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
-    if (!pinCode) { err('Please enter a PIN code') }
+    if (!pinCode) { err(i18n.t('Please enter a PIN code')) }
     else if (!PIN_CODE_REGEX.test(pinCode)) {
       if (import.meta.env.DEV)
         debugger
-      err('Invalid PIN code')
+      err(i18n.t('Invalid PIN code'))
     }
     else { next() }
   },
@@ -75,12 +76,12 @@ export const pinCodeStep: StepInit = async () => ({
 
 export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
-  title: 'Confirm your PIN',
-  description: 'Protect your NIM Pay app with a pin.',
+  get title() { return i18n.t('Confirm your PIN') },
+  get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
-    if (!pinCodeConfirm) { err('Please confirm your PIN code'); return }
-    else if (pinCodeConfirm !== pinCode) { err('PIN did not match'); return }
+    if (!pinCodeConfirm) { err(i18n.t('Please confirm your PIN code')); return }
+    else if (pinCodeConfirm !== pinCode) { err(i18n.t('PIN did not match')); return }
 
     // Nuke everything in case there was a previous encryption db
     const { isWeb } = (await import('@/composables/useDevice')).useDevice()
@@ -93,24 +94,24 @@ export const pinCodeConfirmStep: StepInit = async () => ({
     const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)
     if (decryptError) { err(decryptError); return }
-    if (!decrypted) { err('There was an error'); return }
+    if (!decrypted) { err(i18n.t('There was an error')); return }
     next()
   },
 })
 
 export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
-  title: 'Verify your phone number',
-  description: 'You will receive a SMS with a verification code',
+  get title() { return i18n.t('Verify your phone number') },
+  get description() { return i18n.t('You will receive a SMS with a verification code') },
   main: h(PhoneInput, { canSkip: !!stepsToSkip }),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
-    if (!phoneNumber) { err('Please enter a phone number') }
-    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) { err('Invalid phone number') }
+    if (!phoneNumber) { err(i18n.t('Please enter a phone number')) }
+    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) { err(i18n.t('Invalid phone number')) }
     else {
       const res = await (await import('@/stores/points')).usePoints().authorize(phoneNumber)
       if (res && res.error)
-        err(res.error || 'Error authorizing phone number')
+        err(res.error || i18n.t('Error authorizing phone number'))
       else next()
     }
   },
@@ -118,16 +119,16 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
 
 export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
-  title: 'Confirm your phone number',
-  description: 'Enter the code from the SMS sent to',
-  main: h(CodeInput, { inputLength: 6, backButtonText: 'Resend' }),
+  get title() { return i18n.t('Confirm your phone number') },
+  get description() { return i18n.t('Enter the code from the SMS sent to') },
+  main: h(CodeInput, { inputLength: 6, backButtonText: i18n.t('Resend') }),
   beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
-    if (!phoneNumberConfirm) { err('Please enter a verification code') }
+    if (!phoneNumberConfirm) { err(i18n.t('Please enter a verification code')) }
     else if (phoneNumberConfirm === 'back') { prev() } // User clicked "Resend"
     else {
       const res = await (await import('@/stores/points')).usePoints().verify(phoneNumberConfirm)
       if (res && res.error)
-        err(res.error || 'Error verifying phone number')
+        err(res.error || i18n.t('Error verifying phone number'))
       else
         next()
     }
@@ -136,8 +137,8 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
 
 export const getNotifiedStep: StepInit = async () => ({
   step: StepName.GetNotified,
-  title: 'Enable notifications',
-  description: 'Get important info on transactions, top ups, security and more.',
+  get title() { return i18n.t('Enable notifications') },
+  get description() { return i18n.t('Get important info on transactions, top ups, security and more.') },
   stepsToSkip: 1,
   main: EnableNotifications,
 })
@@ -149,49 +150,49 @@ export const onBoardingPoints: StepInit = async () => ({
 
 export const onBoardingCashback1: StepInit = async () => ({
   step: StepName.OnBoardingCashback1,
-  title: 'What\'s Crypto City Points?',
-  description: 'Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.  ',
+  get title() { return i18n.t('What\'s Crypto City Points?') },
+  get description() { return i18n.t('Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingCashback2: StepInit = async () => ({
   step: StepName.OnBoardingCashback2,
-  title: 'Pay with CC Points',
-  description: 'Pay with CC Points instead of NIM wherever they\'re accepted.',
+  get title() { return i18n.t('Pay with CC Points') },
+  get description() { return i18n.t('Pay with CC Points instead of NIM wherever they\'re accepted.') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingCashback3: StepInit = async () => ({
   step: StepName.OnBoardingCashback3,
-  title: 'Get CC Points',
-  description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
+  get title() { return i18n.t('Get CC Points') },
+  get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingCashback4: StepInit = async () => ({
   step: StepName.OnBoardingCashback4,
-  title: 'Find places to pay with and earn CC Points',
+  get title() { return i18n.t('Find places to pay with and earn CC Points') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
-  title: 'What\'s Bluecode?',
-  description: 'Bluecode is a European payment service that now supports NIM.',
+  get title() { return i18n.t('What\'s Bluecode?') },
+  get description() { return i18n.t('Bluecode is a European payment service that now supports NIM.') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingBluecode2: StepInit = async () => ({
   step: StepName.OnBoardingBluecode2,
-  title: 'Pay with Bluecode',
-  description: 'Create a Bluecode Barcode and show it at the cashier to pay. ',
+  get title() { return i18n.t('Pay with Bluecode') },
+  get description() { return i18n.t('Create a Bluecode Barcode and show it at the cashier to pay. ') },
   main: OnBoardingScreen,
 })
 
 export const onBoardingBluecode3: StepInit = async () => ({
   step: StepName.OnBoardingBluecode3,
-  title: 'Verify your ID',
-  description: 'Get CC Points as cashback rewards or complete challenges to earn them.',
+  get title() { return i18n.t('Verify your ID') },
+  get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
   main: OnBoardingScreen,
 })
 
@@ -199,7 +200,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
   const { isWeb } = (await import('@/composables/useDevice')).useDevice()
   return {
     step: StepName.QRCodeScanner,
-    title: 'Scan QR code',
+    get title() { return i18n.t('Scan QR code') },
     main: h(QRScanner, options?.props),
     canDismiss: !isWeb,
     beforeNext: async (_, { next, prev }) => {
@@ -212,7 +213,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
 }
 
 export const paymentPreviewStep: StepInit = async () => {
-  let titleCmp = 'Payment preview' // Fall back
+  let titleCmp = i18n.t('Payment preview') // Fall back
   return {
     step: StepName.PaymentPreview,
     get title() { return titleCmp },
@@ -220,12 +221,13 @@ export const paymentPreviewStep: StepInit = async () => {
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner)
         return
-      const { shopName: title = 'Payment preview', shopCategory: category } = qrCodeScanner as PaymentRequestData
+      const { shopName: title = i18n.t('Payment preview'), shopCategory: category } = qrCodeScanner as PaymentRequestData
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px: height: 40px', category }))
       titleCmp = `${iconInHTML} ${title}`
     },
     beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next, err }) => {
       if (_request instanceof String)
+        // No translation as not user-facing. Dev error which should not occur in production.
         throw new Error(`Request is a string: ${_request}`)
       const request = _request as PaymentRequestData
 
@@ -235,11 +237,12 @@ export const paymentPreviewStep: StepInit = async () => {
       switch (method) {
         case PaymentMethod.NIM:
           // TODO: handle error
-          await (await import('@/stores/transactions')).useTransactions().sendTx({ ...request!, title: request?.shopName || 'Payment' })
+          await (await import('@/stores/transactions')).useTransactions().sendTx({ ...request!, title: request?.shopName || i18n.t('Payment') })
           next()
           break
         case PaymentMethod.Points: {
           if (!request?.rail || !request?.railPeerId)
+            // No translation as not user-facing. Dev error which should not occur in production.
             throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
 
           const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
@@ -256,15 +259,20 @@ export const paymentPreviewStep: StepInit = async () => {
 
 export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
-  title: 'Withdraw',
+  get title() { return i18n.t('Withdraw') },
   main: NimWithdraw,
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
 
-    if (amount > remoteBalance) { err(`You don't have enough NIM. Your current balance is ${formatCrypto(remoteBalance)}`) }
+    if (amount > remoteBalance) {
+      err(i18n.t(
+        'You don\'t have enough NIM. Your current balance is {balance}.',
+        { balance: formatCrypto(remoteBalance) },
+      ))
+    }
     else if (amount && recipient) {
-      const title = 'Withdrawal'
+      const title = i18n.t('Withdrawal')
       await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
       next()
     }
@@ -275,8 +283,8 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
 
 export const nimAddressInputStep: StepInit = async () => ({
   step: StepName.NimAddressInput,
-  title: 'Send NIM to this address',
-  description: 'Copy or scan the address',
+  get title() { return i18n.t('Send NIM to this address') },
+  get description() { return i18n.t('Copy or scan the address') },
   main: NimAddressInput,
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
     // The NIM Address Step is a special step:
@@ -287,7 +295,7 @@ export const nimAddressInputStep: StepInit = async () => ({
     if (nimAddressInput) {
       const { ValidationUtils } = (await import('@nimiq/utils'))
       if (!ValidationUtils.isValidAddress(nimAddressInput))
-        err('Invalid Nimiq address')
+        err(i18n.t('Invalid Nimiq address'))
       else
         prev()
     }
@@ -297,8 +305,8 @@ export const nimAddressInputStep: StepInit = async () => ({
 
 export const nimAddressDisplay: StepInit = async () => ({
   step: StepName.NimAddressDisplay,
-  title: 'Send NIM to top up',
-  description: 'Send a transaction to the address below. Top up as much as you like.',
+  get title() { return i18n.t('Send NIM to top up') },
+  get description() { return i18n.t('Send a transaction to the address below. Top up as much as you like.') },
   main: NimAddressDisplay,
 })
 
@@ -311,14 +319,14 @@ export const transactionList: StepInit = async () => {
 }
 
 export const transactionDetail: StepInit = async () => {
-  const titleCmp = ref<string>('Payment preview')
+  const titleCmp = ref<string>(i18n.t('Payment preview'))
   const tx = ref() as Ref<ExternalTransaction>
   return {
     step: StepName.PaymentPreview,
     get title() { return titleCmp.value },
     main: h(TransactionDetails, { tx }),
     async beforeDisplay({ transactionList: selectedTx }) {
-      const title = selectedTx.shopName || selectedTx.title || 'Transaction'
+      const title = selectedTx.shopName || selectedTx.title || i18n.t('Transaction')
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: selectedTx.shopCategory }))
       titleCmp.value = `${iconInHTML} ${title}`
       tx.value = selectedTx

@@ -11,6 +11,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import type { DbPagination } from '@/lib/sql-queries'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
+import { i18n } from '@/i18n/i18n-setup'
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -84,7 +85,7 @@ export const useTransactions = defineStore('transactions', () => {
     const details = await client.value!.sendTransaction(signedTx!)
     if (details.state === 'invalidated') {
       console.error('Transaction was invalidated', details)
-      return { data: undefined, error: 'Transaction was invalidated' }
+      return { data: undefined, error: i18n.t('Transaction was invalidated') }
     }
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()

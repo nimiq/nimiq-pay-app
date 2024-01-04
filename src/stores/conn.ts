@@ -27,10 +27,10 @@ export const useConn = defineStore('conn', () => {
       await unlockPromise
     if (!db.value) {
       console.error('The db instance is not defined')
-      return 'The db instance is not defined'
+      return 'The db instance is not defined' // no translation as not user-facing; just a dev error
     }
     // if (locked.value)
-    //   return 'The db is locked'
+    //   return 'The db is locked' // no translation as not user-facing; just a dev error
   }
 
   const lastUnlocked = ref(0)

@@ -6,6 +6,7 @@ import { useToast } from '@/composables/useToast'
 import { usePointsApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
+import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
 import { PointsHashPrefix, Rail, ShopCategory, Transfer } from '@/types/transactions'
 
@@ -34,7 +35,7 @@ export const usePoints = defineStore('points', () => {
    */
   async function verify(accessCodeInput: string) {
     if (!phoneNumber.value)
-      return { data: undefined, error: 'No phone number' }
+      return { data: undefined, error: i18n.t('No phone number set') }
 
     const { data, error } = await api.verify({ phoneNumber, accessCode: accessCodeInput })
     if (error || !data)
@@ -48,7 +49,7 @@ export const usePoints = defineStore('points', () => {
 
   async function updatePointsBalance(): AsyncOption<string> {
     if (!pointsToken.value)
-      return 'Phone number not verified'
+      return i18n.t('Phone number not verified')
 
     const { data, error } = await api.getBalance({ token: pointsToken.value })
     if (error || !data)
@@ -59,7 +60,7 @@ export const usePoints = defineStore('points', () => {
 
   async function getAllTasks() {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
 
     const { data, error } = await api.getTasks({ token: pointsToken.value })
     if (error || !data)
@@ -70,7 +71,7 @@ export const usePoints = defineStore('points', () => {
 
   async function getTaskById(id: string) {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
 
     // TODO: add types to this
     const { data, error } = await api.getTaskById({ id, token: pointsToken.value })
@@ -99,7 +100,7 @@ export const usePoints = defineStore('points', () => {
 
   async function claimTask({ id, answer }: { id: string; answer?: string }) {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
 
     const { data, error } = await api.claimTask({ id, token: pointsToken.value, answer })
     if (error || !data)
@@ -116,7 +117,7 @@ export const usePoints = defineStore('points', () => {
    */
   async function getReferralInfo() {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
 
     const { data, error } = await api.getReferralInfo({ token: pointsToken.value })
     if (error || !data)
@@ -141,23 +142,23 @@ export const usePoints = defineStore('points', () => {
 
   async function redeemReferral() {
     if (!phoneNumber.value)
-      return { data: undefined, error: 'No phone number' }
+      return { data: undefined, error: i18n.t('No phone number set') }
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
     if (!referralCode.value)
-      return { data: undefined, error: 'No referral code' }
+      return { data: undefined, error: i18n.t('No referral code set') }
 
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''
     setTimeout(() => {
       updatePointsBalance()
-      useToast().setToast({ message: 'CC Points added' })
+      useToast().setToast({ message: i18n.t('CC Points added') })
     }, 750)
   }
 
   async function payWithPoints(request: PaymentRequestData) {
     if (!pointsToken.value)
-      return { data: undefined, error: 'Phone number not verified' }
+      return { data: undefined, error: i18n.t('Phone number not verified') }
 
     const { rail, railPeerId, recipient, amount, fee, shopCategory, shopName, message } = request
     const { error } = await api.payWithPoints({ rail: rail!, reference: railPeerId, recipient, token: pointsToken.value })
@@ -176,11 +177,11 @@ export const usePoints = defineStore('points', () => {
       hash: `${PointsHashPrefix}${Date.now().toString()}${Math.random().toString()}`,
       status: Nimiq.Client.TransactionState.PENDING,
       timestamp: Math.ceil(Date.now() / 1000),
-      title: shopName || 'Points Payment',
+      title: shopName || i18n.t('Points Payment'),
       message,
       fee,
       shopCategory: shopCategory || ShopCategory.Shop,
-      shopName: shopName || 'Shop',
+      shopName: shopName || i18n.t('Shop'),
       proofSize: -1,
       raw: JSON.stringify(request),
       // Payments using points are only possible with CPL

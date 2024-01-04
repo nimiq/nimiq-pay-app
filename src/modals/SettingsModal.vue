@@ -18,13 +18,11 @@ const { language, selectedFiat } = storeToRefs(useApp())
       </IonButtons>
     </template>
     <div class="w-full h-full">
-      <p class="text-sm font-bold text-left uppercase text-space/60">
-        Settings
-      </p>
+      <p class="text-sm font-bold text-left uppercase text-space/60">{{ $t('Settings') }}</p>
       <IonList lines="none" class="mt-4">
         <IonItem>
           <IonSelect
-            label="Language" :value="language" class="text-lg font-semibold"
+            :label="$t('Language')" :value="language" class="text-lg font-semibold"
             @ion-change="setLanguage($event.detail.value)"
           >
             <IonSelectOption v-for="lang in SUPPORTED_LANGUAGES" :key="lang" :value="lang">{{
@@ -35,7 +33,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
 
         <IonItem>
           <IonSelect
-            label="Currency" :value="selectedFiat" class="text-lg font-semibold"
+            :label="$t('Currency')" :value="selectedFiat" class="text-lg font-semibold"
             @ion-change="selectedFiat = $event.detail.value"
           >
             <IonSelectOption v-for="currency in Fiat" :key="currency" :value="currency">{{

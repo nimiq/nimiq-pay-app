@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import { usePoints } from '@/stores/points'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { i18n } from '@/i18n/i18n-setup'
 
 defineProps({ errorMsg: { type: String } })
 defineEmits(stepEmits)
@@ -18,11 +19,11 @@ watch(referralCode, async (newValue) => {
     try {
       const { data, error } = await getReferralInfoById(referralCode.value)
       if (error || !data)
-        throw new Error(error || 'Something went wrong when checking the promo code')
+        throw new Error(error || i18n.t('Something went wrong when checking the promo code'))
 
       const { reward, claims_remaining } = data
 
-      if (claims_remaining === 0) { throw new Error('This promo code has been claimed too many times') }
+      if (claims_remaining === 0) { throw new Error(i18n.t('This promo code has been claimed too many times')) }
       else if (claims_remaining > 0) {
         codeField.value.blur()
         rewardAmount.value = reward
@@ -52,11 +53,9 @@ watch(referralCode, async (newValue) => {
     {{ errorMessage || errorMsg }}
   </p>
   <div v-if="rewardAmount" class="w-full">
-    <p class="text-center">
-      You are going to get {{ rewardAmount / 1e5 }} NIM
-    </p>
+    <p class="text-center">{{ $t('You are going to get {amount} NIM', { amount: rewardAmount / 1e5 }) }}</p>
   </div>
-  <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">
-    Claim Promo Code
-  </IonButton>
+  <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">{{
+    $t('Claim Promo Code')
+  }}</IonButton>
 </template>

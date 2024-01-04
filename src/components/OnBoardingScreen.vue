@@ -4,6 +4,7 @@ import { useInterval, useWindowSize } from '@vueuse/core'
 import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { i18n } from '@/i18n/i18n-setup'
 
 import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
@@ -17,23 +18,23 @@ defineEmits(stepEmits)
 
 const steps = ref([
   {
-    title: 'Welcome to Crypto City Points',
-    description: 'Points are a loyalty rewards you can earn and pay with.',
+    title: i18n.t('Welcome to Crypto City Points'),
+    description: i18n.t('Points are a loyalty rewards you can earn and pay with.'),
     svg: NimPointsExchangeSvg,
-    button: 'Go To Points',
+    button: i18n.t('Go To Points'),
   },
   {
-    title: 'Pay with Points',
-    description: 'Pay with Points instead of NIM wherever they\'re accepted.',
+    title: i18n.t('Pay with Points'),
+    description: i18n.t('Pay with Points instead of NIM wherever they\'re accepted.'),
     svg: PayWithPointsSvg,
     isSvgFullWidth: true,
-    button: 'Got It',
+    button: i18n.t('Got It'),
   },
   {
-    title: 'Get Points',
-    description: 'Get Points as cashback rewards or complete challenges to earn them.',
+    title: i18n.t('Get Points'),
+    description: i18n.t('Get Points as cashback rewards or complete challenges to earn them.'),
     svg: CompletedTasksSvg,
-    button: 'Got It',
+    button: i18n.t('Got It'),
   },
 ])
 

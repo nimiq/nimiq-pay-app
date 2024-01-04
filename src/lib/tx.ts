@@ -3,6 +3,7 @@ import type { AsyncResult } from '@/types'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { i18n } from '@/i18n/i18n-setup'
 import type { PartialSendTxArgs } from '@/types/transactions'
 import { Transfer } from '@/types/transactions'
 
@@ -24,7 +25,7 @@ import { Transfer } from '@/types/transactions'
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
-      return { error: 'Remote address is undefined', data: undefined }
+      return { error: i18n.t('Remote address is undefined'), data: undefined }
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
@@ -56,10 +57,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
     if (!useRemoteSigner().isHtlcActive)
-      return { error: `There is no active HTLC`, data: undefined }
+      return { error: i18n.t('There is no active HTLC'), data: undefined }
     const sender = useRemoteSigner().remoteAddress
     if (!sender)
-      return { error: `There is no sender address provided. Sender: ${sender}`, data: undefined }
+      return { error: i18n.t('There is no sender address provided. Sender: {sender}', { sender }), data: undefined }
 
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ sender,
@@ -121,7 +122,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     return await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
   }
   else {
-    return { data: undefined, error: 'Invalid transfer type' }
+    return { data: undefined, error: i18n.t('Invalid transfer type') }
   }
 }
 
@@ -132,7 +133,7 @@ interface GetSignedTxByRemoteArgs {
 
 async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
-    return { data: undefined, error: 'Remote address is undefined' }
+    return { data: undefined, error: i18n.t('Remote address is undefined') }
   // eslint-disable-next-line no-console
   console.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
@@ -146,7 +147,7 @@ async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemot
 function createDepositData() {
   const remotePublicKey = useRemoteSigner().remotePublicKey
   if (!remotePublicKey)
-    throw new Error('Remote public key is undefined')
+    throw new Error('Remote public key is undefined') // no translation as not user-facing
   const data = new Nimiq.SerialBuffer(78)
   useLocalWallet().localWallet.address.serialize(data)
   Nimiq.PublicKey.fromAny(remotePublicKey).toAddress().serialize(data)

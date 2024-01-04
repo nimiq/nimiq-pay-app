@@ -7,6 +7,7 @@ import ValidateWords from './ValidateWords.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import MnemonicInput from '@/components/MnemonicInput.vue'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { i18n } from '@/i18n/i18n-setup'
 
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const { getWords } = useLocalWallet()
@@ -19,7 +20,7 @@ const words = asyncComputed(async () => {
   }
   if (data)
     return data
-}, ['Loading...'])
+}, [i18n.t('Loading...')])
 </script>
 
 <template>
@@ -29,17 +30,15 @@ const words = asyncComputed(async () => {
         <IonBackButton default-href="/" @click.prevent="nav.pop()" />
       </IonButtons>
     </template>
-    <template #title>
-      Copy the words
-    </template>
+    <template #title>{{ $t('Copy the words') }}</template>
     <template #subtitle>
-      Write the words below on a piece of paper in the right order.
-      <br>
-      Keep it safe and never share it!
+      <span class="whitespace-pre-line">{{
+        $t('Write the words below on a piece of paper in the right order.\nKeep it safe and never share it!')
+      }}</span>
     </template>
     <MnemonicInput :recovery-words="words" />
-    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">
-      Continue
-    </IonButton>
+    <IonButton class="self-end w-full text-base" @click="nav.push(markRaw(ValidateWords))">{{
+      $t('Continue')
+    }}</IonButton>
   </ModalTemplate>
 </template>

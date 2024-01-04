@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { until } from '@vueuse/core'
 import type { AsyncResult } from '@/types'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 
 const { setToast, clearToast } = useToast()
 
@@ -31,7 +32,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         clearToast()
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established')
-        setToast({ message: `Consensus lost, ${newConsensus}`, keepOpen: true, error: true })
+        setToast({ message: i18n.t('Consensus lost, {newConsensus}', { newConsensus }), keepOpen: true, error: true })
 
       consensus.value = newConsensus
     })
@@ -41,7 +42,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       await until(consensus).toBe('established', { timeout: 30 * 1e3, throwOnTimeout: true })
     }
     catch {
-      setToast({ message: `Consensus ${consensus.value}`, error: true, keepOpen: true })
+      setToast({ message: i18n.t('Consensus {consensus}', { consensus: consensus.value }), error: true, keepOpen: true })
     }
 
     // @ts-expect-error Private property access
@@ -53,7 +54,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
   async function claimCashlink(cashlink: string, address: Nimiq.Address) {
     if (!cashlink)
-      throw new Error('No Cashlink found')
+      throw new Error(i18n.t('No Cashlink found'))
 
     cashlink = cashlink.split('cashlink/#')[1].replace(/~/g, '').replace(/=*$/, match => Array.from({ length: match.length }).fill('.').join(''))
     const buf = Nimiq.BufferUtils.fromBase64Url(cashlink)
@@ -62,9 +63,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     const { balance } = await client.value!.getAccount(wallet.address)
     const amount = Math.min(buf.readUint64(), balance)
     if (!address)
-      throw new Error('No Nimiq Wallet address found')
+      throw new Error(i18n.t('No Nimiq Wallet address found'))
     if (amount <= 0)
-      throw new Error('Cashlink has no balance')
+      throw new Error(i18n.t('Cashlink has no balance'))
 
     const tx = wallet.createTransaction(
       address,
@@ -77,19 +78,19 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
   async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account> {
     if (!address)
-      return { data: undefined, error: 'No address' }
+      return { data: undefined, error: i18n.t('No address given') }
     const account = await client.value?.getAccount(address)
     if (!account)
-      return { data: undefined, error: 'No account' }
+      return { data: undefined, error: i18n.t('No account found') }
     return { data: account, error: undefined }
   }
 
   async function getAccountTransactions(address: Nimiq.Address | undefined, limit = 30) {
     if (!address)
-      return { data: [], error: 'No address' }
+      return { data: [], error: i18n.t('No address given') }
     const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, limit)
     if (!transactions)
-      return { data: [], error: 'No transactions' }
+      return { data: [], error: i18n.t('No transactions found') }
     return { data: transactions, error: undefined }
   }
 

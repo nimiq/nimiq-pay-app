@@ -59,9 +59,7 @@ onMounted(async () => {
     </IonRefresher>
 
     <IonGrid class="flex flex-col gap-y-2">
-      <h2 class="max-w-sm mb-6 text-2xl font-bold text-center text-balance">
-        Crypto City Points
-      </h2>
+      <h2 class="max-w-sm mb-6 text-2xl font-bold text-center text-balance">{{ $t('Crypto City Points') }}</h2>
       <IonRow class="flex flex-col items-center justify-center mb-10 gap-y-2">
         <h1 class="flex items-center text-5xl font-normal gap-x-2">
           <CryptoCityLogo class="h-11 w-9" />
@@ -71,31 +69,31 @@ onMounted(async () => {
           {{ fiat.formatted }}
         </p>
         <button class="flex items-center text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
-          <CryptoCityLogo slot="start" class="h-5 w-[18px] mr-[6px]" />
-          0 expiring soon
+          <i18n-t keypath="{amount} expiring soon" tag="span" slot="start">
+            <template #amount>
+              <CryptoCityLogo class="h-5 w-[18px] mr-[6px]" />
+              {{ 0 /* TODO display actual value */ }}
+            </template>
+          </i18n-t>
           <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />
         </button>
       </IonRow>
       <!-- Featured -->
       <IonRow>
-        <p class="ml-1 text-sm font-bold uppercase text-space/60">
-          Featured
-        </p>
+        <p class="ml-1 text-sm font-bold uppercase text-space/60">{{ $t('Featured') }}</p>
       </IonRow>
 
       <!-- Referral -->
       <IonRow class="mb-8">
         <!-- TODO: get amount from API -->
-        <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
-          Invite a friend and earn up to 200 Points both!
-        </TaskCard>
+        <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">{{
+          $t('Invite a friend and earn up to 200 Points both!')
+        }}</TaskCard>
       </IonRow>
 
       <!-- Earn Points -->
       <IonRow>
-        <p class="ml-1 text-sm font-bold uppercase text-space/60">
-          Earn Points
-        </p>
+        <p class="ml-1 text-sm font-bold uppercase text-space/60">{{ $t('Earn Points') }}</p>
       </IonRow>
       <!-- Tasks -->
       <Transition name="slide-fade" mode="out-in">
@@ -109,9 +107,7 @@ onMounted(async () => {
         </IonRow>
         <IonRow v-else class="flex flex-col items-center justify-center gap-4 mt-8">
           <IonSpinner />
-          <p>
-            Loading tasks...
-          </p>
+          <p>{{ $t('Loading tasks...') }}</p>
         </IonRow>
       </Transition>
     </IonGrid>

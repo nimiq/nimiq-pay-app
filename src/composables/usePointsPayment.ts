@@ -4,6 +4,7 @@ import { usePointsApi } from './useApi'
 import { useApp } from '@/stores/app'
 import type { Rail } from '@/types/transactions'
 import { usePoints } from '@/stores/points'
+import { i18n } from '@/i18n/i18n-setup'
 
 export enum PointsState {
   NotRegistered = 'not_registered',
@@ -40,7 +41,7 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
 
     if (!toValue(rail) || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
-      message.value = 'This payment is not eligible for CC Points.'
+      message.value = i18n.t('This payment is not eligible for CC Points.')
       return
     }
 
@@ -53,7 +54,7 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
 
     if (usePoints().pointsBalance < toValue(fiatAmount)) {
       pointsState.value = PointsState.InsufficientPoints
-      message.value = 'You don\'t have enough CC Points for this purchase.'
+      message.value = i18n.t('You don\'t have enough CC Points for this purchase.')
       return
     }
 
@@ -65,7 +66,7 @@ export function usePointsPayment({ fiatAmount, rail, recipient, reference }: Use
     }
 
     cashback.value = amountInLuna
-    message.value = `This purchase gets you ${(amountInLuna / 1e5).toFixed(2)} in Points.`
+    message.value = i18n.t('This purchase gets you {amount} in Points.', { amount: (amountInLuna / 1e5).toFixed(2) })
     pointsState.value = PointsState.Ok
   }
 

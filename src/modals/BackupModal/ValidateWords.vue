@@ -9,6 +9,7 @@ import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useApp } from '@/stores/app'
+import { i18n } from '@/i18n/i18n-setup'
 
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const { closeModal } = useModal()
@@ -61,14 +62,14 @@ async function handleGuess(word: string) {
     successCount.value = 0
     usedIndexes.value = []
     // TODO: improve this
-    setToast({ message: 'Wrong word!' })
+    setToast({ message: i18n.t('Wrong word!') })
     setTimeout(() => {
       nav.pop()
     }, 1000)
   }
   if (successCount.value === 3) {
     hasDoneBackup.value = true
-    setToast({ message: 'Back up successful' })
+    setToast({ message: i18n.t('Back up successful') })
     closeModal()
   }
   else {
@@ -86,18 +87,14 @@ onMounted(updateRandomWord)
         <IonBackButton default-href="/" @click.prevent="nav.pop()" />
       </IonButtons>
     </template>
-    <template #title>
-      Test your backup
-    </template>
+    <template #title>{{ $t('Test your backup') }}</template>
     <div class="flex flex-col h-full gap-y-8">
       <div v-if="randomIndex !== null" class="mt-[40%]">
         <p class="mb-6 text-6xl font-semibold">
           {{ randomIndex + 1 }}
         </p>
         <!-- TODO: show first, second... instead of number -->
-        <p class="text-lg font-medium">
-          What's the {{ randomIndex + 1 }}th word?
-        </p>
+        <p class="text-lg font-medium">{{ $t('What\'s the {index}th word?', { index: randomIndex + 1 }) }}</p>
       </div>
       <div class="grid grid-cols-3 gap-4">
         <div v-for="(word, i) in wordsToDisplay" :key="word + i" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded whitespace-nowrap" @click="() => handleGuess(word)">

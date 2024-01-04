@@ -5,7 +5,8 @@ import { useThrottleFn } from '@vueuse/core'
 import { useDevice } from './useDevice'
 import { QRDataFormat } from './useStringParser'
 import { useCameraFeed } from './useCameraFeed'
-import { useStringParser } from '@/composables/useStringParser'
+import { useStringParser } from './useStringParser'
+import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 
 export enum QRScannerState {
@@ -67,8 +68,8 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       onData(data)
     }
     else if (expect === QRDataFormat.NimCashlink) { return getCashlink(raw) }
+    // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
     else { return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined } }
-    return { error: undefined, data: undefined }
   }
 
   return {
@@ -119,7 +120,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
       maxMs -= 100
     }
     if (maxMs <= 0) {
-      onError?.('The QR scanner is not ready yet. Please try again.')
+      onError?.(i18n.t('The QR scanner is not ready yet. Please try again.'))
       return
     }
 

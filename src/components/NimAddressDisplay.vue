@@ -9,6 +9,7 @@ import AddressDisplay from '@/components/AddressDisplay.vue'
 import NimLogo from '@/components/icons/nimiq-logo.vue'
 import { walletUrl } from '@/lib/index'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 
 defineProps({ address: { type: String } })
 
@@ -32,7 +33,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: address,
   })
-  await setToast({message: 'Address copied to clipboard'})
+  await setToast({message: i18n.t('Address copied to clipboard')})
 }
 </script>
 
@@ -45,16 +46,14 @@ async function handleCopy() {
     <div>
       <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('done')">
         <IonIcon slot="start" :icon="qrCodeOutline" />
-        Scan Cashlink
+        {{ $t('Scan Cashlink') }}
       </IonButton>
     </div>
     <div class="w-full mt-auto">
-      <IonButton expand="block" class="text-base" @click="openWallet">
-        Open Wallet
-      </IonButton>
-      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
-        Copy address
-      </IonButton>
+      <IonButton expand="block" class="text-base" @click="openWallet">{{ $t('Open Wallet') }}</IonButton>
+      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">{{
+        $t('Copy address')
+      }}</IonButton>
     </div>
   </div>
 </template>

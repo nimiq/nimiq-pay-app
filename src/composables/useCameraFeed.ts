@@ -50,7 +50,7 @@ function useCameraFeedMobile(cameraFeedContainer: Ref<HTMLElement>) {
   async function tearDownCameraFeed() {
     const { mainView, dialog, backdrop } = await domElements()
     if (!mainView || !dialog || !backdrop)
-      console.error('There is an element missing', { mainView, dialog, backdrop })
+      console.error('There is an element missing', { mainView, dialog, backdrop }) // no translation as not user-facing
 
     mainView?.style.removeProperty('display')
     backdrop?.style.removeProperty('display')
@@ -71,7 +71,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
   function getVideoElement() {
     const video = cameraFeedContainer.value.querySelector('video')
     if (!video)
-      throw new Error('There is no video element in the cameraFeedContainer')
+      throw new Error('There is no video element in the cameraFeedContainer') // no translation as not user-facing text
     return video as HTMLVideoElement
   }
 

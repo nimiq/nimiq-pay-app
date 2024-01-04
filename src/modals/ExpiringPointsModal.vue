@@ -6,12 +6,10 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 
 <template>
   <ModalTemplate>
-    <template #title>
-      Expiring Points
-    </template>
-    <template #subtitle>
-      These Points are made for spending. Get out there and drive crypto adoption. 
-    </template>
+    <template #title>{{ $t('Expiring Points') }}</template>
+    <template #subtitle>{{
+      $t('These Points are made for spending. Get out there and drive crypto adoption.')
+    }}</template>
     <IonGrid class="flex flex-col self-start mt-8 gap-y-6">
       <!-- TODO: get this from API -->
       <!-- <IonRow v-for="i in 5" :key="i" class="flex justify-between w-full">

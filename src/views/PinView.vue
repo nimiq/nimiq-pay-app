@@ -76,7 +76,7 @@ onUnmounted(() => {
     <IonContent class="text-center ion-padding" style="--background: #F8F8F8">
       <IonGrid class="flex flex-col h-full">
         <IonRow class="ion-justify-content-center">
-          <h1>Enter PIN</h1>
+          <h1>{{ $t('Enter PIN') }}</h1>
         </IonRow>
         <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
           <input

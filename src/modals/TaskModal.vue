@@ -9,6 +9,7 @@ import { useToast } from '@/composables/useToast'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { usePoints } from '@/stores/points'
+import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({
   task: {
@@ -103,7 +104,7 @@ async function handleSubmit() {
       return
   }
 
-  setToast({ message: 'You got CC Points'})
+  setToast({ message: i18n.t('You got CC Points') })
   closeModal()
 }
 </script>
@@ -114,11 +115,12 @@ async function handleSubmit() {
       {{ task.description }}
     </template>
     <div class="self-stretch max-w-[98vw]">
-      <div class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
-        <span>You earn</span>
-        <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
-        <span>{{ task.reward_amount / 1e5 }}</span>
-      </div>
+      <i18n-t keypath="You earn {amount}" tag="div" class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
+        <template #amount>
+          <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
+          {{ task.reward_amount / 1e5 }}
+        </template>
+      </i18n-t>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
@@ -129,8 +131,8 @@ async function handleSubmit() {
       </IonRadioGroup>
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
     </div>
-    <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
-      Submit
-    </IonButton>
+    <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">{{
+      $t('Submit')
+    }}</IonButton>
   </ModalTemplate>
 </template>

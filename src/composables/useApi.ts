@@ -2,6 +2,7 @@ import type { MaybeRef } from 'vue'
 import { readonly, ref, toValue as v } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
 import { toMs } from './useTime'
+import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResult, Result } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
@@ -18,13 +19,27 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
   const body = _body ? JSON.stringify(_body) : undefined
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
-  const response = await fetch(url, { method, headers, body }).catch(error => `Error ${method} ${url.href}: ${error}`)
+  const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error {method} {url}: {error}', {
+      method,
+      url: url.href,
+      error,
+    }))
 
   if (typeof response === 'string')
     return { error: response, data: undefined }
 
-  if (!response.ok)
-    return { error: `Error fetching API ${url.href}: ${response.status} ${response.statusText}. Response ${JSON.stringify(response)}. Data ${JSON.stringify(await response.json())}`, data: undefined }
+  if (!response.ok) {
+    return {
+      error: i18n.t('Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}', {
+        url: url.href,
+        status: response.status,
+        statusText: response.statusText,
+        response: JSON.stringify(response),
+        data: JSON.stringify(await response.json()),
+      }),
+      data: undefined,
+    }
+  }
 
   if (response.status === 204)
     return { data: undefined, error: undefined }
@@ -70,7 +85,7 @@ export function usePointsApi() {
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
     const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (error)
-      return { data: undefined, error: error || 'Payment not valid' }
+      return { data: undefined, error: error || i18n.t('Payment not valid') }
     return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined }
   }
 
@@ -121,14 +136,14 @@ export function useRemoteSignerApi() {
   async function getStatus(): AsyncResult<StatusRes> {
     const { data, error } = await api<StatusRes>(new URL('/status', baseWalletUrl))
     if (error || data?.status !== 'good')
-      return { data: undefined, error: error || 'Status not good' }
+      return { data: undefined, error: error || i18n.t('Status not good') }
     return { data: data!, error: undefined }
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
     const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseWalletUrl))
     if (error || !data?.address)
-      return { data: undefined, error: error || 'No remote signer found' }
+      return { data: undefined, error: error || i18n.t('No remote signer found') }
 
     // The response from the server is verbose, and since these fields are used widely in the logic of the app
     // we extract them here and return a simpler object.

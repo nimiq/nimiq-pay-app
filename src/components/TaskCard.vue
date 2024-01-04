@@ -63,9 +63,7 @@ async function handleClick() {
     <span v-if="total" class="absolute text-sm top-2 right-3">
       {{ progress }}/{{ total }}
     </span>
-    <span v-if="task?.status === 'completed'" class="absolute text-sm top-2 right-3">
-      Complete
-    </span>
+    <span v-if="task?.status === 'completed'" class="absolute text-sm top-2 right-3">{{ $t('Complete') }}</span>
     <Transition name="fade" mode="out-in">
       <IonSpinner v-if="isLoading" class="absolute text-white -translate-x-1/2 -translate-y-1/2 top-1/2 left-1/2" />
       <div v-else class="flex flex-col justify-between h-full gap-y-2">

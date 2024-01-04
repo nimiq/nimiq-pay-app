@@ -13,6 +13,8 @@ import { Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/composables/useSync'
 
+// Note: no translations in this file as it's for dev purposes only.
+
 const router = useRouter()
 const { consensus, head, height, peerCount, client } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())

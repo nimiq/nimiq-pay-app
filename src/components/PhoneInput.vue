@@ -41,23 +41,21 @@ watch(() => props.errorMsg, () => {
 <template>
   <div class="flex flex-col self-start w-full h-full pt-8">
     <input
-      v-model="phoneNumber" placeholder="Your number" type="tel" class="w-full p-2 px-4 my-2 phone"
+      v-model="phoneNumber" :placeholder="$t('Your number')" type="tel" class="w-full p-2 px-4 my-2 phone"
       size="16"
     >
-    <p class="mt-1 text-sm font-semibold text-center text-space/50">
-      Standard rates may apply.
-    </p>
+    <p class="mt-1 text-sm font-semibold text-center text-space/50">{{ $t('Standard rates may apply.') }}</p>
     <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin">
       {{ errorMessage }}
     </p>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
-      <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
-        Verify
-      </IonButton>
-      <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">
-        Skip for now
-      </IonButton>
+      <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">{{
+        $t('Verify')
+      }}</IonButton>
+      <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">{{
+        $t('Skip for now')
+      }}</IonButton>
     </div>
   </div>
-  <IonAlert trigger="present-alert" header="Is this your phone number?" :message="phoneNumber" :buttons="[{ text: 'Cancel', handler: () => $emit('focus') }, { text: 'Continue', handler: handleSubmit }]" />
+  <IonAlert trigger="present-alert" :header="$t('Is this your phone number?')" :message="phoneNumber" :buttons="[{ text: $t('Cancel'), handler: () => $emit('focus') }, { text: $t('Continue'), handler: handleSubmit }]" />
 </template>
