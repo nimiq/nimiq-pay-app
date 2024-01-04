@@ -3,6 +3,7 @@ import { IonRippleEffect } from '@ionic/vue'
 import { computed } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({
   address: {
@@ -29,7 +30,7 @@ async function handleCopy() {
   await Clipboard.write({
     string: props.address,
   })
-  await setToast({ message: 'Address copied to clipboard' })
+  await setToast({ message: i18n.t('Address copied to clipboard') })
 }
 </script>
 

@@ -18,6 +18,7 @@ msgstr ""
 msgid "Add NIM address"
 msgstr ""
 
+#: src/components/AddressDisplay.vue:33
 #: src/components/NimAddressDisplay.vue:36
 msgid "Address copied to clipboard"
 msgstr ""
