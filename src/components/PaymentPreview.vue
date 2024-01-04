@@ -83,12 +83,12 @@ function handlePay() {
       :checked="isPayingWithPointsForced"
       @ion-change="(e) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
     >
-      <I18nT keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
+      <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
           {{ crypto.formatted }}
         </template>
-      </I18nT>
+      </i18n-t>
     </IonToggle>
 
     <div class="mb-6 font-semibold text-center min-h-[4rem]">

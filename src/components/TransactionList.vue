@@ -30,11 +30,11 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
     <input v-model="searchQuery" type="text" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" :placeholder="$t('Search')" @select.stop.prevent>
 
     <div v-if="status === TransactionListState.NoResults" class="pt-10">
-      <I18nT keypath="No transactions found for &quot;{searchQuery}&quot;" tag="p">
+      <i18n-t keypath="No transactions found for &quot;{searchQuery}&quot;" tag="p">
         <template #searchQuery>
           <span class="italic font-bold">{{ searchQuery }}</span>
         </template>
-      </I18nT>
+      </i18n-t>
       <QuickButton @click="searchQuery = ''">
         {{ $t('Reset search') }}
       </QuickButton>

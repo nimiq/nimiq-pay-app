@@ -2,6 +2,10 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
+#: src/modals/PointsModal.vue:29
+msgid "{amount} expiring soon"
+msgstr ""
+
 #: src/modals/ReferralModal.vue:22
 msgid "{count} of {total} remaining."
 msgstr ""
@@ -56,6 +60,10 @@ msgstr ""
 
 #: src/composables/useDecrypt.ts:45
 msgid "Both expected and the given PIN are empty"
+msgstr ""
+
+#: src/views/HomeView.vue:86
+msgid "Bring a friend and get {amount} Points each!"
 msgstr ""
 
 #: src/views/HomeView.vue:63
@@ -165,6 +173,7 @@ msgid "Date"
 msgstr ""
 
 #: src/modals/PointsModal.vue:56
+#: src/views/HomeView.vue:33
 msgid "Earn Points"
 msgstr ""
 
@@ -225,6 +234,10 @@ msgstr ""
 msgid "Fees might apply ~{fee}"
 msgstr ""
 
+#: src/views/HomeView.vue:94
+msgid "Find places that accept crypto!"
+msgstr ""
+
 #: src/lib/flows/steps.ts:199
 msgid "Find places to pay with and earn CC Points"
 msgstr ""
@@ -256,6 +269,10 @@ msgstr ""
 
 #: src/views/SetupView.vue:24
 msgid "Get Started"
+msgstr ""
+
+#: src/views/HomeView.vue:109
+msgid "Go to Crypto Map"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:24
@@ -411,6 +428,10 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
+#: src/components/TransactionList.vue:11
+msgid "No transactions found for \"{searchQuery}\""
+msgstr ""
+
 #: src/components/NimWithdraw.vue:81
 msgid "Not enough funds"
 msgstr ""
@@ -425,6 +446,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:101
 #: src/components/PaymentPreview.vue:61
+#: src/views/HomeView.vue:131
 msgid "Pay"
 msgstr ""
 
@@ -510,6 +532,10 @@ msgstr ""
 msgid "Protect your NIM Pay app with a pin."
 msgstr ""
 
+#: src/views/HomeView.vue:16
+msgid "Recovery Words"
+msgstr ""
+
 #: src/lib/tx.ts:135
 #: src/lib/tx.ts:27
 msgid "Remote address is undefined"
@@ -537,6 +563,10 @@ msgstr ""
 
 #: src/components/TransactionList.vue:8
 msgid "Search"
+msgstr ""
+
+#: src/views/HomeView.vue:56
+msgid "See all"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:17
@@ -609,6 +639,10 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
+#: src/views/HomeView.vue:8
+msgid "There is no \"forgot password\""
+msgstr ""
+
 #: src/modals/BackupModal/Intro.vue:4
 msgid "There is no \"Forgot password\""
 msgstr ""
@@ -658,6 +692,7 @@ msgstr ""
 #: src/composables/useSync.ts:173
 #: src/composables/useSync.ts:208
 #: src/modals/MenuModal.vue:14
+#: src/views/HomeView.vue:46
 msgid "Top Up"
 msgstr ""
 
@@ -677,6 +712,10 @@ msgstr ""
 msgid "Unknown error importing words"
 msgstr ""
 
+#: src/components/PaymentPreview.vue:28
+msgid "Use {amount}"
+msgstr ""
+
 #: src/components/PhoneInput.vue:15
 msgid "Verify"
 msgstr ""
@@ -688,6 +727,10 @@ msgstr ""
 #: src/lib/flows/steps.ts:120
 #: src/views/HomeView.vue:127
 msgid "Verify your phone number"
+msgstr ""
+
+#: src/views/HomeView.vue:123
+msgid "Wait ~10 minutes to pay after Top Up"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:21
@@ -751,6 +794,10 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:42
 msgid "You don't have enough Points for this purchase."
+msgstr ""
+
+#: src/modals/TaskModal.vue:7
+msgid "You earn {amount}"
 msgstr ""
 
 #: src/modals/TaskModal.vue:107

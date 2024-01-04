@@ -71,12 +71,12 @@ onMounted(async () => {
           {{ fiat.formatted }}
         </p>
         <button class="flex items-center text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
-          <I18nT slot="start" keypath="{amount} expiring soon" tag="span">
+          <i18n-t slot="start" keypath="{amount} expiring soon" tag="span">
             <template #amount>
               <CryptoCityLogo class="h-5 w-[18px] mr-[6px]" />
               {{ 0 /* TODO display actual value */ }}
             </template>
-          </I18nT>
+          </i18n-t>
           <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />
         </button>
       </IonRow>
