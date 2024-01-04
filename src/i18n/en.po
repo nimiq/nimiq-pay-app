@@ -62,6 +62,10 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
+#: src/views/HomeView.vue:80
+msgid "Bring a friend and get {amount} Points each!"
+msgstr ""
+
 #: src/views/HomeView.vue:63
 msgid "Buy NIM with Credit Card"
 msgstr ""
@@ -165,6 +169,7 @@ msgid "Date"
 msgstr ""
 
 #: src/modals/PointsModal.vue:51
+#: src/views/HomeView.vue:29
 msgid "Earn Points"
 msgstr ""
 
@@ -225,6 +230,10 @@ msgstr ""
 msgid "Fees might apply ~{fee}"
 msgstr ""
 
+#: src/views/HomeView.vue:87
+msgid "Find places that accept crypto!"
+msgstr ""
+
 #: src/lib/flows/steps.ts:174
 msgid "Find places to pay with and earn CC Points"
 msgstr ""
@@ -256,6 +265,10 @@ msgstr ""
 
 #: src/views/SetupView.vue:24
 msgid "Get Started"
+msgstr ""
+
+#: src/views/HomeView.vue:100
+msgid "Go to Crypto Map"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:24
@@ -429,6 +442,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:100
 #: src/components/PaymentPreview.vue:58
+#: src/views/HomeView.vue:121
 msgid "Pay"
 msgstr ""
 
@@ -514,6 +528,10 @@ msgstr ""
 msgid "Protect your NIM Pay app with a pin."
 msgstr ""
 
+#: src/views/HomeView.vue:13
+msgid "Recovery Words"
+msgstr ""
+
 #: src/lib/tx.ts:136
 #: src/lib/tx.ts:28
 msgid "Remote address is undefined"
@@ -541,6 +559,10 @@ msgstr ""
 
 #: src/components/TransactionList.vue:6
 msgid "Search"
+msgstr ""
+
+#: src/views/HomeView.vue:50
+msgid "See all"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:17
@@ -613,6 +635,10 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
+#: src/views/HomeView.vue:7
+msgid "There is no \"forgot password\""
+msgstr ""
+
 #: src/modals/BackupModal/Intro.vue:3
 msgid "There is no \"Forgot password\""
 msgstr ""
@@ -662,6 +688,7 @@ msgstr ""
 #: src/composables/useSync.ts:173
 #: src/composables/useSync.ts:208
 #: src/modals/MenuModal.vue:14
+#: src/views/HomeView.vue:41
 msgid "Top Up"
 msgstr ""
 
@@ -696,6 +723,10 @@ msgstr ""
 #: src/lib/flows/steps.ts:104
 #: src/views/HomeView.vue:127
 msgid "Verify your phone number"
+msgstr ""
+
+#: src/views/HomeView.vue:114
+msgid "Wait ~10 minutes to pay after Top Up"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:21

@@ -277,7 +277,7 @@ onMounted(async () => {
         <IonRow>
           <!-- TODO: interacting with map disable until we find a nice way to do it -->
           <a class="w-full mt-2 bg-white rounded-lg h-72" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
-            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/" />
+            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/"></iframe>
           </a>
         </IonRow>
         <IonRow class="ion-justify-content-center">
