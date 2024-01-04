@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonBackButton, IonButtons } from '@ionic/vue'
-import { type Ref, onMounted, ref } from 'vue'
+import { type Ref, computed, onMounted, ref } from 'vue'
 import type { Nav } from '@ionic/core/dist/types/components/nav/nav'
 import { storeToRefs } from 'pinia'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -76,6 +76,29 @@ async function handleGuess(word: string) {
   }
 }
 
+const randomIndexInstructions = computed(() => {
+  // List all possible strings for translation in full, because different languages have all different kinds of rules
+  // for how to build ordinals (see https://www.unicode.org/cldr/charts/43/supplemental/language_plural_rules.html),
+  // where the suffix, prefix, article etc. can change depending on the number, such that it's easiest to simply list
+  // all sentences in full.
+  switch (randomIndex.value) {
+    case null: return ''
+    case 0: return i18n.t('What\'s the 1st word?')
+    case 1: return i18n.t('What\'s the 2nd word?')
+    case 2: return i18n.t('What\'s the 3rd word?')
+    case 3: return i18n.t('What\'s the 4th word?')
+    case 4: return i18n.t('What\'s the 5th word?')
+    case 5: return i18n.t('What\'s the 6th word?')
+    case 6: return i18n.t('What\'s the 7th word?')
+    case 7: return i18n.t('What\'s the 8th word?')
+    case 8: return i18n.t('What\'s the 9th word?')
+    case 9: return i18n.t('What\'s the 10th word?')
+    case 10: return i18n.t('What\'s the 11th word?')
+    case 11: return i18n.t('What\'s the 12th word?')
+  }
+  throw new Error(`Unexpected index ${randomIndex.value}`)
+})
+
 onMounted(updateRandomWord)
 </script>
 
@@ -94,9 +117,8 @@ onMounted(updateRandomWord)
         <p class="mb-6 text-6xl font-semibold">
           {{ randomIndex + 1 }}
         </p>
-        <!-- TODO: show first, second... instead of number -->
         <p class="text-lg font-medium">
-          {{ $t('What\'s the {index}th word?', { index: randomIndex + 1 }) }}
+          {{ randomIndexInstructions }}
         </p>
       </div>
       <div class="grid grid-cols-3 gap-4">

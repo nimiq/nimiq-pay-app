@@ -750,8 +750,52 @@ msgstr ""
 msgid "What's Crypto City Points?"
 msgstr ""
 
-#: src/modals/BackupModal/ValidateWords.vue:18
-msgid "What's the {index}th word?"
+#: src/modals/BackupModal/ValidateWords.vue:95
+msgid "What's the 10th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:96
+msgid "What's the 11th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:97
+msgid "What's the 12th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:86
+msgid "What's the 1st word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:87
+msgid "What's the 2nd word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:88
+msgid "What's the 3rd word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:89
+msgid "What's the 4th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:90
+msgid "What's the 5th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:91
+msgid "What's the 6th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:92
+msgid "What's the 7th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:93
+msgid "What's the 8th word?"
+msgstr ""
+
+#: src/modals/BackupModal/ValidateWords.vue:94
+msgid "What's the 9th word?"
 msgstr ""
 
 #: src/lib/flows/steps.ts:285
