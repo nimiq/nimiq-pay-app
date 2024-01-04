@@ -27,20 +27,14 @@ import { initializeFlow } from '@/lib/flows'
         </div>
         <div class="w-10/12 mx-auto mt-auto">
           <IonButton class="w-full text-base" expand="block" @click="initializeFlow(FlowName.Setup)">
-            {{
-              $t('Get Started')
-            }}
+            {{ $t('Get Started') }}
           </IonButton>
           <div class="flex justify-around">
             <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.SetupWithPromoCode)">
-              {{
-                $t('I have a promo code')
-              }}
+              {{ $t('I have a promo code') }}
             </IonButton>
             <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.Login)">
-              {{
-                $t('Login')
-              }}
+              {{ $t('Login') }}
             </IonButton>
           </div>
         </div>

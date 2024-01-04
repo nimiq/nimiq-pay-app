@@ -241,9 +241,7 @@ onMounted(async () => {
       </ol>
 
       <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
-        {{
-          $t('See all')
-        }}
+        {{ $t('See all') }}
       </QuickButton>
 
       <!-- TODO: replace with an html grid -->
@@ -272,9 +270,9 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
             @close="isReferralCardShown = false"
           >
-            <span class="text-lg text-pumpkin">{{
-              $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount })
-            }}</span>
+            <span class="text-lg text-pumpkin">
+              {{ $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount }) }}
+            </span>
           </NotificationCard>
         </IonRow>
 
@@ -309,9 +307,7 @@ onMounted(async () => {
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
           <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            {{
-              $t('Wait ~10 minutes to pay after Top Up')
-            }}
+            {{ $t('Wait ~10 minutes to pay after Top Up') }}
           </p>
         </Transition>
         <IonButton

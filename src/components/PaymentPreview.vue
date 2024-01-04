@@ -94,27 +94,19 @@ function handlePay() {
     <div class="mb-6 font-semibold text-center min-h-[4rem]">
       <Transition name="slide-fade" mode="out-in">
         <p v-if="!canPayWithNim && pointsState !== PointsState.Ok" class="text-pumpkin text-pretty">
-          {{
-            $t('You don\'t have enough NIM for this purchase.')
-          }}
+          {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
         <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
-          {{
-            $t('You don\'t have enough Points for this purchase.')
-          }}
+          {{ $t('You don\'t have enough Points for this purchase.') }}
         </p>
         <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 text-pretty">
-          {{
-            $t('You can\'t pay with Points for this purchase.')
-          }}
+          {{ $t('You can\'t pay with Points for this purchase.') }}
         </p>
         <p v-else-if="pointsState === PointsState.Error" class="text-pumpkin text-pretty">
           {{ pointsMessage }}
         </p>
         <p v-else-if="hasCashback" class="opacity-60 text-pretty">
-          {{
-            $t('There is no cashback reward when paying with Points.')
-          }}
+          {{ $t('There is no cashback reward when paying with Points.') }}
         </p>
       </transition>
     </div>

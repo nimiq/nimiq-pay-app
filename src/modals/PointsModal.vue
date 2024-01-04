@@ -91,9 +91,7 @@ onMounted(async () => {
       <IonRow class="mb-8">
         <!-- TODO: get amount from API -->
         <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
-          {{
-            $t('Invite a friend and earn up to 200 Points both!')
-          }}
+          {{ $t('Invite a friend and earn up to 200 Points both!') }}
         </TaskCard>
       </IonRow>
 

@@ -54,9 +54,7 @@ async function handleCopy() {
         {{ $t('Open Wallet') }}
       </IonButton>
       <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
-        {{
-          $t('Copy address')
-        }}
+        {{ $t('Copy address') }}
       </IonButton>
     </div>
   </div>

@@ -27,9 +27,7 @@ const { showModal, closeAllModals } = useModal()
     </div>
 
     <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="showModal(Modal.Backup)">
-      {{
-        $t('Backup Account')
-      }}
+      {{ $t('Backup Account') }}
     </IonButton>
   </div>
 </template>

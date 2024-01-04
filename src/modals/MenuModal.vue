@@ -38,14 +38,10 @@ onLongPress(
 
   <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
     <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimTopUp) }">
-      {{
-        $t('Top Up')
-      }}
+      {{ $t('Top Up') }}
     </IonItem>
     <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimWithdraw) }">
-      {{
-        $t('Withdraw')
-      }}
+      {{ $t('Withdraw') }}
     </IonItem>
 
     <!-- TODO: remove if when BlueCode is added -->
@@ -55,27 +51,19 @@ onLongPress(
     <IonItem button :detail="false">{{ $t('Activate Bluecode payments') }}</IonItem>
     -->
     <IonItem v-if="!phoneNumberVerified" button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.VerifyPhone) }">
-      {{
-        $t('Activate Cashback & Rewards')
-      }}
+      {{ $t('Activate Cashback & Rewards') }}
     </IonItem>
 
     <ItemDivider />
 
     <IonItem ref="htmlRefHook" button :detail="false" @click="showModal(Modal.Settings, { isOnTop: true })">
-      {{
-        $t('Settings')
-      }}
+      {{ $t('Settings') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.Backup)">
-      {{
-        $t('Back up account')
-      }}
+      {{ $t('Back up account') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
-      {{
-        $t('Log Out')
-      }}
+      {{ $t('Log Out') }}
     </IonItem>
   </IonList>
 </template>

@@ -52,14 +52,10 @@ watch(() => props.errorMsg, () => {
     </p>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
       <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
-        {{
-          $t('Verify')
-        }}
+        {{ $t('Verify') }}
       </IonButton>
       <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">
-        {{
-          $t('Skip for now')
-        }}
+        {{ $t('Skip for now') }}
       </IonButton>
     </div>
   </div>

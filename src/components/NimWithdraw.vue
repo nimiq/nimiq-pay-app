@@ -144,9 +144,7 @@ function withdraw() {
               @click.stop="() => $emit('done', '')"
             >
               <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
-                {{
-                  $t('Add NIM address')
-                }}
+                {{ $t('Add NIM address') }}
               </SelectItemText>
             </SelectItem>
             <SelectSeparator class="h-[1.5px] bg-space-space-400" />
@@ -157,9 +155,7 @@ function withdraw() {
               :disabled="true"
             >
               <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
-                {{
-                  $t('To credit card / bank account')
-                }}
+                {{ $t('To credit card / bank account') }}
               </SelectItemText>
             </SelectItem>
           </SelectGroup>
@@ -185,9 +181,7 @@ function withdraw() {
       {{ formatFiat(100, { short: true }) }}
     </button>
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">
-      {{
-        $t('All')
-      }}
+      {{ $t('All') }}
     </button>
   </div>
 

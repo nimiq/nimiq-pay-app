@@ -31,7 +31,7 @@ const pinCodeInput = ref<string[]>([])
       @complete="() => $emit('done', pinCodeInput.join(''))"
     >
       <PinInputInput
-        v-for="(id, index) in inputLength "
+        v-for="(id, index) in inputLength"
         :key="id"
         :index="index"
         class="min-w-[10px] max-w-[42px] w-full text-center bg-white rounded-lg h-14 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-white border-space/40"

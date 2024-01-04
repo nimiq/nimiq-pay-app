@@ -28,9 +28,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
             @ion-change="setLanguage($event.detail.value)"
           >
             <IonSelectOption v-for="lang in SUPPORTED_LANGUAGES" :key="lang" :value="lang">
-              {{
-                LANGUAGE_LABELS[lang]
-              }}
+              {{ LANGUAGE_LABELS[lang] }}
             </IonSelectOption>
           </IonSelect>
         </IonItem>
@@ -41,9 +39,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
             @ion-change="selectedFiat = $event.detail.value"
           >
             <IonSelectOption v-for="currency in Fiat" :key="currency" :value="currency">
-              {{
-                currency
-              }}
+              {{ currency }}
             </IonSelectOption>
           </IonSelect>
         </IonItem>

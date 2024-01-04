@@ -123,9 +123,9 @@ onMounted(async () => {
         </p>
         <p>Balance (if valid): <code>{{ remoteBalance / 1e5 }} NIM</code></p>
         <p>
-          Valid: <strong>{{ isHtlcActive }}</strong> (from <strong>{{
-            validityStart }}</strong> to
-          <strong>{{ validityEnd }}</strong>)
+          Valid: <strong>{{ isHtlcActive }}</strong>
+          (from <strong>{{ validityStart }}</strong>
+          to <strong>{{ validityEnd }}</strong>)
         </p>
         <p>Will be extended in: <strong> {{ Math.ceil(validityEnd - (validityEnd - validityStart) / 2) - MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA + 1 }}</strong></p>
         <p>Timeouted: <strong>{{ hasHtlcExpired }}</strong></p>

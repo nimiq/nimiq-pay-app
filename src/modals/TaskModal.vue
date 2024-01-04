@@ -132,9 +132,7 @@ async function handleSubmit() {
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
     </div>
     <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
-      {{
-        $t('Submit')
-      }}
+      {{ $t('Submit') }}
     </IonButton>
   </ModalTemplate>
 </template>

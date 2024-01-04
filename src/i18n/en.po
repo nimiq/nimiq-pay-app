@@ -2,15 +2,15 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#: src/modals/ReferralModal.vue:26
+#: src/modals/ReferralModal.vue:22
 msgid "{count} of {total} remaining."
 msgstr ""
 
-#: src/modals/MenuModal.vue:32
+#: src/modals/MenuModal.vue:27
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:55
+#: src/components/NimWithdraw.vue:54
 msgid "Add NIM address"
 msgstr ""
 
@@ -18,7 +18,7 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:96
+#: src/components/NimWithdraw.vue:91
 msgid "All"
 msgstr ""
 
@@ -34,7 +34,7 @@ msgstr ""
 msgid "Are you sure you want to log out?"
 msgstr ""
 
-#: src/modals/MenuModal.vue:45
+#: src/modals/MenuModal.vue:36
 msgid "Back up account"
 msgstr ""
 
@@ -46,7 +46,7 @@ msgstr ""
 msgid "Back up your account before login out"
 msgstr ""
 
-#: src/modals/LogOutModal/Warning.vue:22
+#: src/modals/LogOutModal/Warning.vue:21
 msgid "Backup Account"
 msgstr ""
 
@@ -62,7 +62,7 @@ msgstr ""
 msgid "Buy NIM with Credit Card"
 msgstr ""
 
-#: src/components/PhoneInput.vue:26
+#: src/components/PhoneInput.vue:22
 msgid "Cancel"
 msgstr ""
 
@@ -82,7 +82,7 @@ msgstr ""
 msgid "Choose a PIN"
 msgstr ""
 
-#: src/components/GenericInput.vue:19
+#: src/components/GenericInput.vue:18
 msgid "Claim Promo Code"
 msgstr ""
 
@@ -90,8 +90,8 @@ msgstr ""
 msgid "Complete"
 msgstr ""
 
-#: src/components/BricksInput.vue:13
-#: src/modals/LogOutModal/Confirm.vue:22
+#: src/components/BricksInput.vue:12
+#: src/modals/LogOutModal/Confirm.vue:20
 msgid "Confirm"
 msgstr ""
 
@@ -111,8 +111,8 @@ msgstr ""
 msgid "Consensus lost, {newConsensus}"
 msgstr ""
 
-#: src/components/PhoneInput.vue:26
-#: src/modals/BackupModal/ShowWords.vue:19
+#: src/components/PhoneInput.vue:22
+#: src/modals/BackupModal/ShowWords.vue:18
 msgid "Continue"
 msgstr ""
 
@@ -120,11 +120,11 @@ msgstr ""
 msgid "Copied to the clipboard!"
 msgstr ""
 
-#: src/components/NimAddressDisplay.vue:19
+#: src/components/NimAddressDisplay.vue:18
 msgid "Copy address"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:38
+#: src/modals/ReferralModal.vue:31
 msgid "Copy code"
 msgstr ""
 
@@ -144,7 +144,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay. "
 msgstr ""
 
-#: src/modals/ReferralModal.vue:10
+#: src/modals/ReferralModal.vue:7
 msgid "Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points."
 msgstr ""
 
@@ -156,7 +156,7 @@ msgstr ""
 msgid "Crypto City Points (or CC Points) are a bonus currency worth the same as NIM."
 msgstr ""
 
-#: src/modals/SettingsModal.vue:28
+#: src/modals/SettingsModal.vue:26
 msgid "Currency"
 msgstr ""
 
@@ -164,11 +164,11 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: src/modals/PointsModal.vue:58
+#: src/modals/PointsModal.vue:56
 msgid "Earn Points"
 msgstr ""
 
-#: src/components/EnableNotifications.vue:7
+#: src/components/EnableNotifications.vue:6
 #: src/lib/flows/steps.ts:140
 msgid "Enable notifications"
 msgstr ""
@@ -254,7 +254,7 @@ msgstr ""
 msgid "Get Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
-#: src/views/SetupView.vue:25
+#: src/views/SetupView.vue:24
 msgid "Get Started"
 msgstr ""
 
@@ -275,7 +275,7 @@ msgstr ""
 msgid "Hey! Join me on NIM Pay App and earn CryptoCity Points to pay for your purchases! Use my code {code} to earn {amount} NIM in CryptoCity Points at registration."
 msgstr ""
 
-#: src/views/SetupView.vue:31
+#: src/views/SetupView.vue:28
 msgid "I have a promo code"
 msgstr ""
 
@@ -330,19 +330,19 @@ msgstr ""
 msgid "Invalid URL: {url}"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:33
+#: src/modals/ReferralModal.vue:28
 msgid "Invite a Friend"
 msgstr ""
 
-#: src/modals/PointsModal.vue:50
+#: src/modals/PointsModal.vue:49
 msgid "Invite a friend and earn up to 200 Points both!"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:5
+#: src/modals/ReferralModal.vue:4
 msgid "Invite a friend and get {amount} NIM each"
 msgstr ""
 
-#: src/components/PhoneInput.vue:26
+#: src/components/PhoneInput.vue:22
 msgid "Is this your phone number?"
 msgstr ""
 
@@ -354,26 +354,26 @@ msgstr ""
 msgid "Loading"
 msgstr ""
 
-#: src/modals/PointsModal.vue:73
+#: src/modals/PointsModal.vue:71
 msgid "Loading tasks..."
 msgstr ""
 
 #: src/modals/BackupModal/ShowWords.vue:23
-#: src/modals/ReferralModal.vue:18
+#: src/modals/ReferralModal.vue:14
 msgid "Loading..."
 msgstr ""
 
-#: src/modals/LogOutModal/Confirm.vue:17
+#: src/modals/LogOutModal/Confirm.vue:16
 msgid ""
 "Log in again with your backup words.\n"
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:50
+#: src/modals/MenuModal.vue:39
 msgid "Log Out"
 msgstr ""
 
-#: src/views/SetupView.vue:36
+#: src/views/SetupView.vue:31
 msgid "Login"
 msgstr ""
 
@@ -415,7 +415,7 @@ msgstr ""
 msgid "Not enough funds"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:25
+#: src/modals/ReferralModal.vue:21
 msgid "Only {count} out of {total} remaining."
 msgstr ""
 
@@ -423,8 +423,8 @@ msgstr ""
 msgid "Open Wallet"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:107
-#: src/components/PaymentPreview.vue:69
+#: src/components/NimWithdraw.vue:101
+#: src/components/PaymentPreview.vue:61
 msgid "Pay"
 msgstr ""
 
@@ -523,7 +523,7 @@ msgstr ""
 msgid "Reset search"
 msgstr ""
 
-#: src/components/NimAddressInput.vue:20
+#: src/components/NimAddressInput.vue:19
 msgid "Save"
 msgstr ""
 
@@ -559,7 +559,7 @@ msgstr ""
 msgid "Send NIM to top up"
 msgstr ""
 
-#: src/modals/MenuModal.vue:40
+#: src/modals/MenuModal.vue:33
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -568,8 +568,8 @@ msgstr ""
 msgid "Shop"
 msgstr ""
 
-#: src/components/EnableNotifications.vue:12
-#: src/components/PhoneInput.vue:21
+#: src/components/EnableNotifications.vue:9
+#: src/components/PhoneInput.vue:18
 msgid "Skip for now"
 msgstr ""
 
@@ -589,7 +589,7 @@ msgstr ""
 msgid "Status not good"
 msgstr ""
 
-#: src/modals/TaskModal.vue:25
+#: src/modals/TaskModal.vue:24
 msgid "Submit"
 msgstr ""
 
@@ -617,7 +617,7 @@ msgstr ""
 msgid "There is no active HTLC"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:58
+#: src/components/PaymentPreview.vue:51
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
@@ -631,7 +631,7 @@ msgstr ""
 msgid "There was an error"
 msgstr ""
 
-#: src/modals/ExpiringPointsModal.vue:8
+#: src/modals/ExpiringPointsModal.vue:7
 msgid "These Points are made for spending. Get out there and drive crypto adoption."
 msgstr ""
 
@@ -651,13 +651,13 @@ msgstr ""
 msgid "This purchase gets you {amount} in Points."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:68
+#: src/components/NimWithdraw.vue:65
 msgid "To credit card / bank account"
 msgstr ""
 
 #: src/composables/useSync.ts:173
 #: src/composables/useSync.ts:208
-#: src/modals/MenuModal.vue:15
+#: src/modals/MenuModal.vue:14
 msgid "Top Up"
 msgstr ""
 
@@ -677,7 +677,7 @@ msgstr ""
 msgid "Unknown error importing words"
 msgstr ""
 
-#: src/components/PhoneInput.vue:16
+#: src/components/PhoneInput.vue:15
 msgid "Verify"
 msgstr ""
 
@@ -711,7 +711,7 @@ msgid "What's the {index}th word?"
 msgstr ""
 
 #: src/lib/flows/steps.ts:264
-#: src/modals/MenuModal.vue:20
+#: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
 
@@ -733,7 +733,7 @@ msgstr ""
 msgid "You are going to get {amount} NIM"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:50
+#: src/components/PaymentPreview.vue:45
 msgid "You can't pay with Points for this purchase."
 msgstr ""
 
@@ -741,7 +741,7 @@ msgstr ""
 msgid "You don't have enough CC Points for this purchase."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:40
+#: src/components/PaymentPreview.vue:39
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
@@ -749,7 +749,7 @@ msgstr ""
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:45
+#: src/components/PaymentPreview.vue:42
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 

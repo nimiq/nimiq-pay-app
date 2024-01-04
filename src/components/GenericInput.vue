@@ -58,8 +58,6 @@ watch(referralCode, async (newValue) => {
     </p>
   </div>
   <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">
-    {{
-      $t('Claim Promo Code')
-    }}
+    {{ $t('Claim Promo Code') }}
   </IonButton>
 </template>

@@ -49,17 +49,13 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      {{
-        $t('Invite a friend and get {amount} NIM each', { amount: (referralCode?.reward || 0) / 1e5 })
-      }}
+      {{ $t('Invite a friend and get {amount} NIM each', { amount: (referralCode?.reward || 0) / 1e5 }) }}
     </template>
     <p class="self-start text-space/60">
-      {{
-        $t(
-          'Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points.',
-          { amount: (referralCode?.reward || 0) / 1e5 },
-        )
-      }}
+      {{ $t(
+        'Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points.',
+        { amount: (referralCode?.reward || 0) / 1e5 },
+      ) }}
     </p>
     <Transition name="slide-fade" mode="out-in">
       <p v-if="!referralCode" class="text-4xl font-semibold">
@@ -77,14 +73,10 @@ function handleShare() {
     </Transition>
     <div class="flex flex-col self-end w-full">
       <IonButton v-if="canShare" expand="block" strong :disabled="!referralCode" @click="handleShare">
-        {{
-          $t('Invite a Friend')
-        }}
+        {{ $t('Invite a Friend') }}
       </IonButton>
       <IonButton fill="clear" class="text-base normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="handleCopy">
-        {{
-          $t('Copy code')
-        }}
+        {{ $t('Copy code') }}
       </IonButton>
     </div>
   </ModalTemplate>
