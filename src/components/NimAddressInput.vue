@@ -24,7 +24,7 @@ function handleSave() {
 
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
-    <div class="w-3/4 m-auto">
+    <div class="m-auto">
       <p class="mb-6 text-sm font-bold text-center uppercase text-space/60">
         {{ $t('Enter Address') }}
       </p>

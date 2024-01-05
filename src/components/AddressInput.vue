@@ -155,10 +155,10 @@ function addressStringToArray(address: string) {
       <input
         :name="`block-${i}${j}`" :value="address[i - 1 + j - 1]"
         maxlength="4" minlength="4" autocapitalize="characters"
-        class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[66px] text-2xl text-center focus:outline-none focus:border-sky/40"
+        class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[4.725rem] max-w-24 text-2xl text-center focus:outline-none focus:border-sky/40"
         @input="handleInput" @keydown="handleDelete" @paste="handlePaste"
       >
-      <div v-if="j !== 3" class="w-2 h-[1.5px] my-auto bg-space/20" />
+      <div v-if="j !== 3" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
     </template>
   </div>
 </template>
