@@ -22,7 +22,8 @@ watchEffect(() => emit('loginWords', loginWords.value))
     <input
       v-for="(word, i) in recoveryWords"
       :key="word + i"
-      :tabindex="recoveryWords.length - i" class="lowercase"
+      tabindex="0"
+      class="lowercase"
       type="text"
       :value="word"
       :disabled="!!word"
