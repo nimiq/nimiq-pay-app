@@ -3,7 +3,7 @@ import { renderToString } from 'vue/server-renderer'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, Transfer } from '@/types/transactions'
+import { type ExternalTransaction, Transfer, markAsUnknownTransactionTitle, translateTransactionTitle } from '@/types/transactions'
 import { PaymentMethod } from '@/types/database'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
@@ -260,7 +260,12 @@ export const paymentPreviewStep: StepInit = async () => {
       switch (method) {
         case PaymentMethod.NIM:
           // TODO: handle error
-          await (await import('@/stores/transactions')).useTransactions().sendTx({ ...request!, title: request?.shopName || i18n.t('Payment') })
+          await (await import('@/stores/transactions')).useTransactions().sendTx({
+            ...request!,
+            title: request?.shopName
+              ? markAsUnknownTransactionTitle(request.shopName)
+              : 'Payment', // translated at display time
+          })
           next()
           break
         case PaymentMethod.Points: {
@@ -295,7 +300,7 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
       ))
     }
     else if (amount && recipient) {
-      const title = i18n.t('Withdrawal')
+      const title = 'Withdrawal' // translated at display time
       await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
       next()
     }
@@ -349,7 +354,7 @@ export const transactionDetail: StepInit = async () => {
     get title() { return titleCmp.value },
     main: h(TransactionDetails, { tx }),
     async beforeDisplay({ transactionList: selectedTx }) {
-      const title = selectedTx.shopName || selectedTx.title || i18n.t('Transaction')
+      const title = selectedTx.shopName || translateTransactionTitle(selectedTx.title) || i18n.t('Transaction')
       const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: selectedTx.shopCategory }))
       titleCmp.value = `${iconInHTML} ${title}`
       tx.value = selectedTx

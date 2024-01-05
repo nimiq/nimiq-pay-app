@@ -13,7 +13,6 @@ import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 import { usePoints } from '@/stores/points'
 import { useFirestoreApi } from '@/composables/useApi'
-import { i18n } from '@/i18n/i18n-setup'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 // export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 10075
@@ -168,7 +167,7 @@ export function useSync() {
         status: tx.state,
         // Timestamp is not available for pending transactions
         timestamp: Math.ceil(Date.now() / 1000),
-        title: i18n.t('Top Up'),
+        title: 'Top Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,
@@ -203,7 +202,7 @@ export function useSync() {
         hash: tx.transactionHash.toHex(),
         status: tx.state,
         timestamp: tx.timestamp,
-        title: i18n.t('Top Up'),
+        title: 'Top Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,

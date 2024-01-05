@@ -1,3 +1,5 @@
+import { i18n } from '@/i18n/i18n-setup'
+
 export enum Transfer {
   // Normal payment from the user to the merchant
   UserPaymentToMerchant = 'user-payment-to-merchant',
@@ -66,6 +68,28 @@ export interface BaseTransaction {
   proofSize: number
 }
 
+type KnownTransactionTitle = 'Top Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
+// artificial string type which is actually just a string, but that assigning a regular string to is a type error
+type UnknownTransactionTitle = string & { isUnknownTitle: true }
+type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
+
+export function markAsUnknownTransactionTitle(title: string) {
+  return title as UnknownTransactionTitle
+}
+
+export function translateTransactionTitle(title: TransactionTitle) {
+  // Define translations as record such that ts warns us if a translation for a known title is missing
+  const knownTitleTranslations: Record<KnownTransactionTitle, string> = {
+    'Top Up': i18n.t('Top Up'),
+    'Withdrawal': i18n.t('Withdrawal'),
+    'Payment': i18n.t('Payment'),
+    'Points Payment': i18n.t('Points Payment'),
+  }
+  return Object.keys(knownTitleTranslations).includes(title)
+    ? knownTitleTranslations[title as KnownTransactionTitle]
+    : title
+}
+
 export type UserTransaction = BaseTransaction & {
   transfer: Transfer.UserPayment
   message?: string
@@ -73,7 +97,7 @@ export type UserTransaction = BaseTransaction & {
   railPeerId?: undefined
   shopName?: undefined
   shopCategory?: undefined
-  title: string
+  title: TransactionTitle
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
@@ -83,7 +107,7 @@ export type UserReceiptTransaction = BaseTransaction & {
   railPeerId?: undefined
   shopName?: undefined
   shopCategory?: ShopCategory
-  title: string
+  title: TransactionTitle
   senderType: Nimiq.Account.Type
 }
 
@@ -91,7 +115,7 @@ export type MerchantTransaction = BaseTransaction & {
   transfer: Transfer.UserPaymentToMerchant
   shopName: string
   shopCategory: ShopCategory
-  title: string
+  title: TransactionTitle
 } & ({
   rail: Rail.CryptoPaymentLink | Rail.GoCrypto
   railPeerId: string

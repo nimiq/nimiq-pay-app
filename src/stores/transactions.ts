@@ -55,6 +55,8 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Upsert-ing transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
+      // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
+      // time to whatever language the user has selected at that time.
       [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
     )
   }

@@ -137,7 +137,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:310
+#: src/lib/flows/steps.ts:315
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -307,7 +307,7 @@ msgid "Invalid Crypto Payment Link. Missing cpl_id."
 msgstr ""
 
 #: src/composables/useStringParser.ts:20
-#: src/lib/flows/steps.ts:321
+#: src/lib/flows/steps.ts:326
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -471,7 +471,7 @@ msgstr ""
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/lib/flows/steps.ts:263
+#: src/types/transactions.ts:85
 msgid "Payment"
 msgstr ""
 
@@ -482,7 +482,7 @@ msgstr ""
 #. Fall back
 #: src/lib/flows/steps.ts:239
 #: src/lib/flows/steps.ts:247
-#: src/lib/flows/steps.ts:345
+#: src/lib/flows/steps.ts:350
 msgid "Payment preview"
 msgstr ""
 
@@ -524,7 +524,7 @@ msgstr ""
 msgid "Points are a loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/stores/points.ts:180
+#: src/types/transactions.ts:86
 msgid "Points Payment"
 msgstr ""
 
@@ -578,15 +578,15 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:332
+#: src/lib/flows/steps.ts:337
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:309
+#: src/lib/flows/steps.ts:314
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:331
+#: src/lib/flows/steps.ts:336
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -690,18 +690,17 @@ msgstr ""
 msgid "To credit card / bank account"
 msgstr ""
 
-#: src/composables/useSync.ts:171
-#: src/composables/useSync.ts:206
 #: src/modals/MenuModal.vue:14
+#: src/types/transactions.ts:83
 #: src/views/HomeView.vue:46
 msgid "Top Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:352
+#: src/lib/flows/steps.ts:357
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:86
+#: src/stores/transactions.ts:88
 msgid "Transaction was invalidated"
 msgstr ""
 
@@ -798,12 +797,12 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:285
+#: src/lib/flows/steps.ts:290
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
 
-#: src/lib/flows/steps.ts:298
+#: src/types/transactions.ts:84
 msgid "Withdrawal"
 msgstr ""
 
@@ -833,7 +832,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:292
+#: src/lib/flows/steps.ts:297
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 

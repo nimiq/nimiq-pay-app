@@ -8,7 +8,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
-import { PointsHashPrefix, Rail, ShopCategory, Transfer } from '@/types/transactions'
+import { PointsHashPrefix, Rail, ShopCategory, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -177,7 +177,7 @@ export const usePoints = defineStore('points', () => {
       hash: `${PointsHashPrefix}${Date.now().toString()}${Math.random().toString()}`,
       status: Nimiq.Client.TransactionState.PENDING,
       timestamp: Math.ceil(Date.now() / 1000),
-      title: shopName || i18n.t('Points Payment'),
+      title: shopName ? markAsUnknownTransactionTitle(shopName) : 'Points Payment',
       message,
       fee,
       shopCategory: shopCategory || ShopCategory.Shop,

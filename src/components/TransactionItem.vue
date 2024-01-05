@@ -3,7 +3,7 @@ import type { PropType } from 'vue'
 import { IonRippleEffect } from '@ionic/vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, isPaymentTx } from '@/types/transactions'
+import { type ExternalTransaction, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({
@@ -22,7 +22,7 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
     <CategoryIcon :category="tx.shopCategory" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
-        {{ tx.title }}
+        {{ translateTransactionTitle(tx.title) }}
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time class="text-space/50 tabular-nums">{{ formatted }} </time>
