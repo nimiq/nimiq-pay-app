@@ -1,5 +1,5 @@
 import { defineStore, storeToRefs } from 'pinia'
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, until } from '@vueuse/core'
 import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -127,6 +127,30 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   /**
+   * Fetches all the remote signers from the blockchain and saves them in the database as inactive
+   * The updateRemoteFromApi will set the active one
+   */
+  async function getRemoteSignersFromBlockchain() {
+    const transactions = await client!.getTransactionsByAddress(localAddress.value)
+    await until(remotePublicKey).not.toBeUndefined()
+    // eslint-disable-next-line no-console
+    console.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
+    const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+    for (const tx of htlcTransactions) {
+      const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
+      await updateRemoteSigner({
+        active: false,
+        balance: 0,
+        address: tx.recipient as Nimiq.Address,
+        publicKey: remotePublicKey.value!,
+        start: tx.validityStartHeight,
+        end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+        proofSize: tx.proof.raw.length,
+      })
+    }
+  }
+
+  /**
    * Initializes the remote signer variables with the following algorithm:
    * 1. Check if we have a local wallet:
    *    - If we don't have, do nothing
@@ -142,9 +166,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteSigner.value = await getActiveRemoteSigner()
     await updateSignersTableBalance()
 
-    if (!remoteSigner.value)
+    if (!remoteSigner.value) {
       // eslint-disable-next-line no-console
       console.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+      await getRemoteSignersFromBlockchain()
+    }
 
     await updateRemoteFromApi()
 
