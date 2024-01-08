@@ -87,8 +87,12 @@ onMounted(() => {
   </div>
   <ul ref="scroller" class="flex w-screen h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2" @pointerdown="pause" @pointerup="resume">
     <li v-for="{ title, description, svg, isSvgFullWidth, button }, i in steps" :key="i" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
-      <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3" v-html="title" />
-      <p class="mt-4 text-center text-pretty opacity-60" v-html="description" />
+      <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3">
+        {{ title }}
+      </h2>
+      <p class="mt-4 text-center text-pretty opacity-60">
+        {{ description }}
+      </p>
       <img v-if="svg" class="w-2/3 m-auto" :src="svg" :class="{ '!w-full !pl-0': isSvgFullWidth }">
       <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done', false)">
         {{ button }}

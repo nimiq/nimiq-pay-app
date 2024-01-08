@@ -1,9 +1,8 @@
-import { type Ref, type VNode, defineAsyncComponent, h, ref } from 'vue'
-import { renderToString } from 'vue/server-renderer'
+import { type VNode, computed, defineAsyncComponent, h, ref } from 'vue'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, Transfer, markAsUnknownTransactionTitle, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, type ShopCategory, Transfer, markAsUnknownTransactionTitle, translateTransactionTitle } from '@/types/transactions'
 import { PaymentMethod } from '@/types/database'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
@@ -236,17 +235,20 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
 }
 
 export const paymentPreviewStep: StepInit = async () => {
-  let titleCmp = i18n.t('Payment preview') // Fall back
+  // As refs to be reactive
+  const title = ref(i18n.t('Payment preview'))
+  const shopCategory = ref<ShopCategory>()
+  const categoryIcon = h(CategoryIcon, { category: shopCategory })
   return {
     step: StepName.PaymentPreview,
-    get title() { return titleCmp },
+    title,
+    titleIcon: categoryIcon,
     main: PaymentPreview,
     async beforeDisplay({ qrCodeScanner }) {
-      if (!qrCodeScanner)
+      if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return
-      const { shopName: title = i18n.t('Payment preview'), shopCategory: category } = qrCodeScanner as PaymentRequestData
-      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px: height: 40px', category }))
-      titleCmp = `${iconInHTML} ${title}`
+      title.value = qrCodeScanner.shopName || i18n.t('Payment preview')
+      shopCategory.value = qrCodeScanner.shopCategory
     },
     beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next, err }) => {
       if (_request instanceof String)
@@ -347,16 +349,21 @@ export const transactionList: StepInit = async () => {
 }
 
 export const transactionDetail: StepInit = async () => {
-  const titleCmp = ref<string>(i18n.t('Payment preview'))
-  const tx = ref() as Ref<ExternalTransaction>
+  // As refs to be reactive
+  const tx = ref<ExternalTransaction>()
+  const title = computed(() => (tx.value
+    ? tx.value.shopName || translateTransactionTitle(tx.value.title)
+    : null
+  ) || i18n.t('Transaction'))
+  const shopCategory = computed(() => tx.value?.shopCategory)
+  const categoryIcon = h(CategoryIcon, { category: shopCategory })
+  const main = h(TransactionDetails, { tx })
   return {
     step: StepName.PaymentPreview,
-    get title() { return titleCmp.value },
-    main: h(TransactionDetails, { tx }),
+    title,
+    titleIcon: categoryIcon,
+    main,
     async beforeDisplay({ transactionList: selectedTx }) {
-      const title = selectedTx.shopName || translateTransactionTitle(selectedTx.title) || i18n.t('Transaction')
-      const iconInHTML = await renderToString(h(CategoryIcon, { style: 'width: 40px', category: selectedTx.shopCategory }))
-      titleCmp.value = `${iconInHTML} ${title}`
       tx.value = selectedTx
     },
   }

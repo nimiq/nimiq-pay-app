@@ -101,8 +101,9 @@ export interface State {
 export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
 
 type BaseStep = {
-  title?: string
-  description?: string
+  title?: string | Ref<string>
+  description?: string | Ref<string>
+  titleIcon?: VNode
   main: VNode
   buttonLabel?: string
   beforeDisplay?: (state: State) => Promise<void> | undefined
