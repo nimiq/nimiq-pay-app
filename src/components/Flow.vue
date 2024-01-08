@@ -80,17 +80,17 @@ const scrollerItems = ref<HTMLElement[]>([])
 
 // We track the intersection of each step with a number from 0 to 1.
 // The intersection list contains only the steps that have been already displayed.
-const interesections = ref<number[]>([])
+const intersections = ref<number[]>([])
 useIntersectionObserver(scrollerItems, ([{ intersectionRatio, target }]) => {
   const index = scrollerItems.value.indexOf(target as HTMLElement)
-  interesections.value[index] = intersectionRatio
+  intersections.value[index] = intersectionRatio
   if (intersectionRatio === 1 && index === activeIndex.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
 }, { threshold: [0, 0.5, 1] })
 
 // Since the intersection observer only tracks the steps that have been already displayed,
 // we need to fill the rest of the array with 0s.
-const visibility = computed(() => interesections.value.concat(Array(steps.value.length - interesections.value.length).fill(0)))
+const visibility = computed(() => intersections.value.concat(Array(steps.value.length - intersections.value.length).fill(0)))
 
 function focus() {
   const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement

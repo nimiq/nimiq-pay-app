@@ -106,6 +106,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
       err(i18n.t('There was an error'))
       return
     }
+    // TODO: clear pin code from memory
     next()
   },
 })
