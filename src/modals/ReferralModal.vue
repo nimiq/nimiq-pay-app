@@ -32,16 +32,16 @@ async function handleCopy() {
 function handleShare() {
   Share.share({
     // Title if sharing via email
-    title: 'NIM Pay App',
+    title: 'Nimiq Pay App',
     // Text to share via all the apps
     text: i18n.t(
-      'Hey! Join me on NIM Pay App and earn CryptoCity Points to pay for your purchases! '
+      'Hey! Join me on Nimiq Pay App and earn CryptoCity Points to pay for your purchases! '
         + 'Use my code {code} to earn {amount} NIM in CryptoCity Points at registration.',
       { code: referralCode.value?.id, amount: (referralCode.value?.reward || 0) / 1e5 },
     ),
     url: 'https://nimpay.app',
     // Title for the share modal. Only on Android
-    dialogTitle: 'NIM Pay App',
+    dialogTitle: 'Nimiq Pay App',
   })
 }
 </script>

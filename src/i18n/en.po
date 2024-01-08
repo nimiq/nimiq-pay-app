@@ -290,7 +290,7 @@ msgid "Got It"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:37
-msgid "Hey! Join me on NIM Pay App and earn CryptoCity Points to pay for your purchases! Use my code {code} to earn {amount} NIM in CryptoCity Points at registration."
+msgid "Hey! Join me on Nimiq Pay App and earn CryptoCity Points to pay for your purchases! Use my code {code} to earn {amount} NIM in CryptoCity Points at registration."
 msgstr ""
 
 #: src/views/SetupView.vue:28
@@ -528,7 +528,7 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:61
 #: src/lib/flows/steps.ts:79
-msgid "Protect your NIM Pay app with a pin."
+msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
 #: src/views/HomeView.vue:16

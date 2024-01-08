@@ -58,7 +58,7 @@ export const recoveryWordsStep: StepInit = async () => ({
 export const pinCodeStep: StepInit = async () => ({
   step: StepName.PinCode,
   get title() { return i18n.t('Choose a PIN') },
-  get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
+  get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
     if (!pinCode) {
@@ -76,7 +76,7 @@ export const pinCodeStep: StepInit = async () => ({
 export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
   get title() { return i18n.t('Confirm your PIN') },
-  get description() { return i18n.t('Protect your NIM Pay app with a pin.') },
+  get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
   main: h(PinInput, { inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
     if (!pinCodeConfirm) {

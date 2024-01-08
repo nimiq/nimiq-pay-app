@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
   appId: 'com.nimiq.pay',
-  appName: 'NIM Pay',
+  appName: 'Nimiq Pay',
   webDir: 'dist',
   server: {
     androidScheme: 'https',
@@ -10,20 +10,20 @@ const config: CapacitorConfig = {
     cleartext: true,
   },
   loggingBehavior: 'debug',
-  appendUserAgent: 'NIM Pay',
+  appendUserAgent: 'Nimiq Pay',
   plugins: {
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       iosIsEncryption: true,
-      iosKeychainPrefix: 'nim-pay-sqlite',
+      iosKeychainPrefix: 'nimiq-pay-sqlite',
       iosBiometric: {
         biometricAuth: false,
-        biometricTitle: 'Biometric login for NIM Pay',
+        biometricTitle: 'Biometric login for Nimiq Pay',
       },
       androidIsEncryption: true,
       androidBiometric: {
         biometricAuth: false,
-        biometricTitle: 'Biometric login for NIM Pay',
+        biometricTitle: 'Biometric login for Nimiq Pay',
         biometricSubTitle: 'Log in using your biometric',
       },
       bundledWebRuntime: true,
