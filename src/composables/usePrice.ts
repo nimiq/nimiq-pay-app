@@ -77,9 +77,10 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const priceFn = (currency: MaybeRef<Fiat | Crypto>) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
 
   const priceDb = ref<number>()
-  const { data: priceCryptoUsd, fetch: fetchCryptoUsdPrice, error: errorCryptoUsdApi } = useFetch(() => priceFn(cryptoCurrency))
+  const { data: priceCryptoUsd, fetch: fetchCryptoUsdPrice, error: errorCryptoUsdApi } = useFetch(() => priceFn(cryptoCurrency), { immediate: false })
   const { data: priceFiatUsd, fetch: fetchFiatUsdPrice, error: errorFiatUsdApi } = useFetch(
     () => toValue(fiatCurrency) === Fiat.USD ? Promise.resolve({ data: { price: 1 }, error: undefined }) : priceFn(fiatCurrency),
+    { immediate: false },
   )
 
   watch([errorCryptoUsdApi, errorFiatUsdApi], console.error) // TODO Handle error
