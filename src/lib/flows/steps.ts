@@ -238,7 +238,7 @@ export const paymentPreviewStep: StepInit = async () => {
   // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
   const shopCategory = ref<ShopCategory>()
-  const categoryIcon = h(CategoryIcon, { category: shopCategory })
+  const categoryIcon = h(CategoryIcon, { category: shopCategory.value })
   return {
     step: StepName.PaymentPreview,
     title,
@@ -356,7 +356,7 @@ export const transactionDetail: StepInit = async () => {
     : null
   ) || i18n.t('Transaction'))
   const shopCategory = computed(() => tx.value?.shopCategory)
-  const categoryIcon = h(CategoryIcon, { category: shopCategory })
+  const categoryIcon = h(CategoryIcon, { category: shopCategory.value })
   const main = h(TransactionDetails, { tx })
   return {
     step: StepName.PaymentPreview,
