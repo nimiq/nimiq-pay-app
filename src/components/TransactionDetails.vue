@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { type PropType, computed, toValue } from 'vue'
+import { type PropType, computed } from 'vue'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, Transfer } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
-const tx = computed(() => toValue(props.tx))
+const tx = computed(() => props.tx)
 const datetime = computed(() => useFormatTime(tx.value.timestamp))
 
 const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerchant)
 </script>
 
 <template>
-  <div v-if="tx" class="flex flex-col items-center justify-center w-full gap-10 mt-8">
+  <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
     <TransactionAmounts :tx="tx" />
 
     <div v-if="showMap" class="grid w-[calc(100vw-18px)] border rounded-md border-space/10">

@@ -1,4 +1,4 @@
-import type { EmitsOptions, Ref, VNode } from 'vue'
+import type { Component, EmitsOptions, Ref } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
@@ -103,8 +103,8 @@ export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined 
 type BaseStep = {
   title?: string | Ref<string>
   description?: string | Ref<string>
-  titleIcon?: VNode
-  main: VNode
+  titleIcon?: Component
+  main: Component
   buttonLabel?: string
   beforeDisplay?: (state: State) => Promise<void> | undefined
   autofocus?: boolean

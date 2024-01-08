@@ -1,25 +1,25 @@
-import { type VNode, computed, defineAsyncComponent, h, ref } from 'vue'
+import { computed, defineAsyncComponent, h, ref } from 'vue'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, type ShopCategory, Transfer, markAsUnknownTransactionTitle, translateTransactionTitle } from '@/types/transactions'
 import { PaymentMethod } from '@/types/database'
 
-const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue')) as unknown as VNode
-const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue')) as unknown as VNode
-const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue')) as unknown as VNode
-const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue')) as unknown as VNode
-const GenericInput = defineAsyncComponent(() => import('@/components/GenericInput.vue')) as unknown as VNode
-const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue')) as unknown as VNode
-const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue')) as unknown as VNode
-const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue')) as unknown as VNode
-const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue')) as unknown as VNode // TODO This is not being used.
-const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue')) as unknown as VNode
-const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue')) as unknown as VNode
-const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue')) as unknown as VNode
-const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue')) as unknown as VNode
-const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue')) as unknown as VNode
-const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue')) as unknown as VNode
+const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
+const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
+const CodeInput = defineAsyncComponent(() => import('@/components/CodeInput.vue'))
+const PhoneInput = defineAsyncComponent(() => import('@/components/PhoneInput.vue'))
+const GenericInput = defineAsyncComponent(() => import('@/components/GenericInput.vue'))
+const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
+const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue'))
+const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
+const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
+const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
+const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
+const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
+const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
+const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue'))
+const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4})[-.\s]?(\d{1,4})[-.\s]?(\d{1,9})/
@@ -59,7 +59,7 @@ export const pinCodeStep: StepInit = async () => ({
   step: StepName.PinCode,
   get title() { return i18n.t('Choose a PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: h(PinInput, { inputLength: 4 }),
+  main: props => h(PinInput, { ...props, inputLength: 4 }),
   beforeNext: async ({ pinCode }, { next, err }) => {
     if (!pinCode) {
       err(i18n.t('Please enter a PIN code'))
@@ -77,7 +77,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
   get title() { return i18n.t('Confirm your PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: h(PinInput, { inputLength: 4 }),
+  main: props => h(PinInput, { ...props, inputLength: 4 }),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
     if (!pinCodeConfirm) {
       err(i18n.t('Please confirm your PIN code'))
@@ -115,7 +115,7 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
   step: StepName.PhoneNumber,
   get title() { return i18n.t('Verify your phone number') },
   get description() { return i18n.t('You will receive a SMS with a verification code') },
-  main: h(PhoneInput, { canSkip: !!stepsToSkip }),
+  main: props => h(PhoneInput, { ...props, canSkip: !!stepsToSkip }),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
     if (!phoneNumber) {
@@ -137,7 +137,7 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
   get title() { return i18n.t('Confirm your phone number') },
   get description() { return i18n.t('Enter the code from the SMS sent to') },
-  main: h(CodeInput, { inputLength: 6, backButtonText: i18n.t('Resend') }),
+  main: props => h(CodeInput, { ...props, inputLength: 6, backButtonText: i18n.t('Resend') }),
   beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
     if (!phoneNumberConfirm) {
       err(i18n.t('Please enter a verification code'))
@@ -222,7 +222,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
-    main: h(QRScanner, options?.props),
+    main: props => h(QRScanner, { ...props, ...options?.props }),
     canDismiss: !isWeb,
     beforeNext: async (_, { next, prev }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest)
@@ -239,11 +239,10 @@ export const paymentPreviewStep: StepInit = async () => {
   // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
   const shopCategory = ref<ShopCategory>()
-  const categoryIcon = h(CategoryIcon, { category: shopCategory.value })
   return {
     step: StepName.PaymentPreview,
     title,
-    titleIcon: categoryIcon,
+    titleIcon: props => h(CategoryIcon, { ...props, category: shopCategory.value }),
     main: PaymentPreview,
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
@@ -366,13 +365,11 @@ export const transactionDetail: StepInit = async () => {
     : null
   ) || i18n.t('Transaction'))
   const shopCategory = computed(() => tx.value?.shopCategory)
-  const categoryIcon = h(CategoryIcon, { category: shopCategory.value })
-  const main = h(TransactionDetails, { tx })
   return {
     step: StepName.PaymentPreview,
     title,
-    titleIcon: categoryIcon,
-    main,
+    titleIcon: props => h(CategoryIcon, { ...props, category: shopCategory.value }),
+    main: props => tx.value ? h(TransactionDetails, { ...props, tx: tx.value }) : [],
     async beforeDisplay({ transactionList: selectedTx }) {
       tx.value = selectedTx
     },
