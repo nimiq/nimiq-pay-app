@@ -70,14 +70,14 @@ onMounted(async () => {
         <p class="text-base font-semibold text-space/60">
           {{ fiat.formatted }}
         </p>
-        <button class="flex items-center text-base font-bold normal-case text-sky" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
+        <button class="flex items-center text-base font-bold normal-case text-sky gap-x-2" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
+          <CryptoCityLogo class="h-4" />
           <i18n-t slot="start" keypath="{amount} expiring soon" tag="span">
             <template #amount>
-              <CryptoCityLogo class="h-5 w-[18px] mr-[6px]" />
               {{ 0 /* TODO display actual value */ }}
             </template>
           </i18n-t>
-          <IonIcon slot="end" :icon="chevronForwardOutline" class="text-space/50" />
+          <IonIcon :icon="chevronForwardOutline" class="text-space/50" />
         </button>
       </IonRow>
       <!-- Featured -->
