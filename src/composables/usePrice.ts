@@ -1,6 +1,7 @@
 import { storeToRefs } from 'pinia'
 import { type MaybeRef, computed, onMounted, reactive, ref, toRef, toValue, watch } from 'vue'
 import { Crypto, Fiat, useApp } from '../stores/app'
+import { toMs } from './useTime'
 import { usePriceDb } from '@/composables/usePriceDb'
 import { type FormatCryptoOptions, type FormatFiatOptions, useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
@@ -71,7 +72,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const amountInLuna = toRef(_amountInLuna)
   const amountInNim = computed(() => toNim(amountInLuna.value))
 
-  const checkpoint = Math.floor(timestamp / 600000) * 600
+  const checkpoint = toMs(Math.floor(timestamp / 600000) * 600)
 
   const priceFn = (currency: MaybeRef<Fiat | Crypto>) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
 
