@@ -1,4 +1,4 @@
-interface Metadata {
+interface TaskMetadata {
   type: TaskType
   options: string[]
   id: string
@@ -8,7 +8,7 @@ interface Metadata {
 interface Task {
   description: string
   id: string
-  metadata: Metadata
+  metadata: TaskMetadata
   order: number
   parent_task_id: string | null
   reward_amount: number

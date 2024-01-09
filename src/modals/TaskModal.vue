@@ -20,8 +20,9 @@ const props = defineProps({
 const { closeModal } = useModal()
 const { setToast } = useToast()
 const { claimTask } = usePoints()
-const type: ComputedRef<TaskType> = computed(() => props.task && props.task.metadata.type)
-const options: ComputedRef<string[]> = computed(() => (props.task && type.value === 'question' ? props.task.metadata.options : []).sort(() => Math.random() - 0.5))
+const metadata: ComputedRef<TaskMetadata> = computed(() => props.task && props.task.metadata)
+const type: ComputedRef<TaskType> = computed(() => metadata.value.type)
+const options: ComputedRef<string[]> = computed(() => type.value === 'question' ? metadata.value.options : [])
 const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? props.task.metadata : null)
 const inputField = ref()
 const radioValueChecked = ref('')
@@ -121,7 +122,7 @@ async function handleSubmit() {
       </i18n-t>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
-        <IonRadio v-for="(option, index) in options" :key="option + index" mode="md" label-placement="end" justify="start" :value="option" class="w-full my-2">
+        <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" mode="md" label-placement="end" justify="start" :value="option" class="w-full my-2">
           <p class="text-left whitespace-normal text-space/60">
             {{ option }}
           </p>
