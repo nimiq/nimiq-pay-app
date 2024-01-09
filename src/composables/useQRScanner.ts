@@ -60,29 +60,37 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   }
 
   async function parseString(raw: string) {
-    const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
-    if (expect === QRDataFormat.NimiqAddress) {
-      return getNimAddress(raw)
+    try {
+      const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
+      if (expect === QRDataFormat.NimiqAddress) {
+        const { data, error } = getNimAddress(raw)
+        if (error || !data)
+          throw new Error(error)
+        onData(data)
+      }
+      else if (expect === QRDataFormat.PaymentRequest) {
+        const { data, error } = getPaymentRequestData(raw)
+        if (error || !data)
+          throw new Error(error)
+        onData(data)
+      }
+      else if (expect === QRDataFormat.NimCashlink) {
+        const { data, error } = getCashlink(raw)
+        if (error || !data)
+          throw new Error(error)
+        // TODO: move this to step
+        await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
+        useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
+        onData('')
+      }
+      // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
+      else {
+        throw new Error(`Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`)
+      }
     }
-    else if (expect === QRDataFormat.PaymentRequest) {
-      const { data, error } = getPaymentRequestData(raw)
-      if (error || !data)
-        return { error, data: undefined }
-      onData(data)
+    catch (error) {
+      onError((error as Error).message || i18n.t('Invalid QR code'))
     }
-    else if (expect === QRDataFormat.NimCashlink) {
-      const { data, error } = getCashlink(raw)
-      if (error || !data)
-        return { error, data: undefined }
-      // TODO: move this to step
-      await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
-      useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
-      onData('')
-    }
-    // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
-    else { return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined } }
-
-    return { error: undefined, data: undefined }
   }
 
   return {
@@ -153,14 +161,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
   async function startScan(_options: StartScannerOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.addListener('barcodeScanned', useThrottleFn(async ({ barcode }) => {
-      // eslint-disable-next-line no-console
-      console.log('barcodeScanned', barcode)
-      const { error } = await parseString(barcode.displayValue)
-      // TODO: show error to user
-      if (error)
-        console.error(error)
-    }, 1000))
+    await BarcodeScanner.addListener('barcodeScanned', useThrottleFn(async ({ barcode }) => parseString(barcode.displayValue), 1000))
     await BarcodeScanner.startScan()
   }
 

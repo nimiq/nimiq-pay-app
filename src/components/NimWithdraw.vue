@@ -15,7 +15,7 @@ import {
   SelectValue,
   SelectViewport,
 } from 'radix-vue'
-import { chevronForward } from 'ionicons/icons'
+import { chevronDown, chevronForward, chevronUp } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -125,7 +125,7 @@ function withdraw() {
         style="width: var(--radix-select-trigger-width);"
       >
         <SelectScrollUpButton class="flex items-center justify-center h-[25px] bg-white text-violet11 cursor-default">
-          <Icon icon="radix-icons:chevron-up" />
+          <IonIcon :icon="chevronUp" />
         </SelectScrollUpButton>
 
         <SelectViewport>
@@ -169,7 +169,7 @@ function withdraw() {
         </SelectViewport>
 
         <SelectScrollDownButton class="flex items-center justify-center h-[25px] bg-white text-violet11 cursor-default">
-          <Icon icon="radix-icons:chevron-down" />
+          <IonIcon :icon="chevronDown" />
         </SelectScrollDownButton>
       </SelectContent>
     </SelectPortal>

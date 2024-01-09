@@ -28,7 +28,7 @@ function handleSave() {
       <p class="mb-6 text-sm font-bold text-center uppercase text-space/60">
         {{ $t('Enter Address') }}
       </p>
-      <AddressInput @update:address="(v: string) => address = v" />
+      <AddressInput :address="props.state.qrCodeScanner as string" @update:address="(v: string) => address = v" />
       <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')" />
 
       <!-- <button @click="$emit('done')">

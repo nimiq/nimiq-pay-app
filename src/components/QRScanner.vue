@@ -18,7 +18,7 @@ const emit = defineEmits(stepEmits)
 const cameraFeedContainer = ref() as Ref<HTMLDivElement>
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
-const onError = (error: string) => useToast().setToast({ message: error })
+const onError = (error: string) => useToast().setToast({ message: error, error: true })
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
 watch(() => props.isVisible, isVisible => (isVisible) ? setTimeout(start, 500) : nextTick(stop), { immediate: true })
