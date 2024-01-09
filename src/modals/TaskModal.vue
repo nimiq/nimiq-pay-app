@@ -17,25 +17,18 @@ const props = defineProps({
   },
 })
 
-// TODO: move these
-interface Metadata {
-  type: TaskType
-  options: string[]
-  id: string
-  time: number
-}
-
 const { closeModal } = useModal()
 const { setToast } = useToast()
 const { claimTask } = usePoints()
-const type: ComputedRef<TaskType> = computed(() => props.task && (JSON.parse(props.task.metadata) as Metadata).type)
-const options: ComputedRef<string[]> = computed(() => props.task && type.value === 'question' ? (JSON.parse(props.task.metadata) as Metadata).options : [])
-const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? (JSON.parse(props.task.metadata) as Metadata) : null)
+const type: ComputedRef<TaskType> = computed(() => props.task && props.task.metadata.type)
+const options: ComputedRef<string[]> = computed(() => (props.task && type.value === 'question' ? props.task.metadata.options : []).sort(() => Math.random() - 0.5))
+const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? props.task.metadata : null)
 const inputField = ref()
 const radioValueChecked = ref('')
 const isVideoStarted = ref(false)
 const isVideoEnded = ref(false)
 const isAlreadyClaimed = ref(false)
+const errorMsg = ref('')
 
 watchEffect(() => {
   if (videoOptions.value) {
@@ -81,6 +74,7 @@ watchEffect(() => {
 })
 
 async function handleSubmit() {
+  errorMsg.value = ''
   let answer = ''
   if (radioValueChecked.value) {
     const index = options.value.indexOf(radioValueChecked.value)
@@ -98,8 +92,13 @@ async function handleSubmit() {
       return
     }
     const { task_status } = data
-    // TODO: show error and handle errors
-    if (task_status !== 'completed')
+
+    if (task_status === 'rejected') {
+      errorMsg.value = i18n.t('Wrong answer')
+      return
+    }
+    // Video playing will return in-progress
+    if (task_status === 'in-progress')
       return
   }
 
@@ -122,7 +121,7 @@ async function handleSubmit() {
       </i18n-t>
       <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
       <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
-        <IonRadio mode="md" v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" label-placement="end" justify="start" :value="option" class="w-full my-2">
+        <IonRadio v-for="(option, index) in options" :key="option + index" mode="md" label-placement="end" justify="start" :value="option" class="w-full my-2">
           <p class="text-left whitespace-normal text-space/60">
             {{ option }}
           </p>
@@ -130,6 +129,9 @@ async function handleSubmit() {
       </IonRadioGroup>
       <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
     </div>
+    <p v-if="errorMsg" class="text-center text-pumpkin">
+      {{ errorMsg }}
+    </p>
     <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
       {{ $t('Submit') }}
     </IonButton>

@@ -4,13 +4,14 @@ import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResult, Result } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
+import { useApp } from '@/stores/app'
 
 const basePointsUrl = new URL('https://bonus-nim.zeromox.com')
 const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
 const firestoreUrl = new URL('https://firestore.googleapis.com')
 
-const baseHeaders = { 'Content-Type': 'application/json' }
+const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
 
 async function api<T = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}) {
   const method = _body ? 'POST' : 'GET'
