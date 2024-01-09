@@ -27,8 +27,13 @@ import { i18n } from '@/i18n/i18n-setup'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
+// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
+// being inheritable as fallback attributes as there is no single root element in this component.
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
+
 const state = toRef(props, 'state')
 const { withdrawalAddress } = storeToRefs(useApp())
 const address = computed(() => {

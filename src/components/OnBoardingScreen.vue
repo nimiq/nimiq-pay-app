@@ -10,10 +10,11 @@ import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
 import CompletedTasksSvg from '@/assets/graphics/completed-tasks.svg'
 
-const props = defineProps({
-  isVisible: Boolean,
-})
+// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
+// being inheritable as fallback attributes as there is no single root element in this component.
+defineOptions({ inheritAttrs: false })
 
+const props = defineProps({ isVisible: Boolean })
 defineEmits(stepEmits)
 
 const steps = ref([
@@ -101,7 +102,8 @@ watch(isSwiping, (value) => {
 })
 
 watch(pressure, (value) => {
-  if(!props.isVisible) return
+  if (!props.isVisible)
+    return
   if (value)
     pause()
   else

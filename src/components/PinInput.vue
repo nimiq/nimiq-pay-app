@@ -2,6 +2,10 @@
 import { ref, watch } from 'vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 
+// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
+// being inheritable as fallback attributes as there is no single root element in this component.
+defineOptions({ inheritAttrs: false })
+
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
 const emit = defineEmits(stepEmits)
 

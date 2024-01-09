@@ -5,6 +5,10 @@ import { usePoints } from '@/stores/points'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 
+// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
+// being inheritable as fallback attributes as there is no single root element in this component.
+defineOptions({ inheritAttrs: false })
+
 defineProps({ errorMsg: { type: String } })
 defineEmits(stepEmits)
 

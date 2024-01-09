@@ -260,11 +260,11 @@ msgstr ""
 msgid "Get important info on transactions, top ups, security and more."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:34
+#: src/components/OnBoardingScreen.vue:35
 msgid "Get Points"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:35
+#: src/components/OnBoardingScreen.vue:36
 msgid "Get Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
@@ -276,7 +276,7 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:24
+#: src/components/OnBoardingScreen.vue:25
 msgid "Go To Points"
 msgstr ""
 
@@ -284,8 +284,8 @@ msgstr ""
 msgid "GoCrypto is not supported yet"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:31
-#: src/components/OnBoardingScreen.vue:37
+#: src/components/OnBoardingScreen.vue:32
+#: src/components/OnBoardingScreen.vue:38
 msgid "Got It"
 msgstr ""
 
@@ -433,7 +433,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/components/NimWithdraw.vue:83
+#: src/components/NimWithdraw.vue:88
 msgid "Not enough funds"
 msgstr ""
 
@@ -463,11 +463,11 @@ msgstr ""
 msgid "Pay with CC Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:27
+#: src/components/OnBoardingScreen.vue:28
 msgid "Pay with Points"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:28
+#: src/components/OnBoardingScreen.vue:29
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
@@ -518,7 +518,7 @@ msgstr ""
 msgid "Please enter a verification code"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:22
+#: src/components/OnBoardingScreen.vue:23
 msgid "Points are a loyalty rewards you can earn and pay with."
 msgstr ""
 
@@ -602,7 +602,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/components/GenericInput.vue:22
+#: src/components/GenericInput.vue:26
 msgid "Something went wrong when checking the promo code"
 msgstr ""
 
@@ -680,7 +680,7 @@ msgstr ""
 msgid "This payment is not eligible for CC Points."
 msgstr ""
 
-#: src/components/GenericInput.vue:27
+#: src/components/GenericInput.vue:31
 msgid "This promo code has been claimed too many times"
 msgstr ""
 
@@ -735,7 +735,7 @@ msgstr ""
 msgid "Wait ~10 minutes to pay after Top Up"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:21
+#: src/components/OnBoardingScreen.vue:22
 msgid "Welcome to Crypto City Points"
 msgstr ""
 

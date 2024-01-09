@@ -6,8 +6,11 @@ import { IonButton } from '@ionic/vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
-defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, backButtonText: { type: String } })
+// Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
+// being inheritable as fallback attributes as there is no single root element in this component.
+defineOptions({ inheritAttrs: false })
 
+defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, backButtonText: { type: String } })
 defineEmits(stepEmits)
 
 const { phoneNumber } = storeToRefs(useApp())
