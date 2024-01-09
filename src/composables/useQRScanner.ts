@@ -81,6 +81,8 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     }
     // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
     else { return { error: `Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`, data: undefined } }
+
+    return { error: undefined, data: undefined }
   }
 
   return {

@@ -25,11 +25,11 @@ export enum SQLQuery {
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
-  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, shopName TEXT, shopCategory TEXT)',
-  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
-  SelectAllTransactions = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC',
+  CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railPeerId TEXT, shopName TEXT, shopCategory TEXT, paymentMethod TEXT)',
+  SelectPaginationTransactions = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory, paymentMethod FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
+  SelectAllTransactions = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory, paymentMethod FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC',
   GetAllUserReceipts = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory FROM transactions WHERE transfer = \'user-receipt\' ORDER BY timestamp DESC',
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railPeerId, shopName, shopCategory, paymentMethod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = ? WHERE hash = ?',
   ClearTxHistory = 'DELETE FROM transactions',
 

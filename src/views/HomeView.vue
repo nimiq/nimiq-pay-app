@@ -233,6 +233,7 @@ onMounted(async () => {
         {{ $t('Top Up') }}
       </QuickButton>
 
+      <!-- Transaction List -->
       <ol v-if="transactions.length">
         <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash" :data-hash="tx.hash">
           <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />

@@ -10,6 +10,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
+import { PaymentMethod } from '@/types/database'
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -57,7 +58,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null],
     )
   }
 
@@ -95,7 +96,9 @@ export const useTransactions = defineStore('transactions', () => {
     // TODO:
     // eslint-disable-next-line ts/ban-ts-comment
     // @ts-expect-error
-    const tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
+    let tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
+    if (tx.transfer === Transfer.UserPaymentToMerchant)
+      tx = { ...tx, paymentMethod: PaymentMethod.NIM }
 
     // eslint-disable-next-line no-console
     console.log(`✈️ Sending transaction`, tx)

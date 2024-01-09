@@ -1,3 +1,4 @@
+import type { PaymentMethod } from '@/types/database'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {
@@ -116,6 +117,7 @@ export type MerchantTransaction = BaseTransaction & {
   shopName: string
   shopCategory: ShopCategory
   title: TransactionTitle
+  paymentMethod: PaymentMethod
 } & ({
   rail: Rail.CryptoPaymentLink | Rail.GoCrypto
   railPeerId: string

@@ -9,6 +9,7 @@ import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
 import { PointsHashPrefix, Rail, ShopCategory, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
+import { PaymentMethod } from '@/types/database'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -187,6 +188,7 @@ export const usePoints = defineStore('points', () => {
       // Payments using points are only possible with CPL
       rail: Rail.CryptoPaymentLink,
       railPeerId: railPeerId!,
+      paymentMethod: PaymentMethod.Points,
     })
     await updatePointsBalance()
     return { data: undefined, error: undefined }

@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import { IonRippleEffect } from '@ionic/vue'
+import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
+import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
+import { PaymentMethod } from '@/types/database'
 
 const props = defineProps({
   tx: {
@@ -15,6 +18,13 @@ const props = defineProps({
 
 const { formatted } = useRelativeTime({ timestamp: props.tx.timestamp })
 const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isPaymentTx(props.tx) } })
+const paymentMethod = computed(() => {
+  const { tx } = props
+  if (tx.transfer === Transfer.UserPaymentToMerchant)
+    return tx.paymentMethod || PaymentMethod.NIM
+
+  return PaymentMethod.NIM
+})
 </script>
 
 <template>
@@ -31,7 +41,11 @@ const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isP
     </div>
     <div class="flex flex-col items-end ml-auto gap-y-1">
       <span class="text-base font-bold">{{ fiat.formatted }}</span>
-      <time class="text-sm font-semibold leading-none text-space/50 tabular-nums">{{ crypto.formatted }}</time>
+      <time v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">
+        <CryptoCityLogo class="h-3 mr-1" />
+        {{ crypto.total }}
+      </time>
+      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">{{ crypto.total }} {{ paymentMethod }}</time>
     </div>
     <IonRippleEffect />
   </button>

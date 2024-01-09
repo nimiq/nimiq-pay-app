@@ -32,7 +32,8 @@ const canPayWithNim = computed(() => useRemoteSigner().remoteBalance >= payment.
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity } = usePointsPayment({ fiatAmount: fiat.total, rail, recipient, reference: railPeerId })
 
 const paymentMethod = ref<PaymentMethod>(PaymentMethod.NIM)
-const disabled = computed(() => consensus.value !== 'established' || (!canPayWithNim.value && pointsState.value === PointsState.Ok && paymentMethod.value !== PaymentMethod.Points))
+// pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)
+const disabled = computed(() => !(pointsState.value === PointsState.Ok && paymentMethod.value === PaymentMethod.Points) && (!canPayWithNim.value || consensus.value !== 'established'))
 const isPayingWithPointsForced = computed(() => !canPayWithNim.value && pointsState.value === PointsState.Ok)
 const loading = ref(false)
 
@@ -85,7 +86,7 @@ function handlePay() {
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
-          {{ crypto.formatted }}
+          {{ crypto.total }}
         </template>
       </i18n-t>
     </IonToggle>
