@@ -19,32 +19,16 @@ import { chevronForward } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useApp } from '@/stores/app'
+import { Crypto, useApp } from '@/stores/app'
 import AmountInput from '@/components/AmountInput.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
-import { usePrice } from '@/composables/usePrice'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { i18n } from '@/i18n/i18n-setup'
+import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
-
 const emit = defineEmits(stepEmits)
-
-// Max number of decimals to show, more decimals = more precision when converting to Fiat <-> NIM
-const decimals = 6
-
-const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
-
-const fiatAmount = ref(0)
-const { crypto, price } = usePrice(fiatAmount)
-
-const { formatFiat } = useCurrencyFormatter()
-
-const maxFiatAmount = computed(() => remoteBalance.value * price.luna.value)
-const hasEnoughAmount = computed(() => crypto.totalLuna <= maxFiatAmount.value)
-
-const maxAmount = computed(() => Math.floor(maxFiatAmount.value / (10 ** decimals)))
-
 const state = toRef(props, 'state')
 const { withdrawalAddress } = storeToRefs(useApp())
 const address = computed(() => {
@@ -57,6 +41,26 @@ const address = computed(() => {
     return ''
   }
 })
+
+const { height } = storeToRefs(useNimiqNetwork())
+const { formatFiat, formatCrypto } = useCurrencyFormatter()
+const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
+
+const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))
+watch(height, fetch)
+const price = computed(() => data.value?.price || 0)
+
+// This component allows the user to either withdraw a specific Fiat amount or all available funds.
+// For a successful full withdrawal, it's crucial to know the user's exact fund balance.
+// The precision of the set Fiat value directly impacts the accuracy of the fund calculation.
+const fiatDecimals = 6
+
+const fiatAmount = ref(0)
+const lunaAmount = computed(() => fiatAmount.value / (10 ** fiatDecimals) / price.value * 1e5)
+
+const hasEnoughAmount = computed(() => lunaAmount.value <= remoteBalance.value)
+
+const remoteBalanceFiat = computed(() => remoteBalance.value * price.value / 1e5 * (10 ** fiatDecimals))
 
 const isSelectOpen = ref(false)
 const selected = ref('')
@@ -77,7 +81,7 @@ watch(selected, (value) => {
 })
 
 const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? i18n.t('Not enough funds') : ''))
-const disabled = computed(() => !address.value || crypto.totalLuna <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
+const disabled = computed(() => !address.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
 const loading = ref(false)
 
 function withdraw() {
@@ -85,15 +89,15 @@ function withdraw() {
     return
 
   loading.value = true
-  emit('done', { amount: crypto.totalLuna, recipient: selected.value })
+  emit('done', { amount: lunaAmount, recipient: selected.value })
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center mt-6 mb-8 gap-y-2">
-    <AmountInput v-model="fiatAmount" :decimals="decimals" />
+    <AmountInput v-model="fiatAmount" :decimals="fiatDecimals" />
     <p class="text-base font-semibold text-space/60">
-      {{ crypto.formatted }}
+      {{ formatCrypto(lunaAmount) }}
     </p>
   </div>
 
@@ -169,16 +173,16 @@ function withdraw() {
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
   <div class="flex w-full mt-auto mb-4 justify-evenly">
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25 * 10 ** fiatDecimals">
       {{ formatFiat(25, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50 * 10 ** fiatDecimals">
       {{ formatFiat(50, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * 10 ** fiatDecimals">
       {{ formatFiat(100, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = maxAmount * (10 ** decimals)">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
       {{ $t('All') }}
     </button>
   </div>
