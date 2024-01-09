@@ -63,7 +63,7 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/views/HomeView.vue:86
+#: src/views/HomeView.vue:87
 msgid "Bring a friend and get {amount} Points each!"
 msgstr ""
 
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Cashlink has no balance"
 msgstr ""
 
-#: src/stores/points.ts:155
+#: src/stores/points.ts:156
 msgid "CC Points added"
 msgstr ""
 
@@ -137,7 +137,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:318
+#: src/lib/flows/steps.ts:327
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -207,7 +207,7 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useApi.ts:20
+#: src/composables/useApi.ts:21
 msgid "Error {method} {url}: {error}"
 msgstr ""
 
@@ -215,7 +215,7 @@ msgstr ""
 msgid "Error authorizing phone number"
 msgstr ""
 
-#: src/composables/useApi.ts:31
+#: src/composables/useApi.ts:32
 msgid "Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}"
 msgstr ""
 
@@ -235,7 +235,7 @@ msgstr ""
 msgid "Fees might apply ~{fee}"
 msgstr ""
 
-#: src/views/HomeView.vue:94
+#: src/views/HomeView.vue:95
 msgid "Find places that accept crypto!"
 msgstr ""
 
@@ -272,7 +272,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:110
 msgid "Go to Crypto Map"
 msgstr ""
 
@@ -307,7 +307,7 @@ msgid "Invalid Crypto Payment Link. Missing cpl_id."
 msgstr ""
 
 #: src/composables/useStringParser.ts:20
-#: src/lib/flows/steps.ts:329
+#: src/lib/flows/steps.ts:338
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -412,16 +412,16 @@ msgstr ""
 msgid "No Nimiq Wallet address found"
 msgstr ""
 
-#: src/stores/points.ts:145
-#: src/stores/points.ts:38
+#: src/stores/points.ts:146
+#: src/stores/points.ts:39
 msgid "No phone number set"
 msgstr ""
 
-#: src/stores/points.ts:149
+#: src/stores/points.ts:150
 msgid "No referral code set"
 msgstr ""
 
-#: src/composables/useApi.ts:144
+#: src/composables/useApi.ts:145
 msgid "No remote signer found"
 msgstr ""
 
@@ -433,7 +433,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/components/NimWithdraw.vue:79
+#: src/components/NimWithdraw.vue:83
 msgid "Not enough funds"
 msgstr ""
 
@@ -447,7 +447,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:101
 #: src/components/PaymentPreview.vue:61
-#: src/views/HomeView.vue:131
+#: src/views/HomeView.vue:132
 msgid "Pay"
 msgstr ""
 
@@ -471,11 +471,11 @@ msgstr ""
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/types/transactions.ts:85
+#: src/types/transactions.ts:86
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:86
+#: src/composables/useApi.ts:87
 msgid "Payment not valid"
 msgstr ""
 
@@ -484,13 +484,13 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/stores/points.ts:103
-#: src/stores/points.ts:120
-#: src/stores/points.ts:147
-#: src/stores/points.ts:161
-#: src/stores/points.ts:52
-#: src/stores/points.ts:63
-#: src/stores/points.ts:74
+#: src/stores/points.ts:104
+#: src/stores/points.ts:121
+#: src/stores/points.ts:148
+#: src/stores/points.ts:162
+#: src/stores/points.ts:53
+#: src/stores/points.ts:64
+#: src/stores/points.ts:75
 msgid "Phone number not verified"
 msgstr ""
 
@@ -522,7 +522,7 @@ msgstr ""
 msgid "Points are a loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:86
+#: src/types/transactions.ts:87
 msgid "Points Payment"
 msgstr ""
 
@@ -564,7 +564,7 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: src/views/HomeView.vue:56
+#: src/views/HomeView.vue:57
 msgid "See all"
 msgstr ""
 
@@ -576,15 +576,15 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:340
+#: src/lib/flows/steps.ts:349
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:317
+#: src/lib/flows/steps.ts:326
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:339
+#: src/lib/flows/steps.ts:348
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -593,7 +593,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/stores/points.ts:184
+#: src/stores/points.ts:185
 msgid "Shop"
 msgstr ""
 
@@ -614,11 +614,11 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/composables/useApi.ts:137
+#: src/composables/useApi.ts:138
 msgid "Status not good"
 msgstr ""
 
-#: src/modals/TaskModal.vue:24
+#: src/modals/TaskModal.vue:27
 msgid "Submit"
 msgstr ""
 
@@ -634,7 +634,7 @@ msgstr ""
 msgid "The entropy is not defined"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:134
+#: src/composables/useQRScanner.ts:136
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
@@ -664,6 +664,10 @@ msgstr ""
 msgid "There was an error"
 msgstr ""
 
+#: src/lib/flows/steps.ts:312
+msgid "There was an error."
+msgstr ""
+
 #: src/modals/ExpiringPointsModal.vue:7
 msgid "These Points are made for spending. Get out there and drive crypto adoption."
 msgstr ""
@@ -689,16 +693,16 @@ msgid "To credit card / bank account"
 msgstr ""
 
 #: src/modals/MenuModal.vue:14
-#: src/types/transactions.ts:83
+#: src/types/transactions.ts:84
 #: src/views/HomeView.vue:46
 msgid "Top Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:358
+#: src/lib/flows/steps.ts:367
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:88
+#: src/stores/transactions.ts:89
 msgid "Transaction was invalidated"
 msgstr ""
 
@@ -727,7 +731,7 @@ msgstr ""
 msgid "Verify your phone number"
 msgstr ""
 
-#: src/views/HomeView.vue:123
+#: src/views/HomeView.vue:124
 msgid "Wait ~10 minutes to pay after Top Up"
 msgstr ""
 
@@ -800,14 +804,22 @@ msgstr ""
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:84
+#: src/types/transactions.ts:85
 msgid "Withdrawal"
+msgstr ""
+
+#: src/lib/flows/steps.ts:315
+msgid "Withdrawal successful"
 msgstr ""
 
 #: src/modals/BackupModal/ShowWords.vue:13
 msgid ""
 "Write the words below on a piece of paper in the right order.\n"
 "Keep it safe and never share it!"
+msgstr ""
+
+#: src/modals/TaskModal.vue:97
+msgid "Wrong answer"
 msgstr ""
 
 #: src/modals/BackupModal/ValidateWords.vue:64
@@ -842,7 +854,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/modals/TaskModal.vue:106
+#: src/modals/TaskModal.vue:105
 msgid "You got CC Points"
 msgstr ""
 
