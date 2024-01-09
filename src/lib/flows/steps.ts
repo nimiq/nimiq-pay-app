@@ -292,7 +292,7 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
   get title() { return i18n.t('Withdraw') },
   main: NimWithdraw,
-  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err }) => {
+  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
 
@@ -304,8 +304,17 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
     }
     else if (amount && recipient) {
       const title = 'Withdrawal' // translated at display time
-      await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
-      next()
+      const { error } = await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+
+      const { setToast } = (await import('@/composables/useToast')).useToast()
+
+      if (error) {
+        setToast({ message: `${i18n.t('There was an error.')}\n${error}`, error: !!error })
+      }
+      else {
+        setToast({ message: i18n.t('Withdrawal successful') })
+        await finalizeFlow()
+      }
     }
     // User clicked "Add NIM address", let him go, by calling next()
     else { next() }

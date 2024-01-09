@@ -58,7 +58,7 @@ async function onStepDone(value: OnDoneStepValue) {
     state[activeStep.value.step as InputStepName] = value
     const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
     if (activeStep.value.beforeNext)
-      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide })
+      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, path }) })
     else
       goToNext()
   }

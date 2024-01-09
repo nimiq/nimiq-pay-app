@@ -115,6 +115,7 @@ interface BeforeNextOptions {
   next: () => void
   prev: () => void
   err: (msg: string) => void
+  finalizeFlow: () => Promise<void>
 }
 export type InputStep = BaseStep & {
   step: InputStepName
