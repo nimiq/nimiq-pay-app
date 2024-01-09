@@ -137,7 +137,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:326
+#: src/lib/flows/steps.ts:327
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -307,7 +307,7 @@ msgid "Invalid Crypto Payment Link. Missing cpl_id."
 msgstr ""
 
 #: src/composables/useStringParser.ts:20
-#: src/lib/flows/steps.ts:337
+#: src/lib/flows/steps.ts:338
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -480,7 +480,7 @@ msgid "Payment not valid"
 msgstr ""
 
 #: src/lib/flows/steps.ts:240
-#: src/lib/flows/steps.ts:250
+#: src/lib/flows/steps.ts:251
 msgid "Payment preview"
 msgstr ""
 
@@ -576,15 +576,15 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:348
+#: src/lib/flows/steps.ts:349
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:325
+#: src/lib/flows/steps.ts:326
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:347
+#: src/lib/flows/steps.ts:348
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -664,7 +664,7 @@ msgstr ""
 msgid "There was an error"
 msgstr ""
 
-#: src/lib/flows/steps.ts:311
+#: src/lib/flows/steps.ts:312
 msgid "There was an error."
 msgstr ""
 
@@ -698,7 +698,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:366
+#: src/lib/flows/steps.ts:365
 msgid "Transaction"
 msgstr ""
 
@@ -799,7 +799,7 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:292
+#: src/lib/flows/steps.ts:293
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
@@ -808,7 +808,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/steps.ts:314
+#: src/lib/flows/steps.ts:315
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -842,7 +842,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:299
+#: src/lib/flows/steps.ts:300
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 

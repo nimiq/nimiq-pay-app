@@ -1,4 +1,4 @@
-import { computed, defineAsyncComponent, h, ref } from 'vue'
+import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
@@ -28,7 +28,7 @@ export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
   get title() { return i18n.t('Enter your promo code') },
   get description() { return i18n.t('Enter your referral promo code.') },
-  main: GenericInput,
+  main: markRaw(GenericInput),
   beforeNext: async ({ promoCode }, { next, err }) => {
     if (!promoCode) {
       err(i18n.t('Please enter a promo code'))
@@ -44,7 +44,7 @@ export const promoCodeStep: StepInit = async () => ({
 export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
   get title() { return i18n.t('Enter recovery words') },
-  main: BrickInput,
+  main: markRaw(BrickInput),
   beforeNext: async ({ recoveryWordsStep }, { next, err }) => {
     const { importWords } = (await import('@/stores/local-wallet')).useLocalWallet()
     const { error } = importWords(recoveryWordsStep)
@@ -59,7 +59,7 @@ export const pinCodeStep: StepInit = async () => ({
   step: StepName.PinCode,
   get title() { return i18n.t('Choose a PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: props => h(PinInput, { ...props, inputLength: 4 }),
+  main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
   beforeNext: async ({ pinCode }, { next, err }) => {
     if (!pinCode) {
       err(i18n.t('Please enter a PIN code'))
@@ -77,7 +77,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
   get title() { return i18n.t('Confirm your PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: props => h(PinInput, { ...props, inputLength: 4 }),
+  main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
   beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
     if (!pinCodeConfirm) {
       err(i18n.t('Please confirm your PIN code'))
@@ -115,7 +115,7 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
   step: StepName.PhoneNumber,
   get title() { return i18n.t('Verify your phone number') },
   get description() { return i18n.t('You will receive a SMS with a verification code') },
-  main: props => h(PhoneInput, { ...props, canSkip: !!stepsToSkip }),
+  main: markRaw(props => h(PhoneInput, { ...props, canSkip: !!stepsToSkip })),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
     if (!phoneNumber) {
@@ -137,7 +137,7 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
   get title() { return i18n.t('Confirm your phone number') },
   get description() { return i18n.t('Enter the code from the SMS sent to') },
-  main: props => h(CodeInput, { ...props, inputLength: 6, backButtonText: i18n.t('Resend') }),
+  main: markRaw(props => h(CodeInput, { ...props, inputLength: 6, backButtonText: i18n.t('Resend') })),
   beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
     if (!phoneNumberConfirm) {
       err(i18n.t('Please enter a verification code'))
@@ -161,60 +161,60 @@ export const getNotifiedStep: StepInit = async () => ({
   get title() { return i18n.t('Enable notifications') },
   get description() { return i18n.t('Get important info on transactions, top ups, security and more.') },
   stepsToSkip: 1,
-  main: EnableNotifications,
+  main: markRaw(EnableNotifications),
 })
 
 export const onBoardingPoints: StepInit = async () => ({
   step: StepName.OnBoardingPoints,
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback1: StepInit = async () => ({
   step: StepName.OnBoardingCashback1,
   get title() { return i18n.t('What\'s Crypto City Points?') },
   get description() { return i18n.t('Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback2: StepInit = async () => ({
   step: StepName.OnBoardingCashback2,
   get title() { return i18n.t('Pay with CC Points') },
   get description() { return i18n.t('Pay with CC Points instead of NIM wherever they\'re accepted.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback3: StepInit = async () => ({
   step: StepName.OnBoardingCashback3,
   get title() { return i18n.t('Get CC Points') },
   get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback4: StepInit = async () => ({
   step: StepName.OnBoardingCashback4,
   get title() { return i18n.t('Find places to pay with and earn CC Points') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
   get title() { return i18n.t('What\'s Bluecode?') },
   get description() { return i18n.t('Bluecode is a European payment service that now supports NIM.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingBluecode2: StepInit = async () => ({
   step: StepName.OnBoardingBluecode2,
   get title() { return i18n.t('Pay with Bluecode') },
   get description() { return i18n.t('Create a Bluecode Barcode and show it at the cashier to pay.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingBluecode3: StepInit = async () => ({
   step: StepName.OnBoardingBluecode3,
   get title() { return i18n.t('Verify your ID') },
   get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
-  main: OnBoardingScreen,
+  main: markRaw(OnBoardingScreen),
 })
 
 export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
@@ -222,7 +222,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
-    main: props => h(QRScanner, { ...props, ...options?.props }),
+    main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
     canDismiss: !isWeb,
     beforeNext: async (_, { next, prev }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest)
@@ -239,11 +239,12 @@ export const paymentPreviewStep: StepInit = async () => {
   // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
   const shopCategory = ref<ShopCategory>()
+  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: shopCategory.value }))
   return {
     step: StepName.PaymentPreview,
     title,
-    titleIcon: props => h(CategoryIcon, { ...props, category: shopCategory.value }),
-    main: PaymentPreview,
+    titleIcon,
+    main: markRaw(PaymentPreview),
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return
@@ -290,7 +291,7 @@ export const paymentPreviewStep: StepInit = async () => {
 export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
   get title() { return i18n.t('Withdraw') },
-  main: NimWithdraw,
+  main: markRaw(NimWithdraw),
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
@@ -324,7 +325,7 @@ export const nimAddressInputStep: StepInit = async () => ({
   step: StepName.NimAddressInput,
   get title() { return i18n.t('Send NIM to this address') },
   get description() { return i18n.t('Copy or scan the address') },
-  main: NimAddressInput,
+  main: markRaw(NimAddressInput),
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
     // The NIM Address Step is a special step:
     //   - if the address is ok, then we would go to the previous slide
@@ -346,16 +347,14 @@ export const nimAddressDisplay: StepInit = async () => ({
   step: StepName.NimAddressDisplay,
   get title() { return i18n.t('Send NIM to top up') },
   get description() { return i18n.t('Send a transaction to the address below. Top up as much as you like.') },
-  main: NimAddressDisplay,
+  main: markRaw(NimAddressDisplay),
 })
 
-export const transactionList: StepInit = async () => {
-  return {
-    step: StepName.TransactionList,
-    main: TransactionList,
-    autofocus: false, // Don't autofocus on the search bar
-  }
-}
+export const transactionList: StepInit = async () => ({
+  step: StepName.TransactionList,
+  main: markRaw(TransactionList),
+  autofocus: false, // Don't autofocus on the search bar
+})
 
 export const transactionDetail: StepInit = async () => {
   // As refs to be reactive
@@ -365,11 +364,12 @@ export const transactionDetail: StepInit = async () => {
     : null
   ) || i18n.t('Transaction'))
   const shopCategory = computed(() => tx.value?.shopCategory)
+  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: shopCategory.value }))
   return {
     step: StepName.PaymentPreview,
     title,
-    titleIcon: props => h(CategoryIcon, { ...props, category: shopCategory.value }),
-    main: props => tx.value ? h(TransactionDetails, { ...props, tx: tx.value }) : [],
+    titleIcon,
+    main: markRaw(props => tx.value ? h(TransactionDetails, { ...props, tx: tx.value }) : []),
     async beforeDisplay({ transactionList: selectedTx }) {
       tx.value = selectedTx
     },
