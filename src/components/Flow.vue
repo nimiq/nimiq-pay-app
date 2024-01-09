@@ -115,7 +115,7 @@ function focus() {
   <ul ref="scroller" class="flex h-full overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
     <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-4 shrink-0 snap-center snap-always">
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-2 text-2xl font-bold text-center text-balance gap-x-3">
-        <component :is="titleIcon" v-if="titleIcon" class="w-2.5" />
+        <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
       </h2>
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
