@@ -818,7 +818,7 @@ msgid ""
 "Keep it safe and never share it!"
 msgstr ""
 
-#: src/modals/TaskModal.vue:97
+#: src/modals/TaskModal.vue:98
 msgid "Wrong answer"
 msgstr ""
 
@@ -854,7 +854,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/modals/TaskModal.vue:105
+#: src/modals/TaskModal.vue:106
 msgid "You got CC Points"
 msgstr ""
 
