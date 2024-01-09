@@ -207,7 +207,7 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useApi.ts:21
+#: src/composables/useApi.ts:20
 msgid "Error {method} {url}: {error}"
 msgstr ""
 
@@ -215,7 +215,7 @@ msgstr ""
 msgid "Error authorizing phone number"
 msgstr ""
 
-#: src/composables/useApi.ts:32
+#: src/composables/useApi.ts:31
 msgid "Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}"
 msgstr ""
 
@@ -421,7 +421,7 @@ msgstr ""
 msgid "No referral code set"
 msgstr ""
 
-#: src/composables/useApi.ts:145
+#: src/composables/useApi.ts:144
 msgid "No remote signer found"
 msgstr ""
 
@@ -475,7 +475,7 @@ msgstr ""
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:87
+#: src/composables/useApi.ts:86
 msgid "Payment not valid"
 msgstr ""
 
@@ -614,7 +614,7 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/composables/useApi.ts:138
+#: src/composables/useApi.ts:137
 msgid "Status not good"
 msgstr ""
 

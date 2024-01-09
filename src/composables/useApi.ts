@@ -11,11 +11,10 @@ const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
 const firestoreUrl = new URL('https://firestore.googleapis.com')
 
-const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
-
 async function api<T = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}) {
   const method = _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
+  const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
   const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error {method} {url}: {error}', {
