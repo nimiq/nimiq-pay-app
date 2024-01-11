@@ -6,7 +6,7 @@ export interface UseCarouselOptions {
   activeIndex?: Ref<number>
 }
 
-export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, slideWidth: MaybeRef<number>, options: UseCarouselOptions = {}) {
+export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, slideWidth: Ref<number | undefined>, options: UseCarouselOptions = {}) {
   const { columnGap = 0, scrollBehavior = 'smooth', activeIndex = ref(0) } = options
   const elRef = computed(() => toValue(scroller))
 
@@ -17,15 +17,17 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, slideWi
   // }
 
   function goToSlide(index: number) {
-    if (!elRef.value)
+    if (!elRef.value || !slideWidth.value) {
+      console.warn('Cannot go to slide', index, { elRef: elRef.value, slideWidth: slideWidth.value })
       return
+    }
 
     activeIndex.value = index
 
     // For some reason in Safari, the scrollLeft value is not updated immediately after the scroll event
     // so we need to wait a tick before scrolling
     window.requestAnimationFrame(() => elRef.value!.scrollTo({
-      left: (toValue(slideWidth) + (columnGap * 2)) * index,
+      left: (slideWidth.value! + (columnGap * 2)) * index,
       behavior: scrollBehavior,
     }))
   }

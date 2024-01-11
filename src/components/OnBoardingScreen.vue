@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useInterval, usePointer, usePointerSwipe, useWindowSize } from '@vueuse/core'
-import { IonButton } from '@ionic/vue'
+import { computedAsync, useElementSize, useInterval, usePointer, usePointerSwipe, useWindowSize } from '@vueuse/core'
+import { IonButton, modalController } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
@@ -47,8 +47,11 @@ const slideCounter = computed(() => counter.value / (msBeforeNextSlide / interva
 const { pressure } = usePointer()
 
 const scroller = ref<HTMLElement>()
+const scrollerItems = ref<HTMLElement[]>([])
+const activeIndex = ref(0)
+const slideWidth = computed(() => scrollerItems.value.at(activeIndex.value)?.clientWidth)
+const { nextSlide, prevSlide, goToSlide } = useCarousel(scroller, slideWidth, { activeIndex })
 const { isSwiping, direction } = usePointerSwipe(scroller)
-const { nextSlide, prevSlide, activeIndex, goToSlide } = useCarousel(scroller, useWindowSize().width)
 const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
 function next() {
@@ -123,8 +126,8 @@ onMounted(() => {
       <div class="bg-keppel will-change-[width] transition-[width] w-0 ease-in" :class="{ '!w-full': activeIndex > i }" :style="activeIndex === i ? `width: ${slideCounter * 100}%` : ''" />
     </div>
   </div>
-  <ul ref="scroller" class="flex w-screen h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2">
-    <li v-for="{ title, description, svg, isSvgFullWidth, button }, i in steps" :key="i" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
+  <ul ref="scroller" class="flex w-[calc(100%+64px)] h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2">
+    <li v-for="{ title, description, svg, isSvgFullWidth, button }, i in steps" :key="i" ref="scrollerItems" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
       <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3">
         {{ title }}
       </h2>

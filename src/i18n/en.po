@@ -75,7 +75,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:79
+#: src/composables/useQRScanner.ts:83
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -334,6 +334,10 @@ msgstr ""
 
 #: src/composables/useStringParser.ts:70
 msgid "Invalid protocol. Only NIM transactions from Crypto Payment Links are supported."
+msgstr ""
+
+#: src/composables/useQRScanner.ts:92
+msgid "Invalid QR code"
 msgstr ""
 
 #: src/composables/useStringParser.ts:50
@@ -634,7 +638,7 @@ msgstr ""
 msgid "The entropy is not defined"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:136
+#: src/composables/useQRScanner.ts:144
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 

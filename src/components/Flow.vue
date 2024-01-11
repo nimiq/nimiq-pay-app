@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type PropType, computed, nextTick, onMounted, reactive, ref, watchEffect } from 'vue'
-import { useIntersectionObserver, useWindowSize } from '@vueuse/core'
+import { useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -21,7 +21,9 @@ const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, c
 const steps = ref(stepsInFlow)
 
 const scroller = ref<HTMLElement>()
-const { nextSlide, prevSlide } = useCarousel(scroller, useWindowSize().width, { activeIndex })
+const scrollerItems = ref<HTMLElement[]>([])
+const slideWidth = computed(() => scrollerItems.value.at(activeIndex.value)?.clientWidth)
+const { nextSlide, prevSlide } = useCarousel(scroller, slideWidth, { activeIndex })
 const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
 const activeStep = computed(() => stepsInFlow[activeIndex.value])
@@ -77,16 +79,19 @@ function onCancel() {
   onFlowCancel!(state, { path, goTo: replace })
 }
 
-const scrollerItems = ref<HTMLElement[]>([])
-
 // We track the intersection of each step with a number from 0 to 1.
 // The intersection list contains only the steps that have been already displayed.
 const intersections = ref<number[]>([])
 useIntersectionObserver(scrollerItems, ([{ intersectionRatio, target }]) => {
   const index = scrollerItems.value.indexOf(target as HTMLElement)
   intersections.value[index] = intersectionRatio
+  // TODO: remove when focus is working in every device (mobile + tablet)
+  console.log({ index, intersectionRatio, activeIndex: activeIndex.value, target, autofocus: activeStep.value.autofocus })
   if (intersectionRatio === 1 && index === activeIndex.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
+  // If it's not input step or autofocus is false, blur the input previously focused
+  else if (intersectionRatio === 1 && index === activeIndex.value)
+    blur()
 }, { threshold: [0, 0.5, 1] })
 
 // Since the intersection observer only tracks the steps that have been already displayed,
@@ -95,7 +100,15 @@ const visibility = computed(() => intersections.value.concat(Array(steps.value.l
 
 function focus() {
   const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement
+  // TODO: remove when focus is working in every device (mobile + tablet)
+  console.log('focus', input)
   input?.focus()
+}
+
+function blur() {
+  const { activeElement } = document
+  if (activeElement instanceof HTMLElement)
+    activeElement.blur()
 }
 </script>
 
