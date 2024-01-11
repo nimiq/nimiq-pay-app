@@ -171,6 +171,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
     component: FlowCmp,
     handle: false,
     canDismiss: async () => {
+      // TODO Review this code. This ocde might not being called
       // eslint-disable-next-line no-console
       console.log('🌊 canDismiss', activeStepIndex.value, flow.steps.at(activeStepIndex.value)?.canDismiss)
       return flow.steps.at(activeStepIndex.value)?.canDismiss ?? true

@@ -1,4 +1,5 @@
 import { ValidationUtils } from '@nimiq/utils'
+import { useCplApi } from './useApi'
 import { nimCashlinkRegex } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
@@ -32,7 +33,7 @@ export function useStringParser() {
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO GoCrypto
   // TODO Bluecode
-  function getPaymentRequestData(content: string): Result<PaymentRequestData> {
+  async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData>> {
     let url: URL
     try {
       url = new URL(content)
@@ -43,7 +44,7 @@ export function useStringParser() {
 
     const rail = getRailFromUrl(url)
     if (rail === Rail.CryptoPaymentLink)
-      return parseCPLUrl(url)
+      return await parseCPLUrl(url)
     else if (rail === Rail.GoCrypto)
       return { error: i18n.t('GoCrypto is not supported yet'), data: undefined }
     return {
@@ -64,7 +65,7 @@ export function useStringParser() {
   // CPL uses the following format: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
   // And it looks like this:
   //   nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
-  function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Result<PaymentRequestData> {
+  async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData>> {
     if (protocol !== 'nimiq:') {
       return {
         error: i18n.t('Invalid protocol. Only NIM transactions from Crypto Payment Links are supported.'),
@@ -75,12 +76,13 @@ export function useStringParser() {
     if (!searchParams.has(CPL_URL_PARAM_ID))
       return { error: i18n.t('Invalid Crypto Payment Link. Missing cpl_id.'), data: undefined }
 
-    const amount = Math.round(Number.parseFloat(searchParams.get('amount') || '0') * 1e5)
+    const rawAmount = searchParams.get('amount') || '0'
+    const nimAmount = Math.round(Number.parseFloat(rawAmount))
 
-    if (!amount || !recipient)
+    if (!nimAmount || !recipient)
       return { error: i18n.t('Invalid Crypto Payment Link. Missing amount or recipient.'), data: undefined }
 
-    const message = searchParams.get('message') || undefined
+    const lunaAmount = nimAmount * 1e5
     const fee = 0 // There is no fee in NIM (yay)
     const shopName = searchParams.get('label') || undefined
     const transfer = Transfer.UserPaymentToMerchant
@@ -91,7 +93,20 @@ export function useStringParser() {
     if (!railPeerId)
       return { error: i18n.t('Invalid Crypto Payment Link. Missing cpl_id.'), data: undefined }
 
-    const data: PaymentRequestData = { recipient, amount, message, fee, shopName, shopCategory, rail, railPeerId, transfer }
+    const { data: cplRes, error } = await useCplApi().getOrderById({ id: railPeerId })
+    if (error || !cplRes)
+      return { error: i18n.t('Invalid Crypto Payment Link. Could not fetch order.'), data: undefined }
+
+    const { fiatCurrency, fiatAmount, itemDescription } = cplRes
+    const message = searchParams.get('message') || itemDescription
+
+    const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
+    const ff = (amount: number) => ({ total: amount / 1e5, formatted: formatFiat(amount / 1e5, { currency: fiatCurrency }), currency: fiatCurrency })
+
+    const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, shopName, shopCategory, rail, railPeerId, transfer, fiat: ff(fiatAmount), fiatFee: ff(0) }
+
+    console.log('📷 Parsed payment request data:', data) // eslint-disable-line no-console
+
     return { data, error: undefined }
   }
 

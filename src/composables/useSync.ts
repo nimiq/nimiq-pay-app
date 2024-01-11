@@ -12,7 +12,7 @@ import { PointsHashPrefix, ShopCategory, Transfer, type UserReceiptTransaction }
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 import { usePoints } from '@/stores/points'
-import { useFirestoreApi } from '@/composables/useApi'
+import { useCplApi } from '@/composables/useApi'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 // export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 10075
@@ -229,13 +229,13 @@ export function useSync() {
           console.error('Reference not found', dbTx)
           return
         }
-        const { data, error } = await useFirestoreApi().getOrderById({ id: dbTx.railPeerId })
+        const { data, error } = await useCplApi().getOrderById({ id: dbTx.railPeerId })
         if (error) {
           console.error(error)
           return
         }
 
-        const txStatus = data?.fields.status.stringValue as Nimiq.Client.TransactionState
+        const txStatus = data?.status as Nimiq.Client.TransactionState
         if (!txStatus) {
           console.error('No status from CPL API')
           return

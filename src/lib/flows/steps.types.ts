@@ -1,6 +1,6 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
-import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
+import type { ExternalTransaction, Rail, Transaction, Transfer } from '../../types/transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -155,9 +155,28 @@ export const stepEmits: EmitsOptions = {
   focus: () => undefined,
 }
 
-export type PaymentRequestData =
+export type PaymentRequestData<R extends Rail = Rail> =
   Pick<Transaction, 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'fee'>
-  & { transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant }
+  & {
+    transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant
+
+    rail?: R
+
+    // The price stored in the payment request data is used to display the actual amount to be paid by the user.
+    // This ensures consistency as the price is fetched from the same source as the merchant's device
+    // If no fiat is set, the default usePrice composable is used to fetch the price.
+    fiat?: R extends Rail.CryptoPaymentLink ? {
+      total: number
+      formatted: string
+      currency: string // This is a string a not a Currency, since the currency supported by the merchants (e.g CPL) are not the same as the ones supported by the app
+    } : never
+
+    fiatFee?: R extends Rail.CryptoPaymentLink ? {
+      total: number
+      formatted: string
+      currency: string
+    } : never
+  }
 
 export interface NimWithdrawalSelection {
   amount: number

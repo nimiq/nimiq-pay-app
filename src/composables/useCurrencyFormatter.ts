@@ -13,7 +13,7 @@ export interface FormatFiatOptions {
    * The currency to use
    * @default selectedFiat.value
    */
-  currency?: MaybeRef<Fiat>
+  currency?: MaybeRef<Fiat | string>
 
   locale?: MaybeRef<string>
 

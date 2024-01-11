@@ -52,9 +52,11 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     setDummyData = () => {
       const dummyData = {
         [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
-        [QRDataFormat.PaymentRequest]: 'nimiq:NQ89J7V7PFEYJNB1CVKUA32GJQN9U1BATSE4?amount=10&message=Ref%20%23f5z0&label=Alberto%20test&cpl_id=f5z0LYdA',
+        [QRDataFormat.PaymentRequest]: 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=98&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y',
         [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
       }[expect]
+
+      console.log(`💫 Using dummy data for QR scanner: ${dummyData}`) // eslint-disable-line no-console
       parseString(dummyData)
     }
   }
@@ -69,7 +71,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
         onData(data)
       }
       else if (expect === QRDataFormat.PaymentRequest) {
-        const { data, error } = getPaymentRequestData(raw)
+        const { data, error } = await getPaymentRequestData(raw)
         if (error || !data)
           throw new Error(error)
         onData(data)

@@ -9,7 +9,7 @@ import { useApp } from '@/stores/app'
 const basePointsUrl = new URL('https://bonus-nim.zeromox.com')
 const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
-const firestoreUrl = new URL('https://firestore.googleapis.com')
+const cplApiUrl = new URL('https://firestore.googleapis.com')
 
 async function api<T = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}) {
   const method = _body ? 'POST' : 'GET'
@@ -180,12 +180,69 @@ export function useCurrencyPriceApi() {
   }
 }
 
-export function useFirestoreApi() {
+export function useCplApi() {
   interface OrderByIdArg { id: MaybeRef<string> }
-  interface OrderByIdRes { fields: { fiat_currency_code: { stringValue: string }; fiat_price: { doubleValue: number }; item_description: { stringValue: string }; status: { stringValue: string } } }
+  interface OrderByIdRes {
+    name: string
+    createTime: string
+    updateTime: string
+    orderType: string
+    link: string
+    id: string
+    acceptedCurrencies: string[]
+    hasBuyerEmail: boolean
+    brandName: string
+    fiatCurrency: string
+    fiatAmount: number
+    itemDescription: string
+    status: string
+  }
+
+  async function getOrderById({ id }: OrderByIdArg): AsyncResult<OrderByIdRes> {
+    // The response from the API is verbose. We parse it here and return a simpler object.
+    interface OrderByIdFirestoreRes {
+      name: string
+      createTime: string
+      updateTime: string
+      fields: {
+        order_type: { stringValue: string }
+        link: { stringValue: string }
+        id: { stringValue: string }
+        accepted_currencies: { arrayValue: { values: { stringValue: string }[] } }
+        has_buyer_email: { booleanValue: boolean }
+        brand_name: { stringValue: string }
+        fiat_currency_code: { stringValue: string }
+        fiat_price: { doubleValue: number }
+        item_description: { stringValue: string }
+        status: { stringValue: string }
+      }
+    }
+    const { data, error } = await api<OrderByIdFirestoreRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
+    if (error || !data)
+      return { data: undefined, error: error || i18n.t('No order found') }
+    const parsed: OrderByIdRes = {
+      name: data.name,
+      createTime: data.createTime,
+      updateTime: data.updateTime,
+      orderType: data.fields.order_type.stringValue,
+      link: data.fields.link.stringValue,
+      id: data.fields.id.stringValue,
+      acceptedCurrencies: data.fields.accepted_currencies.arrayValue.values.map(v => v.stringValue),
+      hasBuyerEmail: data.fields.has_buyer_email.booleanValue,
+      brandName: data.fields.brand_name.stringValue,
+      fiatCurrency: data.fields.fiat_currency_code.stringValue,
+      fiatAmount: data.fields.fiat_price.doubleValue,
+      itemDescription: data.fields.item_description.stringValue,
+      status: data.fields.status.stringValue,
+    }
+    return {
+      data: parsed,
+      error: undefined,
+    }
+  }
 
   return {
-    getOrderById: ({ id }: OrderByIdArg) => api<OrderByIdRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, firestoreUrl)),
+    getOrderById,
   }
 }
 

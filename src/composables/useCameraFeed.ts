@@ -89,12 +89,11 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
 
     video.srcObject = stream
     video.play()
-    console.log('video', video) // eslint-disable-line no-console
     return video
   }
 
   async function tearDownCameraFeed() {
-    (getVideoElement().srcObject as MediaStream).getTracks().forEach(track => track.stop())
+    (getVideoElement().srcObject as MediaStream)?.getTracks().forEach(track => track.stop())
   }
 
   return {

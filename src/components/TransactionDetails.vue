@@ -3,17 +3,20 @@ import { type PropType, computed } from 'vue'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, Transfer } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
+import { PaymentMethod } from '@/types/database'
+import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
-const tx = computed(() => props.tx)
-const datetime = computed(() => useFormatTime(tx.value.timestamp))
 
-const showMap = computed(() => tx.value.transfer === Transfer.UserPaymentToMerchant)
+const datetime = computed(() => useFormatTime(props.tx.timestamp))
+const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
+
+const { crypto, fiat } = usePrice(props.tx.amount)
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
-    <TransactionAmounts :tx="tx" />
+    <TransactionAmounts :crypto-total="crypto.total" :fiat-formatted="fiat.formatted" :payment-method="tx.paymentMethod || PaymentMethod.NIM" />
 
     <div v-if="showMap" class="grid w-[calc(100vw-18px)] border rounded-md border-space/10">
       <!-- TODO Replace the box below this with the map -->

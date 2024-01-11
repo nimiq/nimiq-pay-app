@@ -99,6 +99,7 @@ export type UserTransaction = BaseTransaction & {
   shopName?: undefined
   shopCategory?: undefined
   title: TransactionTitle
+  paymentMethod?: undefined
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
@@ -110,6 +111,7 @@ export type UserReceiptTransaction = BaseTransaction & {
   shopCategory?: ShopCategory
   title: TransactionTitle
   senderType: Nimiq.Account.Type
+  paymentMethod?: undefined
 }
 
 export type MerchantTransaction = BaseTransaction & {
@@ -136,6 +138,7 @@ interface SyncTransactionBase {
   railPeerId?: undefined
   shopName?: undefined
   shopCategory?: undefined
+  paymentMethod?: undefined
 }
 
 export type LocalToRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.LocalToRemote }
