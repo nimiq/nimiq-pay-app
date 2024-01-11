@@ -56,6 +56,7 @@ async function onStepDone(value: OnDoneStepValue) {
   else if (isActiveStepInput.value) {
     // @ts-expect-error If the emit value is well typed, this should work
     state[activeStep.value.step as InputStepName] = value
+    errors.value![activeStep.value.step as InputStepName] = '' // Clear error message
     const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
     if (activeStep.value.beforeNext)
       await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, path }) })
