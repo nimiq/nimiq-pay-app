@@ -1,3 +1,4 @@
+import { devtools } from '@vue/devtools'
 import { createApp } from 'vue'
 import { IonicVue } from '@ionic/vue'
 
@@ -33,6 +34,11 @@ import { useDevice } from '@/composables/useDevice'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
+
+if (import.meta.env.DEV)
+  // Change this based on your local IP address if you want to use vue-devtools
+  // If you don't know your IP address, open vue-devtools and check the URL
+  devtools.connect('http://192.168.1.35', 8098)
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
