@@ -5,6 +5,7 @@ import { chevronForwardOutline } from 'ionicons/icons'
 import { Modal, useModal } from '@/composables/useModal'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { usePoints } from '@/stores/points'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 const props = defineProps({
   progress: {
@@ -31,6 +32,7 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 const { getTaskById } = usePoints()
 const { showModal } = useModal()
+const { formatCrypto } = useCurrencyFormatter()
 
 const isLoading = ref(false)
 
@@ -61,7 +63,7 @@ async function handleClick() {
     @click="handleClick"
   >
     <span v-if="total" class="absolute text-sm top-2 right-3">
-      {{ progress }}/{{ total }}
+      {{ progress.toLocaleString() }}/{{ total.toLocaleString() }}
     </span>
     <span v-if="task?.status === 'completed'" class="absolute text-sm top-2 right-3">{{ $t('Complete') }}</span>
     <Transition name="fade" mode="out-in">
@@ -74,7 +76,7 @@ async function handleClick() {
           <div v-if="task?.reward_amount" class="flex items-center gap-x-1">
             <CryptoCityLogo class="h-4 w-5 [&>path]:fill-white" />
             <span class="text-base font-normal">
-              {{ task.reward_amount / 1e5 }}
+              {{ formatCrypto(task.reward_amount) }}
             </span>
           </div>
           <IonIcon :icon="chevronForwardOutline" class="ml-auto stroke-2" />

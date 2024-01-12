@@ -83,7 +83,7 @@ function handlePay() {
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
-          {{ amount }}
+          {{ amount.toLocaleString() }}
         </template>
       </i18n-t>
     </IonToggle>

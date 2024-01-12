@@ -43,9 +43,9 @@ const paymentMethod = computed(() => {
       <span class="text-base font-bold">{{ fiat.formatted }}</span>
       <time v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">
         <CryptoCityLogo class="h-3 mr-1" />
-        {{ crypto.total }}
+        {{ crypto.total.toLocaleString() }}
       </time>
-      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">{{ crypto.total }} {{ paymentMethod }}</time>
+      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">{{ crypto.total.toLocaleString() }} {{ paymentMethod }}</time>
     </div>
     <IonRippleEffect />
   </button>

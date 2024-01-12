@@ -217,7 +217,7 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
-            {{ phoneNumberVerified ? pointsBalance / 1e5 : $t('Earn Points') }}
+            {{ phoneNumberVerified ? (pointsBalance / 1e5).toLocaleString() : $t('Earn Points') }}
           </IonButton>
         </IonButtons>
       </IonToolbar>
@@ -271,7 +271,7 @@ onMounted(async () => {
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">
-              {{ $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount }) }}
+              {{ $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount.toLocaleString() }) }}
             </span>
           </NotificationCard>
         </IonRow>

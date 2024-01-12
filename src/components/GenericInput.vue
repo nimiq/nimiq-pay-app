@@ -4,6 +4,7 @@ import { IonButton } from '@ionic/vue'
 import { usePoints } from '@/stores/points'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -17,6 +18,8 @@ const codeField = ref()
 const referralCode = ref('')
 const rewardAmount = ref(0)
 const errorMessage = ref('')
+
+const { formatCrypto } = useCurrencyFormatter()
 
 watch(referralCode, async (newValue) => {
   if (newValue.length === 7) {
@@ -60,7 +63,7 @@ watch(referralCode, async (newValue) => {
   </p>
   <div v-if="rewardAmount" class="w-full">
     <p class="text-center">
-      {{ $t('You are going to get {amount} NIM', { amount: rewardAmount / 1e5 }) }}
+      {{ $t('You are going to get {amount} NIM', { amount: formatCrypto(rewardAmount) }) }}
     </p>
   </div>
   <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">

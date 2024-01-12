@@ -22,9 +22,9 @@ const slots = useSlots()
 
     <span v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-5xl text-center">
       <CryptoCityLogo class="mr-1 h-9" />
-      {{ cryptoTotal }}
+      {{ cryptoTotal.toLocaleString() }}
     </span>
-    <span v-else class="text-5xl text-center uppercase">{{ cryptoTotal }} {{ paymentMethod }}</span>
+    <span v-else class="text-5xl text-center uppercase">{{ cryptoTotal.toLocaleString() }} {{ paymentMethod }}</span>
 
     <p v-if="slots.fee" class="mt-2 text-base font-semibold text-space/60">
       <slot name="fee" />

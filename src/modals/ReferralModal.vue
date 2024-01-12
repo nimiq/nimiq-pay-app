@@ -7,9 +7,13 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { usePoints } from '@/stores/points'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { Crypto } from '@/stores/app'
 
 const { setToast } = useToast()
 const { getReferralInfo } = usePoints()
+const { formatCrypto } = useCurrencyFormatter()
+
 const referralCode = computedAsync(async () => {
   const { data: code, error } = await getReferralInfo()
   if (error) {
@@ -49,7 +53,7 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      {{ $t('Invite a friend and get {amount} NIM each', { amount: (referralCode?.reward || 0) / 1e5 }) }}
+      {{ $t('Invite a friend and get {amount} NIM each', { amount: formatCrypto(referralCode?.reward || 0, { currency: Crypto.NIM }) }) }}
     </template>
     <p class="self-start text-space/60">
       {{ $t(
@@ -66,8 +70,8 @@ function handleShare() {
         <!-- TODO: replace 10 with data from API -->
         <span class="mt-2 text-sm text-space/60">{{
           referralCode?.claims_remaining < 10
-            ? $t('Only {count} out of {total} remaining.', { count: referralCode?.claims_remaining, total: 10 })
-            : $t('{count} of {total} remaining.', { count: referralCode?.claims_remaining, total: 10 })
+            ? $t('Only {count} out of {total} remaining.', { count: referralCode?.claims_remaining.toLocaleString(), total: 10 })
+            : $t('{count} of {total} remaining.', { count: referralCode?.claims_remaining.toLocaleString(), total: 10 })
         }}</span>
       </p>
     </Transition>

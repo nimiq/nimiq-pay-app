@@ -115,7 +115,7 @@ onMounted(updateRandomWord)
     <div class="flex flex-col h-full gap-y-8">
       <div v-if="randomIndex !== null" class="mt-[40%]">
         <p class="mb-6 text-6xl font-semibold">
-          {{ randomIndex + 1 }}
+          {{ (randomIndex + 1).toLocaleString() }}
         </p>
         <p class="text-lg font-medium">
           {{ randomIndexInstructions }}
