@@ -3,7 +3,7 @@ import { modalController } from '@ionic/vue'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { getNotifiedStep, nimAddressDisplay, nimAddressInputStep, nimWithdrawalSelectionStep, onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3, onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4, onBoardingPoints, paymentPreviewStep, phoneNumberConfirmStep, phoneNumberStep, pinCodeConfirmStep, pinCodeStep, promoCodeStep, qrCodeScannerStep, recoveryWordsStep, transactionDetail, transactionList } from './steps'
 import { Modal, useModal } from '@/composables/useModal'
-import { type Flow, type FlowInit, FlowName, type State, inputSteps } from '@/lib/flows/steps.types'
+import { type Flow, type FlowInit, FlowName, type State, StepName, inputSteps } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 
@@ -18,6 +18,10 @@ const loginFlow: FlowInit = async ({ closeFn }) => ({
     const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
     if (err)
       console.error(err)
+
+    // Clear pin code from memory just in case
+    // Since state is a JSON object, we take advantage of the fact that it's a reference
+    state[StepName.PinCode] = ''
 
     goTo('/app')
     closeFn()

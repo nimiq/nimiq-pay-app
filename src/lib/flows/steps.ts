@@ -78,7 +78,8 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   get title() { return i18n.t('Confirm your PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
   main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
-  beforeNext: async ({ pinCode, pinCodeConfirm }, { next, err }) => {
+  beforeNext: async (state, { next, err }) => {
+    const { pinCode, pinCodeConfirm } = state
     if (!pinCodeConfirm) {
       err(i18n.t('Please confirm your PIN code'))
       return
@@ -106,7 +107,12 @@ export const pinCodeConfirmStep: StepInit = async () => ({
       err(i18n.t('There was an error'))
       return
     }
-    // TODO: clear pin code from memory
+
+    // Clear pin code from memory just in case
+    // Since state is a JSON object, we take advantage of the fact that it's a reference
+    state[StepName.PinCode] = ''
+    state[StepName.PinCodeConfirm] = ''
+
     next()
   },
 })
