@@ -192,7 +192,7 @@ onMounted(async () => {
         <div slot="start" class="flex items-center gap-2 ml-2">
           <div class="w-3 h-3 bg-blue-600 rounded-full" />
           <p class="font-semibold">
-            {{ $t('There is no "forgot password"') }}
+            {{ $t('There is no "Forgot Password"') }}
           </p>
         </div>
         <IonButtons slot="end">
@@ -230,7 +230,7 @@ onMounted(async () => {
       <TheHomeAmounts class="mt-[72px]" />
 
       <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
-        {{ $t('Top Up') }}
+        {{ $t('Top-Up') }}
       </QuickButton>
 
       <!-- Transaction List -->
@@ -271,7 +271,7 @@ onMounted(async () => {
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">
-              {{ $t('Bring a friend and get {amount} Points each!', { amount: referralRewardAmount.toLocaleString() }) }}
+              {{ $t('Invite a friend and get {amount} Points each!', { amount: referralRewardAmount.toLocaleString() }) }}
             </span>
           </NotificationCard>
         </IonRow>
@@ -308,7 +308,7 @@ onMounted(async () => {
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
           <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            {{ $t('Wait ~10 minutes to pay after Top Up') }}
+            {{ $t('Wait ~10 minutes to pay after top-up') }}
           </p>
         </Transition>
         <IonButton

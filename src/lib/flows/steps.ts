@@ -122,7 +122,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
 export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   get title() { return i18n.t('Verify your phone number') },
-  get description() { return i18n.t('You will receive a SMS with a verification code') },
+  get description() { return i18n.t('You will receive an SMS with a verification code') },
   main: markRaw(props => h(PhoneInput, { ...props, canSkip: !!stepsToSkip })),
   stepsToSkip,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
@@ -167,7 +167,7 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
 export const getNotifiedStep: StepInit = async () => ({
   step: StepName.GetNotified,
   get title() { return i18n.t('Enable notifications') },
-  get description() { return i18n.t('Get important info on transactions, top ups, security and more.') },
+  get description() { return i18n.t('Get important info on transactions, top-ups, security and more.') },
   stepsToSkip: 1,
   main: markRaw(EnableNotifications),
 })
@@ -179,34 +179,34 @@ export const onBoardingPoints: StepInit = async () => ({
 
 export const onBoardingCashback1: StepInit = async () => ({
   step: StepName.OnBoardingCashback1,
-  get title() { return i18n.t('What\'s Crypto City Points?') },
-  get description() { return i18n.t('Crypto City Points (or CC Points) are a bonus currency worth the same as NIM.') },
+  get title() { return i18n.t('What are Cryptocity Points?') },
+  get description() { return i18n.t('Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM).') },
   main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback2: StepInit = async () => ({
   step: StepName.OnBoardingCashback2,
-  get title() { return i18n.t('Pay with CC Points') },
-  get description() { return i18n.t('Pay with CC Points instead of NIM wherever they\'re accepted.') },
+  get title() { return i18n.t('Pay with Cryptocity Points') },
+  get description() { return i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.') },
   main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback3: StepInit = async () => ({
   step: StepName.OnBoardingCashback3,
-  get title() { return i18n.t('Get CC Points') },
-  get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
+  get title() { return i18n.t('Get Cryptocity Points') },
+  get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
   main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingCashback4: StepInit = async () => ({
   step: StepName.OnBoardingCashback4,
-  get title() { return i18n.t('Find places to pay with and earn CC Points') },
+  get title() { return i18n.t('Find places to pay with, and earn Cryptocity Points') },
   main: markRaw(OnBoardingScreen),
 })
 
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
-  get title() { return i18n.t('What\'s Bluecode?') },
+  get title() { return i18n.t('What is Bluecode?') },
   get description() { return i18n.t('Bluecode is a European payment service that now supports NIM.') },
   main: markRaw(OnBoardingScreen),
 })
@@ -221,7 +221,7 @@ export const onBoardingBluecode2: StepInit = async () => ({
 export const onBoardingBluecode3: StepInit = async () => ({
   step: StepName.OnBoardingBluecode3,
   get title() { return i18n.t('Verify your ID') },
-  get description() { return i18n.t('Get CC Points as cashback rewards or complete challenges to earn them.') },
+  get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
   main: markRaw(OnBoardingScreen),
 })
 
@@ -237,7 +237,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
         next()
       else if (options?.props?.expect === QRDataFormat.NimCashlink)
         next()
-      else // For Top Up and Withdrawal, we go back to the previous step
+      else // For Top-Up and Withdrawal, we go back to the previous step
         prev()
     },
   }

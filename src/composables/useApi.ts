@@ -134,7 +134,7 @@ export function useRemoteSignerApi() {
   async function getStatus(): AsyncResult<StatusRes> {
     const { data, error } = await api<StatusRes>(new URL('/status', baseWalletUrl))
     if (error || data?.status !== 'good')
-      return { data: undefined, error: error || i18n.t('Status not good') }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
     return { data: data!, error: undefined }
   }
 

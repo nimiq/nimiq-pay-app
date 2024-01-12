@@ -68,7 +68,7 @@ async function handleGuess(word: string) {
   }
   if (successCount.value === 3) {
     hasDoneBackup.value = true
-    setToast({ message: i18n.t('Back up successful') })
+    setToast({ message: i18n.t('Backup successful') })
     closeModal()
   }
   else {

@@ -43,7 +43,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
 
     if (!toValue(rail) || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
-      message.value = i18n.t('This payment is not eligible for CC Points.')
+      message.value = i18n.t('This payment is not eligible for Cryptocity Points.')
       return
     }
 
@@ -56,7 +56,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
 
     if (usePoints().pointsBalance < toValue(amount)) {
       pointsState.value = PointsState.InsufficientPoints
-      message.value = i18n.t('You don\'t have enough CC Points for this purchase.')
+      message.value = i18n.t('You don\'t have enough Cryptocity Points for this purchase.')
       return
     }
 

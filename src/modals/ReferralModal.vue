@@ -39,8 +39,8 @@ function handleShare() {
     title: 'Nimiq Pay App',
     // Text to share via all the apps
     text: i18n.t(
-      'Hey! Join me on Nimiq Pay App and earn CryptoCity Points to pay for your purchases! '
-        + 'Use my code {code} to earn {amount} NIM in CryptoCity Points at registration.',
+      'Hey! Join me on Nimiq Pay App and earn Cryptocity Points to pay for your purchases using crypto! '
+        + 'Use my code {code} to earn {amount} NIM in Cryptocity Points at registration.',
       { code: referralCode.value?.id, amount: (referralCode.value?.reward || 0) / 1e5 },
     ),
     url: 'https://nimpay.app',
@@ -57,13 +57,13 @@ function handleShare() {
     </template>
     <p class="self-start text-space/60">
       {{ $t(
-        'Crypto adoption needs you! Bring a friend and you both get {amount} NIM in CC Points.',
+        'Help grow the crypto adoption movement. Invite a friend and you will both get {amount} NIM in Cryptocity Points.',
         { amount: (referralCode?.reward || 0) / 1e5 },
       ) }}
     </p>
     <Transition name="slide-fade" mode="out-in">
       <p v-if="!referralCode" class="text-4xl font-semibold">
-        {{ $t('Loading...') }}
+        {{ $t('Loading…') }}
       </p>
       <p v-else class="flex flex-col text-3xl font-semibold">
         {{ referralCode?.id }}

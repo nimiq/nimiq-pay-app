@@ -38,7 +38,7 @@ onLongPress(
 
   <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
     <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimTopUp) }">
-      {{ $t('Top Up') }}
+      {{ $t('Top-Up') }}
     </IonItem>
     <IonItem button :detail="false" @click="() => { closeModal(); initializeFlow(FlowName.NimWithdraw) }">
       {{ $t('Withdraw') }}
@@ -60,7 +60,7 @@ onLongPress(
       {{ $t('Settings') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.Backup)">
-      {{ $t('Back up account') }}
+      {{ $t('Backup account') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
       {{ $t('Log Out') }}

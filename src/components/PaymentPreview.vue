@@ -58,7 +58,7 @@ function handlePay() {
   <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
     <TransactionAmounts :crypto-total="amount / 1e5" :fiat-formatted="fiat?.formatted || ''" :payment-method="paymentMethod">
       <template #fee>
-        {{ $t('Fees might apply ~{fee}', { fee: fiatFee?.formatted || '' }) }}
+        {{ $t('Fees may apply ~{fee}', { fee: fiatFee?.formatted || '' }) }}
       </template>
     </TransactionAmounts>
 

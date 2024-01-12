@@ -46,7 +46,7 @@ export function useStringParser() {
     if (rail === Rail.CryptoPaymentLink)
       return await parseCPLUrl(url)
     else if (rail === Rail.GoCrypto)
-      return { error: i18n.t('GoCrypto is not supported yet'), data: undefined }
+      return { error: i18n.t('GoCrypto is not yet supported.'), data: undefined }
     return {
       error: i18n.t('Invalid QR code. Only NIM transactions from Crypto Payment Links are supported.'),
       data: undefined,

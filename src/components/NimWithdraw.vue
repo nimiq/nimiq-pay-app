@@ -85,7 +85,7 @@ watch(selected, (value) => {
   selected.value = address.value
 })
 
-const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? i18n.t('Not enough funds') : ''))
+const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? i18n.t('Insufficient funds') : ''))
 const disabled = computed(() => !address.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
 const loading = ref(false)
 
@@ -114,7 +114,7 @@ function withdraw() {
       :aria-label="$t('Select withdrawal address')"
     >
       <NimiqLogo class="w-6 h-6" />
-      <SelectValue :placeholder="address || $t('Select an address...')" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'normal-case text-left': !address }" />
+      <SelectValue :placeholder="address || $t('Select an address…')" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="{ 'normal-case text-left': !address }" />
       <IonIcon :icon="chevronForward" size="large" class="w-6 h-full ml-auto will-change-[transform] transition-transform" :class="{ 'rotate-90': isSelectOpen }" />
     </SelectTrigger>
 

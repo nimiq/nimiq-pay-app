@@ -20,7 +20,7 @@ const words = asyncComputed(async () => {
   }
   if (data)
     return data
-}, [i18n.t('Loading...')])
+}, [i18n.t('Loading…')])
 </script>
 
 <template>
@@ -35,7 +35,7 @@ const words = asyncComputed(async () => {
     </template>
     <template #subtitle>
       <span class="whitespace-pre-line">
-        {{ $t('Write the words below on a piece of paper in the right order.\nKeep it safe and never share it!') }}
+        {{ $t('Write the words below on a piece of paper in the exact order.\nKeep your recovery words safe and never share them with anyone!') }}
       </span>
     </template>
     <MnemonicInput :recovery-words="words" />

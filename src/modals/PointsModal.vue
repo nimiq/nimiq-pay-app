@@ -60,7 +60,7 @@ onMounted(async () => {
 
     <IonGrid class="flex flex-col gap-y-2">
       <h2 class="max-w-sm mb-6 text-2xl font-bold text-center text-balance">
-        {{ $t('Crypto City Points') }}
+        {{ $t('Cryptocity Points') }}
       </h2>
       <IonRow class="flex flex-col items-center justify-center mb-10 gap-y-2">
         <h1 class="flex items-center text-5xl font-normal gap-x-2">
@@ -91,7 +91,7 @@ onMounted(async () => {
       <IonRow class="mb-8">
         <!-- TODO: get amount from API -->
         <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
-          {{ $t('Invite a friend and earn up to 200 Points both!') }}
+          {{ $t('Invite a friend and earn up to 200 Points each!') }}
         </TaskCard>
       </IonRow>
 
@@ -113,7 +113,7 @@ onMounted(async () => {
         </IonRow>
         <IonRow v-else class="flex flex-col items-center justify-center gap-4 mt-8">
           <IonSpinner />
-          <p>{{ $t('Loading tasks...') }}</p>
+          <p>{{ $t('Loading tasks…') }}</p>
         </IonRow>
       </Transition>
     </IonGrid>

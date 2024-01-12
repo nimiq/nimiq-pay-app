@@ -167,7 +167,7 @@ export function useSync() {
         status: tx.state,
         // Timestamp is not available for pending transactions
         timestamp: Math.ceil(Date.now() / 1000),
-        title: 'Top Up', // translated at display time
+        title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,
@@ -202,7 +202,7 @@ export function useSync() {
         hash: tx.transactionHash.toHex(),
         status: tx.state,
         timestamp: tx.timestamp,
-        title: 'Top Up', // translated at display time
+        title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
         shopCategory: ShopCategory.Deposit,

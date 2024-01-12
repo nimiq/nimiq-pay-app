@@ -86,7 +86,7 @@ export const useTransactions = defineStore('transactions', () => {
     const details = await client.value!.sendTransaction(signedTx!)
     if (details.state === 'invalidated') {
       console.error('Transaction was invalidated', details)
-      return { data: undefined, error: i18n.t('Transaction was invalidated') }
+      return { data: undefined, error: i18n.t('Transaction became invalid') }
     }
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()

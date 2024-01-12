@@ -103,7 +103,7 @@ async function handleSubmit() {
       return
   }
 
-  setToast({ message: i18n.t('You got CC Points') })
+  setToast({ message: i18n.t('You received Cryptocity Points') })
   closeModal()
 }
 </script>

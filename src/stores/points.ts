@@ -153,7 +153,7 @@ export const usePoints = defineStore('points', () => {
     referralCode.value = ''
     setTimeout(() => {
       updatePointsBalance()
-      useToast().setToast({ message: i18n.t('CC Points added') })
+      useToast().setToast({ message: i18n.t('Cryptocity Points added') })
     }, 750)
   }
 

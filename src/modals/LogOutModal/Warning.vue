@@ -19,7 +19,7 @@ const { showModal, closeAllModals } = useModal()
   </IonHeader>
   <div class="flex flex-col items-center h-full p-8 pt-0 text-center">
     <h1 class="text-2xl font-bold">
-      {{ $t('Back up your account before login out') }}
+      {{ $t('Backup your account before logging out') }}
     </h1>
     <div class="flex items-start justify-center mt-8 font-semibold gap-x-2 text-pumpkin">
       <InfoIcon class="h-6 w-5 stroke-[1.5] text-pumpkin" />

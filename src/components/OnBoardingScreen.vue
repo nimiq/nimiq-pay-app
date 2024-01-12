@@ -19,7 +19,7 @@ defineEmits(stepEmits)
 
 const steps = ref([
   {
-    title: i18n.t('Welcome to Crypto City Points'),
+    title: i18n.t('Welcome to Cryptocity Points'),
     description: i18n.t('Points are a loyalty rewards you can earn and pay with.'),
     svg: NimPointsExchangeSvg,
     button: i18n.t('Go To Points'),

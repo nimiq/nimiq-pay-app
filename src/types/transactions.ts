@@ -69,7 +69,7 @@ export interface BaseTransaction {
   proofSize: number
 }
 
-type KnownTransactionTitle = 'Top Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
+type KnownTransactionTitle = 'Top-Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
 // artificial string type which is actually just a string, but that assigning a regular string to is a type error
 type UnknownTransactionTitle = string & { isUnknownTitle: true }
 type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
@@ -81,7 +81,7 @@ export function markAsUnknownTransactionTitle(title: string) {
 export function translateTransactionTitle(title: TransactionTitle) {
   // Define translations as record such that ts warns us if a translation for a known title is missing
   const knownTitleTranslations: Record<KnownTransactionTitle, string> = {
-    'Top Up': i18n.t('Top Up'),
+    'Top-Up': i18n.t('Top-Up'),
     'Withdrawal': i18n.t('Withdrawal'),
     'Payment': i18n.t('Payment'),
     'Points Payment': i18n.t('Points Payment'),

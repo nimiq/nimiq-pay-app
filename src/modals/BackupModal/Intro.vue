@@ -12,7 +12,7 @@ const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 <template>
   <ModalTemplate>
     <template #title>
-      {{ $t('There is no "Forgot password"') }}
+      {{ $t('There is no "Forgot Password"') }}
     </template>
     <template #subtitle>
       {{ $t('Create a backup. It\'s the only way to recover your account.') }}
@@ -26,7 +26,7 @@ const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
       </div>
       <!-- TODO: ask for pin before showing words -->
       <IonButton class="w-full mt-6 text-base" @click="nav.push(markRaw(ShowWords))">
-        No One can See me
+        {{ $t('No One can See me') }}
       </IonButton>
     </div>
   </ModalTemplate>
