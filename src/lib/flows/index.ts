@@ -1,20 +1,24 @@
 import { reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
-import { QRDataFormat } from '../../composables/useStringParser'
-import { getNotifiedStep, nimAddressDisplay, nimAddressInputStep, nimWithdrawalSelectionStep, onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3, onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4, onBoardingPoints, paymentPreviewStep, phoneNumberConfirmStep, phoneNumberStep, pinCodeConfirmStep, pinCodeStep, promoCodeStep, qrCodeScannerStep, recoveryWordsStep, transactionDetail, transactionList } from './steps'
 import { Modal, useModal } from '@/composables/useModal'
-import { type Flow, type FlowInit, FlowName, type State, StepName, inputSteps } from '@/lib/flows/steps.types'
+import { FlowName, StepName, inputSteps } from '@/lib/flows/steps.types'
+import type { Flow, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 
-const emptyState = () => reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State)
-
-const loginFlow: FlowInit = async ({ closeFn }) => ({
-  name: FlowName.Login,
-  state: emptyState(),
-  steps: await Promise.all([recoveryWordsStep(), pinCodeStep(), pinCodeConfirmStep(), phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep(), getNotifiedStep(), onBoardingPoints()]),
-  canGoBack: true,
-  onDone: async (state, { goTo }) => {
+const loginFlow: FlowInit = async ({ closeFn, state }) => {
+  const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const flowName = FlowName.Login
+  const steps = await Promise.all([
+    recoveryWordsStep,
+    pinCodeStep,
+    pinCodeConfirmStep,
+    (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }),
+    phoneNumberConfirmStep,
+    getNotifiedStep,
+    onBoardingPoints,
+  ].map(s => s({ flowName })))
+  const onDone: Flow['onDone'] = async (state, { goTo }) => {
     const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
     if (err)
       console.error(err)
@@ -26,27 +30,28 @@ const loginFlow: FlowInit = async ({ closeFn }) => ({
     goTo('/app')
     closeFn()
     useModal().showModal(Modal.Points)
-  },
-  onCancel: async (state, { goTo }) => {
+  }
+  const onCancel: Flow['onCancel'] = async (state, { goTo }) => {
     if (state.pinCode)
       goTo('/app')
 
     closeFn()
-  },
-})
+  }
+  return { flowName, state, steps, onDone, onCancel }
+}
 
-const setupFlow: FlowInit = async ({ closeFn }) => ({
-  name: FlowName.Setup,
-  state: emptyState(),
-  steps: await Promise.all([pinCodeStep(), pinCodeConfirmStep(), phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep(), getNotifiedStep(), onBoardingPoints()]),
-  onDone: async (state, { goTo }) => {
+const setupFlow: FlowInit = async ({ closeFn, state }) => {
+  const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const flowName = FlowName.Setup
+  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
+  const onDone: Flow['onDone'] = async (state, { goTo }) => {
     const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
     if (err)
       console.error(err)
 
     goTo('/app')
     closeFn()
-    const { phoneNumberVerified } = await (await import('@/stores/app')).useApp()
+    const { phoneNumberVerified } = (await import('@/stores/app')).useApp()
     if (phoneNumberVerified) {
       useModal().showModal(Modal.Points)
     }
@@ -54,33 +59,44 @@ const setupFlow: FlowInit = async ({ closeFn }) => ({
       await useModal().closeModal()
       initializeFlow(FlowName.VerifyPhone)
     }
-  },
-  onCancel: async (state, { goTo }) => {
+  }
+  const onCanel: Flow['onCancel'] = async (state, { goTo }) => {
     if (state.pinCode)
       goTo('/app')
 
     closeFn()
-  },
-})
+  }
+  return { flowName, state, steps, onDone, onCancel: onCanel }
+}
 
-const verifyPhoneFlow: FlowInit = async () => ({
-  name: FlowName.VerifyPhone,
-  state: emptyState(),
-  steps: await Promise.all([phoneNumberStep(), phoneNumberConfirmStep(), onBoardingPoints()]),
-  onDone: async () => useModal().showModal(Modal.Points),
-})
+const verifyPhoneFlow: FlowInit = async ({ state }) => {
+  const { phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints } = await import('./steps')
+  const flowName = FlowName.VerifyPhone
+  const steps = await Promise.all([phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints].map(s => s({ flowName })))
+  const onDone: Flow['onDone'] = async () => useModal().showModal(Modal.Points)
+  return { flowName, state, steps, onDone }
+}
 
-const setupWithPromoCodeFlow: FlowInit = async () => ({
-  name: FlowName.SetupWithPromoCode,
-  state: emptyState(),
-  steps: await Promise.all([promoCodeStep(), pinCodeStep(), pinCodeConfirmStep(), phoneNumberStep({ stepsToSkip: 2 }), phoneNumberConfirmStep(), getNotifiedStep(), onBoardingPoints()]),
-})
+const setupWithPromoCodeFlow: FlowInit = async ({ state }) => {
+  const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const flowName = FlowName.SetupWithPromoCode
+  const steps = await Promise.all([
+    promoCodeStep,
+    pinCodeStep,
+    pinCodeConfirmStep,
+    (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }),
+    phoneNumberConfirmStep,
+    getNotifiedStep,
+    onBoardingPoints,
+  ].map(s => s({ flowName })))
+  return { flowName, state, steps }
+}
 
-const onBoardingPointsFlow: FlowInit = async () => ({
-  name: FlowName.OnBoardingPoints,
-  state: emptyState(),
-  steps: await Promise.all([onBoardingPoints()]),
-  onDone: async () => {
+const onBoardingPointsFlow: FlowInit = async ({ state }) => {
+  const { onBoardingPoints } = await import('./steps')
+  const flowName = FlowName.OnBoardingPoints
+  const steps = [await onBoardingPoints({ flowName })]
+  const onDone: Flow['onDone'] = async () => {
     const store = await import('@/stores/app')
     const { phoneNumberVerified } = store.useApp()
     if (phoneNumberVerified) {
@@ -90,50 +106,111 @@ const onBoardingPointsFlow: FlowInit = async () => ({
       await useModal().closeModal()
       initializeFlow(FlowName.VerifyPhone)
     }
-  },
-})
+  }
+  return { flowName, state, steps, onDone }
+}
 
-const onBoardingCashbackFlow: FlowInit = async () => ({
-  name: FlowName.OnBoardingCashback,
-  state: emptyState(),
-  steps: await Promise.all([onBoardingCashback1(), onBoardingCashback2(), onBoardingCashback3(), onBoardingCashback4()]),
-})
+const onBoardingCashbackFlow: FlowInit = async ({ state }) => {
+  const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
+  const flowName = FlowName.OnBoardingCashback
+  const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
+  return { flowName, state, steps }
+}
 
-const onBoardingBluecodeFlow: FlowInit = async () => ({
-  name: FlowName.OnBoardingBluecode,
-  state: emptyState(),
-  steps: await Promise.all([onBoardingBluecode1(), onBoardingBluecode2(), onBoardingBluecode3()]),
-})
+const onBoardingBluecodeFlow: FlowInit = async ({ state }) => {
+  const { onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3 } = await import('./steps')
+  const flowName = FlowName.OnBoardingBluecode
+  const steps = (await Promise.all([onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3].map(s => s({ flowName }))))
 
-const nimOrPointsPaymentFlow: FlowInit = async () => ({
-  name: FlowName.NimOrPointsPayment,
-  state: emptyState(),
-  steps: await Promise.all([qrCodeScannerStep({ props: { expect: QRDataFormat.PaymentRequest } }), paymentPreviewStep()]),
-})
+  return { flowName, state, steps }
+}
 
-const nimWithdrawFlow: FlowInit = async () => ({
-  name: FlowName.NimWithdraw,
-  state: emptyState(),
-  steps: await Promise.all([nimWithdrawalSelectionStep(), nimAddressInputStep(), qrCodeScannerStep({ props: { expect: QRDataFormat.NimiqAddress } })]),
-})
+const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
+  const { paymentPreviewStep, qrCodeScannerStep, pinCodeStep } = await import('./steps')
+  const { QRDataFormat } = await import('@/composables/useStringParser')
 
-const nimTopUpFlow: FlowInit = async () => ({
-  name: FlowName.NimTopUp,
-  state: emptyState(),
-  steps: await Promise.all([nimAddressDisplay(), qrCodeScannerStep({ props: { expect: QRDataFormat.NimCashlink } })]),
-})
+  const flowName = FlowName.NimOrPointsPayment
+  const steps = (await Promise.all([
+    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.PaymentRequest } }),
+    paymentPreviewStep,
+    pinCodeStep,
+  ].map(s => s({ flowName }))))
 
-const viewTransactionsFlow: FlowInit = async () => ({
-  name: FlowName.ViewTransactions,
-  state: emptyState(),
-  steps: await Promise.all([transactionList(), transactionDetail()]),
-})
+  const onDone: Flow['onDone'] = async ({ paymentPreview: method, qrCodeScanner: _request }, { err }) => {
+    const { PaymentMethod } = await import('@/types/database')
+    const { markAsUnknownTransactionTitle } = await import('@/types/transactions')
 
-const viewTransactionDetailFlow: FlowInit = async ({ initialState }) => ({
-  name: FlowName.ViewTransactionDetail,
-  state: { ...emptyState(), ...initialState },
-  steps: await Promise.all([transactionDetail()]),
-})
+    const request = _request as PaymentRequestData
+
+    // eslint-disable-next-line no-console
+    console.log(`🤑  Initializing payment process with ${method}`, request)
+
+    if (method === PaymentMethod.NIM) {
+      // TODO - This is what we do atm.
+      // To make the app looks fast, we do not await for the transaction to be sent so we can immediately close the modal
+      // Instead, if we find an error, we show it to the user once the modal has been closed(?)
+
+      // Currently, with this design we close the modal. Then the user will be in the Home View seeing the old transactions
+      // and after a few seconds, the new transaction will appear. This is not ideal, but it's better than waiting for the
+      // transaction to be sent and then close the modal. In that case, the user would see the modal for a few seconds.
+      //
+      // I would suggest to add a loading indicator in the Home View to indicate that the transactions are being updated.
+      (await import('@/stores/transactions')).useTransactions().sendTx({
+        ...request!,
+        title: request?.shopName
+          ? markAsUnknownTransactionTitle(request.shopName)
+          : 'Payment', // translated at display time
+      })
+        // TODO Handle errors
+        .then(({ error }) => console.error(error ?? 'Transaction was NOT sent successfully'))
+        .catch(error => console.error(error ?? 'Error was thrown. Transaction was NOT sent successfully'))
+      closeFn()
+    }
+    else if (method === PaymentMethod.Points) {
+      if (!request?.rail || !request?.railPeerId)
+      // No translation as not user-facing. Dev error which should not occur in production.
+        throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
+
+      const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
+      if (error)
+        err?.(error)
+      else
+        closeFn()
+    }
+  }
+
+  return { flowName, state, steps, onDone }
+}
+
+const nimWithdrawFlow: FlowInit = async ({ state }) => {
+  const { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep } = await import('./steps')
+  const { QRDataFormat } = await import('@/composables/useStringParser')
+  const flowName = FlowName.NimWithdraw
+  const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } })].map(s => s({ flowName }))))
+  return { flowName, state, steps }
+}
+
+const nimTopUpFlow: FlowInit = async ({ state }) => {
+  const { nimAddressDisplay, qrCodeScannerStep, pinCodeStep } = await import('./steps')
+  const { QRDataFormat } = await import('@/composables/useStringParser')
+  const flowName = FlowName.NimTopUp
+  const steps = (await Promise.all([nimAddressDisplay, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } }), pinCodeStep].map(s => s({ flowName }))))
+  return { flowName, state, steps }
+}
+
+const viewTransactionsFlow: FlowInit = async ({ state }) => {
+  const { transactionList, transactionDetail } = await import('./steps')
+  const flowName = FlowName.ViewTransactions
+  const steps = (await Promise.all([transactionList, transactionDetail].map(s => s({ flowName }))))
+  return { flowName, state, steps }
+}
+
+const viewTransactionDetailFlow: FlowInit = async ({ state }) => {
+  const { transactionDetail } = await import('./steps')
+  const flowName = FlowName.ViewTransactions
+  const steps = (await Promise.all([transactionDetail({ flowName })]))
+  return { flowName, state, steps }
+}
 
 const flows = {
   [FlowName.Login]: loginFlow,
@@ -163,7 +240,8 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
   const activeStepIndex = ref(0)
   const defaultInitialFlowValues: Pick<Flow, 'onDone' | 'onCancel' | 'activeStepIndex'> = { onDone: closeFn, onCancel: closeFn, activeStepIndex }
 
-  const flowConfig = await flows[name]({ initialState, closeFn })
+  const state = { ...reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State), ...initialState }
+  const flowConfig = await flows[name]({ state, closeFn })
   const flow: Flow = { ...defaultInitialFlowValues, ...flowConfig }
 
   // eslint-disable-next-line no-console

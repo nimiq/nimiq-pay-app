@@ -62,6 +62,16 @@ export const useApp = defineStore('app', () => {
     pendingReferralCode.value = referralCode
   }
 
+  // We track when the user has input the pin code for the last time
+  // We will use this to determine if we should ask for the pin code again
+  // when the user is about to do a sensitive operation
+  const MIN_PIN_INPUT_INTERVAL = 1000 * 60 * 5 // 5 minutes
+  const lastPinInputExpired = ref(true)
+  function updatePinInputTs() {
+    lastPinInputExpired.value = false
+    setTimeout(() => lastPinInputExpired.value = true, MIN_PIN_INPUT_INTERVAL)
+  }
+
   return {
     phoneNumber,
     phoneNumberVerified,
@@ -74,5 +84,7 @@ export const useApp = defineStore('app', () => {
     pointsToken,
     setEntropy,
     withdrawalAddress,
+    lastPinInputExpired,
+    updatePinInputTs,
   }
 })

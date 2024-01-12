@@ -37,9 +37,11 @@ const errors = ref<Errors>(Object.fromEntries(steps.value.filter(isInputStep).ma
 watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 const error = (step: StepName) => isActiveStepInput.value && isInputStep(activeStep.value) ? errors.value![step as InputStepName] : undefined
 
-async function goToNext() {
+interface GoToNextOptions { err: (errorMsg: string) => void }
+async function goToNext(options?: GoToNextOptions) {
+  const { err = () => {} } = options || {}
   if (isLast.value) {
-    onFlowDone!(state, { goTo: replace, path })
+    onFlowDone!(state, { goTo: replace, path, err })
     return
   }
   await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state)
@@ -61,9 +63,9 @@ async function onStepDone(value: OnDoneStepValue) {
     errors.value![activeStep.value.step as InputStepName] = '' // Clear error message
     const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
     if (activeStep.value.beforeNext)
-      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, path }) })
+      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, path, err }), skip })
     else
-      goToNext()
+      goToNext({ err })
   }
 }
 
@@ -71,8 +73,9 @@ function skip() {
   const { stepsToSkip = 1 } = activeStep.value
   if (!stepsToSkip)
     return
+  console.log('skip', stepsToSkip)
   steps.value = steps.value.filter((_, i) => i <= activeIndex.value || i >= activeIndex.value + stepsToSkip)
-  nextTick().then(goToNext)
+  nextTick().then(() => goToNext())
 }
 
 function onCancel() {

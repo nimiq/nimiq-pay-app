@@ -52,7 +52,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     setDummyData = () => {
       const dummyData = {
         [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
-        [QRDataFormat.PaymentRequest]: 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=98&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y',
+        [QRDataFormat.PaymentRequest]: 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=1&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y',
         [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
       }[expect]
 

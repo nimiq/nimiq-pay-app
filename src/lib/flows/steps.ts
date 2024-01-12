@@ -1,9 +1,8 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { QRDataFormat } from '../../composables/useStringParser'
-import { type PaymentRequestData, type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, type ShopCategory, Transfer, markAsUnknownTransactionTitle, translateTransactionTitle } from '@/types/transactions'
-import { PaymentMethod } from '@/types/database'
+import { type ExternalTransaction, type ShopCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -55,23 +54,26 @@ export const recoveryWordsStep: StepInit = async () => ({
   },
 })
 
-export const pinCodeStep: StepInit = async () => ({
-  step: StepName.PinCode,
-  get title() { return i18n.t('Choose a PIN') },
-  get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
-  beforeNext: async ({ pinCode }, { next, err }) => {
-    if (!pinCode) {
-      err(i18n.t('Please enter a PIN code'))
-    }
-    else if (!PIN_CODE_REGEX.test(pinCode)) {
-      if (import.meta.env.DEV)
-        debugger // eslint-disable-line no-debugger,no-restricted-syntax
-      err(i18n.t('Invalid PIN code'))
-    }
-    else { next() }
-  },
-})
+export const pinCodeStep: StepInit = async ({ flowName }) => {
+  const { FlowName } = await import('@/lib/flows/steps.types')
+  return {
+    step: StepName.PinCode,
+    get title() { return flowName === FlowName.NimOrPointsPayment ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
+    get description() { return flowName === FlowName.NimOrPointsPayment ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
+    beforeNext: async ({ pinCode }, { next, err }) => {
+      if (!pinCode) {
+        err(i18n.t('Please enter a PIN code'))
+      }
+      else if (!PIN_CODE_REGEX.test(pinCode)) {
+        if (import.meta.env.DEV)
+          debugger // eslint-disable-line no-debugger,no-restricted-syntax
+        err(i18n.t('Invalid PIN code'))
+      }
+      else { next() }
+    },
+  }
+}
 
 export const pinCodeConfirmStep: StepInit = async () => ({
   step: StepName.PinCodeConfirm,
@@ -257,39 +259,17 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = qrCodeScanner.shopName || i18n.t('Payment preview')
       shopCategory.value = qrCodeScanner.shopCategory
     },
-    beforeNext: async ({ paymentPreview: method, qrCodeScanner: _request }, { next, err }) => {
+    beforeNext: async ({ qrCodeScanner: _request }, { next, skip }) => {
+      // The request should be a PaymentRequestData, but we need to handle the case where it's a string
       if (_request instanceof String)
         // No translation as not user-facing. Dev error which should not occur in production.
         throw new Error(`Request is a string: ${_request}`)
-      const request = _request as PaymentRequestData
 
-      // eslint-disable-next-line no-console
-      console.log(`🤑  Initializing payment process with ${method}`, request)
-
-      switch (method) {
-        case PaymentMethod.NIM:
-          // TODO: handle error
-          await (await import('@/stores/transactions')).useTransactions().sendTx({
-            ...request!,
-            title: request?.shopName
-              ? markAsUnknownTransactionTitle(request.shopName)
-              : 'Payment', // translated at display time
-          })
-          next()
-          break
-        case PaymentMethod.Points: {
-          if (!request?.rail || !request?.railPeerId)
-            // No translation as not user-facing. Dev error which should not occur in production.
-            throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
-
-          const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
-          if (error)
-            err(error)
-          else
-            next()
-          break
-        }
-      }
+      // We go to the next step, which it is the pin input.
+      // If the last time the user put the pin was less than 5 minutes ago, we skip the pin code step
+      await next()
+      if (!(await import('@/stores/app')).useApp().lastPinInputExpired)
+        skip()
     },
   }
 }

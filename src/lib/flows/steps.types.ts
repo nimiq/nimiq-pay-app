@@ -19,11 +19,12 @@ export enum FlowName {
 
 interface FlowHooksOptions {
   goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
+  err?: (msg: string) => void
   path: string
 }
 
 export interface Flow {
-  name: FlowName
+  flowName: FlowName
   state: State
   steps: Step[]
   activeStepIndex: Ref<number>
@@ -43,7 +44,7 @@ export interface Flow {
 }
 
 export interface FlowInitOptions {
-  initialState?: Partial<State>
+  state: State
 
   // Function that will be called when the flow is closed
   closeFn: () => Promise<any>
@@ -112,10 +113,11 @@ type BaseStep = {
 } & SkippableStep
 
 interface BeforeNextOptions {
-  next: () => void
+  next: () => Promise<void>
   prev: () => void
   err: (msg: string) => void
   finalizeFlow: () => Promise<void>
+  skip: () => void
 }
 export type InputStep = BaseStep & {
   step: InputStepName
@@ -140,10 +142,12 @@ export interface StepInitOptions<Props = undefined> {
    */
   stepsToSkip?: number
 
+  flowName?: FlowName
+
   props?: Props
 }
 
-export type StepInit<Props = undefined> = (options?: StepInitOptions<Props>) => Promise<Step>
+export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined, props: undefined }
 
 export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction

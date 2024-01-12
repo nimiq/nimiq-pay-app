@@ -102,7 +102,11 @@ export function useDecrypt() {
     const error = await (isWeb ? decryptWeb(pin) : decryptMobile(pin))
     if (error)
       return error
-    await useApp().setEntropy()
+
+    const { setEntropy, updatePinInputTs } = await useApp()
+    await setEntropy()
+    updatePinInputTs()
+
     decrypted.value = true
   }
 
