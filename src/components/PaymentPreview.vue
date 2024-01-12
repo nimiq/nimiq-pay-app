@@ -22,6 +22,7 @@ const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean
 const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())
+const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 
 const payment = computed(() => (props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment }))
 const amount = computed(() => payment.value.amount)
@@ -92,6 +93,9 @@ function handlePay() {
       <Transition name="slide-fade" mode="out-in">
         <p v-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin text-pretty">
           {{ $t('You don\'t have enough NIM for this purchase.') }}
+        </p>
+        <p v-else-if="(!isHtlcActive || !isRemoteOk) && paymentMethod !== PaymentMethod.Points" class="text-pumpkin text-pretty">
+          {{ $t('You cannot pay with NIM yet, wait until the Top Up is completed') }}
         </p>
         <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
           {{ $t('You don\'t have enough Points for this purchase.') }}
