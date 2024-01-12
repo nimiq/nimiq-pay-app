@@ -450,7 +450,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:101
-#: src/components/PaymentPreview.vue:61
+#: src/components/PaymentPreview.vue:64
 #: src/views/HomeView.vue:132
 msgid "Pay"
 msgstr ""
@@ -654,7 +654,7 @@ msgstr ""
 msgid "There is no active HTLC"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:51
+#: src/components/PaymentPreview.vue:54
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
@@ -834,7 +834,7 @@ msgstr ""
 msgid "You are going to get {amount} NIM"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:45
+#: src/components/PaymentPreview.vue:48
 msgid "You can't pay with Points for this purchase."
 msgstr ""
 
@@ -843,6 +843,7 @@ msgid "You don't have enough CC Points for this purchase."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:39
+#: src/components/PaymentPreview.vue:42
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
@@ -850,7 +851,7 @@ msgstr ""
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:42
+#: src/components/PaymentPreview.vue:45
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
