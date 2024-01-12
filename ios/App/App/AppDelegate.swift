@@ -1,5 +1,6 @@
 import Capacitor
 import UIKit
+import CapawesomeCapacitorScreenOrientation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -67,5 +68,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   ) {
     NotificationCenter.default.post(
       name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+  }
+
+  func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+    return ScreenOrientation.getSupportedInterfaceOrientations()
   }
 }

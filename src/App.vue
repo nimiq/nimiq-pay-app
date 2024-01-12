@@ -4,8 +4,14 @@ import { bugOutline } from 'ionicons/icons'
 import { RouterView } from 'vue-router'
 import { StatusBar } from '@capacitor/status-bar'
 
+import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
+import { onMounted } from 'vue'
 import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
+
+onMounted(async () => {
+  await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
+})
 
 const isDev = import.meta.env.DEV
 
