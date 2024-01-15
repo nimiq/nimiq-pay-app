@@ -111,6 +111,8 @@ function blur() {
   const { activeElement } = document
   if (activeElement instanceof HTMLElement)
     activeElement.blur()
+  else
+    console.warn('Cannot blur', activeElement)
 }
 </script>
 

@@ -30,8 +30,6 @@ watch(() => props.errorMsg, (msg) => {
 function handleInputClick(i: number) {
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
-  inputRef?.value?.focus()
-
   inputRef.value?.focus()
 }
 </script>

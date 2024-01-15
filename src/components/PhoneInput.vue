@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonAlert, IonButton } from '@ionic/vue'
+import { IonButton, alertController } from '@ionic/vue'
 import { ref, watch } from 'vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 
@@ -13,6 +13,19 @@ const emit = defineEmits(stepEmits)
 const phoneNumber = ref('')
 const errorMessage = ref('')
 interface JSONData { statusCode: number; error: string; message: string }
+
+function showAlert() {
+  alertController
+    .create({
+      header: 'Is this your phone number?',
+      message: phoneNumber.value,
+      buttons: [
+        { text: 'Cancel', handler: () => emit('focus') },
+        { text: 'Continue', handler: handleSubmit },
+      ],
+    })
+    .then(alert => alert.present())
+}
 
 function handleSubmit() {
   setTimeout(() => emit('done', phoneNumber.value), 200)
@@ -43,11 +56,14 @@ watch(() => props.errorMsg, () => {
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full pt-8">
-    <input
-      v-model="phoneNumber" :placeholder="$t('Your number')" type="tel" class="w-full p-2 px-4 my-2 phone"
-      size="16"
-    >
+  <div class="flex flex-col self-start w-full h-full mt-8">
+    <form @submit.prevent>
+      <input
+        v-model="phoneNumber" :placeholder="$t('Your number')" type="tel" class="w-full p-2 px-4 my-2 phone"
+        size="16"
+        @keydown.enter="showAlert"
+      >
+    </form>
     <p class="mt-1 text-sm font-semibold text-center text-space/50">
       {{ $t('Standard rates may apply.') }}
     </p>
@@ -55,7 +71,7 @@ watch(() => props.errorMsg, () => {
       {{ errorMessage }}
     </p>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
-      <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4">
+      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4" @click="showAlert">
         {{ $t('Verify') }}
       </IonButton>
       <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">
@@ -63,5 +79,4 @@ watch(() => props.errorMsg, () => {
       </IonButton>
     </div>
   </div>
-  <IonAlert trigger="present-alert" :header="$t('Is this your phone number?')" :message="phoneNumber" :buttons="[{ text: $t('Cancel'), handler: () => $emit('focus') }, { text: $t('Continue'), handler: handleSubmit }]" />
 </template>
