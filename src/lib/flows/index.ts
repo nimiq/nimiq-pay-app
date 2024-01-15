@@ -60,13 +60,14 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
       initializeFlow(FlowName.VerifyPhone)
     }
   }
-  const onCanel: Flow['onCancel'] = async (state, { goTo }) => {
-    if (state.pinCode)
-      goTo('/app')
+  const onCancel: Flow['onCancel'] = async (_state, { goTo }) => {
+    const hasLocalWallet = !!(await import('@/stores/app')).useApp().entropy
+    if (hasLocalWallet)
+      await goTo('/app')
 
     closeFn()
   }
-  return { flowName, state, steps, onDone, onCancel: onCanel }
+  return { flowName, state, steps, onDone, onCancel }
 }
 
 const verifyPhoneFlow: FlowInit = async ({ state }) => {
