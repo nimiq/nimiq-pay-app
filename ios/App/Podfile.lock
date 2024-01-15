@@ -25,6 +25,8 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (5.0.6):
     - Capacitor
+  - CapawesomeCapacitorScreenOrientation (5.0.1):
+    - Capacitor
   - GoogleDataTransport (9.3.0):
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30910.0, >= 2.30908.0)
@@ -99,6 +101,7 @@ DEPENDENCIES:
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@5.1.0_@capacitor+core@5.6.0/node_modules/@capacitor/push-notifications`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.6.0/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.6.0/node_modules/@capacitor/status-bar`)"
+  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@5.0.1_@capacitor+core@5.6.0/node_modules/@capawesome/capacitor-screen-orientation`)"
 
 SPEC REPOS:
   trunk:
@@ -142,6 +145,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+share@5.0.6_@capacitor+core@5.6.0/node_modules/@capacitor/share"
   CapacitorStatusBar:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@5.0.6_@capacitor+core@5.6.0/node_modules/@capacitor/status-bar"
+  CapawesomeCapacitorScreenOrientation:
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@5.0.1_@capacitor+core@5.6.0/node_modules/@capawesome/capacitor-screen-orientation"
 
 SPEC CHECKSUMS:
   Capacitor: ebfc16cdb8116d04c101686b080342872da42d43
@@ -156,6 +161,7 @@ SPEC CHECKSUMS:
   CapacitorPushNotifications: b31e326c6e4eb216a622041d6ca21a973f34943f
   CapacitorShare: cd41743331cb71d217c029de54b681cbd91e0fcc
   CapacitorStatusBar: 565c0a1ebd79bb40d797606a8992b4a105885309
+  CapawesomeCapacitorScreenOrientation: a757a72cd4a113142638c049af61441793721f07
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
   GoogleMLKit: 2bd0dc6253c4d4f227aad460f69215a504b2980e
   GoogleToolboxForMac: 8bef7c7c5cf7291c687cf5354f39f9db6399ad34
@@ -171,6 +177,6 @@ SPEC CHECKSUMS:
   SQLCipher: f2e96b3822e3006b379181a0e4fd145f6de29b56
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 7c068ec1012c5cfb9c31b64103df692bcbb014ea
+PODFILE CHECKSUM: 75a13aff84b34435e807b3ff6707e201798be5a3
 
 COCOAPODS: 1.14.3
