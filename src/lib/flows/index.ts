@@ -33,8 +33,9 @@ const loginFlow: FlowInit = async ({ closeFn, state }) => {
     useModal().showModal(Modal.Points)
   }
   const onCancel: Flow['onCancel'] = async (state, { goTo }) => {
-    if (state.pinCode)
-      goTo('/app')
+    const hasLocalWallet = !!(await import('@/stores/app')).useApp().entropy
+    if (hasLocalWallet)
+      await goTo('/app')
 
     closeFn()
   }
@@ -63,7 +64,6 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
   }
   const onCancel: Flow['onCancel'] = async (_state, { goTo }) => {
     const hasLocalWallet = !!(await import('@/stores/app')).useApp().entropy
-    console.log('hasLocalWallet', hasLocalWallet)
     if (hasLocalWallet)
       await goTo('/app')
 
@@ -80,7 +80,7 @@ const verifyPhoneFlow: FlowInit = async ({ state }) => {
   return { flowName, state, steps, onDone }
 }
 
-const setupWithPromoCodeFlow: FlowInit = async ({ state }) => {
+const setupWithPromoCodeFlow: FlowInit = async ({ state, closeFn }) => {
   const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.SetupWithPromoCode
   const steps = await Promise.all([
@@ -92,7 +92,14 @@ const setupWithPromoCodeFlow: FlowInit = async ({ state }) => {
     getNotifiedStep,
     onBoardingPoints,
   ].map(s => s({ flowName })))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async (_state, { goTo }) => {
+    const hasLocalWallet = !!(await import('@/stores/app')).useApp().entropy
+    if (hasLocalWallet)
+      await goTo('/app')
+
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
 const onBoardingPointsFlow: FlowInit = async ({ state }) => {
