@@ -29,11 +29,10 @@ export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
   const { isOpen } = storeToRefs(useConn())
-  const { setPinHash } = useApp()
   const { pinHash } = storeToRefs(useApp())
 
   // No encryption on web, but we simulate PIN requirement
-  async function decryptWeb(inputPin: string): Promise<Option<string>> {
+  async function decryptWeb(inputPin: string, inputHash: string): Promise<Option<string>> {
     if (!isWeb)
       throw new Error('This method is not supported in mobile.') // no translation as not user-facing
 
@@ -46,16 +45,8 @@ export function useDecrypt() {
     if (inputPin.length !== 4)
       return i18n.t('Invalid PIN length {length}', { length: inputPin.length })
 
-    const inputHash = hash(inputPin)
-
-    // If this is the first time the user opens the app, we need to set the PIN
-    if (!pinHash.value)
-      await setPinHash(inputHash)
-
-    if (inputHash !== pinHash.value)
+    if (pinHash.value && inputHash !== pinHash.value)
       return i18n.t('Invalid PIN')
-
-    // else {} If the PIN is correct, we don't need to do anything
   }
 
   async function decryptMobile(pin: string): Promise<Option<string>> {
@@ -83,8 +74,6 @@ export function useDecrypt() {
     console.log('🔑 Database initialized and encrypted in mobile')
 
     await openDb()
-    if (!pinHash.value)
-      await setPinHash(hash(pin))
   }
 
   /**
@@ -97,13 +86,16 @@ export function useDecrypt() {
     if (decrypted.value)
       return
 
-    const error = await (isWeb ? decryptWeb(pin) : decryptMobile(pin))
+    const inputHash = hash(pin)
+    const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
     if (error)
       return error
 
     const { setEntropy, updatePinInputTs } = useApp()
     await setEntropy()
     updatePinInputTs()
+
+    pinHash.value = inputHash
 
     decrypted.value = true
   }

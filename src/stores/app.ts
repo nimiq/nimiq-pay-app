@@ -63,11 +63,6 @@ export const useApp = defineStore('app', () => {
     pendingReferralCode.value = referralCode
   }
 
-  async function setPinHash(hash: string) {
-    await kv().setItem('pinHash', hash)
-    pinHash.value = hash
-  }
-
   // We track when the user has input the pin code for the last time
   // We will use this to determine if we should ask for the pin code again
   // when the user is about to do a sensitive operation
@@ -82,7 +77,6 @@ export const useApp = defineStore('app', () => {
 
   return {
     pinHash,
-    setPinHash,
     phoneNumber,
     phoneNumberVerified,
     referralCode,
