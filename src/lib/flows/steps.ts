@@ -3,6 +3,8 @@ import { QRDataFormat } from '../../composables/useStringParser'
 import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, type ShopCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
+import { useApp } from '@/stores/app'
+import { hash } from '@/composables/useDecrypt'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -69,6 +71,15 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
         if (import.meta.env.DEV)
           debugger // eslint-disable-line no-debugger,no-restricted-syntax
         err(i18n.t('Invalid PIN code'))
+      }
+      else if (useApp().pinHash) {
+        if (useApp().pinHash !== hash(pinCode)) {
+          err(i18n.t('Invalid PIN code'))
+        }
+        else {
+          useApp().updatePinInputTs()
+          next()
+        }
       }
       else { next() }
     },
@@ -268,7 +279,7 @@ export const paymentPreviewStep: StepInit = async () => {
       // We go to the next step, which it is the pin input.
       // If the last time the user put the pin was less than 5 minutes ago, we skip the pin code step
       await next()
-      if (!(await import('@/stores/app')).useApp().lastPinInputExpired)
+      if (!(await import('@/stores/app')).useApp().shouldAskPin())
         skip()
     },
   }

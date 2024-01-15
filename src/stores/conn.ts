@@ -37,9 +37,6 @@ export const useConn = defineStore('conn', () => {
     //   return 'The db is locked' // no translation as not user-facing; just a dev error
   }
 
-  const lastUnlocked = ref(0)
-  watchEffect(() => !locked.value && (lastUnlocked.value = Date.now()))
-
   const dbExists = ref(false)
 
   const dbReady = computed(() => dbExists.value && !!db.value)
@@ -134,7 +131,6 @@ export const useConn = defineStore('conn', () => {
     query,
 
     locked,
-    lastUnlocked,
     waitForUnlock,
 
     deleteDatabase,

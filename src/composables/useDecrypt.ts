@@ -1,21 +1,20 @@
 import { ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import jsSHA from 'jssha'
 import type { Option } from '@/types'
 import { useDevice } from '@/composables/useDevice'
 import { useConn } from '@/stores/conn'
 import { useApp } from '@/stores/app'
 import { i18n } from '@/i18n/i18n-setup'
 
-const pinHashLocalStorageKey = '_pin'
-
 /**
  * Hashes an input to SHA-256, encoded as hex
  */
-async function hash(pin: string): Promise<string> {
-  // FIXME I am not sure this is working fine on iOS and Safari. Could we check it?
+export function hash(pin: string): string {
+  // We need to use a pure JS library because the native one doesn't work on unsecure contexts
   // https://forums.appgyver.com/t/error-in-crypto-subtle-on-ios-preview/12946
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin))
-  return new Uint8Array(digest).reduce((str, byte) => str + byte.toString(16).padStart(2, '0'), '')
+  // eslint-disable-next-line new-cap
+  return new jsSHA('SHA-256', 'TEXT', { encoding: 'UTF8' }).update(pin).getHash('HEX')
 }
 
 // Must be defined outside the useDecrypt scope, to be shared between calls
@@ -30,6 +29,8 @@ export function useDecrypt() {
   const { isWeb } = useDevice()
   const { sqlite, open: openDb, close: closeDb } = useConn()
   const { isOpen } = storeToRefs(useConn())
+  const { setPinHash } = useApp()
+  const { pinHash } = storeToRefs(useApp())
 
   // No encryption on web, but we simulate PIN requirement
   async function decryptWeb(inputPin: string): Promise<Option<string>> {
@@ -39,24 +40,19 @@ export function useDecrypt() {
     if (!isOpen.value)
       await openDb()
 
-    let expectedPinHash = window.localStorage.getItem(pinHashLocalStorageKey)
-
-    if (!expectedPinHash && !inputPin)
+    if (!pinHash.value && !inputPin)
       return i18n.t('Both expected and the given PIN are empty')
 
     if (inputPin.length !== 4)
       return i18n.t('Invalid PIN length {length}', { length: inputPin.length })
 
-    const pinHash = await hash(inputPin)
+    const inputHash = hash(inputPin)
 
     // If this is the first time the user opens the app, we need to set the PIN
-    if (!expectedPinHash) {
-      // Set PIN
-      localStorage.setItem(pinHashLocalStorageKey, pinHash)
-      expectedPinHash = pinHash
-    }
+    if (!pinHash.value)
+      await setPinHash(inputHash)
 
-    if (pinHash !== expectedPinHash)
+    if (inputHash !== pinHash.value)
       return i18n.t('Invalid PIN')
 
     // else {} If the PIN is correct, we don't need to do anything
@@ -87,6 +83,8 @@ export function useDecrypt() {
     console.log('🔑 Database initialized and encrypted in mobile')
 
     await openDb()
+    if (!pinHash.value)
+      await setPinHash(hash(pin))
   }
 
   /**
@@ -103,7 +101,7 @@ export function useDecrypt() {
     if (error)
       return error
 
-    const { setEntropy, updatePinInputTs } = await useApp()
+    const { setEntropy, updatePinInputTs } = useApp()
     await setEntropy()
     updatePinInputTs()
 
@@ -113,7 +111,7 @@ export function useDecrypt() {
   function hasPin() {
     if (!isWeb)
       throw new Error('This method is not supported in mobile.') // no translation as not user-facing
-    return window.localStorage.getItem(pinHashLocalStorageKey) !== null
+    return useApp().pinHash !== ''
   }
 
   return {

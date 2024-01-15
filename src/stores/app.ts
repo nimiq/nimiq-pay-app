@@ -25,6 +25,7 @@ function kv(): StorageLikeAsync {
 
 export const useApp = defineStore('app', () => {
   const sharedOptions = { writeDefaults: false }
+  const pinHash = useStorageAsync('pinHash', '', kv(), sharedOptions)
   const phoneNumber = useStorageAsync('phoneNumber', '', kv(), sharedOptions)
   const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
@@ -62,17 +63,26 @@ export const useApp = defineStore('app', () => {
     pendingReferralCode.value = referralCode
   }
 
+  async function setPinHash(hash: string) {
+    await kv().setItem('pinHash', hash)
+    pinHash.value = hash
+  }
+
   // We track when the user has input the pin code for the last time
   // We will use this to determine if we should ask for the pin code again
   // when the user is about to do a sensitive operation
   const MIN_PIN_INPUT_INTERVAL = 1000 * 60 * 5 // 5 minutes
-  const lastPinInputExpired = ref(true)
+  const lastPinInputTs = ref(0)
   function updatePinInputTs() {
-    lastPinInputExpired.value = false
-    setTimeout(() => lastPinInputExpired.value = true, MIN_PIN_INPUT_INTERVAL)
+    lastPinInputTs.value = Date.now()
+  }
+  function shouldAskPin() {
+    return Date.now() - lastPinInputTs.value > MIN_PIN_INPUT_INTERVAL
   }
 
   return {
+    pinHash,
+    setPinHash,
     phoneNumber,
     phoneNumberVerified,
     referralCode,
@@ -84,7 +94,7 @@ export const useApp = defineStore('app', () => {
     pointsToken,
     setEntropy,
     withdrawalAddress,
-    lastPinInputExpired,
     updatePinInputTs,
+    shouldAskPin,
   }
 })
