@@ -3,7 +3,7 @@ import { type PropType, computed, nextTick, onMounted, reactive, ref, watchEffec
 import { useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, InputStepName, OnDoneStepValue, StepName } from '@/lib/flows/steps.types'
 import { useCarousel } from '@/composables/useCarousel'
@@ -15,7 +15,6 @@ const props = defineProps({
   },
 })
 
-const { path } = useRoute()
 const { replace } = useRouter()
 const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true, activeStepIndex: activeIndex } = props.flow
 const steps = ref(stepsInFlow)
@@ -41,7 +40,7 @@ interface GoToNextOptions { err: (errorMsg: string) => void }
 async function goToNext(options?: GoToNextOptions) {
   const { err = () => {} } = options || {}
   if (isLast.value) {
-    onFlowDone!(state, { goTo: replace, path, err })
+    onFlowDone!(state, { goTo: replace, err })
     return
   }
   await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state)
@@ -63,7 +62,7 @@ async function onStepDone(value: OnDoneStepValue) {
     errors.value![activeStep.value.step as InputStepName] = '' // Clear error message
     const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
     if (activeStep.value.beforeNext)
-      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, path, err }), skip })
+      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: prevSlide, finalizeFlow: () => onFlowDone!(state, { goTo: replace, err }), skip })
     else
       goToNext({ err })
   }
@@ -79,7 +78,7 @@ function skip() {
 }
 
 function onCancel() {
-  onFlowCancel!(state, { path, goTo: replace })
+  onFlowCancel!(state, { goTo: replace })
 }
 
 // We track the intersection of each step with a number from 0 to 1.

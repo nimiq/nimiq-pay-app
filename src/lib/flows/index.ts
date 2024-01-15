@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { Modal, useModal } from '@/composables/useModal'
 import { FlowName, StepName, inputSteps } from '@/lib/flows/steps.types'
 import type { Flow, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
@@ -62,6 +63,7 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
   }
   const onCancel: Flow['onCancel'] = async (_state, { goTo }) => {
     const hasLocalWallet = !!(await import('@/stores/app')).useApp().entropy
+    console.log('hasLocalWallet', hasLocalWallet)
     if (hasLocalWallet)
       await goTo('/app')
 
@@ -236,7 +238,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
   const isFullscreen = false
 
   // Close the modal
-  const closeFn = () => modalController.getTop().then(m => m.dismiss())
+  const closeFn = () => modalController.getTop().then(m => m.dismiss({ programmatically: true }))
 
   const activeStepIndex = ref(0)
   const defaultInitialFlowValues: Pick<Flow, 'onDone' | 'onCancel' | 'activeStepIndex'> = { onDone: closeFn, onCancel: closeFn, activeStepIndex }
@@ -253,11 +255,28 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
   modalController.create({
     component: FlowCmp,
     handle: false,
-    canDismiss: async () => {
-      // TODO Review this code. This ocde might not being called
+
+    /**
+     * This function is called when the modal is about to be dismissed.
+     * It can be triggered by the user or programmatically by a flow.
+     *
+     * If the user is trying to dismiss the flow, we call the `onCancel` hook.
+     * Then the flow might decide to close the modal or not. If it does close
+     * the modal, the `canDismiss` function will be executed again, but this time
+     * it will return immediately true.
+     *
+     * At the moment, we don't prevent any modal of being dismissed, so
+     * all the triggers will return true, closing the modal.
+     */
+    canDismiss: async (data?: { programmatically: boolean }) => {
+      if (data?.programmatically)
+        return true
+
       // eslint-disable-next-line no-console
-      console.log('🌊 canDismiss', activeStepIndex.value, flow.steps.at(activeStepIndex.value)?.canDismiss)
-      return flow.steps.at(activeStepIndex.value)?.canDismiss ?? true
+      console.log('🌊 Dismissing flow', flow)
+      const { default: router } = await import('@/router/index')
+      await flow.onCancel?.(flow.state, { goTo: async (path: RouteLocationRaw) => router.replace(path) })
+      return true
     },
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
