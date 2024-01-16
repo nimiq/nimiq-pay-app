@@ -29,7 +29,23 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       return { data: undefined, error: undefined }
     }
     catch (error) {
-      return { error: (error as Error).message || i18n.t('Unknown error importing words'), data: undefined }
+      let errorMessage = (error as Error).message || i18n.t('Unknown error importing words')
+      // Translate and reword Nimiq core error messages
+      const invalidWordErrorMatch = errorMessage.match(/^Invalid mnemonic, word >(.*)< is not in wordlist$/)
+      if (invalidWordErrorMatch) {
+        const word = invalidWordErrorMatch[1]
+        errorMessage = i18n.t('"{word}" is an invalid recovery word', { word })
+      }
+      else if (/Invalid mnemonic, (?:less|more|words % 3)|Invalid generated key, length (?:<|>|% 4)/.test(errorMessage)) {
+        errorMessage = i18n.t('Wrong number of recovery words')
+      }
+      else if (errorMessage === 'Invalid checksum') {
+        errorMessage = i18n.t('Invalid recovery words')
+      }
+      else {
+        console.warn(`Untranslated message: ${errorMessage}`) // eslint-disable-line no-console
+      }
+      return { error: errorMessage, data: undefined }
     }
   }
 

@@ -2,6 +2,10 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
+#: src/stores/local-wallet.ts:37
+msgid "\"{word}\" is an invalid recovery word"
+msgstr ""
+
 #: src/modals/PointsModal.vue:30
 msgid "{amount} expiring soon"
 msgstr ""
@@ -358,6 +362,10 @@ msgstr ""
 
 #: src/composables/useStringParser.ts:51
 msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
+msgstr ""
+
+#: src/stores/local-wallet.ts:43
+msgid "Invalid recovery words"
 msgstr ""
 
 #: src/lib/tx.ts:123
@@ -864,6 +872,10 @@ msgstr ""
 
 #: src/modals/TaskModal.vue:98
 msgid "Wrong answer"
+msgstr ""
+
+#: src/stores/local-wallet.ts:40
+msgid "Wrong number of recovery words"
 msgstr ""
 
 #: src/modals/BackupModal/ValidateWords.vue:64

@@ -34,7 +34,7 @@ const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
 type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
 watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
-const error = (step: StepName) => isActiveStepInput.value && isInputStep(activeStep.value) ? errors.value![step as InputStepName] : undefined
+const error = (step: StepName) => isActiveStepInput.value ? errors.value![step as InputStepName] : undefined
 
 interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
 async function goToNext(options?: GoToNextOptions) {
