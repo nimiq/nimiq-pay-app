@@ -3,6 +3,7 @@ import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
 import { computed, ref, watch } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computedAsync } from '@vueuse/core'
 import InfoIcon from '@/components/icons/info.vue'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { Flow, PaymentRequestData } from '@/lib/flows/steps.types'
@@ -11,8 +12,7 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { usePrice } from '@/composables/usePrice'
-import { Rail, Transfer } from '@/types/transactions'
+import { Transfer } from '@/types/transactions'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -25,25 +25,30 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 
 const payment = computed(() => (props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment }))
-const amount = computed(() => payment.value.amount)
-const fee = computed(() => payment.value.fee)
-const recipient = computed(() => payment.value.recipient)
-const rail = computed(() => payment.value.rail)
-const railPeerId = computed(() => payment.value?.railPeerId)
-const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= amount.value)
+const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 
-const useDefaultPriceApi = computed(() => rail.value !== Rail.CryptoPaymentLink)
-const { fiat } = useDefaultPriceApi.value ? usePrice(amount) : payment.value
-const { fiatFee } = useDefaultPriceApi.value ? { fiatFee: usePrice(fee).fiat } : payment.value
+const amounts = computedAsync(async () => {
+  if (payment.value.fiatCurrency && payment.value.fiatAmount && payment.value.fiatFeeAmount) {
+    // If the tx has its own fiat values, use them
+    const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
+    return { formattedFiat: formatFiat(payment.value.fiatAmount, { currency: payment.value.fiatCurrency }), formattedFee: formatFiat(payment.value.fiatFeeAmount, { currency: payment.value.fiatCurrency }) }
+  }
+  else {
+    // Otherwise, use the API to get the fiat values
+    const { usePrice } = await import('@/composables/usePrice')
+    return { formattedFiat: usePrice(payment.value.amount).fiat.formatted, formattedFee: usePrice(payment.value.fee).fiat.formatted }
+  }
+})
 
-const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible } = usePointsPayment({ amount, rail, recipient, reference: railPeerId })
+const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
+   = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
 const paymentMethod = ref<PaymentMethod>(!hasEnoughNimBalance.value && isEligible.value ? PaymentMethod.Points : PaymentMethod.NIM)
 const disabled = computed(() => !(isEligible.value && paymentMethod.value === PaymentMethod.Points) && (!hasEnoughNimBalance.value || consensus.value !== 'established'))
 
 const loading = ref(false)
 
-watch(amount, checkPointsPaymentValidity)
+watch(payment, checkPointsPaymentValidity)
 
 function handlePay() {
   if (loading.value)
@@ -56,9 +61,9 @@ function handlePay() {
 
 <template>
   <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
-    <TransactionAmounts :crypto-total="amount / 1e5" :fiat-formatted="fiat?.formatted || ''" :payment-method="paymentMethod">
+    <TransactionAmounts :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts.formattedFiat || ''" :payment-method="paymentMethod">
       <template #fee>
-        {{ $t('Fees may apply ~{fee}', { fee: fiatFee?.formatted || '' }) }}
+        {{ $t('Fees may apply ~{fee}', { fee: amounts.formattedFee }) }}
       </template>
     </TransactionAmounts>
 
@@ -84,7 +89,7 @@ function handlePay() {
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
-          {{ amount.toLocaleString() }}
+          {{ (payment.amount / 1e5).toLocaleString() }}
         </template>
       </i18n-t>
     </IonToggle>

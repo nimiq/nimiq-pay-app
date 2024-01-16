@@ -8,7 +8,7 @@ import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
-import { PointsHashPrefix, ShopCategory, Transfer, type UserReceiptTransaction } from '@/types/transactions'
+import { PointsHashPrefix, Transfer, type UserReceiptTransaction } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 import { usePoints } from '@/stores/points'
@@ -170,7 +170,7 @@ export function useSync() {
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
-        shopCategory: ShopCategory.Deposit,
+        isIncoming: true,
         proofSize: tx.proof.raw.length,
       })
     }, [useLocalWallet().localAddress])
@@ -205,7 +205,7 @@ export function useSync() {
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
-        shopCategory: ShopCategory.Deposit,
+        isIncoming: true,
         proofSize: tx.proof.raw.length,
       })
     }))
@@ -225,11 +225,11 @@ export function useSync() {
         return
 
       if (dbTx.hash.includes(PointsHashPrefix)) {
-        if (!dbTx.railPeerId) {
+        if (!dbTx.paymentRef) {
           console.error('Reference not found', dbTx)
           return
         }
-        const { data, error } = await useCplApi().getOrderById({ id: dbTx.railPeerId })
+        const { data, error } = await useCplApi().getOrderById({ id: dbTx.paymentRef })
         if (error) {
           console.error(error)
           return

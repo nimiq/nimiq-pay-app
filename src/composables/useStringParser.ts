@@ -4,7 +4,7 @@ import { nimCashlinkRegex } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
-import { Rail, ShopCategory, Transfer } from '@/types/transactions'
+import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 
 const CPL_URL_PARAM_ID = 'cpl_id'
 const GO_CRYPTO_URL_PARAM_ID = 'gocrypto'
@@ -65,6 +65,8 @@ export function useStringParser() {
   // CPL uses the following format: https://github.com/nimiq/nimiq-utils/blob/0b1cf9123c8f2218255eefdf48407fe14f5e8873/src/request-link-encoding/RequestLinkEncoding.ts#L217
   // And it looks like this:
   //   nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
+  // We will parse it as follows:
+  //    { message: 'cplink.com ref #PZEd', rail: Rail.Cpl, merchantId: '', txRef: PZEd, amount: 183000, recipient: 'NQ51...', merchantName: 'Maxi Shoes' }
   async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData>> {
     if (protocol !== 'nimiq:') {
       return {
@@ -84,26 +86,24 @@ export function useStringParser() {
 
     const lunaAmount = nimAmount * 1e5
     const fee = 0 // There is no fee in NIM (yay)
-    const shopName = searchParams.get('label') || undefined
+    const merchantName = searchParams.get('label') || undefined
     const transfer = Transfer.UserPaymentToMerchant
     const rail = Rail.CryptoPaymentLink
-    const railPeerId = searchParams.get(CPL_URL_PARAM_ID) || undefined
-    const shopCategory = ShopCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
+    const paymentRef = searchParams.get(CPL_URL_PARAM_ID) || undefined
+    const merchantCategory = MerchantCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
 
-    if (!railPeerId)
+    if (!paymentRef)
       return { error: i18n.t('Invalid Crypto Payment Link. Missing cpl_id.'), data: undefined }
 
-    const { data: cplRes, error } = await useCplApi().getOrderById({ id: railPeerId })
+    const { data: cplRes, error } = await useCplApi().getOrderById({ id: paymentRef })
     if (error || !cplRes)
       return { error: i18n.t('Invalid Crypto Payment Link. Could not fetch order.'), data: undefined }
 
     const { fiatCurrency, fiatAmount, itemDescription } = cplRes
+    const fiatFeeAmount = 0 // There is no fee in NIM (yay)
     const message = searchParams.get('message') || itemDescription
 
-    const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
-    const ff = (amount: number) => ({ total: amount / 1e5, formatted: formatFiat(amount / 1e5, { currency: fiatCurrency }), currency: fiatCurrency })
-
-    const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, shopName, shopCategory, rail, railPeerId, transfer, fiat: ff(fiatAmount), fiatFee: ff(0) }
+    const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount }
 
     console.log('📷 Parsed payment request data:', data) // eslint-disable-line no-console
 

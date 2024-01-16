@@ -2,7 +2,7 @@ import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, type ShopCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, type MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { useApp } from '@/stores/app'
 import { hash } from '@/composables/useDecrypt'
 
@@ -257,8 +257,8 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
 export const paymentPreviewStep: StepInit = async () => {
   // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
-  const shopCategory = ref<ShopCategory>()
-  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: shopCategory.value }))
+  const merchantCategory = ref<MerchantCategory>()
+  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: merchantCategory.value }))
   return {
     step: StepName.PaymentPreview,
     title,
@@ -267,8 +267,8 @@ export const paymentPreviewStep: StepInit = async () => {
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return
-      title.value = qrCodeScanner.shopName || i18n.t('Payment preview')
-      shopCategory.value = qrCodeScanner.shopCategory
+      title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
+      merchantCategory.value = qrCodeScanner.merchantCategory
     },
     beforeNext: async ({ qrCodeScanner: _request }, { next, skip }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
@@ -357,11 +357,11 @@ export const transactionDetail: StepInit = async () => {
   // As refs to be reactive
   const tx = ref<ExternalTransaction>()
   const title = computed(() => (tx.value
-    ? tx.value.shopName || translateTransactionTitle(tx.value.title)
+    ? tx.value.merchantName || translateTransactionTitle(tx.value.title)
     : null
   ) || i18n.t('Transaction'))
-  const shopCategory = computed(() => tx.value?.shopCategory)
-  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: shopCategory.value }))
+  const merchantCategory = computed(() => tx.value?.merchantCategory)
+  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: merchantCategory.value }))
   return {
     step: StepName.PaymentPreview,
     title,

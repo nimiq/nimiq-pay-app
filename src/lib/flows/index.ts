@@ -167,8 +167,8 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
       // I would suggest to add a loading indicator in the Home View to indicate that the transactions are being updated.
       (await import('@/stores/transactions')).useTransactions().sendTx({
         ...request!,
-        title: request?.shopName
-          ? markAsUnknownTransactionTitle(request.shopName)
+        title: request?.merchantName
+          ? markAsUnknownTransactionTitle(request.merchantName)
           : 'Payment', // translated at display time
       })
         // TODO Handle errors
@@ -177,9 +177,9 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
       closeFn()
     }
     else if (method === PaymentMethod.Points) {
-      if (!request?.rail || !request?.railPeerId)
+      if (!request?.rail || !request?.paymentRef)
       // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`You cannot pay with points without a railPeerId nor rail. Request: ${JSON.stringify(request)}`)
+        throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(request)}`)
 
       const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
       if (error)
