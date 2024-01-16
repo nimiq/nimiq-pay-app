@@ -39,9 +39,9 @@ function handleShare() {
     title: 'Nimiq Pay App',
     // Text to share via all the apps
     text: i18n.t(
-      'Hey! Join me on Nimiq Pay App and earn Cryptocity Points to pay for your purchases using crypto! '
-        + 'Use my code {code} to earn {amount} NIM in Cryptocity Points at registration.',
-      { code: referralCode.value?.id, amount: (referralCode.value?.reward || 0) / 1e5 },
+      'Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! '
+        + 'Use my code {code} to earn {amount} in Cryptocity Points at registration.',
+      { code: referralCode.value?.id, amount: formatCrypto(referralCode?.value?.reward || 0, { currency: Crypto.NIM }) },
     ),
     url: 'https://nimpay.app',
     // Title for the share modal. Only on Android
@@ -53,12 +53,12 @@ function handleShare() {
 <template>
   <ModalTemplate>
     <template #title>
-      {{ $t('Invite a friend and get {amount} NIM each', { amount: formatCrypto(referralCode?.reward || 0, { currency: Crypto.NIM }) }) }}
+      {{ $t('Invite a friend and get {amount} each', { amount: formatCrypto(referralCode?.reward || 0, { currency: Crypto.NIM }) }) }}
     </template>
-    <p class="self-start text-space/60">
+    <p class="self-start text-space/60 text-balance">
       {{ $t(
-        'Help grow the crypto adoption movement. Invite a friend and you will both get {amount} NIM in Cryptocity Points.',
-        { amount: (referralCode?.reward || 0) / 1e5 },
+        'Crypto adoption needs you! Bring a friend and you both get {amount} in Points.',
+        { amount: formatCrypto(referralCode?.reward || 0, { currency: Crypto.NIM }) },
       ) }}
     </p>
     <Transition name="slide-fade" mode="out-in">

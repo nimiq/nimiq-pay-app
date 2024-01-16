@@ -140,6 +140,10 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
+#: src/modals/ReferralModal.vue:7
+msgid "Crypto adoption needs you! Bring a friend and you both get {amount} in Points."
+msgstr ""
+
 #: src/modals/PointsModal.vue:18
 msgid "Cryptocity Points"
 msgstr ""
@@ -174,7 +178,7 @@ msgstr ""
 msgid "Enter Address"
 msgstr ""
 
-#: src/views/PinView.vue:9
+#: src/views/PinView.vue:10
 msgid "Enter PIN"
 msgstr ""
 
@@ -276,12 +280,8 @@ msgstr ""
 msgid "Got It"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:7
-msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} NIM in Cryptocity Points."
-msgstr ""
-
 #: src/modals/ReferralModal.vue:41
-msgid "Hey! Join me on Nimiq Pay App and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} NIM in Cryptocity Points at registration."
+msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
 #: src/views/SetupView.vue:28
@@ -323,7 +323,7 @@ msgid "Invalid phone number"
 msgstr ""
 
 #: src/composables/useDecrypt.ts:49
-#: src/composables/useDecrypt.ts:63
+#: src/composables/useDecrypt.ts:62
 msgid "Invalid PIN"
 msgstr ""
 
@@ -365,7 +365,7 @@ msgid "Invite a friend and earn up to 200 Points each!"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:4
-msgid "Invite a friend and get {amount} NIM each"
+msgid "Invite a friend and get {amount} each"
 msgstr ""
 
 #: src/views/HomeView.vue:87
@@ -667,7 +667,7 @@ msgstr ""
 msgid "There is no sender address provided. Sender: {sender}"
 msgstr ""
 
-#: src/composables/useDecrypt.ts:62
+#: src/composables/useDecrypt.ts:63
 #: src/composables/useDecrypt.ts:66
 #: src/lib/flows/steps.ts:120
 msgid "There was an error"
