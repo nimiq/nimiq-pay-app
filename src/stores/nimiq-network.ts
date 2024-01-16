@@ -30,7 +30,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         clearToast()
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established')
-        setToast({ message: i18n.t('Consensus lost, {newConsensus}', { newConsensus }), keepOpen: true, error: true })
+        setToast({
+          message: `${i18n.t('Consensus lost.')} ${translateConsensus(newConsensus)}`,
+          error: true,
+          keepOpen: true,
+        })
 
       consensus.value = newConsensus
     })
@@ -40,7 +44,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       await until(consensus).toBe('established', { timeout: 30 * 1e3, throwOnTimeout: true })
     }
     catch {
-      setToast({ message: i18n.t('Consensus {consensus}', { consensus: consensus.value }), error: true, keepOpen: true })
+      setToast({
+        message: `${i18n.t('Trying to establish consensus:')} ${translateConsensus(consensus.value)}`,
+        error: true,
+        keepOpen: true,
+      })
     }
 
     // @ts-expect-error Private property access
@@ -92,6 +100,18 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!transactions)
       return { data: [], error: i18n.t('No transactions found') }
     return { data: transactions, error: undefined }
+  }
+
+  function translateConsensus(consensusState: Nimiq.Client.ConsensusState) {
+    // Define translations as record such that ts warns us if a translation for a consensus state is missing
+    const consensusStateTranslations: Record<Nimiq.Client.ConsensusState, string> = {
+      established: i18n.t('Consensus established.'),
+      syncing: i18n.t('Syncing with network.'),
+      connecting: i18n.t('Connecting to network.'),
+    }
+    return Object.keys(consensusStateTranslations).includes(consensusState)
+      ? consensusStateTranslations[consensusState]
+      : consensusStateTranslations.syncing
   }
 
   return {

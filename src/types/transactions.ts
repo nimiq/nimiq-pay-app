@@ -90,6 +90,21 @@ export function translateTransactionTitle(title: TransactionTitle) {
     : title
 }
 
+export function translateTransactionState(state: Nimiq.Client.TransactionState) {
+  // Define translations as record such that ts warns us if a translation for a transaction state is missing
+  const transactionStateTranslations: Record<Nimiq.Client.TransactionState, string> = {
+    new: i18n.t('New'),
+    pending: i18n.t('Pending'),
+    mined: i18n.t('Confirming'), // We display a just mined, but not yet confirmed transactions as confirming.
+    invalidated: i18n.t('Invalidated'),
+    expired: i18n.t('Expired'),
+    confirmed: i18n.t('Confirmed'),
+  }
+  return Object.keys(transactionStateTranslations).includes(state)
+    ? transactionStateTranslations[state]
+    : i18n.t('Unknown')
+}
+
 export type UserTransaction = BaseTransaction & {
   transfer: Transfer.UserPayment
   rail?: undefined

@@ -71,7 +71,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:66
+#: src/stores/nimiq-network.ts:74
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -100,12 +100,25 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:43
-msgid "Consensus {consensus}"
+#: src/types/transactions.ts:101
+msgid "Confirmed"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:33
-msgid "Consensus lost, {newConsensus}"
+#. We display a just mined, but not yet confirmed transactions as confirming.
+#: src/types/transactions.ts:98
+msgid "Confirming"
+msgstr ""
+
+#: src/stores/nimiq-network.ts:110
+msgid "Connecting to network."
+msgstr ""
+
+#: src/stores/nimiq-network.ts:108
+msgid "Consensus established."
+msgstr ""
+
+#: src/stores/nimiq-network.ts:34
+msgid "Consensus lost."
 msgstr ""
 
 #: src/modals/BackupModal/ShowWords.vue:18
@@ -212,6 +225,10 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:174
 msgid "Error verifying phone number"
+msgstr ""
+
+#: src/types/transactions.ts:100
+msgid "Expired"
 msgstr ""
 
 #: src/modals/ExpiringPointsModal.vue:4
@@ -351,6 +368,10 @@ msgstr ""
 msgid "Invalid URL: {url}"
 msgstr ""
 
+#: src/types/transactions.ts:99
+msgid "Invalidated"
+msgstr ""
+
 #: src/modals/ReferralModal.vue:28
 msgid "Invite a Friend"
 msgstr ""
@@ -398,20 +419,24 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:84
+#: src/types/transactions.ts:96
+msgid "New"
+msgstr ""
+
+#: src/stores/nimiq-network.ts:92
 msgid "No account found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:81
-#: src/stores/nimiq-network.ts:90
+#: src/stores/nimiq-network.ts:89
+#: src/stores/nimiq-network.ts:98
 msgid "No address given"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:55
+#: src/stores/nimiq-network.ts:63
 msgid "No Cashlink found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:64
+#: src/stores/nimiq-network.ts:72
 msgid "No Nimiq Wallet address found"
 msgstr ""
 
@@ -436,7 +461,7 @@ msgstr ""
 msgid "No remote signer found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:93
+#: src/stores/nimiq-network.ts:101
 msgid "No transactions found"
 msgstr ""
 
@@ -488,6 +513,10 @@ msgstr ""
 #: src/lib/flows/steps.ts:262
 #: src/lib/flows/steps.ts:273
 msgid "Payment preview"
+msgstr ""
+
+#: src/types/transactions.ts:97
+msgid "Pending"
 msgstr ""
 
 #: src/stores/points.ts:103
@@ -632,6 +661,10 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
+#: src/stores/nimiq-network.ts:109
+msgid "Syncing with network."
+msgstr ""
+
 #: src/modals/BackupModal/ValidateWords.vue:9
 msgid "Test your backup"
 msgstr ""
@@ -713,7 +746,11 @@ msgstr ""
 msgid "Transaction became invalid"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:18
+#: src/stores/nimiq-network.ts:48
+msgid "Trying to establish consensus:"
+msgstr ""
+
+#: src/types/transactions.ts:105
 msgid "Unknown"
 msgstr ""
 

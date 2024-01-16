@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type PropType, computed } from 'vue'
 import TransactionAmounts from './TransactionAmounts.vue'
-import { type ExternalTransaction, PaymentMethod, Transfer } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
 
@@ -30,7 +30,7 @@ const { crypto, fiat } = usePrice(props.tx.amount)
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize">
-        {{ tx.status || $t('Unknown') }}
+        {{ translateTransactionState(tx.status) }}
       </div>
 
       <div>{{ $t('Date') }}</div>

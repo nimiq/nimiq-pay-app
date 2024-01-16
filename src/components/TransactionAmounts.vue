@@ -24,7 +24,10 @@ const slots = useSlots()
       <CryptoCityLogo class="mr-1 h-9" />
       {{ cryptoTotal.toLocaleString() }}
     </span>
-    <span v-else class="text-5xl text-center uppercase">{{ cryptoTotal.toLocaleString() }} {{ paymentMethod }}</span>
+    <span v-else class="text-5xl text-center uppercase">
+      <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
+      {{ cryptoTotal.toLocaleString() }} {{ paymentMethod }}
+    </span>
 
     <p v-if="slots.fee" class="mt-2 text-base font-semibold text-space/60">
       <slot name="fee" />

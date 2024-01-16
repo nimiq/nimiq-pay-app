@@ -5,7 +5,7 @@ import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, PaymentMethod, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer, isPaymentTx, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({
@@ -35,7 +35,9 @@ const paymentMethod = computed(() => {
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time class="text-space/50 tabular-nums">{{ formatted }} </time>
-        <span v-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">{{ tx.status }}</span>
+        <span v-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
+          {{ translateTransactionState(tx.status) }}
+        </span>
       </div>
     </div>
     <div class="flex flex-col items-end ml-auto gap-y-1">
@@ -44,7 +46,10 @@ const paymentMethod = computed(() => {
         <CryptoCityLogo class="h-3 mr-1" />
         {{ crypto.total.toLocaleString() }}
       </time>
-      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">{{ crypto.total.toLocaleString() }} {{ paymentMethod }}</time>
+      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">
+        <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
+        {{ crypto.total.toLocaleString() }} {{ paymentMethod }}
+      </time>
     </div>
     <IonRippleEffect />
   </button>
