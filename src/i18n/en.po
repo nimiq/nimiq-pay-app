@@ -71,6 +71,10 @@ msgstr ""
 msgid "Buy NIM with Credit Card"
 msgstr ""
 
+#: src/components/PhoneInput.vue:24
+msgid "Cancel"
+msgstr ""
+
 #: src/composables/useQRScanner.ts:85
 msgid "Cashlink claimed successfully"
 msgstr ""
@@ -125,6 +129,7 @@ msgstr ""
 msgid "Consensus lost."
 msgstr ""
 
+#: src/components/PhoneInput.vue:25
 #: src/modals/BackupModal/ShowWords.vue:18
 msgid "Continue"
 msgstr ""
@@ -394,6 +399,10 @@ msgstr ""
 
 #: src/views/HomeView.vue:87
 msgid "Invite a friend and get {amount} Points each!"
+msgstr ""
+
+#: src/components/PhoneInput.vue:21
+msgid "Is this your phone number?"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:15

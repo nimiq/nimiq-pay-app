@@ -2,6 +2,7 @@
 import { IonButton, alertController } from '@ionic/vue'
 import { ref, watch } from 'vue'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { i18n } from '@/i18n/i18n-setup'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -17,11 +18,11 @@ interface JSONData { statusCode: number; error: string; message: string }
 function showAlert() {
   alertController
     .create({
-      header: 'Is this your phone number?',
+      header: i18n.t('Is this your phone number?'),
       message: phoneNumber.value,
       buttons: [
-        { text: 'Cancel', handler: () => emit('focus') },
-        { text: 'Continue', handler: handleSubmit },
+        { text: i18n.t('Cancel'), handler: () => emit('focus') },
+        { text: i18n.t('Continue'), handler: handleSubmit },
       ],
     })
     .then(alert => alert.present())
