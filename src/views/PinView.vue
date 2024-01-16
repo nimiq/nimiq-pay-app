@@ -1,58 +1,37 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
-import { Keyboard } from '@capacitor/keyboard'
 import { storeToRefs } from 'pinia'
+import { Keyboard } from '@capacitor/keyboard'
 import { useConn } from '@/stores/conn'
 import { useDecrypt } from '@/composables/useDecrypt'
-import { useDevice } from '@/composables/useDevice'
+import PinInput from '@/components/PinInput.vue'
 
 const { dbExists } = storeToRefs(useConn())
 const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
-const pinField = ref()
-const pin = ref('')
-const { isWeb } = useDevice()
+const errorMsg = ref('')
 
-watch(pin, (newValue) => {
-  if (newValue.length === 4)
-    handleSubmit()
-})
-
-async function handleSubmit() {
-  if (pin.value.length < 4)
+async function handleSubmit(pin: string) {
+  if (pin.length < 4)
     return false
 
-  const error = await decrypt(pin.value)
+  const error = await decrypt(pin)
   if (error) {
-    // eslint-disable-next-line no-alert
-    alert(error) // TODO: Provide in-app feedback
-    pin.value = ''
+    errorMsg.value = error
     return
   }
-  pinField.value?.blur()
-  if (!isWeb)
-    Keyboard.hide()
   await router.replace('/app')
 }
 
 function shown() {
+  const input = document.querySelector('input')
   setTimeout(() => {
-    pinField.value?.focus()
-  }, 200)
-  if (!isWeb)
+    // TODO: this is not working, idk why
+    input?.focus()
     Keyboard.show()
-}
-
-// Prevent the keyboard from hiding
-// Keyboard.addListener('keyboardDidHide', () => {
-//   pinField.value?.blur()
-//   pinField.value?.focus()
-// })
-
-function handleBlur() {
-  pinField.value?.focus()
+  }, 200)
 }
 
 onMounted(() => {
@@ -61,11 +40,6 @@ onMounted(() => {
   else if (decrypted.value)
     router.replace('/app')
   shown()
-})
-
-onUnmounted(() => {
-  pinField.value?.blur()
-  Keyboard.hide()
 })
 </script>
 
@@ -77,16 +51,12 @@ onUnmounted(() => {
     <IonContent class="text-center ion-padding" style="--background: #F8F8F8">
       <IonGrid class="flex flex-col h-full">
         <IonRow class="ion-justify-content-center">
-          <h1>{{ $t('Enter PIN') }}</h1>
+          <h1 class="font-bold">
+            {{ $t('Enter PIN') }}
+          </h1>
         </IonRow>
         <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
-          <input
-            ref="pinField" v-model="pin" type="password" inputmode="numeric" pattern="[0-9]*" minlength="4"
-            maxlength="4" size="4" placeholder="••••" class="pin bg-[#F8F8F8]"
-            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-            autofocus="true"
-            @blur="handleBlur"
-          >
+          <PinInput :input-length="4" :error-msg="errorMsg" @done="handleSubmit" />
         </IonRow>
       </IonGrid>
     </IonContent>

@@ -59,8 +59,8 @@ export function useDecrypt() {
 
     const error = (await sqlite.isSecretStored()).result
       ? await sqlite.checkEncryptionSecret(pin)
-        .then(({ result }) => !result ? i18n.t('There was an error') : undefined)
-        .catch(() => i18n.t('Invalid PIN'))
+        .then(({ result }) => !result ? i18n.t('Invalid PIN') : undefined)
+        .catch(() => i18n.t('There was an error'))
       : await sqlite.setEncryptionSecret(pin)
         .then(() => undefined)
         .catch(() => i18n.t('There was an error'))
