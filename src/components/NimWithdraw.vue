@@ -94,7 +94,7 @@ function withdraw() {
     return
 
   loading.value = true
-  emit('done', { amount: lunaAmount, recipient: selected.value })
+  emit('done', { amount: lunaAmount.value, recipient: selected.value })
 }
 </script>
 
