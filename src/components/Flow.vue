@@ -141,7 +141,7 @@ function blur() {
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
         {{ description }}
       </p>
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step, isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
   </ul>
 </template>
