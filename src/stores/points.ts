@@ -161,7 +161,7 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { rail, paymentRef, recipient, amount, fee, merchantCategory, merchantName, message } = request
+    const { rail, paymentRef, recipient, amount, fee, merchantCategory, merchantName, message, fiatAmount, fiatCurrency, fiatFeeAmount } = request
     const { error } = await api.payWithPoints({ rail: rail!, reference: paymentRef, recipient, token: pointsToken.value })
     if (error)
       return { data: undefined, error }
@@ -190,11 +190,9 @@ export const usePoints = defineStore('points', () => {
       paymentRef: paymentRef!,
       paymentMethod: PaymentMethod.Points,
 
-      // TODO
-      isLocalDeposit: false,
-      fiatAmount: 0,
-      fiatCurrency: 'EUR',
-      fiatFeeAmount: 0,
+      fiatAmount: fiatAmount!,
+      fiatFeeAmount: fiatFeeAmount!,
+      fiatCurrency: fiatCurrency!,
     })
     await updatePointsBalance()
     return { data: undefined, error: undefined }

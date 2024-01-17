@@ -67,7 +67,6 @@ export interface BaseTransaction {
   hash: string
   proofSize: number
   message?: string
-  isLocalDeposit: boolean
 }
 
 type KnownTransactionTitle = 'Top-Up' | 'Withdrawal' | 'Payment' | 'Points Payment'

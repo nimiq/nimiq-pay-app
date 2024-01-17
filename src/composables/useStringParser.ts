@@ -66,7 +66,7 @@ export function useStringParser() {
   // And it looks like this:
   //   nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
   // We will parse it as follows:
-  //    { message: 'cplink.com ref #PZEd', rail: Rail.Cpl, merchantId: '', txRef: PZEd, amount: 183000, recipient: 'NQ51...', merchantName: 'Maxi Shoes' }
+  //    { message: 'cplink.com ref #PZEd', rail: Rail.Cpl, railMerchantId: '', paymentRef: PZEdCP62, amount: 183000, recipient: 'NQ51...', merchantName: 'Maxi Shoes' }
   async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData>> {
     if (protocol !== 'nimiq:') {
       return {

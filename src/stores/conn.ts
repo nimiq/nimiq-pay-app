@@ -73,10 +73,8 @@ export const useConn = defineStore('conn', () => {
       : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
     await db.value!.open()
 
-    // Android supports WAL mode, but web doesn't
-    // We enable it. Not sure about iOS:
     // https://github.com/capacitor-community/sqlite/issues/215#issuecomment-1028913155
-    if (!useDevice().isAndroid)
+    if (isWeb)
       await db.value!.execute(`PRAGMA journal_mode=WAL;`, false)
 
     resolveUnlockDb()
@@ -119,7 +117,7 @@ export const useConn = defineStore('conn', () => {
     if (err)
       throw new Error(err)
 
-    await db.value!.run(query, args, false)
+    await db.value!.run(query, args, !isWeb)
     if (isWeb)
       await sqlite.saveToStore(DB_NAME)
   }

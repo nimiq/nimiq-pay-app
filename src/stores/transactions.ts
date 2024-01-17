@@ -48,7 +48,7 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Selected ${txs.length} transactions`, txs)
     // eslint-disable-next-line no-console
     console.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
-    return filteredTxs.map(tx => ({ ...tx, isLocalDeposit: tx.isLocalDeposit as unknown as string === '1' }))
+    return filteredTxs
   }
 
   async function upsertTx(tx: Transaction) {
@@ -58,7 +58,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatCurrency, tx.recipient === useLocalWallet().localAddress.toUserFriendlyAddress()],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatCurrency],
     )
   }
 

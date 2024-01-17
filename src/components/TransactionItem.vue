@@ -29,7 +29,7 @@ const paymentMethod = computed(() => {
 
 <template>
   <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed' }">
-    <CategoryIcon :category="tx.isLocalDeposit ? 'deposit' : tx.merchantCategory" />
+    <CategoryIcon :category="tx.transfer === Transfer.UserReceipt ? 'deposit' : tx.merchantCategory" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
         {{ translateTransactionTitle(tx.title) }}

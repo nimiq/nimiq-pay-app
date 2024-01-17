@@ -170,7 +170,6 @@ export function useSync() {
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
-        isLocalDeposit: true,
         proofSize: tx.proof.raw.length,
       })
     }, [useLocalWallet().localAddress])
@@ -205,7 +204,6 @@ export function useSync() {
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
-        isLocalDeposit: true,
         proofSize: tx.proof.raw.length,
       })
     }))
