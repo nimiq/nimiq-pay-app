@@ -3,14 +3,13 @@ import { computed, onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
-import { type ExternalTransaction, type MerchantTransaction, type PartialSendTxArgs, type Transaction, type TransactionSentByUser, Transfer, type UserReceiptTransaction, isExternalTx } from '@/types/transactions'
+import { type ExternalTransaction, type MerchantTransaction, type PartialSendTxArgs, PaymentMethod, type Transaction, type TransactionSentByUser, Transfer, type UserReceiptTransaction, isExternalTx } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { PaymentMethod } from '@/types/database'
 
 export enum TransactionListState {
   // There are no transactions to show

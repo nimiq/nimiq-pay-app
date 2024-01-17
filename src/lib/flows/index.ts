@@ -147,7 +147,7 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
   ].map(s => s({ flowName }))))
 
   const onDone: Flow['onDone'] = async ({ paymentPreview: method, qrCodeScanner: _request }, { err }) => {
-    const { PaymentMethod } = await import('@/types/database')
+    const { PaymentMethod } = await import('@/types/transactions')
     const { markAsUnknownTransactionTitle } = await import('@/types/transactions')
 
     const request = _request as PaymentRequestData

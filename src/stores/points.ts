@@ -8,8 +8,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
-import { MerchantCategory, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
-import { PaymentMethod } from '@/types/database'
+import { MerchantCategory, PaymentMethod, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()

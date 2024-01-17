@@ -1,4 +1,3 @@
-import type { PaymentMethod } from '@/types/database'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {
@@ -188,3 +187,8 @@ export type PartialSendTxArgs =
   | Pick<RemoteToLocalAfterTimeoutTx, 'transfer'>
   | Pick<RemoteToLocalTx, 'transfer'>
   | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+
+export enum PaymentMethod {
+  NIM = 'nim',
+  Points = 'points',
+}

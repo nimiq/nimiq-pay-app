@@ -5,9 +5,8 @@ import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
-import { PaymentMethod } from '@/types/database'
 
 const props = defineProps({
   tx: {
