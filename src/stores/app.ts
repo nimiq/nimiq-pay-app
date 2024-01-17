@@ -33,8 +33,7 @@ export const useApp = defineStore('app', () => {
   const { query, run } = useConn()
 
   const kv = reactive<Kv>(defaultKv)
-  const { entropy, hasDoneBackup, language, pendingReferralCode, phoneNumber, pinHash, pointsToken, referralCode, selectedFiat, withdrawalAddress } = toRefs(kv)
-
+  // Read the values from the database
   query<{ key: string; value: string }[]>(SQLQuery.SelectKv).then(x => x.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {})).then(x => Object.assign(kv, x))
 
   watch(kv, async (newValue, oldValue) => {
@@ -43,8 +42,9 @@ export const useApp = defineStore('app', () => {
       return
     const sqlQuery = `INSERT OR REPLACE INTO kv (key, value) VALUES ${diffKeys.map(() => `(?, ?)`).join(', ')}`
     await run(sqlQuery, diffKeys.flatMap(key => [key, newValue[key as keyof Kv]]))
-  }, { immediate: true })
+  })
 
+  const { entropy, hasDoneBackup, language, pendingReferralCode, phoneNumber, pinHash, pointsToken, referralCode, selectedFiat, withdrawalAddress } = toRefs(kv)
   const phoneNumberVerified = computed(() => !!kv.pointsToken)
 
   async function setEntropy() {
