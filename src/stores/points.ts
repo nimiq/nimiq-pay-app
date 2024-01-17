@@ -191,7 +191,7 @@ export const usePoints = defineStore('points', () => {
       paymentMethod: PaymentMethod.Points,
 
       // TODO
-      isIncoming: false,
+      isLocalDeposit: false,
       fiatAmount: 0,
       fiatCurrency: 'EUR',
       fiatFeeAmount: 0,

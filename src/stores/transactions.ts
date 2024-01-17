@@ -48,7 +48,7 @@ export const useTransactions = defineStore('transactions', () => {
     console.log(`📚 Selected ${txs.length} transactions`, txs)
     // eslint-disable-next-line no-console
     console.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
-    return filteredTxs
+    return filteredTxs.map(tx => ({ ...tx, isLocalDeposit: tx.isLocalDeposit as unknown as string === '1' }))
   }
 
   async function upsertTx(tx: Transaction) {
