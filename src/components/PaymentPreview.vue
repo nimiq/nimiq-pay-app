@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
@@ -24,7 +24,7 @@ const emit = defineEmits(stepEmits)
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 
-const payment = computed(() => (props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment }))
+const payment = toRef(() => props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment })
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 
 const amounts = computedAsync(async () => {
