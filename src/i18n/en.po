@@ -659,6 +659,13 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:137
+#: src/stores/points.ts:107
+#: src/stores/points.ts:124
+#: src/stores/points.ts:138
+#: src/stores/points.ts:42
+#: src/stores/points.ts:56
+#: src/stores/points.ts:67
+#: src/stores/points.ts:79
 msgid "Something went wrong"
 msgstr ""
 

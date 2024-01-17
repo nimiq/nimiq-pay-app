@@ -39,7 +39,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.verify({ phoneNumber, accessCode: accessCodeInput })
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     pointsToken.value = data.token
 
@@ -53,7 +53,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getBalance({ token: pointsToken.value })
     if (error || !data)
-      return error
+      return error || i18n.t('Something went wrong')
 
     pointsBalance.value = data.balance
   }
@@ -64,7 +64,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getTasks({ token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     return { data, error }
   }
@@ -76,7 +76,7 @@ export const usePoints = defineStore('points', () => {
     // TODO: add types to this
     const { data, error } = await api.getTaskById({ id, token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     return { data, error: undefined }
   }
@@ -104,7 +104,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.claimTask({ id, token: pointsToken.value, answer })
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     await updatePointsBalance()
     await updateTasks()
@@ -121,7 +121,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getReferralInfo({ token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     return { data, error: undefined }
   }
@@ -135,7 +135,7 @@ export const usePoints = defineStore('points', () => {
     const { data, error } = await api.getReferralById({ id })
 
     if (error || !data)
-      return { data: undefined, error }
+      return { data: undefined, error: error || i18n.t('Something went wrong') }
 
     return { data, error: undefined }
   }
