@@ -104,19 +104,20 @@ export const pinCodeConfirmStep: StepInit = async () => ({
 
     // Nuke everything in case there was a previous encryption db
     const { isWeb } = (await import('@/composables/useDevice')).useDevice()
+    const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
+
     if (!isWeb) {
-      const { sqlite } = (await import('@/stores/conn')).useConn()
-      await sqlite.deleteOldDatabases()
-      await sqlite.clearEncryptionSecret()
+      await (await import('@/stores/conn')).useConn().deleteDatabase(false)
+      // Set it to false in case it was decrypted before, we are sure there's no encrypted db since we just deleted it
+      decrypted.value = false
     }
 
-    const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
     const decryptError = await decrypt(pinCode)
     if (decryptError) {
       err(decryptError)
       return
     }
-    if (!decrypted) {
+    if (!decrypted.value) {
       err(i18n.t('There was an error'))
       return
     }

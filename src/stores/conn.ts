@@ -84,9 +84,20 @@ export const useConn = defineStore('conn', () => {
   }
 
   async function deleteDatabase(reload: boolean = true) {
-    await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
-    await db.value!.delete()
-    await sqlite.closeAllConnections()
+    try {
+      if (dbExists.value) {
+        console.log('Deleting database')
+        await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
+        await db.value!.delete()
+        await sqlite.closeAllConnections()
+        db.value = undefined
+        dbExists.value = false
+      }
+    }
+    catch (e) {
+      console.error(e)
+    }
+    console.log('Database deleted, reloading', reload)
     if (reload)
       globalThis.document?.location.reload()
   }
