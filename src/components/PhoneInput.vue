@@ -13,7 +13,6 @@ const emit = defineEmits(stepEmits)
 
 const phoneNumber = ref('')
 const errorMessage = ref('')
-interface JSONData { statusCode: number; error: string; message: string }
 
 function showAlert() {
   alertController
@@ -40,19 +39,17 @@ watch(phoneNumber, () => {
 
 watch(() => props.errorMsg, () => {
   const { errorMsg } = props
-  if (!errorMsg)
+  if (!errorMsg) {
+    errorMessage.value = ''
     return
-  const start_index = errorMsg.indexOf('. Data ') + '. Data '.length
-  const json_data_str = errorMsg.substring(start_index)
+  }
 
-  let json_data: JSONData
-  try {
-    json_data = JSON.parse(json_data_str) as JSONData
-    errorMessage.value = json_data.message
-  }
-  catch (error) {
-    console.error(`Error parsing JSON: ${(error as Error).message}`)
-  }
+  // Try to parse server error message from message prop in server response json in (potentially translated) api() error
+  // message. Note that the server error message itself has also been translated on the server.
+  const serverErrorMessageMatch = errorMsg.match(/"message":\s*("(?:\\"|[^"])+")/i)
+  errorMessage.value = serverErrorMessageMatch
+    ? JSON.parse(serverErrorMessageMatch[1]) as string // decode json encoded message string, resolving potential escape sequences
+    : errorMsg
 })
 </script>
 

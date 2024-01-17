@@ -71,7 +71,7 @@ msgstr ""
 msgid "Buy NIM with Credit Card"
 msgstr ""
 
-#: src/components/PhoneInput.vue:24
+#: src/components/PhoneInput.vue:23
 msgid "Cancel"
 msgstr ""
 
@@ -129,7 +129,7 @@ msgstr ""
 msgid "Consensus lost."
 msgstr ""
 
-#: src/components/PhoneInput.vue:25
+#: src/components/PhoneInput.vue:24
 #: src/modals/BackupModal/ShowWords.vue:18
 msgid "Continue"
 msgstr ""
@@ -401,7 +401,7 @@ msgstr ""
 msgid "Invite a friend and get {amount} Points each!"
 msgstr ""
 
-#: src/components/PhoneInput.vue:21
+#: src/components/PhoneInput.vue:20
 msgid "Is this your phone number?"
 msgstr ""
 
