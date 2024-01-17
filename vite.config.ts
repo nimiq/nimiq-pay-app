@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import checker from 'vite-plugin-checker'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
+import VueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,6 +17,7 @@ export default defineConfig({
     poOptimizer(),
     legacy(),
     VitePWA({ registerType: 'autoUpdate' }),
+    VueDevTools(),
   ],
   resolve: {
     alias: {
