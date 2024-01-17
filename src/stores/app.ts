@@ -1,8 +1,9 @@
+import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, toRefs, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
-import { guessUserLanguage } from '@/i18n/i18n-setup'
+import { type SupportedLanguage, guessUserLanguage } from '@/i18n/i18n-setup'
 
 export enum Fiat {
   USD = 'USD',
@@ -14,52 +15,47 @@ export enum Crypto {
   NIM = 'NIM',
 }
 
-const defaultKv = {
-  pinHash: '',
-  phoneNumber: '',
-  referralCode: '',
-  hasDoneBackup: false,
-  selectedFiat: Fiat.USD,
-  language: guessUserLanguage(),
-  pointsToken: '',
-  withdrawalAddress: '',
-  pendingReferralCode: '',
-  entropy: '',
+function kv(): StorageLikeAsync {
+  return {
+    getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
+    setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
+    removeItem: async key => useConn().run(SQLQuery.DeleteKv, [key]),
+  }
 }
 
-type Kv = typeof defaultKv
-
 export const useApp = defineStore('app', () => {
-  const { query, run } = useConn()
+  const sharedOptions = { writeDefaults: false }
+  const pinHash = useStorageAsync('pinHash', '', kv(), sharedOptions)
+  const phoneNumber = useStorageAsync('phoneNumber', '', kv(), sharedOptions)
+  const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
+  const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
+  const selectedFiat = useStorageAsync<Fiat>('selectedFiat', Fiat.USD, kv(), sharedOptions)
+  const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
+  const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
+  const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
+  const phoneNumberVerified = computed(() => !!pointsToken.value)
 
-  const kv = reactive<Kv>(defaultKv)
-  // Read the values from the database
-  query<{ key: string; value: string }[]>(SQLQuery.SelectKv).then(x => x.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {})).then(x => Object.assign(kv, x))
-
-  watch(kv, async (newValue, oldValue) => {
-    const diffKeys = Object.keys(newValue).filter(key => newValue[key as keyof Kv] !== oldValue?.[key as keyof Kv])
-    if (diffKeys.length === 0)
-      return
-    const sqlQuery = `INSERT OR REPLACE INTO kv (key, value) VALUES ${diffKeys.map(() => `(?, ?)`).join(', ')}`
-    await run(sqlQuery, diffKeys.flatMap(key => [key, newValue[key as keyof Kv]]))
-  })
-
-  const { entropy, hasDoneBackup, language, pendingReferralCode, phoneNumber, pinHash, pointsToken, referralCode, selectedFiat, withdrawalAddress } = toRefs(kv)
-  const phoneNumberVerified = computed(() => !!kv.pointsToken)
-
+  const pendingReferralCode = ref('')
+  const entropy = ref('')
   async function setEntropy() {
     if (pendingReferralCode.value)
-      referralCode.value = pendingReferralCode.value
-
+      await kv().setItem('referralCode', pendingReferralCode.value)
     // This case only happen when importing from words (login)
     if (entropy.value) {
+      await Promise.all([kv().setItem('entropy', entropy.value), kv().setItem('hasDoneBackup', 'true')])
       hasDoneBackup.value = true
+      return
+    }
+    // Maybe we should revisit this later. Right now this will be in memory all the times
+    const entropyDb = await kv().getItem('entropy')
+    if (entropyDb) {
+      entropy.value = entropyDb
     }
     else {
-    // Maybe we should revisit this later. Right now this will be in memory all the times
       // @ts-expect-error 16 is the value we need to have to get the 12 words
       Nimiq.Entropy.SIZE = 16
       entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
+      await kv().setItem('entropy', entropy.value)
     }
   }
 
@@ -80,19 +76,18 @@ export const useApp = defineStore('app', () => {
   }
 
   return {
+    pinHash,
+    phoneNumber,
+    phoneNumberVerified,
+    referralCode,
+    setReferralCode,
     entropy,
     hasDoneBackup,
-    language,
-    pendingReferralCode,
-    phoneNumber,
-    pinHash,
-    pointsToken,
-    referralCode,
     selectedFiat,
-    phoneNumberVerified,
-    withdrawalAddress,
-    setReferralCode,
+    language,
+    pointsToken,
     setEntropy,
+    withdrawalAddress,
     updatePinInputTs,
     shouldAskPin,
   }

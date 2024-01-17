@@ -21,8 +21,9 @@ export interface RemoteSigner {
 
 export enum SQLQuery {
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
-  SelectKv = 'SELECT * FROM kv',
-  UpdateKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
+  SelectKv = 'SELECT value FROM kv WHERE key = ?',
+  UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
+  DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railMerchantId TEXT, merchantName TEXT, merchantCategory TEXT, paymentRef TEXT, paymentMethod TEXT, fiatAmount INTEGER, fiatFeeAmount INTEGER, fiatCurrency TEXT, incomingTx BOOLEAN)',
   SelectPaginationTransactions = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, incomingTx FROM transactions WHERE transfer IN (\'user-payment-to-merchant\', \'user-payment\', \'user-receipt\') ORDER BY timestamp DESC LIMIT ? OFFSET ?',
