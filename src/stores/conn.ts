@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
-import { computed, ref, watchEffect } from 'vue'
+import { computed, ref } from 'vue'
 import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
 import { migrations } from '@/lib/sql-queries'
@@ -72,6 +72,11 @@ export const useConn = defineStore('conn', () => {
       ? await sqlite.retrieveConnection(DB_NAME, false)
       : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
     await db.value!.open()
+
+    // https://github.com/capacitor-community/sqlite/issues/215#issuecomment-1028913155
+    if (isWeb)
+      await db.value!.execute(`PRAGMA journal_mode=WAL;`, false)
+
     resolveUnlockDb()
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
@@ -123,7 +128,7 @@ export const useConn = defineStore('conn', () => {
     if (err)
       throw new Error(err)
 
-    await db.value!.run(query, args)
+    await db.value!.run(query, args, !isWeb)
     if (isWeb)
       await sqlite.saveToStore(DB_NAME)
   }

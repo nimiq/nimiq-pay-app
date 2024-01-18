@@ -5,9 +5,8 @@ import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer, isPaymentTx, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
-import { PaymentMethod } from '@/types/database'
 
 const props = defineProps({
   tx: {
@@ -29,7 +28,7 @@ const paymentMethod = computed(() => {
 
 <template>
   <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed' }">
-    <CategoryIcon :category="tx.shopCategory" />
+    <CategoryIcon :category="tx.transfer === Transfer.UserReceipt ? 'deposit' : tx.merchantCategory" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
         {{ translateTransactionTitle(tx.title) }}

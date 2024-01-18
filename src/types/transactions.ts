@@ -1,4 +1,3 @@
-import type { PaymentMethod } from '@/types/database'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {
@@ -39,11 +38,10 @@ export enum Rail {
 
 export const PointsHashPrefix = 'PointsPayment#'
 
-export enum ShopCategory {
+export enum MerchantCategory {
   CarsBikes = 'cars_bikes',
   Cash = 'cash',
   ComputerElectronics = 'computer_electronics',
-  Deposit = 'deposit',
   Entertainment = 'entertainment',
   FoodDrinks = 'food_drinks',
   HealthBeauty = 'health_beauty',
@@ -67,6 +65,7 @@ export interface BaseTransaction {
   fee: number
   hash: string
   proofSize: number
+  message?: string
 }
 
 type KnownTransactionTitle = 'Top-Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
@@ -93,52 +92,65 @@ export function translateTransactionTitle(title: TransactionTitle) {
 
 export type UserTransaction = BaseTransaction & {
   transfer: Transfer.UserPayment
-  message?: string
   rail?: undefined
-  railPeerId?: undefined
-  shopName?: undefined
-  shopCategory?: undefined
+  railMerchantId?: undefined
+  paymentRef?: undefined
+  merchantName?: undefined
+  merchantCategory?: undefined
   title: TransactionTitle
   paymentMethod?: undefined
+  fiatCurrency?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
   transfer: Transfer.UserReceipt
-  message?: string
   rail?: undefined
-  railPeerId?: undefined
-  shopName?: undefined
-  shopCategory?: ShopCategory
+  railMerchantId?: undefined
+  paymentRef?: undefined
+  merchantName?: undefined
+  merchantCategory?: undefined
   title: TransactionTitle
-  senderType: Nimiq.Account.Type
   paymentMethod?: undefined
+  fiatCurrency?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
 }
 
 export type MerchantTransaction = BaseTransaction & {
   transfer: Transfer.UserPaymentToMerchant
-  shopName: string
-  shopCategory: ShopCategory
+  fiatCurrency: string
+  fiatAmount: number
+  fiatFeeAmount: number
+  merchantName: string
+  merchantCategory: MerchantCategory
   title: TransactionTitle
   paymentMethod: PaymentMethod
+  paymentRef: string // The reference of the payment in the rail system
 } & ({
-  rail: Rail.CryptoPaymentLink | Rail.GoCrypto
-  railPeerId: string
-  message?: string
+  rail: Rail.CryptoPaymentLink
+  railMerchantId?: undefined // The merchant id in CPL is not exposed
 } | {
-  // TODO Finish Bluecode
+  rail: Rail.GoCrypto
+  railMerchantId: string
+} /* | {
+  // TODO
   rail: Rail.Bluecode
-  railPeerId: undefined
-  message?: string
-})
+  railMerchantId: string
+} */)
 
 interface SyncTransactionBase {
-  message?: string
   title?: undefined
   rail?: undefined
-  railPeerId?: undefined
-  shopName?: undefined
-  shopCategory?: undefined
+  railMerchantId?: undefined
+  paymentRef?: undefined
+  merchantName?: undefined
+  merchantCategory?: undefined
   paymentMethod?: undefined
+  fiatCurrency?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
 }
 
 export type LocalToRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.LocalToRemote }
@@ -169,9 +181,14 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 }
 
 export type PartialSendTxArgs =
-  | Pick<UserTransaction | MerchantTransaction, 'transfer' | 'recipient' | 'amount' | 'message' | 'shopName' | 'shopCategory' | 'rail' | 'railPeerId' | 'title'>
+  | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message'>
   | Pick<LocalToRemoteTx, 'transfer'>
   | Pick<ExtendRemoteTx, 'transfer'>
   | Pick<RemoteToLocalAfterTimeoutTx, 'transfer'>
   | Pick<RemoteToLocalTx, 'transfer'>
   | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+
+export enum PaymentMethod {
+  NIM = 'nim',
+  Points = 'points',
+}

@@ -8,8 +8,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
-import { PointsHashPrefix, Rail, ShopCategory, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
-import { PaymentMethod } from '@/types/database'
+import { MerchantCategory, PaymentMethod, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -161,8 +160,8 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { rail, railPeerId, recipient, amount, fee, shopCategory, shopName, message } = request
-    const { error } = await api.payWithPoints({ rail: rail!, reference: railPeerId, recipient, token: pointsToken.value })
+    const { rail, paymentRef, recipient, amount, fee, merchantCategory, merchantName, message, fiatAmount, fiatCurrency, fiatFeeAmount } = request
+    const { error } = await api.payWithPoints({ rail: rail!, reference: paymentRef, recipient, token: pointsToken.value })
     if (error)
       return { data: undefined, error }
 
@@ -178,17 +177,21 @@ export const usePoints = defineStore('points', () => {
       hash: `${PointsHashPrefix}${Date.now().toString()}${Math.random().toString()}`,
       status: Nimiq.Client.TransactionState.PENDING,
       timestamp: Math.ceil(Date.now() / 1000),
-      title: shopName ? markAsUnknownTransactionTitle(shopName) : 'Points Payment',
+      title: merchantName ? markAsUnknownTransactionTitle(merchantName) : 'Points Payment',
       message,
       fee,
-      shopCategory: shopCategory || ShopCategory.Shop,
-      shopName: shopName || i18n.t('Shop'),
+      merchantCategory: merchantCategory || MerchantCategory.Shop,
+      merchantName: merchantName || i18n.t('Shop'),
       proofSize: -1,
       raw: JSON.stringify(request),
       // Payments using points are only possible with CPL
       rail: Rail.CryptoPaymentLink,
-      railPeerId: railPeerId!,
+      paymentRef: paymentRef!,
       paymentMethod: PaymentMethod.Points,
+
+      fiatAmount: fiatAmount!,
+      fiatFeeAmount: fiatFeeAmount!,
+      fiatCurrency: fiatCurrency!,
     })
     await updatePointsBalance()
     return { data: undefined, error: undefined }

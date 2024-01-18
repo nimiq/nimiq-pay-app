@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSlots } from 'vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
-import { PaymentMethod } from '@/types/database'
+import { PaymentMethod } from '@/types/transactions'
 
 defineProps<{
   cryptoTotal: number

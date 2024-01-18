@@ -10,7 +10,8 @@ import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
 
 onMounted(async () => {
-  await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
+  if (!useDevice().isWeb)
+    await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
 })
 
 const isDev = import.meta.env.DEV

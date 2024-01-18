@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ShopCategory } from '@/types/transactions'
+import { MerchantCategory } from '@/types/transactions'
 import CarsBikesIcon from '@/components/icons/categories/cars_bikes.vue'
 import CashIcon from '@/components/icons/categories/cash.vue'
 import ComputerElectronicsIcon from '@/components/icons/categories/computer_electronics.vue'
@@ -16,26 +16,26 @@ import DepositIcon from '@/components/icons/categories/deposit.vue'
 
 defineProps({
   category: {
-    type: String as () => ShopCategory,
-    default: ShopCategory.Shop,
+    type: String as () => MerchantCategory | 'deposit',
+    default: MerchantCategory.Shop,
   },
 })
 </script>
 
 <template>
   <div class="rounded-full aspect-square text-space bg-space/[0.06] w-8">
-    <CarsBikesIcon v-if="category === ShopCategory.CarsBikes" />
-    <CashIcon v-else-if="category === ShopCategory.Cash" />
-    <ComputerElectronicsIcon v-else-if="category === ShopCategory.ComputerElectronics" />
-    <EntertainmentIcon v-else-if="category === ShopCategory.Entertainment" />
-    <FoodDrinksIcon v-else-if="category === ShopCategory.FoodDrinks" />
-    <HealthBeautyIcon v-else-if="category === ShopCategory.HealthBeauty" />
-    <HotelLodgingIcon v-else-if="category === ShopCategory.HotelLodging" />
-    <LeisureActivitiesIcon v-else-if="category === ShopCategory.LeisureActivities" />
-    <MiscellaneousIcon v-else-if="category === ShopCategory.Miscellaneous" />
-    <RestaurantBarIcon v-else-if="category === ShopCategory.RestaurantBar" />
-    <ShopIcon v-else-if="category === ShopCategory.Shop" />
-    <SportsFitnessIcon v-else-if="category === ShopCategory.SportsFitness" />
-    <DepositIcon v-else-if="category === ShopCategory.Deposit" />
+    <CarsBikesIcon v-if="category === MerchantCategory.CarsBikes" />
+    <CashIcon v-else-if="category === MerchantCategory.Cash" />
+    <ComputerElectronicsIcon v-else-if="category === MerchantCategory.ComputerElectronics" />
+    <EntertainmentIcon v-else-if="category === MerchantCategory.Entertainment" />
+    <FoodDrinksIcon v-else-if="category === MerchantCategory.FoodDrinks" />
+    <HealthBeautyIcon v-else-if="category === MerchantCategory.HealthBeauty" />
+    <HotelLodgingIcon v-else-if="category === MerchantCategory.HotelLodging" />
+    <LeisureActivitiesIcon v-else-if="category === MerchantCategory.LeisureActivities" />
+    <MiscellaneousIcon v-else-if="category === MerchantCategory.Miscellaneous" />
+    <RestaurantBarIcon v-else-if="category === MerchantCategory.RestaurantBar" />
+    <ShopIcon v-else-if="category === MerchantCategory.Shop" />
+    <SportsFitnessIcon v-else-if="category === MerchantCategory.SportsFitness" />
+    <DepositIcon v-else-if="category === 'deposit'" />
   </div>
 </template>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { type PropType, computed } from 'vue'
 import TransactionAmounts from './TransactionAmounts.vue'
-import { type ExternalTransaction, Transfer } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
-import { PaymentMethod } from '@/types/database'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })

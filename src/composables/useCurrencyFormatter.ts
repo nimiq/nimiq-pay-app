@@ -41,7 +41,7 @@ export function useCurrencyFormatter() {
     currencyDisplay: 'narrowSymbol',
   }
 
-  function formatFiat(amount: number, options: FormatFiatOptions) {
+  function formatFiat(amount: number, options: FormatFiatOptions = {}) {
     const currency = toValue(options.currency || selectedFiat)
     const locale = toValue(options.locale || language)
     const digitsOptions = options.short ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }

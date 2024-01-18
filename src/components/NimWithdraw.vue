@@ -94,7 +94,7 @@ function withdraw() {
     return
 
   loading.value = true
-  emit('done', { amount: lunaAmount, recipient: selected.value })
+  emit('done', { amount: lunaAmount.value, recipient: selected.value })
 }
 </script>
 
@@ -198,7 +198,7 @@ function withdraw() {
         <IonSpinner class="text-white" name="dots" />
       </template>
       <template v-else>
-        {{ $t('Pay') }}
+        {{ $t('Send') }}
       </template>
     </IonButton>
   </div>

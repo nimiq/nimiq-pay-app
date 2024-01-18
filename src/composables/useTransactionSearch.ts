@@ -17,7 +17,7 @@ export function useTransactionSearch() {
     keys: [{
       name: 'title',
       getFn: tx => translateTransactionTitle(tx.title),
-    }, /* untranslated title */ 'title', 'message', 'shopName', 'shopCategory', 'amount'],
+    }, /* untranslated title */ 'title', 'message', 'merchantName', 'merchantCategory', 'amount'],
     sortFn: ({ item: a }, { item: b }) => (b.timestamp as unknown as number) - (a.timestamp as unknown as number),
     ignoreLocation: true,
   } })

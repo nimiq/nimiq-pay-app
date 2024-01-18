@@ -3,14 +3,13 @@ import { computed, onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
-import { type ExternalTransaction, type MerchantTransaction, type PartialSendTxArgs, type Transaction, type TransactionSentByUser, Transfer, type UserReceiptTransaction, isExternalTx } from '@/types/transactions'
+import { type ExternalTransaction, type MerchantTransaction, type PartialSendTxArgs, PaymentMethod, type Transaction, type TransactionSentByUser, Transfer, type UserReceiptTransaction, isExternalTx } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { PaymentMethod } from '@/types/database'
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -58,7 +57,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railPeerId, tx.shopName, tx.shopCategory, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatCurrency],
     )
   }
 
@@ -144,12 +143,16 @@ export const useTransactions = defineStore('transactions', () => {
     const remoteAddressTable = await useRemoteSigner().getAllRemoteSigners()
     // Don't add tx to the transaction list if it came from the remote signer (remote-to-local)
     if (!remoteAddressTable.some(remoteAddress => remoteAddress.address.toUserFriendlyAddress() === tx.sender))
-      transactions.value = [tx, ...transactions.value]
+      addTransaction(tx)
   }
 
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
     await upsertTx(tx)
-    transactions.value = [tx, ...transactions.value]
+    addTransaction(tx)
+  }
+
+  function addTransaction(tx: ExternalTransaction) {
+    transactions.value = [tx, ...transactions.value].sort((a, b) => b.timestamp - a.timestamp)
   }
 
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
