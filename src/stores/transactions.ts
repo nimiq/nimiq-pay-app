@@ -143,12 +143,20 @@ export const useTransactions = defineStore('transactions', () => {
     const remoteAddressTable = await useRemoteSigner().getAllRemoteSigners()
     // Don't add tx to the transaction list if it came from the remote signer (remote-to-local)
     if (!remoteAddressTable.some(remoteAddress => remoteAddress.address.toUserFriendlyAddress() === tx.sender))
-      transactions.value = [tx, ...transactions.value]
+      addTransaction(tx)
   }
 
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
     await upsertTx(tx)
-    transactions.value = [tx, ...transactions.value]
+    addTransaction(tx)
+  }
+
+  function addTransaction(tx: ExternalTransaction) {
+    const index = transactions.value.findIndex(t => t.hash === tx.hash)
+    if (index === -1)
+      transactions.value = [tx, ...transactions.value]
+    else
+      transactions.value = [...transactions.value.slice(0, index), tx, ...transactions.value.slice(index + 1)]
   }
 
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
