@@ -251,11 +251,11 @@ msgstr ""
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:35
+#: src/components/OnBoardingScreen.vue:33
 msgid "Get Points"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:36
+#: src/components/OnBoardingScreen.vue:34
 msgid "Get Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
@@ -267,17 +267,12 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:25
-msgid "Go To Points"
-msgstr ""
-
 #: src/composables/useStringParser.ts:49
 msgid "GoCrypto is not yet supported."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:32
-#: src/components/OnBoardingScreen.vue:38
-msgid "Got It"
+#: src/components/OnBoardingScreen.vue:19
+msgid "Got it"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:41
@@ -475,11 +470,11 @@ msgstr ""
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:28
+#: src/components/OnBoardingScreen.vue:27
 msgid "Pay with Points"
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:29
+#: src/components/OnBoardingScreen.vue:28
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 

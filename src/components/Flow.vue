@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType, type Ref, computed, onMounted, reactive, ref, watch, watchEffect } from 'vue'
+import { type PropType, type Ref, computed, onMounted, reactive, ref, watchEffect } from 'vue'
 import { until, useIntersectionObserver, useScroll } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
@@ -21,8 +21,7 @@ const steps: Ref<Step[]> = ref([stepsInFlow[0]])
 
 const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
-const slideWidth = computed(() => scrollerItems.value.at(activeIndex.value)?.clientWidth)
-const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, slideWidth, { activeIndex })
+const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, { activeIndex })
 
 const activeStep = computed(() => steps.value.slice(-1)[0])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))

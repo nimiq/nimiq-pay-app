@@ -102,7 +102,7 @@ const setupWithPromoCodeFlow: FlowInit = async ({ state, closeFn }) => {
   return { flowName, state, steps, onCancel }
 }
 
-const onBoardingPointsFlow: FlowInit = async ({ state }) => {
+const onBoardingPointsFlow: FlowInit = async ({ state, closeFn }) => {
   const { onBoardingPoints } = await import('./steps')
   const flowName = FlowName.OnBoardingPoints
   const steps = [await onBoardingPoints({ flowName })]
@@ -117,7 +117,10 @@ const onBoardingPointsFlow: FlowInit = async ({ state }) => {
       initializeFlow(FlowName.VerifyPhone)
     }
   }
-  return { flowName, state, steps, onDone }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onDone, onCancel }
 }
 
 const onBoardingCashbackFlow: FlowInit = async ({ state }) => {
