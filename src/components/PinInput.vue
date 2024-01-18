@@ -1,22 +1,30 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { until } from '@vueuse/core'
 import { stepEmits } from '@/lib/flows/steps.types'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, isScrolling: { type: Boolean, required: false } })
 const emit = defineEmits(stepEmits)
 
+const isScrolling = computed(() => props.isScrolling)
 const inputRef = ref<HTMLInputElement | null>(null)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 
-watch(pinCodeInput, (pin) => {
+watch(pinCodeInput, async (pin) => {
   if (pin.length === props.inputLength) {
     wiggle.value = false
     emit('done', pin)
+
+    // Clear input when component is invisible, this will allow to clear the input without the user seeing it
+    // and when the users goes back to this component, the input will be empty.
+    await until(isScrolling).toBe(true, { timeout: 1000 })
+    await until(isScrolling).toBe(false, { timeout: 1000 })
+    pinCodeInput.value = ''
   }
 })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { computedAsync, useElementSize, useInterval, usePointer, usePointerSwipe, useWindowSize } from '@vueuse/core'
-import { IonButton, modalController } from '@ionic/vue'
+import { useInterval, usePointer, usePointerSwipe } from '@vueuse/core'
+import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
@@ -22,54 +22,49 @@ const steps = ref([
     title: i18n.t('Welcome to Cryptocity Points'),
     description: i18n.t('Points are a loyalty rewards you can earn and pay with.'),
     svg: NimPointsExchangeSvg,
-    button: i18n.t('Go To Points'),
   },
   {
     title: i18n.t('Pay with Points'),
     description: i18n.t('Pay with Points instead of NIM wherever they\'re accepted.'),
     svg: PayWithPointsSvg,
     isSvgFullWidth: true,
-    button: i18n.t('Got It'),
   },
   {
     title: i18n.t('Get Points'),
     description: i18n.t('Get Points as cashback rewards or complete challenges to earn them.'),
     svg: CompletedTasksSvg,
-    button: i18n.t('Got It'),
   },
 ])
 
 const isAnimating = ref(false)
 const interval = 100
 const msBeforeNextSlide = 5 * 1e3
-const { counter, reset, pause, resume } = useInterval(interval, { controls: true, immediate: false })
+const { counter, reset, pause, resume, isActive } = useInterval(interval, { controls: true, immediate: false })
 const slideCounter = computed(() => counter.value / (msBeforeNextSlide / interval))
-const { pressure } = usePointer()
 
 const scroller = ref<HTMLElement>()
-const scrollerItems = ref<HTMLElement[]>([])
 const activeIndex = ref(0)
-const slideWidth = computed(() => scrollerItems.value.at(activeIndex.value)?.clientWidth)
-const { nextSlide, prevSlide, goToSlide } = useCarousel(scroller, slideWidth, { activeIndex })
+const { nextSlide, prevSlide } = useCarousel(scroller, { activeIndex })
 const { isSwiping, direction } = usePointerSwipe(scroller)
+const { pressure } = usePointer({ target: scroller })
+
 const isLast = computed(() => activeIndex.value === steps.value.length - 1)
 
 function next() {
-  if (isLast.value)
-    goToSlide(0)
-  else
+  if (isLast.value) {
+    pause()
+  }
+  else {
     nextSlide()
-
-  reset()
+    reset()
+  }
 }
 
 function prev() {
-  if (activeIndex.value === 0)
-    goToSlide(steps.value.length - 1)
-  else
+  if (activeIndex.value !== 0) {
     prevSlide()
-
-  reset()
+    reset()
+  }
 }
 
 watch(slideCounter, (value) => {
@@ -123,11 +118,11 @@ onMounted(() => {
 <template>
   <div v-if="isVisible" class="fixed z-10 flex justify-center w-screen px-16 translate-x-1/2 top-6 right-1/2 gap-x-2">
     <div v-for="(_, i) in steps.length" :key="i" class="overflow-hidden h-[6px] w-full max-w-16 flex rounded-xl bg-space-space-300">
-      <div class="bg-keppel will-change-[width] transition-[width] w-0 ease-in" :class="{ '!w-full': activeIndex > i }" :style="activeIndex === i ? `width: ${slideCounter * 100}%` : ''" />
+      <div class="bg-keppel will-change-[width] transition-[width] w-0 ease-in" :class="{ '!w-full': activeIndex > i || (activeIndex === i && !isActive && !pressure) }" :style="activeIndex === i ? `width: ${slideCounter * 100}%` : ''" />
     </div>
   </div>
-  <ul ref="scroller" class="flex w-[calc(100%+64px)] h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2">
-    <li v-for="{ title, description, svg, isSvgFullWidth, button }, i in steps" :key="i" ref="scrollerItems" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
+  <ul ref="scroller" class="flex w-[calc(100%+64px)] h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2 relative">
+    <li v-for="{ title, description, svg, isSvgFullWidth }, i in steps" :key="i" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-center snap-always [&>*]:px-8">
       <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3">
         {{ title }}
       </h2>
@@ -135,9 +130,11 @@ onMounted(() => {
         {{ description }}
       </p>
       <img v-if="svg" class="w-2/3 m-auto" :src="svg" :class="{ '!w-full !pl-0': isSvgFullWidth }">
-      <IonButton class="w-full mt-auto text-base font-bold uppercase" @click.prevent="() => $emit('done', false)">
-        {{ button }}
-      </IonButton>
     </li>
   </ul>
+  <div class="sticky z-10 flex items-end pb-6">
+    <IonButton v-if="isVisible" class="w-[calc(100vw-64px)] max-w-[360px] text-base font-bold uppercase" @click.prevent="() => $emit('done', false)">
+      {{ $t('Got it') }}
+    </IonButton>
+  </div>
 </template>
