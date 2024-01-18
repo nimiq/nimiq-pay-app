@@ -63,7 +63,7 @@ function handlePay() {
   <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
     <TransactionAmounts :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts.formattedFiat || ''" :payment-method="paymentMethod">
       <template #fee>
-        {{ $t('Fees may apply ~{fee}', { fee: amounts.formattedFee }) }}
+        {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts.formattedFee})` : '' }) }}
       </template>
     </TransactionAmounts>
 
@@ -100,7 +100,7 @@ function handlePay() {
           {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
         <p v-else-if="(!isHtlcActive || !isRemoteOk) && paymentMethod !== PaymentMethod.Points" class="text-pumpkin text-pretty">
-          {{ $t('You cannot pay with NIM yet, wait until the Top Up is completed') }}
+          {{ $t('You cannot pay with NIM yet, wait until the Top-Up is completed') }}
         </p>
         <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
           {{ $t('You don\'t have enough Points for this purchase.') }}

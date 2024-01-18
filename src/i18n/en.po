@@ -53,11 +53,8 @@ msgstr ""
 msgid "Are you sure you want to log out?"
 msgstr ""
 
-#: src/modals/MenuModal.vue:36
-msgid "Backup account"
-msgstr ""
-
 #: src/modals/LogOutModal/Warning.vue:21
+#: src/modals/MenuModal.vue:36
 msgid "Backup Account"
 msgstr ""
 
@@ -156,10 +153,6 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/modals/BackupModal/ShowWords.vue:9
-msgid "Copy the words"
-msgstr ""
-
 #: src/modals/BackupModal/Intro.vue:7
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
@@ -168,20 +161,16 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/modals/ReferralModal.vue:7
-msgid "Crypto adoption needs you! Bring a friend and you both get {amount} in Points."
-msgstr ""
-
 #: src/modals/PointsModal.vue:18
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/stores/points.ts:155
-msgid "Cryptocity Points added"
-msgstr ""
-
 #: src/lib/flows/steps.ts:197
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
+msgstr ""
+
+#: src/stores/points.ts:155
+msgid "Cryptocity Points have been credited"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:26
@@ -247,7 +236,7 @@ msgid "Featured"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:5
-msgid "Fees may apply ~{fee}"
+msgid "Fees may apply {fee}"
 msgstr ""
 
 #: src/views/HomeView.vue:95
@@ -266,6 +255,7 @@ msgstr ""
 msgid "Get Cryptocity Points"
 msgstr ""
 
+#: src/components/OnBoardingScreen.vue:34
 #: src/lib/flows/steps.ts:211
 #: src/lib/flows/steps.ts:238
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
@@ -277,10 +267,6 @@ msgstr ""
 
 #: src/components/OnBoardingScreen.vue:33
 msgid "Get Points"
-msgstr ""
-
-#: src/components/OnBoardingScreen.vue:34
-msgid "Get Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
 #: src/views/SetupView.vue:24
@@ -297,6 +283,10 @@ msgstr ""
 
 #: src/components/OnBoardingScreen.vue:23
 msgid "Got it"
+msgstr ""
+
+#: src/modals/ReferralModal.vue:7
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
 msgstr ""
 
 #: src/modals/ReferralModal.vue:41
@@ -420,7 +410,7 @@ msgstr ""
 
 #: src/modals/LogOutModal/Confirm.vue:16
 msgid ""
-"Log in again with your backup words.\n"
+"Log in again with your recovery words.\n"
 "Please ensure that you have them available before logging out."
 msgstr ""
 
@@ -457,7 +447,7 @@ msgid "No Cashlink found"
 msgstr ""
 
 #: src/modals/BackupModal/Intro.vue:18
-msgid "No One can See me"
+msgid "No one can see me. Continue to words"
 msgstr ""
 
 #: src/composables/useApi.ts:222
@@ -493,16 +483,13 @@ msgstr ""
 msgid "Pay with Cryptocity Points"
 msgstr ""
 
+#: src/components/OnBoardingScreen.vue:28
 #: src/lib/flows/steps.ts:204
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:27
 msgid "Pay with Points"
-msgstr ""
-
-#: src/components/OnBoardingScreen.vue:28
-msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
 #: src/types/transactions.ts:85
@@ -562,7 +549,7 @@ msgid "Please enter a verification code"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:23
-msgid "Points are a loyalty rewards you can earn and pay with."
+msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
 #: src/types/transactions.ts:86
@@ -576,6 +563,10 @@ msgstr ""
 #: src/lib/flows/steps.ts:66
 #: src/lib/flows/steps.ts:94
 msgid "Protect your Nimiq Pay app with a pin."
+msgstr ""
+
+#: src/stores/points.ts:184
+msgid "Purchase"
 msgstr ""
 
 #: src/views/HomeView.vue:16
@@ -637,10 +628,6 @@ msgstr ""
 #: src/modals/MenuModal.vue:33
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
-msgstr ""
-
-#: src/stores/points.ts:184
-msgid "Shop"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:9
@@ -707,7 +694,7 @@ msgid "Test your backup"
 msgstr ""
 
 #: src/modals/BackupModal/Intro.vue:13
-msgid "The backup is a list of 12 words. Please make sure no one can see your screen before continuing."
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
 #: src/composables/useQRScanner.ts:146
@@ -728,7 +715,7 @@ msgid "These Points are made for spending. Get out there and help drive crypto a
 msgstr ""
 
 #: src/views/HomeView.vue:58
-msgid "This is in alpha, please report any bugs and remember to use only TestNIM"
+msgid "This is an early alpha version, please report any bugs and remember to use only Testnet NIM"
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:46
@@ -867,6 +854,10 @@ msgstr ""
 msgid "Withdrawal successful"
 msgstr ""
 
+#: src/modals/BackupModal/ShowWords.vue:9
+msgid "Write down these words"
+msgstr ""
+
 #: src/modals/BackupModal/ShowWords.vue:13
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
@@ -890,7 +881,7 @@ msgid "You can't pay with Points for this purchase."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:42
-msgid "You cannot pay with NIM yet, wait until the Top Up is completed"
+msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:39
@@ -919,7 +910,7 @@ msgid "You received Cryptocity Points"
 msgstr ""
 
 #: src/components/GenericInput.vue:14
-msgid "You will receive {amount} NIM"
+msgid "You will receive {amount} Points"
 msgstr ""
 
 #: src/lib/flows/steps.ts:139

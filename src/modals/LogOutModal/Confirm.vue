@@ -45,7 +45,7 @@ async function handleConfirm() {
       {{ $t('Are you sure you want to log out?') }}
     </h1>
     <p class="self-start mt-4 text-base text-center whitespace-pre-line text-space/60 text-balance">
-      {{ $t('Log in again with your backup words.\nPlease ensure that you have them available before logging out.') }}
+      {{ $t('Log in again with your recovery words.\nPlease ensure that you have them available before logging out.') }}
     </p>
 
     <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="handleConfirm">

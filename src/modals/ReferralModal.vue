@@ -57,7 +57,7 @@ function handleShare() {
     </template>
     <p class="self-start text-space/60 text-balance">
       {{ $t(
-        'Crypto adoption needs you! Bring a friend and you both get {amount} in Points.',
+        'Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points.',
         { amount: formatCrypto(referralCode?.reward || 0, { currency: Crypto.NIM }) },
       ) }}
     </p>

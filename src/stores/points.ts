@@ -152,7 +152,7 @@ export const usePoints = defineStore('points', () => {
     referralCode.value = ''
     setTimeout(() => {
       updatePointsBalance()
-      useToast().setToast({ message: i18n.t('Cryptocity Points added') })
+      useToast().setToast({ message: i18n.t('Cryptocity Points have been credited') })
     }, 750)
   }
 
@@ -181,7 +181,7 @@ export const usePoints = defineStore('points', () => {
       message,
       fee,
       merchantCategory: merchantCategory || MerchantCategory.Shop,
-      merchantName: merchantName || i18n.t('Shop'),
+      merchantName: merchantName || i18n.t('Purchase'),
       proofSize: -1,
       raw: JSON.stringify(request),
       // Payments using points are only possible with CPL

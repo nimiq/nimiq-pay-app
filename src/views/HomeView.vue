@@ -55,7 +55,7 @@ const notificationArray = ref([
   },
   {
     get title() { return i18n.t('Alpha Testing') },
-    get subtitle() { return i18n.t('This is in alpha, please report any bugs and remember to use only TestNIM') },
+    get subtitle() { return i18n.t('This is an early alpha version, please report any bugs and remember to use only Testnet NIM') },
     action: () => console.log('Notification Card 2 clicked'), // eslint-disable-line no-console
   },
   {

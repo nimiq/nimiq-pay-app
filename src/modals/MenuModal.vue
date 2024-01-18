@@ -60,7 +60,7 @@ onLongPress(
       {{ $t('Settings') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.Backup)">
-      {{ $t('Backup account') }}
+      {{ $t('Backup Account') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
       {{ $t('Log Out') }}

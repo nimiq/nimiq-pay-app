@@ -20,18 +20,18 @@ defineEmits(stepEmits)
 const steps = ref([
   {
     title: i18n.t('Welcome to Cryptocity Points'),
-    description: i18n.t('Points are a loyalty rewards you can earn and pay with.'),
+    description: i18n.t('Points are loyalty rewards you can earn and pay with.'),
     svg: NimPointsExchangeSvg,
   },
   {
     title: i18n.t('Pay with Points'),
-    description: i18n.t('Pay with Points instead of NIM wherever they\'re accepted.'),
+    description: i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.'),
     svg: PayWithPointsSvg,
     isSvgFullWidth: true,
   },
   {
     title: i18n.t('Get Points'),
-    description: i18n.t('Get Points as cashback rewards or complete challenges to earn them.'),
+    description: i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.'),
     svg: CompletedTasksSvg,
   },
 ])

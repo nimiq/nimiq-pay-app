@@ -21,12 +21,12 @@ const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
       <div class="flex items-start justify-center font-semibold gap-x-2 text-space/60">
         <InfoIcon class="h-6 w-6 stroke-[1.5] text-space/60" />
         <span>
-          {{ $t('The backup is a list of 12 words. Please make sure no one can see your screen before continuing.') }}
+          {{ $t('The backup is a list of 12 English words. Please make sure no one can see your screen before continuing.') }}
         </span>
       </div>
       <!-- TODO: ask for pin before showing words -->
       <IonButton class="w-full mt-6 text-base" @click="nav.push(markRaw(ShowWords))">
-        {{ $t('No One can See me') }}
+        {{ $t('No one can see me. Continue to words') }}
       </IonButton>
     </div>
   </ModalTemplate>

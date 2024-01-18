@@ -31,7 +31,7 @@ const words = asyncComputed(async () => {
       </IonButtons>
     </template>
     <template #title>
-      {{ $t('Copy the words') }}
+      {{ $t('Write down these words') }}
     </template>
     <template #subtitle>
       <span class="whitespace-pre-line">
