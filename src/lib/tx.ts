@@ -23,7 +23,7 @@ import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
 export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
-      return { error: i18n.t('Remote address is undefined'), data: undefined }
+      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.Account.Type.HTLC,
@@ -55,10 +55,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
     if (!useRemoteSigner().isHtlcActive)
-      return { error: i18n.t('There is no active HTLC'), data: undefined }
+      return { error: i18n.t('No account has been created yet, or it is currently processing funds'), data: undefined }
     const sender = useRemoteSigner().remoteAddress
     if (!sender)
-      return { error: i18n.t('There is no sender address provided. Sender: {sender}', { sender }), data: undefined }
+      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
 
     const tx = new Nimiq.ExtendedTransaction(
       /* sender */ sender,
@@ -131,7 +131,7 @@ interface GetSignedTxByRemoteArgs {
 
 async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
-    return { data: undefined, error: i18n.t('Remote address is undefined') }
+    return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
   // eslint-disable-next-line no-console
   console.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })

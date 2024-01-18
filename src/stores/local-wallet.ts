@@ -16,7 +16,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   async function getWords(): AsyncResult<string[]> {
     if (!entropy.value)
-      return { error: i18n.t('The entropy is not defined'), data: undefined }
+      return { error: i18n.t('No account has been found'), data: undefined }
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
@@ -29,7 +29,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       return { data: undefined, error: undefined }
     }
     catch (error) {
-      let errorMessage = (error as Error).message || i18n.t('Unknown error importing words')
+      let errorMessage = (error as Error).message || i18n.t('An unknown error occurred while importing words')
       // Translate and reword Nimiq core error messages
       const invalidWordErrorMatch = errorMessage.match(/^Invalid mnemonic, word >(.*)< is not in wordlist$/)
       if (invalidWordErrorMatch) {

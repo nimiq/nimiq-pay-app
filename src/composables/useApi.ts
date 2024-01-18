@@ -17,7 +17,7 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
-  const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error {method} {url}: {error}', {
+  const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error during {method} request to {url}: {error}', {
     method,
     url: url.href,
     error,
@@ -28,12 +28,12 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
 
   if (!response.ok) {
     return {
-      error: i18n.t('Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}', {
+      error: i18n.t('Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}.', {
         url: url.href,
         status: response.status,
         statusText: response.statusText,
-        response: JSON.stringify(response),
         data: JSON.stringify(await response.json()),
+        metadata: JSON.stringify(response),
       }),
       data: undefined,
     }
@@ -83,7 +83,7 @@ export function usePointsApi() {
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
     const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (error)
-      return { data: undefined, error: error || i18n.t('Payment not valid') }
+      return { data: undefined, error: error || i18n.t('Payment invalid') }
     return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined }
   }
 
@@ -134,14 +134,14 @@ export function useRemoteSignerApi() {
   async function getStatus(): AsyncResult<StatusRes> {
     const { data, error } = await api<StatusRes>(new URL('/status', baseWalletUrl))
     if (error || data?.status !== 'good')
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
     return { data: data!, error: undefined }
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
     const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseWalletUrl))
     if (error || !data?.address)
-      return { data: undefined, error: error || i18n.t('No remote signer found') }
+      return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
 
     // The response from the server is verbose, and since these fields are used widely in the logic of the app
     // we extract them here and return a simpler object.
@@ -219,7 +219,7 @@ export function useCplApi() {
     }
     const { data, error } = await api<OrderByIdFirestoreRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('No order found') }
+      return { data: undefined, error: error || i18n.t('No payment details found') }
     const parsed: OrderByIdRes = {
       name: data.name,
       createTime: data.createTime,

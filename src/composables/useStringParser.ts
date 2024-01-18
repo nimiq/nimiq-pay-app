@@ -48,7 +48,7 @@ export function useStringParser() {
     else if (rail === Rail.GoCrypto)
       return { error: i18n.t('GoCrypto is not yet supported.'), data: undefined }
     return {
-      error: i18n.t('Invalid QR code. Only NIM transactions from Crypto Payment Links are supported.'),
+      error: i18n.t('Invalid link format. CPLinks are only supported for NIM.'),
       data: undefined,
     }
   }
@@ -70,19 +70,19 @@ export function useStringParser() {
   async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData>> {
     if (protocol !== 'nimiq:') {
       return {
-        error: i18n.t('Invalid protocol. Only NIM transactions from Crypto Payment Links are supported.'),
+        error: i18n.t('Invalid link format. CPLinks are only supported for NIM.'),
         data: undefined,
       }
     }
 
     if (!searchParams.has(CPL_URL_PARAM_ID))
-      return { error: i18n.t('Invalid Crypto Payment Link. Missing cpl_id.'), data: undefined }
+      return { error: i18n.t('Invalid CPLink. Missing id.'), data: undefined }
 
     const rawAmount = searchParams.get('amount') || '0'
     const nimAmount = Math.round(Number.parseFloat(rawAmount))
 
     if (!nimAmount || !recipient)
-      return { error: i18n.t('Invalid Crypto Payment Link. Missing amount or recipient.'), data: undefined }
+      return { error: i18n.t('Invalid CPLink. Missing amount or recipient.'), data: undefined }
 
     const lunaAmount = nimAmount * 1e5
     const fee = 0 // There is no fee in NIM (yay)
@@ -93,11 +93,11 @@ export function useStringParser() {
     const merchantCategory = MerchantCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
 
     if (!paymentRef)
-      return { error: i18n.t('Invalid Crypto Payment Link. Missing cpl_id.'), data: undefined }
+      return { error: i18n.t('Invalid CPLink. Missing id.'), data: undefined }
 
     const { data: cplRes, error } = await useCplApi().getOrderById({ id: paymentRef })
     if (error || !cplRes)
-      return { error: i18n.t('Invalid Crypto Payment Link. Could not fetch order.'), data: undefined }
+      return { error: i18n.t('Invalid CPLink. Could not fetch payment details.'), data: undefined }
 
     const { fiatCurrency, fiatAmount, itemDescription } = cplRes
     const fiatFeeAmount = 0 // There is no fee in NIM (yay)

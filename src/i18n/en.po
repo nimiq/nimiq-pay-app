@@ -27,6 +27,12 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
+#: src/stores/nimiq-network.ts:72
+#: src/stores/nimiq-network.ts:89
+#: src/stores/nimiq-network.ts:98
+msgid "Address missing"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:91
 msgid "All"
 msgstr ""
@@ -37,6 +43,10 @@ msgstr ""
 
 #: src/views/HomeView.vue:57
 msgid "Alpha Testing"
+msgstr ""
+
+#: src/stores/local-wallet.ts:32
+msgid "An unknown error occurred while importing words"
 msgstr ""
 
 #: src/modals/LogOutModal/Confirm.vue:13
@@ -125,10 +135,6 @@ msgstr ""
 msgid "Consensus established."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:34
-msgid "Consensus lost."
-msgstr ""
-
 #: src/components/PhoneInput.vue:24
 #: src/modals/BackupModal/ShowWords.vue:18
 msgid "Continue"
@@ -209,7 +215,7 @@ msgid "Enter recovery words"
 msgstr ""
 
 #: src/lib/flows/steps.ts:161
-msgid "Enter the code from the SMS sent to"
+msgid "Enter the code from the SMS sent to you."
 msgstr ""
 
 #: src/lib/flows/steps.ts:30
@@ -221,19 +227,11 @@ msgid "Enter your referral promo code."
 msgstr ""
 
 #: src/composables/useApi.ts:20
-msgid "Error {method} {url}: {error}"
-msgstr ""
-
-#: src/lib/flows/steps.ts:152
-msgid "Error authorizing phone number"
+msgid "Error during {method} request to {url}: {error}"
 msgstr ""
 
 #: src/composables/useApi.ts:31
-msgid "Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}"
-msgstr ""
-
-#: src/lib/flows/steps.ts:174
-msgid "Error verifying phone number"
+msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
 msgstr ""
 
 #: src/types/transactions.ts:100
@@ -317,17 +315,27 @@ msgstr ""
 msgid "Insufficient funds"
 msgstr ""
 
+#. For transactions that got rejected by the mempool.
+#: src/types/transactions.ts:99
+msgid "Invalid"
+msgstr ""
+
 #: src/composables/useStringParser.ts:100
-msgid "Invalid Crypto Payment Link. Could not fetch order."
+msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
 #: src/composables/useStringParser.ts:85
-msgid "Invalid Crypto Payment Link. Missing amount or recipient."
+msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
 #: src/composables/useStringParser.ts:79
 #: src/composables/useStringParser.ts:96
-msgid "Invalid Crypto Payment Link. Missing cpl_id."
+msgid "Invalid CPLink. Missing id."
+msgstr ""
+
+#: src/composables/useStringParser.ts:51
+#: src/composables/useStringParser.ts:73
+msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
 #: src/composables/useStringParser.ts:21
@@ -357,16 +365,8 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useStringParser.ts:73
-msgid "Invalid protocol. Only NIM transactions from Crypto Payment Links are supported."
-msgstr ""
-
 #: src/composables/useQRScanner.ts:94
 msgid "Invalid QR code"
-msgstr ""
-
-#: src/composables/useStringParser.ts:51
-msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
 msgstr ""
 
 #: src/stores/local-wallet.ts:43
@@ -379,10 +379,6 @@ msgstr ""
 
 #: src/composables/useStringParser.ts:42
 msgid "Invalid URL: {url}"
-msgstr ""
-
-#: src/types/transactions.ts:99
-msgid "Invalidated"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:28
@@ -436,6 +432,10 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
+#: src/stores/nimiq-network.ts:34
+msgid "Network consensus lost."
+msgstr ""
+
 #: src/types/transactions.ts:96
 msgid "New"
 msgstr ""
@@ -444,17 +444,16 @@ msgstr ""
 msgid "No account found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:89
-#: src/stores/nimiq-network.ts:98
-msgid "No address given"
+#: src/lib/tx.ts:58
+msgid "No account has been created yet, or it is currently processing funds"
+msgstr ""
+
+#: src/stores/local-wallet.ts:19
+msgid "No account has been found"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:63
 msgid "No Cashlink found"
-msgstr ""
-
-#: src/stores/nimiq-network.ts:72
-msgid "No Nimiq Wallet address found"
 msgstr ""
 
 #: src/modals/BackupModal/Intro.vue:18
@@ -462,20 +461,7 @@ msgid "No One can See me"
 msgstr ""
 
 #: src/composables/useApi.ts:222
-msgid "No order found"
-msgstr ""
-
-#: src/stores/points.ts:145
-#: src/stores/points.ts:38
-msgid "No phone number set"
-msgstr ""
-
-#: src/stores/points.ts:149
-msgid "No referral code set"
-msgstr ""
-
-#: src/composables/useApi.ts:144
-msgid "No remote signer found"
+msgid "No payment details found"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:101
@@ -524,7 +510,7 @@ msgid "Payment"
 msgstr ""
 
 #: src/composables/useApi.ts:86
-msgid "Payment not valid"
+msgid "Payment invalid"
 msgstr ""
 
 #: src/lib/flows/steps.ts:262
@@ -534,6 +520,11 @@ msgstr ""
 
 #: src/types/transactions.ts:97
 msgid "Pending"
+msgstr ""
+
+#: src/stores/points.ts:145
+#: src/stores/points.ts:38
+msgid "Phone number missing"
 msgstr ""
 
 #: src/stores/points.ts:103
@@ -578,6 +569,10 @@ msgstr ""
 msgid "Points Payment"
 msgstr ""
 
+#: src/stores/points.ts:149
+msgid "Promo code missing"
+msgstr ""
+
 #: src/lib/flows/steps.ts:66
 #: src/lib/flows/steps.ts:94
 msgid "Protect your Nimiq Pay app with a pin."
@@ -585,11 +580,6 @@ msgstr ""
 
 #: src/views/HomeView.vue:16
 msgid "Recovery Words"
-msgstr ""
-
-#: src/lib/tx.ts:134
-#: src/lib/tx.ts:26
-msgid "Remote address is undefined"
 msgstr ""
 
 #: src/lib/flows/steps.ts:162
@@ -658,19 +648,42 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/composables/useApi.ts:137
-#: src/stores/points.ts:107
-#: src/stores/points.ts:124
-#: src/stores/points.ts:138
-#: src/stores/points.ts:42
-#: src/stores/points.ts:56
-#: src/stores/points.ts:67
-#: src/stores/points.ts:79
+#: src/lib/flows/steps.ts:312
 msgid "Something went wrong"
 msgstr ""
 
 #: src/components/GenericInput.vue:29
-msgid "Something went wrong when checking the promo code"
+#: src/stores/points.ts:124
+#: src/stores/points.ts:138
+msgid "Something went wrong checking the promo code"
+msgstr ""
+
+#: src/composables/useDecrypt.ts:63
+#: src/composables/useDecrypt.ts:66
+#: src/lib/flows/steps.ts:123
+msgid "Something went wrong decrypting the database"
+msgstr ""
+
+#: src/composables/useApi.ts:137
+#: src/composables/useApi.ts:144
+#: src/lib/tx.ts:134
+#: src/lib/tx.ts:26
+#: src/lib/tx.ts:61
+msgid "Something went wrong syncing your account"
+msgstr ""
+
+#: src/stores/points.ts:107
+#: src/stores/points.ts:67
+#: src/stores/points.ts:79
+msgid "Something went wrong updating the tasks"
+msgstr ""
+
+#: src/stores/points.ts:56
+msgid "Something went wrong updating your Points"
+msgstr ""
+
+#: src/stores/points.ts:42
+msgid "Something went wrong verifying the phone number"
 msgstr ""
 
 #: src/components/PhoneInput.vue:11
@@ -697,10 +710,6 @@ msgstr ""
 msgid "The backup is a list of 12 words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/stores/local-wallet.ts:19
-msgid "The entropy is not defined"
-msgstr ""
-
 #: src/composables/useQRScanner.ts:146
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
@@ -710,26 +719,8 @@ msgstr ""
 msgid "There is no \"Forgot Password\""
 msgstr ""
 
-#: src/lib/tx.ts:58
-msgid "There is no active HTLC"
-msgstr ""
-
 #: src/components/PaymentPreview.vue:54
 msgid "There is no cashback reward when paying with Points."
-msgstr ""
-
-#: src/lib/tx.ts:61
-msgid "There is no sender address provided. Sender: {sender}"
-msgstr ""
-
-#: src/composables/useDecrypt.ts:63
-#: src/composables/useDecrypt.ts:66
-#: src/lib/flows/steps.ts:123
-msgid "There was an error"
-msgstr ""
-
-#: src/lib/flows/steps.ts:312
-msgid "There was an error."
 msgstr ""
 
 #: src/modals/ExpiringPointsModal.vue:7
@@ -749,7 +740,7 @@ msgid "This promo code has been claimed too many times"
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:71
-msgid "This purchase gets you {amount} in Points."
+msgid "This purchase gets you {amount} Points."
 msgstr ""
 
 #: src/components/NimWithdraw.vue:65
@@ -766,20 +757,16 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:88
-msgid "Transaction became invalid"
+#: src/stores/transactions.ts:89
+msgid "Transaction invalid"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:48
-msgid "Trying to establish consensus:"
+msgid "Trying to establish network consensus:"
 msgstr ""
 
 #: src/types/transactions.ts:105
 msgid "Unknown"
-msgstr ""
-
-#: src/stores/local-wallet.ts:32
-msgid "Unknown error importing words"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:28
@@ -906,10 +893,6 @@ msgstr ""
 msgid "You cannot pay with NIM yet, wait until the Top Up is completed"
 msgstr ""
 
-#: src/composables/usePointsPayment.ts:59
-msgid "You don't have enough Cryptocity Points for this purchase."
-msgstr ""
-
 #: src/components/PaymentPreview.vue:39
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
@@ -919,6 +902,7 @@ msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:45
+#: src/composables/usePointsPayment.ts:59
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 

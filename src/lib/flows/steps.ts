@@ -120,7 +120,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
       return
     }
     if (!decrypted.value) {
-      err(i18n.t('There was an error'))
+      err(i18n.t('Something went wrong decrypting the database'))
       return
     }
 
@@ -149,7 +149,7 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
     else {
       const res = await (await import('@/stores/points')).usePoints().authorize(phoneNumber)
       if (res && res.error)
-        err(res.error || i18n.t('Error authorizing phone number'))
+        err(res.error)
       else next()
     }
   },
@@ -158,7 +158,7 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
 export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
   get title() { return i18n.t('Confirm your phone number') },
-  get description() { return i18n.t('Enter the code from the SMS sent to') },
+  get description() { return i18n.t('Enter the code from the SMS sent to you.') },
   main: markRaw(props => h(CodeInput, { ...props, inputLength: 6, backButtonText: i18n.t('Resend') })),
   beforeNext: async ({ phoneNumberConfirm }, { next, prev, err }) => {
     if (!phoneNumberConfirm) {
@@ -171,7 +171,7 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
     else {
       const res = await (await import('@/stores/points')).usePoints().verify(phoneNumberConfirm)
       if (res && res.error)
-        err(res.error || i18n.t('Error verifying phone number'))
+        err(res.error)
       else
         next()
     }
@@ -309,7 +309,7 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
       const { setToast } = (await import('@/composables/useToast')).useToast()
 
       if (error) {
-        setToast({ message: `${i18n.t('There was an error.')}\n${error}`, error: !!error })
+        setToast({ message: `${i18n.t('Something went wrong')}.\n${error}`, error: !!error })
       }
       else {
         setToast({ message: i18n.t('Withdrawal successful') })

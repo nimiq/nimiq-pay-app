@@ -26,7 +26,7 @@ watch(referralCode, async (newValue) => {
     try {
       const { data, error } = await getReferralInfoById(referralCode.value)
       if (error || !data)
-        throw new Error(error || i18n.t('Something went wrong when checking the promo code'))
+        throw new Error(error || i18n.t('Something went wrong checking the promo code'))
 
       const { reward, claims_remaining } = data
 

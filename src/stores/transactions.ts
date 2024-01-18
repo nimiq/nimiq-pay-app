@@ -84,8 +84,9 @@ export const useTransactions = defineStore('transactions', () => {
     }
     const details = await client.value!.sendTransaction(signedTx!)
     if (details.state === 'invalidated') {
-      console.error('Transaction was invalidated', details)
-      return { data: undefined, error: i18n.t('Transaction became invalid') }
+      // Transaction was rejected by the mempool
+      console.error('Transaction invalid', details)
+      return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
     const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()

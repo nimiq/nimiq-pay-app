@@ -56,7 +56,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
 
     if (usePoints().pointsBalance < toValue(amount)) {
       pointsState.value = PointsState.InsufficientPoints
-      message.value = i18n.t('You don\'t have enough Cryptocity Points for this purchase.')
+      message.value = i18n.t('You don\'t have enough Points for this purchase.')
       return
     }
 
@@ -68,7 +68,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
     }
 
     cashback.value = amountInLuna
-    message.value = i18n.t('This purchase gets you {amount} in Points.', { amount: (amountInLuna / 1e5).toFixed(2) })
+    message.value = i18n.t('This purchase gets you {amount} Points.', { amount: (amountInLuna / 1e5).toFixed(2) })
     pointsState.value = PointsState.Eligible
   }
 

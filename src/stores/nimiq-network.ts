@@ -31,7 +31,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established')
         setToast({
-          message: `${i18n.t('Consensus lost.')} ${translateConsensus(newConsensus)}`,
+          message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
           error: true,
           keepOpen: true,
         })
@@ -45,7 +45,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
     catch {
       setToast({
-        message: `${i18n.t('Trying to establish consensus:')} ${translateConsensus(consensus.value)}`,
+        message: `${i18n.t('Trying to establish network consensus:')} ${translateConsensus(consensus.value)}`,
         error: true,
         keepOpen: true,
       })
@@ -69,7 +69,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     const { balance } = await client.value!.getAccount(wallet.address)
     const amount = Math.min(buf.readUint64(), balance)
     if (!address)
-      throw new Error(i18n.t('No Nimiq Wallet address found'))
+      throw new Error(i18n.t('Address missing'))
     if (amount <= 0)
       throw new Error(i18n.t('Cashlink has no balance'))
 
@@ -86,7 +86,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
   async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account> {
     if (!address)
-      return { data: undefined, error: i18n.t('No address given') }
+      return { data: undefined, error: i18n.t('Address missing') }
     const account = await client.value?.getAccount(address)
     if (!account)
       return { data: undefined, error: i18n.t('No account found') }
@@ -95,7 +95,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
   async function getAccountTransactions(address: Nimiq.Address | undefined, limit = 30) {
     if (!address)
-      return { data: [], error: i18n.t('No address given') }
+      return { data: [], error: i18n.t('Address missing') }
     const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, limit)
     if (!transactions)
       return { data: [], error: i18n.t('No transactions found') }

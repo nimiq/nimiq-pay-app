@@ -35,11 +35,11 @@ export const usePoints = defineStore('points', () => {
    */
   async function verify(accessCodeInput: string) {
     if (!phoneNumber.value)
-      return { data: undefined, error: i18n.t('No phone number set') }
+      return { data: undefined, error: i18n.t('Phone number missing') }
 
     const { data, error } = await api.verify({ phoneNumber, accessCode: accessCodeInput })
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong verifying the phone number') }
 
     pointsToken.value = data.token
 
@@ -53,7 +53,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getBalance({ token: pointsToken.value })
     if (error || !data)
-      return error || i18n.t('Something went wrong')
+      return error || i18n.t('Something went wrong updating your Points')
 
     pointsBalance.value = data.balance
   }
@@ -64,7 +64,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getTasks({ token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
 
     return { data, error }
   }
@@ -76,7 +76,7 @@ export const usePoints = defineStore('points', () => {
     // TODO: add types to this
     const { data, error } = await api.getTaskById({ id, token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
 
     return { data, error: undefined }
   }
@@ -104,7 +104,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.claimTask({ id, token: pointsToken.value, answer })
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
 
     await updatePointsBalance()
     await updateTasks()
@@ -121,7 +121,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await api.getReferralInfo({ token: pointsToken.value })
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong checking the promo code') }
 
     return { data, error: undefined }
   }
@@ -135,18 +135,18 @@ export const usePoints = defineStore('points', () => {
     const { data, error } = await api.getReferralById({ id })
 
     if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong') }
+      return { data: undefined, error: error || i18n.t('Something went wrong checking the promo code') }
 
     return { data, error: undefined }
   }
 
   async function redeemReferral() {
     if (!phoneNumber.value)
-      return { data: undefined, error: i18n.t('No phone number set') }
+      return { data: undefined, error: i18n.t('Phone number missing') }
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
     if (!referralCode.value)
-      return { data: undefined, error: i18n.t('No referral code set') }
+      return { data: undefined, error: i18n.t('Promo code missing') }
 
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''

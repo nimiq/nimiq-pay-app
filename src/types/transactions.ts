@@ -96,7 +96,7 @@ export function translateTransactionState(state: Nimiq.Client.TransactionState) 
     new: i18n.t('New'),
     pending: i18n.t('Pending'),
     mined: i18n.t('Confirming'), // We display a just mined, but not yet confirmed transactions as confirming.
-    invalidated: i18n.t('Invalidated'),
+    invalidated: i18n.t('Invalid'), // For transactions that got rejected by the mempool.
     expired: i18n.t('Expired'),
     confirmed: i18n.t('Confirmed'),
   }
