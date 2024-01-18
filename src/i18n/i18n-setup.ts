@@ -5,10 +5,11 @@ import { useApp } from '@/stores/app'
 // import { setLanguage as setVueComponentsLanguage } from '@nimiq/vue3-components'
 
 const DEFAULT_LANGUAGE = 'en'
-export const SUPPORTED_LANGUAGES = [DEFAULT_LANGUAGE] as const
+export const SUPPORTED_LANGUAGES = [DEFAULT_LANGUAGE, 'de'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 export const LANGUAGE_LABELS: Record<SupportedLanguage, string> = {
   en: 'English',
+  de: 'Deutsch',
 }
 
 const loadedLanguages: SupportedLanguage[] = []
