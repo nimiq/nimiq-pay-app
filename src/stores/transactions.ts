@@ -152,11 +152,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   function addTransaction(tx: ExternalTransaction) {
-    const index = transactions.value.findIndex(t => t.hash === tx.hash)
-    if (index === -1)
-      transactions.value = [tx, ...transactions.value]
-    else
-      transactions.value = [...transactions.value.slice(0, index), tx, ...transactions.value.slice(index + 1)]
+    transactions.value = [tx, ...transactions.value].sort((a, b) => b.timestamp - a.timestamp)
   }
 
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
