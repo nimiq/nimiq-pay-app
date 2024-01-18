@@ -148,7 +148,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/stores/points.ts:156
+#: src/stores/points.ts:155
 msgid "Cryptocity Points added"
 msgstr ""
 
@@ -296,16 +296,16 @@ msgstr ""
 msgid "Insufficient funds"
 msgstr ""
 
-#: src/composables/useStringParser.ts:98
+#: src/composables/useStringParser.ts:100
 msgid "Invalid Crypto Payment Link. Could not fetch order."
 msgstr ""
 
-#: src/composables/useStringParser.ts:83
+#: src/composables/useStringParser.ts:85
 msgid "Invalid Crypto Payment Link. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:77
-#: src/composables/useStringParser.ts:94
+#: src/composables/useStringParser.ts:79
+#: src/composables/useStringParser.ts:96
 msgid "Invalid Crypto Payment Link. Missing cpl_id."
 msgstr ""
 
@@ -336,7 +336,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useStringParser.ts:71
+#: src/composables/useStringParser.ts:73
 msgid "Invalid protocol. Only NIM transactions from Crypto Payment Links are supported."
 msgstr ""
 
@@ -428,12 +428,12 @@ msgstr ""
 msgid "No order found"
 msgstr ""
 
-#: src/stores/points.ts:146
-#: src/stores/points.ts:39
+#: src/stores/points.ts:145
+#: src/stores/points.ts:38
 msgid "No phone number set"
 msgstr ""
 
-#: src/stores/points.ts:150
+#: src/stores/points.ts:149
 msgid "No referral code set"
 msgstr ""
 
@@ -457,7 +457,6 @@ msgstr ""
 msgid "Open Wallet"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:101
 #: src/components/PaymentPreview.vue:64
 #: src/views/HomeView.vue:132
 msgid "Pay"
@@ -483,7 +482,7 @@ msgstr ""
 msgid "Pay with Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/types/transactions.ts:86
+#: src/types/transactions.ts:85
 msgid "Payment"
 msgstr ""
 
@@ -496,13 +495,13 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/stores/points.ts:104
-#: src/stores/points.ts:121
-#: src/stores/points.ts:148
-#: src/stores/points.ts:162
-#: src/stores/points.ts:53
-#: src/stores/points.ts:64
-#: src/stores/points.ts:75
+#: src/stores/points.ts:103
+#: src/stores/points.ts:120
+#: src/stores/points.ts:147
+#: src/stores/points.ts:161
+#: src/stores/points.ts:52
+#: src/stores/points.ts:63
+#: src/stores/points.ts:74
 msgid "Phone number not verified"
 msgstr ""
 
@@ -534,7 +533,7 @@ msgstr ""
 msgid "Points are a loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:87
+#: src/types/transactions.ts:86
 msgid "Points Payment"
 msgstr ""
 
@@ -588,6 +587,10 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
+#: src/components/NimWithdraw.vue:101
+msgid "Send"
+msgstr ""
+
 #: src/lib/flows/steps.ts:346
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
@@ -605,7 +608,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/stores/points.ts:185
+#: src/stores/points.ts:184
 msgid "Shop"
 msgstr ""
 
@@ -702,7 +705,7 @@ msgid "To credit card / bank account"
 msgstr ""
 
 #: src/modals/MenuModal.vue:14
-#: src/types/transactions.ts:84
+#: src/types/transactions.ts:83
 #: src/views/HomeView.vue:46
 msgid "Top-Up"
 msgstr ""
@@ -711,7 +714,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:89
+#: src/stores/transactions.ts:88
 msgid "Transaction became invalid"
 msgstr ""
 
@@ -813,7 +816,7 @@ msgstr ""
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:85
+#: src/types/transactions.ts:84
 msgid "Withdrawal"
 msgstr ""
 

@@ -198,7 +198,7 @@ function withdraw() {
         <IonSpinner class="text-white" name="dots" />
       </template>
       <template v-else>
-        {{ $t('Pay') }}
+        {{ $t('Send') }}
       </template>
     </IonButton>
   </div>
