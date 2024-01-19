@@ -16,9 +16,9 @@ export function useTransactionSearch() {
   const { results: filteredTransactions } = useFuse(searchQuery, allTransactions, { fuseOptions: {
     keys: [{
       name: 'title',
-      getFn: tx => translateTransactionTitle(tx.title),
+      getFn: (tx: ExternalTransaction) => translateTransactionTitle(tx.title),
     }, /* untranslated title */ 'title', 'message', 'merchantName', 'merchantCategory', 'amount'],
-    sortFn: ({ item: a }, { item: b }) => (b.timestamp as unknown as number) - (a.timestamp as unknown as number),
+    sortFn: ({ item: a }: { item: ExternalTransaction }, { item: b }: { item: ExternalTransaction }) => (b.timestamp as number) - (a.timestamp as number),
     ignoreLocation: true,
   } })
 
