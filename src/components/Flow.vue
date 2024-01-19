@@ -24,6 +24,8 @@ const scrollerItems = ref<HTMLElement[]>([])
 const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, { activeIndex })
 
 const activeStep = computed(() => steps.value.slice(-1)[0])
+// Get the element in screen knowing the active step using the li key
+const activeElement = computed(() => scrollerItems.value[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
 
@@ -91,19 +93,17 @@ function onCancel() {
 
 const isVisible = ref(false)
 // We track the intersection of each step with a number from 0 to 1.
-useIntersectionObserver(scrollerItems, ([{ intersectionRatio, target }]) => {
-  const index = scrollerItems.value.indexOf(target as HTMLElement)
-  // TODO: remove when focus is working in every device (mobile + tablet)
-  if (intersectionRatio === 1 && index === activeIndex.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
+useIntersectionObserver(activeElement, ([{ intersectionRatio }]) => {
+  isVisible.value =  intersectionRatio === 1
+  if (isVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
   // If it's not input step or autofocus is false, blur the input previously focused
-  else if (intersectionRatio === 1 && index === activeIndex.value)
+  else if (isVisible.value)
     blur()
 
-  isVisible.value = index === activeIndex.value && intersectionRatio === 1
-
-  console.log({ index, intersectionRatio, activeIndex: activeIndex.value, target, autofocus: activeStep.value.autofocus, isVisible: isVisible.value })
-}, { threshold: [0, 0.5, 1] })
+  // TODO: remove when focus is working in every device (mobile + tablet)
+  console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isVisible: isVisible.value })
+}, { threshold: [0, 0.5, 1], root: scroller })
 
 function focus() {
   const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement
