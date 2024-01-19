@@ -271,7 +271,7 @@ msgstr ""
 msgid "GoCrypto is not yet supported."
 msgstr ""
 
-#: src/components/OnBoardingScreen.vue:19
+#: src/components/OnBoardingScreen.vue:22
 msgid "Got it"
 msgstr ""
 
@@ -580,6 +580,10 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:14
 msgid "Select withdrawal address"
+msgstr ""
+
+#: src/components/NimWithdraw.vue:101
+msgid "Send"
 msgstr ""
 
 #: src/lib/flows/steps.ts:347
