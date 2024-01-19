@@ -46,13 +46,15 @@ export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
   get title() { return i18n.t('Enter recovery words') },
   main: markRaw(BrickInput),
-  beforeNext: async ({ recoveryWordsStep }, { next, err }) => {
+  beforeNext: async (state, { next, err }) => {
     const { importWords } = (await import('@/stores/local-wallet')).useLocalWallet()
-    const { error } = importWords(recoveryWordsStep)
-    if (error)
-      err(error)
-    else
+    const { error } = importWords(state.recoveryWordsStep)
+    if (error) { err(error) }
+    else {
+      // Clear recovery words from memory just in case
+      state[StepName.RecoveryWordsStep] = []
       next()
+    }
   },
 })
 
