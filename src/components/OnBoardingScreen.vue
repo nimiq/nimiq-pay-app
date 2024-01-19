@@ -101,7 +101,7 @@ watch(pressure, (value) => {
 
 <template>
   <Transition name="slide-fade" :duration="150">
-    <div v-if="isVisible" class="fixed z-10 flex justify-center w-screen px-16 translate-x-1/2 top-6 right-1/2 gap-x-2">
+    <div v-if="isVisible" class="fixed z-10 flex justify-center w-screen px-16 translate-x-1/2 top-6 right-1/2 gap-x-2" style="max-width: var(--width);">
       <div v-for="(_, i) in steps.length" :key="i" class="overflow-hidden h-[6px] w-full max-w-16 flex rounded-xl bg-space-space-300">
         <div class="bg-keppel will-change-[width] transition-[width] w-0 ease-in" :class="{ '!w-full': activeIndex > i || (activeIndex === i && !isActive && !pressure) }" :style="activeIndex === i ? `width: ${slideCounter * 100}%` : ''" />
       </div>
@@ -119,7 +119,7 @@ watch(pressure, (value) => {
     </li>
   </ul>
   <div class="sticky z-10 flex items-end pb-6">
-    <IonButton class="w-[calc(100vw-64px)] max-w-[360px] text-base font-bold uppercase" @click.prevent="() => $emit('done', false)">
+    <IonButton class="w-screen px-8 text-base font-bold uppercase" style="max-width: var(--width);" @click.prevent="() => $emit('done', false)">
       {{ $t('Got it') }}
     </IonButton>
   </div>
