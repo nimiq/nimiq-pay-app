@@ -52,7 +52,7 @@ function handleInputClick(i: number) {
     </p>
   </div>
   <input
-    ref="inputRef" type="password" inputmode="numeric" class="sr-only" pattern="[0-9]*"
+    ref="inputRef" type="password" inputmode="numeric" class="sr-only caret-transparent" pattern="[0-9]*"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
     @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"
