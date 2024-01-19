@@ -89,16 +89,20 @@ function onCancel() {
   onFlowCancel!(state, { goTo: replace })
 }
 
+const isVisible = ref(false)
 // We track the intersection of each step with a number from 0 to 1.
 useIntersectionObserver(scrollerItems, ([{ intersectionRatio, target }]) => {
   const index = scrollerItems.value.indexOf(target as HTMLElement)
   // TODO: remove when focus is working in every device (mobile + tablet)
-  console.log({ index, intersectionRatio, activeIndex: activeIndex.value, target, autofocus: activeStep.value.autofocus })
   if (intersectionRatio === 1 && index === activeIndex.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
   // If it's not input step or autofocus is false, blur the input previously focused
   else if (intersectionRatio === 1 && index === activeIndex.value)
     blur()
+
+  isVisible.value = index === activeIndex.value && intersectionRatio === 1
+
+  console.log({ index, intersectionRatio, activeIndex: activeIndex.value, target, autofocus: activeStep.value.autofocus, isVisible: isVisible.value })
 }, { threshold: [0, 0.5, 1] })
 
 function focus() {
@@ -140,7 +144,7 @@ function blur() {
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
         {{ description }}
       </p>
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: step === activeStep.step, isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible, isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
   </ul>
 </template>
