@@ -119,7 +119,8 @@ watch(pressure, (value) => {
     </li>
   </ul>
   <div class="sticky z-10 flex items-end pb-6">
-    <IonButton class="w-screen px-8 text-base font-bold uppercase" style="max-width: var(--width);" @click.prevent="() => $emit('done', false)">
+    <!-- w-screen wont work, it will cause the setup flow to scroll into view too fast -->
+    <IonButton class="w-[calc(100vw-64px)] text-base font-bold uppercase" style="max-width: var(--width);" @click.prevent="() => $emit('done', false)">
       {{ $t('Got it') }}
     </IonButton>
   </div>
