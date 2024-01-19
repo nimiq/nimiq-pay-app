@@ -68,7 +68,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
     }
 
     cashback.value = amountInLuna
-    message.value = i18n.t('This purchase gets you {amount} Points.', { amount: (amountInLuna / 1e5).toFixed(2) })
+    message.value = i18n.tc('- | This purchase gets you {amount} Point. | This purchase gets you {amount} Points.', amountInLuna / 1e5, { amount: (amountInLuna / 1e5).toFixed(2) })
     pointsState.value = PointsState.Eligible
   }
 

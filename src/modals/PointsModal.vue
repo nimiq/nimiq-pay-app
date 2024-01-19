@@ -71,10 +71,13 @@ onMounted(async () => {
           {{ fiat.formatted }}
         </p>
         <button class="flex items-center text-base font-bold normal-case text-sky gap-x-2" @click="showModal(Modal.ExpiringPoints, { isOnTop: true })">
-          <CryptoCityLogo class="h-4" />
-          <i18n-t slot="start" keypath="{amount} expiring soon" tag="span">
+          <!-- Use three different message versions depending on whether amount is 0, 1, or more -->
+          <i18n-t slot="start" keypath="No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon" :plural="0 /* TODO use actual amount */">
             <template #amount>
-              {{ 0 /* TODO display actual value. Remember to use toLocaleString() */ }}
+              <CryptoCityLogo class="h-4" />
+              <span>
+                {{ 0 /* TODO display actual amount. Remember to use toLocaleString() */ }}
+              </span>
             </template>
           </i18n-t>
           <IonIcon :icon="chevronForwardOutline" class="text-space/50" />

@@ -271,7 +271,7 @@ onMounted(async () => {
             @close="isReferralCardShown = false"
           >
             <span class="text-lg text-pumpkin">
-              {{ $t('Invite a friend and get {amount} Points each!', { amount: referralRewardAmount.toLocaleString() }) }}
+              {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
             </span>
           </NotificationCard>
         </IonRow>
