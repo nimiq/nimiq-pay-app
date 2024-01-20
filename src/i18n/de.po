@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-01-19 22:25+0000\n"
+"PO-Revision-Date: 2024-01-20 22:08+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -9,11 +9,14 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 "X-Generator: Weblate 4.18.2\n"
 
+msgid "- | This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
+msgstr "- | Bei dieser Zahlung erhältst du {amount} Punkt. | Bei dieser Zahlung erhälst du {amount} Punkte."
+
+msgid "- | You will receive {amount} Point | You will receive {amount} Points"
+msgstr "- | Du erhälst {amount} Punkt | Du erhälst {amount} Punkte"
+
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" ist ein ungültiges Wiederherstellungswort"
-
-msgid "{amount} expiring soon"
-msgstr "{amount} laufen bald ab"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} von {total} verbleibend."
@@ -27,6 +30,9 @@ msgstr "NIM-Adresse hinzufügen"
 msgid "Address copied to clipboard"
 msgstr "Adresse kopiert"
 
+msgid "Address missing"
+msgstr "Adresse fehlt"
+
 msgid "All"
 msgstr "Alles"
 
@@ -36,11 +42,11 @@ msgstr "Alle Transaktionen"
 msgid "Alpha Testing"
 msgstr "Alpha-Test"
 
+msgid "An unknown error occurred while importing words"
+msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
+
 msgid "Are you sure you want to log out?"
 msgstr "Sicher, dass du dich ausloggen willst?"
-
-msgid "Backup account"
-msgstr "Account-Backup erstellen"
 
 msgid "Backup Account"
 msgstr "Account-Backup erstellen"
@@ -100,9 +106,6 @@ msgstr "Verbinde zum Netzwerk."
 msgid "Consensus established."
 msgstr "Konsens erreicht."
 
-msgid "Consensus lost."
-msgstr "Konsens verloren."
-
 msgid "Continue"
 msgstr "Fortfahren"
 
@@ -118,26 +121,20 @@ msgstr "Code kopieren"
 msgid "Copy or scan the address"
 msgstr "Die Adresse kopieren oder scannen"
 
-msgid "Copy the words"
-msgstr "Wörter kopieren"
-
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Erstelle ein Backup. Es ist der einzige Weg, dein Konto wiederherzustellen."
 
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr "Erstelle einen Bluecode-Barcode und zeige ihn zum Bezahlen an der Kasse vor."
 
-msgid "Crypto adoption needs you! Bring a friend and you both get {amount} in Points."
-msgstr "Hilf mit, die Krypto-Bewegung bekannter zu machen. Lade eine/n Freund/in ein und erhaltet beide {amount} NIM in Kryptostadt-Punkten."
-
 msgid "Cryptocity Points"
 msgstr "Kryptostadt-Punkte"
 
-msgid "Cryptocity Points added"
-msgstr "Kryptostadt-Punkte wurden gutgeschrieben"
-
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr "Kryptostadt-Punkte sind Treuepunkte, die du verdienen und zum Bezahlen benutzen kannst. Der Wert eines Kryptostadt-Punkts entspricht einem NIM."
+
+msgid "Cryptocity Points have been credited"
+msgstr "Kryptostadt-Punkte wurden gutgeschrieben"
 
 msgid "Currency"
 msgstr "Währung"
@@ -160,8 +157,8 @@ msgstr "PIN eingeben"
 msgid "Enter recovery words"
 msgstr "Wiederherstellungswörter eingeben"
 
-msgid "Enter the code from the SMS sent to"
-msgstr "Gib den Bestätigungscode ein, der dir zugesandt wurde"
+msgid "Enter the code from the SMS sent to you."
+msgstr "Gib den Bestätigungscode ein, der dir zugesandt wurde."
 
 msgid "Enter your promo code"
 msgstr "Promo-Code eingeben"
@@ -169,17 +166,11 @@ msgstr "Promo-Code eingeben"
 msgid "Enter your referral promo code."
 msgstr "Gib deinen Empfehlungscode ein."
 
-msgid "Error {method} {url}: {error}"
-msgstr "Fehler während der {method}-Anfrage von {url}: {error}"
+msgid "Error during {method} request to {url}: {error}"
+msgstr "Fehler während der {method}-Anfrage an {url}: {error}"
 
-msgid "Error authorizing phone number"
-msgstr "Fehler bei der Autorisierung der Telefonnummer"
-
-msgid "Error fetching API {url}: {status} {statusText}. Response {response}. Data {data}"
-msgstr "Fehler während der API-Anfrage an {url}: {status} {statusText}. Metadaten: {response}. Empfangene Daaten: {data}."
-
-msgid "Error verifying phone number"
-msgstr "Fehler während der Verifizierung der Telefonnummer"
+msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
+msgstr "Fehler während der API-Anfrage an {url}: {status} - {statusText}. Empfangene Daten: {data}. Metadaten: {metadata}."
 
 msgid "Expired"
 msgstr "Abgelaufen"
@@ -190,8 +181,8 @@ msgstr "Verfallende Punkte"
 msgid "Featured"
 msgstr "Empfohlen"
 
-msgid "Fees may apply ~{fee}"
-msgstr "Es könnten Gebühren anfallen ~{fee}"
+msgid "Fees may apply {fee}"
+msgstr "Es könnten Gebühren anfallen {fee}"
 
 msgid "Find places that accept crypto!"
 msgstr "Entdecke Shops, die Krypto akzeptieren."
@@ -214,9 +205,6 @@ msgstr "Erhalte Informationen zu Transaktionen, Aufladungen, Sicherheit und mehr
 msgid "Get Points"
 msgstr "Punkte Verdienen"
 
-msgid "Get Points as cashback rewards or complete challenges to earn them."
-msgstr "Erhalte Kryptostadt-Punkte als Cashback oder durch Erfüllen von Aufgaben."
-
 msgid "Get Started"
 msgstr "Los geht's"
 
@@ -228,6 +216,9 @@ msgstr "GoCrypto wird noch nicht unterstützt."
 
 msgid "Got it"
 msgstr "Verstanden"
+
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+msgstr "Hilf mit, die Krypto-Bewegung bekannter zu machen. Lade eine/n Freund/in ein und erhaltet beide {amount} in Kryptostadt-Punkten."
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Hallo! Registriere dich in der Nimiq Pay App und erhalte Kryptostadt-Punkte, die du bei Zahlungen in Krypto einsetzen kannst. Benutze meinen Code {code}, um {amount} in Kryptostadt-Punkten bei der Registrierung zu erhalten."
@@ -241,14 +232,21 @@ msgstr "Zur Bestätigung PIN eingeben"
 msgid "Insufficient funds"
 msgstr "Unzureichendes Guthaben"
 
-msgid "Invalid Crypto Payment Link. Could not fetch order."
-msgstr "Ungültiger Crypto Payment Link. Die Zahlungsdetails konnten nicht abgerufen werden."
+#. For transactions that got rejected by the mempool.
+msgid "Invalid"
+msgstr "Ungültig"
 
-msgid "Invalid Crypto Payment Link. Missing amount or recipient."
-msgstr "Ungültiger Crypto Payment Link. Betrag oder Empfänger fehlen."
+msgid "Invalid CPLink. Could not fetch payment details."
+msgstr "Ungültiger CPLink. Die Zahlungsdetails konnten nicht abgerufen werden."
 
-msgid "Invalid Crypto Payment Link. Missing cpl_id."
-msgstr "Ungültiger Crypto Payment Link. ID fehlt."
+msgid "Invalid CPLink. Missing amount or recipient."
+msgstr "Ungültiger CPLink. Betrag oder Empfänger fehlen."
+
+msgid "Invalid CPLink. Missing id."
+msgstr "Ungültiger CPLink. ID fehlt."
+
+msgid "Invalid link format. CPLinks are only supported for NIM."
+msgstr "Ungültiges Link-Format. CPLinks werden nur für NIM unterstützt."
 
 msgid "Invalid Nimiq address"
 msgstr "Ungültige Nimiq-Adresse"
@@ -268,14 +266,8 @@ msgstr "Ungültiger PIN-Code"
 msgid "Invalid PIN length {length}"
 msgstr "Ungültige PIN-Länge {length}"
 
-msgid "Invalid protocol. Only NIM transactions from Crypto Payment Links are supported."
-msgstr "Ungültiges Protokoll. Es werden nur NIM-Transaktionen von Crypto Payment Links unterstützt."
-
 msgid "Invalid QR code"
 msgstr "Ungültiger QR-Code"
-
-msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
-msgstr "Ungültiger QR-Code. Es werden nur NIM-Transaktionen über Crypto Payment Links unterstützt."
 
 msgid "Invalid recovery words"
 msgstr "Ungültige Wiederherstellungswörter"
@@ -286,9 +278,6 @@ msgstr "Ungültige Transferart"
 msgid "Invalid URL: {url}"
 msgstr "Ungültige URL: {url}"
 
-msgid "Invalidated"
-msgstr "Ungültig"
-
 msgid "Invite a Friend"
 msgstr "Eine/n Freund/in einladen"
 
@@ -298,8 +287,8 @@ msgstr "Lade eine/n Freund/in ein und erhaltet jeweils bis zu 200 Punkte."
 msgid "Invite a friend and get {amount} each"
 msgstr "Lade eine/n Freund/in ein und erhaltet jeweils {amount}"
 
-msgid "Invite a friend and get {amount} Points each!"
-msgstr "Lade eine/n Freund/in ein und erhaltet jeweils {amount} Punkte."
+msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
+msgstr "Lade eine/n Freund/in ein. | Lade eine/n Freund/in ein und erhaltet jeweils {amount} Punkt. | Lade eine/n Freund/in ein und erhaltet jeweils {amount} Punkte."
 
 msgid "Is this your phone number?"
 msgstr "Ist das deine Telefonnummer?"
@@ -317,11 +306,9 @@ msgid "Loading…"
 msgstr "Lade…"
 
 msgid ""
-"Log in again with your backup words.\n"
+"Log in again with your recovery words.\n"
 "Please ensure that you have them available before logging out."
-msgstr ""
-"Logge dich erneut mit deinen Wiederherstellungswörtern ein.\n"
-"Vergewissere dich, dass du sie vorliegen hast, bevor du dich ausloggst."
+msgstr "Logge dich erneut mit deinen Wiederherstellungswörtern ein. Vergewissere dich, dass du sie vorliegen hast, bevor du dich ausloggst."
 
 msgid "Log Out"
 msgstr "Ausloggen"
@@ -329,35 +316,32 @@ msgstr "Ausloggen"
 msgid "Login"
 msgstr "Einloggen"
 
+msgid "Network consensus lost."
+msgstr "Netzwerk-Konsens verloren."
+
 msgid "New"
 msgstr "Neu"
 
 msgid "No account found"
 msgstr "Kein Konto gefunden"
 
-msgid "No address given"
-msgstr "Adresse fehlt"
+msgid "No account has been created yet, or it is currently processing funds"
+msgstr "Es wurde noch kein Konto angelegt oder es wird aktuell Guthaben verarbeitet"
+
+msgid "No account has been found"
+msgstr "Es wurde kein Konto gefunden"
 
 msgid "No Cashlink found"
 msgstr "Kein Cashlink gefunden"
 
-msgid "No Nimiq Wallet address found"
-msgstr "Keine Nimiq-Wallet-Adresse gefunden"
+msgid "No one can see me. Continue to words"
+msgstr "Ich bin allein. Weiter zu den Wötern"
 
-msgid "No One can See me"
-msgstr "Ich bin allein"
-
-msgid "No order found"
+msgid "No payment details found"
 msgstr "Keine Zahlungsdetails gefunden"
 
-msgid "No phone number set"
-msgstr "Keine Telefonnummer ausgewählt"
-
-msgid "No referral code set"
-msgstr "Empfehlungscode fehlt"
-
-msgid "No remote signer found"
-msgstr "Keine Remote-Adresse gefunden"
+msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
+msgstr "Aktuell verfallen keine Punkte | {amount} verfällt bald | {amount} verfallen bald"
 
 msgid "No transactions found"
 msgstr "Keine Transaktionen gefunden"
@@ -386,13 +370,10 @@ msgstr "Bezahle mit Kryptostadt-Punkten statt mit NIM - überall, wo sie akzepti
 msgid "Pay with Points"
 msgstr "Mit Punkten bezahlen"
 
-msgid "Pay with Points instead of NIM wherever they're accepted."
-msgstr "Bezahle mit Punkten statt mit NIM - überall, wo sie akzeptiert werden."
-
 msgid "Payment"
 msgstr "Zahlung"
 
-msgid "Payment not valid"
+msgid "Payment invalid"
 msgstr "Zahlung ungültig"
 
 msgid "Payment preview"
@@ -400,6 +381,9 @@ msgstr "Zahlungsvorschau"
 
 msgid "Pending"
 msgstr "Ausstehend"
+
+msgid "Phone number missing"
+msgstr "Telefonnummer fehlt"
 
 msgid "Phone number not verified"
 msgstr "Telefonnummer nicht verifiziert"
@@ -422,20 +406,23 @@ msgstr "Bitte einen Promo-Code eingeben"
 msgid "Please enter a verification code"
 msgstr "Bitte einen Verifizierungscode eingeben"
 
-msgid "Points are a loyalty rewards you can earn and pay with."
+msgid "Points are loyalty rewards you can earn and pay with."
 msgstr "Punkte sind Treue-Boni, die du verdienen und zum Bezahlen benutzen kannst."
 
 msgid "Points Payment"
 msgstr "Zahlung mit Punkten"
 
+msgid "Promo code missing"
+msgstr "Promo-Code fehlt"
+
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr "Schütze deine Nimiq Pay App mit einer PIN."
 
+msgid "Purchase"
+msgstr "Kauf"
+
 msgid "Recovery Words"
 msgstr "Wiederherstellungswörter"
-
-msgid "Remote address is undefined"
-msgstr "Sender-Adresse unbekannt"
 
 msgid "Resend"
 msgstr "Erneut senden"
@@ -479,17 +466,29 @@ msgstr "Schicke NIM zum Aufladen"
 msgid "Settings"
 msgstr "Einstellungen"
 
-msgid "Shop"
-msgstr "Shop"
-
 msgid "Skip for now"
 msgstr "Zunächst überspringen"
 
 msgid "Something went wrong"
 msgstr "Etwas ist schiefgelaufen"
 
-msgid "Something went wrong when checking the promo code"
+msgid "Something went wrong checking the promo code"
 msgstr "Etwas ist bei der Überprüfung des Promo-Codes schiefgelaufen"
+
+msgid "Something went wrong decrypting the database"
+msgstr "Etwas ist beim Entschlüsseln der Datenbank schiefgelaufen"
+
+msgid "Something went wrong syncing your account"
+msgstr "Etwas ist beim Abruf deines Kontos schiefgelaufen"
+
+msgid "Something went wrong updating the tasks"
+msgstr "Etwas ist bei der Aktualisierung der Aufgaben schiefgelaufen"
+
+msgid "Something went wrong updating your Points"
+msgstr "Etwas ist bei der Aktualisierung deiner Punkte schiefgelaufen"
+
+msgid "Something went wrong verifying the phone number"
+msgstr "Etwas ist bei der Verifizierung der Telefonnummer schiefgelaufen"
 
 msgid "Standard rates may apply."
 msgstr "Dein Mobilfunkanbieter könnte Kosten erheben."
@@ -506,37 +505,22 @@ msgstr "Synchronisiere mit dem Netzwerk."
 msgid "Test your backup"
 msgstr "Backup testen"
 
-msgid "The backup is a list of 12 words. Please make sure no one can see your screen before continuing."
-msgstr "Das Backup besteht aus 12 Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
-
-msgid "The entropy is not defined"
-msgstr "No wallet has been found"
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
 
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr "Der QR-Code-Scanner ist noch nicht bereit. Bitte erneut versuchen."
 
 msgid "There is no \"Forgot Password\""
-msgstr "Es gibt kein \"Passwort vergessen*"
-
-msgid "There is no active HTLC"
-msgstr "Es wurde kein aktiver HTLC gefunden"
+msgstr "Es gibt kein \"Passwort vergessen\""
 
 msgid "There is no cashback reward when paying with Points."
 msgstr "Es gibt keinen Casback bei der Zahlung mit Punkten."
 
-msgid "There is no sender address provided. Sender: {sender}"
-msgstr "Die Sender-Adresse ist unbekannt. Sender: {sender}"
-
-msgid "There was an error"
-msgstr "Es ist ein Fehler aufgetreten"
-
-msgid "There was an error."
-msgstr "Es ist ein Fehler aufgetreten."
-
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
-msgstr "Diese Punkte sind zum Ausgeben da. Hilf uns dabei, Krypto bekannter zu machen."
+msgstr "Diese Punkte sind zum Ausgeben da. Verwende sie für deinen nächsten Einkauf und sei so Teil der Krypto-Bewegung."
 
-msgid "This is in alpha, please report any bugs and remember to use only TestNIM"
+msgid "This is an early alpha version, please report any bugs and remember to use only Testnet NIM"
 msgstr "Dies ist eine frühe Testversion. Bitte melde uns etwaige Funktionsfehler und verwende ausschließlich Testnet-NIM"
 
 msgid "This payment is not eligible for Cryptocity Points."
@@ -544,9 +528,6 @@ msgstr "Bei dieser Zahlung erhältst du keine Kryptostadt-Punkte."
 
 msgid "This promo code has been claimed too many times"
 msgstr "Dieser Promo-Code wurde zu oft eingelöst"
-
-msgid "This purchase gets you {amount} in Points."
-msgstr "Bei dieser Zahlung erhältst du {amount} in Punkten."
 
 msgid "To credit card / bank account"
 msgstr "An Kreditkarte/Bankkonto"
@@ -557,17 +538,14 @@ msgstr "Aufladen"
 msgid "Transaction"
 msgstr "Transaktion"
 
-msgid "Transaction became invalid"
-msgstr "Transaktion wurde ungültig"
+msgid "Transaction invalid"
+msgstr "Transaktion ungültig"
 
-msgid "Trying to establish consensus:"
-msgstr "Versuche einen Konsens zu erreichen:"
+msgid "Trying to establish network consensus:"
+msgstr "Versuche Netzwerk-Konsens zu erreichen:"
 
 msgid "Unknown"
 msgstr "Unbekannt"
-
-msgid "Unknown error importing words"
-msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
 
 msgid "Use {amount}"
 msgstr "{amount} benutzen"
@@ -643,6 +621,9 @@ msgstr "Abbuchung"
 msgid "Withdrawal successful"
 msgstr "Abbuchung erfolgreich"
 
+msgid "Write down these words"
+msgstr "Schreibe dir diese Wörter auf"
+
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -662,11 +643,8 @@ msgstr "Falsches Wort!"
 msgid "You can't pay with Points for this purchase."
 msgstr "Diesen Einkauf kannst du nicht mit Punkten bezahlen."
 
-msgid "You cannot pay with NIM yet, wait until the Top Up is completed"
-msgstr "Du kannst noch nicht mit NIM bezahlen bis der Aufladungsvorgang beendet ist"
-
-msgid "You don't have enough Cryptocity Points for this purchase."
-msgstr "Du hast nicht genug Kryptostadt-Punkte für diesen Einkauf."
+msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
+msgstr "Du kannst noch nicht mit NIM bezahlen bis der Aufladungsvorgang abgeschlossen ist"
 
 msgid "You don't have enough NIM for this purchase."
 msgstr "Du hast nicht genug NIM für diesen Einkauf."
@@ -686,9 +664,6 @@ msgstr "Du kannst einen Bonus von 5€ abholen!"
 msgid "You received Cryptocity Points"
 msgstr "Du hast Kryptostadt-Punkte erhalten"
 
-msgid "You will receive {amount} NIM"
-msgstr "Du bekommst {amount} NIM"
-
 msgid "You will receive an SMS with a verification code"
 msgstr "Du bekommst eine SMS mit einem Verifizierungscode"
 
@@ -701,8 +676,77 @@ msgstr "Deine Telefonnummer"
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
 
-#~ msgid "{amount} are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
-#~ msgstr "{amount} verfallen aktuell | {amount} verfällt bald | {amount} verfallen bald"
+#~ msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
+#~ msgstr "Ungültiger QR-Code. Es werden nur NIM-Transaktionen über Crypto Payment Links unterstützt."
+
+#~ msgid "{amount} expiring soon"
+#~ msgstr "{amount} laufen bald ab"
+
+#~ msgid "Backup account"
+#~ msgstr "Account-Backup erstellen"
+
+#~ msgid "Error authorizing phone number"
+#~ msgstr "Fehler bei der Autorisierung der Telefonnummer"
+
+#~ msgid "Error verifying phone number"
+#~ msgstr "Fehler während der Verifizierung der Telefonnummer"
+
+#~ msgid "Get Points as cashback rewards or complete challenges to earn them."
+#~ msgstr "Erhalte Kryptostadt-Punkte als Cashback oder durch Erfüllen von Aufgaben."
+
+#~ msgid "Invalid protocol. Only NIM transactions from Crypto Payment Links are supported."
+#~ msgstr "Ungültiges Protokoll. Es werden nur NIM-Transaktionen von Crypto Payment Links unterstützt."
+
+#~ msgid "Invalidated"
+#~ msgstr "Ungültig"
+
+#~ msgid "No address given"
+#~ msgstr "Adresse fehlt"
+
+#~ msgid "No Nimiq Wallet address found"
+#~ msgstr "Keine Nimiq-Wallet-Adresse gefunden"
+
+#~ msgid "No One can See me"
+#~ msgstr "Ich bin allein"
+
+#~ msgid "No order found"
+#~ msgstr "Keine Zahlungsdetails gefunden"
+
+#~ msgid "No phone number set"
+#~ msgstr "Keine Telefonnummer ausgewählt"
+
+#~ msgid "No referral code set"
+#~ msgstr "Empfehlungscode fehlt"
+
+#~ msgid "No remote signer found"
+#~ msgstr "Keine Remote-Adresse gefunden"
+
+#~ msgid "Pay with Points instead of NIM wherever they're accepted."
+#~ msgstr "Bezahle mit Punkten statt mit NIM - überall, wo sie akzeptiert werden."
+
+#~ msgid "Remote address is undefined"
+#~ msgstr "Sender-Adresse unbekannt"
+
+#~ msgid "Shop"
+#~ msgstr "Shop"
+
+#~ msgid "The entropy is not defined"
+#~ msgstr "No wallet has been found"
+
+#~ msgid "There is no active HTLC"
+#~ msgstr "Es wurde kein aktiver HTLC gefunden"
+
+#~ msgid "There is no sender address provided. Sender: {sender}"
+#~ msgstr "Die Sender-Adresse ist unbekannt. Sender: {sender}"
+
+#~ msgid "There was an error"
+#~ msgstr "Es ist ein Fehler aufgetreten"
+
+#~ msgid "There was an error."
+#~ msgstr "Es ist ein Fehler aufgetreten."
+
+#~ msgid "You don't have enough Cryptocity Points for this purchase."
+#~ msgstr "Du hast nicht genug Kryptostadt-Punkte für diesen Einkauf."
 
 #~ msgid "Consensus lost, {newConsensus}"
 #~ msgstr "Konsensus verloren, {newConsensus}"
