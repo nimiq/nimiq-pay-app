@@ -86,7 +86,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:85
+#: src/composables/useQRScanner.ts:86
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -153,7 +153,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:327
+#: src/lib/flows/steps.ts:328
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -219,6 +219,14 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:237
+msgid "Error {errorCode}"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:236
+msgid "Error {errorCode}: {errorMessage}"
+msgstr ""
+
 #: src/composables/useApi.ts:20
 msgid "Error during {method} request to {url}: {error}"
 msgstr ""
@@ -281,10 +289,6 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/composables/useStringParser.ts:49
-msgid "GoCrypto is not yet supported."
-msgstr ""
-
 #: src/components/OnBoardingScreen.vue:23
 msgid "Got it"
 msgstr ""
@@ -301,6 +305,14 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:203
+msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:282
+msgid "If you already made a payment, wait for it to be confirmed instead."
+msgstr ""
+
 #: src/lib/flows/steps.ts:65
 msgid "Insert PIN to confirm"
 msgstr ""
@@ -314,26 +326,35 @@ msgstr ""
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useStringParser.ts:100
+#: src/composables/useStringParser.ts:99
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:85
+#: src/composables/useStringParser.ts:84
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:79
-#: src/composables/useStringParser.ts:96
+#: src/composables/useStringParser.ts:78
+#: src/composables/useStringParser.ts:95
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
-#: src/composables/useStringParser.ts:51
-#: src/composables/useStringParser.ts:73
+#: src/composables/useStringParser.ts:125
+#: src/composables/useStringParser.ts:129
+#: src/composables/useStringParser.ts:138
+msgid "Invalid GoCrypto link."
+msgstr ""
+
+#: src/composables/useStringParser.ts:72
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
+#: src/composables/useStringParser.ts:50
+msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgstr ""
+
 #: src/composables/useStringParser.ts:21
-#: src/lib/flows/steps.ts:338
+#: src/lib/flows/steps.ts:339
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -359,7 +380,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:94
+#: src/composables/useQRScanner.ts:95
 msgid "Invalid QR code"
 msgstr ""
 
@@ -371,7 +392,7 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:42
+#: src/composables/useStringParser.ts:41
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -454,8 +475,12 @@ msgstr ""
 msgid "No one can see me. Continue to words"
 msgstr ""
 
-#: src/composables/useApi.ts:222
+#: src/composables/useApi.ts:226
 msgid "No payment details found"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:228
+msgid "No payment request found"
 msgstr ""
 
 #: src/modals/PointsModal.vue:30
@@ -470,6 +495,10 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:215
+msgid "Not a pending payment request"
+msgstr ""
+
 #: src/modals/ReferralModal.vue:21
 msgid "Only {count} out of {total} remaining."
 msgstr ""
@@ -478,7 +507,7 @@ msgstr ""
 msgid "Open Wallet"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:64
+#: src/components/PaymentPreview.vue:63
 #: src/views/HomeView.vue:132
 msgid "Pay"
 msgstr ""
@@ -504,13 +533,17 @@ msgstr ""
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:86
+#: src/composables/useApi.ts:89
 msgid "Payment invalid"
 msgstr ""
 
 #: src/lib/flows/steps.ts:262
-#: src/lib/flows/steps.ts:273
+#: src/lib/flows/steps.ts:274
 msgid "Payment preview"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:245
+msgid "Payment request has already been paid"
 msgstr ""
 
 #: src/types/transactions.ts:97
@@ -518,6 +551,7 @@ msgid "Pending"
 msgstr ""
 
 #: src/stores/points.ts:145
+#: src/stores/points.ts:161
 #: src/stores/points.ts:38
 msgid "Phone number missing"
 msgstr ""
@@ -525,7 +559,8 @@ msgstr ""
 #: src/stores/points.ts:103
 #: src/stores/points.ts:120
 #: src/stores/points.ts:147
-#: src/stores/points.ts:161
+#: src/stores/points.ts:163
+#: src/stores/points.ts:174
 #: src/stores/points.ts:52
 #: src/stores/points.ts:63
 #: src/stores/points.ts:74
@@ -534,6 +569,10 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:103
 msgid "PIN did not match"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:197
+msgid "Please ask the merchant to create a new payment request."
 msgstr ""
 
 #: src/lib/flows/steps.ts:99
@@ -573,7 +612,7 @@ msgstr ""
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
-#: src/stores/points.ts:184
+#: src/stores/points.ts:197
 msgid "Purchase"
 msgstr ""
 
@@ -621,15 +660,15 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:349
+#: src/lib/flows/steps.ts:350
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:326
+#: src/lib/flows/steps.ts:327
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:348
+#: src/lib/flows/steps.ts:349
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -643,7 +682,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/lib/flows/steps.ts:312
+#: src/lib/flows/steps.ts:313
 msgid "Something went wrong"
 msgstr ""
 
@@ -653,14 +692,18 @@ msgstr ""
 msgid "Something went wrong checking the promo code"
 msgstr ""
 
+#: src/stores/points.ts:167
+msgid "Something went wrong claiming the cashback"
+msgstr ""
+
 #: src/composables/useDecrypt.ts:63
 #: src/composables/useDecrypt.ts:66
 #: src/lib/flows/steps.ts:123
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
-#: src/composables/useApi.ts:137
-#: src/composables/useApi.ts:144
+#: src/composables/useApi.ts:141
+#: src/composables/useApi.ts:148
 #: src/lib/tx.ts:134
 #: src/lib/tx.ts:26
 #: src/lib/tx.ts:61
@@ -705,7 +748,19 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/composables/useQRScanner.ts:146
+#: src/composables/useGoCrypto.ts:273
+msgid "The payment request expired"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:279
+msgid "The payment request is about to expire"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:217
+msgid "The payment request might have been paid, expired, or cancelled."
+msgstr ""
+
+#: src/composables/useQRScanner.ts:147
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
@@ -714,7 +769,7 @@ msgstr ""
 msgid "There is no \"Forgot Password\""
 msgstr ""
 
-#: src/components/PaymentPreview.vue:54
+#: src/components/PaymentPreview.vue:53
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
@@ -744,7 +799,7 @@ msgstr ""
 msgid "Top-Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:365
+#: src/lib/flows/steps.ts:366
 msgid "Transaction"
 msgstr ""
 
@@ -756,11 +811,15 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:234
+msgid "Unexpected GoCrypto error"
+msgstr ""
+
 #: src/types/transactions.ts:105
 msgid "Unknown"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:28
+#: src/components/PaymentPreview.vue:27
 msgid "Use {amount}"
 msgstr ""
 
@@ -845,7 +904,7 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:293
+#: src/lib/flows/steps.ts:294
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
@@ -854,7 +913,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/steps.ts:315
+#: src/lib/flows/steps.ts:316
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -880,23 +939,23 @@ msgstr ""
 msgid "Wrong word!"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:48
+#: src/components/PaymentPreview.vue:47
 msgid "You can't pay with Points for this purchase."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:42
+#: src/components/PaymentPreview.vue:41
 msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:39
+#: src/components/PaymentPreview.vue:38
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:300
+#: src/lib/flows/steps.ts:301
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:45
+#: src/components/PaymentPreview.vue:44
 #: src/composables/usePointsPayment.ts:59
 msgid "You don't have enough Points for this purchase."
 msgstr ""
@@ -923,6 +982,26 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:5
 msgid "Your number"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:253
+msgid "Your payment failed"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:249
+msgid "Your payment is being processed"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:257
+msgid "Your payment is invalid"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:266
+msgid "Your payment was cancelled"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:261
+msgid "Your payment was refunded"
 msgstr ""
 
 #: src/views/HomeView.vue:53
