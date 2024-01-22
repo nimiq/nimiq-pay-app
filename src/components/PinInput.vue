@@ -12,6 +12,7 @@ const emit = defineEmits(stepEmits)
 
 const isScrolling = computed(() => props.isScrolling)
 const inputRef = ref<HTMLInputElement | null>(null)
+const isInputFocused = ref(false)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 
@@ -45,7 +46,13 @@ function handleInputClick(i: number) {
 <template>
   <div class="m-auto">
     <div class="flex justify-center px-2 py-4 mx-auto gap-x-8" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()">
-      <div v-for="i in inputLength" :key="i" class="w-4 h-4 transition-colors rounded-full bg-space" :title="i.toString()" :class="{ 'opacity-40': pinCodeInput.length < i }" @click="handleInputClick(i)" />
+      <div
+        v-for="i in inputLength" :key="i"
+        class="w-4 h-4 transition-colors rounded-full bg-space"
+        :title="i.toString()"
+        :class="{ 'opacity-40': pinCodeInput.length < i, 'animate-bounce': isInputFocused && pinCodeInput.length === i - 1 }"
+        @click="handleInputClick(i)"
+      />
     </div>
     <p v-if="errorMsg" class="mt-12 text-base text-center text-pumpkin">
       {{ errorMsg }}
@@ -56,5 +63,7 @@ function handleInputClick(i: number) {
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
     @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"
+    @focus="isInputFocused = true"
+    @blur="isInputFocused = false"
   >
 </template>
