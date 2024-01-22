@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
 import { type Ref, ref } from 'vue'
+import { computed } from 'vue'
 import MnemonicInput from '@/components/MnemonicInput.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 
@@ -15,6 +16,7 @@ const isDev = import.meta.env.DEV
 
 const loginWords: Ref<string[]> = ref([])
 const isDevImport = ref(false)
+const isValidMnemonic = computed(() => loginWords.value.length === 12 && loginWords.value.every(word => Nimiq.MnemonicUtils.DEFAULT_WORDLIST.includes(word)))
 
 const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adult', 'cost', 'country', 'mask', 'night', 'giraffe']
 </script>
@@ -29,7 +31,7 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
       {{ errorMsg }}
     </p>
   </div>
-  <IonButton expand="block" class="w-full mt-auto mb-4 font-bold" @click="$emit('done', loginWords)">
+  <IonButton expand="block" class="w-full mt-auto mb-4 font-bold" :disabled="!isValidMnemonic" @click="$emit('done', loginWords)">
     {{ $t('Confirm') }}
   </IonButton>
 </template>

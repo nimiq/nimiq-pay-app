@@ -13,8 +13,36 @@ const emit = defineEmits<{
 }>()
 
 const loginWords: Ref<string[]> = ref([])
+const wordList = Nimiq.MnemonicUtils.DEFAULT_WORDLIST
 
 watchEffect(() => emit('loginWords', loginWords.value))
+let timeout = 0
+function inputHandler(e: Event) {
+  timeout && clearTimeout(timeout)
+
+  const input = e.target as HTMLInputElement
+  const value = input.value.toLowerCase()
+  const index = Number(input.placeholder) - 1
+
+  if (input.classList.contains('text-pumpkin'))
+    input.classList.remove('text-pumpkin')
+  if (value === '') {
+    loginWords.value[index] = ''
+    return
+  }
+  // Wait if user is still typing
+  // TODO: Jump to next word if valid
+  if (wordList.includes(value)) { loginWords.value[index] = value }
+  else {
+    timeout = setTimeout(() => {
+      input.classList.add('animate-wiggle')
+      input.classList.add('text-pumpkin')
+      setTimeout(() => {
+        input.classList.remove('animate-wiggle')
+      }, 1000)
+    }, 2000)
+  }
+}
 </script>
 
 <template>
@@ -30,7 +58,7 @@ watchEffect(() => emit('loginWords', loginWords.value))
       :placeholder="(i + 1).toString().padStart(2, '0')"
       autocomplete="off"
       autocorrect="off"
-      @input="loginWords[i] = ($event.target as HTMLTextAreaElement).value.toLowerCase()"
+      @input="inputHandler"
     >
   </div>
 </template>
