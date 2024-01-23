@@ -86,7 +86,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:86
+#: src/composables/useQRScanner.ts:58
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -380,7 +380,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:95
+#: src/composables/useQRScanner.ts:67
 msgid "Invalid QR code"
 msgstr ""
 
@@ -760,7 +760,7 @@ msgstr ""
 msgid "The payment request might have been paid, expired, or cancelled."
 msgstr ""
 
-#: src/composables/useQRScanner.ts:147
+#: src/composables/useQRScanner.ts:162
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 

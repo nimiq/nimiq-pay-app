@@ -26,6 +26,55 @@ interface UseQRScannerOptions<T = QRDataFormat> {
 }
 
 export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: UseQRScannerOptions) {
+  // Block parallel invocations, as multiple parallel successful scans would lead to the onData success callback being
+  // called multiple times, which can lead to problems for example in Flow.vue where goToNext would be called multiple
+  // times. Additionally also add throttling to avoid spamming the apis also on failing api calls.
+  let isParsingString = false
+  const parseString = useThrottleFn(
+    async (raw: string) => {
+      if (isParsingString)
+        return
+      isParsingString = true
+      try {
+        const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
+        if (expect === QRDataFormat.NimiqAddress) {
+          const { data, error } = getNimAddress(raw)
+          if (error || !data)
+            throw new Error(error)
+          onData(data)
+        }
+        else if (expect === QRDataFormat.PaymentRequest) {
+          const { data, error } = await getPaymentRequestData(raw)
+          if (error || !data)
+            throw new Error(error)
+          onData(data)
+        }
+        else if (expect === QRDataFormat.NimCashlink) {
+          const { data, error } = getCashlink(raw)
+          if (error || !data)
+            throw new Error(error)
+          // TODO: move this to step
+          await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
+          useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
+          onData('')
+        }
+        // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
+        else {
+          throw new Error(`Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`)
+        }
+      }
+      catch (error) {
+        onError((error as Error).message || i18n.t('Invalid QR code'))
+      }
+      finally {
+        isParsingString = false
+      }
+    },
+    1500,
+    /* trailing */ false, // ignore repeated call and do not schedule it to run after throttle time
+    /* leading */ true, // run immediately on first call
+  )
+
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
   const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
   const state = ref(QRScannerState.Idle)
@@ -59,40 +108,6 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
 
       console.log(`💫 Using dummy data for QR scanner: ${dummyData}`) // eslint-disable-line no-console
       parseString(dummyData)
-    }
-  }
-
-  async function parseString(raw: string) {
-    try {
-      const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
-      if (expect === QRDataFormat.NimiqAddress) {
-        const { data, error } = getNimAddress(raw)
-        if (error || !data)
-          throw new Error(error)
-        onData(data)
-      }
-      else if (expect === QRDataFormat.PaymentRequest) {
-        const { data, error } = await getPaymentRequestData(raw)
-        if (error || !data)
-          throw new Error(error)
-        onData(data)
-      }
-      else if (expect === QRDataFormat.NimCashlink) {
-        const { data, error } = getCashlink(raw)
-        if (error || !data)
-          throw new Error(error)
-        // TODO: move this to step
-        await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
-        useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
-        onData('')
-      }
-      // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
-      else {
-        throw new Error(`Invalid QRDataFormat. Use any of ${Object.values(QRDataFormat)}`)
-      }
-    }
-    catch (error) {
-      onError((error as Error).message || i18n.t('Invalid QR code'))
     }
   }
 
@@ -164,7 +179,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
   async function startScan(_options: StartScannerOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.addListener('barcodeScanned', useThrottleFn(async ({ barcode }) => parseString(barcode.displayValue), 1000))
+    await BarcodeScanner.addListener('barcodeScanned', ({ barcode }) => parseString(barcode.displayValue))
     await BarcodeScanner.startScan()
   }
 
