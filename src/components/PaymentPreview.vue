@@ -28,10 +28,15 @@ const payment = toRef(() => props.state[StepName.QRCodeScanner] as PaymentReques
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 
 const amounts = computedAsync(async () => {
-  if (payment.value.fiatCurrency && payment.value.fiatAmount && payment.value.fiatFeeAmount) {
+  // If the tx has its own fiat values, use them, otherwise use the API to get the fiat values
+  // We check for undefined because the tx might have 0 as a value, which is falsy
+  const properties = ['fiatCurrency', 'fiatAmount', 'fiatFeeAmount'] as const
+  const useDefaultFiat = properties.some(prop => payment.value[prop] === undefined)
+
+  if (!useDefaultFiat) {
     // If the tx has its own fiat values, use them
     const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
-    return { formattedFiat: formatFiat(payment.value.fiatAmount, { currency: payment.value.fiatCurrency }), formattedFee: formatFiat(payment.value.fiatFeeAmount, { currency: payment.value.fiatCurrency }) }
+    return { formattedFiat: formatFiat(payment.value.fiatAmount!, { currency: payment.value.fiatCurrency }), formattedFee: formatFiat(payment.value.fiatFeeAmount!, { currency: payment.value.fiatCurrency }) }
   }
   else {
     // Otherwise, use the API to get the fiat values
@@ -61,9 +66,9 @@ function handlePay() {
 
 <template>
   <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
-    <TransactionAmounts :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts.formattedFiat || ''" :payment-method="paymentMethod">
+    <TransactionAmounts :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
       <template #fee>
-        {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts.formattedFee})` : '' }) }}
+        {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
       </template>
     </TransactionAmounts>
 
