@@ -150,7 +150,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 
     const { useIntervalFn } = await import('@vueuse/core')
 
-    const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: false })
+    const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: true })
     stopScan = pause
     resumeScan = resume
   }
