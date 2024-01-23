@@ -26,15 +26,17 @@ const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, { activeInde
 const activeStep = computed(() => steps.value[steps.value.length - 1])
 // Get the element in screen knowing the active step using the li key
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
-const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
-const isActiveStepInput = computed(() => isInputStep(activeStep.value))
 
 const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
 
 type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
 watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
-const error = (step: StepName) => isActiveStepInput.value ? errors.value![step as InputStepName] : undefined
+
+function getInputStepError(stepName: StepName) {
+  return isInputStep(stepName) ? errors.value[stepName] : null
+}
+
 
 interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
 async function goToNext(options?: GoToNextOptions) {
@@ -64,13 +66,14 @@ const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.
 onMounted(async () => shouldAutofocus.value && focus())
 
 async function onStepDone(value: OnDoneStepValue) {
-  if (isActiveStepInfo.value) {
+  const activeStepName = activeStep.value.step
+  if (isInfoStep(activeStepName)) {
     goToNext()
   }
-  else if (isActiveStepInput.value) {
+  else if (isInputStep(activeStepName)) {
     // @ts-expect-error If the emit value is well typed, this should work
-    state[activeStep.value.step as InputStepName] = value
-    errors.value![activeStep.value.step as InputStepName] = '' // Clear error message
+    state[activeStepName] = value
+    errors.value[activeStepName] = '' // Clear error message
     const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
     if (activeStep.value.beforeNext)
       await activeStep.value.beforeNext(state, { next: goToNext, err, prev: goToPrevious, finalizeFlow: () => onFlowDone!(state, { goTo: replace, err }), skip })
@@ -150,7 +153,7 @@ function blur() {
       </p>
       <component
         :is="main"
-        v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling }"
+        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling }"
         v-on="{ focus, done: onStepDone, select: onStepDone, skip }"
       />
     </li>

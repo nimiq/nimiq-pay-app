@@ -81,8 +81,14 @@ export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.Pin
 const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail]
 export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay | StepName.TransactionList | StepName.TransactionDetail
 
-export const isInputStep = (step: Step): step is InputStep => inputSteps.includes(step.step)
-export const isInfoStep = (step: Step): step is InfoStep => infoSteps.includes(step.step)
+export const isInputStep = (step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName => {
+  const stepName = typeof step === 'string' ? step : step.step
+  return inputSteps.includes(stepName)
+}
+export const isInfoStep = (step: Step | StepName): step is typeof step extends Step ? InfoStep : InfoStepName => {
+  const stepName = typeof step === 'string' ? step : step.step
+  return infoSteps.includes(stepName)
+}
 
 export interface State {
   [StepName.PromoCode]: string
