@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useInterval, usePointer, usePointerSwipe } from '@vueuse/core'
 import { IonButton } from '@ionic/vue'
 import { useCarousel } from '@/composables/useCarousel'
@@ -77,6 +77,9 @@ watch(() => props.isVisible, (value) => {
   if (value) {
     reset()
     resume()
+  }
+  else {
+    pause()
   }
 }, { immediate: true })
 

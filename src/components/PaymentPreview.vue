@@ -19,7 +19,7 @@ import { watchEffect } from 'vue'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true }, isVisible: { type: Boolean, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true } })
 const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())

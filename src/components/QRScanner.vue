@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType, type Ref, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { type PropType, type Ref, onBeforeUnmount, ref, watch } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
 import { useToast } from '@/composables/useToast'
 import { QRDataFormat } from '@/composables/useStringParser'
@@ -21,7 +21,18 @@ const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const onError = (error: string) => useToast().setToast({ message: error, error: true })
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-watch(() => props.isVisible, isVisible => isVisible ? setTimeout(start, 500) : nextTick(stop), { immediate: true })
+watch(() => props.isVisible, (isVisible) => {
+  if (isVisible) {
+    setTimeout(() => {
+      if (!props.isVisible)
+        return // not visible anymore
+      start()
+    }, 500)
+  }
+  else {
+    stop()
+  }
+}, { immediate: true })
 
 const isDev = import.meta.env.DEV
 const { isWeb } = useDevice()

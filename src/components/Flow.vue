@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type PropType, type Ref, computed, onMounted, reactive, ref, watchEffect } from 'vue'
-import { until, useIntersectionObserver, useScroll } from '@vueuse/core'
+import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
@@ -23,9 +23,9 @@ const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
 const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, { activeIndex })
 
-const activeStep = computed(() => steps.value.slice(-1)[0])
+const activeStep = computed(() => steps.value[steps.value.length - 1])
 // Get the element in screen knowing the active step using the li key
-const activeElement = computed(() => scrollerItems.value[activeIndex.value])
+const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 const isActiveStepInfo = computed(() => isInfoStep(activeStep.value))
 const isActiveStepInput = computed(() => isInputStep(activeStep.value))
 
@@ -91,22 +91,26 @@ function onCancel() {
   onFlowCancel!(state, { goTo: replace })
 }
 
-const isVisible = ref(false)
+const isActiveStepFullyVisible = ref(false)
 // We track the intersection of each step with a number from 0 to 1.
-useIntersectionObserver(activeElement, ([{ intersectionRatio }]) => {
-  isVisible.value = intersectionRatio === 1
-  if (isVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
+useIntersectionObserver(activeStepScrollerItem, ([{ intersectionRatio }]) => {
+  isActiveStepFullyVisible.value = intersectionRatio === 1
+  if (isActiveStepFullyVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
   // If it's not input step or autofocus is false, blur the input previously focused
-  else if (isVisible.value)
+  else if (isActiveStepFullyVisible.value)
     blur()
 
   // TODO: remove when focus is working in every device (mobile + tablet)
-  console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isVisible: isVisible.value })
+  console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
 }, { threshold: [0, 0.5, 1], root: scroller })
 
+function isStepVisible(stepName: StepName) {
+  return stepName === activeStep.value.step && isActiveStepFullyVisible.value
+}
+
 function focus() {
-  const input = scroller.value?.querySelector(`li:nth-child(${activeIndex.value + 1}) input`) as HTMLInputElement
+  const input = activeStepScrollerItem.value?.querySelector('input')
   // TODO: remove when focus is working in every device (mobile + tablet)
   console.log('focus', input)
   input?.focus()
@@ -144,7 +148,11 @@ function blur() {
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
         {{ description }}
       </p>
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: (isVisible && activeStep.step === step), isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
+      <component
+        :is="main"
+        v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling }"
+        v-on="{ focus, done: onStepDone, select: onStepDone, skip }"
+      />
     </li>
   </ul>
 </template>
