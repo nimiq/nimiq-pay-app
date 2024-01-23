@@ -31,11 +31,11 @@ onBeforeUnmount(stop)
 
 <template>
   <div class="mt-8 px-0.5">
-    <div v-if="isDev && expect !== QRDataFormat.NimCashlink" class="flex flex-col mb-6 items-center">
-      <button class="z-10 block w-full text-sm font-normal text-center underline text-space/80" :class="{ 'absolute -translate-x-1/2 left-1/2': !isWeb }" @click="setDummyData">
+    <div v-if="isDev && expect !== QRDataFormat.NimCashlink" class="flex flex-col items-center mb-6" :class="{ 'absolute z-10  -translate-x-1/2 left-1/2': !isWeb }">
+      <button class="block w-full text-sm font-normal text-center underline text-space/80" @click="setDummyData">
         Click here to use mockup data.<br>
       </button>
-      <span class="text-xs opacity-70">
+      <span class="mt-2 text-xs text-center opacity-70">
         <!-- The payment reference, used to fetch the price from the CPL API, is tied to the original payment value (e.g., 100NIM). If the value is later changed (e.g., to 1NIM for testing), the fetched price will still correspond to the original value, leading to incorrect pricing. -->
         It is <b>expected</b> that data in preview might be wrong
       </span>
