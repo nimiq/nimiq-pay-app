@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { isInfoStep, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, InputStepName, OnDoneStepValue, Step, StepName } from '@/lib/flows/steps.types'
 import { useCarousel } from '@/composables/useCarousel'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   flow: {
@@ -37,10 +38,20 @@ function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
 }
 
+function defaultErrorHandler(errorMessage: string) {
+  const activeStepName = activeStep.value.step
+  if (isInputStep(activeStepName))
+    errors.value[activeStepName] = errorMessage
+  else
+    useToast().setToast({ message: errorMessage, error: true })
+}
 
 interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
 async function goToNext(options?: GoToNextOptions) {
-  const { err = () => {}, stepsToSkip = 1 } = options || {}
+  const {
+    err = defaultErrorHandler,
+    stepsToSkip = 1,
+  } = options || {}
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value.step)
   const nextStep = stepsInFlow[currentIndex + stepsToSkip]
   if (!nextStep) {
@@ -74,11 +85,11 @@ async function onStepDone(value: OnDoneStepValue) {
     // @ts-expect-error If the emit value is well typed, this should work
     state[activeStepName] = value
     errors.value[activeStepName] = '' // Clear error message
-    const err = (errorMsg: string) => errors.value![activeStep.value.step as InputStepName] = errorMsg
+    const err = defaultErrorHandler
     if (activeStep.value.beforeNext)
       await activeStep.value.beforeNext(state, { next: goToNext, err, prev: goToPrevious, finalizeFlow: () => onFlowDone!(state, { goTo: replace, err }), skip })
     else
-      goToNext({ err })
+      goToNext()
   }
 }
 
@@ -91,7 +102,7 @@ function skip() {
 }
 
 function onCancel() {
-  onFlowCancel!(state, { goTo: replace })
+  onFlowCancel!(state, { goTo: replace, err: defaultErrorHandler })
 }
 
 const isActiveStepFullyVisible = ref(false)

@@ -1,12 +1,13 @@
 import { reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
-import type { RouteLocationRaw } from 'vue-router'
 import { Modal, useModal } from '@/composables/useModal'
 import { FlowName, StepName, inputSteps } from '@/lib/flows/steps.types'
 import type { Flow, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 import { useDevice } from '@/composables/useDevice'
+import { useToast } from '@/composables/useToast';
+import { i18n } from '@/i18n/i18n-setup'
 
 const loginFlow: FlowInit = async ({ closeFn, state }) => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
@@ -20,10 +21,12 @@ const loginFlow: FlowInit = async ({ closeFn, state }) => {
     getNotifiedStep,
     onBoardingPoints,
   ].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async (state, { goTo }) => {
-    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
-    if (err)
-      console.error(err)
+  const onDone: Flow['onDone'] = async (state, { goTo, err }) => {
+    const error = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
+    if (error) {
+      err(error)
+      return
+    }
 
     // Clear pin code from memory just in case
     // Since state is a JSON object, we take advantage of the fact that it's a reference
@@ -47,10 +50,12 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
   const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Setup
   const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async (state, { goTo }) => {
-    const err = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
-    if (err)
-      console.error(err)
+  const onDone: Flow['onDone'] = async (state, { goTo, err }) => {
+    const error = await (await import('@/composables/useDecrypt')).useDecrypt().decrypt(state.pinCode!)
+    if (error) {
+      err(error)
+      return
+    }
 
     goTo('/app')
     closeFn()
@@ -169,25 +174,32 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
       // transaction to be sent and then close the modal. In that case, the user would see the modal for a few seconds.
       //
       // I would suggest to add a loading indicator in the Home View to indicate that the transactions are being updated.
-      (await import('@/stores/transactions')).useTransactions().sendTx({
-        ...request!,
-        title: request?.merchantName
+      const { error } = await (await import('@/stores/transactions')).useTransactions().sendTx({
+        ...request,
+        title: request.merchantName
           ? markAsUnknownTransactionTitle(request.merchantName)
           : 'Payment', // translated at display time
-      })
-        // TODO Handle errors
-        .then(({ error }) => error && console.error(error))
-        .catch(error => console.error(error ?? 'Error was thrown. Transaction was NOT sent successfully'))
-      closeFn()
+      }).catch((error) => ({ error: i18n.t(
+        'Transaction failed: {error}',
+        { error: error instanceof Error ? error.message : String(error) },
+      ) }))
+      if (error)
+        err(error)
+      else
+        closeFn()
     }
     else if (method === PaymentMethod.Points) {
-      if (!request?.rail || !request?.paymentRef)
-      // No translation as not user-facing. Dev error which should not occur in production.
+      if (!request.rail || !request.paymentRef)
+        // No translation as not user-facing. Dev error which should not occur in production.
         throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(request)}`)
 
       const { error } = await (await import('@/stores/points')).usePoints().payWithPoints(request)
+        .catch((error) => ({ error: i18n.t(
+          'Transaction failed: {error}',
+          { error: error instanceof Error ? error.message : String(error) },
+        ) }))
       if (error)
-        err?.(error)
+        err(error)
       else
         closeFn()
     }
@@ -294,7 +306,12 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
       // eslint-disable-next-line no-console
       console.log('🌊 Dismissing flow', flow)
       const { default: router } = await import('@/router/index')
-      await flow.onCancel?.(flow.state, { goTo: async (path: RouteLocationRaw) => router.replace(path) })
+      await flow.onCancel?.(flow.state, {
+        goTo: (path) => router.replace(path),
+        err(errorMessage: string) {
+          useToast().setToast({ message: errorMessage, error: true })
+        }
+      })
       return true
     },
     initialBreakpoint: isFullscreen ? undefined : 1,

@@ -49,7 +49,9 @@ export const recoveryWordsStep: StepInit = async () => ({
   beforeNext: async (state, { next, err }) => {
     const { importWords } = (await import('@/stores/local-wallet')).useLocalWallet()
     const { error } = importWords(state.recoveryWordsStep)
-    if (error) { err(error) }
+    if (error) {
+      err(error)
+    }
     else {
       // Clear recovery words from memory just in case
       state[StepName.RecoveryWordsStep] = []

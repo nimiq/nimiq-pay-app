@@ -19,7 +19,7 @@ export enum FlowName {
 
 interface FlowHooksOptions {
   goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
-  err?: (msg: string) => void
+  err: (msg: string) => void
 }
 
 export interface Flow {
