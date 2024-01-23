@@ -31,9 +31,15 @@ onBeforeUnmount(stop)
 
 <template>
   <div class="mt-8 px-0.5">
-    <button v-if="isDev && expect !== QRDataFormat.NimCashlink" class="z-10 block w-full mb-6 text-sm font-normal text-center underline text-space/80" :class="{ 'absolute -translate-x-1/2 left-1/2': !isWeb }" @click="setDummyData">
-      Click here to use mockup data
-    </button>
+    <div v-if="isDev && expect !== QRDataFormat.NimCashlink" class="flex flex-col mb-6 items-center">
+      <button class="z-10 block w-full text-sm font-normal text-center underline text-space/80" :class="{ 'absolute -translate-x-1/2 left-1/2': !isWeb }" @click="setDummyData">
+        Click here to use mockup data.<br>
+      </button>
+      <span class="text-xs opacity-70">
+        <!-- The payment reference, used to fetch the price from the CPL API, is tied to the original payment value (e.g., 100NIM). If the value is later changed (e.g., to 1NIM for testing), the fetched price will still correspond to the original value, leading to incorrect pricing. -->
+        It is <b>expected</b> that data in preview might be wrong
+      </span>
+    </div>
 
     <div v-if="isWeb" ref="cameraFeedContainer" class="relative aspect-square" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
       <video autoplay muted playsinline :controls="false" :class="{ 'opacity-0': state !== QRScannerState.Scanning }" />
