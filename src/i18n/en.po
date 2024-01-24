@@ -803,8 +803,8 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/lib/flows/index.ts:183
-#: src/lib/flows/index.ts:198
+#: src/lib/flows/index.ts:193
+#: src/lib/flows/index.ts:209
 msgid "Transaction failed: {error}"
 msgstr ""
 
