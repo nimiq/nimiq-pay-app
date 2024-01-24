@@ -94,7 +94,7 @@ function onCancel() {
 const isVisible = ref(false)
 // We track the intersection of each step with a number from 0 to 1.
 useIntersectionObserver(activeElement, ([{ intersectionRatio }]) => {
-  isVisible.value =  intersectionRatio === 1
+  isVisible.value = intersectionRatio === 1
   if (isVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
     focus()
   // If it's not input step or autofocus is false, blur the input previously focused
@@ -136,7 +136,7 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-4 shrink-0 snap-center snap-always">
+    <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-4 shrink-0 snap-center snap-always overflow-y-hidden">
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-2 text-2xl font-bold text-center text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
@@ -144,7 +144,7 @@ function blur() {
       <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
         {{ description }}
       </p>
-      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible, isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
+      <component :is="main" v-bind="{ errorMsg: error(step), canSkip: !!stepsToSkip, state, isVisible: (isVisible && activeStep.step === step), isScrolling }" :state="state" :error-msg="error(step)" v-on="{ focus, done: onStepDone, select: onStepDone, skip }" />
     </li>
   </ul>
 </template>

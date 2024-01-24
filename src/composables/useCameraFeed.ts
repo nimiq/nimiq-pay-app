@@ -42,6 +42,9 @@ function useCameraFeedMobile(cameraFeedContainer: Ref<HTMLElement>) {
     dialog.style.setProperty('border-top', 'calc((var(--ion-safe-area-top) + 10px)) solid #a9a9a9')
 
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
+    if (!await BarcodeScanner.isSupported())
+      throw new Error('BarcodeScanner is not supported')
+
     await BarcodeScanner.requestPermissions()
     const permission = await BarcodeScanner.checkPermissions()
     hasPermission.value = permission.camera === 'granted'

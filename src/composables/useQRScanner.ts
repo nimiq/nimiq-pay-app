@@ -34,6 +34,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     const video = await setUpCameraFeed()
     if (!hasPermission.value) {
       state.value = QRScannerState.NoPermission
+      console.error('No permission to use the camera')
       return
     }
     startScan({ video })

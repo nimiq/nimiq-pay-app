@@ -267,6 +267,7 @@ export const paymentPreviewStep: StepInit = async () => {
     title,
     titleIcon,
     main: markRaw(PaymentPreview),
+    autofocus: false, // Don't autofocus on the toggle button
     async beforeDisplay({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return

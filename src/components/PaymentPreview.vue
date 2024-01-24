@@ -73,7 +73,6 @@ function handlePay() {
     </TransactionAmounts>
 
     <Transition name="slide-fade" mode="out-in">
-      <!-- v-if="cashback && instantPayWallet.balanceRaw.value > (pendingPayment?.amount || 0)" -->
       <div
         v-if="hasCashback"
         class="flex items-baseline mt-8 font-semibold gap-x-1.5 transition-colors text-pretty text-center px-16"

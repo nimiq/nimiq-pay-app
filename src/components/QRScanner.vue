@@ -21,7 +21,7 @@ const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const onError = (error: string) => useToast().setToast({ message: error, error: true })
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-watch(() => props.isVisible, isVisible => (isVisible) ? setTimeout(start, 500) : nextTick(stop), { immediate: true })
+watch(() => props.isVisible, isVisible => isVisible ? setTimeout(start, 500) : nextTick(stop), { immediate: true })
 
 const isDev = import.meta.env.DEV
 const { isWeb } = useDevice()
