@@ -2,7 +2,7 @@ import { reactive, ref } from 'vue'
 import { modalController } from '@ionic/vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { FlowName, StepName, inputSteps } from '@/lib/flows/steps.types'
-import type { Flow, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Flow, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 import { useDevice } from '@/composables/useDevice'
@@ -23,7 +23,7 @@ const loginFlow: FlowInit = async ({ closeFn, state }) => {
   ].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async (state, { goTo, err }) => {
     const { useDecrypt } = await import('@/composables/useDecrypt')
-    const error = await useDecrypt().decrypt(state.pinCode!)
+    const error = await useDecrypt().decrypt(state[StepName.PinCode])
     if (error) {
       err(error)
       return
@@ -57,7 +57,7 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
       { useDecrypt },
       { useApp },
     ] = await Promise.all([import('@/composables/useDecrypt'), import('@/stores/app')])
-    const error = await useDecrypt().decrypt(state.pinCode!)
+    const error = await useDecrypt().decrypt(state[StepName.PinCode])
     if (error) {
       err(error)
       return
@@ -165,10 +165,13 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
     pinCodeStep,
   ].map(s => s({ flowName }))))
 
-  const onDone: Flow['onDone'] = async ({ paymentPreview: method, qrCodeScanner: _request }, { err }) => {
+  const onDone: Flow['onDone'] = async (state, { err }) => {
     const { markAsUnknownTransactionTitle, PaymentMethod } = await import('@/types/transactions')
 
-    const request = _request as PaymentRequestData
+    const { [StepName.PaymentPreview]: method, [StepName.QRCodeScanner]: request } = state
+    if (!request || typeof request === 'string')
+      // No translation as not user-facing. Dev error which should not occur in production.
+      throw new Error(`${flowName} flow expected a parsed payment request`)
 
     // eslint-disable-next-line no-console
     console.log(`🤑  Initializing payment process with ${method}`, request)
