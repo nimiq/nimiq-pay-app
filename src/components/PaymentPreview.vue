@@ -13,6 +13,7 @@ import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
+import { watchEffect } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -53,7 +54,10 @@ const disabled = computed(() => !(isEligible.value && paymentMethod.value === Pa
 
 const loading = ref(false)
 
-watch(payment, checkPointsPaymentValidity)
+watchEffect(() => {
+  if(payment.value)
+    checkPointsPaymentValidity()
+})
 
 function handlePay() {
   if (loading.value)

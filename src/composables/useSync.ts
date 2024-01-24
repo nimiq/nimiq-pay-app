@@ -8,10 +8,11 @@ import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
-import { PointsHashPrefix, Transfer, type UserReceiptTransaction } from '@/types/transactions'
+import { PaymentMethod, PointsHashPrefix, type Transaction, Transfer, type UserReceiptTransaction } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 import { usePoints } from '@/stores/points'
+import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
@@ -213,9 +214,29 @@ export function useSync() {
    * Updates the transactions in the db if they have a different status or timestamp.
    */
   async function updateTransactionsInDb() {
-    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
+    const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
 
     await Promise.all(dbTxs.map(async (dbTx) => {
+      // Checking for tx with cashback to claim
+      // We need to check this if it's mined or confirmed just in case the user closes the app
+      // before the tx is mined and opened again after it's confirmed
+      if ((dbTx.status === 'mined' || dbTx.status === 'confirmed') && dbTx.transfer === Transfer.UserPaymentToMerchant && dbTx.paymentMethod === PaymentMethod.NIM) {
+        if (dbTx.isCashbackClaimed)
+          return
+        if (!useApp().pointsToken)
+          return
+        const { error } = await usePoints().claimCashback(dbTx)
+        if (error) {
+          console.error(error)
+          // TODO: get errors from enum
+          if (error.includes('CPL_PAYMENT_REQUEST_ALREADY_PROCESSED'))
+            useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+        }
+        else {
+          useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+        }
+      }
+
       // If tx is confirmed, we can guarantee that the status and timestamp in the db are correct
       // so we don't need to check it and that prevents us from making an unnecessary request to the blockchain
       // that can get us rate limited

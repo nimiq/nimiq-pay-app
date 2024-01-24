@@ -1,6 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { type Ref, ref } from 'vue'
 import { useApp } from './app'
+import { MerchantCategory, type MerchantTransaction, PaymentMethod, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { useToast } from '@/composables/useToast'
 import { usePointsApi } from '@/composables/useApi'
@@ -8,7 +9,6 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
-import { MerchantCategory, PaymentMethod, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -156,6 +156,19 @@ export const usePoints = defineStore('points', () => {
     }, 750)
   }
 
+  async function claimCashback(tx: MerchantTransaction) {
+    if (!phoneNumber.value)
+      return { data: undefined, error: i18n.t('Phone number missing') }
+    if (!pointsToken.value)
+      return { data: undefined, error: i18n.t('Phone number not verified') }
+
+    const { error } = await api.claimCashback({ reference: tx.paymentRef, tx_hash: tx.hash, token: pointsToken.value })
+    if (error)
+      return { data: undefined, error: error || i18n.t('Something went wrong claiming the cashback') }
+
+    return { error: undefined }
+  }
+
   async function payWithPoints(request: PaymentRequestData) {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
@@ -192,6 +205,7 @@ export const usePoints = defineStore('points', () => {
       fiatAmount: fiatAmount!,
       fiatFeeAmount: fiatFeeAmount!,
       fiatCurrency: fiatCurrency!,
+      isCashbackClaimed: false,
     })
     await updatePointsBalance()
     return { data: undefined, error: undefined }
@@ -211,5 +225,6 @@ export const usePoints = defineStore('points', () => {
     getReferralInfo,
     getReferralInfoById,
     payWithPoints,
+    claimCashback,
   }
 })

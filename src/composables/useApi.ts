@@ -57,12 +57,15 @@ export function usePointsApi() {
   interface TaskArg { token: MaybeRef<string> }
   interface TaskIdArg { id: MaybeRef<string>; token: MaybeRef<string> }
   interface ClaimTaskArg { id: MaybeRef<string>; answer?: MaybeRef<string>; token: MaybeRef<string> }
+  interface ClaimCashbackArg { reference: MaybeRef<string>; tx_hash: MaybeRef<string>; token: MaybeRef<string> }
 
   type AuthorizeRes = string
   interface VerifyRes { token: string }
   interface VerifyPaymentRes { valid: boolean; reason: string; cashback: { percentage: number; amountInLuna: number } }
   interface BalanceRes { balance: number }
   type PayWithPointsRes = undefined
+  // TODO: Get more errors from the puntos server code
+  type ClaimCashbackRes = undefined | { statusCode: number; error: 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED'; message: string }
 
   interface ParticipantReferralRes { id: string; claims_remaining: number; reward: number }
   interface ReferralIdRes { id: string; claims_remaining: number; reward: number }
@@ -92,6 +95,7 @@ export function usePointsApi() {
     verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
     getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
     payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
+    claimCashback: ({ reference, tx_hash, token }: ClaimCashbackArg) => api<ClaimCashbackRes>(new URL('api/payment/on-chain', basePointsUrl), { token: v(token), body: { reference: v(reference), tx_hash: v(tx_hash) } }),
     verifyPayment,
     getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/voucher', basePointsUrl), { token: v(token) }),
     getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/voucher/${v(id)}`, basePointsUrl)),

@@ -117,6 +117,7 @@ export type UserTransaction = BaseTransaction & {
   fiatCurrency?: undefined
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
+  isCashbackClaimed?: undefined
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
@@ -131,6 +132,7 @@ export type UserReceiptTransaction = BaseTransaction & {
   fiatCurrency?: undefined
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
+  isCashbackClaimed?: undefined
 }
 
 export type MerchantTransaction = BaseTransaction & {
@@ -138,6 +140,7 @@ export type MerchantTransaction = BaseTransaction & {
   fiatCurrency: string
   fiatAmount: number
   fiatFeeAmount: number
+  isCashbackClaimed: boolean
   merchantName: string
   merchantCategory: MerchantCategory
   title: TransactionTitle
@@ -166,6 +169,7 @@ interface SyncTransactionBase {
   fiatCurrency?: undefined
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
+  isCashbackClaimed?: undefined
 }
 
 export type LocalToRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.LocalToRemote }

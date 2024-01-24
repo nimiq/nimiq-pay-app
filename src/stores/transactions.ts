@@ -57,7 +57,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatCurrency],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatCurrency, tx.isCashbackClaimed],
     )
   }
 
@@ -164,6 +164,13 @@ export const useTransactions = defineStore('transactions', () => {
       tx.status = status
   }
 
+  async function updateTransactionCashbackClaimed({ hash }: { hash: string }) {
+    await run(SQLQuery.UpdateCashbackStatus, [true, hash])
+    const tx = transactions.value.find(tx => tx.hash === hash)
+    if (tx)
+      tx.isCashbackClaimed = true
+  }
+
   const status = computed(() => {
     if (transactions.value.length === 0)
       return TransactionListState.Empty
@@ -181,6 +188,7 @@ export const useTransactions = defineStore('transactions', () => {
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
     updateTransactionStatus,
+    updateTransactionCashbackClaimed,
     clearTxHistory,
 
     // Search for transactions
