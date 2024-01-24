@@ -89,8 +89,9 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
-    const { fee, transactionHash: hash, recipient, sender, value: amount, data: { raw: message }, senderType, recipientType } = signedTx!.toPlain()
-    const raw = signedTx!.serialize().toString()
+    const { fee, transactionHash: hash, recipient, sender, value: amount, senderType, recipientType } = signedTx!.toPlain()
+    const raw = Nimiq.BufferUtils.toHex(signedTx!.serializeContent())
+    const message = partialTx.transfer === Transfer.UserPaymentToMerchant ? partialTx.message : ''
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
     // TODO:

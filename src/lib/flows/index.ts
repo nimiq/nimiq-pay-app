@@ -176,7 +176,7 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
           : 'Payment', // translated at display time
       })
         // TODO Handle errors
-        .then(({ error }) => console.error(error ?? 'Transaction was NOT sent successfully'))
+        .then(({ error }) => error && console.error(error))
         .catch(error => console.error(error ?? 'Error was thrown. Transaction was NOT sent successfully'))
       closeFn()
     }
