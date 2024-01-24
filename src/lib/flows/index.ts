@@ -6,6 +6,7 @@ import { FlowName, StepName, inputSteps } from '@/lib/flows/steps.types'
 import type { Flow, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
+import { useDevice } from '@/composables/useDevice'
 
 const loginFlow: FlowInit = async ({ closeFn, state }) => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
@@ -191,8 +192,16 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
         closeFn()
     }
   }
-
-  return { flowName, state, steps, onDone }
+  const onCancel: Flow['onCancel'] = async (_state) => {
+    console.log('🤑  Cancelling payment process')
+    if (!useDevice().isWeb) {
+      const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
+      await BarcodeScanner.removeAllListeners()
+      await BarcodeScanner.stopScan()
+    }
+    closeFn()
+  }
+  return { flowName, state, steps, onDone, onCancel }
 }
 
 const nimWithdrawFlow: FlowInit = async ({ state }) => {
