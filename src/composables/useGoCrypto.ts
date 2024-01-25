@@ -88,7 +88,7 @@ export function parseGoCryptoRequestLink(requestLink: string | URL): GoCryptoReq
 
 /**
  * @param {GoCryptoRequestIdentifier} requestIdentifier
- * @param {number} [earlyExpiryOffset=20000] - Offset to deduct from the expiry date for the transaction to be confirmed
+ * @param {number} [earlyExpiryOffset] - Offset to deduct from the expiry date for the transaction to be confirmed
  *   by GoCrypto in time. If confirmation on the Blockchain is required, setting this to at least twice the block time
  *   should be considered. In ms. The default is 20000ms.
  */
@@ -135,11 +135,11 @@ export async function fetchGoCryptoPaymentDetails(
             };
         }
 
-        const id: string = data.id; // eslint-disable-line prefer-destructuring
+        const id: string = data.id;
         if (typeof id !== 'string' || !/\w+/.test(id)
             || ('paymentId' in requestIdentifier && id !== requestIdentifier.paymentId)) throw new Error('Invalid id');
 
-        const status: GoCryptoPaymentStatus = data.status; // eslint-disable-line prefer-destructuring
+        const status: GoCryptoPaymentStatus = data.status;
         if (typeof status !== 'number'
             || !Object.values(GoCryptoPaymentStatus).includes(status)) throw new Error('Invalid status');
 
@@ -147,7 +147,7 @@ export async function fetchGoCryptoPaymentDetails(
         if (Number.isNaN(expiryFinal)) throw new Error('Invalid expiry');
         const expiryEarly = expiryFinal - earlyExpiryOffset;
 
-        const storeName: string = data.store_full_name; // eslint-disable-line prefer-destructuring
+        const storeName: string = data.store_full_name;
         if (typeof storeName !== 'string' || !storeName) throw new Error('Invalid storeName');
 
         // Only support Nimiq

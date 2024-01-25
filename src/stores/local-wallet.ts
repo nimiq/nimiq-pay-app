@@ -43,7 +43,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
         errorMessage = i18n.t('Invalid recovery words')
       }
       else {
-        console.warn(`Untranslated message: ${errorMessage}`) // eslint-disable-line no-console
+        console.warn(`Untranslated message: ${errorMessage}`)
       }
       return { error: errorMessage, data: undefined }
     }

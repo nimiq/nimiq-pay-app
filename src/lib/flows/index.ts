@@ -6,7 +6,7 @@ import type { Flow, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.t
 
 import FlowCmp from '@/components/Flow.vue'
 import { useDevice } from '@/composables/useDevice'
-import { useToast } from '@/composables/useToast';
+import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 
 const loginFlow: FlowInit = async ({ closeFn, state }) => {
@@ -192,7 +192,7 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
         title: request.merchantName
           ? markAsUnknownTransactionTitle(request.merchantName)
           : 'Payment', // translated at display time
-      }).catch((error) => ({ error: i18n.t(
+      }).catch(error => ({ error: i18n.t(
         'Transaction failed: {error}',
         { error: error instanceof Error ? error.message : String(error) },
       ) }))
@@ -208,7 +208,7 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
 
       const { usePoints } = await import('@/stores/points')
       const { error } = await usePoints().payWithPoints(request)
-        .catch((error) => ({ error: i18n.t(
+        .catch(error => ({ error: i18n.t(
           'Transaction failed: {error}',
           { error: error instanceof Error ? error.message : String(error) },
         ) }))
@@ -325,10 +325,10 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
       console.log('🌊 Dismissing flow', flow)
       const { default: router } = await import('@/router/index')
       await flow.onCancel?.(flow.state, {
-        goTo: (path) => router.replace(path),
+        goTo: path => router.replace(path),
         err(errorMessage: string) {
           useToast().setToast({ message: errorMessage, error: true })
-        }
+        },
       })
       return true
     },

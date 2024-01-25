@@ -26,15 +26,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     head.value = await client.value.getHeadBlock()
 
     client.value.addConsensusChangedListener((newConsensus) => {
-      if (newConsensus === 'established')
-        clearToast()
+      if (newConsensus === 'established') { clearToast() }
       // If consensus was established before, but now is not, show error toast
-      else if (consensus.value === 'established')
+      else if (consensus.value === 'established') {
         setToast({
           message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
           error: true,
           keepOpen: true,
         })
+      }
 
       consensus.value = newConsensus
     })

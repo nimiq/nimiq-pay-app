@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
-import { computed, ref, toRef, watch } from 'vue'
+import { computed, ref, toRef, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
@@ -13,7 +13,6 @@ import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
-import { watchEffect } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -55,7 +54,7 @@ const disabled = computed(() => !(isEligible.value && paymentMethod.value === Pa
 const loading = ref(false)
 
 watchEffect(() => {
-  if(payment.value)
+  if (payment.value)
     checkPointsPaymentValidity()
 })
 

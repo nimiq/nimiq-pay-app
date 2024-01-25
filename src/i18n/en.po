@@ -447,7 +447,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:34
+#: src/stores/nimiq-network.ts:33
 msgid "Network consensus lost."
 msgstr ""
 
@@ -803,8 +803,8 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/lib/flows/index.ts:196
-#: src/lib/flows/index.ts:212
+#: src/lib/flows/index.ts:195
+#: src/lib/flows/index.ts:211
 msgid "Transaction failed: {error}"
 msgstr ""
 
