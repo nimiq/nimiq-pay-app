@@ -212,11 +212,11 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:264
+#: src/composables/useGoCrypto.ts:268
 msgid "Error {errorCode}"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:263
+#: src/composables/useGoCrypto.ts:267
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
@@ -302,11 +302,11 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:230
+#: src/composables/useGoCrypto.ts:234
 msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:309
+#: src/composables/useGoCrypto.ts:313
 msgid "If you already made a payment, wait for it to be confirmed instead."
 msgstr ""
 
@@ -484,7 +484,7 @@ msgstr ""
 msgid "No payment details found"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:255
+#: src/composables/useGoCrypto.ts:259
 msgid "No payment request found"
 msgstr ""
 
@@ -500,7 +500,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:242
+#: src/composables/useGoCrypto.ts:246
 msgid "Not a pending payment request"
 msgstr ""
 
@@ -547,7 +547,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:272
+#: src/composables/useGoCrypto.ts:276
 msgid "Payment request has already been paid"
 msgstr ""
 
@@ -576,7 +576,7 @@ msgstr ""
 msgid "PIN did not match"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:224
+#: src/composables/useGoCrypto.ts:228
 msgid "Please ask the merchant to create a new payment request."
 msgstr ""
 
@@ -753,15 +753,15 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:300
+#: src/composables/useGoCrypto.ts:304
 msgid "The payment request expired"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:306
+#: src/composables/useGoCrypto.ts:310
 msgid "The payment request is about to expire"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:244
+#: src/composables/useGoCrypto.ts:248
 msgid "The payment request might have been paid, expired, or cancelled."
 msgstr ""
 
@@ -825,7 +825,7 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:261
+#: src/composables/useGoCrypto.ts:265
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
@@ -1002,23 +1002,23 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:280
+#: src/composables/useGoCrypto.ts:284
 msgid "Your payment failed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:276
+#: src/composables/useGoCrypto.ts:280
 msgid "Your payment is being processed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:284
+#: src/composables/useGoCrypto.ts:288
 msgid "Your payment is invalid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:293
+#: src/composables/useGoCrypto.ts:297
 msgid "Your payment was cancelled"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:288
+#: src/composables/useGoCrypto.ts:292
 msgid "Your payment was refunded"
 msgstr ""
 

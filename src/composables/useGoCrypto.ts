@@ -125,29 +125,31 @@ export async function fetchGoCryptoPaymentDetails(
     };
 
     try {
-        let data: Record<string, any>; // Assume any as type. Type correctness will be checked by further parsing below.
-        // TODO sync with server time
-        const timeOffset = 0;
-
         let isResponseStatusOk: boolean;
+        let responseDateHeader: string | null;
+        let data: Record<string, any>; // Assume any as type. Type correctness will be checked by further parsing below.
         if (!customFetch) {
             const response = await fetch(url, {
                 headers,
                 cache: 'no-cache',
                 referrerPolicy: 'no-referrer',
             });
+            isResponseStatusOk = response.ok;
+            // Note: with the browser api's fetch, reading the Date header is not allowed on cors requests unless it's
+            // specified in the response's Access-Control-Expose-Headers. If not allowed, null is read.
+            responseDateHeader = response.headers.get('Date');
             // Try to read body which is set on valid requests and expected errors.
             data = await response.json() as Record<string, any>;
-            isResponseStatusOk = response.ok;
         } else {
             const response = await customFetch({
                 url,
                 headers,
                 responseType: 'json',
             });
-            data = response.data as Record<string, any>; // already parsed according to responseType
             // Define ok status equivalent to browser api, https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
             isResponseStatusOk = response.status >= 200 && response.status < 300;
+            responseDateHeader = response.headers.Date || response.headers.date;
+            data = response.data as Record<string, any>; // already parsed according to responseType
         }
 
         if (!isResponseStatusOk) {
@@ -169,6 +171,8 @@ export async function fetchGoCryptoPaymentDetails(
         if (typeof status !== 'number'
             || !Object.values(GoCryptoPaymentStatus).includes(status)) throw new Error('Invalid status');
 
+        const serverTime = Date.parse(responseDateHeader || '');
+        const timeOffset = !Number.isNaN(serverTime) ? serverTime - Date.now() : 0;
         const expiryFinal = Date.parse(data.expires_at) - timeOffset; // convert expiry to user's clock
         if (Number.isNaN(expiryFinal)) throw new Error('Invalid expiry');
         const expiryEarly = expiryFinal - earlyExpiryOffset;
