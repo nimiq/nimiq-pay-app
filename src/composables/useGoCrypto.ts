@@ -1,7 +1,8 @@
 /* eslint-disable style/indent, style/semi, style/member-delimiter-style, antfu/if-newline, style/quote-props,
-style/type-annotation-spacing, style/array-bracket-spacing, style/brace-style, curly --
+style/type-annotation-spacing, style/brace-style, unicorn/prefer-type-error, curly, arrow-parens --
 The idea is to eventually move this into a separate lib, therefore we keep the file as close as possible to the variant
 using in the Nimiq Wallet */
+import type { CapacitorHttp } from '@capacitor/core';
 import { ValidationUtils } from '@nimiq/utils';
 import { i18n } from '@/i18n/i18n-setup';
 import { isDev } from '@/lib/index';
@@ -88,13 +89,23 @@ export function parseGoCryptoRequestLink(requestLink: string | URL): GoCryptoReq
 
 /**
  * @param {GoCryptoRequestIdentifier} requestIdentifier
- * @param {number} [earlyExpiryOffset] - Offset to deduct from the expiry date for the transaction to be confirmed
- *   by GoCrypto in time. If confirmation on the Blockchain is required, setting this to at least twice the block time
- *   should be considered. In ms. The default is 20000ms.
+ * @param {object} [options]
+ * @param {number} [options.earlyExpiryOffset] - Offset to deduct from the expiry date for the transaction to be
+ *   confirmed by GoCrypto in time. If confirmation on the Blockchain is required, setting this to at least twice the
+ *   block time should be considered. In ms. The default is 20000ms.
+ * @param {typeof CapacitorHttp['request']} [options.customFetch] - Custom fetch handler to use. In native, for example
+ *   Capacitor/Cordova based apps, it is recommended to use native HTTP requests instead of the browser api, to be able
+ *   to set and read arbitrary headers. By default, the browser api's fetch is used.
  */
 export async function fetchGoCryptoPaymentDetails(
-  requestIdentifier: GoCryptoRequestIdentifier,
-  earlyExpiryOffset: number = 20 * 1000,
+    requestIdentifier: GoCryptoRequestIdentifier,
+    {
+        earlyExpiryOffset = 20 * 1000,
+        customFetch,
+    }: {
+        earlyExpiryOffset?: number,
+        customFetch?: typeof CapacitorHttp['request'],
+    } = {},
 ): Promise<GoCryptoPaymentDetails | GoCryptoPaymentApiError> {
     // Note: for querying data by merchant id for fixed QR code stickers in the shop, the documentation claims that
     // <apiEndpoint>/v3/custodial/payment?merchant_id=<merchantId> should be queried, and chapter 4 suggests that v2 is
@@ -106,28 +117,43 @@ export async function fetchGoCryptoPaymentDetails(
     const headers = {
         // Note: As of August 2023, setting a custom user agent is possible in Firefox and Safari, but not in Chrome
         // yet, see https://bugs.chromium.org/p/chromium/issues/detail?id=571722. However, the Chrome uer agent is good
-        // enough for now, according to GoCrypto.
-        // TODO in native app use CapacitorHttp plugin to circumvent this issue.
+        // enough for now, according to GoCrypto. In native apps, a customFetch that supports arbitrary headers should
+        // be used.
         'User-Agent': 'Nimiq Pay',
         Authorization: `publicauth ${GO_CRYPTO_CONFIG.apiKey}`,
         'Content-Type': 'application/json',
     };
 
     try {
+        let data: Record<string, any>; // Assume any as type. Type correctness will be checked by further parsing below.
         // TODO sync with server time
         const timeOffset = 0;
-        const [response /* , timeOffset */] = await Promise.all([
-            fetch(url, {
+
+        let isResponseStatusOk: boolean;
+        if (!customFetch) {
+            const response = await fetch(url, {
                 headers,
                 cache: 'no-cache',
                 referrerPolicy: 'no-referrer',
-            }),
-            // getServerTime().then((serverTime) => serverTime - Date.now()),
-        ]);
-        const data = await response.json() as any; // Try to read body which is set on valid requests and expected errors.
+            });
+            // Try to read body which is set on valid requests and expected errors.
+            data = await response.json() as Record<string, any>;
+            isResponseStatusOk = response.ok;
+        } else {
+            const response = await customFetch({
+                url,
+                headers,
+                responseType: 'json',
+            });
+            data = response.data as Record<string, any>; // already parsed according to responseType
+            // Define ok status equivalent to browser api, https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
+            isResponseStatusOk = response.status >= 200 && response.status < 300;
+        }
 
-        if (!response.ok) {
-            if (typeof data.code !== 'string' || typeof data.message !== 'string') throw new Error('Unexpected error');
+        if (!isResponseStatusOk) {
+            if (typeof data !== 'object' || typeof data.code !== 'string' || typeof data.message !== 'string') {
+                throw new Error('Unexpected error');
+            }
             return {
                 errorCode: data.code,
                 errorMessage: data.message,
@@ -151,8 +177,9 @@ export async function fetchGoCryptoPaymentDetails(
         if (typeof storeName !== 'string' || !storeName) throw new Error('Invalid storeName');
 
         // Only support Nimiq
-        const nimiqPaymentOptions = Array.isArray(data.payment_options)
-            && data.payment_options.find((option: any) => !!option && option.currency_name === 'NIM');
+        const nimiqPaymentOptions: Record<string, any> = Array.isArray(data.payment_options)
+            && (data.payment_options as any[])
+                .find((option) => typeof option === 'object' && option.currency_name === 'NIM');
         if (!nimiqPaymentOptions
             || nimiqPaymentOptions.currency !== /* Nimiq id */ 207) throw new Error('Missing Nimiq payment options');
 

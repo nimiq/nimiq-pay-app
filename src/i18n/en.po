@@ -67,7 +67,7 @@ msgstr ""
 msgid "Beta Testing"
 msgstr ""
 
-#: src/lib/flows/steps.ts:226
+#: src/lib/flows/steps.ts:227
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr ""
 
@@ -91,7 +91,7 @@ msgstr ""
 msgid "Choose a PIN"
 msgstr ""
 
-#: src/components/GenericInput.vue:18
+#: src/components/GenericInput.vue:19
 msgid "Claim Promo Code"
 msgstr ""
 
@@ -104,7 +104,7 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: src/lib/flows/steps.ts:162
+#: src/lib/flows/steps.ts:163
 msgid "Confirm your phone number"
 msgstr ""
 
@@ -146,7 +146,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:330
+#: src/lib/flows/steps.ts:331
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -154,7 +154,7 @@ msgstr ""
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
-#: src/lib/flows/steps.ts:233
+#: src/lib/flows/steps.ts:234
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
@@ -162,7 +162,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:199
+#: src/lib/flows/steps.ts:200
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr ""
 
@@ -184,7 +184,7 @@ msgid "Earn Points"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:6
-#: src/lib/flows/steps.ts:185
+#: src/lib/flows/steps.ts:186
 msgid "Enable notifications"
 msgstr ""
 
@@ -200,7 +200,7 @@ msgstr ""
 msgid "Enter recovery words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:163
+#: src/lib/flows/steps.ts:164
 msgid "Enter the code from the SMS sent to you."
 msgstr ""
 
@@ -212,11 +212,11 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:237
+#: src/composables/useGoCrypto.ts:264
 msgid "Error {errorCode}"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:236
+#: src/composables/useGoCrypto.ts:263
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
@@ -248,7 +248,7 @@ msgstr ""
 msgid "Find places that accept crypto!"
 msgstr ""
 
-#: src/lib/flows/steps.ts:219
+#: src/lib/flows/steps.ts:220
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
@@ -256,17 +256,17 @@ msgstr ""
 msgid "Get cashback and earn rewards"
 msgstr ""
 
-#: src/lib/flows/steps.ts:212
+#: src/lib/flows/steps.ts:213
 msgid "Get Cryptocity Points"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:34
-#: src/lib/flows/steps.ts:213
-#: src/lib/flows/steps.ts:240
+#: src/lib/flows/steps.ts:214
+#: src/lib/flows/steps.ts:241
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
-#: src/lib/flows/steps.ts:186
+#: src/lib/flows/steps.ts:187
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr ""
 
@@ -302,11 +302,11 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:203
+#: src/composables/useGoCrypto.ts:230
 msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:282
+#: src/composables/useGoCrypto.ts:309
 msgid "If you already made a payment, wait for it to be confirmed instead."
 msgstr ""
 
@@ -323,43 +323,43 @@ msgstr ""
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useStringParser.ts:104
+#: src/composables/useStringParser.ts:105
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:89
+#: src/composables/useStringParser.ts:90
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:100
-#: src/composables/useStringParser.ts:83
+#: src/composables/useStringParser.ts:101
+#: src/composables/useStringParser.ts:84
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
-#: src/composables/useStringParser.ts:130
-#: src/composables/useStringParser.ts:134
-#: src/composables/useStringParser.ts:143
+#: src/composables/useStringParser.ts:137
+#: src/composables/useStringParser.ts:141
+#: src/composables/useStringParser.ts:150
 msgid "Invalid GoCrypto link."
 msgstr ""
 
-#: src/composables/useStringParser.ts:77
+#: src/composables/useStringParser.ts:78
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:55
+#: src/composables/useStringParser.ts:56
 msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:21
-#: src/lib/flows/steps.ts:341
+#: src/composables/useStringParser.ts:22
+#: src/lib/flows/steps.ts:342
 msgid "Invalid Nimiq address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:33
+#: src/composables/useStringParser.ts:34
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:149
+#: src/lib/flows/steps.ts:150
 msgid "Invalid phone number"
 msgstr ""
 
@@ -389,7 +389,7 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:46
+#: src/composables/useStringParser.ts:47
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -484,7 +484,7 @@ msgstr ""
 msgid "No payment details found"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:228
+#: src/composables/useGoCrypto.ts:255
 msgid "No payment request found"
 msgstr ""
 
@@ -500,7 +500,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:215
+#: src/composables/useGoCrypto.ts:242
 msgid "Not a pending payment request"
 msgstr ""
 
@@ -517,16 +517,16 @@ msgstr ""
 msgid "Pay"
 msgstr ""
 
-#: src/lib/flows/steps.ts:232
+#: src/lib/flows/steps.ts:233
 msgid "Pay with Bluecode"
 msgstr ""
 
-#: src/lib/flows/steps.ts:205
+#: src/lib/flows/steps.ts:206
 msgid "Pay with Cryptocity Points"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:28
-#: src/lib/flows/steps.ts:206
+#: src/lib/flows/steps.ts:207
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
@@ -542,12 +542,12 @@ msgstr ""
 msgid "Payment invalid"
 msgstr ""
 
-#: src/lib/flows/steps.ts:264
-#: src/lib/flows/steps.ts:276
+#: src/lib/flows/steps.ts:265
+#: src/lib/flows/steps.ts:277
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:245
+#: src/composables/useGoCrypto.ts:272
 msgid "Payment request has already been paid"
 msgstr ""
 
@@ -576,7 +576,7 @@ msgstr ""
 msgid "PIN did not match"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:197
+#: src/composables/useGoCrypto.ts:224
 msgid "Please ask the merchant to create a new payment request."
 msgstr ""
 
@@ -584,7 +584,7 @@ msgstr ""
 msgid "Please confirm your PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:146
+#: src/lib/flows/steps.ts:147
 msgid "Please enter a phone number"
 msgstr ""
 
@@ -596,7 +596,7 @@ msgstr ""
 msgid "Please enter a promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:167
+#: src/lib/flows/steps.ts:168
 msgid "Please enter a verification code"
 msgstr ""
 
@@ -629,7 +629,7 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:164
+#: src/lib/flows/steps.ts:165
 msgid "Resend"
 msgstr ""
 
@@ -645,7 +645,7 @@ msgstr ""
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:248
+#: src/lib/flows/steps.ts:249
 msgid "Scan QR code"
 msgstr ""
 
@@ -669,15 +669,15 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:352
+#: src/lib/flows/steps.ts:353
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:329
+#: src/lib/flows/steps.ts:330
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:351
+#: src/lib/flows/steps.ts:352
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -687,11 +687,11 @@ msgid "Settings"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:9
-#: src/components/PhoneInput.vue:21
+#: src/components/PhoneInput.vue:22
 msgid "Skip for now"
 msgstr ""
 
-#: src/lib/flows/steps.ts:315
+#: src/lib/flows/steps.ts:316
 msgid "Something went wrong"
 msgstr ""
 
@@ -707,7 +707,7 @@ msgstr ""
 
 #: src/composables/useDecrypt.ts:63
 #: src/composables/useDecrypt.ts:66
-#: src/lib/flows/steps.ts:125
+#: src/lib/flows/steps.ts:126
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
@@ -733,7 +733,7 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
-#: src/components/PhoneInput.vue:11
+#: src/components/PhoneInput.vue:12
 msgid "Standard rates may apply."
 msgstr ""
 
@@ -753,15 +753,15 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:273
+#: src/composables/useGoCrypto.ts:300
 msgid "The payment request expired"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:279
+#: src/composables/useGoCrypto.ts:306
 msgid "The payment request is about to expire"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:217
+#: src/composables/useGoCrypto.ts:244
 msgid "The payment request might have been paid, expired, or cancelled."
 msgstr ""
 
@@ -808,7 +808,7 @@ msgstr ""
 msgid "Top-Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:368
+#: src/lib/flows/steps.ts:369
 msgid "Transaction"
 msgstr ""
 
@@ -825,7 +825,7 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:234
+#: src/composables/useGoCrypto.ts:261
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
@@ -837,15 +837,15 @@ msgstr ""
 msgid "Use {amount}"
 msgstr ""
 
-#: src/components/PhoneInput.vue:18
+#: src/components/PhoneInput.vue:19
 msgid "Verify"
 msgstr ""
 
-#: src/lib/flows/steps.ts:239
+#: src/lib/flows/steps.ts:240
 msgid "Verify your ID"
 msgstr ""
 
-#: src/lib/flows/steps.ts:140
+#: src/lib/flows/steps.ts:141
 #: src/views/HomeView.vue:108
 msgid "Verify your phone number"
 msgstr ""
@@ -862,11 +862,11 @@ msgstr ""
 msgid "Welcome to Nimiq Pay"
 msgstr ""
 
-#: src/lib/flows/steps.ts:198
+#: src/lib/flows/steps.ts:199
 msgid "What are Cryptocity Points?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:225
+#: src/lib/flows/steps.ts:226
 msgid "What is Bluecode?"
 msgstr ""
 
@@ -918,7 +918,7 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:296
+#: src/lib/flows/steps.ts:297
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
@@ -927,7 +927,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/steps.ts:318
+#: src/lib/flows/steps.ts:319
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -965,7 +965,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:303
+#: src/lib/flows/steps.ts:304
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
@@ -986,11 +986,11 @@ msgstr ""
 msgid "You received Cryptocity Points"
 msgstr ""
 
-#: src/components/GenericInput.vue:14
+#: src/components/GenericInput.vue:15
 msgid "You will receive {amount} Point | You will receive {amount} Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:141
+#: src/lib/flows/steps.ts:142
 msgid "You will receive an SMS with a verification code"
 msgstr ""
 
@@ -1002,23 +1002,23 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:253
+#: src/composables/useGoCrypto.ts:280
 msgid "Your payment failed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:249
+#: src/composables/useGoCrypto.ts:276
 msgid "Your payment is being processed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:257
+#: src/composables/useGoCrypto.ts:284
 msgid "Your payment is invalid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:266
+#: src/composables/useGoCrypto.ts:293
 msgid "Your payment was cancelled"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:261
+#: src/composables/useGoCrypto.ts:288
 msgid "Your payment was refunded"
 msgstr ""
 
