@@ -93,6 +93,9 @@ export function parseGoCryptoRequestLink(requestLink: string | URL): GoCryptoReq
  * @param {number} [options.earlyExpiryOffset] - Offset to deduct from the expiry date for the transaction to be
  *   confirmed by GoCrypto in time. If confirmation on the Blockchain is required, setting this to at least twice the
  *   block time should be considered. In ms. The default is 20000ms.
+ * @param {() => Promise<number>} [options.getServerTime] - A function to determine the current server time, for the
+ *   case that the user's clock is off. Only used, if the server time can't be determined from GoCrypto's api responses
+ *   via a customFetch.
  * @param {typeof CapacitorHttp['request']} [options.customFetch] - Custom fetch handler to use. In native, for example
  *   Capacitor/Cordova based apps, it is recommended to use native HTTP requests instead of the browser api, to be able
  *   to set and read arbitrary headers. By default, the browser api's fetch is used.
@@ -101,9 +104,11 @@ export async function fetchGoCryptoPaymentDetails(
     requestIdentifier: GoCryptoRequestIdentifier,
     {
         earlyExpiryOffset = 20 * 1000,
+        getServerTime,
         customFetch,
     }: {
         earlyExpiryOffset?: number,
+        getServerTime?: () => Promise<number>,
         customFetch?: typeof CapacitorHttp['request'],
     } = {},
 ): Promise<GoCryptoPaymentDetails | GoCryptoPaymentApiError> {
@@ -171,9 +176,8 @@ export async function fetchGoCryptoPaymentDetails(
         if (typeof status !== 'number'
             || !Object.values(GoCryptoPaymentStatus).includes(status)) throw new Error('Invalid status');
 
-        const serverTime = Date.parse(responseDateHeader || '');
-        const timeOffset = !Number.isNaN(serverTime) ? serverTime - Date.now() : 0;
-        const expiryFinal = Date.parse(data.expires_at) - timeOffset; // convert expiry to user's clock
+        const serverTimeOffset = await getServerTimeOffset(responseDateHeader, getServerTime);
+        const expiryFinal = Date.parse(data.expires_at) - serverTimeOffset; // convert expiry to user's clock
         if (Number.isNaN(expiryFinal)) throw new Error('Invalid expiry');
         const expiryEarly = expiryFinal - earlyExpiryOffset;
 
@@ -334,4 +338,34 @@ function toUrl(link: string | URL): null | URL {
     } catch (e) {
         return null;
     }
+}
+
+// Cache server time offset, to avoid re-fetching it every time.
+let serverTimeOffset: number | undefined;
+let serverTimeOffsetResetTimeout = -1;
+async function getServerTimeOffset(serverDateHeader?: string | null, getServerTime?: () => Promise<number>) {
+    let serverTime = Date.parse(serverDateHeader || '');
+    const gotInvalidDateHeader = Number.isNaN(serverTime);
+    if (serverTimeOffset !== undefined && gotInvalidDateHeader) {
+        // If we already have a cached serverTimeOffset, and we couldn't retrieve the server time from the Date header
+        // without having to fetch it separately, return the cached serverTimeOffset.
+        return serverTimeOffset;
+    }
+
+    if (gotInvalidDateHeader) {
+        // Could not retrieve server time from Date header, we have to fetch it separately.
+        serverTime = getServerTime ? await getServerTime() : Date.now();
+    }
+    serverTimeOffset = serverTime - Date.now();
+    if (Math.abs(serverTimeOffset) < 1500) {
+        // If deviation from server time is minimal, ignore it as it might be coming just from network delays.
+        serverTimeOffset = 0;
+    }
+
+    // Reset cached serverTimeOffset after one hour for the case that user changes his clock without killing or
+    // reloading the app. Note that setTimeout is unaffected from changes to the user clock.
+    clearTimeout(serverTimeOffsetResetTimeout);
+    serverTimeOffsetResetTimeout = setTimeout(() => serverTimeOffset = undefined, 60 * 60 * 1000);
+
+    return serverTimeOffset;
 }

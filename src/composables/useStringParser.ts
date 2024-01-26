@@ -1,6 +1,7 @@
 import { ValidationUtils } from '@nimiq/utils'
 import { useDevice } from './useDevice'
 import { useCplApi } from './useApi'
+import { getServerTime } from './useTime'
 import { GOCRYPTO_ID_PARAM, fetchGoCryptoPaymentDetails, goCryptoStatusToUserFriendlyMessage, parseGoCryptoRequestLink } from './useGoCrypto'
 import { nimiqDomainUrl } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
@@ -123,6 +124,7 @@ export function useStringParser() {
       goCryptoPaymentDetails = goCryptoRequestIdentifier
         ? await fetchGoCryptoPaymentDetails(goCryptoRequestIdentifier, {
           earlyExpiryOffset: 120 * 1000, // TODO remove once GoCrypto supports our instant transactions
+          getServerTime,
           // In native app, use native fetch, to be able to send and receive arbitrary headers
           customFetch: !useDevice().isWeb
             ? await import('@capacitor/core').then(({ CapacitorHttp: { request } }) => request)
