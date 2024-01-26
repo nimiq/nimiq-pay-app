@@ -63,7 +63,7 @@ watch(referralCode, async (newValue) => {
   </p>
   <div v-if="rewardAmount" class="w-full">
     <p class="text-center">
-      {{ $tc('- | You will receive {amount} Point | You will receive {amount} Points', rewardAmount / 1e5, { amount: formatCrypto(rewardAmount).replace(' NIM', '') }) }}
+      {{ $tc('You will receive {amount} Point | You will receive {amount} Points', rewardAmount / 1e5, { amount: formatCrypto(rewardAmount).replace(' NIM', '') }) }}
     </p>
   </div>
   <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">

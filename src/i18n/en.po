@@ -2,14 +2,6 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#: src/composables/usePointsPayment.ts:71
-msgid "- | This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
-msgstr ""
-
-#: src/components/GenericInput.vue:14
-msgid "- | You will receive {amount} Point | You will receive {amount} Points"
-msgstr ""
-
 #: src/stores/local-wallet.ts:37
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
@@ -789,6 +781,10 @@ msgstr ""
 msgid "This promo code has been claimed too many times"
 msgstr ""
 
+#: src/composables/usePointsPayment.ts:71
+msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
+msgstr ""
+
 #: src/components/NimWithdraw.vue:65
 msgid "To credit card / bank account"
 msgstr ""
@@ -803,12 +799,12 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/lib/flows/index.ts:195
-#: src/lib/flows/index.ts:211
+#: src/lib/flows/index.ts:186
+#: src/lib/flows/index.ts:202
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:89
+#: src/stores/transactions.ts:94
 msgid "Transaction invalid"
 msgstr ""
 
@@ -975,6 +971,10 @@ msgstr ""
 
 #: src/modals/TaskModal.vue:106
 msgid "You received Cryptocity Points"
+msgstr ""
+
+#: src/components/GenericInput.vue:14
+msgid "You will receive {amount} Point | You will receive {amount} Points"
 msgstr ""
 
 #: src/lib/flows/steps.ts:141
