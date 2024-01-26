@@ -93,7 +93,7 @@ export function useSync() {
       return
     console.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
     if (hasHtlcExpired.value) {
-      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout })
+      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error)
         console.error('Error while recovering funds from Remote', error)
     }
@@ -281,11 +281,18 @@ export function useSync() {
   /**
    * Sends all the funds from the remote signer to the local signer.
    */
-  async function drainRemoteSigner({ address, balance }: RemoteSigner) {
+  async function drainRemoteSigner({ address, balance, end }: RemoteSigner) {
     const amount = await useNimiqNetwork().getAccount(address).then(account => account.data?.balance || balance)
-    useTransactions().sendTx({ transfer: Transfer.RemoteToLocalImmediateReclaim, sender: address, amount })
+    if (!amount) {
+      console.error('Error while draining remote signer. Amount is undefined', { address: address.toUserFriendlyAddress(), amount })
+      return
+    }
+    if (end < localHeight.value)
+      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount, sender: address })
+    else
+      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalImmediateReclaim, sender: address, amount })
 
-    console.log('📡 Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
+    console.log('Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
   }
 
   /**
@@ -294,7 +301,7 @@ export function useSync() {
    * useSync composable later will take care of the rest.
    */
   async function ensureSingleRemoteSignerWithBalance() {
-    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetRemoteSignerWithBalance)
+    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetRemoteSignerWithBalance).then(parseAddress)
     if (remoteSigners.length <= 1)
       return
 

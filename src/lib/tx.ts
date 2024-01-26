@@ -89,13 +89,13 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
     tx.proof = createResolveProof({ mode: 'early', tx })
     return await getSignedTxByRemote(tx, { address: partialArgs.sender })
   }
-  else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout && useRemoteSigner().remoteAddress) {
+  else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
     const tx = new Nimiq.ExtendedTransaction(
-      /* sender */ useRemoteSigner().remoteAddress!,
+      /* sender */ partialArgs.sender,
       /* senderType */ Nimiq.Account.Type.HTLC,
       /* recipient */ useLocalWallet().localAddress,
       /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ useRemoteSigner().remoteBalance,
+      /* value */ partialArgs.amount,
       /* fee */ 0,
       /* validityStartHeight */ useRemoteSigner().remoteHeight,
       /* flags */ Nimiq.Transaction.Flag.NONE,

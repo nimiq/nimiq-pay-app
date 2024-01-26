@@ -203,7 +203,7 @@ export type PartialSendTxArgs =
   | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message'>
   | Pick<LocalToRemoteTx, 'transfer'>
   | Pick<ExtendRemoteTx, 'transfer'>
-  | Pick<RemoteToLocalAfterTimeoutTx, 'transfer'>
+  | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
   | Pick<RemoteToLocalTx, 'transfer'>
   | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
 
