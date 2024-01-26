@@ -5,7 +5,7 @@ import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, PaymentMethod, Transfer, isPaymentTx, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, MerchantCategory, PaymentMethod, Transfer, isPaymentTx, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
 
 const props = defineProps({
@@ -24,11 +24,23 @@ const paymentMethod = computed(() => {
 
   return PaymentMethod.NIM
 })
+
+const category = computed(() => {
+  const { tx } = props
+  if (tx.transfer === Transfer.UserPaymentToMerchant)
+    return tx.merchantCategory
+  if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.Account.Type.HTLC && tx.recipientType === Nimiq.Account.Type.BASIC)
+    return 'withdraw'
+  if (tx.transfer === Transfer.UserReceipt)
+    return 'deposit'
+
+  return MerchantCategory.Shop
+})
 </script>
 
 <template>
   <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed' }">
-    <CategoryIcon :category="tx.transfer === Transfer.UserReceipt ? 'deposit' : tx.merchantCategory" />
+    <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
         {{ translateTransactionTitle(tx.title) }}

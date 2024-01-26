@@ -13,10 +13,11 @@ import RestaurantBarIcon from '@/components/icons/categories/restaurant_bar.vue'
 import ShopIcon from '@/components/icons/categories/shop.vue'
 import SportsFitnessIcon from '@/components/icons/categories/sports_fitness.vue'
 import DepositIcon from '@/components/icons/categories/deposit.vue'
+import WithdrawIcon from '@/components/icons/categories/withdraw.vue'
 
 defineProps({
   category: {
-    type: String as () => MerchantCategory | 'deposit',
+    type: String as () => MerchantCategory | 'deposit' | 'withdraw',
     default: MerchantCategory.Shop,
   },
 })
@@ -37,5 +38,6 @@ defineProps({
     <ShopIcon v-else-if="category === MerchantCategory.Shop" />
     <SportsFitnessIcon v-else-if="category === MerchantCategory.SportsFitness" />
     <DepositIcon v-else-if="category === 'deposit'" />
+    <WithdrawIcon v-else-if="category === 'withdraw'" />
   </div>
 </template>

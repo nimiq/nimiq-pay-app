@@ -2,7 +2,7 @@ import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, type MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
+import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { useApp } from '@/stores/app'
 import { hash } from '@/composables/useDecrypt'
 
@@ -366,7 +366,16 @@ export const transactionDetail: StepInit = async () => {
     ? tx.value.merchantName || translateTransactionTitle(tx.value.title)
     : null
   ) || i18n.t('Transaction'))
-  const merchantCategory = computed(() => tx.value?.merchantCategory)
+  const merchantCategory = computed(() => {
+    if (tx.value?.transfer === Transfer.UserPaymentToMerchant)
+      return tx.value?.merchantCategory
+    if (tx.value?.transfer === Transfer.UserPayment && tx.value?.senderType === Nimiq.Account.Type.HTLC && tx.value?.recipientType === Nimiq.Account.Type.BASIC)
+      return 'withdraw'
+    if (tx.value?.transfer === Transfer.UserReceipt)
+      return 'deposit'
+
+    return MerchantCategory.Shop
+  })
   const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: merchantCategory.value }))
   return {
     step: StepName.PaymentPreview,

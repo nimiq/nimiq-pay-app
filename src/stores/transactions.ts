@@ -41,7 +41,12 @@ export const useTransactions = defineStore('transactions', () => {
   async function selectTxs(options?: DbPagination) {
     const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || DEFAULT_LIMIT, options?.offset || 0])
     // TODO: Temporary, don't handle tx from HTLCs if tx is UserReceiptTransaction
-    const filteredTxs = txs.filter(tx => 'senderType' in tx && tx.senderType !== Nimiq.Account.Type.HTLC)
+    const filteredTxs = txs.filter((tx) => {
+      if (tx.transfer === Transfer.UserReceipt)
+        return tx.senderType !== Nimiq.Account.Type.HTLC
+      else
+        return true
+    })
 
     // eslint-disable-next-line no-console
     console.log(`📚 Selected ${txs.length} transactions`, txs)
@@ -89,15 +94,13 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
-    const { fee, transactionHash: hash, recipient, sender, value: amount, senderType, recipientType } = signedTx!.toPlain()
+    const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx!.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx!.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant ? partialTx.message : ''
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
-    // TODO:
-    // eslint-disable-next-line ts/ban-ts-comment
-    // @ts-expect-error
-    let tx = { ...partialTx, fee, recipient, recipientType, timestamp, status, hash, sender, senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
+
+    let tx = { ...partialTx, fee, recipient, recipientType: signedTx!.recipientType, timestamp, status, hash, sender, senderType: signedTx!.senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
     if (tx.transfer === Transfer.UserPaymentToMerchant)
       tx = { ...tx, paymentMethod: PaymentMethod.NIM }
 

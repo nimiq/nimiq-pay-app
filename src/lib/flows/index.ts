@@ -177,15 +177,6 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
     console.log(`🤑  Initializing payment process with ${method}`, request)
 
     if (method === PaymentMethod.NIM) {
-      // TODO - This is what we do atm.
-      // To make the app looks fast, we do not await for the transaction to be sent so we can immediately close the modal
-      // Instead, if we find an error, we show it to the user once the modal has been closed(?)
-
-      // Currently, with this design we close the modal. Then the user will be in the Home View seeing the old transactions
-      // and after a few seconds, the new transaction will appear. This is not ideal, but it's better than waiting for the
-      // transaction to be sent and then close the modal. In that case, the user would see the modal for a few seconds.
-      //
-      // I would suggest to add a loading indicator in the Home View to indicate that the transactions are being updated.
       const { useTransactions } = await import('@/stores/transactions')
       const { error } = await useTransactions().sendTx({
         ...request,
