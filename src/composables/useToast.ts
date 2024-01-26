@@ -26,6 +26,7 @@ function _useToast() {
       icon: error ? xmark : check,
       cssClass: `notification-alert-toast ${error && 'toast-error'}`,
       position: 'top',
+      swipeGesture: 'vertical',
       // animated: true,
       // enterAnimation,
     })
