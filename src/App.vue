@@ -2,7 +2,7 @@
 import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView } from 'vue-router'
-import { StatusBar } from '@capacitor/status-bar'
+import { StatusBar, Style } from '@capacitor/status-bar'
 
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { onMounted } from 'vue'
@@ -18,6 +18,7 @@ const isDev = import.meta.env.DEV
 
 if (!useDevice().isWeb) {
   StatusBar.setBackgroundColor({ color: '#F8F8F8' })
+  StatusBar.setStyle({ style: Style.Light })
   StatusBar.setOverlaysWebView({ overlay: false })
 }
 </script>
