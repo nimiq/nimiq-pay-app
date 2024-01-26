@@ -40,7 +40,7 @@ const pinCodeInput = ref<string[]>([])
         class="min-w-[10px] max-w-[42px] w-full text-center bg-white rounded-lg h-14 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-white border-space/40"
       />
     </PinInputRoot>
-    <p class="m-auto text-pumpkin min-h-14">
+    <p class="m-auto text-pumpkin small:min-h-7 tall:min-h-14">
       {{ errorMsg }}
     </p>
     <IonButton

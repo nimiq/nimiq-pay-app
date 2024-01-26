@@ -6,6 +6,8 @@ export default {
       ...require('tailwindcss-nimiq-theme'),
       screens: {
         xs: '320px',
+        tall: { raw: '(min-height: 800px)' },
+        small: { raw: '(min-height: 670px)' },
       },
       boxShadow: {
         card: '0px 0.33701px 2px 0px rgba(0, 0, 0, 0.03), 0px 1.5px 3px 0px rgba(0, 0, 0, 0.05), 0px 4px 16px 0px rgba(0, 0, 0, 0.07);',

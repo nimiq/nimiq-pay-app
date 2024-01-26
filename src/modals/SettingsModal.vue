@@ -21,7 +21,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
       <p class="text-sm font-bold text-left uppercase text-space/60">
         {{ $t('Settings') }}
       </p>
-      <IonList lines="none" class="mt-4">
+      <IonList lines="none">
         <IonItem>
           <IonSelect
             :label="$t('Language')" :value="language" class="text-lg font-semibold"

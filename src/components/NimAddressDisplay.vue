@@ -38,9 +38,9 @@ async function handleCopy() {
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full pt-8 pb-2">
-    <div class="flex flex-col items-center justify-center mt-8">
-      <NimLogo class="w-16 mb-8 h-14" />
+  <div class="flex flex-col self-start w-full h-full pt-8 small:pb-2">
+    <div class="flex flex-col items-center justify-center small:mt-4 tall:mt-8">
+      <NimLogo class="w-16 mb-2 small:mb-4 tall:mb-8 h-14" />
       <AddressDisplay class="w-4/5 min-w-[18rem] my-4" :address="address" />
     </div>
     <div>
