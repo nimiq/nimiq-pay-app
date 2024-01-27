@@ -1,5 +1,5 @@
 /* eslint-disable style/indent, style/semi, style/member-delimiter-style, antfu/if-newline, style/quote-props,
-style/type-annotation-spacing, style/brace-style, unicorn/prefer-type-error, curly, arrow-parens --
+style/type-annotation-spacing, style/brace-style, curly, arrow-parens --
 The idea is to eventually move this into a separate lib, therefore we keep the file as close as possible to the variant
 using in the Nimiq Wallet */
 import type { CapacitorHttp } from '@capacitor/core';
@@ -50,6 +50,14 @@ export enum GoCryptoPaymentApiErrorCode {
     // This surprisingly is returned for non-pending requests, for example paid, expired, or cancelled requests, instead
     // of payment info with a status of for example Paid or AutoClosed.
     PaymentNotFound = 'paymentNotFound',
+    // This is not an error that is returned by the GoCrypto api, but an error that we assign when the rate limit on
+    // this IP is hit. This error's name is surrounded by __ to avoid a potential name clash with GoCrypto.
+    // Note that Too Many requests more likely results due to too many requests by the GoCrypto PoS than by us, for
+    // example if two PoS with two different payment requests are open at the same time or the network cache is disabled
+    // in the dev tools (which results in sending a new OPTIONS pre-flight with every request), as the PoS sends api
+    // requests very frequently. Also note, that we can catch this error only on the request, not if it already occurs
+    // during the pre-flight. Running into the rate limit results in being blocked for one hour.
+    TooManyRequests = '__tooManyRequests__',
     // This is not an error that is returned by the GoCrypto api, but an error that we assign on invalid / unexpected
     // api responses. This error's name is surrounded by __ to avoid a potential name clash with GoCrypto.
     InvalidResponse = '__invalidResponse__',
@@ -130,42 +138,52 @@ export async function fetchGoCryptoPaymentDetails(
     };
 
     try {
-        let isResponseStatusOk: boolean;
+        let responseStatus: number;
         let responseDateHeader: string | null;
-        let data: Record<string, any>; // Assume any as type. Type correctness will be checked by further parsing below.
+        let data: Record<string, any> | null; // Assume type any. Correct type will be checked by further parsing below.
         if (!customFetch) {
             const response = await fetch(url, {
                 headers,
                 cache: 'no-cache',
                 referrerPolicy: 'no-referrer',
             });
-            isResponseStatusOk = response.ok;
+            responseStatus = response.status;
             // Note: with the browser api's fetch, reading the Date header is not allowed on cors requests unless it's
             // specified in the response's Access-Control-Expose-Headers. If not allowed, null is read.
             responseDateHeader = response.headers.get('Date');
             // Try to read body which is set on valid requests and expected errors.
-            data = await response.json() as Record<string, any>;
+            data = await response.json().catch(() => null) as Record<string, any> | null;
         } else {
             const response = await customFetch({
                 url,
                 headers,
                 responseType: 'json',
             });
-            // Define ok status equivalent to browser api, https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
-            isResponseStatusOk = response.status >= 200 && response.status < 300;
+            responseStatus = response.status;
             responseDateHeader = response.headers.Date || response.headers.date;
-            data = response.data as Record<string, any>; // already parsed according to responseType
+            data = response.data as Record<string, any> | null; // already parsed according to responseType
         }
 
-        if (!isResponseStatusOk) {
-            if (typeof data !== 'object' || typeof data.code !== 'string' || typeof data.message !== 'string') {
-                throw new Error('Unexpected error');
-            }
+        if (data && typeof data === 'object' && typeof data.code === 'string' && typeof data.message === 'string') {
+            // Api error with an error code.
             return {
                 errorCode: data.code,
                 errorMessage: data.message,
                 request: requestIdentifier,
             };
+        }
+        if (responseStatus === /* Too Many Requests */ 429) {
+            // Handle error Too Many Requests manually as it's an error that can regularly occur, but that does not
+            // include data with an error code.
+            return {
+                errorCode: GoCryptoPaymentApiErrorCode.TooManyRequests,
+                errorMessage: 'Too Many Requests', // translated message is given in goCryptoStatusToUserFriendlyMessage
+                request: requestIdentifier,
+            };
+        }
+        if (responseStatus < 200 || responseStatus >= 300 || !data) {
+            // Equivaltent to browser fetch's response.ok, https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
+            throw new Error('Unexpected error');
         }
 
         const id: string = data.id;
@@ -262,6 +280,16 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
                 ...errorDefaults,
                 title: i18n.t('No payment request found') as string,
                 message: messageNewPaymentRequest,
+            };
+            case GoCryptoPaymentApiErrorCode.TooManyRequests: return {
+                // Rate limit hit.
+                ...errorDefaults,
+                title: i18n.t('GoCrypto API refused connecting') as string,
+                // The user could also avoid the rate limit by switching to a different network, but more than likely if
+                // a rate limit occurred, the user is in the same network as the merchant, and the merchant is rate
+                // limited, too. GoCrypto blocks the IP for one hour.
+                message: i18n.t('If you\'re in the same WiFi as the merchant, try both switching to mobile data. '
+                    + 'Otherwise, try again in one hour.') as string,
             };
             case GoCryptoPaymentApiErrorCode.InvalidResponse:
             default: return {
