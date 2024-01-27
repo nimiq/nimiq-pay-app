@@ -212,11 +212,11 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:300
+#: src/composables/useGoCrypto.ts:320
 msgid "Error {errorCode}"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:299
+#: src/composables/useGoCrypto.ts:319
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
@@ -286,7 +286,7 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:287
+#: src/composables/useGoCrypto.ts:290
 msgid "GoCrypto API refused connecting"
 msgstr ""
 
@@ -306,15 +306,15 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:256
+#: src/composables/useGoCrypto.ts:255
 msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:345
+#: src/composables/useGoCrypto.ts:367
 msgid "If you already made a payment, wait for it to be confirmed instead."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:291
+#: src/composables/useGoCrypto.ts:294
 msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
 msgstr ""
 
@@ -329,6 +329,10 @@ msgstr ""
 #. For transactions that got rejected by the mempool.
 #: src/types/transactions.ts:99
 msgid "Invalid"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:300
+msgid "Invalid API response"
 msgstr ""
 
 #: src/composables/useStringParser.ts:106
@@ -492,7 +496,7 @@ msgstr ""
 msgid "No payment details found"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:281
+#: src/composables/useGoCrypto.ts:284
 msgid "No payment request found"
 msgstr ""
 
@@ -508,7 +512,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:268
+#: src/composables/useGoCrypto.ts:271
 msgid "Not a pending payment request"
 msgstr ""
 
@@ -555,7 +559,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:308
+#: src/composables/useGoCrypto.ts:330
 msgid "Payment request has already been paid"
 msgstr ""
 
@@ -584,7 +588,11 @@ msgstr ""
 msgid "PIN did not match"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:250
+#: src/composables/useGoCrypto.ts:254
+msgid "Please ask the merchant to check the status of your payment."
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:253
 msgid "Please ask the merchant to create a new payment request."
 msgstr ""
 
@@ -627,6 +635,10 @@ msgstr ""
 
 #: src/stores/points.ts:197
 msgid "Purchase"
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:301
+msgid "Received an invalid response from GoCrypto: {errorMessage}"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:26
@@ -761,15 +773,15 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:336
+#: src/composables/useGoCrypto.ts:358
 msgid "The payment request expired"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:342
+#: src/composables/useGoCrypto.ts:364
 msgid "The payment request is about to expire"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:270
+#: src/composables/useGoCrypto.ts:273
 msgid "The payment request might have been paid, expired, or cancelled."
 msgstr ""
 
@@ -833,7 +845,7 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:297
+#: src/composables/useGoCrypto.ts:317
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
@@ -1010,23 +1022,23 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:316
+#: src/composables/useGoCrypto.ts:338
 msgid "Your payment failed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:312
+#: src/composables/useGoCrypto.ts:334
 msgid "Your payment is being processed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:320
+#: src/composables/useGoCrypto.ts:342
 msgid "Your payment is invalid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:329
+#: src/composables/useGoCrypto.ts:351
 msgid "Your payment was cancelled"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:324
+#: src/composables/useGoCrypto.ts:346
 msgid "Your payment was refunded"
 msgstr ""
 

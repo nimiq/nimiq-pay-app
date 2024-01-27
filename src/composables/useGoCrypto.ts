@@ -139,6 +139,7 @@ export async function fetchGoCryptoPaymentDetails(
 
     try {
         let responseStatus: number;
+        let responseStatusText: string | null = null;
         let responseDateHeader: string | null;
         let data: Record<string, any> | null; // Assume type any. Correct type will be checked by further parsing below.
         if (!customFetch) {
@@ -148,6 +149,7 @@ export async function fetchGoCryptoPaymentDetails(
                 referrerPolicy: 'no-referrer',
             });
             responseStatus = response.status;
+            responseStatusText = response.statusText;
             // Note: with the browser api's fetch, reading the Date header is not allowed on cors requests unless it's
             // specified in the response's Access-Control-Expose-Headers. If not allowed, null is read.
             responseDateHeader = response.headers.get('Date');
@@ -181,10 +183,12 @@ export async function fetchGoCryptoPaymentDetails(
                 request: requestIdentifier,
             };
         }
-        if (responseStatus < 200 || responseStatus >= 300 || !data) {
+        if (responseStatus < 200 || responseStatus >= 300) {
             // Equivaltent to browser fetch's response.ok, https://developer.mozilla.org/en-US/docs/Web/API/Response/ok
-            throw new Error('Unexpected error');
+            // eslint-disable-next-line prefer-template
+            throw new Error(`HTTP Error ${responseStatus}` + (responseStatusText ? ` - ${responseStatusText}` : ''));
         }
+        if (!data) throw new Error('Received no data');
 
         const id: string = data.id;
         if (typeof id !== 'string' || !/\w+/.test(id)
@@ -228,8 +232,7 @@ export async function fetchGoCryptoPaymentDetails(
         const errorMessage = e instanceof Error ? e.message : String(e);
         return {
             errorCode: GoCryptoPaymentApiErrorCode.InvalidResponse,
-            // We don't translate the error message, as these errors shouldn't normally occur.
-            errorMessage: `Received an invalid response from GoCrypto: ${errorMessage}`,
+            errorMessage, // We don't translate the error message, as these errors shouldn't normally occur.
             request: requestIdentifier,
         };
     }
@@ -248,13 +251,13 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
         paymentStatus: 'accepted' as const,
     };
     const messageNewPaymentRequest = i18n.t('Please ask the merchant to create a new payment request.') as string;
+    const messageAskForPaymentStatus = i18n.t('Please ask the merchant to check the status of your payment.') as string;
+    const messageRefund = i18n.t('If you already made a payment which was not accepted, please contact GoCrypto for a '
+      + 'refund.') as string + (paymentId ? ` (GoCrypto id: ${paymentId})` : '');
     const errorDefaults = {
         paymentStatus: 'failed' as const,
         // Concatenate sentences to re-use individual translations.
-        // eslint-disable-next-line prefer-template
-        message: messageNewPaymentRequest + ' '
-            + i18n.t('If you already made a payment which was not accepted, please contact GoCrypto for a refund.')
-            + (paymentId ? ` (GoCrypto id: ${paymentId})` : ''),
+        message: `${messageNewPaymentRequest} ${messageRefund}`,
     };
 
     if ('errorCode' in paymentDetails) {
@@ -291,14 +294,33 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
                 message: i18n.t('If you\'re in the same WiFi as the merchant, try both switching to mobile data. '
                     + 'Otherwise, try again in one hour.') as string,
             };
-            case GoCryptoPaymentApiErrorCode.InvalidResponse:
-            default: return {
+            case GoCryptoPaymentApiErrorCode.InvalidResponse: return {
+                // Invalid data or generic HTTP error.
                 ...errorDefaults,
-                title: i18n.t('Unexpected GoCrypto error') as string,
-                message: paymentDetails.errorMessage
-                    ? i18n.t('Error {errorCode}: {errorMessage}', { ...paymentDetails }) as string
-                    : i18n.t('Error {errorCode}', { ...paymentDetails }) as string,
+                title: i18n.t('Invalid API response'),
+                message: `${i18n.t(
+                    'Received an invalid response from GoCrypto: {errorMessage}',
+                    { errorMessage: paymentDetails.errorMessage },
+                )}. ${messageAskForPaymentStatus} ${messageRefund}`,
             };
+            default: {
+                // An error code we don't know and don't specifically handle.
+                // Split camel case error code into multiple upper case words.
+                const userFriendlyErrorCode = paymentDetails.errorCode
+                    .replace(/^[a-z]|[A-Z]/g, (char, index) => `${index !== 0 ? ' ' : ''}${char.toUpperCase()}`);
+                const i18nInterpolation = {
+                    errorCode: userFriendlyErrorCode,
+                    errorMessage: paymentDetails.errorMessage,
+                };
+                return {
+                    ...errorDefaults,
+                    title: i18n.t('Unexpected GoCrypto error') as string,
+                    message: `${paymentDetails.errorMessage
+                        ? i18n.t('Error {errorCode}: {errorMessage}', i18nInterpolation)
+                        : i18n.t('Error {errorCode}', i18nInterpolation)
+                    }. ${messageAskForPaymentStatus} ${messageRefund}`,
+                };
+            }
         }
     }
 
