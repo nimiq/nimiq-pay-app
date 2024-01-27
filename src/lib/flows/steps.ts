@@ -282,10 +282,10 @@ export const paymentPreviewStep: StepInit = async () => {
         // No translation as not user-facing. Dev error which should not occur in production.
         throw new Error(`Request is a string: ${_request}`)
 
-      // We go to the next step, which it is the pin input.
-      // If the last time the user put the pin was less than 5 minutes ago, we skip the pin code step
-      await next()
-      if (!(await import('@/stores/app')).useApp().shouldAskPin())
+      // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
+      if ((await import('@/stores/app')).useApp().shouldAskPin())
+        next()
+      else
         skip()
     },
   }
