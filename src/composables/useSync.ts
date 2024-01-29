@@ -142,7 +142,7 @@ export function useSync() {
     })
 
     client.value?.addTransactionListener(async (tx) => {
-      console.log('📬  New transaction received', tx)
+      console.log('📬  New transaction received', tx.toPlain())
       // Only handle pending transactions, mined ones are handled by the block listener
       if (tx.state !== Nimiq.Client.TransactionState.PENDING)
         return
@@ -302,8 +302,25 @@ export function useSync() {
    */
   async function ensureSingleRemoteSignerWithBalance() {
     const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetRemoteSignerWithBalance).then(parseAddress)
-    if (remoteSigners.length <= 1)
+    if (remoteSigners.length === 0)
       return
+
+    if (remoteSigners.length === 1) {
+      // If there is only one remote signer with a balance greater than zero, but it is not the active one, set it as active
+      if (remoteSigners[0].balance !== 0 && remoteSigners[0].active === false) {
+        console.log('🫥 There is one remote signers with a balance greater than zero, but it is not the active one. Setting the one with balance as active')
+        await useRemoteSigner().updateRemoteSigner({
+          active: true,
+          balance: remoteSigners[1].balance,
+          address: remoteSigners[1].address,
+          publicKey: remoteSigners[1].publicKey,
+          start: remoteSigners[1].start,
+          end: remoteSigners[1].end,
+          proofSize: remoteSigners[1].proofSize,
+        })
+      }
+      return
+    }
 
     console.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
     remoteSigners.forEach(drainRemoteSigner)
