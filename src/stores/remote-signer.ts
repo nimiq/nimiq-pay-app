@@ -49,7 +49,7 @@ function useRemoteSignerDb() {
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { client, getAccount } = useNimiqNetwork()
+  const { client, getAccounts } = useNimiqNetwork()
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
@@ -115,13 +115,25 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     // eslint-disable-next-line no-console
     console.groupCollapsed('📡 Updating remote signers table balance')
-    await Promise.all(remoteSignersToCheck.map(async (remoteSigner) => {
-      const { data, error } = await getAccount(remoteSigner.address)
-      if (error || !data)
-        return
+    const addresses = remoteSignersToCheck.map(remoteSigner => remoteSigner.address)
+    const { data: accounts, error } = await getAccounts(addresses)
+    if (error || !accounts) {
+      console.error('Error getting accounts for Remote Signers', error)
+      return
+    }
 
-      await updateBalance(data.balance, remoteSigner.address)
-    }))
+    // Assuming accounts are in the same order as addresses
+    for (let i = 0; i < accounts.length; i++) {
+      const account = accounts[i]
+      const remoteSigner = remoteSignersToCheck[i]
+      const newBalance = account.balance
+      if (remoteSigner.balance !== newBalance) {
+        // eslint-disable-next-line no-console
+        console.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
+        await updateBalance(newBalance, remoteSigner.address)
+      }
+    }
+
     // eslint-disable-next-line no-console
     console.groupEnd()
   }

@@ -93,6 +93,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account, error: undefined }
   }
 
+  async function getAccounts(addressArray: Nimiq.Address[]): AsyncResult<Nimiq.Account[]> {
+    if (addressArray.length === 0)
+      return { data: undefined, error: i18n.t('Addresses missing') }
+    const accounts = await client.value?.getAccounts(addressArray)
+    if (!accounts || accounts.length === 0)
+      return { data: undefined, error: i18n.t('No accounts found') }
+    return { data: accounts, error: undefined }
+  }
+
   async function getAccountTransactions(address: Nimiq.Address | undefined, limit = 30) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
@@ -123,6 +132,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     init,
     claimCashlink,
     getAccount,
+    getAccounts,
     getAccountTransactions,
   }
 })
