@@ -101,7 +101,7 @@ onMounted(async () => {
     </IonCard>
     <IonCard>
       <IonCardHeader>
-        <IonCardTitle>Base wallet</IonCardTitle>
+        <IonCardTitle>Local Wallet</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
         <p @click="() => writeToClipboard(localAddress && localAddress.toUserFriendlyAddress() || '')">
@@ -120,7 +120,7 @@ onMounted(async () => {
 
     <IonCard>
       <IonCardHeader>
-        <IonCardTitle>Instant wallet</IonCardTitle>
+        <IonCardTitle>Remote Wallet</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
         <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
