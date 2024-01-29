@@ -5,6 +5,7 @@ import { useToast } from '@/composables/useToast'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { useDevice } from '@/composables/useDevice'
 import { type QRData, QRScannerState, useQRScanner } from '@/composables/useQRScanner'
+import { isDev } from '@/lib/index'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },
@@ -34,7 +35,6 @@ watch(() => props.isVisible, (isVisible) => {
   }
 }, { immediate: true })
 
-const isDev = import.meta.env.DEV
 const { isWeb } = useDevice()
 
 onBeforeUnmount(stop)

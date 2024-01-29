@@ -8,13 +8,12 @@ import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen
 import { onMounted } from 'vue'
 import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
+import { isDev } from '@/lib/index'
 
 onMounted(async () => {
   if (!useDevice().isWeb)
     await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
 })
-
-const isDev = import.meta.env.DEV
 
 if (!useDevice().isWeb) {
   StatusBar.setBackgroundColor({ color: '#F8F8F8' })

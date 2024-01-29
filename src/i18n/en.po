@@ -219,11 +219,11 @@ msgstr ""
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
-#: src/composables/useApi.ts:20
+#: src/composables/useApi.ts:21
 msgid "Error during {method} request to {url}: {error}"
 msgstr ""
 
-#: src/composables/useApi.ts:31
+#: src/composables/useApi.ts:32
 msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
 msgstr ""
 
@@ -467,7 +467,7 @@ msgstr ""
 msgid "No one can see me. Continue to words"
 msgstr ""
 
-#: src/composables/useApi.ts:226
+#: src/composables/useApi.ts:227
 msgid "No payment details found"
 msgstr ""
 
@@ -525,7 +525,7 @@ msgstr ""
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:89
+#: src/composables/useApi.ts:90
 msgid "Payment invalid"
 msgstr ""
 
@@ -694,8 +694,8 @@ msgstr ""
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
-#: src/composables/useApi.ts:141
-#: src/composables/useApi.ts:148
+#: src/composables/useApi.ts:142
+#: src/composables/useApi.ts:149
 #: src/lib/tx.ts:134
 #: src/lib/tx.ts:26
 #: src/lib/tx.ts:61

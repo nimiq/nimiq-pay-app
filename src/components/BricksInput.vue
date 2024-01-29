@@ -4,6 +4,7 @@ import { type Ref, ref } from 'vue'
 import { computed } from 'vue'
 import MnemonicInput from '@/components/MnemonicInput.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { isDev } from '@/lib/index'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -11,8 +12,6 @@ defineOptions({ inheritAttrs: false })
 
 defineProps({ errorMsg: { type: String } })
 defineEmits(stepEmits)
-
-const isDev = import.meta.env.DEV
 
 const loginWords: Ref<string[]> = ref([])
 const isDevImport = ref(false)

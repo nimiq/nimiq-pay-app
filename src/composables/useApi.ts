@@ -5,9 +5,10 @@ import type { AsyncResult, Result } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
 import { useApp } from '@/stores/app'
+import { isDev } from '@/lib/index'
 
-const basePointsUrl = new URL('https://bonus-nim.zeromox.com')
-const baseWalletUrl = new URL('https://pay-test-cos.nim.sh')
+const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com' : 'https://points.nimpay.app/api/')
+const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh' : 'https://cs1.nimpay.app/')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
 const cplApiUrl = new URL('https://firestore.googleapis.com')
 
@@ -136,14 +137,14 @@ export function useRemoteSignerApi() {
   interface GetRemoteSignerRes { address: string; servicePublicKey: string; serviceSignatureProofSize: number; validityStart: number; validityEnd: number; balance: number }
 
   async function getStatus(): AsyncResult<StatusRes> {
-    const { data, error } = await api<StatusRes>(new URL('/status', baseWalletUrl))
+    const { data, error } = await api<StatusRes>(new URL('/status', baseCosignerUrl))
     if (error || data?.status !== 'good')
       return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
     return { data: data!, error: undefined }
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
-    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseWalletUrl))
+    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseCosignerUrl))
     if (error || !data?.address)
       return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
 
@@ -163,11 +164,11 @@ export function useRemoteSignerApi() {
 
   return {
     getStatus,
-    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction>(new URL(`/tx/${v(hash)}`, baseWalletUrl)),
-    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[]>(new URL(`/txs/${v(address)}`, baseWalletUrl)),
+    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
+    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[]>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
     getRemoteSigner,
-    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseWalletUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
-    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseWalletUrl), { body }),
+    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
+    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),
   }
 }
 

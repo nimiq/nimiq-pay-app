@@ -1,5 +1,4 @@
-// TODO Replace with import.meta.env.DEV
-export const isDev = true // import.meta.env.DEV
+export const isDev = import.meta.env.DEV
 
 export const nimiqDomainUrl = isDev ? 'nimiq-testnet.com' : 'nimiq.com'
 
