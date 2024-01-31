@@ -277,6 +277,10 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
+#: src/views/HomeView.vue:127
+msgid "Getting everything ready…"
+msgstr ""
+
 #: src/views/HomeView.vue:110
 msgid "Go to Crypto Map"
 msgstr ""
@@ -504,7 +508,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:63
-#: src/views/HomeView.vue:132
+#: src/views/HomeView.vue:136
 msgid "Pay"
 msgstr ""
 
@@ -808,7 +812,7 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:94
+#: src/stores/transactions.ts:95
 msgid "Transaction invalid"
 msgstr ""
 
@@ -841,7 +845,7 @@ msgstr ""
 msgid "Verify your phone number"
 msgstr ""
 
-#: src/views/HomeView.vue:124
+#: src/views/HomeView.vue:126
 msgid "Wait ~{blocks} minute to pay after top-up | Wait ~{blocks} minutes to pay after top-up"
 msgstr ""
 
@@ -850,7 +854,7 @@ msgid "Welcome to Cryptocity Points"
 msgstr ""
 
 #: src/views/HomeView.vue:57
-msgid "Welcome to Nimiq"
+msgid "Welcome to Nimiq Pay"
 msgstr ""
 
 #: src/lib/flows/steps.ts:198
@@ -970,7 +974,7 @@ msgid "You earn {amount}"
 msgstr ""
 
 #: src/views/HomeView.vue:112
-msgid "You have 5€ reward to claim!"
+msgid "You have a reward to claim!"
 msgstr ""
 
 #: src/modals/TaskModal.vue:106

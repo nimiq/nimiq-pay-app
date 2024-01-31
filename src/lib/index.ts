@@ -1,4 +1,4 @@
-export const isDev = false // import.meta.env.DEV
+export const isDev = import.meta.env.DEV
 
 export const nimiqDomainUrl = isDev ? 'nimiq-testnet.com' : 'nimiq.com'
 
