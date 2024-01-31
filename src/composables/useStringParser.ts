@@ -1,7 +1,7 @@
 import { ValidationUtils } from '@nimiq/utils'
 import { useCplApi } from './useApi'
 import { GOCRYPTO_ID_PARAM, fetchGoCryptoPaymentDetails, goCryptoStatusToUserFriendlyMessage, parseGoCryptoRequestLink } from './useGoCrypto'
-import { nimCashlinkRegex } from '@/lib'
+import { nimiqDomainUrl } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
@@ -24,6 +24,11 @@ export function useStringParser() {
   }
 
   function getCashlink(maybeCashlink: string): Result<string> {
+    // Cashlinks are Base64 URL encoded, which is the regular Base64 alphabet but uses "_" and "-" instead of "/" and
+    // "+". Additionally, long character sequences are broken with a "~". The minimum Cashlink data length is 32 bytes
+    // for the key + 8 byte for the amount, which is 54 Base64 chars and a "==" padding.
+    const nimCashlinkRegex = new RegExp(`^https://hub\\.${nimiqDomainUrl.replaceAll('.', '\\.')}/cashlink/#[0-9A-Za-z_-]{54}[~0-9A-Za-z_-]*={0,2}$`)
+
     if (!nimCashlinkRegex.test(maybeCashlink))
       return { error: i18n.t('Invalid Nimiq Cashlink'), data: undefined }
 
