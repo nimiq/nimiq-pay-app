@@ -7,10 +7,10 @@ import type { Rail } from '@/types/transactions'
 import { useApp } from '@/stores/app'
 import { isDev } from '@/lib/index'
 
-const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com' : 'https://points.nimpay.app/api/')
-const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh' : 'https://cs1.nimpay.app/')
-const baseCurrencyPriceUrl = new URL('https://prices.nim.sh')
-const cplApiUrl = new URL('https://firestore.googleapis.com')
+const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com/api/' : 'https://points.nimpay.app/api/')
+const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https://cs1.nimpay.app/')
+const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
+const cplApiUrl = new URL('https://firestore.googleapis.com/')
 
 async function api<T = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}) {
   const method = _body ? 'POST' : 'GET'
@@ -85,25 +85,25 @@ export function usePointsApi() {
 
   // Just remap the JSON object from the API to a TS object
   async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
-    const { data, error } = await api<any>(new URL('api/payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
+    const { data, error } = await api<any>(new URL('payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
     if (error)
       return { data: undefined, error: error || i18n.t('Payment invalid') }
     return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined }
   }
 
   return {
-    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('api/participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
-    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('api/participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
-    getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('api/participant/balance', basePointsUrl), { token: v(token) }),
-    payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('api/payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
-    claimCashback: ({ reference, tx_hash, token }: ClaimCashbackArg) => api<ClaimCashbackRes>(new URL('api/payment/on-chain', basePointsUrl), { token: v(token), body: { reference: v(reference), tx_hash: v(tx_hash) } }),
+    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
+    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
+    getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('participant/balance', basePointsUrl), { token: v(token) }),
+    payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
+    claimCashback: ({ reference, tx_hash, token }: ClaimCashbackArg) => api<ClaimCashbackRes>(new URL('payment/on-chain', basePointsUrl), { token: v(token), body: { reference: v(reference), tx_hash: v(tx_hash) } }),
     verifyPayment,
-    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('api/participant/voucher', basePointsUrl), { token: v(token) }),
-    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`api/voucher/${v(id)}`, basePointsUrl)),
-    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`api/voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
-    getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('api/task', basePointsUrl), { token: v(token) }),
-    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`api/task/${v(id)}`, basePointsUrl), { token: v(token) }),
-    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`api/task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
+    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('participant/voucher', basePointsUrl), { token: v(token) }),
+    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`voucher/${v(id)}`, basePointsUrl)),
+    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
+    getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('task', basePointsUrl), { token: v(token) }),
+    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`task/${v(id)}`, basePointsUrl), { token: v(token) }),
+    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
   }
 }
 
