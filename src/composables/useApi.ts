@@ -222,7 +222,7 @@ export function useCplApi() {
         status: { stringValue: string }
       }
     }
-    const { data, error } = await api<OrderByIdFirestoreRes>(new URL(`v1/projects/checkout-service-staging-0/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
+    const { data, error } = await api<OrderByIdFirestoreRes>(new URL(`v1/projects/checkout-service${isDev ? '-staging-0' : ''}/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
     if (error || !data)
       return { data: undefined, error: error || i18n.t('No payment details found') }
     const parsed: OrderByIdRes = {
