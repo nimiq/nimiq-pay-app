@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
-
+import type { Ref } from 'vue'
+import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync, until } from '@vueuse/core'
-import { computed } from 'vue'
 import { usePrice } from './usePrice'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -22,7 +22,7 @@ export function useSync() {
   const { getAccount, getAccountTransactions } = useNimiqNetwork()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { updateActiveWallet } = useRemoteSigner()
 
   // Whether the remote wallet is synced with the local wallet or not.
@@ -31,6 +31,9 @@ export function useSync() {
 
   // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
   const htlcCanBeExtended = computed(() => (end.value - (end.value - start.value) / 2) < (localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA))
+
+  const pendingTransactions: Ref<Nimiq.Client.TransactionDetails[]> = ref([])
+  const isTransactionPending = computed(() => pendingTransactions.value.length > 0)
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -44,13 +47,17 @@ export function useSync() {
   async function handleFunds() {
     if (localBalance.value === 0)
       return
+    if (isTransactionPending.value) {
+      console.log('There is a pending transaction. Delaying handleFunds')
+      return
+    }
 
     const remoteBalance = (await getAccount(remoteAddress.value!)).data?.balance || 0
 
     console.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
-    console.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value })
+    console.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
 
-    if (remoteBalance === 0) {
+    if (remoteBalance === 0 && !isHtlcPending.value) {
       const { error } = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
       if (error)
         console.error('Error while creating HTLC', error)
@@ -67,7 +74,7 @@ export function useSync() {
       return
     }
 
-    console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}`)
+    console.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}, isHtlcPending: ${isHtlcPending.value}`)
   }
 
   async function extendValidity() {
@@ -107,10 +114,11 @@ export function useSync() {
       localBalance.value = (await getAccount(localAddress.value)).data?.balance || 0
     else
       console.log('Local address not found')
-    if (remoteAddress.value)
+    if (remoteAddress.value) {
       remoteBalance.value = (await getAccount(remoteAddress.value!)).data?.balance || 0
-    else
-      console.warn('Remote address not found')
+      console.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}`)
+    }
+    else { console.warn('Remote address not found') }
   }
 
   /**
@@ -128,25 +136,46 @@ export function useSync() {
     await updateBalances()
     await verifyRemoteSignersDb()
 
-    console.group(`🧬  Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    console.group(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
     console.groupEnd()
 
-    client.value?.addBlockListener(async () => {
-      console.log(`⛏️  New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    client.value?.addHeadChangedListener(async () => {
+      console.log(`⛏️ New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+
+      console.log('pending transactions', pendingTransactions.value)
+      // Check pending txs if they are still pending
+      for (const tx of pendingTransactions.value) {
+        const { state } = await client.value!.getTransaction(tx.transactionHash)
+        if (state !== Nimiq.Client.TransactionState.PENDING) {
+          console.log(`Removing transaction ${tx.transactionHash.toHex()} from pending transactions`)
+          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash.toHex() !== tx.transactionHash.toHex())
+        }
+      }
+
       await updateActiveWallet()
+      // We need to update balances here because the remote balance is updated manually and needed before the sync
       await updateBalances()
 
       await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionsInDb()])
-      if (localHeight.value % 10 === 0)
+
+      if (!isTransactionPending.value && localHeight.value % 10 === 0)
         await verifyRemoteSignersDb()
     })
 
     client.value?.addTransactionListener(async (tx) => {
-      console.log('📬  New transaction received', tx.toPlain())
+      console.log(`📬 New ${tx.state} transaction received`, tx.toPlain())
       // Only handle pending transactions, mined ones are handled by the block listener
-      if (tx.state !== Nimiq.Client.TransactionState.PENDING)
+      if (tx.state !== Nimiq.Client.TransactionState.PENDING) {
+        // Removing the tx from the pending array
+        pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash.toHex() !== tx.transactionHash.toHex())
         return
+      }
+
+      // In the case that we have a pending tx, for example a tx coming from the remote, we need to wait until that
+      // tx is mined before sending the local balance to the remote again
+      pendingTransactions.value.push(tx)
+
       // Ignore transactions sent by the local wallet or the remote signer
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
         return
@@ -157,7 +186,7 @@ export function useSync() {
       if (isTxInDB)
         return
 
-      console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
+      console.log(`📬 Saving pending transaction with ${usePrice(tx.value).crypto.formatted}`)
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
@@ -192,7 +221,7 @@ export function useSync() {
       if (dbTx)
         return
 
-      console.log(`📬 New transaction received with ${usePrice(tx.value).crypto.formatted}`)
+      console.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
@@ -261,7 +290,7 @@ export function useSync() {
           return
         }
         if (dbTx.status !== txStatus) {
-          console.log(`📬  Updating transaction ${dbTx.hash} ${txStatus}`)
+          console.log(`📬 Updating transaction ${dbTx.hash} ${txStatus}`)
           useTransactions().updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
         }
       }
@@ -272,7 +301,7 @@ export function useSync() {
 
         // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
         if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
-          console.log(`📬  Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
+          console.log(`📬 Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
           useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
         }
       }
@@ -326,33 +355,26 @@ export function useSync() {
       return
     }
 
-    console.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
-    remoteSigners.forEach(drainRemoteSigner)
-  }
-
-  /**
-   * This function ensures that there are no deactivated remote signers with a balance greater than zero.
-   * If there are, it initiates transactions to transfer the balance from the remote to the local signer.
-   */
-  async function ensureDeactivatedRemoteSignersWithoutBalance() {
-    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetDeactivatedRemoteSignersWithBalance).then(parseAddress)
-    if (remoteSigners.length === 0)
-      return
-
-    console.log('😱 There are deactivated remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
-    remoteSigners.forEach(drainRemoteSigner)
+    const canEveryHtlcBeDrained = remoteSigners.every(remoteSigner => remoteSigner.start < localHeight.value)
+    if (canEveryHtlcBeDrained) {
+      console.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet')
+      remoteSigners.forEach(drainRemoteSigner)
+    }
+    else {
+      console.log('🫠 There are multiple remote signers with a balance greater than zero, but cannot be drained yet... Delaying draining')
+    }
   }
 
   async function verifyRemoteSignersDb() {
     await useRemoteSigner().updateSignersTableBalance()
     await ensureSingleRemoteSignerWithBalance()
-    await ensureDeactivatedRemoteSignersWithoutBalance()
   }
 
   return {
     syncWallets,
     updateBalances,
     updateTransactionHistory,
+    pendingTransactions,
 
     verifyRemoteSignersDb,
   }

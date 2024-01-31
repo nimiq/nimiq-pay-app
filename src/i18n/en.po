@@ -23,10 +23,14 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
+#: src/stores/nimiq-network.ts:107
 #: src/stores/nimiq-network.ts:72
 #: src/stores/nimiq-network.ts:89
-#: src/stores/nimiq-network.ts:98
 msgid "Address missing"
+msgstr ""
+
+#: src/stores/nimiq-network.ts:98
+msgid "Addresses missing"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:91
@@ -35,10 +39,6 @@ msgstr ""
 
 #: src/components/TransactionList.vue:4
 msgid "All transactions"
-msgstr ""
-
-#: src/views/HomeView.vue:57
-msgid "Alpha Testing"
 msgstr ""
 
 #: src/stores/local-wallet.ts:32
@@ -62,16 +62,16 @@ msgstr ""
 msgid "Backup your account before logging out"
 msgstr ""
 
+#: src/views/HomeView.vue:52
+msgid "Beta Testing"
+msgstr ""
+
 #: src/lib/flows/steps.ts:226
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr ""
 
 #: src/composables/useDecrypt.ts:43
 msgid "Both expected and the given PIN are empty"
-msgstr ""
-
-#: src/views/HomeView.vue:62
-msgid "Buy NIM with Credit Card"
 msgstr ""
 
 #: src/components/PhoneInput.vue:23
@@ -120,11 +120,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:110
+#: src/stores/nimiq-network.ts:119
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:108
+#: src/stores/nimiq-network.ts:117
 msgid "Consensus established."
 msgstr ""
 
@@ -251,7 +251,7 @@ msgstr ""
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:127
+#: src/views/HomeView.vue:108
 msgid "Get cashback and earn rewards"
 msgstr ""
 
@@ -459,6 +459,10 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
+#: src/stores/nimiq-network.ts:101
+msgid "No accounts found"
+msgstr ""
+
 #: src/stores/nimiq-network.ts:63
 msgid "No Cashlink found"
 msgstr ""
@@ -479,7 +483,7 @@ msgstr ""
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:101
+#: src/stores/nimiq-network.ts:110
 msgid "No transactions found"
 msgstr ""
 
@@ -728,7 +732,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:109
+#: src/stores/nimiq-network.ts:118
 msgid "Syncing with network."
 msgstr ""
 
@@ -769,8 +773,8 @@ msgstr ""
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr ""
 
-#: src/views/HomeView.vue:58
-msgid "This is an early alpha version, please report any bugs and remember to use only Testnet NIM"
+#: src/views/HomeView.vue:53
+msgid "This is an early beta version, please report any bugs and remember to backup your words"
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:46
@@ -833,19 +837,19 @@ msgid "Verify your ID"
 msgstr ""
 
 #: src/lib/flows/steps.ts:140
-#: src/views/HomeView.vue:126
+#: src/views/HomeView.vue:107
 msgid "Verify your phone number"
 msgstr ""
 
 #: src/views/HomeView.vue:124
-msgid "Wait ~10 minutes to pay after top-up"
+msgid "Wait ~{blocks} minute to pay after top-up | Wait ~{blocks} minutes to pay after top-up"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:22
 msgid "Welcome to Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:52
+#: src/views/HomeView.vue:57
 msgid "Welcome to Nimiq"
 msgstr ""
 
@@ -965,7 +969,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:131
+#: src/views/HomeView.vue:112
 msgid "You have 5€ reward to claim!"
 msgstr ""
 
@@ -1009,6 +1013,6 @@ msgstr ""
 msgid "Your payment was refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:53
+#: src/views/HomeView.vue:58
 msgid "Your wallet is ready to use"
 msgstr ""

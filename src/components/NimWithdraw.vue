@@ -85,7 +85,7 @@ watch(selected, (value) => {
   selected.value = address.value
 })
 
-const errorMessage = computed(() => props.errorMsg || (!hasEnoughAmount.value ? i18n.t('Insufficient funds') : ''))
+const errorMessage = computed(() => props.errorMsg || ((!hasEnoughAmount.value && lunaAmount.value > 0) ? i18n.t('Insufficient funds') : ''))
 const disabled = computed(() => !address.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
 const loading = ref(false)
 

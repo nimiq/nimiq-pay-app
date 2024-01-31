@@ -32,7 +32,7 @@ const router = useRouter()
 const { showModal } = useModal()
 
 const { localBalance } = storeToRefs(useLocalWallet())
-const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
+const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
@@ -47,36 +47,17 @@ const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalanc
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
-const notificationArray = ref([
+const notificationArray: Ref<{ title: string; subtitle?: string; action?: () => void }[]> = computed(() => [
   {
-    get title() { return i18n.t('Welcome to Nimiq') },
-    get subtitle() { return i18n.t('Your wallet is ready to use') },
-    action: () => initializeFlow(FlowName.OnBoardingPoints),
-  },
-  {
-    get title() { return i18n.t('Alpha Testing') },
-    get subtitle() { return i18n.t('This is an early alpha version, please report any bugs and remember to use only Testnet NIM') },
+    get title() { return i18n.t('Beta Testing') },
+    get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
     action: () => console.log('Notification Card 2 clicked'), // eslint-disable-line no-console
   },
   {
-    get title() { return i18n.t('Buy NIM with Credit Card') },
-    action: () => Browser.open({ url: 'https://buy.simplex.com/' }),
+    get title() { return i18n.t('Welcome to Nimiq') },
+    get subtitle() { return i18n.t('Your wallet is ready to use') },
+    // action: () => initializeFlow(FlowName.OnBoardingPoints),
   },
-  // {
-  //   get title() { return i18n.t('Notification Card 3') },
-  //   get subtitle() { return i18n.t('Subtitle') },
-  //   action: () => console.log('Notification Card 3 clicked'),
-  // },
-  // {
-  //   get title() { return i18n.t('Notification Card 4') },
-  //   get subtitle() { return i18n.t('Subtitle') },
-  //   action: () => console.log('Notification Card 4 clicked'),
-  // },
-  // {
-  //   get title() { return i18n.t('Notification Card 5') },
-  //   get subtitle() { return i18n.t('Subtitle') },
-  //   action: () => console.log('Notification Card 5 clicked'),
-  // },
 ])
 
 function removeNotification(index: number) {
@@ -308,7 +289,11 @@ onMounted(async () => {
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
           <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            {{ $t('Wait ~10 minutes to pay after top-up') }}
+            {{
+              blocksUntilHtlcActive > 0
+                ? $tc('Wait ~{blocks} minute to pay after top-up | Wait ~{blocks} minutes to pay after top-up', blocksUntilHtlcActive, { blocks: blocksUntilHtlcActive })
+                : $t('Getting everything ready…')
+            }}
           </p>
         </Transition>
         <IonButton

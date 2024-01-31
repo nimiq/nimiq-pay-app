@@ -34,6 +34,10 @@ function useRemoteSignerDb() {
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
+    async deactivateAllRemoteSigners() {
+      await run(SQLQuery.DeactivateRemoteSigners)
+    },
+
     async updateBalance(newBalance: number, address: Nimiq.Address) {
       // eslint-disable-next-line no-console
       console.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
@@ -53,7 +57,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet } = useRemoteSignerDb()
+  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
@@ -69,12 +73,19 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
   const isHtlcActive = computed(() => remoteBalance.value > 0 && start.value < height.value && end.value > height.value)
+  const blocksUntilHtlcActive = computed(() => Math.min(Math.max(((start.value - height.value) + 1), 0), 10))
   const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
+  const isHtlcPending = computed(() => start.value > height.value)
 
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
-  async function updateRemoteSigner(signer: RemoteSigner) {
-    await setRemoteSigner(signer)
+  async function updateRemoteSigner(signer: RemoteSigner | undefined) {
+    // eslint-disable-next-line no-console
+    console.log('📡 Updating remote signer', signer)
+    if (signer)
+      await setRemoteSigner(signer)
+    else
+      await deactivateAllRemoteSigners()
     remoteSigner.value = signer
   }
 
@@ -207,7 +218,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteHeight,
 
     isHtlcActive,
+    blocksUntilHtlcActive,
     hasHtlcExpired,
+    isHtlcPending,
 
     updateBalance,
     updateActiveWallet,

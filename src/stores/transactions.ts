@@ -9,6 +9,7 @@ import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
+import { useSync } from '@/composables/useSync'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum TransactionListState {
@@ -116,11 +117,12 @@ export const useTransactions = defineStore('transactions', () => {
       if (details) {
         const plain = details?.toPlain()
         const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(details.data.raw)
-        useRemoteSigner().updateRemoteSigner({
+        await useRemoteSigner().updateRemoteSigner({
           active: true,
           balance: plain.value,
           publicKey: useRemoteSigner().remotePublicKey!,
-          start: plain.validityStartHeight,
+          // Adding 2 more blocks just in case the tx is not mined in the next block, it will be corrected later
+          start: plain.validityStartHeight + 12,
           address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
           end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
           proofSize: tx.proofSize,
@@ -129,6 +131,11 @@ export const useTransactions = defineStore('transactions', () => {
       else {
         console.error('Transaction details are undefined, cannot update remote signer', tx)
       }
+    }
+    else if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
+      // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one
+      await useRemoteSigner().updateRemoteSigner(undefined)
+      useSync().pendingTransactions.value.push(details)
     }
     else {
       updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
