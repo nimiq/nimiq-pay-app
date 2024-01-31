@@ -39,7 +39,7 @@ if [ -f "$CONFIG_FILE" ]; then
     # header or end of file.
     WEBLATE_CONFIG=$(cat "$CONFIG_FILE" | sed '/^\[weblate]$/,/^\[.*]$/! d; # del outside [weblate],[next-header] range
         /^\[weblate]$/ d; # delete [weblate] header itself
-        /^\[.*]$/ d # delete next header itself')
+        /^\[.*]$/ d; # delete next header itself')
     API_URL=$(echo "$WEBLATE_CONFIG" | sed '/url *= */! d; s/url *= *//') # del lines other than url=.. and strip "url="
     API_KEY=$(echo "$WEBLATE_CONFIG" | sed '/key *= */! d; s/key *= *//') # del lines other than key=.. and strip "key="
 else
@@ -84,9 +84,9 @@ if [ ! -z "$PULL_TRANSLATIONS" ]; then
 
     # Remove translator's email addresses and Language-Team entry from translation files.
     for language in $(echo "$PULL_TRANSLATIONS" | sed "s/,/ /g"); do
-        sed --in-place -e '0,/^$/ { # Within first paragraph, starting from first line until first empty line,
+        sed --in-place='' -e '0,/^$/ { # Within first paragraph, starting from first line until first empty line,
             s/ \?[^ ]\+@[^ ]\+\.[^ \]\+//g; # remove all email addresses
-            /Language-Team/ d # and delete Language-Team line which exposes the url of our internal Weblate instance.
+            /Language-Team/ d; # and delete Language-Team line which exposes the url of our internal Weblate instance.
         }' "${FOLDER}${language}.po"
     done
 fi
