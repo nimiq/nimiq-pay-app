@@ -66,7 +66,7 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
     step: StepName.PinCode,
     get title() { return flowName === FlowName.NimOrPointsPayment ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
     get description() { return flowName === FlowName.NimOrPointsPayment ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
-    main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: flowName === FlowName.NimOrPointsPayment })),
     beforeNext: async ({ pinCode }, { next, err }) => {
       if (!pinCode) {
         err(i18n.t('Please enter a PIN code'))
