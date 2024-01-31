@@ -16,7 +16,6 @@ import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
-// export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 10075
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function useSync() {
@@ -139,6 +138,8 @@ export function useSync() {
       await updateBalances()
 
       await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionsInDb()])
+      if (localHeight.value % 10 === 0)
+        await verifyRemoteSignersDb()
     })
 
     client.value?.addTransactionListener(async (tx) => {
@@ -191,7 +192,7 @@ export function useSync() {
       if (dbTx)
         return
 
-      console.log(`📬  New transaction received with ${usePrice(tx.value).crypto.formatted}`)
+      console.log(`📬 New transaction received with ${usePrice(tx.value).crypto.formatted}`)
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
@@ -307,17 +308,20 @@ export function useSync() {
 
     if (remoteSigners.length === 1) {
       // If there is only one remote signer with a balance greater than zero, but it is not the active one, set it as active
-      if (remoteSigners[0].balance !== 0 && remoteSigners[0].active === false) {
+      const { active, balance, address, start, end, proofSize, publicKey } = remoteSigners[0]
+      if (balance > 0 && !active) {
         console.log('🫥 There is one remote signers with a balance greater than zero, but it is not the active one. Setting the one with balance as active')
         await useRemoteSigner().updateRemoteSigner({
           active: true,
-          balance: remoteSigners[1].balance,
-          address: remoteSigners[1].address,
-          publicKey: remoteSigners[1].publicKey,
-          start: remoteSigners[1].start,
-          end: remoteSigners[1].end,
-          proofSize: remoteSigners[1].proofSize,
+          balance,
+          address,
+          publicKey,
+          start,
+          end,
+          proofSize,
         })
+        // Updating balance because the active remote signer has changed
+        updateBalances()
       }
       return
     }

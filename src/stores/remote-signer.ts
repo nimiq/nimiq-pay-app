@@ -74,7 +74,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
   async function updateRemoteSigner(signer: RemoteSigner) {
-    setRemoteSigner(signer)
+    await setRemoteSigner(signer)
     remoteSigner.value = signer
   }
 
