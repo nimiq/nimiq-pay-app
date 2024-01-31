@@ -47,14 +47,14 @@ const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalanc
 // TODO: get this from API
 const referralRewardAmount = 10
 // TODO: get this from somewhere
-const notificationArray: Ref<{ title: string; subtitle?: string; action?: () => void }[]> = computed(() => [
+const notificationArray: Ref<{ title: string; subtitle?: string | undefined; action?: (() => void) | undefined }[]> = ref([
   {
     get title() { return i18n.t('Beta Testing') },
     get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
     action: () => console.log('Notification Card 2 clicked'), // eslint-disable-line no-console
   },
   {
-    get title() { return i18n.t('Welcome to Nimiq') },
+    get title() { return i18n.t('Welcome to Nimiq Pay') },
     get subtitle() { return i18n.t('Your wallet is ready to use') },
     // action: () => initializeFlow(FlowName.OnBoardingPoints),
   },
@@ -101,7 +101,7 @@ if (import.meta.env.DEV) {
   })
 }
 
-watchEffect(async () => {
+watch([referralCode, phoneNumberVerified], () => {
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     get title() { return i18n.t('Verify your phone number') },
@@ -109,9 +109,10 @@ watchEffect(async () => {
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
   const claimRewardsNotification = {
-    get title() { return i18n.t('You have 5€ reward to claim!') },
+    get title() { return i18n.t('You have a reward to claim!') },
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
+
   notificationArray.value = notificationArray.value.filter(notification =>
     notification.title !== verifyNumberNotification.title && notification.title !== claimRewardsNotification.title)
 
@@ -126,7 +127,7 @@ watchEffect(async () => {
     notificationArray.value.unshift(claimRewardsNotification)
     scrollToFirstNotification()
   }
-})
+}, { immediate: true })
 
 watch(isRecoveryWordsShown, () => {
   if (useDevice().isWeb)
