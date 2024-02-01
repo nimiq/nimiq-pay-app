@@ -1,7 +1,7 @@
 import { type MaybeRef, computed, ref, toValue } from 'vue'
 import { usePointsApi } from './useApi'
 import { useApp } from '@/stores/app'
-import type { Rail } from '@/types/transactions'
+import { Rail } from '@/types/transactions'
 import { usePoints } from '@/stores/points'
 import { i18n } from '@/i18n/i18n-setup'
 
@@ -41,7 +41,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
       return
     }
 
-    if (!toValue(rail) || !toValue(reference)) {
+    if (toValue(rail) !== Rail.CryptoPaymentLink || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
       message.value = i18n.t('This payment is not eligible for Cryptocity Points.')
       return
