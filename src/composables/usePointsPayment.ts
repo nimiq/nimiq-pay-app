@@ -43,7 +43,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
 
     if (toValue(rail) !== Rail.CryptoPaymentLink || !toValue(reference)) {
       pointsState.value = PointsState.NotEligibleForPayment
-      message.value = i18n.t('This payment is not eligible for Cryptocity Points.')
+      message.value = i18n.t('This payment is not eligible for receiving or paying with Points.')
       return
     }
 
@@ -63,7 +63,7 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
     const { cashback: { amountInLuna }, reason, valid } = data!
     if (!valid) {
       pointsState.value = PointsState.Error
-      message.value = reason
+      message.value = reason // TODO provide a user friendly message for the reason which is an error code
       return
     }
 

@@ -524,7 +524,7 @@ msgstr ""
 msgid "Open Wallet"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:63
+#: src/components/PaymentPreview.vue:60
 #: src/views/HomeView.vue:136
 msgid "Pay"
 msgstr ""
@@ -794,7 +794,7 @@ msgstr ""
 msgid "There is no \"Forgot Password\""
 msgstr ""
 
-#: src/components/PaymentPreview.vue:53
+#: src/components/PaymentPreview.vue:50
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
@@ -807,7 +807,7 @@ msgid "This is an early beta version, please report any bugs and remember to bac
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:46
-msgid "This payment is not eligible for Cryptocity Points."
+msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
 
 #: src/components/GenericInput.vue:34
@@ -973,10 +973,6 @@ msgstr ""
 msgid "Wrong word!"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:47
-msgid "You can't pay with Points for this purchase."
-msgstr ""
-
 #: src/components/PaymentPreview.vue:41
 msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
 msgstr ""
@@ -989,7 +985,6 @@ msgstr ""
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:44
 #: src/composables/usePointsPayment.ts:59
 msgid "You don't have enough Points for this purchase."
 msgstr ""

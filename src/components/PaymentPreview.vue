@@ -109,13 +109,10 @@ function handlePay() {
         <p v-else-if="(!isHtlcActive || !isRemoteOk) && paymentMethod !== PaymentMethod.Points" class="text-pumpkin text-pretty">
           {{ $t('You cannot pay with NIM yet, wait until the Top-Up is completed') }}
         </p>
-        <p v-else-if="pointsState === PointsState.InsufficientPoints" class="opacity-60text-pretty">
-          {{ $t('You don\'t have enough Points for this purchase.') }}
-        </p>
-        <p v-else-if="pointsState === PointsState.NotEligibleForPayment" class="opacity-60 text-pretty">
-          {{ $t('You can\'t pay with Points for this purchase.') }}
-        </p>
-        <p v-else-if="pointsState === PointsState.Error" class="text-pumpkin text-pretty">
+        <p
+          v-else-if="[PointsState.NotEligibleForPayment, PointsState.InsufficientPoints, PointsState.Error].includes(pointsState)"
+          class="text-pretty" :class="pointsState === PointsState.Error ? 'text-pumpkin' : 'opacity-60'"
+        >
           {{ pointsMessage }}
         </p>
         <p v-else-if="hasCashback" class="opacity-60 text-pretty">
