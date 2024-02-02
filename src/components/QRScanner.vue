@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType, type Ref, onBeforeUnmount, ref, watch } from 'vue'
+import { type PropType, type Ref, onBeforeUnmount, ref, watch, watchEffect } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { useDevice } from '@/composables/useDevice'
@@ -19,6 +19,19 @@ const cameraFeedContainer = ref() as Ref<HTMLDivElement>
 const errorMessage = ref('') // last error; could be coming from external prop or from scanning
 
 watch(() => props.errorMsg, msg => errorMessage.value = msg || '', { immediate: true })
+
+const cameraFeedContainerTop = ref(0)
+watchEffect(() => {
+  if (!props.isVisible)
+    return
+  let totalOffsetTop = 0
+  let element: Element | null = cameraFeedContainer.value
+  while (element instanceof HTMLElement) {
+    totalOffsetTop += element.offsetTop
+    element = element.offsetParent
+  }
+  cameraFeedContainerTop.value = totalOffsetTop
+})
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const onError = (error: string) => errorMessage.value = error
@@ -54,14 +67,17 @@ onBeforeUnmount(stop)
       </span>
     </div>
 
-    <div v-if="isWeb" ref="cameraFeedContainer" class="relative aspect-square" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
+    <div v-if="isWeb" ref="cameraFeedContainer" class="relative aspect-square pointer-events-none" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
       <video autoplay muted playsinline :controls="false" :class="{ 'opacity-0': state !== QRScannerState.Scanning }" />
       <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
         <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
       </svg>
     </div>
-    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center">
-      <div class="relative w-screen" style="--px: 48px; border: var(--px) solid white; border-top-width: calc(50vh - var(--px)); border-bottom-width: calc(50vh - var(--px));">
+    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center pointer-events-none">
+      <!-- On native, the camera is visible behind the webview. Put a transparent square in the center of the screen,
+      through which the camera can be seen (other parent / background elements are made transparent in useCamerFeed),
+      with a wide white border to cover the rest. -->
+      <div class="relative w-screen" style="border: 48px solid white; border-top-width: 50vh; border-bottom-width: 50vh" :style="`top: -${cameraFeedContainerTop / 2}px`">
         <div class="aspect-square">
           <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
