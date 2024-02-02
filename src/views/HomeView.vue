@@ -291,11 +291,11 @@ onMounted(async () => {
         <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
           <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            {{
-              blocksUntilHtlcActive > 0
-                ? $tc('Wait ~{blocks} minute to pay after top-up | Wait ~{blocks} minutes to pay after top-up', blocksUntilHtlcActive, { blocks: blocksUntilHtlcActive })
-                : $t('Getting everything ready…')
-            }}
+            {{ $tc(
+              'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
+              blocksUntilHtlcActive,
+              { blocks: blocksUntilHtlcActive },
+            ) }}
           </p>
         </Transition>
         <IonButton

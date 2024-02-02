@@ -278,10 +278,6 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:127
-msgid "Getting everything ready…"
-msgstr ""
-
 #: src/views/HomeView.vue:110
 msgid "Go to Crypto Map"
 msgstr ""
@@ -624,6 +620,10 @@ msgstr ""
 msgid "Points Payment"
 msgstr ""
 
+#: src/views/HomeView.vue:124
+msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+msgstr ""
+
 #: src/stores/points.ts:149
 msgid "Promo code missing"
 msgstr ""
@@ -868,10 +868,6 @@ msgstr ""
 #: src/lib/flows/steps.ts:141
 #: src/views/HomeView.vue:108
 msgid "Verify your phone number"
-msgstr ""
-
-#: src/views/HomeView.vue:126
-msgid "Wait ~{blocks} minute to pay after top-up | Wait ~{blocks} minutes to pay after top-up"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:22
