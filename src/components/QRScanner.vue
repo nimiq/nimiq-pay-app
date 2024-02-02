@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { type PropType, type Ref, onBeforeUnmount, ref, watch } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
-import { useToast } from '@/composables/useToast'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { useDevice } from '@/composables/useDevice'
 import { type QRData, QRScannerState, useQRScanner } from '@/composables/useQRScanner'
@@ -17,9 +16,12 @@ const props = defineProps({
 const emit = defineEmits(stepEmits)
 
 const cameraFeedContainer = ref() as Ref<HTMLDivElement>
+const errorMessage = ref('') // last error; could be coming from external prop or from scanning
+
+watch(() => props.errorMsg, msg => errorMessage.value = msg || '', { immediate: true })
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
-const onError = (error: string) => useToast().setToast({ message: error, error: true })
+const onError = (error: string) => errorMessage.value = error
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
 watch(() => props.isVisible, (isVisible) => {
@@ -67,5 +69,9 @@ onBeforeUnmount(stop)
         </div>
       </div>
     </div>
+
+    <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
+      {{ errorMessage }}
+    </p>
   </div>
 </template>
