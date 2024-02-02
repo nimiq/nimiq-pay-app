@@ -1,8 +1,8 @@
-# Daniel 2024.
+# Daniel <daniel@nimiq.com>, 2024.
 msgid ""
 msgstr ""
 "PO-Revision-Date: 2024-01-23 18:19+0000\n"
-"Last-Translator: Daniel\n"
+"Last-Translator: Daniel <daniel@nimiq.com>\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
