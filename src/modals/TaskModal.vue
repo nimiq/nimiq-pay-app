@@ -98,7 +98,10 @@ async function handleSubmit() {
     const { task_status } = data
 
     if (task_status === 'rejected') {
-      errorMsg.value = i18n.t('Wrong answer')
+      if (type.value === 'yt-video' && isVideoEnded.value)
+        errorMsg.value = i18n.t('You need to watch the full video')
+      else
+        errorMsg.value = i18n.t('Wrong answer')
       return
     }
     // Video playing will return in-progress
@@ -116,7 +119,7 @@ async function handleSubmit() {
     <template #title>
       {{ task.description }}
     </template>
-    <div class="self-stretch max-w-[98vw] w-full">
+    <div class="self-stretch max-w-[98vw] w-full flex flex-col">
       <i18n-t keypath="You earn {amount}" tag="div" class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
@@ -146,7 +149,7 @@ async function handleSubmit() {
       <div
         v-else-if="type === 'yt-video'"
         id="yt-player"
-        class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md"
+        class="w-full mt-4 mx-auto aspect-[9/16] rounded-md"
         style="height: clamp(25rem, 60vh, 30rem);"
       />
     </div>
