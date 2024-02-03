@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { type PropType, computed } from 'vue'
+import { Clipboard } from '@capacitor/clipboard'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
@@ -11,6 +14,14 @@ const datetime = computed(() => useFormatTime(props.tx.timestamp))
 const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
 
 const { crypto, fiat } = usePrice(props.tx.amount)
+const { setToast } = useToast()
+
+async function handleCopy(string: string) {
+  await Clipboard.write({
+    string,
+  })
+  await setToast({ message: i18n.t('Address copied to clipboard') })
+}
 </script>
 
 <template>
@@ -26,7 +37,7 @@ const { crypto, fiat } = usePrice(props.tx.amount)
 
     <div
       v-if="tx"
-      class="grid justify-between w-full grid-cols-[1fr,auto] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
+      class="grid justify-between w-full grid-cols-[1fr,1fr] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize">
@@ -35,6 +46,14 @@ const { crypto, fiat } = usePrice(props.tx.amount)
 
       <div>{{ $t('Date') }}</div>
       <div>{{ datetime }}</div>
+
+      <!-- Only display first 4 and last 4 characters -->
+      <div v-if="tx.title === 'Withdrawal'">
+        {{ $t('Recipient') }}
+      </div>
+      <div v-if="tx.title === 'Withdrawal'" @click="() => handleCopy(tx.recipient)">
+        {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
+      </div>
 
       <!-- TODO Add the geo location name -->
     </div>
