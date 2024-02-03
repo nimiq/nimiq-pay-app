@@ -99,9 +99,9 @@ function withdraw() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-screen px-8 mt-6 mb-8 gap-y-2">
+  <div class="flex flex-col items-center justify-center w-full px-8 mt-6 mb-8 gap-y-2">
     <AmountInput v-model="fiatAmount" :decimals="fiatDecimals" />
-    <p class="text-base font-semibold text-space/60">
+    <p class="max-w-full text-base font-semibold text-space/60">
       {{ formatCrypto(lunaAmount) }}
     </p>
   </div>
