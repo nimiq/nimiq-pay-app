@@ -61,7 +61,7 @@ async function handleGuess(word: string) {
     successCount.value = 0
     usedIndexes.value = []
     // TODO: improve this
-    setToast({ message: i18n.t('Wrong word!') })
+    setToast({ message: i18n.t('Wrong word!'), error: true })
     setTimeout(() => {
       nav.pop()
     }, 1000)

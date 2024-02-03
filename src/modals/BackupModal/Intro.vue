@@ -25,8 +25,10 @@ const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
         </span>
       </div>
       <!-- TODO: ask for pin before showing words -->
-      <IonButton class="w-full mt-6 text-base" @click="nav.push(markRaw(ShowWords))">
-        {{ $t('No one can see me. Continue to words') }}
+      <IonButton class="w-full mt-6 text-base whitespace-normal text-balance" @click="nav.push(markRaw(ShowWords))">
+        <span class="leading-snug">
+          {{ $t('No one can see me. Continue to words') }}
+        </span>
       </IonButton>
     </div>
   </ModalTemplate>
