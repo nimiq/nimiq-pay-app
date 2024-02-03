@@ -24,12 +24,13 @@ const metadata: ComputedRef<TaskMetadata> = computed(() => props.task && props.t
 const type: ComputedRef<TaskType> = computed(() => metadata.value.type)
 const options: ComputedRef<string[]> = computed(() => type.value === 'question' ? metadata.value.options : [])
 const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? props.task.metadata : null)
-const inputField = ref()
+const textareaField = ref()
 const radioValueChecked = ref('')
 const isVideoStarted = ref(false)
 const isVideoEnded = ref(false)
 const isAlreadyClaimed = ref(false)
 const errorMsg = ref('')
+const textareaMinLength = 10
 
 watchEffect(() => {
   if (videoOptions.value) {
@@ -81,8 +82,10 @@ async function handleSubmit() {
     const index = options.value.indexOf(radioValueChecked.value)
     answer = String.fromCharCode(97 + index)
   }
-  else if (inputField.value?.value) {
-    answer = inputField.value.value
+  else if (textareaField.value?.value) {
+    answer = textareaField.value.value
+    if (answer.length < textareaMinLength)
+      return errorMsg.value = i18n.t('Minimum length is 10 characters')
   }
   if (!answer && type.value !== 'yt-video')
     return
@@ -113,27 +116,46 @@ async function handleSubmit() {
     <template #title>
       {{ task.description }}
     </template>
-    <div class="self-stretch max-w-[98vw]">
+    <div class="self-stretch max-w-[98vw] w-full">
       <i18n-t keypath="You earn {amount}" tag="div" class="flex items-center justify-center text-lg font-bold" :class="{ 'mb-8': type !== 'yt-video' }">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-2 mr-1" />
           {{ (task.reward_amount / 1e5).toLocaleString() }}
         </template>
       </i18n-t>
-      <input v-if="type === 'text-input'" ref="inputField" min="10" max="1000">
-      <IonRadioGroup v-else-if="type === 'question'" @ion-change="(e) => radioValueChecked = e.detail.value">
+      <!-- Text Input -->
+      <textarea
+        v-if="type === 'text-input'"
+        ref="textareaField" :minlength="textareaMinLength" maxlength="1000"
+        class="w-full h-full small:h-1/2 tall:h-3/5 p-4 placeholder:text-space/60 border-[1.5px] border-solid rounded-md border-space-space-400"
+        :placeholder="$t('We value your opinion. Minimum length is 10 characters.')"
+        @focus="errorMsg = ''"
+      />
+      <!-- Radio Input -->
+      <IonRadioGroup
+        v-else-if="type === 'question'"
+        @ion-change="(e) => { errorMsg = ''; radioValueChecked = e.detail.value }"
+      >
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" mode="md" label-placement="end" justify="start" :value="option" class="w-full my-2">
           <p class="text-left whitespace-normal text-space/60">
             {{ option }}
           </p>
         </IonRadio>
       </IonRadioGroup>
-      <div v-else-if="type === 'yt-video'" id="yt-player" class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md" style="height: clamp(25rem, 60vh, 30rem);" />
+      <!-- Video -->
+      <div
+        v-else-if="type === 'yt-video'"
+        id="yt-player"
+        class="w-[calc(100%+80px*2)] mt-4 -ml-20 aspect-[9/16] rounded-md"
+        style="height: clamp(25rem, 60vh, 30rem);"
+      />
     </div>
     <p v-if="errorMsg" class="text-center text-pumpkin">
       {{ errorMsg }}
     </p>
-    <IonButton class="self-end w-full" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
+    <!-- Margin Top needed when the text area is focused, this causes the button to be too close to the text area leaving no space.
+      With the margin top it leaves some space to click safely in either the text area or the button -->
+    <IonButton class="self-end w-full mt-8" expand="block" strong :disabled="type === 'yt-video' && !isVideoEnded" @click="handleSubmit">
       {{ $t('Submit') }}
     </IonButton>
   </ModalTemplate>
