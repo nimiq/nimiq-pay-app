@@ -85,12 +85,15 @@ const setupFlow: FlowInit = async ({ closeFn, state }) => {
   return { flowName, state, steps, onDone, onCancel }
 }
 
-const verifyPhoneFlow: FlowInit = async ({ state }) => {
+const verifyPhoneFlow: FlowInit = async ({ state, closeFn }) => {
   const { phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.VerifyPhone
   const steps = await Promise.all([phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async () => useModal().showModal(Modal.Points)
-  return { flowName, state, steps, onDone }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onDone, onCancel }
 }
 
 const setupWithPromoCodeFlow: FlowInit = async ({ state, closeFn }) => {
@@ -137,19 +140,24 @@ const onBoardingPointsFlow: FlowInit = async ({ state, closeFn }) => {
   return { flowName, state, steps, onDone, onCancel }
 }
 
-const onBoardingCashbackFlow: FlowInit = async ({ state }) => {
+const onBoardingCashbackFlow: FlowInit = async ({ state, closeFn }) => {
   const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
   const flowName = FlowName.OnBoardingCashback
   const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
-const onBoardingBluecodeFlow: FlowInit = async ({ state }) => {
+const onBoardingBluecodeFlow: FlowInit = async ({ state, closeFn }) => {
   const { onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3 } = await import('./steps')
   const flowName = FlowName.OnBoardingBluecode
   const steps = (await Promise.all([onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3].map(s => s({ flowName }))))
-
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
 const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
@@ -221,38 +229,50 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
   return { flowName, state, steps, onDone, onCancel }
 }
 
-const nimWithdrawFlow: FlowInit = async ({ state }) => {
+const nimWithdrawFlow: FlowInit = async ({ state, closeFn }) => {
   const [
     { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimWithdraw
   const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } })].map(s => s({ flowName }))))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
-const nimTopUpFlow: FlowInit = async ({ state }) => {
+const nimTopUpFlow: FlowInit = async ({ state, closeFn }) => {
   const [
     { nimAddressDisplay, qrCodeScannerStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimTopUp
   const steps = (await Promise.all([nimAddressDisplay, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } })].map(s => s({ flowName }))))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
-const viewTransactionsFlow: FlowInit = async ({ state }) => {
+const viewTransactionsFlow: FlowInit = async ({ state, closeFn }) => {
   const { transactionList, transactionDetail } = await import('./steps')
   const flowName = FlowName.ViewTransactions
   const steps = (await Promise.all([transactionList, transactionDetail].map(s => s({ flowName }))))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
-const viewTransactionDetailFlow: FlowInit = async ({ state }) => {
+const viewTransactionDetailFlow: FlowInit = async ({ state, closeFn }) => {
   const { transactionDetail } = await import('./steps')
   const flowName = FlowName.ViewTransactions
   const steps = (await Promise.all([transactionDetail({ flowName })]))
-  return { flowName, state, steps }
+  const onCancel: Flow['onCancel'] = async () => {
+    closeFn()
+  }
+  return { flowName, state, steps, onCancel }
 }
 
 const flows = {

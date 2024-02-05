@@ -34,7 +34,8 @@ export interface Flow {
 
   // Function that will be called when the flow is cancelled.
   // If it is not set, the flow will be closed automatically when the last step is done.
-  onCancel?: (state: State, options: FlowHooksOptions) => Promise<any>
+  // This needs to be mandatory, because the flow needs to be closed when the user presses the hardware back button.
+  onCancel: (state: State, options: FlowHooksOptions) => Promise<any>
 
   // Wether the user can go back or not
   // @default true
