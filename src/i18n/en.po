@@ -146,7 +146,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:331
+#: src/lib/flows/steps.ts:329
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -359,7 +359,7 @@ msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM a
 msgstr ""
 
 #: src/composables/useStringParser.ts:23
-#: src/lib/flows/steps.ts:342
+#: src/lib/flows/steps.ts:340
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -550,8 +550,8 @@ msgstr ""
 msgid "Payment invalid"
 msgstr ""
 
-#: src/lib/flows/steps.ts:265
-#: src/lib/flows/steps.ts:277
+#: src/lib/flows/steps.ts:263
+#: src/lib/flows/steps.ts:275
 msgid "Payment preview"
 msgstr ""
 
@@ -665,7 +665,7 @@ msgstr ""
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:249
+#: src/lib/flows/steps.ts:248
 msgid "Scan QR code"
 msgstr ""
 
@@ -689,15 +689,15 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:353
+#: src/lib/flows/steps.ts:351
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:330
+#: src/lib/flows/steps.ts:328
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:352
+#: src/lib/flows/steps.ts:350
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -711,7 +711,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/lib/flows/steps.ts:316
+#: src/lib/flows/steps.ts:314
 msgid "Something went wrong"
 msgstr ""
 
@@ -828,7 +828,7 @@ msgstr ""
 msgid "Top-Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:369
+#: src/lib/flows/steps.ts:367
 msgid "Transaction"
 msgstr ""
 
@@ -934,7 +934,7 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:297
+#: src/lib/flows/steps.ts:295
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
@@ -943,7 +943,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/steps.ts:319
+#: src/lib/flows/steps.ts:317
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -977,7 +977,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/lib/flows/steps.ts:304
+#: src/lib/flows/steps.ts:302
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 

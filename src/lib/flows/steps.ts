@@ -243,12 +243,10 @@ export const onBoardingBluecode3: StepInit = async () => ({
 })
 
 export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
-  const { isWeb } = (await import('@/composables/useDevice')).useDevice()
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
     main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
-    canDismiss: !isWeb,
     beforeNext: async (_, { next, prev }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest)
         next()
