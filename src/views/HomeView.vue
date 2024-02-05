@@ -75,6 +75,7 @@ function scrollToFirstNotification() {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
+  console.log('Manual refresh triggered') // eslint-disable-line no-console
   // TODO: add a loading variable from useSync and don't refresh if already loading
   await Promise.all([
     sleep(2000),
