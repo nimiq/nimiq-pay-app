@@ -122,7 +122,7 @@ export const useTransactions = defineStore('transactions', () => {
           balance: plain.value,
           publicKey: useRemoteSigner().remotePublicKey!,
           // Adding 2 more blocks just in case the tx is not mined in the next block, it will be corrected later
-          start: plain.validityStartHeight + 12,
+          start: plain.validityStartHeight + (tx.transfer === Transfer.LocalToRemote ? 12 : 0),
           address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
           end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
           proofSize: tx.proofSize,
