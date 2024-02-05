@@ -37,22 +37,27 @@ const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const onError = (error: string) => errorMessage.value = error
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
+const { isWeb } = useDevice()
+
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
     setTimeout(() => {
       if (!props.isVisible)
         return // not visible anymore
+      document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
       start()
     }, 500)
   }
   else {
+    document.body.classList.remove('native-qr-scanner-modal-open')
     stop()
   }
 }, { immediate: true })
 
-const { isWeb } = useDevice()
-
-onBeforeUnmount(stop)
+onBeforeUnmount(() => {
+  document.body.classList.remove('native-qr-scanner-modal-open')
+  stop()
+})
 </script>
 
 <template>
@@ -91,3 +96,30 @@ onBeforeUnmount(stop)
     </p>
   </div>
 </template>
+
+<style>
+/* Non-scoped style on purpose, as we're manipulating parent elements (in an admittedly hacky fashion, which likely
+still is better though than assigning styles via js) */
+
+body.native-qr-scanner-modal-open ion-app > div {
+  display: none;
+}
+body.native-qr-scanner-modal-open ion-modal {
+  --ion-backdrop-color: transparent; /* make backdrop transparent */
+  --background: transparent; /* make dialog background transparent */
+  --overflow: visible; /* make ::before element defined below visible */
+}
+body.native-qr-scanner-modal-open ion-modal .ion-page::before {
+  /* Simulate backdrop above modal. This area is typically var(--ion-safe-area-top) + 10px big (via definition of
+  --height on ion-modal), but a larger area is visible when the user drags the modal down to close it. */
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 10%;
+  bottom: 100%;
+  background: #a9a9a9;
+}
+body.native-qr-scanner-modal-open ion-modal ion-header {
+  background: white; /* avoid video shining through transparent paddings in header */
+}
+</style>
