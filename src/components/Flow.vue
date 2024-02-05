@@ -140,7 +140,7 @@ function blur() {
 </script>
 
 <template>
-  <IonHeader class="small:pt-1 ion-no-border">
+  <IonHeader class="tall:pt-1 ion-no-border">
     <IonToolbar>
       <IonButtons slot="start">
         <IonBackButton v-if="allowBack" default-href="/" @click.prevent="goToPrevious" />
@@ -154,8 +154,8 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 tall:pt-4 shrink-0 snap-center snap-always overflow-y-hidden">
-      <h2 v-if="title" class="z-10 flex items-center justify-center text-2xl font-bold text-center small:mt-2 text-balance gap-x-3">
+    <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
+      <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 small:mt-0 text-2xl font-bold text-center text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
       </h2>

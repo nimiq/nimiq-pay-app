@@ -38,7 +38,7 @@ async function handleCopy() {
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full pt-8 small:pb-2">
+  <div class="flex flex-col self-start w-full h-full pt-8 tall:pb-2">
     <div class="flex flex-col items-center justify-center gap-y-2 small:mt-4 small:gap-y-3 tall:mt-8 tall:gap-y-4">
       <Identicon :address="address" class="w-20" />
       <AddressDisplay class="w-4/5 min-w-[18rem]" :address="address" />
