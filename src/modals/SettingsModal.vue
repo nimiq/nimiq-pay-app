@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { IonBackButton, IonButtons, IonItem, IonList, IonSelect, IonSelectOption } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
+import { App } from '@capacitor/app'
+import { computedAsync } from '@vueuse/core'
 import { useModal } from '@/composables/useModal'
 import { Fiat, useApp } from '@/stores/app'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -8,6 +10,8 @@ import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, setLanguage } from '@/i18n/i18n-s
 
 const { closeModal } = useModal()
 const { language, selectedFiat } = storeToRefs(useApp())
+
+const appVersion = computedAsync(async () => (await App.getInfo()).version)
 </script>
 
 <template>
@@ -17,7 +21,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
         <IonBackButton default-href="/" @click.prevent="closeModal()" />
       </IonButtons>
     </template>
-    <div class="w-full h-full">
+    <div class="flex flex-col w-full h-full">
       <p class="text-sm font-bold text-left uppercase text-space/60">
         {{ $t('Settings') }}
       </p>
@@ -44,6 +48,7 @@ const { language, selectedFiat } = storeToRefs(useApp())
           </IonSelect>
         </IonItem>
       </IonList>
+      <code class="mt-auto text-sm opacity-60">v{{ appVersion }}</code>
     </div>
   </ModalTemplate>
 </template>
