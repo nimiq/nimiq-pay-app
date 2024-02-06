@@ -29,6 +29,7 @@
     "@capacitor/share": "^5.0.7",
     "@capawesome/capacitor-screen-orientation": "^5.0.1",
     "@nimiq/utils": "^0.9.3",
+    "@nimiq/vue3-components": "github:nimiq/vue3-components#build/full",
     "@vueuse/core": "^10.7.2",
     "@vueuse/integrations": "^10.7.2",
     "fuse.js": "^7.0.0",

@@ -3,13 +3,13 @@ import { IonButton, IonIcon } from '@ionic/vue'
 import { Clipboard } from '@capacitor/clipboard'
 import { qrCodeOutline } from 'ionicons/icons'
 import { Browser } from '@capacitor/browser'
+import { Identicon } from '@nimiq/vue3-components'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
-import AddressDisplay from '@/components/AddressDisplay.vue'
-import NimLogo from '@/components/icons/nimiq-logo.vue'
 import { walletUrl } from '@/lib/index'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import AddressDisplay from '@/components/AddressDisplay.vue'
 
 defineProps({ address: { type: String } })
 
@@ -39,15 +39,16 @@ async function handleCopy() {
 
 <template>
   <div class="flex flex-col self-start w-full h-full pt-8 small:pb-2">
-    <div class="flex flex-col items-center justify-center small:mt-4 tall:mt-8">
-      <NimLogo class="w-16 mb-2 small:mb-4 tall:mb-8 h-14" />
-      <AddressDisplay class="w-4/5 min-w-[18rem] my-4" :address="address" />
-    </div>
-    <div>
-      <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('done')">
-        <IonIcon slot="start" :icon="qrCodeOutline" />
-        {{ $t('Scan Cashlink') }}
-      </IonButton>
+    <div class="flex flex-col items-center justify-center gap-y-2 small:mt-4 small:gap-y-3 tall:mt-8 tall:gap-y-4">
+      <Identicon :address="address" class="w-20" />
+      <AddressDisplay class="w-4/5 min-w-[18rem]" :address="address" />
+      <!-- Scan Cashlink Button -->
+      <div>
+        <IonButton expand="block" fill="clear" class="text-base font-semibold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('done')">
+          <IonIcon slot="start" :icon="qrCodeOutline" />
+          {{ $t('Scan Cashlink') }}
+        </IonButton>
+      </div>
     </div>
     <div class="w-full mt-auto">
       <IonButton expand="block" class="text-base" @click="openWallet">
