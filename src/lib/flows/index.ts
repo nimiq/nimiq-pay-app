@@ -282,7 +282,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
   const isClosing = ref(false)
   const defaultInitialFlowValues: Pick<Flow, 'onDone' | 'onCancel' | 'activeStepIndex' | 'isClosing'> = { onDone: closeFn, onCancel: closeFn, activeStepIndex, isClosing }
 
-  const state = { ...reactive(Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State), ...initialState }
+  const state = reactive({ ...Object.fromEntries(inputSteps.map(s => [s, undefined])) as unknown as State, ...initialState })
   const flowConfig = await flows[name]({ state, closeFn })
   const flow: Flow = { ...defaultInitialFlowValues, ...flowConfig }
 
