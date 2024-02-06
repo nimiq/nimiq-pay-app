@@ -28,9 +28,7 @@ export function useCameraFeedMobile() {
   }
 
   async function tearDownCameraFeed() {
-    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.removeAllListeners()
-    await BarcodeScanner.stopScan()
+    document.body.classList.remove('native-qr-scanner-modal-open')
   }
 
   return {
