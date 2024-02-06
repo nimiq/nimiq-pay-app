@@ -9,7 +9,7 @@ export function useCameraFeed(cameraFeedContainer: Ref<HTMLElement>) {
  * In Ionic, the camera feed is displayed behind the WebView.
  * This composable will open a "hole" in the WebView to display the camera feed and close it when the camera is closed.
  */
-export function useCameraFeedMobile() {
+function useCameraFeedMobile() {
   const hasPermission = ref(false)
 
   /**
@@ -28,7 +28,7 @@ export function useCameraFeedMobile() {
   }
 
   async function tearDownCameraFeed() {
-    document.body.classList.remove('native-qr-scanner-modal-open')
+    // Nothing to do.
   }
 
   return {

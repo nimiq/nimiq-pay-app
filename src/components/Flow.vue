@@ -17,7 +17,7 @@ const props = defineProps({
 })
 
 const { replace } = useRouter()
-const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true, activeStepIndex: activeIndex } = props.flow
+const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true, activeStepIndex: activeIndex, isClosing } = props.flow
 const steps: Ref<Step[]> = ref([stepsInFlow[0]])
 
 const scroller = ref<HTMLElement>()
@@ -48,6 +48,8 @@ function defaultErrorHandler(errorMessage: string) {
 
 interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
 async function goToNext(options?: GoToNextOptions) {
+  if (isClosing.value)
+    return
   const {
     err = defaultErrorHandler,
     stepsToSkip = 1,
@@ -64,6 +66,8 @@ async function goToNext(options?: GoToNextOptions) {
 }
 
 async function goToPrevious() {
+  if (isClosing.value)
+    return
   prevSlide()
   // Wait for the scroll to start and finish
   await until(isScrolling).toBe(true, { timeout: 3000 })
@@ -77,6 +81,8 @@ const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.
 onMounted(async () => shouldAutofocus.value && focus())
 
 async function onStepDone(value: OnDoneStepValue) {
+  if (isClosing.value)
+    return
   const activeStepName = activeStep.value.step
   if (isInfoStep(activeStepName)) {
     goToNext()
@@ -102,6 +108,8 @@ function skip() {
 }
 
 function onCancel() {
+  if (isClosing.value)
+    return
   onFlowCancel!(state, { goTo: replace, err: defaultErrorHandler })
 }
 
@@ -121,6 +129,10 @@ useIntersectionObserver(activeStepScrollerItem, ([{ intersectionRatio }]) => {
 
 function isStepVisible(stepName: StepName) {
   return stepName === activeStep.value.step && isActiveStepFullyVisible.value
+    // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
+    // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
+    // the background page on native, before the modal unveils the background.
+    && !isClosing.value
 }
 
 function focus() {
