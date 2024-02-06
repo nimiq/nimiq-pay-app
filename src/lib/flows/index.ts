@@ -220,9 +220,9 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ state, closeFn }) => {
   const onCancel: Flow['onCancel'] = async (_state) => {
     console.log('🤑  Cancelling payment process')
     if (!useDevice().isWeb) {
-      const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-      await BarcodeScanner.removeAllListeners()
-      await BarcodeScanner.stopScan()
+      const { useCameraFeedMobile } = await import('@/composables/useCameraFeed')
+      const { tearDownCameraFeed } = useCameraFeedMobile()
+      await tearDownCameraFeed()
     }
     closeFn()
   }
@@ -237,6 +237,11 @@ const nimWithdrawFlow: FlowInit = async ({ state, closeFn }) => {
   const flowName = FlowName.NimWithdraw
   const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } })].map(s => s({ flowName }))))
   const onCancel: Flow['onCancel'] = async () => {
+    if (!useDevice().isWeb) {
+      const { useCameraFeedMobile } = await import('@/composables/useCameraFeed')
+      const { tearDownCameraFeed } = useCameraFeedMobile()
+      await tearDownCameraFeed()
+    }
     closeFn()
   }
   return { flowName, state, steps, onCancel }
@@ -250,6 +255,11 @@ const nimTopUpFlow: FlowInit = async ({ state, closeFn }) => {
   const flowName = FlowName.NimTopUp
   const steps = (await Promise.all([nimAddressDisplay, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } })].map(s => s({ flowName }))))
   const onCancel: Flow['onCancel'] = async () => {
+    if (!useDevice().isWeb) {
+      const { useCameraFeedMobile } = await import('@/composables/useCameraFeed')
+      const { tearDownCameraFeed } = useCameraFeedMobile()
+      await tearDownCameraFeed()
+    }
     closeFn()
   }
   return { flowName, state, steps, onCancel }
