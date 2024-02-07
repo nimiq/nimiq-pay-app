@@ -14,11 +14,14 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const head = ref<Nimiq.Block>()
   const height = computed(() => head.value?.height || -1)
   const peerCount = ref(0)
+  const networkName = ref('')
 
   async function init() {
     isDev
       ? Nimiq.GenesisConfig.test()
       : Nimiq.GenesisConfig.main()
+
+    networkName.value = Nimiq.GenesisConfig.NETWORK_NAME
 
     await Nimiq.WasmHelper.doImport()
     client.value = Nimiq.Client.Configuration.builder().instantiateClient()
@@ -134,5 +137,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAccount,
     getAccounts,
     getAccountTransactions,
+    networkName,
   }
 })

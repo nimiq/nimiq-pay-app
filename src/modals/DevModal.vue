@@ -16,7 +16,7 @@ import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_
 // Note: no translations in this file as it's for dev purposes only.
 
 const router = useRouter()
-const { consensus, head, height, peerCount, client } = storeToRefs(useNimiqNetwork())
+const { consensus, head, height, peerCount, client, networkName } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
@@ -97,6 +97,7 @@ onMounted(async () => {
           Head <strong>{{ height }}</strong>:
           <code>{{ head?.hash()?.toHex() }}</code>
         </p>
+        <p>Network: <strong>{{ networkName }}</strong></p>
       </IonCardContent>
     </IonCard>
     <IonCard>
