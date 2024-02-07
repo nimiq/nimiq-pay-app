@@ -4,21 +4,33 @@ import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
-import { isInfoStep, isInputStep } from '@/lib/flows/steps.types'
-import type { Flow, InputStepName, OnDoneStepValue, Step, StepName } from '@/lib/flows/steps.types'
+import { inputSteps, isInfoStep, isInputStep } from '@/lib/flows/steps.types'
+import type { Flow, InputStepName, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   flow: {
-    type: Object as PropType<Flow>,
+    type: Object as PropType<Required<Flow>>,
     required: true,
+  },
+  isClosing: {
+    type: Boolean,
+    required: true,
+  },
+  initialState: {
+    type: Object as PropType<Partial<State>>,
+    required: false,
   },
 })
 
 const { replace } = useRouter()
-const { onDone: onFlowDone, onCancel: onFlowCancel, state, steps: stepsInFlow, canGoBack = true, activeStepIndex: activeIndex, isClosing } = props.flow
+const { onDone: onFlowDone, onCancel: onFlowCancel, steps: stepsInFlow, canGoBack = true } = props.flow!
 const steps: Ref<Step[]> = ref([stepsInFlow[0]])
+
+const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
+const state = ref({ ...emptyState, ...props.initialState })
+const activeIndex = ref(0)
 
 const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
@@ -48,7 +60,7 @@ function defaultErrorHandler(errorMessage: string) {
 
 interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
 async function goToNext(options?: GoToNextOptions) {
-  if (isClosing.value)
+  if (props.isClosing)
     return
   const {
     err = defaultErrorHandler,
@@ -57,16 +69,16 @@ async function goToNext(options?: GoToNextOptions) {
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value.step)
   const nextStep = stepsInFlow[currentIndex + stepsToSkip]
   if (!nextStep) {
-    onFlowDone!(state, { goTo: replace, err })
+    onFlowDone(state.value, { goTo: replace, err })
     return
   }
   steps.value.push(nextStep)
-  await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state)
+  await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state.value)
   nextSlide()
 }
 
 async function goToPrevious() {
-  if (isClosing.value)
+  if (props.isClosing)
     return
   prevSlide()
   // Wait for the scroll to start and finish
@@ -78,10 +90,15 @@ async function goToPrevious() {
 // TODO revise this
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
-onMounted(async () => shouldAutofocus.value && focus())
+onMounted(async () => {
+  await stepsInFlow[activeIndex.value].beforeDisplay?.(state.value)
+
+  if (shouldAutofocus.value)
+    focus()
+})
 
 async function onStepDone(value: OnDoneStepValue) {
-  if (isClosing.value)
+  if (props.isClosing)
     return
   const activeStepName = activeStep.value.step
   if (isInfoStep(activeStepName)) {
@@ -89,11 +106,11 @@ async function onStepDone(value: OnDoneStepValue) {
   }
   else if (isInputStep(activeStepName)) {
     // @ts-expect-error If the emit value is well typed, this should work
-    state[activeStepName] = value
+    state.value[activeStepName] = value
     errors.value[activeStepName] = '' // Clear error message
     const err = defaultErrorHandler
     if (activeStep.value.beforeNext)
-      await activeStep.value.beforeNext(state, { next: goToNext, err, prev: goToPrevious, finalizeFlow: () => onFlowDone!(state, { goTo: replace, err }), skip })
+      await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrevious, finalizeFlow: () => onFlowDone(state.value, { goTo: replace, err }), skip })
     else
       goToNext()
   }
@@ -108,9 +125,9 @@ function skip() {
 }
 
 function onCancel() {
-  if (isClosing.value)
+  if (props.isClosing)
     return
-  onFlowCancel!(state, { goTo: replace, err: defaultErrorHandler })
+  onFlowCancel({ goTo: replace, err: defaultErrorHandler })
 }
 
 const isActiveStepFullyVisible = ref(false)
@@ -132,7 +149,7 @@ function isStepVisible(stepName: StepName) {
     // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
     // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
     // the background page on native, before the modal unveils the background.
-    && !isClosing.value
+    && !props.isClosing
 }
 
 function focus() {

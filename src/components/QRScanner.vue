@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type PropType, type Ref, onBeforeUnmount, ref, watch, watchEffect } from 'vue'
-import { type State, stepEmits } from '@/lib/flows/steps.types'
+import { stepEmits } from '@/lib/flows/steps.types'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { useDevice } from '@/composables/useDevice'
 import { type QRData, QRScannerState, useQRScanner } from '@/composables/useQRScanner'
@@ -10,7 +10,6 @@ const props = defineProps({
   isVisible: { type: Boolean, required: true },
   errorMsg: { type: String },
   canSkip: { type: Boolean },
-  state: { type: Object as PropType<State>, required: true },
   expect: { type: String as PropType<QRDataFormat>, required: true },
 })
 const emit = defineEmits(stepEmits)

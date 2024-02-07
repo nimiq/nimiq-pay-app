@@ -6,7 +6,7 @@ import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
 import InfoIcon from '@/components/icons/info.vue'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
-import type { Flow, PaymentRequestData } from '@/lib/flows/steps.types'
+import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
@@ -18,7 +18,7 @@ import { Transfer } from '@/types/transactions'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<Flow['state']>, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())

@@ -24,10 +24,7 @@ interface FlowHooksOptions {
 
 export interface Flow {
   flowName: FlowName
-  state: State
   steps: Step[]
-  activeStepIndex: Ref<number>
-  isClosing: Ref<boolean>
 
   // Function that will be called when the flow is supposed to be closed.
   // If it is not set, the flow will be closed automatically when the last step is done.
@@ -36,7 +33,7 @@ export interface Flow {
   // Function that will be called when the flow is cancelled.
   // Also, the flow will be closed automatically when the last step is done.
   // This needs to be mandatory, because the flow needs to be closed when the user presses the hardware back button.
-  onCancel: (state: State, options: FlowHooksOptions) => Promise<any>
+  onCancel: (options: FlowHooksOptions) => Promise<any>
 
   // Wether the user can go back or not
   // @default true
@@ -44,13 +41,11 @@ export interface Flow {
 }
 
 export interface FlowInitOptions {
-  state: State
-
   // Function that will be called when the flow is closed
   closeFn: () => Promise<any>
 }
 
-export type FlowInit = (options: FlowInitOptions) => Promise<Omit<Flow, 'activeStepIndex' | 'isClosing'>>
+export type FlowInit = (options: FlowInitOptions) => Promise<Flow>
 
 export enum StepName {
   PromoCode = 'promoCode',
