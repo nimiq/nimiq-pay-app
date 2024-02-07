@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { ValidationUtils } from '@nimiq/utils'
 
 const props = defineProps({
@@ -11,155 +11,86 @@ const props = defineProps({
 
 const emit = defineEmits(['update:address'])
 
-const inputAddress = ref('')
+const inputAddress = ref<string[]>([])
 
-const address = computed(() => {
-  const { address } = props
-  if (!address)
-    return []
-
-  const array = addressStringToArray(address)
-  return array as string[]
+watch(() => props.address, (address) => {
+  if (address)
+    inputAddress.value = address.replace(/\s/g, '').match(/.{1,4}/g) || []
 })
 
-watch(inputAddress, (address) => {
-  if (!ValidationUtils.isValidAddress(address)) {
-    // TODO: Show error
-    console.error('Invalid address')
-    return
+watch(inputAddress, (input) => {
+  const address = input.join('')
+  if (ValidationUtils.isValidAddress(address)) {
+    const { activeElement } = document
+    if (activeElement instanceof HTMLInputElement)
+      activeElement.blur()
+    emit('update:address', Nimiq.Address.fromUserFriendlyAddress(address).toUserFriendlyAddress())
   }
-  emit('update:address', address)
-})
+  else {
+    emit('update:address', '')
+  }
+}, { deep: true })
 
-// TODO: refactor all this ugly code
-function handleInput() {
-  // TODO: Replace special letters
-  // https://github.com/nimiq/vue-components/blob/5748e875e0e128441cc905b21684293d229da7dc/src/components/AddressInput.vue#L64
-  for (let i = 1; i <= 3; i++) {
-    for (let j = 1; j <= 3; j++) {
-      const input = document.getElementsByName(`block-${i}${j}`)[0] as HTMLInputElement
-      if (input.value.length === 4) {
-        if (i === 3 && j === 3) {
-          // Only blur if writing in the last input
-          const row = Number.parseInt(input.name.split('-')[1][0])
-          const column = Number.parseInt(input.name.split('-')[1][1])
-          if (row === 3 && column === 3) {
-            input.blur()
-            getAddressFromInputs()
-            return
-          }
-        }
-        const nextInput = document.getElementsByName(`block-${j === 3 ? i + 1 : i}${j === 3 ? 1 : j + 1}`)[0] as HTMLInputElement
-        nextInput.focus()
-      }
-    }
+function handleInput(event: Event) {
+  const target = event.target as HTMLInputElement
+  const value = target.value
+  const index = Number.parseInt(target.id)
+
+  if (value.length > 4) {
+    // Remove spaces and split every 4 characters
+    const array = value.replace(/\s/g, '').match(/.{1,4}/g)
+    if (!array)
+      return
+    for (let i = 0; i < array.length; i++)
+      inputAddress.value[index + i] = array[i]
+  }
+  else {
+    inputAddress.value[index] = value
+  }
+
+  // Focus on the next input
+  if (index < 8 && value.length >= 4) {
+    const nextInput = document.getElementById((index + 1).toString())
+    if (nextInput)
+      nextInput.focus()
   }
 }
 
 function handleDelete(event: KeyboardEvent) {
-  const { key } = event
-  if (key === 'Backspace') {
-    // Get which input is the focused one
-    const focusedInput = document.activeElement as HTMLInputElement
-    if (!focusedInput)
-      return
-    if (focusedInput.value.length > 0)
-      return
-    const focusedInputName = focusedInput.name
-    const focusedInputNameArray = focusedInputName.split('-')
-    const row = Number.parseInt(focusedInputNameArray[1][0])
-    const column = Number.parseInt(focusedInputNameArray[1][1])
-    if (row === 1 && column === 1)
-      return
-
-    const previousInput = document.getElementsByName(`block-${column === 1 ? row - 1 : row}${column === 1 ? 3 : column - 1}`)[0] as HTMLInputElement
-    previousInput.focus()
-  }
-}
-
-function handlePaste(event: ClipboardEvent) {
-  const { clipboardData } = event || window
-  if (!clipboardData)
-    return
-  const clipboardText = clipboardData.getData('text').replace(/ /g, '')
-  if (!clipboardText)
-    return
-
-  // An address without spaces is 36 characters long
-  // If we have a full address, fill from the beginning
-  if (clipboardText.length === 36) {
-    const array = addressStringToArray(clipboardText)
-    const iterator = array.values()
-    for (let i = 1; i <= 3; i++) {
-      for (let j = 1; j <= 3; j++) {
-        const input = document.getElementsByName(`block-${i}${j}`)[0] as HTMLInputElement
-        input.value = iterator.next().value
-      }
-    }
-    inputAddress.value = clipboardText
-  }
-  else if (clipboardText.length < 36) {
-    // If we have a partial address, fill from the current input
-    const array = addressStringToArray(clipboardText)
-    const focusedInput = document.activeElement as HTMLInputElement
-    if (!focusedInput)
-      return
-    const focusedInputName = focusedInput.name
-    const focusedInputNameArray = focusedInputName.split('-')
-    const row = Number.parseInt(focusedInputNameArray[1][0])
-    let column = Number.parseInt(focusedInputNameArray[1][1])
-
-    const iterator = array.values()
-    for (let i = row; i <= 3; i++) {
-      for (let j = column; j <= 3; j++) {
-        const input = document.getElementsByName(`block-${i}${j}`)[0] as HTMLInputElement
-        input.value = iterator.next().value || ''
-        if (i === 3 && j === 3)
-          input.blur()
-        if (!input.value)
-          break
-      }
-      column = 1
-    }
-    getAddressFromInputs()
-  }
-  else {
-    // eslint-disable-next-line no-console
-    console.log('Clipboard text is too long to be an address, filling only first input')
-  }
-}
-
-function getAddressFromInputs() {
-  inputAddress.value = ''
-  for (let i = 1; i <= 3; i++) {
-    for (let j = 1; j <= 3; j++) {
-      const input = document.getElementsByName(`block-${i}${j}`)[0] as HTMLInputElement
-      inputAddress.value += input.value.toUpperCase()
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault()
+    const target = event.target as HTMLInputElement
+    const index = Number.parseInt(target.id)
+    inputAddress.value[index] = inputAddress.value[index].slice(0, -1)
+    if (inputAddress.value[index].length === 0 && index > 0) {
+      const prevInput = document.getElementById((index - 1).toString())
+      if (prevInput)
+        nextTick(() => prevInput.focus())
     }
   }
-}
-
-function addressStringToArray(address: string) {
-  const array = address.replace(/ /g, '').match(/.{1,4}/g)
-  if (!array) {
-    console.error('Invalid address')
-    return []
-  }
-  return array
 }
 </script>
 
 <template>
-  <div v-for="i in 3" :key="i" class="grid grid-cols-[repeat(5,minmax(0,auto))] my-2 justify-center">
-    <template v-for="j in 3" :key="i.toString() + j.toString()">
+  <div class="grid grid-cols-3 gap-y-4">
+    <div
+      v-for="(_, i) in 9"
+      :key="i"
+      class="flex items-center"
+      :class="{ 'justify-end': i % 3 === 0 }"
+    >
+      <!-- Only show horizontal lines in the middle element, that's the best way I found in my extend research (2 minutes) to prevent hacking too many things -->
+      <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
       <input
-        :name="`block-${i}${j}`" :value="address[i - 1 + j - 1]"
-        maxlength="4" minlength="4" autocapitalize="characters"
+        :id="i.toString()"
+        v-model="inputAddress[i]"
+        autocapitalize="characters"
         class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[4.725rem] max-w-24 text-2xl text-center focus:outline-none focus:border-sky/40"
-        @input="handleInput" @keydown="handleDelete" @paste="handlePaste"
+        @input="handleInput"
+        @keydown="handleDelete"
       >
-      <div v-if="j !== 3" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
-    </template>
+      <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
+    </div>
   </div>
 </template>
 

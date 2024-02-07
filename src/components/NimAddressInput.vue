@@ -29,11 +29,7 @@ function handleSave() {
         {{ $t('Enter Address') }}
       </p>
       <AddressInput :address="props.state.qrCodeScanner as string" @update:address="(v: string) => address = v" />
-      <QRIcon class="mt-4 ml-auto w-9 h-9" @click="$emit('done')" />
-
-      <!-- <button @click="$emit('done')">
-      </button> -->
-      <!-- TODO: Fun fact! Opening the camera, then close it and then open it again does not work. Alberto, add it to the list 🦈 -->
+      <QRIcon class="mt-6 ml-auto w-9 h-9" @click="$emit('done')" />
     </div>
 
     <p class="mt-8 text-center text-tomato">
