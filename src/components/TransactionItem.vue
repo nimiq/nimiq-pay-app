@@ -15,7 +15,7 @@ const props = defineProps({
   },
 })
 
-const { formatted } = useRelativeTime({ timestamp: props.tx.timestamp })
+const { formatted } = useRelativeTime({ timestamp: props.tx.timestamp || Math.ceil(Date.now() / 1000) })
 const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isPaymentTx(props.tx) } })
 const paymentMethod = computed(() => {
   const { tx } = props

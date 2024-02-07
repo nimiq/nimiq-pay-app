@@ -231,7 +231,7 @@ export function useSync() {
         recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
-        timestamp: tx.timestamp,
+        timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
