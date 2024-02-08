@@ -112,6 +112,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
 
     if (!isWeb) {
       await (await import('@/stores/conn')).useConn().deleteDatabase(false)
+      await (await import('@/stores/conn')).useConn().resetSecret()
       // Set it to false in case it was decrypted before, we are sure there's no encrypted db since we just deleted it
       decrypted.value = false
     }
