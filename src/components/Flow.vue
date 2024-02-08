@@ -164,7 +164,7 @@ function blur() {
       </p>
       <component
         :is="main"
-        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling }"
+        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
         v-on="{ focus, done: onStepDone, select: onStepDone, skip }"
       />
     </li>

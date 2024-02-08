@@ -101,6 +101,7 @@ watch(
       <span ref="widthValue" class="width-finder">{{ formattedValue || '' }}</span>
       <input
         ref="input" v-model="formattedValue" type="text"
+        name="amount"
         inputmode="decimal"
         class="max-w-full px-1 py-0 text-center transition-all border-none rounded-lg duration-[50ms] border-space/10 outline-0 bg-clip-padding"
         placeholder="0"

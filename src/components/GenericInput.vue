@@ -10,7 +10,7 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-defineProps({ errorMsg: { type: String } })
+defineProps({ errorMsg: { type: String }, stepName: { type: String, required: false } })
 defineEmits(stepEmits)
 
 const { getReferralInfoById } = usePoints()
@@ -53,6 +53,7 @@ watch(referralCode, async (newValue) => {
 <template>
   <input
     ref="codeField" type="text" minlength="6"
+    :name="stepName"
     maxlength="8" size="8"
     class="w-4/5 mx-auto uppercase text-3xl text-center mt-[33%] p-1 mb-4" autofocus="true"
     autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"

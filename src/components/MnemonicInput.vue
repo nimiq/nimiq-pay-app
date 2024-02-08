@@ -50,6 +50,7 @@ function inputHandler(e: Event) {
     <input
       v-for="(word, i) in recoveryWords"
       :key="word + i"
+      name="recovery-word"
       tabindex="0"
       class="lowercase"
       type="text"

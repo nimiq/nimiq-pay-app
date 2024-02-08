@@ -84,6 +84,7 @@ function handleDelete(event: KeyboardEvent) {
       <input
         :id="i.toString()"
         v-model="inputAddress[i]"
+        name="address"
         autocapitalize="characters"
         class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[4.725rem] max-w-24 text-2xl text-center focus:outline-none focus:border-sky/40"
         @input="handleInput"

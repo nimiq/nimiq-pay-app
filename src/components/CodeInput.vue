@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { PinInputInput, PinInputRoot } from 'radix-vue'
 import { storeToRefs } from 'pinia'
 import { IonButton } from '@ionic/vue'
-import { pin } from 'ionicons/icons'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
@@ -11,7 +9,7 @@ import { useApp } from '@/stores/app'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, backButtonText: { type: String } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, inputLength: { type: Number, required: true }, backButtonText: { type: String }, stepName: { type: String, required: false }, })
 const emit = defineEmits(stepEmits)
 
 const { phoneNumber } = storeToRefs(useApp())
@@ -77,6 +75,7 @@ function handleDelete(event: KeyboardEvent) {
         v-for="i in inputLength"
         :id="(i - 1).toString()"
         :key="i"
+        :name="stepName"
         v-model="pinCodeInput[i - 1]"
         autocomplete="one-time-code"
         class="w-10 p-2 text-2xl font-semibold text-center transition-colors duration-100 border-2 rounded-md focus:outline-none focus:ring-0 focus:border-sky border-space-space-300 h-14"

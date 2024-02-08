@@ -8,7 +8,7 @@ import { i18n } from '@/i18n/i18n-setup'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false } })
 const emit = defineEmits(stepEmits)
 
 const phoneNumber = ref('')
@@ -58,6 +58,7 @@ watch(() => props.errorMsg, () => {
     <form @submit.prevent>
       <input
         v-model="phoneNumber" :placeholder="$t('Your number')" type="tel" class="w-full p-2 px-4 my-2 phone"
+        :name="stepName"
         size="16"
         @keydown.enter="showAlert"
       >

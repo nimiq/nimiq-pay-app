@@ -14,6 +14,7 @@ const props = defineProps({
   inputLength: { type: Number, required: true },
   isScrolling: { type: Boolean, required: false },
   showLoading: { type: Boolean, required: false },
+  stepName: { type: String, required: false },
 })
 const emit = defineEmits(stepEmits)
 
@@ -84,6 +85,7 @@ function handleInputClick(i: number) {
   </div>
   <input
     ref="inputRef" type="password" inputmode="numeric" class="sr-only caret-transparent" pattern="[0-9]*"
+    :name="stepName"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
     @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"

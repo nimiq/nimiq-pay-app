@@ -27,7 +27,7 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
     </h2>
 
     <!-- TODO Lupa -->
-    <input v-model="searchQuery" type="text" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" :placeholder="$t('Search')" @select.stop.prevent>
+    <input v-model="searchQuery" type="text" name="search" class="rounded-full ring-1 z-10 ring-[#cdcdd5] w-full outline-none mt-6 px-4 py-2 border-none text-space selection:bg-space selection:text-white" :placeholder="$t('Search')" @select.stop.prevent>
 
     <div v-if="status === TransactionListState.NoResults" class="pt-10">
       <i18n-t keypath="No transactions found for &quot;{searchQuery}&quot;" tag="p">
