@@ -20,7 +20,7 @@ const { setToast } = useToast()
 const address = useLocalWallet().localAddress.toUserFriendlyAddress()
 
 async function openWallet() {
-  const url = new URL(`${walletUrl}/nimiq:${useLocalWallet().localAddress.toHex()}`)
+  const url = new URL(`/nimiq:${useLocalWallet().localAddress.toUserFriendlyAddress()}`, walletUrl)
 
   await Browser.open({ url: url.toString(), toolbarColor: '#E9B213' })
   Browser.addListener('browserFinished', () => {
