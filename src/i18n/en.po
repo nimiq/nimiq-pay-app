@@ -832,8 +832,8 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/lib/flows/index.ts:185
-#: src/lib/flows/index.ts:201
+#: src/lib/flows/index.ts:167
+#: src/lib/flows/index.ts:181
 msgid "Transaction failed: {error}"
 msgstr ""
 

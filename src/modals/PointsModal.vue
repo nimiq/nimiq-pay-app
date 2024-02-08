@@ -32,7 +32,6 @@ async function handleRefresh(event: CustomEvent) {
 onMounted(async () => {
   // If phone number is not verified, show the modal
   if (!phoneNumberVerified.value) {
-    await closeModal()
     initializeFlow(FlowName.VerifyPhone)
     return
   }

@@ -8,7 +8,7 @@ import FlowCmp from '@/components/Flow.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 
-const loginFlow: FlowInit = async ({ closeFn }) => {
+const loginFlow: FlowInit = async () => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Login
   const steps = await Promise.all([
@@ -33,7 +33,6 @@ const loginFlow: FlowInit = async ({ closeFn }) => {
     state[StepName.PinCode] = ''
 
     goTo('/app')
-    closeFn()
     useModal().showModal(Modal.Points)
   }
   const onCancel: Flow['onCancel'] = async ({ goTo }) => {
@@ -41,13 +40,11 @@ const loginFlow: FlowInit = async ({ closeFn }) => {
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
       await goTo('/app')
-
-    closeFn()
   }
   return { flowName, steps, onDone, onCancel }
 }
 
-const setupFlow: FlowInit = async ({ closeFn }) => {
+const setupFlow: FlowInit = async () => {
   const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Setup
   const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
@@ -63,37 +60,30 @@ const setupFlow: FlowInit = async ({ closeFn }) => {
     }
 
     goTo('/app')
-    closeFn()
     const { phoneNumberVerified } = useApp()
-    if (phoneNumberVerified) {
-      useModal().showModal(Modal.Points)
-    }
-    else {
-      await useModal().closeModal()
-      initializeFlow(FlowName.VerifyPhone)
-    }
+    if (phoneNumberVerified)
+      await useModal().showModal(Modal.Points)
+    else
+      await initializeFlow(FlowName.VerifyPhone)
   }
   const onCancel: Flow['onCancel'] = async ({ goTo }) => {
     const { useApp } = await import('@/stores/app')
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
       await goTo('/app')
-
-    closeFn()
   }
   return { flowName, steps, onDone, onCancel }
 }
 
-const verifyPhoneFlow: FlowInit = async ({ closeFn }) => {
+const verifyPhoneFlow: FlowInit = async () => {
   const { phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.VerifyPhone
   const steps = await Promise.all([phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async () => useModal().showModal(Modal.Points)
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onDone, onCancel }
+  return { flowName, steps, onDone }
 }
 
-const setupWithPromoCodeFlow: FlowInit = async ({ closeFn }) => {
+const setupWithPromoCodeFlow: FlowInit = async () => {
   const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.SetupWithPromoCode
   const steps = await Promise.all([
@@ -110,48 +100,40 @@ const setupWithPromoCodeFlow: FlowInit = async ({ closeFn }) => {
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
       await goTo('/app')
-
-    closeFn()
   }
   return { flowName, steps, onCancel }
 }
 
-const onBoardingPointsFlow: FlowInit = async ({ closeFn }) => {
+const onBoardingPointsFlow: FlowInit = async () => {
   const { onBoardingPoints } = await import('./steps')
   const flowName = FlowName.OnBoardingPoints
   const steps = [await onBoardingPoints({ flowName })]
   const onDone: Flow['onDone'] = async () => {
     const { useApp } = await import('@/stores/app')
     const { phoneNumberVerified } = useApp()
-    if (phoneNumberVerified) {
+    if (phoneNumberVerified)
       useModal().showModal(Modal.Points)
-    }
-    else {
-      await useModal().closeModal()
-      initializeFlow(FlowName.VerifyPhone)
-    }
+    else
+      await initializeFlow(FlowName.VerifyPhone)
   }
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onDone, onCancel }
+  return { flowName, steps, onDone }
 }
 
-const onBoardingCashbackFlow: FlowInit = async ({ closeFn }) => {
+const onBoardingCashbackFlow: FlowInit = async () => {
   const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
   const flowName = FlowName.OnBoardingCashback
   const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
-const onBoardingBluecodeFlow: FlowInit = async ({ closeFn }) => {
+const onBoardingBluecodeFlow: FlowInit = async () => {
   const { onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3 } = await import('./steps')
   const flowName = FlowName.OnBoardingBluecode
   const steps = (await Promise.all([onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3].map(s => s({ flowName }))))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
-const nimOrPointsPaymentFlow: FlowInit = async ({ closeFn }) => {
+const nimOrPointsPaymentFlow: FlowInit = async () => {
   const [
     { paymentPreviewStep, qrCodeScannerStep, pinCodeStep },
     { QRDataFormat },
@@ -188,8 +170,6 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ closeFn }) => {
       ) }))
       if (error)
         err(error)
-      else
-        closeFn()
     }
     else if (method === PaymentMethod.Points) {
       if (!request.rail || !request.paymentRef)
@@ -204,53 +184,46 @@ const nimOrPointsPaymentFlow: FlowInit = async ({ closeFn }) => {
         ) }))
       if (error)
         err(error)
-      else
-        closeFn()
     }
   }
   const onCancel: Flow['onCancel'] = async () => {
     console.log('🤑  Cancelling payment process') // eslint-disable-line no-console
-    closeFn()
   }
   return { flowName, steps, onDone, onCancel }
 }
 
-const nimWithdrawFlow: FlowInit = async ({ closeFn }) => {
+const nimWithdrawFlow: FlowInit = async () => {
   const [
     { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimWithdraw
   const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } })].map(s => s({ flowName }))))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
-const nimTopUpFlow: FlowInit = async ({ closeFn }) => {
+const nimTopUpFlow: FlowInit = async () => {
   const [
     { nimAddressDisplay, qrCodeScannerStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimTopUp
   const steps = (await Promise.all([nimAddressDisplay, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } })].map(s => s({ flowName }))))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
-const viewTransactionsFlow: FlowInit = async ({ closeFn }) => {
+const viewTransactionsFlow: FlowInit = async () => {
   const { transactionList, transactionDetail } = await import('./steps')
   const flowName = FlowName.ViewTransactions
   const steps = (await Promise.all([transactionList, transactionDetail].map(s => s({ flowName }))))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
-const viewTransactionDetailFlow: FlowInit = async ({ closeFn }) => {
+const viewTransactionDetailFlow: FlowInit = async () => {
   const { transactionDetail } = await import('./steps')
   const flowName = FlowName.ViewTransactions
   const steps = (await Promise.all([transactionDetail({ flowName })]))
-  const onCancel: Flow['onCancel'] = closeFn
-  return { flowName, steps, onCancel }
+  return { flowName, steps }
 }
 
 const flows = {
@@ -273,13 +246,12 @@ const flows = {
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, initialState?: Partial<State>) {
+  // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
+  await useModal().closeModal()
+
   const isFullscreen = false
 
-  // Close the modal
-  const closeFn = () => modalController.getTop().then(m => m.dismiss({ programmatically: true }))
-
-  const flowConfig = await flows[name]({ closeFn })
-  const flow = { onDone: closeFn, ...flowConfig, canGoBack: !!flowConfig.canGoBack }
+  const flow = await flows[name]()
 
   // eslint-disable-next-line no-console
   console.log(`🌊 Initializing flow ${name}`, flow)
@@ -298,23 +270,19 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * This function is called when the modal is about to be dismissed.
      * It can be triggered by the user or programmatically by a flow.
      *
-     * If the user is trying to dismiss the flow, we call the `onCancel` hook.
-     * Then the flow might decide to close the modal or not. If it does close
-     * the modal, the `canDismiss` function will be executed again, but this time
-     * it will return immediately true.
-     *
      * At the moment, we don't prevent any modal of being dismissed, so
      * all the triggers will return true, closing the modal.
      */
-    canDismiss: async (data?: { programmatically: boolean }) => {
+    canDismiss: async (data?: { skipCancelHook: boolean }) => {
+      const wasAlreadyClosing = isClosing.value
       isClosing.value = true
-      if (data?.programmatically)
+      if (data?.skipCancelHook || wasAlreadyClosing)
         return true
 
       // eslint-disable-next-line no-console
       console.log('🌊 Dismissing flow', flow)
       const { default: router } = await import('@/router/index')
-      await flow.onCancel({
+      await flow.onCancel?.({
         goTo: path => router.replace(path),
         err(errorMessage: string) {
           useToast().setToast({ message: errorMessage, error: true })
@@ -326,4 +294,11 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
     breakpoints: isFullscreen ? undefined : [0, 1],
   })
   await modal.present()
+}
+
+export async function closeModalSkippingFlowCancelHook() {
+  const modal = await modalController.getTop()
+  if (!modal)
+    return
+  await modal.dismiss({ skipCancelHook: true })
 }
