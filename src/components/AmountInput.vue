@@ -100,11 +100,13 @@ watch(
       <span ref="widthPlaceholder" class="width-finder"> 0 </span>
       <span ref="widthValue" class="width-finder">{{ formattedValue || '' }}</span>
       <input
-        ref="input" v-model="formattedValue" type="text"
+        ref="input" v-model="formattedValue"
+        type="number"
         name="amount"
         inputmode="decimal"
         class="max-w-full px-1 py-0 text-center transition-all border-none rounded-lg duration-[50ms] border-space/10 outline-0 bg-clip-padding"
         placeholder="0"
+        pattern="[0-9]*"
         :style="{ 'width': `${width}px`, 'box-shadow': `inset 0 0 0 .15rem ${isFocussed ? 'var(--border-color-focus)' : 'var(--border-color)'}` }"
         @focus="isFocussed = true"
         @blur="isFocussed = false"
