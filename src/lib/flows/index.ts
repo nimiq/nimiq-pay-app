@@ -299,7 +299,10 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
       // eslint-disable-next-line no-console
       console.log('🌊 Dismissing flow', flow)
       const { default: router } = await import('@/router/index')
-      await flow.onCancel({
+      // We do not await onCancel here, for the case that it recursively calls modal.dismiss() which would result in a
+      // deadlock if canDismiss itself was called from an outer modal.dismiss(), as the outer dismiss() claims a lock
+      // which the inner/recursive dismiss() needs to wait for, resulting in a deadlock.
+      flow.onCancel({
         goTo: path => router.replace(path),
         err(errorMessage: string) {
           useToast().setToast({ message: errorMessage, error: true })
@@ -307,10 +310,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
       })
       if (role === 'gesture') {
         // Close modal immediately on swipe gesture, instead of waiting for snap-back animation to finish animating the
-        // gesture back, see handleCanDismiss in ion-modal.js. We don't await modal.dismiss() here, to avoid a deadlock
-        // if canDismiss itself was called by an outer modal.dismiss(), as dismiss includes a lock that only allows one
-        // parallel execution, which would block this recursive call of modal.dismiss() to resolve, until the outer call
-        // terminates.
+        // gesture back, see handleCanDismiss in ion-modal.js. Same as above, we don't await the dismiss() call here.
         modal.dismiss()
       }
       return true
