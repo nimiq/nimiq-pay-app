@@ -273,7 +273,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * At the moment, we don't prevent any modal of being dismissed, so
      * all the triggers will return true, closing the modal.
      */
-    canDismiss: async (data?: { skipCancelHook: boolean }) => {
+    canDismiss: async (data?: { skipCancelHook: boolean }, role?) => {
       const wasAlreadyClosing = isClosing.value
       isClosing.value = true
       if (data?.skipCancelHook || wasAlreadyClosing)
@@ -288,6 +288,14 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
           useToast().setToast({ message: errorMessage, error: true })
         },
       })
+      if (role === 'gesture') {
+        // Close modal immediately on swipe gesture, instead of waiting for snap-back animation to finish animating the
+        // gesture back, see handleCanDismiss in ion-modal.js. We don't await modal.dismiss() here, to avoid a deadlock
+        // if canDismiss itself was called by an outer modal.dismiss(), as dismiss includes a lock that only allows one
+        // parallel execution, which would block this recursive call of modal.dismiss() to resolve, until the outer call
+        // terminates.
+        modal.dismiss()
+      }
       return true
     },
     initialBreakpoint: isFullscreen ? undefined : 1,
