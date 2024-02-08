@@ -28,11 +28,11 @@ export interface Flow {
 
   // Function that will be called when the flow is supposed to be closed.
   // If it is not set, the flow will be closed automatically when the last step is done.
-  onDone?: (state: State, options: FlowHooksOptions) => Promise<any>
+  onDone?: (state: State, options: FlowHooksOptions) => Promise<void>
 
   // Function that will be called when the flow is cancelled.
   // Also, the flow will be closed automatically when the last step is done.
-  onCancel?: (options: FlowHooksOptions) => Promise<any>
+  onCancel?: (options: FlowHooksOptions) => Promise<void>
 
   // Wether the user can go back or not
   // @default true

@@ -251,7 +251,24 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
 
   const isFullscreen = false
 
-  const flow = await flows[name]()
+  // Avoid that onDone / onCancel can be called again, after one of the two invoked or meant to be invoked (even if the
+  // handler is undefined). This is especially to avoid running onCancel on modal dismissal after onDone or onCancel.
+  let didAnyHandlerRun = false
+  const makeSingleRunHandler = <T extends (...args: any[]) => Promise<void>>(originalHandler?: T): T => {
+    // Not an arrow function to be able to pass original `this` on.
+    return function (this: ThisType<T>, ...args: Parameters<T>) {
+      if (didAnyHandlerRun)
+        return Promise.resolve()
+      didAnyHandlerRun = true
+      return originalHandler?.apply(this, args)
+    } as T
+  }
+
+  const flow = await flows[name]().then(flowDefinition => ({
+    ...flowDefinition,
+    onDone: makeSingleRunHandler(flowDefinition.onDone),
+    onCancel: makeSingleRunHandler(flowDefinition.onCancel),
+  }))
 
   // eslint-disable-next-line no-console
   console.log(`🌊 Initializing flow ${name}`, flow)
@@ -273,16 +290,16 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * At the moment, we don't prevent any modal of being dismissed, so
      * all the triggers will return true, closing the modal.
      */
-    canDismiss: async (data?: { skipCancelHook: boolean }, role?) => {
+    canDismiss: async (data?: any, role?) => {
       const wasAlreadyClosing = isClosing.value
       isClosing.value = true
-      if (data?.skipCancelHook || wasAlreadyClosing)
+      if (wasAlreadyClosing)
         return true
 
       // eslint-disable-next-line no-console
       console.log('🌊 Dismissing flow', flow)
       const { default: router } = await import('@/router/index')
-      await flow.onCancel?.({
+      await flow.onCancel({
         goTo: path => router.replace(path),
         err(errorMessage: string) {
           useToast().setToast({ message: errorMessage, error: true })
@@ -302,11 +319,4 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
     breakpoints: isFullscreen ? undefined : [0, 1],
   })
   await modal.present()
-}
-
-export async function closeModalSkippingFlowCancelHook() {
-  const modal = await modalController.getTop()
-  if (!modal)
-    return
-  await modal.dismiss({ skipCancelHook: true })
 }

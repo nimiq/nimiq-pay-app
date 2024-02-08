@@ -4,15 +4,15 @@ import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
-import { closeModalSkippingFlowCancelHook } from '@/lib/flows'
 import { inputSteps, isInfoStep, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, InputStepName, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
+import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   flow: {
-    type: Object as PropType<Flow>,
+    type: Object as PropType<Omit<Flow, 'onDone' | 'onCancel'> & Required<Pick<Flow, 'onDone' | 'onCancel'>>>,
     required: true,
   },
   isClosing: {
@@ -70,11 +70,10 @@ async function goToNext(options?: GoToNextOptions) {
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value.step)
   const nextStep = stepsInFlow[currentIndex + stepsToSkip]
   if (!nextStep) {
-    if (onFlowDone)
-      await onFlowDone(state.value, { goTo: replace, err })
+    await onFlowDone(state.value, { goTo: replace, err })
     if (!props.isClosing)
-      // Ensure flow gets closed, in case onFlowDone is not set, or did not dismiss the modal itself.
-      await closeModalSkippingFlowCancelHook()
+      // Ensure flow gets closed, in case onFlowDone did not dismiss the modal itself.
+      await useModal().closeModal()
     return
   }
   steps.value.push(nextStep)
@@ -116,11 +115,10 @@ async function onStepDone(value: OnDoneStepValue) {
     const err = defaultErrorHandler
     if (activeStep.value.beforeNext) {
       const finalizeFlow = async () => {
-        if (onFlowDone)
-          await onFlowDone(state.value, { goTo: replace, err })
+        await onFlowDone(state.value, { goTo: replace, err })
         if (!props.isClosing)
-          // Ensure flow gets closed, in case onFlowDone is not set, or did not dismiss the modal itself.
-          await closeModalSkippingFlowCancelHook()
+          // Ensure flow gets closed, in case onFlowDone did not dismiss the modal itself.
+          await useModal().closeModal()
       }
       await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrevious, finalizeFlow, skip })
     }
@@ -141,11 +139,10 @@ function skip() {
 async function onCancel() {
   if (props.isClosing)
     return
-  if (onFlowCancel)
-    await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
+  await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
   if (!props.isClosing)
-    // Ensure flow gets closed, in case onFlowCancel is not set, or did not dismiss the modal itself.
-    await closeModalSkippingFlowCancelHook()
+    // Ensure flow gets closed, in case onFlowCancel did not dismiss the modal itself.
+    await useModal().closeModal()
 }
 
 const isActiveStepFullyVisible = ref(false)
