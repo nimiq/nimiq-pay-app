@@ -41,8 +41,13 @@ function handleInput(event: Event) {
     const array = value.replace(/\s/g, '').match(/.{1,4}/g)
     if (!array)
       return
-    for (let i = 0; i < array.length; i++)
-      inputAddress.value[index + i] = array[i]
+    if (index === 8) {
+      target.value = array[0]
+    }
+    else {
+      for (let i = 0; i < array.length; i++)
+        inputAddress.value[index + i] = array[i]
+    }
   }
   else {
     inputAddress.value[index] = value
@@ -56,7 +61,7 @@ function handleInput(event: Event) {
   }
 }
 
-function handleDelete(event: KeyboardEvent) {
+function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Delete' || event.key === 'Backspace') {
     event.preventDefault()
     const target = event.target as HTMLInputElement
@@ -66,6 +71,19 @@ function handleDelete(event: KeyboardEvent) {
       const prevInput = document.getElementById((index - 1).toString())
       if (prevInput)
         nextTick(() => prevInput.focus())
+    }
+  }
+  else if (event.key === 'Enter') {
+    event.preventDefault()
+    const target = event.target as HTMLInputElement
+    const index = Number.parseInt(target.id)
+    if (index < 8) {
+      const nextInput = document.getElementById((index + 1).toString())
+      if (nextInput)
+        nextTick(() => nextInput.focus())
+    }
+    else {
+      target.blur()
     }
   }
 }
@@ -83,12 +101,12 @@ function handleDelete(event: KeyboardEvent) {
       <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
       <input
         :id="i.toString()"
-        v-model="inputAddress[i]"
+        :value="inputAddress[i]"
         name="address"
         autocapitalize="characters"
         class="uppercase border-[1.5px] border-space-space-400 rounded py-1 px-2 min-w-[4.725rem] max-w-24 text-2xl text-center focus:outline-none focus:border-sky/40"
         @input="handleInput"
-        @keydown="handleDelete"
+        @keydown="handleKeydown"
       >
       <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
     </div>
