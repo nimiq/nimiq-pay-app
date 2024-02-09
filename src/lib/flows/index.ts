@@ -19,8 +19,11 @@ const loginFlow: FlowInit = async () => {
     getNotifiedStep,
     onBoardingPoints,
   ].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async (state, { goTo, err }) => {
-    const { useDecrypt } = await import('@/composables/useDecrypt')
+  const onDone: Flow['onDone'] = async (state, { err }) => {
+    const [
+      { default: router },
+      { useDecrypt },
+    ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt')])
     const error = await useDecrypt().decrypt(state[StepName.PinCode])
     if (error) {
       err(error)
@@ -31,14 +34,17 @@ const loginFlow: FlowInit = async () => {
     // Since state is a JSON object, we take advantage of the fact that it's a reference
     state[StepName.PinCode] = ''
 
-    goTo('/app')
+    await router.replace('/app')
     useModal().showModal(Modal.Points)
   }
-  const onCancel: Flow['onCancel'] = async ({ goTo }) => {
-    const { useApp } = await import('@/stores/app')
+  const onCancel: Flow['onCancel'] = async () => {
+    const [
+      { default: router },
+      { useApp },
+    ] = await Promise.all([import('@/router'), import('@/stores/app')])
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
-      await goTo('/app')
+      await router.replace('/app')
   }
   return { flowName, steps, onDone, onCancel }
 }
@@ -47,29 +53,33 @@ const setupFlow: FlowInit = async () => {
   const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Setup
   const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async (state, { goTo, err }) => {
+  const onDone: Flow['onDone'] = async (state, { err }) => {
     const [
+      { default: router },
       { useDecrypt },
       { useApp },
-    ] = await Promise.all([import('@/composables/useDecrypt'), import('@/stores/app')])
+    ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
     const error = await useDecrypt().decrypt(state[StepName.PinCode])
     if (error) {
       err(error)
       return
     }
 
-    goTo('/app')
+    await router.replace('/app')
     const { phoneNumberVerified } = useApp()
     if (phoneNumberVerified)
       await useModal().showModal(Modal.Points)
     else
       await initializeFlow(FlowName.VerifyPhone)
   }
-  const onCancel: Flow['onCancel'] = async ({ goTo }) => {
-    const { useApp } = await import('@/stores/app')
+  const onCancel: Flow['onCancel'] = async () => {
+    const [
+      { default: router },
+      { useApp },
+    ] = await Promise.all([import('@/router'), import('@/stores/app')])
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
-      await goTo('/app')
+      await router.replace('/app')
   }
   return { flowName, steps, onDone, onCancel }
 }
@@ -94,11 +104,14 @@ const setupWithPromoCodeFlow: FlowInit = async () => {
     getNotifiedStep,
     onBoardingPoints,
   ].map(s => s({ flowName })))
-  const onCancel: Flow['onCancel'] = async ({ goTo }) => {
-    const { useApp } = await import('@/stores/app')
+  const onCancel: Flow['onCancel'] = async () => {
+    const [
+      { default: router },
+      { useApp },
+    ] = await Promise.all([import('@/router'), import('@/stores/app')])
     const hasLocalWallet = !!useApp().entropy
     if (hasLocalWallet)
-      await goTo('/app')
+      await router.replace('/app')
   }
   return { flowName, steps, onCancel }
 }

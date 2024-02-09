@@ -3,7 +3,6 @@ import { type PropType, type Ref, computed, onMounted, reactive, ref, watch, wat
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { useRouter } from 'vue-router'
 import { inputSteps, isInfoStep, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, InputStepName, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { useModal } from '@/composables/useModal'
@@ -25,7 +24,6 @@ const props = defineProps({
   },
 })
 
-const { replace } = useRouter()
 const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, canGoBack = true } = props.flow!
 const steps: Ref<Step[]> = ref([stepsInFlow[0]])
 
@@ -59,7 +57,7 @@ watch(() => props.isClosing, async () => {
   // The flow's modal is being dismissed.
   // Invoke onFlowCancel for the case that no onFlowDone/onFlowCancel handler was invoked yet, e.g. if the flow/modal
   // dismissal was not triggered by a handler but, for example, a swipe gesture or modal.dismiss()
-  await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
+  await onFlowCancel({ err: defaultErrorHandler })
   // Out of abundance of caution, clear the state to clear any potential secrets. After the flow unmounts, the state
   // will be garbage collected anyway, but just for the case that some code still retains a reference to it, clear its
   // content.
@@ -104,7 +102,7 @@ async function goToNext(options?: GoToNextOptions) {
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value.step)
   const nextStep = stepsInFlow[currentIndex + stepsToSkip]
   if (!nextStep) {
-    await onFlowDone(state.value, { goTo: replace, err })
+    await onFlowDone(state.value, { err })
     return
   }
   steps.value.push(nextStep)
@@ -145,7 +143,7 @@ async function onStepDone(value: OnDoneStepValue) {
     errors.value[activeStepName] = '' // Clear error message
     const err = defaultErrorHandler
     if (activeStep.value.beforeNext) {
-      const finalizeFlow = () => onFlowDone(state.value, { goTo: replace, err })
+      const finalizeFlow = () => onFlowDone(state.value, { err })
       await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrevious, finalizeFlow, skip })
     }
     else {
@@ -165,7 +163,7 @@ function skip() {
 async function onCancel() {
   if (props.isClosing)
     return
-  await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
+  await onFlowCancel({ err: defaultErrorHandler })
 }
 
 const isActiveStepFullyVisible = ref(false)

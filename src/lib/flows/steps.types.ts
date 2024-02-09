@@ -1,5 +1,4 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
-import type { NavigationFailure, RouteLocationRaw } from 'vue-router'
 import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
 export enum FlowName {
@@ -18,7 +17,6 @@ export enum FlowName {
 }
 
 interface FlowHooksOptions {
-  goTo: (path: RouteLocationRaw) => Promise<void | NavigationFailure | void>
   err: (msg: string) => void
 }
 
