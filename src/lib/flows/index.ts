@@ -23,7 +23,8 @@ const loginFlow: FlowInit = async () => {
     const [
       { default: router },
       { useDecrypt },
-    ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt')])
+      { useApp },
+    ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
     const error = await useDecrypt().decrypt(state[StepName.PinCode])
     if (error) {
       err(error)
@@ -35,7 +36,9 @@ const loginFlow: FlowInit = async () => {
     state[StepName.PinCode] = ''
 
     await router.replace('/app')
-    useModal().showModal(Modal.Points)
+    const { phoneNumberVerified } = useApp()
+    if (phoneNumberVerified)
+      await useModal().showModal(Modal.Points)
   }
   const onCancel: Flow['onCancel'] = async () => {
     const [
@@ -69,8 +72,6 @@ const setupFlow: FlowInit = async () => {
     const { phoneNumberVerified } = useApp()
     if (phoneNumberVerified)
       await useModal().showModal(Modal.Points)
-    else
-      await initializeFlow(FlowName.VerifyPhone)
   }
   const onCancel: Flow['onCancel'] = async () => {
     const [
@@ -124,7 +125,7 @@ const onBoardingPointsFlow: FlowInit = async () => {
     const { useApp } = await import('@/stores/app')
     const { phoneNumberVerified } = useApp()
     if (phoneNumberVerified)
-      useModal().showModal(Modal.Points)
+      await useModal().showModal(Modal.Points)
     else
       await initializeFlow(FlowName.VerifyPhone)
   }
