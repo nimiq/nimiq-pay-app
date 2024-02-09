@@ -85,6 +85,7 @@ function handleInputClick(i: number) {
   </div>
   <input
     ref="inputRef" type="password" inputmode="numeric" class="sr-only caret-transparent" pattern="[0-9]*"
+    autocomplete="false" on-paste="return false" on-drop="return false"
     :name="stepName"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
