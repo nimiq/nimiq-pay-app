@@ -56,9 +56,15 @@ const onFlowCancel = makeFlowHandler(originalOnFlowCancel)
 watch(() => props.isClosing, async () => {
   if (!props.isClosing)
     return
+  // The flow's modal is being dismissed.
   // Invoke onFlowCancel for the case that no onFlowDone/onFlowCancel handler was invoked yet, e.g. if the flow/modal
   // dismissal was not triggered by a handler but, for example, a swipe gesture or modal.dismiss()
   await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
+  // Out of abundance of caution, clear the state to clear any potential secrets. After the flow unmounts, the state
+  // will be garbage collected anyway, but just for the case that some code still retains a reference to it, clear its
+  // content.
+  for (const stepName of Object.keys(state.value))
+    delete state.value[stepName as keyof typeof state.value]
 })
 
 const scroller = ref<HTMLElement>()
