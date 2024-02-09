@@ -33,9 +33,10 @@ async function api<T = undefined>(url: URL, { token, body: _body }: { token?: st
         url: url.href,
         status: response.status,
         statusText: response.statusText,
-        data: JSON.stringify(await response.json()),
+        data: response.bodyUsed ? JSON.stringify(await response.json()) : undefined,
         metadata: JSON.stringify(response),
       }),
+      status: response.status,
       data: undefined,
     }
   }

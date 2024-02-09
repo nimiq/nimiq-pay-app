@@ -10,7 +10,7 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-defineProps({ errorMsg: { type: String }, stepName: { type: String, required: false } })
+const props = defineProps({ errorMsg: { type: String }, stepName: { type: String, required: false }, inputLength: { type: Number, default: 7 } })
 defineEmits(stepEmits)
 
 const { getReferralInfoById } = usePoints()
@@ -22,7 +22,7 @@ const errorMessage = ref('')
 const { formatCrypto } = useCurrencyFormatter()
 
 watch(referralCode, async (newValue) => {
-  if (newValue.length === 7) {
+  if (newValue.length === props.inputLength) {
     try {
       const { data, error } = await getReferralInfoById(referralCode.value)
       if (error || !data)
@@ -39,8 +39,6 @@ watch(referralCode, async (newValue) => {
       }
     }
     catch (e: any) {
-      codeField.value.setCustomValidity(e.message || e)
-      codeField.value.reportValidity()
       errorMessage.value = e.message || e
     }
   }
@@ -52,10 +50,10 @@ watch(referralCode, async (newValue) => {
 
 <template>
   <input
-    ref="codeField" type="text" minlength="6"
+    ref="codeField" type="text"
     :name="stepName"
-    maxlength="8" size="8"
-    class="w-4/5 mx-auto uppercase text-3xl text-center mt-[33%] p-1 mb-4" autofocus="true"
+    :maxlength="inputLength"
+    class="w-3/4 min-w-16 mx-auto uppercase text-3xl text-center mt-[33%] p-1 mb-4" autofocus="true"
     autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
     :value="referralCode" @input="referralCode = ($event.target as HTMLTextAreaElement).value.toUpperCase()"
   >
@@ -67,7 +65,7 @@ watch(referralCode, async (newValue) => {
       {{ $tc('You will receive {amount} Point | You will receive {amount} Points', rewardAmount / 1e5, { amount: formatCrypto(rewardAmount).replace(' NIM', '') }) }}
     </p>
   </div>
-  <IonButton expand="block" class="pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">
+  <IonButton expand="block" class="w-full pb-6 mt-auto" :disabled="!rewardAmount" @click="$emit('done', referralCode)">
     {{ $t('Claim Promo Code') }}
   </IonButton>
 </template>

@@ -132,7 +132,10 @@ export const usePoints = defineStore('points', () => {
    * Used to get the info before the user has created an account
    */
   async function getReferralInfoById(id: string) {
-    const { data, error } = await api.getReferralById({ id })
+    const { data, error, status } = await api.getReferralById({ id })
+
+    if (status === 404)
+      return { data: undefined, error: i18n.t('Promo code not found') }
 
     if (error || !data)
       return { data: undefined, error: error || i18n.t('Something went wrong checking the promo code') }

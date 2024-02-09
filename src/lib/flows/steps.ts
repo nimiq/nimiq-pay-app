@@ -29,7 +29,7 @@ export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
   get title() { return i18n.t('Enter your promo code') },
   get description() { return i18n.t('Enter your referral promo code.') },
-  main: markRaw(GenericInput),
+  main: markRaw(props => h(GenericInput, { ...props, inputLength: 7 })),
   beforeNext: async ({ promoCode }, { next, err }) => {
     if (!promoCode) {
       err(i18n.t('Please enter a promo code'))
