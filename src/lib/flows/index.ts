@@ -5,7 +5,6 @@ import { FlowName, StepName } from '@/lib/flows/steps.types'
 import type { Flow, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
-import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 
 const loginFlow: FlowInit = async () => {
@@ -251,24 +250,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
 
   const isFullscreen = false
 
-  // Avoid that onDone / onCancel can be called again, after one of the two invoked or meant to be invoked (even if the
-  // handler is undefined). This is especially to avoid running onCancel on modal dismissal after onDone or onCancel.
-  let didAnyHandlerRun = false
-  const makeSingleRunHandler = <T extends (...args: any[]) => Promise<void>>(originalHandler?: T): T => {
-    // Not an arrow function to be able to pass original `this` on.
-    return function (this: ThisType<T>, ...args: Parameters<T>) {
-      if (didAnyHandlerRun)
-        return Promise.resolve()
-      didAnyHandlerRun = true
-      return originalHandler?.apply(this, args)
-    } as T
-  }
-
-  const flow = await flows[name]().then(flowDefinition => ({
-    ...flowDefinition,
-    onDone: makeSingleRunHandler(flowDefinition.onDone),
-    onCancel: makeSingleRunHandler(flowDefinition.onCancel),
-  }))
+  const flow = await flows[name]()
 
   // eslint-disable-next-line no-console
   console.log(`🌊 Initializing flow ${name}`, flow)
@@ -291,26 +273,14 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * all the triggers will return true, closing the modal.
      */
     canDismiss: async (data?: any, role?) => {
-      const wasAlreadyClosing = isClosing.value
-      isClosing.value = true
-      if (wasAlreadyClosing)
-        return true
-
       // eslint-disable-next-line no-console
       console.log('🌊 Dismissing flow', flow)
-      const { default: router } = await import('@/router/index')
-      // We do not await onCancel here, for the case that it recursively calls modal.dismiss() which would result in a
-      // deadlock if canDismiss itself was called from an outer modal.dismiss(), as the outer dismiss() claims a lock
-      // which the inner/recursive dismiss() needs to wait for, resulting in a deadlock.
-      flow.onCancel({
-        goTo: path => router.replace(path),
-        err(errorMessage: string) {
-          useToast().setToast({ message: errorMessage, error: true })
-        },
-      })
+      isClosing.value = true
       if (role === 'gesture') {
         // Close modal immediately on swipe gesture, instead of waiting for snap-back animation to finish animating the
-        // gesture back, see handleCanDismiss in ion-modal.js. Same as above, we don't await the dismiss() call here.
+        // gesture back, see handleCanDismiss in ion-modal.js. We don't await modal.dismiss() here, to avoid a deadlock
+        // if canDismiss itself was called by an outer modal.dismiss(), as dismiss includes a lock that only allows one
+        // parallel execution, which would block this recursive call of modal.dismiss(), until the outer call terminates
         modal.dismiss()
       }
       return true

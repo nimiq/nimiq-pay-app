@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType, type Ref, computed, onMounted, reactive, ref, watchEffect } from 'vue'
+import { type PropType, type Ref, computed, onMounted, reactive, ref, watch, watchEffect } from 'vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
@@ -12,7 +12,7 @@ import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   flow: {
-    type: Object as PropType<Omit<Flow, 'onDone' | 'onCancel'> & Required<Pick<Flow, 'onDone' | 'onCancel'>>>,
+    type: Object as PropType<Flow>,
     required: true,
   },
   isClosing: {
@@ -26,12 +26,40 @@ const props = defineProps({
 })
 
 const { replace } = useRouter()
-const { onDone: onFlowDone, onCancel: onFlowCancel, steps: stepsInFlow, canGoBack = true } = props.flow!
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, canGoBack = true } = props.flow!
 const steps: Ref<Step[]> = ref([stepsInFlow[0]])
 
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
 const state = ref({ ...emptyState, ...props.initialState })
 const activeIndex = ref(0)
+
+// Avoid that onDone / onCancel can be called again, after one of the two was invoked or meant to be invoked (even if
+// the handler is undefined). This is especially to avoid running onCancel on modal dismissal if onDone or onCancel were
+// already called.
+let didAnyFlowHandlerRun = false
+function makeFlowHandler<T extends (...args: any) => Promise<void>>(originalHandler?: T): T {
+  // Not an arrow function to be able to pass original `this` on.
+  return async function (this: ThisType<T>, ...args: Parameters<T>) {
+    if (!didAnyFlowHandlerRun) {
+      didAnyFlowHandlerRun = true
+      await originalHandler?.apply(this, args)
+    }
+    if (!props.isClosing) {
+      // Ensure flow gets closed, in case the original handler did not dismiss the modal itself.
+      await useModal().closeModal()
+    }
+  } as T
+}
+const onFlowDone = makeFlowHandler(originalOnFlowDone)
+const onFlowCancel = makeFlowHandler(originalOnFlowCancel)
+
+watch(() => props.isClosing, async () => {
+  if (!props.isClosing)
+    return
+  // Invoke onFlowCancel for the case that no onFlowDone/onFlowCancel handler was invoked yet, e.g. if the flow/modal
+  // dismissal was not triggered by a handler but, for example, a swipe gesture or modal.dismiss()
+  await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
+})
 
 const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
@@ -53,7 +81,7 @@ function getInputStepError(stepName: StepName) {
 
 function defaultErrorHandler(errorMessage: string) {
   const activeStepName = activeStep.value.step
-  if (isInputStep(activeStepName))
+  if (isInputStep(activeStepName) && !props.isClosing)
     errors.value[activeStepName] = errorMessage
   else
     useToast().setToast({ message: errorMessage, error: true })
@@ -71,9 +99,6 @@ async function goToNext(options?: GoToNextOptions) {
   const nextStep = stepsInFlow[currentIndex + stepsToSkip]
   if (!nextStep) {
     await onFlowDone(state.value, { goTo: replace, err })
-    if (!props.isClosing)
-      // Ensure flow gets closed, in case onFlowDone did not dismiss the modal itself.
-      await useModal().closeModal()
     return
   }
   steps.value.push(nextStep)
@@ -114,12 +139,7 @@ async function onStepDone(value: OnDoneStepValue) {
     errors.value[activeStepName] = '' // Clear error message
     const err = defaultErrorHandler
     if (activeStep.value.beforeNext) {
-      const finalizeFlow = async () => {
-        await onFlowDone(state.value, { goTo: replace, err })
-        if (!props.isClosing)
-          // Ensure flow gets closed, in case onFlowDone did not dismiss the modal itself.
-          await useModal().closeModal()
-      }
+      const finalizeFlow = () => onFlowDone(state.value, { goTo: replace, err })
       await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrevious, finalizeFlow, skip })
     }
     else {
@@ -140,9 +160,6 @@ async function onCancel() {
   if (props.isClosing)
     return
   await onFlowCancel({ goTo: replace, err: defaultErrorHandler })
-  if (!props.isClosing)
-    // Ensure flow gets closed, in case onFlowCancel did not dismiss the modal itself.
-    await useModal().closeModal()
 }
 
 const isActiveStepFullyVisible = ref(false)
