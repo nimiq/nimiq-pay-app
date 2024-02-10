@@ -167,18 +167,29 @@ async function onCancel() {
 }
 
 const isActiveStepFullyVisible = ref(false)
-// We track the intersection of each step with a number from 0 to 1.
-useIntersectionObserver(activeStepScrollerItem, ([{ intersectionRatio }]) => {
-  isActiveStepFullyVisible.value = intersectionRatio === 1
-  if (isActiveStepFullyVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
-    focus()
-  // If it's not input step or autofocus is false, blur the input previously focused
-  else if (isActiveStepFullyVisible.value)
-    blur()
+// We track the intersection of each step, with 1 meaning the step is fully visible.
+useIntersectionObserver(
+  activeStepScrollerItem,
+  ([{ intersectionRatio }]) => {
+    isActiveStepFullyVisible.value = intersectionRatio === 1
+    if (isActiveStepFullyVisible.value && isInputStep(activeStep.value) && activeStep.value.autofocus !== false)
+      focus()
+    // If it's not input step or autofocus is false, blur the input previously focused
+    else if (isActiveStepFullyVisible.value)
+      blur()
 
-  // TODO: remove when focus is working in every device (mobile + tablet)
-  console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
-}, { threshold: [0, 0.5, 1], root: scroller })
+    // TODO: remove when focus is working in every device (mobile + tablet)
+    console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
+  },
+  // Note: previously, we used [0, 0.5, 1] as threshold, meaning that the observer should be called whenever any of
+  // those values is reached/passed. However, occasionally but seldom it happened that the callback for reaching 1 was
+  // not called, but only a callback for example at 0.9xxx, which probably is the callback for passing the 0.5 threshold
+  // just invoked late. It seemed like in such cases a separate callback for threshold 1 might have been skipped,
+  // although I'm not sure why that should be. This caused isActiveStepFullyVisible not becoming true on rare occasion,
+  // and for example the QRScanner of the pay flow not starting in such case.
+  // Since setting 1 as single threshold, this issue was not observed anymore. But just 1 also results in less callbacks
+  { threshold: 1, root: scroller },
+)
 
 function isStepVisible(stepName: StepName) {
   return stepName === activeStep.value.step && isActiveStepFullyVisible.value
