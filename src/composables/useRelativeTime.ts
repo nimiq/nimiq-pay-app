@@ -1,51 +1,52 @@
-import { useNow } from '@vueuse/core'
-import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
+import { type MaybeRef, computed, getCurrentScope, onScopeDispose, ref, toValue, watchEffect } from 'vue'
 import { toMs } from './useTime'
 import { useApp } from '@/stores/app'
 
-const { language } = storeToRefs(useApp())
+// Formatter for current language.
+const timeFormatter = computed(() => new Intl.RelativeTimeFormat(useApp().language, { numeric: 'auto' }))
 
 type Unit = Intl.RelativeTimeFormatUnitSingular
-const DEFAULT_UNITS: { unit: Unit; max: number; value: number }[] = [
-  { unit: 'second', max: 60_000, value: 1_000 },
-  { unit: 'minute', max: 2_760_000, value: 60_000 },
-  { unit: 'hour', max: 72_000_000, value: 3_600_000 },
-  { unit: 'day', max: 518_400_000, value: 86_400_000 },
-  { unit: 'week', max: 2_419_200_000, value: 604_800_000 },
-  { unit: 'month', max: 28_512_000_000, value: 2_592_000_000 },
-  { unit: 'year', max: Number.POSITIVE_INFINITY, value: 31_536_000_000 },
+const DEFAULT_UNITS: { unit: Unit; max: number; unitMs: number }[] = [
+  { unit: 'second', max: 60_000, unitMs: 1_000 },
+  { unit: 'minute', max: 2_760_000, unitMs: 60_000 },
+  { unit: 'hour', max: 72_000_000, unitMs: 3_600_000 },
+  { unit: 'day', max: 518_400_000, unitMs: 86_400_000 },
+  { unit: 'week', max: 2_419_200_000, unitMs: 604_800_000 },
+  { unit: 'month', max: 28_512_000_000, unitMs: 2_592_000_000 },
+  { unit: 'year', max: Number.POSITIVE_INFINITY, unitMs: 31_536_000_000 },
 ]
 
 export interface UseRelativeTimeOptions {
   /**
-   * The locale to use when formatting the relative time.
-   * @default storeToRefs(useApp()).language.value
+   * The timestamp to format. In ms or s. Reactive if passed as a ref.
+   * @default time when useRelativeTime was called, if timestamp is undefined or 0.
    */
-  locale?: string
-
-  /**
-   * The timestamp to format.
-   * @default Date.now()
-   */
-  timestamp?: number
+  timestamp?: MaybeRef<number | undefined>
 }
-export function useRelativeTime({ timestamp: _timestamp = Date.now(), locale = language.value }: UseRelativeTimeOptions = {}) {
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
-  const now = useNow()
+export function useRelativeTime({ timestamp: timestampMsOrS }: UseRelativeTimeOptions = {}) {
+  const defaultTime = Date.now() // Default to time when useRelativeTime was called, if timestamp is undefined or 0
+  const timestamp = computed(() => toMs(toValue(timestampMsOrS) || defaultTime))
 
   const formatted = ref('')
-  const timestamp = toMs(_timestamp)
 
-  function formatRelativeTime() {
-    const diff = timestamp - now.value.getTime()
-    const { unit, value } = DEFAULT_UNITS.find(({ max }) => Math.abs(diff) < max)!
-    formatted.value = rtf.format(Math.round(diff / value), unit)
-    if (['second', 'minute', 'hour'].includes(unit))
-      setTimeout(formatRelativeTime, value - Math.abs(diff % value) + 200)
+  let updateTimeout = -1
+  function updateRelativeTime() {
+    const diff = timestamp.value - Date.now()
+    const { unit, unitMs } = DEFAULT_UNITS.find(({ max }) => Math.abs(diff) < max)!
+    formatted.value = timeFormatter.value.format(Math.round(diff / unitMs), unit)
+
+    clearTimeout(updateTimeout)
+    if (['second', 'minute', 'hour', 'day'].includes(unit))
+      updateTimeout = setTimeout(updateRelativeTime, unitMs - Math.abs(diff % unitMs) + 200)
   }
 
-  formatRelativeTime()
+  const unwatch = watchEffect(updateRelativeTime)
+
+  if (getCurrentScope())
+    onScopeDispose(() => {
+      clearTimeout(updateTimeout)
+      unwatch()
+    })
 
   return {
     formatted,

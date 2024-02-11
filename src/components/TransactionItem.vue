@@ -15,7 +15,8 @@ const props = defineProps({
   },
 })
 
-const { formatted } = useRelativeTime({ timestamp: props.tx.timestamp || Math.ceil(Date.now() / 1000) })
+const timestamp = computed(() => props.tx.timestamp)
+const { formatted: relativeTime } = useRelativeTime({ timestamp })
 const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isPaymentTx(props.tx) } })
 const paymentMethod = computed(() => {
   const { tx } = props
@@ -46,7 +47,7 @@ const category = computed(() => {
         {{ translateTransactionTitle(tx.title) }}
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
-        <time class="text-space/50 tabular-nums">{{ formatted }} </time>
+        <time class="text-space/50 tabular-nums">{{ relativeTime }} </time>
         <span v-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
           {{ translateTransactionState(tx.status) }}
         </span>
