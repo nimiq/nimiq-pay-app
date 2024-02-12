@@ -36,17 +36,42 @@ export function useRelativeTime({ timestamp: timestampMsOrS }: UseRelativeTimeOp
     formatted.value = timeFormatter.value.format(Math.round(diff / unitMs), unit)
 
     clearTimeout(updateTimeout)
-    if (['second', 'minute', 'hour', 'day'].includes(unit))
-      updateTimeout = setTimeout(updateRelativeTime, unitMs - Math.abs(diff % unitMs) + 200)
+    if (['second', 'minute', 'hour', 'day'].includes(unit)) {
+      // Schedule next update to be shortly after when we should be rounding to the next number (i.e. to the earliest
+      // time the number is changing).
+      // Note that the next rounding point would in terms of absolute value depend on whether the time diff is negative
+      // or positive, it does however not differ when not working with absolute values, in the sense of in which
+      // direction the next rounding point is: as the next rounding point is in the future, and Date.now() is subtracted
+      // in diff, the diff gets smaller regardless of whether diff is/was positive or negative. For illustration:
+      // - If the timestamp is 4.2 seconds in the past, diff is -4200, rounded to "4 seconds ago" (represented in
+      //   roundedToUnitsMs below), and rounding to "5 seconds ago" begins at <=-4500 (called roundingPoint below),
+      //   i.e. in >=300ms (called timeToRoundingPoint below).
+      // - If the timestamp is 4.2 seconds in the future, diff is 4200, rounded to "in 4 seconds" (represented in
+      //   roundedToUnitsMs below), and rounding to "in 3 seconds" begins at <3500 (called roundingPoint below),
+      //   i.e. in >700ms (called timeToRoundingPoint below).
+      // To cover both, the >= for negative diff, and > for positive diff, we simply add a small fixed value of 10 to
+      // get the final wait time (called waitTime below).
+      const roundedToUnitsMs = Math.round(diff / unitMs) * unitMs
+      // The point where rounding changes the formatted result next time in the future, is in the middle of the unit
+      // (unitMs / 2). As Date.now() is subtracted in diff, the diff becomes smaller in the future, which is why the
+      // half unit needs to be subtracted here.
+      const roundingPoint = roundedToUnitsMs - unitMs / 2
+      // timeToRounding point is the delta or distance in time between current diff and roundingPoint. As roundingPoint
+      // is smaller than diff as it's in the future (see above), no Math.abs() is required here.
+      const timeToRoundingPoint = diff - roundingPoint
+      const waitTime = timeToRoundingPoint + 10
+      updateTimeout = setTimeout(updateRelativeTime, waitTime)
+    }
   }
 
   const unwatch = watchEffect(updateRelativeTime)
 
-  if (getCurrentScope())
+  if (getCurrentScope()) {
     onScopeDispose(() => {
       clearTimeout(updateTimeout)
       unwatch()
     })
+  }
 
   return {
     formatted,
