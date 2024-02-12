@@ -76,7 +76,7 @@ async function handleClick() {
           <div v-if="task?.reward_amount" class="flex items-center gap-x-1">
             <CryptoCityLogo class="h-4 w-5 [&>path]:fill-white" />
             <span class="text-base font-normal">
-              {{ formatCrypto(task.reward_amount) }}
+              {{ (task.reward_amount / 1e5).toLocaleString() }}
             </span>
           </div>
           <IonIcon :icon="chevronForwardOutline" class="ml-auto stroke-2" />
