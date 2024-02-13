@@ -80,10 +80,8 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   )
 
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
-  const { startScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
+  const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
   const state = ref(QRScannerState.Idle)
-
-  let stopScan: Function = () => {}
 
   async function start() {
     const video = await setUpCameraFeed()
@@ -92,13 +90,15 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       logger.error('No permission to use the camera')
       return
     }
-    stopScan = await startScan({ video })
+    startScan({ video })
     state.value = QRScannerState.Scanning
   }
 
   async function stop() {
-    await tearDownCameraFeed()
-    stopScan()
+    await Promise.all([
+      tearDownCameraFeed(),
+      stopScan(),
+    ])
     state.value = QRScannerState.Idle
   }
 
@@ -135,8 +135,8 @@ interface StartScannerOptions {
 }
 
 function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
-  let stopScan: Function = () => {}
-  let resumeScan: Function | undefined
+  let stopScan: Function | undefined
+  let resumeScan: Function
 
   async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
     const canvas = document.createElement('canvas')
@@ -150,10 +150,10 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
       parseString(result)
   }
 
-  async function startScan({ video }: StartScannerOptions): Promise<Function> {
+  async function startScan({ video }: StartScannerOptions) {
     if (resumeScan) {
       resumeScan()
-      return stopScan
+      return
     }
 
     const { ready, scan } = await import('qr-scanner-wechat')
@@ -166,7 +166,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     }
     if (maxMs <= 0) {
       onError?.(i18n.t('The QR scanner is not ready yet. Please try again.'))
-      return stopScan
+      return
     }
 
     const { useIntervalFn } = await import('@vueuse/core')
@@ -174,12 +174,11 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: true })
     stopScan = pause
     resumeScan = resume
-
-    return stopScan
   }
 
   return {
     startScan,
+    stopScan: () => stopScan?.(), // invoke stopScan if set
   }
 }
 
@@ -188,14 +187,16 @@ function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
     await BarcodeScanner.addListener('barcodeScanned', ({ barcode }) => parseString(barcode.displayValue))
     await BarcodeScanner.startScan()
+  }
 
-    return async function stopScan() {
-      await BarcodeScanner.removeAllListeners()
-      await BarcodeScanner.stopScan()
-    }
+  async function stopScan() {
+    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
+    await BarcodeScanner.removeAllListeners()
+    await BarcodeScanner.stopScan()
   }
 
   return {
     startScan,
+    stopScan,
   }
 }
