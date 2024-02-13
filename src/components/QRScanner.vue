@@ -47,7 +47,8 @@ watch(() => props.isVisible, (isVisible) => {
       start()
     }, 500)
   }
-  else {
+  else if (cameraFeedContainer.value) {
+    // Stop scanner, if the container has actually been mounted yet.
     document.body.classList.remove('native-qr-scanner-modal-open')
     stop()
   }

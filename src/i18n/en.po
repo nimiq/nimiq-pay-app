@@ -169,7 +169,7 @@ msgstr ""
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr ""
 
-#: src/stores/points.ts:185
+#: src/stores/points.ts:207
 msgid "Cryptocity Points have been credited"
 msgstr ""
 
@@ -245,6 +245,10 @@ msgstr ""
 
 #: src/modals/ExpiringPointsModal.vue:4
 msgid "Expiring Points"
+msgstr ""
+
+#: src/modals/DeletePointsModal.vue:24
+msgid "Failed to delete Points account"
 msgstr ""
 
 #: src/modals/PointsModal.vue:45
@@ -437,7 +441,7 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: src/components/PhoneInput.vue:38
+#: src/components/PhoneInput.vue:39
 msgid "Learn more"
 msgstr ""
 
@@ -500,7 +504,7 @@ msgstr ""
 msgid "No one can see me. Continue to words"
 msgstr ""
 
-#: src/composables/useApi.ts:266
+#: src/composables/useApi.ts:268
 msgid "No payment details found"
 msgstr ""
 
@@ -572,7 +576,7 @@ msgstr ""
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useApi.ts:106
+#: src/composables/useApi.ts:107
 msgid "Payment invalid"
 msgstr ""
 
@@ -581,7 +585,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/lib/flows/index.ts:202
+#: src/lib/flows/index.ts:205
 msgid "Payment successful"
 msgstr ""
 
@@ -589,20 +593,20 @@ msgstr ""
 msgid "Pending"
 msgstr ""
 
-#: src/stores/points.ts:174
-#: src/stores/points.ts:191
+#: src/stores/points.ts:196
+#: src/stores/points.ts:213
 #: src/stores/points.ts:51
 msgid "Phone number missing"
 msgstr ""
 
-#: src/stores/points.ts:129
-#: src/stores/points.ts:146
-#: src/stores/points.ts:176
-#: src/stores/points.ts:193
-#: src/stores/points.ts:204
-#: src/stores/points.ts:65
-#: src/stores/points.ts:86
-#: src/stores/points.ts:97
+#: src/stores/points.ts:108
+#: src/stores/points.ts:119
+#: src/stores/points.ts:151
+#: src/stores/points.ts:168
+#: src/stores/points.ts:198
+#: src/stores/points.ts:215
+#: src/stores/points.ts:226
+#: src/stores/points.ts:87
 msgid "Phone number not verified"
 msgstr ""
 
@@ -650,6 +654,10 @@ msgstr ""
 msgid "Please watch the full video"
 msgstr ""
 
+#: src/modals/DeletePointsModal.vue:18
+msgid "Points account deleted successfully"
+msgstr ""
+
 #: src/components/OnBoardingScreen.vue:23
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
@@ -666,11 +674,11 @@ msgstr ""
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
-#: src/stores/points.ts:178
+#: src/stores/points.ts:200
 msgid "Promo code missing"
 msgstr ""
 
-#: src/stores/points.ts:164
+#: src/stores/points.ts:186
 msgid "Promo code not found"
 msgstr ""
 
@@ -679,7 +687,7 @@ msgstr ""
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
-#: src/stores/points.ts:226
+#: src/stores/points.ts:248
 msgid "Purchase"
 msgstr ""
 
@@ -770,12 +778,12 @@ msgid "Settings"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:9
-#: src/components/PhoneInput.vue:45
+#: src/components/PhoneInput.vue:46
 msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:51
-#: src/lib/flows/index.ts:250
+#: src/lib/flows/index.ts:253
 msgid "Something went wrong"
 msgstr ""
 
@@ -784,12 +792,12 @@ msgid "Something went wrong authorizing the phone number"
 msgstr ""
 
 #: src/components/GenericInput.vue:29
-#: src/stores/points.ts:150
-#: src/stores/points.ts:167
+#: src/stores/points.ts:172
+#: src/stores/points.ts:189
 msgid "Something went wrong checking the promo code"
 msgstr ""
 
-#: src/stores/points.ts:197
+#: src/stores/points.ts:219
 msgid "Something went wrong claiming the cashback"
 msgstr ""
 
@@ -799,11 +807,15 @@ msgstr ""
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
+#: src/stores/points.ts:77
+msgid "Something went wrong deleting the account"
+msgstr ""
+
 #: src/composables/usePointsPayment.ts:53
 msgid "Something went wrong getting the Points cashback data."
 msgstr ""
 
-#: src/stores/points.ts:209
+#: src/stores/points.ts:231
 msgid "Something went wrong paying with Points"
 msgstr ""
 
@@ -811,21 +823,21 @@ msgstr ""
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:169
-#: src/composables/useApi.ts:176
+#: src/composables/useApi.ts:171
+#: src/composables/useApi.ts:178
 #: src/lib/tx.ts:137
 #: src/lib/tx.ts:29
 #: src/lib/tx.ts:64
 msgid "Something went wrong syncing your account"
 msgstr ""
 
-#: src/stores/points.ts:102
-#: src/stores/points.ts:133
-#: src/stores/points.ts:90
+#: src/stores/points.ts:112
+#: src/stores/points.ts:124
+#: src/stores/points.ts:155
 msgid "Something went wrong updating the tasks"
 msgstr ""
 
-#: src/stores/points.ts:69
+#: src/stores/points.ts:91
 msgid "Something went wrong updating your Points"
 msgstr ""
 
@@ -931,7 +943,7 @@ msgstr ""
 msgid "Transaction already sent"
 msgstr ""
 
-#: src/lib/flows/index.ts:184
+#: src/lib/flows/index.ts:187
 msgid "Transaction failed: {error}"
 msgstr ""
 
@@ -943,7 +955,7 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
-#: src/stores/points.ts:78
+#: src/stores/points.ts:100
 msgid "Unable to connect to the Points server"
 msgstr ""
 
@@ -959,7 +971,7 @@ msgstr ""
 msgid "Use {amount}"
 msgstr ""
 
-#: src/components/PhoneInput.vue:42
+#: src/components/PhoneInput.vue:43
 msgid "Verify"
 msgstr ""
 
@@ -1053,7 +1065,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:252
+#: src/lib/flows/index.ts:255
 msgid "Withdrawal successful"
 msgstr ""
 
