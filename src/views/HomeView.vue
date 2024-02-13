@@ -213,7 +213,7 @@ onMounted(async () => {
       <TheHomeAmounts class="mt-[72px]" />
 
       <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
-        {{ $t('Top-Up') }}
+        {{ $t('Top Up') }}
       </QuickButton>
 
       <!-- Transaction List -->

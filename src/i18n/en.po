@@ -452,10 +452,6 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/modals/TaskModal.vue:88
-msgid "Minimum length is 10 characters"
-msgstr ""
-
 #: src/stores/nimiq-network.ts:36
 msgid "Network consensus lost."
 msgstr ""
@@ -555,10 +551,6 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:330
-msgid "Payment request has already been paid"
-msgstr ""
-
 #: src/types/transactions.ts:97
 msgid "Pending"
 msgstr ""
@@ -610,6 +602,14 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:168
 msgid "Please enter a verification code"
+msgstr ""
+
+#: src/modals/TaskModal.vue:88
+msgid "Please enter at least ten characters"
+msgstr ""
+
+#: src/modals/TaskModal.vue:102
+msgid "Please watch the full video"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:23
@@ -781,12 +781,24 @@ msgstr ""
 msgid "The payment request expired"
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:330
+msgid "The payment request has already been paid"
+msgstr ""
+
 #: src/composables/useGoCrypto.ts:364
 msgid "The payment request is about to expire"
 msgstr ""
 
+#: src/composables/useGoCrypto.ts:334
+msgid "The payment request is being processed"
+msgstr ""
+
 #: src/composables/useGoCrypto.ts:273
 msgid "The payment request might have been paid, expired, or cancelled."
+msgstr ""
+
+#: src/composables/useGoCrypto.ts:351
+msgid "The payment request was cancelled"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:162
@@ -827,8 +839,11 @@ msgid "To credit card / bank account"
 msgstr ""
 
 #: src/modals/MenuModal.vue:14
-#: src/types/transactions.ts:83
 #: src/views/HomeView.vue:46
+msgid "Top Up"
+msgstr ""
+
+#: src/types/transactions.ts:83
 msgid "Top-Up"
 msgstr ""
 
@@ -875,7 +890,7 @@ msgid "Verify your phone number"
 msgstr ""
 
 #: src/modals/TaskModal.vue:18
-msgid "We value your opinion. Minimum length is 10 characters."
+msgid "We value your opinion. Please enter at least ten characters."
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:22
@@ -1001,10 +1016,6 @@ msgstr ""
 msgid "You have a reward to claim!"
 msgstr ""
 
-#: src/modals/TaskModal.vue:102
-msgid "You need to watch the full video"
-msgstr ""
-
 #: src/modals/TaskModal.vue:112
 msgid "You received Cryptocity Points"
 msgstr ""
@@ -1029,16 +1040,8 @@ msgstr ""
 msgid "Your payment failed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:334
-msgid "Your payment is being processed"
-msgstr ""
-
 #: src/composables/useGoCrypto.ts:342
 msgid "Your payment is invalid"
-msgstr ""
-
-#: src/composables/useGoCrypto.ts:351
-msgid "Your payment was cancelled"
 msgstr ""
 
 #: src/composables/useGoCrypto.ts:346

@@ -85,7 +85,7 @@ async function handleSubmit() {
   else if (textareaField.value?.value) {
     answer = textareaField.value.value
     if (answer.length < textareaMinLength)
-      return errorMsg.value = i18n.t('Minimum length is 10 characters')
+      return errorMsg.value = i18n.t('Please enter at least ten characters')
   }
   if (!answer && type.value !== 'yt-video')
     return
@@ -99,7 +99,7 @@ async function handleSubmit() {
 
     if (task_status === 'rejected') {
       if (type.value === 'yt-video' && isVideoEnded.value)
-        errorMsg.value = i18n.t('You need to watch the full video')
+        errorMsg.value = i18n.t('Please watch the full video')
       else
         errorMsg.value = i18n.t('Wrong answer')
       return
@@ -131,7 +131,7 @@ async function handleSubmit() {
         v-if="type === 'text-input'"
         ref="textareaField" :minlength="textareaMinLength" maxlength="1000"
         class="w-full h-full small:h-1/2 tall:h-3/5 p-4 placeholder:text-space/60 border-[1.5px] border-solid rounded-md border-space-space-400"
-        :placeholder="$t('We value your opinion. Minimum length is 10 characters.')"
+        :placeholder="$t('We value your opinion. Please enter at least ten characters.')"
         @focus="errorMsg = ''"
       ></textarea>
       <!-- Radio Input -->

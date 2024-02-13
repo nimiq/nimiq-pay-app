@@ -327,11 +327,11 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
     switch (paymentDetails.status) {
         case GoCryptoPaymentStatus.Paid: return {
             ...successDefaults,
-            title: i18n.t('Payment request has already been paid') as string,
+            title: i18n.t('The payment request has already been paid') as string,
         };
         case GoCryptoPaymentStatus.Processing: return {
             ...successDefaults,
-            title: i18n.t('Your payment is being processed') as string,
+            title: i18n.t('The payment request is being processed') as string,
         };
         case GoCryptoPaymentStatus.Failed: return {
             ...errorDefaults,
@@ -348,7 +348,7 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
         };
         case GoCryptoPaymentStatus.Cancelled: return {
             ...errorDefaults,
-            title: i18n.t('Your payment was cancelled') as string,
+            title: i18n.t('The payment request was cancelled') as string,
         };
         default: // do nothing and continue with checks below
     }
