@@ -761,6 +761,10 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
+#: src/modals/TaskModal.vue:46
+msgid "Submit"
+msgstr ""
+
 #: src/stores/nimiq-network.ts:121
 msgid "Syncing with network."
 msgstr ""
@@ -868,6 +872,10 @@ msgstr ""
 #: src/lib/flows/steps.ts:141
 #: src/views/HomeView.vue:108
 msgid "Verify your phone number"
+msgstr ""
+
+#: src/modals/TaskModal.vue:18
+msgid "We value your opinion. Minimum length is 10 characters."
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:22
@@ -983,6 +991,10 @@ msgstr ""
 
 #: src/composables/usePointsPayment.ts:59
 msgid "You don't have enough Points for this purchase."
+msgstr ""
+
+#: src/modals/TaskModal.vue:7
+msgid "You earn {amount}"
 msgstr ""
 
 #: src/views/HomeView.vue:113

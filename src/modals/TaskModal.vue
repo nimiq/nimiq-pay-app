@@ -133,7 +133,7 @@ async function handleSubmit() {
         class="w-full h-full small:h-1/2 tall:h-3/5 p-4 placeholder:text-space/60 border-[1.5px] border-solid rounded-md border-space-space-400"
         :placeholder="$t('We value your opinion. Minimum length is 10 characters.')"
         @focus="errorMsg = ''"
-      />
+      ></textarea>
       <!-- Radio Input -->
       <IonRadioGroup
         v-else-if="type === 'question'"
