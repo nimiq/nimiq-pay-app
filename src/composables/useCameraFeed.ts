@@ -50,15 +50,22 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
 
   async function setUpCameraFeed() {
     const video = getVideoElement()
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        width: 512,
-        height: 512,
-        facingMode: 'environment', // Select the back camera
-      },
-    })
-    hasPermission.value = true
+    let stream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          width: 512,
+          height: 512,
+          facingMode: 'environment', // Select the back camera
+        },
+      })
+      hasPermission.value = true
+    }
+    catch (e) {
+      hasPermission.value = false
+      return
+    }
 
     video.srcObject = stream
     video.play()

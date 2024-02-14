@@ -101,8 +101,12 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
-      {{ errorMessage }}
+    <p v-if="state === QRScannerState.NoPermission || errorMessage" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
+      {{
+        state === QRScannerState.NoPermission
+          ? $t('Please allow Nimiq Pay to access your camera and try again to scan QR codes.')
+          : errorMessage
+      }}
     </p>
   </div>
 </template>

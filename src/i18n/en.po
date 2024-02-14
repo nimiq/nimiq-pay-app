@@ -614,6 +614,10 @@ msgstr ""
 msgid "PIN did not match"
 msgstr ""
 
+#: src/components/QRScanner.vue:45
+msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
+msgstr ""
+
 #: src/composables/useGoCrypto.ts:254
 msgid "Please ask the merchant to check the status of your payment."
 msgstr ""

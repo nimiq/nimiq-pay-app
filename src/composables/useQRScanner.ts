@@ -95,11 +95,11 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   }
 
   async function stop() {
+    state.value = QRScannerState.Idle
     await Promise.all([
       tearDownCameraFeed(),
       stopScan(),
     ])
-    state.value = QRScannerState.Idle
   }
 
   // setDummyData is only used in development mode to test the scanner. In production, it's a no-op.
