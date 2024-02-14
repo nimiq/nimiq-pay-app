@@ -1,4 +1,5 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
+import { isValidPhoneNumber } from 'libphonenumber-js/mobile'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
@@ -23,7 +24,6 @@ const TransactionList = defineAsyncComponent(() => import('@/components/Transact
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
-const PHONE_NUMBER_REGEX = /\+(\d{1,4})[-.\s]?(?:[(](\d{1,3})[)][-.\s]?)?(\d{1,4})[-.\s]?(\d{1,4})[-.\s]?(\d{1,9})/
 
 export const promoCodeStep: StepInit = async () => ({
   step: StepName.PromoCode,
@@ -146,7 +146,7 @@ export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepIni
     if (!phoneNumber) {
       err(i18n.t('Please enter a phone number'))
     }
-    else if (!PHONE_NUMBER_REGEX.test(phoneNumber)) {
+    else if (!isValidPhoneNumber(phoneNumber)) {
       err(i18n.t('Invalid phone number'))
     }
     else {

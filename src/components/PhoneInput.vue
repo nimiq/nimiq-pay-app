@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { IonButton, alertController } from '@ionic/vue'
-import { ref, watch } from 'vue'
+import { IonButton, alertController,modalController } from '@ionic/vue'
+import { computed, ref, watch } from 'vue'
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
+import { storeToRefs } from 'pinia'
+import CountrySelectModal from '@/components/CountrySelectModal.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
+import { useApp } from '@/stores/app'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -11,8 +15,29 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false } })
 const emit = defineEmits(stepEmits)
 
-const phoneNumber = ref('')
+const { language } = storeToRefs(useApp())
+
+const isFocussed = ref(false)
+const phoneNumberInput = ref('')
 const errorMessage = ref('')
+const regionNames = computed(() => new Intl.DisplayNames([language.value], { type: 'region' }))
+const countryFilter = ref('')
+const countries = computed(() => {
+  return getCountries()
+    .map((country) => {
+      const callingCode = getCountryCallingCode(country)
+      return {
+        countryCode: country,
+        callingCode,
+        countryName: regionNames.value.of(country) || country,
+      }
+    })
+    .filter(country => country.countryName.toLowerCase().includes(countryFilter.value.toLowerCase()))
+    .sort((a, b) => a.countryName.localeCompare(b.countryName))
+})
+// Set current country (based on device language) as default or first country in list
+const selectedCountry = ref(countries.value.find(country => country.countryCode === (new Intl.Locale(navigator.language)).region) || countries.value[0])
+const phoneNumber = computed(() => `+${selectedCountry.value.callingCode} ${phoneNumberInput.value}`)
 
 function showAlert() {
   alertController
@@ -31,12 +56,6 @@ function handleSubmit() {
   setTimeout(() => emit('done', phoneNumber.value), 200)
 }
 
-watch(phoneNumber, () => {
-  // If phone number doesn't start with '+'', add it
-  if (phoneNumber.value && !phoneNumber.value.startsWith('+'))
-    phoneNumber.value = `+${phoneNumber.value}`
-})
-
 watch(() => props.errorMsg, () => {
   const { errorMsg } = props
   if (!errorMsg) {
@@ -51,18 +70,41 @@ watch(() => props.errorMsg, () => {
     ? JSON.parse(serverErrorMessageMatch[1]) as string // decode json encoded message string, resolving potential escape sequences
     : errorMsg
 })
+
+async function openModal() {
+  const modal = await modalController.create({
+    component: CountrySelectModal,
+    handle: false,
+    canDismiss: true,
+    initialBreakpoint: 1,
+    breakpoints: [0, 1],
+  })
+
+  modal.present()
+
+  const { data, role } = await modal.onWillDismiss()
+
+  if (role === 'confirm')
+    selectedCountry.value = data
+}
 </script>
 
 <template>
   <div class="flex flex-col self-start w-full h-full mt-8">
-    <form @submit.prevent>
+    <div class="relative grid grid-cols-[auto_0px_1fr] items-center w-full gap-x-4 border-2 border-space-space-200 rounded-lg p-4" :class="{ 'border-sky-sky-400': isFocussed }">
+      <button class="text-base text-space/60" @click="openModal">
+        +{{ selectedCountry.callingCode }}
+      </button>
+      <div class="h-[calc(100%+32px)] w-0 border border-space-space-200" :class="{ 'border-sky-sky-400': isFocussed }" />
       <input
-        v-model="phoneNumber" :placeholder="$t('Your number')" type="tel" class="w-full p-2 px-4 my-2 phone"
+        v-model="phoneNumberInput" :placeholder="$t('Your number')" type="tel" class="border-none focus:outline-none focus:ring-0"
         :name="stepName"
         size="16"
         @keydown.enter="showAlert"
+        @focus="isFocussed = true"
+        @blur="isFocussed = false"
       >
-    </form>
+    </div>
     <p class="mt-1 text-sm font-semibold text-center text-space/50">
       {{ $t('Standard rates may apply.') }}
     </p>
@@ -70,7 +112,7 @@ watch(() => props.errorMsg, () => {
       {{ errorMessage }}
     </p>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
-      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumber.length < 4" @click="showAlert">
+      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumberInput.length < 4" @click="showAlert">
         {{ $t('Verify') }}
       </IonButton>
       <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">
