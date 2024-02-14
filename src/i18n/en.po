@@ -897,8 +897,8 @@ msgstr ""
 msgid "The payment request was cancelled"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:168
-msgid "The QR scanner is not ready yet. Please try again."
+#: src/composables/useQRScanner.ts:165
+msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
 #: src/modals/BackupModal/Intro.vue:4

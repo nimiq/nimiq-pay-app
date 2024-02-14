@@ -159,15 +159,16 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     const { ready, scan } = await import('qr-scanner-wechat')
 
     // The first time, we need to download the model, so it will take some time
-    let maxMs = 10_000
-    while (!ready() && maxMs > 0) {
-      await new Promise(r => window.setTimeout(r, 100))
-      maxMs -= 100
-    }
-    if (maxMs <= 0) {
-      onError?.(i18n.t('The QR scanner is not ready yet. Please try again.'))
-      return
-    }
+    let didTimeout = false
+    const timeout = window.setTimeout(() => {
+      didTimeout = true
+      onError?.(i18n.t('The QR scanner is not ready yet. Please wait.'))
+    }, 10000)
+    await ready()
+    clearTimeout(timeout)
+    if (didTimeout)
+      // Clear error message
+      onError?.('')
 
     const { useIntervalFn } = await import('@vueuse/core')
 
