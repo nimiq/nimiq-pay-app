@@ -68,7 +68,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
     }
 
     video.srcObject = stream
-    video.play()
+    await video.play()
     return video
   }
 

@@ -90,7 +90,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       logger.error('No permission to use the camera')
       return
     }
-    startScan({ video })
+    await startScan({ video })
     state.value = QRScannerState.Scanning
   }
 
@@ -139,6 +139,8 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
   let resumeScan: Function
 
   async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
+    if (!video.videoWidth || !video.videoHeight)
+      return // video not ready yet
     const canvas = document.createElement('canvas')
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
