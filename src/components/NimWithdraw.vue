@@ -120,7 +120,7 @@ function withdraw() {
 
     <SelectPortal>
       <SelectContent
-        class="border-[1.5px] border-t-0 rounded-t-none border-solid rounded border-space-space-400 will-change-[opacity,transform] data-[side=top]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
+        class="border-[1.5px] bg-white border-t-0 rounded-t-none border-solid rounded border-space-space-400 will-change-[opacity,transform] data-[side=top]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
         position="popper"
         style="width: var(--radix-select-trigger-width);"
       >
