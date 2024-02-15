@@ -36,7 +36,10 @@ const formattedValue = computed({
   get() {
     return liveValue.value
   },
-  set(value: string) {
+  set(value: string | number) {
+    if (typeof value === 'number')
+      value = value.toString()
+
     liveValue.value = value
 
     if (!value) {
@@ -71,8 +74,9 @@ const formattedValue = computed({
 function updateValue(newValue: number) {
   if (newValue === inputValue.value)
     return
+
   lastEmittedValue.value = newValue || 0
-  formattedValue.value = newValue ? (newValue / 10 ** decimals).toString() : ''
+  formattedValue.value = newValue.toString() ? (newValue / 10 ** decimals).toString() : ''
   updateWidth()
 }
 
