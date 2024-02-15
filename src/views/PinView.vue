@@ -20,6 +20,9 @@ async function handleSubmit(pin: string) {
   const error = await decrypt(pin)
   if (error) {
     errorMsg.value = error
+    setTimeout(() => {
+      errorMsg.value = ''
+    }, 2000)
     return
   }
   await router.replace('/app')

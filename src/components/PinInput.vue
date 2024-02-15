@@ -46,6 +46,7 @@ watch(() => props.errorMsg, (msg) => {
     pinCodeInput.value = ''
     isLoading.value = false
   }
+  else { wiggle.value = false }
 })
 
 watch(isLoading, (loading) => {
@@ -61,7 +62,7 @@ function handleInputClick(i: number) {
 </script>
 
 <template>
-  <div class="m-auto">
+  <div class="relative m-auto">
     <Transition name="slide-fade" mode="out-in">
       <LoadingSpinner
         v-if="isLoading" class="w-8 h-8 m-auto text-space"
@@ -79,7 +80,7 @@ function handleInputClick(i: number) {
         />
       </div>
     </Transition>
-    <p v-if="errorMsg" class="mt-12 text-base text-center text-pumpkin">
+    <p v-if="errorMsg" class="absolute w-full text-base text-center top-20 text-pumpkin">
       {{ errorMsg }}
     </p>
   </div>
