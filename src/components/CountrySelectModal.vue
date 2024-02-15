@@ -22,7 +22,7 @@ const countries = computed(() => {
         countryName: regionNames.value.of(country) || country,
       }
     })
-    .filter(country => country.countryName.toLowerCase().includes(countryFilter.value.toLowerCase()) || country.callingCode.includes(countryFilter.value) || country.countryCode.toLowerCase().includes(countryFilter.value.toLowerCase()))
+    .filter(country => country.countryName.toLowerCase().includes(countryFilter.value.toLowerCase()) || country.countryCode.toLowerCase().includes(countryFilter.value.toLowerCase()) || country.callingCode.includes(countryFilter.value))
     .sort((a, b) => a.countryName.localeCompare(b.countryName))
 })
 const selectedCountry = ref(countries.value.find(country => country.countryCode === (new Intl.Locale(navigator.language)).region) || countries.value[0])
