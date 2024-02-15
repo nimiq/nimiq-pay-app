@@ -21,8 +21,16 @@ async function api<T = undefined, E = undefined>(url: URL, { token, body: _body 
   const response = await fetch(url, { method, headers, body })
 
   if (!response.ok) {
+    let responseBody: E | undefined
+    try {
+      responseBody = await response.json() as E
+    }
+    catch (e) {
+      // If the response is not JSON or not exist, we don't do anything
+      console.error('Error parsing response', e)
+    }
     return {
-      error: response.bodyUsed ? (await response.json()) as E : undefined,
+      error: responseBody,
       hasError: true,
       status: response.status,
       data: undefined,
