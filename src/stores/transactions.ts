@@ -71,7 +71,7 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction> {
+  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction, string> {
     // eslint-disable-next-line no-console
     console.log('✈️  Preparing new transaction', {
       partialTx,

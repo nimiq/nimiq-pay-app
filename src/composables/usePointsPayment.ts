@@ -47,10 +47,10 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
       return
     }
 
-    const { data, error } = await usePointsApi().verifyPayment({ recipient, reference: toValue(reference)!, token: useApp().pointsToken, rail: toValue(rail)! })
-    if (error) {
+    const { data, error, hasError } = await usePointsApi().verifyPayment({ recipient, reference: toValue(reference)!, token: useApp().pointsToken, rail: toValue(rail)! })
+    if (hasError) {
       pointsState.value = PointsState.Error
-      message.value = error
+      message.value = error?.message || i18n.t('Something went wrong getting the Points cashback data.')
       return
     }
 

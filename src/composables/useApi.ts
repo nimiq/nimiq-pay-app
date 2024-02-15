@@ -1,7 +1,7 @@
 import { type MaybeRef, readonly, ref, toValue as v } from 'vue'
 import { toMs } from './useTime'
 import { i18n } from '@/i18n/i18n-setup'
-import type { AsyncResult, Result } from '@/types'
+import type { AsyncResultApi } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
 import { useApp } from '@/stores/app'
@@ -12,39 +12,27 @@ const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https:
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 
-async function api<T = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}) {
+async function api<T = undefined, E = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}): AsyncResultApi<T, E> {
   const method = _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
-  const response = await fetch(url, { method, headers, body }).catch(error => i18n.t('Error during {method} request to {url}: {error}', {
-    method,
-    url: url.href,
-    error,
-  }))
-
-  if (typeof response === 'string')
-    return { error: response, data: undefined }
+  const response = await fetch(url, { method, headers, body })
 
   if (!response.ok) {
     return {
-      error: i18n.t('Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}.', {
-        url: url.href,
-        status: response.status,
-        statusText: response.statusText,
-        data: response.bodyUsed ? JSON.stringify(await response.json()) : undefined,
-        metadata: JSON.stringify(response),
-      }),
+      error: response.bodyUsed ? (await response.json()) as E : undefined,
+      hasError: true,
       status: response.status,
       data: undefined,
     }
   }
 
   if (response.status === 204)
-    return { data: undefined, error: undefined }
+    return { data: true as T, status: response.status, hasError: false, error: undefined }
 
-  return { data: await response.json() as T, error: undefined }
+  return { data: await response.json() as T, status: response.status, error: undefined, hasError: false }
 }
 
 export function usePointsApi() {
@@ -83,28 +71,40 @@ export function usePointsApi() {
     task_status: 'in-progress' | 'completed' | 'rejected'
     updated_at: string
   }
+  interface PointsErrorRes {
+    statusCode: number
+    error: string
+    message: string
+    timestamp?: number
+  }
 
   // Just remap the JSON object from the API to a TS object
-  async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResult<VerifyPaymentRes> {
-    const { data, error } = await api<any>(new URL('payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
-    if (error)
-      return { data: undefined, error: error || i18n.t('Payment invalid') }
-    return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined }
+  async function verifyPayment({ token, rail, reference, recipient }: VerifyPaymentArg): AsyncResultApi<VerifyPaymentRes, PointsErrorRes> {
+    const { data, error, hasError, status } = await api<any>(new URL('payment/verify', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } })
+    if (hasError) {
+      return {
+        data: undefined,
+        error: error || { message: i18n.t('Payment invalid'), statusCode: 400, error: 'INVALID_PAYMENT' },
+        status,
+        hasError,
+      }
+    }
+    return { data: { ...data, cashback: { percentage: data!.cashback.percentage, amountInLuna: data!.cashback.amount_in_luna } } as VerifyPaymentRes, error: undefined, status, hasError }
   }
 
   return {
-    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes>(new URL('participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
-    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes>(new URL('participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
-    getBalance: ({ token }: BalanceArg) => api<BalanceRes>(new URL('participant/balance', basePointsUrl), { token: v(token) }),
-    payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes>(new URL('payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
-    claimCashback: ({ reference, tx_hash, token }: ClaimCashbackArg) => api<ClaimCashbackRes>(new URL('payment/on-chain', basePointsUrl), { token: v(token), body: { reference: v(reference), tx_hash: v(tx_hash) } }),
+    authorize: ({ phoneNumber, publicKey }: AuthorizeArg) => api<AuthorizeRes, PointsErrorRes>(new URL('participant/authorize', basePointsUrl), { body: { phone_number: v(phoneNumber), public_key: v(publicKey) } }),
+    verify: ({ phoneNumber, accessCode }: VerifyArg) => api<VerifyRes, PointsErrorRes>(new URL('participant/verify', basePointsUrl), { body: { phone_number: v(phoneNumber), access_code: v(accessCode) } }),
+    getBalance: ({ token }: BalanceArg) => api<BalanceRes, PointsErrorRes>(new URL('participant/balance', basePointsUrl), { token: v(token) }),
+    payWithPoints: ({ rail, reference, recipient, token }: PayWithPointsArg) => api<PayWithPointsRes, PointsErrorRes>(new URL('payment', basePointsUrl), { token: v(token), body: { type: v(rail), reference: v(reference), destination: v(recipient) } }),
+    claimCashback: ({ reference, tx_hash, token }: ClaimCashbackArg) => api<ClaimCashbackRes, PointsErrorRes>(new URL('payment/on-chain', basePointsUrl), { token: v(token), body: { reference: v(reference), tx_hash: v(tx_hash) } }),
     verifyPayment,
-    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes>(new URL('participant/voucher', basePointsUrl), { token: v(token) }),
-    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes>(new URL(`voucher/${v(id)}`, basePointsUrl)),
-    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes>(new URL(`voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
-    getTasks: ({ token }: TaskArg) => api<TaskRes>(new URL('task', basePointsUrl), { token: v(token) }),
-    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes>(new URL(`task/${v(id)}`, basePointsUrl), { token: v(token) }),
-    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes>(new URL(`task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
+    getReferralInfo: ({ token }: ParticipantReferralArg) => api<ParticipantReferralRes, PointsErrorRes>(new URL('participant/voucher', basePointsUrl), { token: v(token) }),
+    getReferralById: ({ id }: ReferralIdArg) => api<ReferralIdRes, PointsErrorRes>(new URL(`voucher/${v(id)}`, basePointsUrl)),
+    claimReferral: ({ id, token }: ClaimReferralArg) => api<ClaimReferralRes, PointsErrorRes>(new URL(`voucher/${v(id)}/claim`, basePointsUrl), { token: v(token) }),
+    getTasks: ({ token }: TaskArg) => api<TaskRes, PointsErrorRes>(new URL('task', basePointsUrl), { token: v(token) }),
+    getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes, PointsErrorRes>(new URL(`task/${v(id)}`, basePointsUrl), { token: v(token) }),
+    claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes, PointsErrorRes>(new URL(`task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
   }
 }
 
@@ -137,17 +137,23 @@ export function useRemoteSignerApi() {
   interface StatusRes { status: 'good' | 'bad'; blockHeight: number; servicePublicKey: string; network: string }
   interface GetRemoteSignerRes { address: string; servicePublicKey: string; serviceSignatureProofSize: number; validityStart: number; validityEnd: number; balance: number }
 
-  async function getStatus(): AsyncResult<StatusRes> {
-    const { data, error } = await api<StatusRes>(new URL('/status', baseCosignerUrl))
-    if (error || data?.status !== 'good')
-      return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
-    return { data: data!, error: undefined }
+  interface RemoteErrorRes {
+    statusCode: number
+    error: string
+    message: string
   }
 
-  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResult<RemoteSigner> {
-    const { data, error } = await api<GetRemoteSignerRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseCosignerUrl))
-    if (error || !data?.address)
-      return { data: undefined, error: error || i18n.t('Something went wrong syncing your account') }
+  async function getStatus(): AsyncResultApi<StatusRes, RemoteErrorRes> {
+    const { data, error, status, hasError } = await api<StatusRes>(new URL('/status', baseCosignerUrl))
+    if (error || data?.status !== 'good' || hasError)
+      return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
+    return { data: data!, status, hasError, error: undefined }
+  }
+
+  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<RemoteSigner, RemoteErrorRes> {
+    const { data, error, status, hasError } = await api<GetRemoteSignerRes, RemoteErrorRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseCosignerUrl))
+    if (error || !data?.address || hasError)
+      return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
     // The response from the server is verbose, and since these fields are used widely in the logic of the app
     // we extract them here and return a simpler object.
@@ -160,16 +166,16 @@ export function useRemoteSignerApi() {
       end: data.validityEnd,
       active: true,
     }
-    return { data: remoteSigner, error: undefined }
+    return { data: remoteSigner, error: undefined, status, hasError }
   }
 
   return {
     getStatus,
-    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
-    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[]>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
+    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction, RemoteErrorRes>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
+    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[], RemoteErrorRes>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
     getRemoteSigner,
-    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
-    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),
+    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
+    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),
   }
 }
 
@@ -177,12 +183,17 @@ export function useCurrencyPriceApi() {
   interface PriceNowArg { currency: MaybeRef<string> }
   interface PriceAtArg { currency: MaybeRef<string>; timestamp: MaybeRef<number> }
 
-  interface PriceNowRes { price: number }
-  interface PriceAtRes { price: number }
+  type PriceNowRes = { currency: string; time: number; price: number; error: undefined } | { currency: string; time: number; price: undefined; error: string }
+  type PriceAtRes = { currency: string; time: number; price: number; error: undefined } | { currency: string; time: number; price: undefined; error: string }
+  interface PriceErrorRes {
+    statusCode: number
+    error: string
+    message: string
+  }
 
   return {
-    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
-    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
+    getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes, PriceErrorRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
+    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes, PriceErrorRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
   }
 }
 
@@ -203,8 +214,15 @@ export function useCplApi() {
     itemDescription: string
     status: string
   }
+  interface PointsCplFirestoreRes {
+    error: {
+      code: number
+      message: string
+      status: string
+    }
+  }
 
-  async function getOrderById({ id }: OrderByIdArg): AsyncResult<OrderByIdRes> {
+  async function getOrderById({ id }: OrderByIdArg): AsyncResultApi<OrderByIdRes, PointsCplFirestoreRes> {
     // The response from the API is verbose. We parse it here and return a simpler object.
     interface OrderByIdFirestoreRes {
       name: string
@@ -223,9 +241,9 @@ export function useCplApi() {
         status: { stringValue: string }
       }
     }
-    const { data, error } = await api<OrderByIdFirestoreRes>(new URL(`v1/projects/checkout-service${isDev ? '-staging-0' : ''}/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('No payment details found') }
+    const { data, error, status, hasError } = await api<OrderByIdFirestoreRes, PointsCplFirestoreRes>(new URL(`v1/projects/checkout-service${isDev ? '-staging-0' : ''}/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
+    if (error || !data || hasError)
+      return { data: undefined, status, hasError, error: error || { error: { message: i18n.t('No payment details found'), code: 404, status: 'NOT_FOUND' } } }
     const parsed: OrderByIdRes = {
       name: data.name,
       createTime: data.createTime,
@@ -244,6 +262,8 @@ export function useCplApi() {
     return {
       data: parsed,
       error: undefined,
+      status,
+      hasError,
     }
   }
 
@@ -262,10 +282,10 @@ export enum FetchStatus {
 export interface UseFetchOptions {
   immediate?: boolean
 }
-export function useFetch<T>(fn: () => Promise<Result<T>>, { immediate = true }: UseFetchOptions = {}) {
+export function useFetch<T, E>(fn: () => AsyncResultApi<T, E>, { immediate = true }: UseFetchOptions = {}) {
   const state = ref<FetchStatus>(FetchStatus.Idle)
   const data = ref<T>()
-  const error = ref<string>()
+  const error = ref<E>()
 
   async function fetch() {
     state.value = FetchStatus.Loading

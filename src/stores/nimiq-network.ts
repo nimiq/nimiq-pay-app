@@ -87,7 +87,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     await client.value!.sendTransaction(tx)
   }
 
-  async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account> {
+  async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account, string> {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
     const account = await client.value?.getAccount(address)
@@ -96,7 +96,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account, error: undefined }
   }
 
-  async function getAccounts(addressArray: Nimiq.Address[]): AsyncResult<Nimiq.Account[]> {
+  async function getAccounts(addressArray: Nimiq.Address[]): AsyncResult<Nimiq.Account[], string> {
     if (addressArray.length === 0)
       return { data: undefined, error: i18n.t('Addresses missing') }
     const accounts = await client.value?.getAccounts(addressArray)

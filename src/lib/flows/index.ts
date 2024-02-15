@@ -191,10 +191,6 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
 
       const { usePoints } = await import('@/stores/points')
       const { error } = await usePoints().payWithPoints(request)
-        .catch(error => ({ error: i18n.t(
-          'Transaction failed: {error}',
-          { error: error instanceof Error ? error.message : String(error) },
-        ) }))
       if (error)
         err(error)
     }

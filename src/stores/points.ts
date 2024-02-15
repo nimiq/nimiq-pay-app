@@ -22,9 +22,9 @@ export const usePoints = defineStore('points', () => {
    * Access code is sent to phone number via SMS
    */
   async function authorize(phoneNumberInput: string) {
-    const { error } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
-    if (error)
-      return { data: undefined, error }
+    const { error, hasError } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong authorizing the phone number') }
 
     phoneNumber.value = phoneNumberInput
   }
@@ -37,9 +37,9 @@ export const usePoints = defineStore('points', () => {
     if (!phoneNumber.value)
       return { data: undefined, error: i18n.t('Phone number missing') }
 
-    const { data, error } = await api.verify({ phoneNumber, accessCode: accessCodeInput })
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong verifying the phone number') }
+    const { data, error, hasError } = await api.verify({ phoneNumber, accessCode: accessCodeInput })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong verifying the phone number') }
 
     pointsToken.value = data.token
 
@@ -51,9 +51,9 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return i18n.t('Phone number not verified')
 
-    const { data, error } = await api.getBalance({ token: pointsToken.value })
-    if (error || !data)
-      return error || i18n.t('Something went wrong updating your Points')
+    const { data, error, hasError } = await api.getBalance({ token: pointsToken.value })
+    if (hasError)
+      return error?.message || i18n.t('Something went wrong updating your Points')
 
     pointsBalance.value = data.balance
   }
@@ -62,9 +62,9 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { data, error } = await api.getTasks({ token: pointsToken.value })
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
+    const { data, error, hasError } = await api.getTasks({ token: pointsToken.value })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong updating the tasks') }
 
     return { data, error }
   }
@@ -74,9 +74,9 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
     // TODO: add types to this
-    const { data, error } = await api.getTaskById({ id, token: pointsToken.value })
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
+    const { data, error, hasError } = await api.getTaskById({ id, token: pointsToken.value })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong updating the tasks') }
 
     return { data, error: undefined }
   }
@@ -102,9 +102,9 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { data, error } = await api.claimTask({ id, token: pointsToken.value, answer })
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong updating the tasks') }
+    const { data, error, hasError } = await api.claimTask({ id, token: pointsToken.value, answer })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong updating the tasks') }
 
     await updatePointsBalance()
     await updateTasks()
@@ -119,9 +119,9 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { data, error } = await api.getReferralInfo({ token: pointsToken.value })
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong checking the promo code') }
+    const { data, error, hasError } = await api.getReferralInfo({ token: pointsToken.value })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong checking the promo code') }
 
     return { data, error: undefined }
   }
@@ -132,13 +132,13 @@ export const usePoints = defineStore('points', () => {
    * Used to get the info before the user has created an account
    */
   async function getReferralInfoById(id: string) {
-    const { data, error, status } = await api.getReferralById({ id })
+    const { data, error, status, hasError } = await api.getReferralById({ id })
 
     if (status === 404)
       return { data: undefined, error: i18n.t('Promo code not found') }
 
-    if (error || !data)
-      return { data: undefined, error: error || i18n.t('Something went wrong checking the promo code') }
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong checking the promo code') }
 
     return { data, error: undefined }
   }
@@ -151,6 +151,7 @@ export const usePoints = defineStore('points', () => {
     if (!referralCode.value)
       return { data: undefined, error: i18n.t('Promo code missing') }
 
+    // TODO: if error, check code next time
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''
     setTimeout(() => {
@@ -165,9 +166,9 @@ export const usePoints = defineStore('points', () => {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
-    const { error } = await api.claimCashback({ reference: tx.paymentRef, tx_hash: tx.hash, token: pointsToken.value })
-    if (error)
-      return { data: undefined, error: error || i18n.t('Something went wrong claiming the cashback') }
+    const { error, hasError } = await api.claimCashback({ reference: tx.paymentRef, tx_hash: tx.hash, token: pointsToken.value })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong claiming the cashback') }
 
     return { error: undefined }
   }
@@ -177,9 +178,9 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error: i18n.t('Phone number not verified') }
 
     const { rail, paymentRef, recipient, amount, fee, merchantCategory, merchantName, message, fiatAmount, fiatCurrency, fiatFeeAmount } = request
-    const { error } = await api.payWithPoints({ rail: rail!, reference: paymentRef, recipient, token: pointsToken.value })
-    if (error)
-      return { data: undefined, error }
+    const { error, hasError } = await api.payWithPoints({ rail: rail!, reference: paymentRef, recipient, token: pointsToken.value })
+    if (hasError)
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong paying with Points') }
 
     // eslint-disable-next-line no-console
     console.log(`📚 Upsert-ing points transaction`, request)

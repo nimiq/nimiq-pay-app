@@ -20,7 +20,7 @@ import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction> {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction, string> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
       return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
@@ -134,11 +134,11 @@ async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemot
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
   // eslint-disable-next-line no-console
   console.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
-  const { data: receipt, error } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
+  const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
   // eslint-disable-next-line no-console
   console.log({ receipt, error })
-  if (error)
-    return { data: undefined, error }
+  if (hasError)
+    return { data: undefined, error: error?.message || i18n.t('Something went wrong signing the transaction') }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }
 }
 

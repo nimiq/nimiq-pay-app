@@ -14,13 +14,13 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
   const localBalance = ref(0)
 
-  async function getWords(): AsyncResult<string[]> {
+  async function getWords(): AsyncResult<string[], string> {
     if (!entropy.value)
       return { error: i18n.t('No account has been found'), data: undefined }
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 
-  function importWords(words: string[]): Result<void> {
+  function importWords(words: string[]): Result<void, string> {
     try {
       // eslint-disable-next-line ts/ban-ts-comment
       // @ts-expect-error

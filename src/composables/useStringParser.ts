@@ -18,14 +18,14 @@ export enum QRDataFormat {
 }
 
 export function useStringParser() {
-  function getNimAddress(maybeNimAddress: string): Result<string> {
+  function getNimAddress(maybeNimAddress: string): Result<string, string> {
     if (!ValidationUtils.isValidAddress(maybeNimAddress))
       return { error: i18n.t('Invalid Nimiq address'), data: undefined }
 
     return { data: maybeNimAddress, error: undefined }
   }
 
-  function getCashlink(maybeCashlink: string): Result<string> {
+  function getCashlink(maybeCashlink: string): Result<string, string> {
     // Cashlinks are Base64 URL encoded, which is the regular Base64 alphabet but uses "_" and "-" instead of "/" and
     // "+". Additionally, long character sequences are broken with a "~". The minimum Cashlink data length is 32 bytes
     // for the key + 8 byte for the amount, which is 54 Base64 chars and a "==" padding.
@@ -39,7 +39,7 @@ export function useStringParser() {
 
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
-  async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData>> {
+  async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
     let url: URL
     try {
       url = new URL(content)
@@ -73,7 +73,7 @@ export function useStringParser() {
   //   nimiq:NQ51PF643FPJ86JERCTP5R7F0BR5U41VELP6?amount=1.83&message=cplink.com%20ref%20%23PZEd&label=Maxi%20Shoes&cpl_id=PZEdCP62
   // We will parse it as follows:
   //    { message: 'cplink.com ref #PZEd', rail: Rail.Cpl, railMerchantId: '', paymentRef: PZEdCP62, amount: 183000, recipient: 'NQ51...', merchantName: 'Maxi Shoes' }
-  async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData>> {
+  async function parseCPLUrl({ searchParams, pathname: recipient, protocol }: URL): Promise<Result<PaymentRequestData, string>> {
     if (protocol !== 'nimiq:') {
       return {
         error: i18n.t('Invalid link format. CPLinks are only supported for NIM.'),
@@ -116,7 +116,7 @@ export function useStringParser() {
     return { data, error: undefined }
   }
 
-  async function parseGoCryptoUrl({ href, searchParams }: URL): Promise<Result<PaymentRequestData>> {
+  async function parseGoCryptoUrl({ href, searchParams }: URL): Promise<Result<PaymentRequestData, string>> {
     let goCryptoPaymentDetails
     try {
       const goCryptoRequestIdentifier = parseGoCryptoRequestLink(href)
