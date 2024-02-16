@@ -31,10 +31,6 @@ export interface Flow {
   // Function that will be called when the flow is cancelled.
   // Also, the flow will be closed automatically when the last step is done.
   onCancel?: (options: FlowHooksOptions) => Promise<void>
-
-  // Wether the user can go back or not
-  // @default true
-  canGoBack?: boolean
 }
 
 export interface FlowInitOptions {
@@ -96,7 +92,25 @@ export interface State {
   [StepName.TransactionList]: ExternalTransaction // User selects a transaction
 }
 
-export type SkippableStep = { stepsToSkip: number } | { stepsToSkip?: undefined }
+export interface NavigationControl {
+  /**
+   * Defines how many steps to move forward when the skip action is triggered. A specific
+   * number indicates how many steps to bypass, including the current one. For instance,
+   * setting this to 1 means skipping just the current step, and setting it to 2 means skipping
+   * the current step plus the next one.
+   *
+   * @default 1
+   */
+  skipAheadBy?: number
+  /**
+   * Determines the number of steps to move backward when the back action is engaged. To prevent
+   * moving backwards, explicitly set this to -1. Setting this to 1 moves back to the
+   * previous step, while 2 would move back two steps, including the current one.
+   *
+   * @default 1
+   */
+  goBackBy?: number
+}
 
 type BaseStep = {
   title?: string | Ref<string>
@@ -107,7 +121,7 @@ type BaseStep = {
   beforeDisplay?: (state: State) => Promise<void> | undefined
   autofocus?: boolean
   canDismiss?: boolean
-} & SkippableStep
+} & NavigationControl
 
 interface BeforeNextOptions {
   next: () => Promise<void>
@@ -130,22 +144,13 @@ export type InfoStep = BaseStep & {
 
 export type Step = InputStep | InfoStep
 
-export interface StepInitOptions<Props = undefined> {
-  /**
-   * Number of steps to skip if the user presses the skip button.
-   * Use 1, to skip just the current step, 2 to skip the current step and the next one, etc.
-   *
-   * @default undefined
-   */
-  stepsToSkip?: number
-
+export type StepInitOptions<Props = undefined> = {
   flowName?: FlowName
-
   props?: Props
-}
+} & NavigationControl
 
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
-export const defaultStepInitOptions: StepInitOptions = { stepsToSkip: undefined, props: undefined }
+export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }
 
 export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction
 

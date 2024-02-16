@@ -136,12 +136,13 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   },
 })
 
-export const phoneNumberStep: StepInit = async ({ stepsToSkip } = defaultStepInitOptions) => ({
+export const phoneNumberStep: StepInit = async ({ skipAheadBy, goBackBy } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
   get title() { return i18n.t('Verify your phone number') },
   get description() { return i18n.t('You will receive an SMS with a verification code') },
-  main: markRaw(props => h(PhoneInput, { ...props, canSkip: !!stepsToSkip })),
-  stepsToSkip,
+  main: markRaw(props => h(PhoneInput, { ...props, canSkip: !!skipAheadBy })),
+  skipAheadBy,
+  goBackBy,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
     if (!phoneNumber) {
       err(i18n.t('Please enter a phone number'))

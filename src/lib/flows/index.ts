@@ -10,11 +10,12 @@ import { i18n } from '@/i18n/i18n-setup'
 const loginFlow: FlowInit = async () => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Login
+  const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
   const steps = await Promise.all([
     recoveryWordsStep,
     pinCodeStep,
     pinCodeConfirmStep,
-    (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }),
+    (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }),
     phoneNumberConfirmStep,
     getNotifiedStep,
     onBoardingPoints,
@@ -55,7 +56,8 @@ const loginFlow: FlowInit = async () => {
 const setupFlow: FlowInit = async () => {
   const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Setup
-  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
+  const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
+  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async (state, { err }) => {
     const [
       { default: router },
@@ -96,11 +98,12 @@ const verifyPhoneFlow: FlowInit = async () => {
 const setupWithPromoCodeFlow: FlowInit = async () => {
   const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.SetupWithPromoCode
+  const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
   const steps = await Promise.all([
     promoCodeStep,
     pinCodeStep,
     pinCodeConfirmStep,
-    (options: StepInitOptions) => phoneNumberStep({ ...options, stepsToSkip: 2 }),
+    (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }),
     phoneNumberConfirmStep,
     getNotifiedStep,
     onBoardingPoints,

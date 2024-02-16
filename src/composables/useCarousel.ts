@@ -13,15 +13,13 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, options
   const { isScrolling } = useScroll(elRef, { behavior: scrollBehavior })
 
   function goToSlide(index: number) {
-    if (!elRef.value) {
+    if (!elRef.value || index < 0 || index >= elRef.value.children.length) {
       console.warn('Cannot go to slide', index, { elRef: elRef.value })
       return
     }
 
     activeIndex.value = index
 
-    // For some reason in Safari, the scrollLeft value is not updated immediately after the scroll event
-    // so we need to wait a tick before scrolling
     const item = elRef.value?.children[index]
     window.requestAnimationFrame(() => item.scrollIntoView({ behavior: scrollBehavior, inline: 'center', block: 'nearest' }))
   }

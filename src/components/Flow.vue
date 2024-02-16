@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { type PropType, type Ref, computed, onMounted, reactive, ref, watch, watchEffect } from 'vue'
+import { type PropType, computed, onMounted, reactive, ref, watch, watchEffect } from 'vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { nextTick } from 'vue'
 import { inputSteps, isInfoStep, isInputStep } from '@/lib/flows/steps.types'
-import type { Flow, InputStepName, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
+import type { Flow, InputStepName, NavigationControl, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
 import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
@@ -24,12 +25,12 @@ const props = defineProps({
   },
 })
 
-const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, canGoBack = true } = props.flow!
-const steps: Ref<Step[]> = ref([stepsInFlow[0]])
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow } = props.flow!
+const historyStack = ref([stepsInFlow[0]])
+const activeIndex = ref(0)
 
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
 const state = ref({ ...emptyState, ...props.initialState })
-const activeIndex = ref(0)
 
 // Avoid that onDone / onCancel can be called again, after one of the two was invoked or meant to be invoked (even if
 // the handler is undefined). This is especially to avoid running onCancel on modal dismissal if onDone or onCancel were
@@ -67,17 +68,17 @@ watch(() => props.isClosing, async () => {
 
 const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
-const { nextSlide, prevSlide, isScrolling } = useCarousel(scroller, { activeIndex })
+const { goToSlide, isScrolling } = useCarousel(scroller, { activeIndex })
 
-const activeStep = computed(() => steps.value[steps.value.length - 1])
+const activeStep = computed(() => historyStack.value[activeIndex.value])
 // Get the element in screen knowing the active step using the li key
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 
-const allowBack = computed(() => activeIndex.value > 0 && canGoBack)
+const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1)
 
 type Errors = Record<InputStepName, string>
-const errors = ref<Errors>(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
-watchEffect(() => errors.value = reactive(Object.fromEntries(steps.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
+const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
+watchEffect(() => errors.value = reactive(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 
 function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
@@ -91,33 +92,53 @@ function defaultErrorHandler(errorMessage: string) {
     useToast().setToast({ message: errorMessage, error: true })
 }
 
-interface GoToNextOptions { err?: (errorMsg: string) => void; stepsToSkip?: number }
-async function goToNext(options?: GoToNextOptions) {
+type GoToNextOptions = { err?: (errorMsg: string) => void } & Pick<NavigationControl, 'skipAheadBy'>
+async function goToNext(options: GoToNextOptions = {}) {
   if (props.isClosing)
     return
-  const {
-    err = defaultErrorHandler,
-    stepsToSkip = 1,
-  } = options || {}
+  const { err = defaultErrorHandler, skipAheadBy = 1 } = options
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value.step)
-  const nextStep = stepsInFlow[currentIndex + stepsToSkip]
+  const nextStep = stepsInFlow[currentIndex + skipAheadBy]
   if (!nextStep) {
     await onFlowDone(state.value, { err })
     return
   }
-  steps.value.push(nextStep)
-  await steps.value.at(activeIndex.value + 1)?.beforeDisplay?.(state.value)
-  nextSlide()
+  await nextStep?.beforeDisplay?.(state.value)
+  // @ts-expect-error nextStep is of type Step, which it is the same as the historyStack
+  historyStack.value.push(nextStep)
+  await nextTick()
+  goToSlide(historyStack.value.length - 1)
 }
 
-async function goToPrevious() {
+type GoToPrevOptions = Pick<NavigationControl, 'goBackBy'>
+async function goToPrev(options: GoToPrevOptions = {}) {
   if (props.isClosing)
     return
-  prevSlide()
-  // Wait for the scroll to start and finish
+  const { goBackBy = 1 } = options
+  const newIndex = activeIndex.value - goBackBy
+  const prevStep = historyStack.value.at(newIndex)
+  if (!prevStep) {
+    console.warn('Cannot go back from', activeStep.value.step)
+    return
+  }
+
+  await prevStep.beforeDisplay?.(state.value)
+
+  // To have a smooth transition, we need to remove the steps between the prevStep and the activeStep
+  // but keeping both of them
+  historyStack.value.splice(newIndex + 1, activeIndex.value - newIndex - 1)
+
+  // Go to the previous slide and wait for the scroll to start and finish
+  goToSlide(newIndex)
   await until(isScrolling).toBe(true, { timeout: 3000 })
   await until(isScrolling).toBe(false, { timeout: 3000 })
-  steps.value.pop()
+
+  // Remove the last step in the historyStack, since it was the activeStep and
+  // the transition is already done
+  historyStack.value.pop()
+
+  // We need to render the history stack in the template
+  await nextTick()
 }
 
 // TODO revise this
@@ -144,7 +165,7 @@ async function onStepDone(value: OnDoneStepValue) {
     const err = defaultErrorHandler
     if (activeStep.value.beforeNext) {
       const finalizeFlow = () => onFlowDone(state.value, { err })
-      await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrevious, finalizeFlow, skip })
+      await activeStep.value.beforeNext(state.value, { next: goToNext, err, prev: goToPrev, finalizeFlow, skip })
     }
     else {
       goToNext()
@@ -153,11 +174,9 @@ async function onStepDone(value: OnDoneStepValue) {
 }
 
 function skip() {
-  const { stepsToSkip = 1 } = activeStep.value
-  if (!stepsToSkip)
-    return
   // Assuming there's no option to skip if you are in the last step
-  goToNext({ stepsToSkip })
+  if (activeStep.value.skipAheadBy)
+    goToNext({ skipAheadBy: activeStep.value.skipAheadBy })
 }
 
 async function onCancel() {
@@ -179,7 +198,7 @@ useIntersectionObserver(
       blur()
 
     // TODO: remove when focus is working in every device (mobile + tablet)
-    console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
+    console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value }) // eslint-disable-line no-console
   },
   // Note: previously, we used [0, 0.5, 1] as threshold, meaning that the observer should be called whenever any of
   // those values is reached/passed. However, occasionally but seldom it happened that the callback for reaching 1 was
@@ -202,7 +221,7 @@ function isStepVisible(stepName: StepName) {
 function focus() {
   const input = activeStepScrollerItem.value?.querySelector('input')
   // TODO: remove when focus is working in every device (mobile + tablet)
-  console.log('focus', input)
+  console.log('focus', input) // eslint-disable-line no-console
   input?.focus()
 }
 
@@ -219,7 +238,7 @@ function blur() {
   <IonHeader class="tall:pt-1 ion-no-border">
     <IonToolbar>
       <IonButtons slot="start">
-        <IonBackButton v-if="allowBack" default-href="/" @click.prevent="goToPrevious" />
+        <IonBackButton v-if="allowBack" default-href="/" @click.prevent="() => goToPrev({ goBackBy: activeStep.goBackBy })" />
       </IonButtons>
       <IonButtons slot="end">
         <IonButton v-if="activeStep.canDismiss !== false" @click.stop="onCancel">
@@ -230,7 +249,7 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, stepsToSkip }) in steps" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
+    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 small:mt-0 text-2xl font-bold text-center text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
@@ -240,7 +259,7 @@ function blur() {
       </p>
       <component
         :is="main"
-        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!stepsToSkip, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
+        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
         v-on="{ focus, done: onStepDone, select: onStepDone, skip }"
       />
     </li>
