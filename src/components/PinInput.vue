@@ -34,17 +34,20 @@ watch(pinCodeInput, async (pin) => {
 
     // Clear input when component is invisible, this will allow to clear the input without the user seeing it
     // and when the users goes back to this component, the input will be empty.
-    await until(isScrolling).toBe(true, { timeout: 1000 })
-    await until(isScrolling).toBe(false, { timeout: 1000 })
-    pinCodeInput.value = ''
+    // Only do this if the stepName is defined, as this is a step in a flow, and not a standalone component.
+    if (props.stepName && !props.errorMsg) {
+      await until(isScrolling).toBe(true, { timeout: 1000 })
+      await until(isScrolling).toBe(false, { timeout: 1000 })
+    }
+    clearInput()
   }
 })
 
 watch(() => props.errorMsg, (msg) => {
   if (msg) {
     wiggle.value = true
-    pinCodeInput.value = ''
     isLoading.value = false
+    clearInput()
   }
   else { wiggle.value = false }
 })
@@ -58,6 +61,12 @@ function handleInputClick(i: number) {
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
   inputRef.value?.focus()
+}
+
+function clearInput() {
+  setTimeout(() => {
+    pinCodeInput.value = ''
+  }, 300)
 }
 </script>
 

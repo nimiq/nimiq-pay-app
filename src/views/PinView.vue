@@ -53,14 +53,10 @@ onMounted(() => {
     </IonHeader>
     <IonContent class="text-center ion-padding" style="--background: #F8F8F8">
       <IonGrid class="flex flex-col h-full">
-        <IonRow class="ion-justify-content-center">
-          <h1 class="font-bold">
-            {{ $t('Enter PIN') }}
-          </h1>
-        </IonRow>
-        <IonRow class="flex-1 ion-justify-content-center ion-align-items-center">
-          <PinInput :input-length="4" :error-msg="errorMsg" @done="handleSubmit" />
-        </IonRow>
+        <h1 class="font-bold">
+          {{ $t('Enter PIN') }}
+        </h1>
+        <PinInput :input-length="4" :error-msg="errorMsg" @done="handleSubmit" />
       </IonGrid>
     </IonContent>
   </IonPage>
