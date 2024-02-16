@@ -266,10 +266,9 @@ onMounted(async () => {
           </p>
         </IonRow>
         <IonRow>
-          <!-- TODO: interacting with map disable until we find a nice way to do it -->
-          <a class="w-full mt-2 bg-white rounded-lg h-72" @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })">
+          <a class="w-full mt-2 bg-white rounded-lg h-80">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
-            <iframe class="w-full h-full pointer-events-none" src="https://map.nimiq.com/"></iframe>
+            <iframe class="w-full h-full" src="https://map.nimiq.com/"></iframe>
           </a>
         </IonRow>
         <IonRow class="ion-justify-content-center">
