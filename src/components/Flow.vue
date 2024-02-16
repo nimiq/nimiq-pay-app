@@ -174,7 +174,6 @@ async function onStepDone(value: OnDoneStepValue) {
 }
 
 function skip() {
-  console.log('skip', activeStep.value.skipAheadBy) // eslint-disable-line no-console
   // Assuming there's no option to skip if you are in the last step
   if (activeStep.value.skipAheadBy)
     goToNext({ skipAheadBy: activeStep.value.skipAheadBy })
