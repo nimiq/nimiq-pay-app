@@ -286,8 +286,6 @@ onMounted(async () => {
     <!-- Footer -->
     <IonFooter>
       <IonToolbar>
-        <!-- TODO: add info icon -->
-        <!-- TODO: update minutes when blocks are less than 10 mins -->
         <Transition name="slide-fade">
           <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
             {{ $tc(

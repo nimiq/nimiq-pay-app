@@ -77,7 +77,7 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
           debugger // eslint-disable-line no-debugger,no-restricted-syntax
         err(i18n.t('Invalid PIN code'))
       }
-      else if (useApp().pinHash) {
+      else if (useApp().pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login) {
         if (useApp().pinHash !== hash(pinCode)) {
           err(i18n.t('Invalid PIN code'))
         }
