@@ -1,7 +1,8 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { isValidPhoneNumber } from 'libphonenumber-js/mobile'
 import { QRDataFormat } from '../../composables/useStringParser'
-import { type StepInit, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { useApp } from '@/stores/app'
@@ -40,7 +41,7 @@ export const promoCodeStep: StepInit = async () => ({
       next()
     }
   },
-})
+} satisfies Step)
 
 export const recoveryWordsStep: StepInit = async () => ({
   step: StepName.RecoveryWordsStep,
@@ -58,7 +59,7 @@ export const recoveryWordsStep: StepInit = async () => ({
       next()
     }
   },
-})
+} satisfies Step)
 
 export const pinCodeStep: StepInit = async ({ flowName }) => {
   const { FlowName } = await import('@/lib/flows/steps.types')
@@ -87,7 +88,7 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
       }
       else { next() }
     },
-  }
+  } satisfies Step
 }
 
 export const pinCodeConfirmStep: StepInit = async () => ({
@@ -134,7 +135,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
 
     next()
   },
-})
+} satisfies Step)
 
 export const phoneNumberStep: StepInit = async ({ skipAheadBy, goBackBy } = defaultStepInitOptions) => ({
   step: StepName.PhoneNumber,
@@ -157,7 +158,7 @@ export const phoneNumberStep: StepInit = async ({ skipAheadBy, goBackBy } = defa
       else next()
     }
   },
-})
+} satisfies Step)
 
 export const phoneNumberConfirmStep: StepInit = async () => ({
   step: StepName.PhoneNumberConfirm,
@@ -180,68 +181,68 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
         next()
     }
   },
-})
+} satisfies Step)
 
 export const getNotifiedStep: StepInit = async () => ({
   step: StepName.GetNotified,
   get title() { return i18n.t('Enable notifications') },
   get description() { return i18n.t('Get important info on transactions, top-ups, security and more.') },
-  stepsToSkip: 1,
+  skipAheadBy: 1,
   main: markRaw(EnableNotifications),
-})
+} satisfies Step)
 
 export const onBoardingPoints: StepInit = async () => ({
   step: StepName.OnBoardingPoints,
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingCashback1: StepInit = async () => ({
   step: StepName.OnBoardingCashback1,
   get title() { return i18n.t('What are Cryptocity Points?') },
   get description() { return i18n.t('Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM).') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingCashback2: StepInit = async () => ({
   step: StepName.OnBoardingCashback2,
   get title() { return i18n.t('Pay with Cryptocity Points') },
   get description() { return i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingCashback3: StepInit = async () => ({
   step: StepName.OnBoardingCashback3,
   get title() { return i18n.t('Get Cryptocity Points') },
   get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingCashback4: StepInit = async () => ({
   step: StepName.OnBoardingCashback4,
   get title() { return i18n.t('Find places to pay with, and earn Cryptocity Points') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
   get title() { return i18n.t('What is Bluecode?') },
   get description() { return i18n.t('Bluecode is a European payment service that now supports NIM.') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingBluecode2: StepInit = async () => ({
   step: StepName.OnBoardingBluecode2,
   get title() { return i18n.t('Pay with Bluecode') },
   get description() { return i18n.t('Create a Bluecode Barcode and show it at the cashier to pay.') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const onBoardingBluecode3: StepInit = async () => ({
   step: StepName.OnBoardingBluecode3,
   get title() { return i18n.t('Verify your ID') },
   get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
   main: markRaw(OnBoardingScreen),
-})
+} satisfies Step)
 
 export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
   return {
@@ -256,7 +257,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
       else // For Top-Up and Withdrawal, we go back to the previous step
         prev()
     },
-  }
+  } satisfies Step
 }
 
 export const paymentPreviewStep: StepInit = async () => {
@@ -288,7 +289,7 @@ export const paymentPreviewStep: StepInit = async () => {
       else
         skip()
     },
-  }
+  } satisfies Step
 }
 
 export const nimWithdrawalSelectionStep: StepInit = async () => ({
@@ -322,7 +323,7 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
     // User clicked "Add NIM address", let him go, by calling next()
     else { next() }
   },
-})
+} satisfies Step)
 
 export const nimAddressInputStep: StepInit = async () => ({
   step: StepName.NimAddressInput,
@@ -344,20 +345,20 @@ export const nimAddressInputStep: StepInit = async () => ({
     }
     else { next() }
   },
-})
+} satisfies Step)
 
 export const nimAddressDisplay: StepInit = async () => ({
   step: StepName.NimAddressDisplay,
   get title() { return i18n.t('Send NIM to top up') },
   get description() { return i18n.t('Send a transaction to the address below. Top up as much as you like.') },
   main: markRaw(NimAddressDisplay),
-})
+} satisfies Step)
 
 export const transactionList: StepInit = async () => ({
   step: StepName.TransactionList,
   main: markRaw(TransactionList),
   autofocus: false, // Don't autofocus on the search bar
-})
+} satisfies Step)
 
 export const transactionDetail: StepInit = async () => {
   // As refs to be reactive
@@ -385,5 +386,5 @@ export const transactionDetail: StepInit = async () => {
     async beforeDisplay({ transactionList: selectedTx }) {
       tx.value = selectedTx
     },
-  }
+  } satisfies Step
 }
