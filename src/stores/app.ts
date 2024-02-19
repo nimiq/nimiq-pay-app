@@ -68,6 +68,9 @@ export const useApp = defineStore('app', () => {
   // when the user is about to do a sensitive operation
   const MIN_PIN_INPUT_INTERVAL = 1000 * 60 * 5 // 5 minutes
   const lastPinInputTs = ref(0)
+  function clearPinInputTs() {
+    lastPinInputTs.value = 0
+  }
   function updatePinInputTs() {
     lastPinInputTs.value = Date.now()
   }
@@ -90,5 +93,6 @@ export const useApp = defineStore('app', () => {
     withdrawalAddress,
     updatePinInputTs,
     shouldAskPin,
+    clearPinInputTs,
   }
 })

@@ -118,7 +118,7 @@ type BaseStep = {
   titleIcon?: Component
   main: Component
   buttonLabel?: string
-  beforeDisplay?: (state: State) => Promise<void> | undefined
+  beforeRender?: (state: State) => Promise<void> | undefined
   autofocus?: boolean
   canDismiss?: boolean
 } & NavigationControl

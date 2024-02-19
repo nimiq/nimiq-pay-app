@@ -5,7 +5,6 @@ import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
-import { useApp } from '@/stores/app'
 import { hash } from '@/composables/useDecrypt'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
@@ -68,7 +67,23 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
     get title() { return flowName === FlowName.NimOrPointsPayment ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
     get description() { return flowName === FlowName.NimOrPointsPayment ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
     main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: flowName === FlowName.NimOrPointsPayment })),
+    beforeRender: async (state) => {
+      // If there is a pinHash, it means that the user is going backwards
+      const { storeToRefs } = await import('pinia')
+      const { useApp } = (await import('@/stores/app'))
+      const { pinHash } = storeToRefs(useApp())
+      if (!pinHash)
+        return
+
+      // We clean: pinCode, pinCodeConfirm although it should have been emptied already
+      state.pinCodeConfirm = ''
+      state.pinCode = ''
+      pinHash.value = ''
+      useApp().clearPinInputTs()
+    },
     beforeNext: async ({ pinCode }, { next, err }) => {
+      const { useApp } = (await import('@/stores/app'))
+      const { pinHash } = useApp()
       if (!pinCode) {
         err(i18n.t('Please enter a PIN code'))
       }
@@ -77,8 +92,8 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
           debugger // eslint-disable-line no-debugger,no-restricted-syntax
         err(i18n.t('Invalid PIN code'))
       }
-      else if (useApp().pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login) {
-        if (useApp().pinHash !== hash(pinCode)) {
+      else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login) {
+        if (pinHash !== hash(pinCode)) {
           err(i18n.t('Invalid PIN code'))
         }
         else {
@@ -271,7 +286,7 @@ export const paymentPreviewStep: StepInit = async () => {
     titleIcon,
     main: markRaw(PaymentPreview),
     autofocus: false, // Don't autofocus on the toggle button
-    async beforeDisplay({ qrCodeScanner }) {
+    async beforeRender({ qrCodeScanner }) {
       if (!qrCodeScanner || typeof qrCodeScanner === 'string')
         return
       title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
@@ -383,7 +398,7 @@ export const transactionDetail: StepInit = async () => {
     title,
     titleIcon,
     main: markRaw(props => tx.value ? h(TransactionDetails, { ...props, tx: tx.value }) : []),
-    async beforeDisplay({ transactionList: selectedTx }) {
+    async beforeRender({ transactionList: selectedTx }) {
       tx.value = selectedTx
     },
   } satisfies Step

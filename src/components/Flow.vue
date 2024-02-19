@@ -103,7 +103,7 @@ async function goToNext(options: GoToNextOptions = {}) {
     await onFlowDone(state.value, { err })
     return
   }
-  await nextStep?.beforeDisplay?.(state.value)
+  await nextStep?.beforeRender?.(state.value)
   // @ts-expect-error nextStep is of type Step, which it is the same as the historyStack
   historyStack.value.push(nextStep)
   await nextTick()
@@ -122,7 +122,7 @@ async function goToPrev(options: GoToPrevOptions = {}) {
     return
   }
 
-  await prevStep.beforeDisplay?.(state.value)
+  await prevStep.beforeRender?.(state.value)
 
   // To have a smooth transition, we need to remove the steps between the prevStep and the activeStep
   // but keeping both of them
@@ -145,7 +145,7 @@ async function goToPrev(options: GoToPrevOptions = {}) {
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
 onMounted(async () => {
-  await stepsInFlow[activeIndex.value].beforeDisplay?.(state.value)
+  await stepsInFlow[activeIndex.value].beforeRender?.(state.value)
 
   if (shouldAutofocus.value)
     focus()
