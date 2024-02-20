@@ -27,7 +27,6 @@ const isLoading = ref(false)
 
 watch(pinCodeInput, async (pin) => {
   if (pin.length === props.inputLength) {
-    wiggle.value = false
     emit('done', pin)
     if (props.showLoading)
       isLoading.value = true
@@ -46,16 +45,26 @@ watch(pinCodeInput, async (pin) => {
 watch(() => props.errorMsg, (msg) => {
   if (msg) {
     wiggle.value = true
+    setTimeout(() => {
+      wiggle.value = false
+    }, 300)
     isLoading.value = false
     clearInput()
   }
-  else { wiggle.value = false }
 })
 
 watch(isLoading, (loading) => {
   if (loading)
     inputRef.value?.blur()
 })
+
+function handleInput(event: Event) {
+  // Prevent input when there's an error message and the input is being animated
+  if (wiggle.value)
+    return
+  const target = event.target as HTMLInputElement
+  pinCodeInput.value = target.value
+}
 
 function handleInputClick(i: number) {
   if (pinCodeInput.value.length > 0)
@@ -99,7 +108,7 @@ function clearInput() {
     :name="stepName"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
-    @input="pinCodeInput = ($event.target as HTMLTextAreaElement).value"
+    @input="handleInput"
     @focus="isInputFocused = true"
     @blur="isInputFocused = false"
   >
