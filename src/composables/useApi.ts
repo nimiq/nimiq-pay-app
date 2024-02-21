@@ -244,7 +244,7 @@ export function useCplApi() {
         has_buyer_email: { booleanValue: boolean }
         brand_name: { stringValue: string }
         fiat_currency_code: { stringValue: string }
-        fiat_price: { doubleValue: number }
+        fiat_price: { doubleValue: number; integerValue: undefined } | { doubleValue: undefined; integerValue: number }
         item_description: { stringValue: string }
         status: { stringValue: string }
       }
@@ -263,7 +263,7 @@ export function useCplApi() {
       hasBuyerEmail: data.fields.has_buyer_email.booleanValue,
       brandName: data.fields.brand_name.stringValue,
       fiatCurrency: data.fields.fiat_currency_code.stringValue,
-      fiatAmount: data.fields.fiat_price.doubleValue,
+      fiatAmount: data.fields.fiat_price.doubleValue ?? data.fields.fiat_price.integerValue,
       itemDescription: data.fields.item_description.stringValue,
       status: data.fields.status.stringValue,
     }
