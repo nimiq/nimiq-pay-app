@@ -63,7 +63,13 @@ export function usePointsPayment({ amount, rail, recipient, reference }: UsePoin
     const { cashback: { amountInLuna }, reason, valid } = data!
     if (!valid) {
       pointsState.value = PointsState.Error
-      message.value = reason // TODO provide a user friendly message for the reason which is an error code
+      switch (reason) {
+        case 'CPL_MERCHANT_NOT_FOUND':
+          message.value = i18n.t('This merchant is not registered to receive Points payments.')
+          break
+        default:
+          message.value = reason
+      }
       return
     }
 
