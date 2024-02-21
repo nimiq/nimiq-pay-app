@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { IonButton, alertController,modalController } from '@ionic/vue'
-import { computed, ref, watch } from 'vue'
+import { IonButton, alertController, modalController } from '@ionic/vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
 import { storeToRefs } from 'pinia'
+import { useTimestamp } from '@vueuse/core'
 import CountrySelectModal from '@/components/CountrySelectModal.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
+import { usePoints } from '@/stores/points'
+import { countdownTo } from '@/composables/useTime'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false }, isVisible: { type: Boolean, default: false } })
 const emit = defineEmits(stepEmits)
 
 const { language } = storeToRefs(useApp())
+const { nextRequestCapTs } = storeToRefs(usePoints())
+const timestamp = useTimestamp({ interval: 1000 })
+const nextRequestIn = computed(() => {
+  const { minutes, seconds } = countdownTo(nextRequestCapTs.value, timestamp.value)
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+})
+const showCountdown = ref(false)
+watchEffect(() => {
+  if (props.errorMsg || !props.isVisible)
+    showCountdown.value = false
+  else
+    showCountdown.value = nextRequestCapTs.value > timestamp.value
+})
 
 const isFocussed = ref(false)
 const phoneNumberInput = ref('')
@@ -108,11 +124,18 @@ async function openModal() {
     <p class="mt-1 text-sm font-semibold text-center text-space/50">
       {{ $t('Standard rates may apply.') }}
     </p>
-    <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin">
-      {{ errorMessage }}
-    </p>
+    <Transition name="slide-fade">
+      <p v-if="showCountdown" class="mt-4 text-sm font-semibold text-center text-space/80">
+        {{ $t('You can try again in') }} {{ nextRequestIn }}
+      </p>
+    </Transition>
+    <Transition name="slide-fade">
+      <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin">
+        {{ errorMessage }}
+      </p>
+    </Transition>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
-      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumberInput.length < 4" @click="showAlert">
+      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumberInput.length < 4 || nextRequestCapTs > timestamp" @click="showAlert">
         {{ $t('Verify') }}
       </IonButton>
       <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">

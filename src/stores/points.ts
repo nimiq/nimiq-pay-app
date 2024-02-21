@@ -9,6 +9,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
+import { toMs } from '@/composables/useTime'
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -16,6 +17,7 @@ export const usePoints = defineStore('points', () => {
   const { phoneNumber, pointsToken, referralCode } = storeToRefs(useApp())
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
+  const nextRequestCapTs = ref(0)
 
   /**
    * Send wallet public key and phone number to get access code
@@ -23,8 +25,15 @@ export const usePoints = defineStore('points', () => {
    */
   async function authorize(phoneNumberInput: string) {
     const { error, hasError } = await api.authorize({ phoneNumber: phoneNumberInput, publicKey })
-    if (hasError)
+    if (hasError) {
+      if (error?.timestamp)
+        nextRequestCapTs.value = toMs(error.timestamp)
       return { data: undefined, error: error?.message || i18n.t('Something went wrong authorizing the phone number') }
+    }
+    else {
+      // Prevents spamming the server with requests, only one request every 10 minutes
+      nextRequestCapTs.value = Date.now() + 1e3 * 60 * 10
+    }
 
     phoneNumber.value = phoneNumberInput
   }
@@ -218,6 +227,7 @@ export const usePoints = defineStore('points', () => {
   return {
     authorize,
     verify,
+    nextRequestCapTs,
     redeemReferral,
     updatePointsBalance,
     pointsBalance,

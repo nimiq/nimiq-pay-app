@@ -160,11 +160,16 @@ export const phoneNumberStep: StepInit = async ({ skipAheadBy, goBackBy } = defa
   skipAheadBy,
   goBackBy,
   beforeNext: async ({ phoneNumber }, { next, err }) => {
+    const { nextRequestCapTs } = (await import('@/stores/points')).usePoints()
     if (!phoneNumber) {
       err(i18n.t('Please enter a phone number'))
     }
     else if (!isValidPhoneNumber(phoneNumber)) {
       err(i18n.t('Invalid phone number'))
+    }
+    else if (nextRequestCapTs > Date.now()) {
+      const minutes = Math.ceil((nextRequestCapTs - Date.now()) / 60 / 1000)
+      err(i18n.tc('Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code', minutes, { time: minutes }))
     }
     else {
       const res = await (await import('@/stores/points')).usePoints().authorize(phoneNumber)

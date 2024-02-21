@@ -27,6 +27,13 @@ export function toMs(_maybeSec: MaybeRef<number>) {
   return maybeSec < twentyFirstCentury ? maybeSec * 1000 : maybeSec
 }
 
+export function countdownTo(timestamp: number, target = Date.now()) {
+  const count = Math.max(0, toMs(timestamp) - target)
+  const minutes = Math.floor(count / 60000)
+  const seconds = Math.floor(count / 1000) % 60
+  return { minutes, seconds }
+}
+
 let serverTimeOffset: number | undefined
 let serverTimeOffsetResetTimeout = -1
 

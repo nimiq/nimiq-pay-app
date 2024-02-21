@@ -86,10 +86,12 @@ function getInputStepError(stepName: StepName) {
 
 function defaultErrorHandler(errorMessage: string) {
   const activeStepName = activeStep.value.step
-  if (isInputStep(activeStepName) && !props.isClosing)
+  if (isInputStep(activeStepName) && !props.isClosing) {
     errors.value[activeStepName] = errorMessage
-  else
-    useToast().setToast({ message: errorMessage, error: true })
+    // Clear the error message after 10 seconds
+    setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
+  }
+  else { useToast().setToast({ message: errorMessage, error: true }) }
 }
 
 type GoToNextOptions = { err?: (errorMsg: string) => void } & Pick<NavigationControl, 'skipAheadBy'>
