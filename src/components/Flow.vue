@@ -211,11 +211,11 @@ useIntersectionObserver(
 )
 
 function isStepVisible(stepName: StepName) {
-  return stepName === activeStep.value.step && isActiveStepFullyVisible.value
-    // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
-    // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
-    // the background page on native, before the modal unveils the background.
-    && !props.isClosing
+  return (activeIndex.value === 0 && stepName === stepsInFlow.at(0)?.step) || (stepName === activeStep.value.step && isActiveStepFullyVisible.value
+  // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
+  // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
+  // the background page on native, before the modal unveils the background.
+    && !props.isClosing)
 }
 
 function focus() {
@@ -250,7 +250,7 @@ function blur() {
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
     <li v-for="({ main, step, title, titleIcon, description, skipAheadBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
-      <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 small:mt-0 text-2xl font-bold text-center text-balance gap-x-3">
+      <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 text-2xl font-bold text-center small:mt-0 text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
       </h2>
