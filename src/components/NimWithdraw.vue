@@ -193,10 +193,8 @@ function withdraw() {
   </div>
 
   <div class="flex flex-col justify-center w-full pb-6">
-    <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="disabled" @click="withdraw">
-      <template v-if="loading">
-        <IonSpinner class="text-white" name="dots" />
-      </template>
+    <IonButton id="present-alert" size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
+      <IonSpinner v-if="loading" name="dots" />
       <template v-else>
         {{ $t('Send') }}
       </template>

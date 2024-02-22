@@ -121,10 +121,8 @@ function handlePay() {
       </transition>
     </div>
 
-    <IonButton expand="block" class="w-full text-base font-bold" :disabled="disabled" @click="handlePay">
-      <template v-if="loading">
-        <IonSpinner class="text-white" name="dots" />
-      </template>
+    <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
+      <IonSpinner v-if="loading" name="dots" />
       <template v-else>
         {{ $t('Pay') }}
       </template>
