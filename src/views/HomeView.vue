@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
+import { computedAsync } from '@vueuse/core'
 import { Modal, useModal } from '@/composables/useModal'
 import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -27,6 +28,7 @@ import { useDevice } from '@/composables/useDevice'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { toNim } from '@/composables/usePrice'
 
 const router = useRouter()
 const { showModal } = useModal()
@@ -36,7 +38,7 @@ const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive } = store
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { updatePointsBalance, updateTasks, redeemReferral } = usePoints()
+const { updatePointsBalance, updateTasks, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
 
@@ -44,8 +46,17 @@ const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
 
-// TODO: get this from API
-const referralRewardAmount = 10
+const referralInfo = computedAsync(async () => {
+  const { data, error } = await getReferralInfo()
+  if (error) {
+    console.error('Error getting referral info:', error)
+    return null
+  }
+  return data
+})
+const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
+const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
+
 // TODO: get this from somewhere
 const notificationArray: Ref<{ title: string; subtitle?: string | undefined; action?: (() => void) | undefined }[]> = ref([
   {
@@ -247,7 +258,7 @@ onMounted(async () => {
         </IonRow>
 
         <!-- Referral -->
-        <IonRow v-if="isReferralCardShown" class="mb-8">
+        <IonRow v-if="isReferralCardShown && referralClaimsRemaining > 0" class="mb-8">
           <NotificationCard
             class="w-full"
             @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"

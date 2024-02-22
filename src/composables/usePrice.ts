@@ -46,7 +46,7 @@ type UsePriceOption = UsePriceTime & {
   immediate?: boolean
 }
 
-const toNim = (amount: number) => amount / 1e5
+export const toNim = (amount: number) => amount / 1e5
 
 /**
  * Retrieves and formats the price for a specified amount of LUNA. This function first attempts to fetch the price

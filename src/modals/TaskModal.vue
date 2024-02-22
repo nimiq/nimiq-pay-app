@@ -127,6 +127,7 @@ async function handleSubmit() {
         </template>
       </i18n-t>
       <!-- Text Input -->
+      <!-- eslint-disable-next-line vue/html-self-closing -->
       <textarea
         v-if="type === 'text-input'"
         ref="textareaField" :minlength="textareaMinLength" maxlength="1000"

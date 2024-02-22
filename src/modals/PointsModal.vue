@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonSpinner, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computedAsync } from '@vueuse/core'
 import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import { usePrice } from '@/composables/usePrice'
+import { toNim, usePrice } from '@/composables/usePrice'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -15,8 +16,19 @@ import { initializeFlow } from '@/lib/flows'
 const { pointsBalance, tasks } = storeToRefs(usePoints())
 const { fiat } = usePrice(pointsBalance)
 const { phoneNumberVerified } = storeToRefs(useApp())
-const { updatePointsBalance, updateTasks } = usePoints()
+const { updatePointsBalance, updateTasks, getReferralInfo } = usePoints()
 const { closeModal, showModal } = useModal()
+
+const referralInfo = computedAsync(async () => {
+  const { data, error } = await getReferralInfo()
+  if (error) {
+    console.error('Error getting referral info:', error)
+    return null
+  }
+  return data
+})
+const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
+const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -91,9 +103,8 @@ onMounted(async () => {
 
       <!-- Referral -->
       <IonRow class="mb-8">
-        <!-- TODO: get amount from API -->
         <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
-          {{ $t('Invite a friend and earn up to 200 Points each!') }}
+          {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
         </TaskCard>
       </IonRow>
 
