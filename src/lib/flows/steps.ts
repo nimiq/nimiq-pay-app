@@ -1,7 +1,7 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { isValidPhoneNumber } from 'libphonenumber-js/mobile'
 import { QRDataFormat } from '../../composables/useStringParser'
-import { StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
+import { FlowName, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
@@ -61,13 +61,18 @@ export const recoveryWordsStep: StepInit = async () => ({
 } satisfies Step)
 
 export const pinCodeStep: StepInit = async ({ flowName }) => {
-  const { FlowName } = await import('@/lib/flows/steps.types')
+  const { FlowName: Flow } = await import('@/lib/flows/steps.types')
+  const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw].includes(f)
   return {
     step: StepName.PinCode,
-    get title() { return flowName === FlowName.NimOrPointsPayment ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
-    get description() { return flowName === FlowName.NimOrPointsPayment ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
-    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: flowName === FlowName.NimOrPointsPayment })),
+    get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
+    get description() { return isTxFlow(flowName) ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName) })),
     beforeRender: async (state) => {
+      // We only care about login/setup flows
+      if (isTxFlow(flowName))
+        return
+
       // If there is a pinHash, it means that the user is going backwards
       const { storeToRefs } = await import('pinia')
       const { useApp } = (await import('@/stores/app'))

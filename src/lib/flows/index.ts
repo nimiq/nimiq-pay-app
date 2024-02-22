@@ -206,11 +206,11 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
 
 const nimWithdrawFlow: FlowInit = async () => {
   const [
-    { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep },
+    { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep, pinCodeStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimWithdraw
-  const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } })].map(s => s({ flowName }))))
+  const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } }), pinCodeStep].map(s => s({ flowName }))))
   return { flowName, steps }
 }
 
