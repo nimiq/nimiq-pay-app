@@ -312,7 +312,7 @@ export const paymentPreviewStep: StepInit = async () => {
       if ((await import('@/stores/app')).useApp().shouldAskPin())
         next()
       else
-        skip()
+        skip({ skipAheadBy: 2 })
     },
   } satisfies Step
 }

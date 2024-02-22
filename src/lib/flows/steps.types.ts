@@ -128,7 +128,7 @@ interface BeforeNextOptions {
   prev: () => void
   err: (msg: string) => void
   finalizeFlow: () => Promise<void>
-  skip: () => void
+  skip: (navigationControl?: Pick<NavigationControl, 'skipAheadBy'>) => void
 }
 export type InputStep = BaseStep & {
   step: InputStepName

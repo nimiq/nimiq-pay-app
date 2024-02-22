@@ -175,10 +175,8 @@ async function onStepDone(value: OnDoneStepValue) {
   }
 }
 
-function skip() {
-  // Assuming there's no option to skip if you are in the last step
-  if (activeStep.value.skipAheadBy)
-    goToNext({ skipAheadBy: activeStep.value.skipAheadBy })
+function skip(navigationControl?: Pick<NavigationControl, 'skipAheadBy'>) {
+  goToNext({ skipAheadBy: navigationControl?.skipAheadBy || activeStep.value.skipAheadBy })
 }
 
 async function onCancel() {
