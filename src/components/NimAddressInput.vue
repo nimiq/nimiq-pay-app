@@ -2,10 +2,13 @@
 import { type PropType, ref, toRefs, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import AddressInput from '@/components/AddressInput.vue'
 import QRIcon from '@/components/icons/qr.vue'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useRemoteSigner } from '@/stores/remote-signer'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
@@ -13,6 +16,15 @@ const emit = defineEmits(stepEmits)
 const { withdrawalAddress } = storeToRefs(useApp())
 const address = ref<string>()
 watch(() => toRefs(props.state), ({ qrCodeScanner }) => address.value = qrCodeScanner.value as string || '', { deep: true })
+
+const { remoteAddress } = storeToRefs(useRemoteSigner())
+const { localAddress } = storeToRefs(useLocalWallet())
+
+const validAddress = computed(() => {
+  return remoteAddress.value?.toUserFriendlyAddress() !== address.value && localAddress.value.toUserFriendlyAddress() !== address.value
+})
+
+const hasError = computed(() => !validAddress.value && !!address.value)
 
 function handleSave() {
   if (!address.value)
@@ -32,10 +44,16 @@ function handleSave() {
       <QRIcon class="mt-6 ml-auto w-9 h-9" @click="$emit('done')" />
     </div>
 
-    <p class="mt-8 text-center text-tomato">
-      {{ errorMsg }}
+    <p v-if="hasError" class="mt-8 text-center text-tomato">
+      <template v-if="!validAddress">
+        {{ $t('You can not use this address') }}
+      </template>
+      <template v-else>
+        {{ errorMsg }}
+      </template>
     </p>
-    <IonButton :disabled="!address" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">
+
+    <IonButton :disabled="!address || !validAddress" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">
       {{ $t('Save') }}
     </IonButton>
   </div>
