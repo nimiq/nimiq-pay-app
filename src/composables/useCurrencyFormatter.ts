@@ -50,6 +50,8 @@ export function useCurrencyFormatter() {
   }
 
   function formatCrypto(amountInLuna: number, options?: FormatCryptoOptions) {
+    if (!amountInLuna)
+      return '0 NIM'
     const currency = toValue(options?.currency || Crypto.NIM)
     const amountInNim = amountInLuna / 1e5 // Convert to NIM
     const locale = toValue(options?.locale || language)
