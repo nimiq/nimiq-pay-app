@@ -230,12 +230,12 @@ onMounted(async () => {
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
         <!-- Notification Horizontal Scroll -->
-        <IonRow v-if="notificationArray.length">
+        <IonRow v-if="notificationArray.length" class="w-screen ml-[-21px]">
           <ul
             ref="notificationList"
-            class="flex min-w-[100vw] overflow-x-auto hide-scrollbar items-center snap-x snap-mandatory gap-x-3 last:pr-96 scroll-pl-4 pb-4"
+            class="flex w-full gap-x-3 gap-y-8 pb-4 scroll-pl-[21px] snap-mandatory snap-x overflow-auto hide-scrollbar py-14"
           >
-            <li v-for="(notification, index) in notificationArray" :key="notification.title" class="h-full">
+            <li v-for="(notification, index) in notificationArray" :key="notification.title" class="snap-start shrink-0 first:pl-[21px] last:pr-[21px]">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
                 {{ notification.title }}
                 <template v-if="notification.subtitle" #subtitle>
