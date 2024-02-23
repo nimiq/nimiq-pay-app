@@ -275,11 +275,11 @@ useIntersectionObserver(
 )
 
 function isStepVisible(stepName: StepName) {
-  return (activeIndex.value === 0 && stepName === stepsInFlow.at(0)?.step) || (stepName === activeStep.value?.step && isActiveStepFullyVisible.value
-  // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
-  // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
-  // the background page on native, before the modal unveils the background.
-    && !props.isClosing)
+  return ((activeIndex.value === 0 && stepName === stepsInFlow.at(0)?.step) || (stepName === activeStep.value?.step && isActiveStepFullyVisible.value))
+    // When the flow is closing, already allow steps to tear down before the modal slides down to close. This way, for
+    // example animations can already be stopped, and we especially use this in QRScanner to remove styles applied to
+    // the background page on native, before the modal unveils the background.
+    && !props.isClosing
 }
 
 function focus() {
