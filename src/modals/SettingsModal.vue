@@ -11,7 +11,13 @@ import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, setLanguage } from '@/i18n/i18n-s
 const { closeModal } = useModal()
 const { language, selectedFiat } = storeToRefs(useApp())
 
-const appVersion = computedAsync(async () => (await App.getInfo()).version)
+const appVersion = computedAsync(async () => {
+  try { return (await App.getInfo()).version }
+  catch (e) {
+    console.error('Error getting app version:', e)
+    return '0.0.0'
+  }
+})
 </script>
 
 <template>
