@@ -6,6 +6,7 @@ import type { Flow, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.t
 
 import FlowCmp from '@/components/Flow.vue'
 import { i18n } from '@/i18n/i18n-setup'
+import { useToast } from '@/composables/useToast'
 
 const loginFlow: FlowInit = async () => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
@@ -185,7 +186,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
         { error: error instanceof Error ? error.message : String(error) },
       ) }))
       if (error)
-        err(error)
+        return err(error)
     }
     else if (method === PaymentMethod.Points) {
       if (!request.rail || !request.paymentRef)
@@ -195,8 +196,10 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
       const { usePoints } = await import('@/stores/points')
       const { error } = await usePoints().payWithPoints(request)
       if (error)
-        err(error)
+        return err(error)
     }
+
+    useToast().setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
     console.log('🤑  Cancelling payment process') // eslint-disable-line no-console
