@@ -29,12 +29,6 @@ const config: CapacitorConfig = {
       bundledWebRuntime: true,
     },
   },
-  android: {
-    webContentsDebuggingEnabled: true,
-  },
-  ios: {
-    webContentsDebuggingEnabled: true,
-  },
 }
 
 export default config
