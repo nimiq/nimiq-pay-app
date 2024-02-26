@@ -4,6 +4,7 @@ import { computed, ref, toRef, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
+import LoadingSpinner from './icons/loading-spinner.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
@@ -123,14 +124,9 @@ function handlePay() {
     <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
       <transition
         mode="out-in"
-        enter-active-class="transition duration-100 ease-out origin-bottom"
-        enter-from-class="scale-95 translate-y-4 opacity-0 rotate-x-[-45deg]"
-        enter-to-class="scale-100 translate-y-0 opacity-100 rotate-x-0"
-        leave-active-class="transition duration-75 ease-out origin-top"
-        leave-from-class="scale-100 translate-y-0 opacity-100 rotate-x-0"
-        leave-to-class="scale-95 -translate-y-4 opacity-0 rotate-x-[-45deg] "
+        name="slide-fade"
       >
-        <IonSpinner v-if="loading" name="dots" />
+        <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
         <span v-else>{{ $t('Pay') }}</span>
       </transition>
     </IonButton>
