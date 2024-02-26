@@ -88,6 +88,13 @@ export const useTransactions = defineStore('transactions', () => {
       console.error('Error while signing transaction', error)
       return { data: undefined, error }
     }
+
+    // Check if the tx is already in the transaction list
+    if (transactions.value.some(tx => tx.hash === signedTx!.hash().toHex())) {
+      console.error('Transaction already sent', signedTx)
+      return { data: undefined, error: i18n.t('Transaction already sent') }
+    }
+
     const details = await client.value!.sendTransaction(signedTx!)
     if (details.state === 'invalidated') {
       // Transaction was rejected by the mempool
