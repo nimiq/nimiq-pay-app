@@ -12,8 +12,10 @@ import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import Gamepad from '@/components/icons/gamepad.vue'
 
-const { pointsBalance, tasks } = storeToRefs(usePoints())
+const { pointsBalance, tasks, isCampaignActive } = storeToRefs(usePoints())
 const { fiat } = usePrice(pointsBalance)
 const { phoneNumberVerified } = storeToRefs(useApp())
 const { updatePointsBalance, updateTasks, getReferralInfo } = usePoints()
@@ -69,7 +71,7 @@ onMounted(async () => {
       <IonRefresherContent />
     </IonRefresher>
 
-    <IonGrid class="flex flex-col gap-y-2">
+    <IonGrid class="flex flex-col h-full gap-y-2">
       <h2 class="max-w-sm mb-6 text-2xl font-bold text-center text-balance">
         {{ $t('Cryptocity Points') }}
       </h2>
@@ -94,41 +96,49 @@ onMounted(async () => {
           <IonIcon :icon="chevronForwardOutline" class="text-space/50" />
         </button>
       </IonRow>
-      <!-- Featured -->
-      <IonRow>
-        <p class="ml-1 text-sm font-bold uppercase text-space/60">
-          {{ $t('Featured') }}
-        </p>
-      </IonRow>
-
-      <!-- Referral -->
-      <IonRow class="mb-8">
-        <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
-          {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
-        </TaskCard>
-      </IonRow>
-
-      <!-- Earn Points -->
-      <IonRow>
-        <p class="ml-1 text-sm font-bold uppercase text-space/60">
-          {{ $t('Earn Points') }}
-        </p>
-      </IonRow>
-      <!-- Tasks -->
-      <Transition name="slide-fade" mode="out-in">
-        <IonRow v-if="tasks" class="grid grid-cols-2 gap-2">
-          <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
-            <!-- TODO: Do we really need different bg? -->
-            <TaskCard :task="task" class="h-full text-white" style="background: var(--radial-gradient-light-blue);">
-              {{ task.description }}
-            </TaskCard>
-          </IonCol>
+      <div v-if="isCampaignActive">
+        <!-- Featured -->
+        <IonRow>
+          <p class="ml-1 text-sm font-bold uppercase text-space/60">
+            {{ $t('Featured') }}
+          </p>
         </IonRow>
-        <IonRow v-else class="flex flex-col items-center justify-center gap-4 mt-8">
-          <IonSpinner />
-          <p>{{ $t('Loading tasks…') }}</p>
+
+        <!-- Referral -->
+        <IonRow class="mb-8">
+          <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
+            {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
+          </TaskCard>
         </IonRow>
-      </Transition>
+
+        <!-- Earn Points -->
+        <IonRow>
+          <p class="ml-1 text-sm font-bold uppercase text-space/60">
+            {{ $t('Earn Points') }}
+          </p>
+        </IonRow>
+        <!-- Tasks -->
+        <Transition name="slide-fade" mode="out-in">
+          <IonRow v-if="tasks" class="grid grid-cols-2 gap-2">
+            <IonCol v-for="task in tasks" :key="task.id" class="col-span-1 last:odd:col-span-2">
+              <!-- TODO: Do we really need different bg? -->
+              <TaskCard :task="task" class="h-full text-white" style="background: var(--radial-gradient-light-blue);">
+                {{ task.description }}
+              </TaskCard>
+            </IonCol>
+          </IonRow>
+          <IonRow v-else class="flex flex-col items-center justify-center gap-4 mt-8">
+            <LoadingSpinner class="w-8 h-8 m-auto text-sky" />
+            <p>{{ $t('Loading tasks…') }}</p>
+          </IonRow>
+        </Transition>
+      </div>
+      <div v-else class="flex flex-col items-center justify-center gap-y-6 mt-[20%]">
+        <Gamepad class="w-20 text-sky" />
+        <p class="font-bold text-center whitespace-pre-line text-space/60">
+          {{ $t('No tasks available.\nStay tuned.') }}
+        </p>
+      </div>
     </IonGrid>
   </IonContent>
 </template>
@@ -140,9 +150,5 @@ ion-col {
 
 ion-row {
   column-gap: 0.5rem;
-}
-
-ion-spinner {
-  --color: rgb(59 130 246);
 }
 </style>

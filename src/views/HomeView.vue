@@ -38,7 +38,7 @@ const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive } = store
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
-const { updatePointsBalance, updateTasks, redeemReferral, getReferralInfo } = usePoints()
+const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
 
@@ -91,6 +91,7 @@ async function handleRefresh(event: CustomEvent) {
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
+    updateStatus(),
     useSync().updateBalances(),
     useSync().updateTransactionHistory(),
   ])
@@ -171,6 +172,7 @@ onMounted(async () => {
 
   if (phoneNumberVerified.value) {
     updatePointsBalance()
+    await updateStatus()
     updateTasks()
   }
 

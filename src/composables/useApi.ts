@@ -79,6 +79,8 @@ export function usePointsApi() {
     task_status: 'in-progress' | 'completed' | 'rejected'
     updated_at: string
   }
+  interface StatusRes { status: 'online'; campaign_running: boolean }
+
   interface PointsErrorRes {
     statusCode: number
     error: string
@@ -113,6 +115,7 @@ export function usePointsApi() {
     getTasks: ({ token }: TaskArg) => api<TaskRes, PointsErrorRes>(new URL('task', basePointsUrl), { token: v(token) }),
     getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes, PointsErrorRes>(new URL(`task/${v(id)}`, basePointsUrl), { token: v(token) }),
     claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes, PointsErrorRes>(new URL(`task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
+    getStatus: () => api<StatusRes, PointsErrorRes>(basePointsUrl),
   }
 }
 

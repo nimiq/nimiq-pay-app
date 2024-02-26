@@ -18,6 +18,7 @@ export const usePoints = defineStore('points', () => {
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
   const nextRequestCapTs = ref(0)
+  const isCampaignActive = ref(true)
 
   /**
    * Send wallet public key and phone number to get access code
@@ -67,6 +68,16 @@ export const usePoints = defineStore('points', () => {
     pointsBalance.value = data.balance
   }
 
+  async function updateStatus() {
+    const { data, error, hasError } = await api.getStatus()
+    if (hasError) {
+      isCampaignActive.value = false
+      return error?.message || i18n.t('Unable to connect to the Points server')
+    }
+
+    isCampaignActive.value = data.campaign_running
+  }
+
   async function getAllTasks() {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
@@ -91,6 +102,9 @@ export const usePoints = defineStore('points', () => {
   }
 
   async function updateTasks() {
+    if (!isCampaignActive.value)
+      return
+
     const { data, error } = await getAllTasks()
     if (error || !data) {
       console.error(error)
@@ -177,7 +191,7 @@ export const usePoints = defineStore('points', () => {
 
     const { error, hasError } = await api.claimCashback({ reference: tx.paymentRef, tx_hash: tx.hash, token: pointsToken.value })
     if (hasError)
-      return { data: undefined, error: error?.message || i18n.t('Something went wrong claiming the cashback') }
+      return { data: undefined, error: error?.message || i18n.t('Something went wrong claiming the cashback'), errorType: error?.error }
 
     return { error: undefined }
   }
@@ -236,6 +250,8 @@ export const usePoints = defineStore('points', () => {
     updateTasks,
     tasks,
     claimTask,
+    isCampaignActive,
+    updateStatus,
     getReferralInfo,
     getReferralInfoById,
     payWithPoints,
