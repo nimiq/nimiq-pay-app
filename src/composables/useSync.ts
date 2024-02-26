@@ -255,11 +255,11 @@ export function useSync() {
           return
         if (!useApp().pointsToken)
           return
-        const { error } = await usePoints().claimCashback(dbTx)
+        const { error, errorType } = await usePoints().claimCashback(dbTx)
         if (error) {
           console.error(error)
           // TODO: get errors from enum
-          if (error.includes('CPL_PAYMENT_REQUEST_ALREADY_PROCESSED'))
+          if (errorType === 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED' || errorType === 'CPL_MERCHANT_NOT_FOUND')
             useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
         }
         else {
