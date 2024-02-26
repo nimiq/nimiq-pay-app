@@ -71,13 +71,13 @@ onBeforeUnmount(() => {
       </span>
     </div>
 
-    <div v-if="isWeb" ref="cameraFeedContainer" class="relative aspect-square pointer-events-none" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
+    <div v-if="isWeb" ref="cameraFeedContainer" class="relative pointer-events-none aspect-square" :class="{ 'bg-space/20 animate-pulse': state !== QRScannerState.Scanning }">
       <video autoplay muted playsinline :controls="false" :class="{ 'opacity-0': state !== QRScannerState.Scanning }" />
       <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
         <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
       </svg>
     </div>
-    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center pointer-events-none">
+    <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid pointer-events-none place-content-center">
       <!-- On native, the camera is visible behind the webview. Put a transparent square in the center of the screen,
       through which the camera can be seen (other parent / background elements are made transparent in useCamerFeed),
       with a wide white border to cover the rest. -->
@@ -87,6 +87,11 @@ onBeforeUnmount(() => {
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
         </div>
+        <p class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
+          <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq or NAKA QR code to pay.') }} </span>
+          <!-- TODO: use this when BTC Lightning is implemented -->
+          <!-- <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay.') }} </span> -->
+        </p>
       </div>
     </div>
 
