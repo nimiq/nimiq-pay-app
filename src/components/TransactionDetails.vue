@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType, computed } from 'vue'
+import { type PropType, computed, ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
@@ -11,7 +11,9 @@ import { i18n } from '@/i18n/i18n-setup'
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
 const datetime = computed(() => useFormatTime(props.tx.timestamp))
-const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
+// TODO: Get the map info from crypto map API
+// const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
+const showMap = ref(false)
 
 const { crypto, fiat } = usePrice(props.tx.amount)
 const { setToast } = useToast()
@@ -20,7 +22,7 @@ async function handleCopy(string: string) {
   await Clipboard.write({
     string,
   })
-  await setToast({ message: i18n.t('Address copied to clipboard') })
+  await setToast({ message: i18n.t('Copied to clipboard') })
 }
 </script>
 
@@ -40,7 +42,7 @@ async function handleCopy(string: string) {
       class="grid justify-between w-full grid-cols-[1fr,1fr] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
       <div>{{ $t('Status') }}</div>
-      <div class="capitalize">
+      <div class="capitalize" @click="() => handleCopy(tx.hash)">
         {{ translateTransactionState(tx.status) }}
       </div>
 
