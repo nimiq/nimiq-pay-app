@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
+import { IonButton, IonToggle } from '@ionic/vue'
 import { computed, ref, toRef, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
 import LoadingSpinner from './icons/loading-spinner.vue'
-import InfoIcon from '@/components/icons/info.vue'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
@@ -52,8 +51,8 @@ const amounts = computedAsync(async () => {
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
    = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
-const paymentMethod = ref<PaymentMethod>(!hasEnoughNimBalance.value && isEligible.value ? PaymentMethod.Points : PaymentMethod.NIM)
-const disabled = computed(() => !(isEligible.value && paymentMethod.value === PaymentMethod.Points) && (!hasEnoughNimBalance.value || consensus.value !== 'established'))
+const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
+const disabled = computed(() => !(isEligible.value && paymentMethod.value === PaymentMethod.Points) && (!isHtlcActive.value || !hasEnoughNimBalance.value || consensus.value !== 'established'))
 
 const loading = ref(false)
 
@@ -79,27 +78,15 @@ function handlePay() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center mt-8 gap-y-2">
-    <TransactionAmounts :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
-      <template #fee>
-        {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
-      </template>
-    </TransactionAmounts>
-
-    <Transition name="slide-fade" mode="out-in">
-      <div
-        v-if="hasCashback"
-        class="flex items-baseline mt-8 font-semibold gap-x-1.5 transition-colors text-pretty text-center px-16"
-        :class="{ '[&>*]:opacity-60 ': paymentMethod === PaymentMethod.Points }"
-      >
-        <InfoIcon class="w-6 stroke-2" />
-        <p>{{ pointsMessage }}</p>
-      </div>
-    </Transition>
-  </div>
+  <TransactionAmounts class="mt-8" :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
+    <template #fee>
+      {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
+    </template>
+  </TransactionAmounts>
   <div class="flex flex-col items-center w-full pb-6 mt-auto">
     <IonToggle
-      v-if="hasEnoughNimBalance || pointsState === PointsState.Eligible" :disabled="!isEligible"
+      v-if="pointsState !== PointsState.NotRegistered"
+      :disabled="!isEligible"
       label-placement="end" class="mb-4"
       :checked="paymentMethod === PaymentMethod.Points"
       @ion-change="(e) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
@@ -114,11 +101,14 @@ function handlePay() {
 
     <div class="mb-6 font-semibold text-center min-h-[4rem]">
       <Transition name="slide-fade" mode="out-in">
-        <p v-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin text-pretty">
-          {{ $t('You don\'t have enough NIM for this purchase.') }}
+        <p v-if="(!isHtlcActive || !isRemoteOk) && isEligible" class="text-pumpkin text-pretty">
+          {{ $t('Your NIM balance is not available yet. You can only pay with Points.') }}
         </p>
-        <p v-else-if="(!isHtlcActive || !isRemoteOk) && paymentMethod !== PaymentMethod.Points" class="text-pumpkin text-pretty">
-          {{ $t('You cannot pay with NIM yet, wait until the Top-Up is completed') }}
+        <p v-else-if="!hasEnoughNimBalance && isEligible" class="text-pumpkin text-pretty">
+          {{ $t('You don\'t have enough NIM for this purchase. You can only pay with Points.') }}
+        </p>
+        <p v-else-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin text-pretty">
+          {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
         <p
           v-else-if="[PointsState.NotEligibleForPayment, PointsState.InsufficientPoints, PointsState.Error].includes(pointsState)"
@@ -126,10 +116,13 @@ function handlePay() {
         >
           {{ pointsMessage }}
         </p>
-        <p v-else-if="hasCashback" class="opacity-60 text-pretty">
+        <p v-else-if="hasCashback && paymentMethod === PaymentMethod.Points" class="opacity-60 text-pretty">
           {{ $t('There is no cashback reward when paying with Points.') }}
         </p>
-      </transition>
+        <p v-else-if="hasCashback && paymentMethod !== PaymentMethod.Points" class="opacity-60 text-pretty">
+          {{ pointsMessage }}
+        </p>
+      </Transition>
     </div>
     <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
       <Transition
