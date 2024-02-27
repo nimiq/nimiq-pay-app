@@ -208,11 +208,12 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-export const getNotifiedStep: StepInit = async () => ({
+export const getNotifiedStep: StepInit = async ({ skipAheadBy = 1, goBackBy = 1 } = defaultStepInitOptions) => ({
   step: StepName.GetNotified,
   get title() { return i18n.t('Enable notifications') },
   get description() { return i18n.t('Get important info on transactions, top-ups, security and more.') },
-  skipAheadBy: 1,
+  skipAheadBy,
+  goBackBy,
   main: markRaw(EnableNotifications),
 } satisfies Step)
 
@@ -302,7 +303,7 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
       merchantCategory.value = qrCodeScanner.merchantCategory
     },
-    beforeNext: async ({ qrCodeScanner: _request }, { next, skip }) => {
+    beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
       if (_request instanceof String)
         // No translation as not user-facing. Dev error which should not occur in production.
@@ -312,7 +313,7 @@ export const paymentPreviewStep: StepInit = async () => {
       if ((await import('@/stores/app')).useApp().shouldAskPin())
         next()
       else
-        skip({ skipAheadBy: 2 })
+        navigateTo({ skipAheadBy: 2 })
     },
   } satisfies Step
 }
@@ -321,32 +322,27 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
   get title() { return i18n.t('Withdraw') },
   main: markRaw(NimWithdraw),
-  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow }) => {
+  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
 
     if (amount > remoteBalance) {
-      err(i18n.t(
+      return err(i18n.t(
         'You don\'t have enough NIM. Your current balance is {balance}.',
         { balance: formatCrypto(remoteBalance) },
       ))
     }
-    else if (amount && recipient) {
-      const title = 'Withdrawal' // translated at display time
-      const { error } = await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
 
-      const { setToast } = (await import('@/composables/useToast')).useToast()
-
-      if (error) {
-        setToast({ message: `${i18n.t('Something went wrong')}.\n${error}`, error: !!error })
-      }
-      else {
-        setToast({ message: i18n.t('Withdrawal successful') })
-        await finalizeFlow()
-      }
+    if (!amount || !recipient) {
+      // User clicked "Add NIM address", let him go, by calling next()
+      return next()
     }
-    // User clicked "Add NIM address", let him go, by calling next()
-    else { next() }
+
+    const { shouldAskPin } = (await import('@/stores/app')).useApp()
+    if (shouldAskPin())
+      return navigateTo({ step: StepName.PinCode })
+    else
+      finalizeFlow()
   },
 } satisfies Step)
 

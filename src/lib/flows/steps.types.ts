@@ -16,21 +16,20 @@ export enum FlowName {
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
 }
 
-interface FlowHooksOptions {
-  err: (msg: string) => void
-}
+export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<void>
 
 export interface Flow {
   flowName: FlowName
   steps: Step[]
 
-  // Function that will be called when the flow is supposed to be closed.
-  // If it is not set, the flow will be closed automatically when the last step is done.
-  onDone?: (state: State, options: FlowHooksOptions) => Promise<void>
+  // Function that will be called when the flow is supposed to be closed. If it
+  // is not set, the flow will be closed automatically when the last step is
+  // done.
+  onDone?: FlowHookCb
 
-  // Function that will be called when the flow is cancelled.
-  // Also, the flow will be closed automatically when the last step is done.
-  onCancel?: (options: FlowHooksOptions) => Promise<void>
+  // Function that will be called when the flow is cancelled. Also, the flow
+  // will be closed automatically when the last step is done.
+  onCancel?: FlowHookCb
 }
 
 export interface FlowInitOptions {
@@ -64,10 +63,10 @@ export enum StepName {
   TransactionDetail = 'transactionDetail',
 }
 
-export const inputSteps: StepName[] = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList]
-export type InputStepName = StepName.PromoCode | StepName.PinCode | StepName.PinCodeConfirm | StepName.PhoneNumber | StepName.PhoneNumberConfirm | StepName.RecoveryWordsStep | StepName.QRCodeScanner | StepName.PaymentPreview | StepName.NimWithdrawalSelection | StepName.NimAddressInput | StepName.TransactionList
-const infoSteps: StepName[] = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail]
-export type InfoStepName = StepName.GetNotified | StepName.OnBoardingPoints | StepName.OnBoardingCashback1 | StepName.OnBoardingCashback2 | StepName.OnBoardingCashback3 | StepName.OnBoardingCashback4 | StepName.OnBoardingBluecode1 | StepName.OnBoardingBluecode2 | StepName.OnBoardingBluecode3 | StepName.NimAddressDisplay | StepName.TransactionList | StepName.TransactionDetail
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList] as const
+export type InputStepName = typeof inputSteps[number]
+const infoSteps = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail] as const
+export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
   const stepName = typeof step === 'string' ? step : step.step
@@ -102,6 +101,7 @@ export interface NavigationControl {
    * @default 1
    */
   skipAheadBy?: number
+
   /**
    * Determines the number of steps to move backward when the back action is engaged. To prevent
    * moving backwards, explicitly set this to -1. Setting this to 1 moves back to the
@@ -113,33 +113,99 @@ export interface NavigationControl {
 }
 
 type BaseStep = {
+  /**
+   * Title of the modal
+   */
   title?: string | Ref<string>
-  description?: string | Ref<string>
+
+  /**
+   * An icon for the title (e.g. ShopIcon when showing the `merchantName`)
+   */
   titleIcon?: Component
+
+  /**
+   * Subline of the modal
+   */
+  description?: string | Ref<string>
+
+  /**
+   * The Vue component that will render in the slot of the carousel. It is where
+   * the UI of the step itself is coded. It should emit at least `done` or
+   * `select`.
+   *
+   * Learn more in `flows/README.md`
+   */
   main: Component
-  buttonLabel?: string
+
+  /**
+   * Hook that will be triggered when the step has been marked as `active` but
+   * right before the sliding animation has occurred. Useful for setting up
+   * dynamic values of the UI (e.g. in the payment preview we would like to set
+   * the title of the `merchantName`)
+   */
   beforeRender?: (state: State) => Promise<void> | undefined
-  autofocus?: boolean
-  canDismiss?: boolean
+
+  /**
+   * Hook that will be triggered when the `main` component has emitted `done` or
+   * `select`. If this function is not set, the default behaviour of the flow
+   * will be to go to the very next step. If you need custom logic or validation
+   * of the inputs (e.g. checking `pinCode` and `pinCodeConfirm` are the same) you
+   * should declare that logic inside this hook. Use the `callbacks` to
+   * programme the behaviour you want.
+   */
+  beforeNext?: (state: State, callbacks: BeforeNextCallbacks) => Promise<void>
 } & NavigationControl
 
-interface BeforeNextOptions {
-  next: () => Promise<void>
-  prev: () => void
+export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>
+
+interface BeforeNextCallbacks {
+  /**
+   * Callback function to go to a specific slide of the flow. This function is
+   * mainly used for creating branches in a flow. Either set `skipAheadBy` to go
+   * to a specific step forward or `goBackBy` to go backwards.
+   *
+   * Read more about branching flows in the ./README.md
+   */
+  navigateTo: (p: NavigateToOptions) => void
+  next: () => void // alias for navigateTo(1)
+  prev: () => void // alias for navigateTo(-1)
+
+  /**
+   * Callback function to set an error in step. This will abort the flow
+   * lifecycle and the error string will be passed down to the `main` component
+   * of the step, which it is responsible to render the error message
+   */
   err: (msg: string) => void
+
+  /**
+   * Callback function that will execute `done` hook of the flow and then it
+   * will close the flow
+   */
   finalizeFlow: () => Promise<void>
-  skip: (navigationControl?: Pick<NavigationControl, 'skipAheadBy'>) => void
 }
+
 export type InputStep = BaseStep & {
+  /**
+   * Just for reference while debugging and references in the code
+   */
   step: InputStepName
 
-  // Function that validates the input and calls any of the callbacks
-  beforeNext?: (state: State, options: BeforeNextOptions) => Promise<void>
+  /**
+   * Whether or not the flow can autofocus in the first focusable element of the
+   * main component when it gets activated. For example, if the step is the pin
+   * input, we want to open the keyboard automatically
+   */
+  autofocus?: boolean
 }
 
 export type InfoStep = BaseStep & {
+  /**
+   * Just for reference while debugging and references in the code
+   */
   step: InfoStepName
-  beforeNext?: undefined // Just to be explicit, and avoid TS issues
+
+  // Just to be explicit, and avoid TS issues
+  autofocus?: undefined
 }
 
 export type Step = InputStep | InfoStep
@@ -160,6 +226,8 @@ export const stepEmits: EmitsOptions = {
   skip: () => undefined,
   focus: () => undefined,
 }
+
+// Complex types for State
 
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
 & {

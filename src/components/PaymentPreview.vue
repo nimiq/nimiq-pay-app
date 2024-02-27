@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonSpinner, IonToggle } from '@ionic/vue'
-import { computed, ref, toRef, watchEffect } from 'vue'
+import { computed, ref, toRef, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
@@ -14,6 +14,9 @@ import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
+
+// TODO: async import
+import { useToast } from '@/composables/useToast'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -57,6 +60,13 @@ const loading = ref(false)
 watchEffect(() => {
   if (payment.value)
     checkPointsPaymentValidity()
+})
+
+watch(() => props.errorMsg, () => {
+  if (props.errorMsg) {
+    loading.value = false
+    useToast().setToast({ message: props.errorMsg, error: true, duration: 5 * 1e3 })
+  }
 })
 
 function handlePay() {
@@ -122,13 +132,13 @@ function handlePay() {
       </transition>
     </div>
     <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
-      <transition
+      <Transition
         mode="out-in"
         name="slide-fade"
       >
         <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
         <span v-else>{{ $t('Pay') }}</span>
-      </transition>
+      </Transition>
     </IonButton>
   </div>
 </template>
