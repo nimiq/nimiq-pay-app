@@ -208,11 +208,12 @@ export const phoneNumberConfirmStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-export const getNotifiedStep: StepInit = async () => ({
+export const getNotifiedStep: StepInit = async ({ skipAheadBy = 1, goBackBy = 1 } = defaultStepInitOptions) => ({
   step: StepName.GetNotified,
   get title() { return i18n.t('Enable notifications') },
   get description() { return i18n.t('Get important info on transactions, top-ups, security and more.') },
-  skipAheadBy: 1,
+  skipAheadBy,
+  goBackBy,
   main: markRaw(EnableNotifications),
 } satisfies Step)
 
@@ -302,7 +303,7 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
       merchantCategory.value = qrCodeScanner.merchantCategory
     },
-    beforeNext: async ({ qrCodeScanner: _request }, { next, skip }) => {
+    beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
       if (_request instanceof String)
         // No translation as not user-facing. Dev error which should not occur in production.
@@ -312,7 +313,7 @@ export const paymentPreviewStep: StepInit = async () => {
       if ((await import('@/stores/app')).useApp().shouldAskPin())
         next()
       else
-        skip({ skipAheadBy: 2 })
+        navigateTo({ skipAheadBy: 2 })
     },
   } satisfies Step
 }

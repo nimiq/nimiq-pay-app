@@ -57,8 +57,8 @@ const loginFlow: FlowInit = async () => {
 const setupFlow: FlowInit = async () => {
   const { pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.Setup
-  const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
-  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }), phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
+  const phoneStepCb = (options: StepInitOptions) => phoneNumberStep({ ...options, goBackBy: 2, skipAheadBy: 2 })
+  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, phoneStepCb, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async (state, { err }) => {
     const [
       { default: router },
@@ -66,10 +66,8 @@ const setupFlow: FlowInit = async () => {
       { useApp },
     ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
     const error = await useDecrypt().decrypt(state[StepName.PinCode])
-    if (error) {
-      err(error)
-      return
-    }
+    if (error)
+      return err(error)
 
     await router.replace('/app')
     const { phoneNumberVerified } = useApp()
