@@ -20,7 +20,7 @@ where the QR data is an object with some properties.
 
 As well as the `state`, the flow has an `error` object. This object is used to
 store the error of the flow. The error is set by `beforeNext` callback, and
-invoking it will prevent the default behaviour of the flow to go to the next
+invoking it will prevent the default behavior of the flow to go to the next
 step. The error message will be passed down to the `main` component which it is
 responsible for the rendering of the error message.
 
@@ -30,9 +30,7 @@ A step is a JSON of type [`Step`](./steps.types.ts). You can read more about the
 type in the definition type.
 
 The flow system created follows the composability philosophy. Basically, you
-define independent steps and   
-
-Each step can be either `InputStep` or `InfoStep`. All 
+define independent steps and each step can be either `InputStep` or `InfoStep`.
 
 ### `Input Step`
 
@@ -45,7 +43,7 @@ Step used to show only information to the user and the user is not required to d
 ### Step lifecycle
 
 1. The flow will activate the first step when it is open for the first time or
-   the [`useCarousel`](../../composables/useCarousel.ts) will be update the
+   the [`useCarousel`](../../composables/useCarousel.ts) will update the
    `activeStep` if the carousel slides
 2. Once, the step is activated, the `async` function `beforeRender(state)` will
    be triggered. Read more about this function [in the
@@ -55,7 +53,7 @@ Step used to show only information to the user and the user is not required to d
 4. The `beforeNext` is a hook that it's used to define validation of the step.
    It has some available callbacks to tell the flow what to do. By default, the
    callback `next` will be executed. Read more about this [callback in the type
-   defintion](./steps.types.ts)
+   definition](./steps.types.ts)
 
 > Note: The `main` component will receive always the same props like `state` or
 > `isVisible`. Read the `Flow.vue` to see the props that are passed down to the
@@ -70,9 +68,11 @@ Step used to show only information to the user and the user is not required to d
 
 ## Lifecycle of the Flow
 
+```
 ┌──────┐   ┌──────┐  ┌──────┐   ┌──────┐
 │Step 1├─► │Step 2├─►│Step 3├─► │Step 4│ This is an example of
 └──────┘   └──────┘  └──────┘   └──────┘ steps in the flow.
+```
 
 1. `initializeFlow` will run the function with a signature of type `FlowInit`
 2. It will setup mainly: name, steps and hooks a. As you can see, the flow is a
@@ -104,19 +104,21 @@ After executing the `beforeNext` hook, the step will go to the next one.
 
 ### Jumping from one step to another and creating branches of the flow
 
+```
        Step 2 ──►  Step 3
           ▲            │
           │<18         ▼
  User Age─┴────────► Step 4
             =>18
+```
 
 In the previous graph, the Step 1 might have two options. Depending on what the
 age of the user, the flow will go to the Step 2 or Step 4.
 
-To achieve this behaviour you should have:
+To achieve this behavior you should have:
    
-- Set the steps in a linked list: [Step 1, Step 2, Step 3, Step 4]. Doing this
-  we have setted up the default linked list flow. One step after the other. 
+- Set the steps in a linked list: [Step 1, Step 2, Step 3, Step 4]. By doing this
+  we have set up the default linked list flow. One step after the other. 
 - To define the link between step 1 to step 4 we would need to setup the
   `beforeNext` hook with the custom logic and using the callbacks.
 
