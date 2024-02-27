@@ -22,6 +22,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { Crypto, useApp } from '@/stores/app'
 import AmountInput from '@/components/AmountInput.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { i18n } from '@/i18n/i18n-setup'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
@@ -96,6 +97,11 @@ function withdraw() {
   loading.value = true
   emit('done', { amount: lunaAmount.value, recipient: selected.value })
 }
+
+watch(errorMessage, (value) => {
+  if (value)
+    loading.value = false
+})
 </script>
 
 <template>
@@ -194,18 +200,13 @@ function withdraw() {
 
   <div class="flex flex-col justify-center w-full pb-6">
     <IonButton id="present-alert" size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
-      <transition
+      <Transition
         mode="out-in"
-        enter-active-class="transition duration-100 ease-out origin-bottom"
-        enter-from-class="scale-95 translate-y-4 opacity-0 rotate-x-[-45deg]"
-        enter-to-class="scale-100 translate-y-0 opacity-100 rotate-x-0"
-        leave-active-class="transition duration-75 ease-out origin-top"
-        leave-from-class="scale-100 translate-y-0 opacity-100 rotate-x-0"
-        leave-to-class="scale-95 -translate-y-4 opacity-0 rotate-x-[-45deg] "
+        name="slide-fade"
       >
-        <IonSpinner v-if="loading" name="dots" />
+        <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
         <span v-else>{{ $t('Send') }}</span>
-      </transition>
+      </Transition>
     </IonButton>
   </div>
 </template>
