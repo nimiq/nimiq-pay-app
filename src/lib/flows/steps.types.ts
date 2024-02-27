@@ -16,9 +16,7 @@ export enum FlowName {
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
 }
 
-interface FlowHooksOptions {
-  err: (msg: string) => void
-}
+export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<void>
 
 export interface Flow {
   flowName: FlowName
@@ -27,11 +25,11 @@ export interface Flow {
   // Function that will be called when the flow is supposed to be closed. If it
   // is not set, the flow will be closed automatically when the last step is
   // done.
-  onDone?: (state: State, options: FlowHooksOptions) => Promise<void>
+  onDone?: FlowHookCb
 
   // Function that will be called when the flow is cancelled. Also, the flow
   // will be closed automatically when the last step is done.
-  onCancel?: (options: FlowHooksOptions) => Promise<void>
+  onCancel?: FlowHookCb
 }
 
 export interface FlowInitOptions {

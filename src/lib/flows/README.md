@@ -90,7 +90,8 @@ Step used to show only information to the user and the user is not required to d
    finalize the flow. By default, clicking the cross icon will `cancel` the
    flow, and executing the last step lifecycle successfully will trigger `done`
    hook. You can read more about step lifecycle
-   [here](./README.md#step-lifecycle)
+   [here](./README.md#step-lifecycle). Using `err` inside the hook will prevent
+   the flow to go to the next step.
 9. When the last step is active, and the user wants to go to the next, the hook
    `done` will be triggered instead, since it does not have more steps ahead.
 

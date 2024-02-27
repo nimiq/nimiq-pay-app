@@ -2,7 +2,7 @@ import { h, ref } from 'vue'
 import { modalController } from '@ionic/vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
-import type { Flow, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
 
 import FlowCmp from '@/components/Flow.vue'
 import { i18n } from '@/i18n/i18n-setup'
@@ -59,7 +59,7 @@ const setupFlow: FlowInit = async () => {
   const flowName = FlowName.Setup
   const phoneStepCb = (options: StepInitOptions) => phoneNumberStep({ ...options, goBackBy: 2, skipAheadBy: 2 })
   const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, phoneStepCb, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async (state, { err }) => {
+  const onDone: FlowHookCb = async (state, { err }) => {
     const [
       { default: router },
       { useDecrypt },
@@ -206,13 +206,50 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
 }
 
 const nimWithdrawFlow: FlowInit = async () => {
+  /**
+   *    - User can input the amount in selection Step.
+   *    - User can select the address or it can select "Add new", which triggers the nimAddressInputStep.
+   *    - User can read a QR code with the address, which triggers the
+   *      qrCodeScannerStep. Reading the QR code will autofill the value in the
+   *      nimAddressInputStep.
+   *    - The user then can select "Continue" from the nimAddressInputStep to go
+   *      to selectionStep.
+   *    - Clicking "Send" in selection Step might:
+   *        - Open the pinCodeStep if the user is required to put the pin code.
+   *          Check useApp().
+   *        - Finish the flow if the user is not required to put the pin code.
+   *  The flow looks like this:
+                                   ┌────────┐
+                                   │        ▼
+       ┌────────► nimAddressInputStep      qrCodeScannerStep
+       │           │               ▲        │
+       │           │               └────────┘
+       │           │
+selectionStep ◄────┘
+        │
+        │
+        └────► pinCodeStep
+   */
   const [
     { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep, pinCodeStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimWithdraw
   const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } }), pinCodeStep].map(s => s({ flowName }))))
-  return { flowName, steps }
+  const onDone: Flow['onDone'] = async ({ nimWithdrawalSelection: { amount, recipient } }, { err, setToast }) => {
+    const [{ Transfer }, { sendTx }] = await Promise.all([
+      import('@/types/transactions'),
+      import('@/stores/transactions').then(t => t.useTransactions()),
+    ])
+
+    const title = 'Withdrawal' // translated at display time
+    const { error } = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+    if (error)
+      return err(`${i18n.t('Something went wrong')}.\n${error}`)
+
+    setToast({ message: i18n.t('Withdrawal successful') })
+  }
+  return { flowName, steps, onDone }
 }
 
 const nimTopUpFlow: FlowInit = async () => {

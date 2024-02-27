@@ -4,8 +4,8 @@ import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { nextTick } from 'vue'
-import { inputSteps, isInfoStep, isInputStep } from '@/lib/flows/steps.types'
-import type { Flow, InputStepName, NavigateToOptions, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
+import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
 import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
@@ -32,22 +32,36 @@ const activeIndex = ref(0)
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
 const state = ref({ ...emptyState, ...props.initialState })
 
+const { setToast } = useToast()
+
 // Avoid that onDone / onCancel can be called again, after one of the two was invoked or meant to be invoked (even if
 // the handler is undefined). This is especially to avoid running onCancel on modal dismissal if onDone or onCancel were
 // already called.
-let didAnyFlowHandlerRun = false
-function makeFlowHandler<T extends (...args: any) => Promise<void>>(originalHandler?: T): T {
-  // Not an arrow function to be able to pass original `this` on.
-  return async function (this: ThisType<T>, ...args: Parameters<T>) {
-    if (!didAnyFlowHandlerRun) {
-      didAnyFlowHandlerRun = true
-      await originalHandler?.apply(this, args)
+let currentlyHookRunning = false
+function makeFlowHandler(originalHandler?: FlowHookCb) {
+  if (!originalHandler) {
+    return async () => {
+      await useModal().closeModal()
     }
-    if (!props.isClosing) {
+  }
+
+  const fn = async function (_err = defaultErrorHandler) {
+    if (currentlyHookRunning)
+      return
+    currentlyHookRunning = true
+    let hasError = false
+    const err = (message: string) => {
+      _err(message)
+      hasError = true
+    }
+    await originalHandler(state.value, { err, setToast })
+    currentlyHookRunning = false
+    if (!props.isClosing && !hasError) {
       // Ensure flow gets closed, in case the original handler did not dismiss the modal itself.
       await useModal().closeModal()
     }
-  } as T
+  }
+  return fn
 }
 const onFlowDone = makeFlowHandler(originalOnFlowDone)
 const onFlowCancel = makeFlowHandler(originalOnFlowCancel)
@@ -58,7 +72,7 @@ watch(() => props.isClosing, async () => {
   // The flow's modal is being dismissed.
   // Invoke onFlowCancel for the case that no onFlowDone/onFlowCancel handler was invoked yet, e.g. if the flow/modal
   // dismissal was not triggered by a handler but, for example, a swipe gesture or modal.dismiss()
-  await onFlowCancel({ err: defaultErrorHandler })
+  await onFlowCancel()
   // Out of abundance of caution, clear the state to clear any potential secrets. After the flow unmounts, the state
   // will be garbage collected anyway, but just for the case that some code still retains a reference to it, clear its
   // content.
@@ -91,7 +105,7 @@ function defaultErrorHandler(errorMessage: string) {
     // Clear the error message after 10 seconds
     setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
-  else { useToast().setToast({ message: errorMessage, error: true }) }
+  else { setToast({ message: errorMessage, error: true }) }
 }
 
 /**
@@ -114,10 +128,11 @@ function defaultErrorHandler(errorMessage: string) {
 async function navigateTo(options: NavigateToOptions = 1) {
   if (props.isClosing)
     return
-  const err = defaultErrorHandler
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
   let newIndex: number = currentIndex + 1
-  if (options instanceof Number) { newIndex = currentIndex + (options as number) }
+  if (Number.isInteger(options as number)) {
+    newIndex = currentIndex + (options as number)
+  }
   else if ((options as { step: string }).step) {
     const stepIndex = stepsInFlow.findIndex(s => s.step === (options as { step: StepName }).step)
     if (stepIndex === -1) {
@@ -132,12 +147,10 @@ async function navigateTo(options: NavigateToOptions = 1) {
   else if ((options as { goBackBy: number }).goBackBy) { newIndex = activeIndex.value - (options as { goBackBy: number }).goBackBy }
   else if ((options as { skipAheadBy: number }).skipAheadBy) { newIndex = currentIndex + (options as { skipAheadBy: number }).skipAheadBy }
 
-  const isGoingForward = newIndex > activeIndex.value
-
   if (newIndex < 0)
     throw new Error('Cannot navigate to a negative index')
   else if (newIndex >= stepsInFlow.length)
-    return await onFlowDone(state.value, { err })
+    return await onFlowDone()
 
   const newActiveStep = stepsInFlow.at(newIndex)
   if (!newActiveStep)
@@ -145,6 +158,7 @@ async function navigateTo(options: NavigateToOptions = 1) {
 
   await newActiveStep?.beforeRender?.(state.value)
 
+  const isGoingForward = newIndex > activeIndex.value
   if (isGoingForward) {
     // @ts-expect-error nextStep is of type Step, which it is the same as the historyStack
     historyStack.value.push(newActiveStep)
@@ -184,28 +198,23 @@ async function onStepDone(value: OnDoneStepValue) {
   if (props.isClosing)
     return
   const activeStepName = activeStep.value.step
-  if (isInfoStep(activeStepName)) {
-    navigateTo(1)
-  }
-  else if (isInputStep(activeStepName)) {
+
+  if (isInputStep(activeStepName)) {
     // @ts-expect-error If the emit value is well typed, this should work
     state.value[activeStepName] = value
     errors.value[activeStepName] = '' // Clear error message
-    const err = defaultErrorHandler
-    if (activeStep.value.beforeNext) {
-      const finalizeFlow = () => onFlowDone(state.value, { err })
-      await activeStep.value.beforeNext(state.value, { err, finalizeFlow, navigateTo, next: () => navigateTo(1), prev: () => navigateTo(-1) })
-    }
-    else {
-      navigateTo(1)
-    }
   }
+  const next = () => navigateTo(1)
+  if (activeStep.value.beforeNext)
+    await activeStep.value.beforeNext(state.value, { err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next, prev: () => navigateTo(-1) })
+  else
+    next()
 }
 
 async function onCancel() {
   if (props.isClosing)
     return
-  await onFlowCancel({ err: defaultErrorHandler })
+  await onFlowCancel()
 }
 
 const isActiveStepFullyVisible = ref(false)

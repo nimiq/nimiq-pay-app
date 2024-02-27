@@ -322,32 +322,27 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalSelection,
   get title() { return i18n.t('Withdraw') },
   main: markRaw(NimWithdraw),
-  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow }) => {
+  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
 
     if (amount > remoteBalance) {
-      err(i18n.t(
+      return err(i18n.t(
         'You don\'t have enough NIM. Your current balance is {balance}.',
         { balance: formatCrypto(remoteBalance) },
       ))
     }
-    else if (amount && recipient) {
-      const title = 'Withdrawal' // translated at display time
-      const { error } = await (await import('@/stores/transactions')).useTransactions().sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
 
-      const { setToast } = (await import('@/composables/useToast')).useToast()
-
-      if (error) {
-        setToast({ message: `${i18n.t('Something went wrong')}.\n${error}`, error: !!error })
-      }
-      else {
-        setToast({ message: i18n.t('Withdrawal successful') })
-        await finalizeFlow()
-      }
+    if (!amount || !recipient) {
+      // User clicked "Add NIM address", let him go, by calling next()
+      return next()
     }
-    // User clicked "Add NIM address", let him go, by calling next()
-    else { next() }
+
+    const { shouldAskPin } = (await import('@/stores/app')).useApp()
+    if (shouldAskPin())
+      return navigateTo({ step: StepName.PinCode })
+    else
+      finalizeFlow()
   },
 } satisfies Step)
 
