@@ -105,7 +105,7 @@ function defaultErrorHandler(errorMessage: string) {
     // Clear the error message after 10 seconds
     setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
-  else { setToast({ message: errorMessage, error: true }) }
+  else { setToast({ message: errorMessage, error: true, duration: 10 * 1e3 }) }
 }
 
 /**

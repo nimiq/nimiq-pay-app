@@ -32,7 +32,6 @@ const props = defineProps({
 const emit = defineEmits(['click'])
 const { getTaskById } = usePoints()
 const { showModal } = useModal()
-const { formatCrypto } = useCurrencyFormatter()
 
 const isLoading = ref(false)
 

@@ -28,6 +28,9 @@ const config: CapacitorConfig = {
       },
       bundledWebRuntime: true,
     },
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
 }
 

@@ -2,7 +2,6 @@
 import { IonButton } from '@ionic/vue'
 import NotificationBell from './icons/notification-bell.vue'
 
-// import { PushNotifications } from '@capacitor/push-notifications'
 defineEmits<{ done: []; skip: [] }>()
 </script>
 

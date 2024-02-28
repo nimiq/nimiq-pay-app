@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "657691751400",
+    "project_id": "nimiq-pay",
+    "storage_bucket": "nimiq-pay.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:657691751400:android:62c04bc009e2c4fd6baa5d",
+        "android_client_info": {
+          "package_name": "com.nimiq.pay"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDg_hnex9m1FTthYGqvFdcgMtqs4moXiII"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

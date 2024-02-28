@@ -215,6 +215,14 @@ export const getNotifiedStep: StepInit = async ({ skipAheadBy = 1, goBackBy = 1 
   skipAheadBy,
   goBackBy,
   main: markRaw(EnableNotifications),
+  beforeNext: async (_, { next, err }) => {
+    const { registerNotifications } = (await import('@/composables/useNotifications')).useNotifications()
+    const isRegistered = await registerNotifications()
+    if (!isRegistered)
+      err(i18n.t('Notifications cannot be enabled, skipping this step.'))
+
+    next()
+  },
 } satisfies Step)
 
 export const onBoardingPoints: StepInit = async () => ({
