@@ -44,7 +44,13 @@ const amounts = computedAsync(async () => {
   else {
     // Otherwise, use the API to get the fiat values
     const { usePrice } = await import('@/composables/usePrice')
-    return { formattedFiat: usePrice(payment.value.amount).fiat.formatted, formattedFee: usePrice(payment.value.fee).fiat.formatted }
+    const fiatAmount = usePrice(payment.value.amount)
+    const fiatFeeAmount = usePrice(payment.value.fee)
+    // Force update the fiat values, we are not doing it in parallel because
+    // we want to get the fee amount from the db instead of API
+    await fiatAmount.getFiatPrice()
+    await fiatFeeAmount.getFiatPrice()
+    return { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
   }
 })
 
