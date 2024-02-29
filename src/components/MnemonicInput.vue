@@ -21,7 +21,7 @@ function inputHandler(e: Event) {
   timeout && clearTimeout(timeout)
 
   const input = e.target as HTMLInputElement
-  const value = input.value.toLowerCase()
+  const value = input.value.toLowerCase().trim()
   const index = Number(input.placeholder) - 1
 
   if (input.classList.contains('text-pumpkin'))
