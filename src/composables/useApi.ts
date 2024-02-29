@@ -28,7 +28,7 @@ async function api<T = undefined, E = undefined>(url: URL, { token, body: _body 
       }
       catch (e) {
       // If the response is not JSON or not exist, we don't do anything
-        console.error('Error parsing response', e)
+        console.error('Error parsing response', e, { response, url, method, headers, body })
       }
       return {
         error: responseBody,
