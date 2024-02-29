@@ -35,7 +35,7 @@ const state = ref({ ...emptyState, ...props.initialState })
 const { setToast } = useToast()
 
 let lock = Promise.resolve() // Initially unlocked
-const hasRunSuccessfully = false // Flag to track if the hook has run successfully
+let hasRunSuccessfully = false // Flag to track if the hook has run successfully
 
 /**
  * Extends the flow handler to ensure that it only executes successfully once.
@@ -51,14 +51,14 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
     return async () => useModal().closeModal()
 
   const fn = async function (_err = defaultErrorHandler) {
+    // Wait for the lock to be released before proceeding.
+    await lock
+
     // Prevent execution if the hook has already run successfully.
     if (hasRunSuccessfully) {
       console.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
       return
     }
-
-    // Wait for the lock to be released before proceeding.
-    await lock
 
     // Lock the execution by replacing the lock promise with a new, unresolved promise.
     let unlock
@@ -73,6 +73,8 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
 
       // Execute the original handler with the provided state and utilities.
       await originalHandler(state.value, { err, setToast })
+      if (!hasError)
+        hasRunSuccessfully = true
 
       // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing)
