@@ -25,7 +25,7 @@ const props = defineProps({
   },
 })
 
-const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow } = props.flow!
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName } = props.flow!
 const historyStack = ref([stepsInFlow[0]])
 const activeIndex = ref(0)
 
@@ -34,35 +34,58 @@ const state = ref({ ...emptyState, ...props.initialState })
 
 const { setToast } = useToast()
 
-// Avoid that onDone / onCancel can be called again, after one of the two was invoked or meant to be invoked (even if
-// the handler is undefined). This is especially to avoid running onCancel on modal dismissal if onDone or onCancel were
-// already called.
-let currentlyHookRunning = false
-function makeFlowHandler(originalHandler?: FlowHookCb) {
-  if (!originalHandler) {
-    return async () => {
-      await useModal().closeModal()
-    }
-  }
+let lock = Promise.resolve() // Initially unlocked
+const hasRunSuccessfully = false // Flag to track if the hook has run successfully
+
+/**
+ * Extends the flow handler to ensure that it only executes successfully once.
+ * Once the handler has completed successfully (without errors), it prevents further execution.
+ * This avoids re-calling onDone or onCancel after either has already been executed,
+ * in particular to prevent onCancel from being executed on modal dismissal if onDone or onCancel has been
+ * has already been triggered. Implements a promise-based locking system to manage execution flow and enforce a single
+ * enforce a single successful execution.
+ */
+function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
+  // If the original handler is not provided, return a function to close the modal.
+  if (!originalHandler)
+    return async () => useModal().closeModal()
 
   const fn = async function (_err = defaultErrorHandler) {
-    if (currentlyHookRunning)
+    // Prevent execution if the hook has already run successfully.
+    if (hasRunSuccessfully) {
+      console.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
       return
-    currentlyHookRunning = true
-    let hasError = false
-    const err = (message: string) => {
-      _err(message)
-      hasError = true
     }
-    await originalHandler(state.value, { err, setToast })
-    currentlyHookRunning = false
-    if (!props.isClosing && !hasError) {
-      // Ensure flow gets closed, in case the original handler did not dismiss the modal itself.
-      await useModal().closeModal()
+
+    // Wait for the lock to be released before proceeding.
+    await lock
+
+    // Lock the execution by replacing the lock promise with a new, unresolved promise.
+    let unlock
+    lock = new Promise(resolve => unlock = resolve)
+
+    try {
+      let hasError = false
+      const err = (message: string) => {
+        _err(message)
+        hasError = true
+      }
+
+      // Execute the original handler with the provided state and utilities.
+      await originalHandler(state.value, { err, setToast })
+
+      // If no error occurred, proceed to close the modal unless it's already closing.
+      if (!hasError && !props.isClosing)
+        await useModal().closeModal()
+    }
+    finally {
+      // Release the lock for subsequent operations and reset the lock state.
+      unlock!()
     }
   }
   return fn
 }
+
 const onFlowDone = makeFlowHandler(originalOnFlowDone)
 const onFlowCancel = makeFlowHandler(originalOnFlowCancel)
 

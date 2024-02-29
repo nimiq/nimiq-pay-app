@@ -133,12 +133,12 @@ enum StepName { UserAge = 'user_age', Step2 = 'step_2', Step3 = 'step_3', Step4 
 const userAgeStep: StepInit = async () => {
   const step: Step = {
     // Definition of the step title, description...
-    beforeNext: async (state, { next, navigateTo }) => {
+    beforeNext: async (state, { next, navigateTo /* prev */ }) => {
       // We control the branching here
       if (state.user_age < 18)
         next()
       else
-        navigateTo(StepName.Step4)
+        navigateTo(StepName.Step4) // You can use a relative index. In this case 3. Using negative index goes backwards. If you need to go one before, use prev() or navigateTo(-1)
     }
   }
 }
@@ -183,7 +183,7 @@ first step in the flow. Then, the function `navigateTo` in `Flow.vue` will be
 executed:
 - If the step is going forward, we will push the step into the stack
 - If the step is going backward, we will:
-   1. Eliminate the steps between the active
+   1. Eliminate the steps between the active and the new active
    2. Make an animation, going one slide previous
    3. The `activeIndex` has been updated. We will remove the previous activeStep
       from the historyStack
