@@ -100,6 +100,21 @@ export function useDecrypt() {
     decrypted.value = true
   }
 
+  /**
+   * Resets the decrypted state and the pin hash. This is useful when the user reset the password.
+   *
+   * For example, in the setup flow, the user can go do:
+   *   1. pin code & pin code confirm
+   *   2. Once in the phon input step, click 'back'
+   *   3. Redo the whole flow
+   *
+   * In this case, we need to reset the state of this composable to make it work
+   */
+  function reset() {
+    decrypted.value = false
+    pinHash.value = ''
+  }
+
   function hasPin() {
     if (!isWeb)
       throw new Error('This method is not supported in mobile.') // no translation as not user-facing
@@ -110,5 +125,6 @@ export function useDecrypt() {
     decrypted,
     decrypt,
     hasPin,
+    reset,
   }
 }

@@ -74,17 +74,15 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
         return
 
       // If there is a pinHash, it means that the user is going backwards
-      const { storeToRefs } = await import('pinia')
       const { useApp } = (await import('@/stores/app'))
-      const { pinHash } = storeToRefs(useApp())
-      if (!pinHash)
-        return
-
-      // We clean: pinCode, pinCodeConfirm although it should have been emptied already
-      state.pinCodeConfirm = ''
-      state.pinCode = ''
-      pinHash.value = ''
+      // Clear pin code from memory just in case
+      // Since state is a JSON object, we take advantage of the fact that it's a reference
+      state[StepName.PinCode] = ''
+      state[StepName.PinCodeConfirm] = ''
       useApp().clearPinInputTs()
+
+      const { reset } = (await import('@/composables/useDecrypt')).useDecrypt()
+      reset()
     },
     beforeNext: async ({ pinCode }, { next, err }) => {
       const { useApp } = (await import('@/stores/app'))
