@@ -49,9 +49,9 @@ let hasRunSuccessfully = false // Flag to track if the hook has run successfully
  * enforce a single successful execution.
  */
 function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
-  // If the original handler is not provided, return a function to close the modal.
+  // If no custom handler is not provided, the default behavior is to close the modal.
   if (!originalHandler)
-    return async () => useModal().closeModal()
+    originalHandler = async () => useModal().closeModal()
 
   const fn = async function (_err = defaultErrorHandler) {
     // Wait for the lock to be released before proceeding.
@@ -75,7 +75,7 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
       }
 
       // Execute the original handler with the provided state and utilities.
-      const { prevent } = await originalHandler(state.value, { err, setToast }) || { prevent: false }
+      const { prevent } = await originalHandler!(state.value, { err, setToast }) || { prevent: false }
       if (!hasError)
         hasRunSuccessfully = true
 
