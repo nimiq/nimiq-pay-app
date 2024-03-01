@@ -89,8 +89,7 @@ export function useLogger(name: string = '') {
   function log(...args: any[]) {
     if (isDev) {
       // Get the stack trace and log the file and line number
-      // eslint-disable-next-line unicorn/error-message
-      const stack = new Error().stack?.split('\n')[2].trim()
+      const stack = new Error('log').stack?.split('\n').slice(-1)[0].trim()
       if (stack)
         console.log(`${name} ${stack}:\n`, ...args)
       else
@@ -101,8 +100,7 @@ export function useLogger(name: string = '') {
 
   function warn(...args: any[]) {
     if (isDev) {
-      // eslint-disable-next-line unicorn/error-message
-      const stack = new Error().stack?.split('\n')[2].trim()
+      const stack = new Error('warn').stack?.split('\n').slice(-1)[0].trim()
       if (stack)
         console.warn(`${name} ${stack}:\n`, ...args)
       else
@@ -113,8 +111,7 @@ export function useLogger(name: string = '') {
 
   function error(...args: any[]) {
     if (isDev) {
-      // eslint-disable-next-line unicorn/error-message
-      const stack = new Error().stack?.split('\n')[2].trim()
+      const stack = new Error('error').stack?.split('\n').slice(-1)[0].trim()
       if (stack)
         console.error(`${name} ${stack}:\n`, ...args)
       else
