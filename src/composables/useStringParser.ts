@@ -1,8 +1,7 @@
 import { ValidationUtils } from '@nimiq/utils'
-import { useDevice } from './useDevice'
 import { useCplApi } from './useApi'
-import { getServerTime } from './useTime'
-import { GOCRYPTO_ID_PARAM, fetchGoCryptoPaymentDetails, goCryptoStatusToUserFriendlyMessage, parseGoCryptoRequestLink } from './useGoCrypto'
+import { GOCRYPTO_ID_PARAM, parseGoCryptoRequestLink } from './useGoCrypto'
+import { fetchGoCryptoPaymentRequestData } from '@/composables/useGoCryptoMonitoring'
 import { nimiqDomainUrl } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
@@ -52,14 +51,24 @@ export function useStringParser() {
     }
 
     const rail = getRailFromUrl(url)
-    if (rail === Rail.CryptoPaymentLink)
-      return await parseCPLUrl(url)
-    else if (rail === Rail.GoCrypto)
-      return await parseGoCryptoUrl(url)
-    return {
-      error: i18n.t('Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported.'),
-      data: undefined,
+    let result: Result<PaymentRequestData, string>
+    if (rail === Rail.CryptoPaymentLink) {
+      result = await parseCPLUrl(url)
     }
+    else if (rail === Rail.GoCrypto) {
+      result = await parseGoCryptoUrl(url)
+    }
+    else {
+      result = {
+        error: i18n.t('Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported.'),
+        data: undefined,
+      }
+    }
+
+    if (result.data)
+      logger.log('📷 Parsed payment request data:', result.data)
+
+    return result
   }
 
   function getRailFromUrl({ href, searchParams }: URL): Rail | undefined {
@@ -114,61 +123,15 @@ export function useStringParser() {
 
     const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount }
 
-    logger.log('📷 Parsed payment request data:', data)
-
     return { data, error: undefined }
   }
 
   async function parseGoCryptoUrl({ href, searchParams }: URL): Promise<Result<PaymentRequestData, string>> {
-    let goCryptoPaymentDetails
-    try {
-      const goCryptoRequestIdentifier = parseGoCryptoRequestLink(href)
-        || (searchParams.has(GOCRYPTO_ID_PARAM) ? { paymentId: searchParams.get(GOCRYPTO_ID_PARAM)! } : null)
-      goCryptoPaymentDetails = goCryptoRequestIdentifier
-        ? await fetchGoCryptoPaymentDetails(goCryptoRequestIdentifier, {
-          earlyExpiryOffset: 120 * 1000, // TODO remove once GoCrypto supports our instant transactions
-          getServerTime,
-          // In native app, use native fetch, to be able to send and receive arbitrary headers
-          customFetch: !useDevice().isWeb
-            ? await import('@capacitor/core').then(({ CapacitorHttp: { request } }) => request)
-            : undefined,
-        })
-        : null
-    }
-    catch (e) {
-      const errorMessage = e instanceof Error ? e.message : String(e)
-      // No need to translate "Error:" as the errorMessage is also in English anyway. Typically, there are not actually
-      // errors expected to be thrown here.
-      return { error: `${i18n.t('Invalid GoCrypto link.')} Error: ${errorMessage}`, data: undefined }
-    }
-
-    if (!goCryptoPaymentDetails)
+    const goCryptoRequestIdentifier = parseGoCryptoRequestLink(href)
+      || (searchParams.has(GOCRYPTO_ID_PARAM) ? { paymentId: searchParams.get(GOCRYPTO_ID_PARAM)! } : null)
+    if (!goCryptoRequestIdentifier)
       return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
-    const goCryptoStatus = goCryptoStatusToUserFriendlyMessage(goCryptoPaymentDetails)
-    if (goCryptoStatus.paymentStatus === 'accepted')
-      // Report already paid request as error
-      return { error: goCryptoStatus.title, data: undefined }
-    else if (goCryptoStatus.paymentStatus === 'failed')
-      return { error: `${goCryptoStatus.title}: ${goCryptoStatus.message}`, data: undefined }
-    else if ('errorCode' in goCryptoPaymentDetails)
-      // This case should already be entirely be covered by the other cases above, and is just included here as a type guard
-      return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
-
-    // still pending GoCrypto request
-    const data: PaymentRequestData = {
-      recipient: goCryptoPaymentDetails.recipient,
-      amount: goCryptoPaymentDetails.amount,
-      fee: 0,
-      merchantName: goCryptoPaymentDetails.storeName,
-      merchantCategory: MerchantCategory.Shop, // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
-      rail: Rail.GoCrypto,
-      paymentRef: goCryptoPaymentDetails.id,
-      transfer: Transfer.UserPaymentToMerchant,
-    }
-
-    logger.log('📷 Parsed payment request data:', data)
-
-    return { data, error: undefined }
+    return fetchGoCryptoPaymentRequestData(goCryptoRequestIdentifier)
   }
 
   return {

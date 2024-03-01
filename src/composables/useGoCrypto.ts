@@ -238,10 +238,11 @@ export async function fetchGoCryptoPaymentDetails(
     }
 }
 
-export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError)
-: { paymentStatus: 'pending' }
+export type GoCryptoUserFriendlyStatus = { paymentStatus: 'pending' }
     | { paymentStatus: 'accepted', title: string }
-    | { paymentStatus: 'failed', title: string, message: string } {
+    | { paymentStatus: 'failed', title: string, message: string };
+export function goCryptoStatusToUserFriendlyStatus(paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError)
+: GoCryptoUserFriendlyStatus {
     const paymentId = 'id' in paymentDetails
         ? paymentDetails.id
         : 'paymentId' in paymentDetails.request
@@ -372,6 +373,103 @@ export function goCryptoStatusToUserFriendlyMessage(paymentDetails: GoCryptoPaym
     return {
         paymentStatus: 'pending',
     };
+}
+
+type MonitoringOptions = Parameters<typeof fetchGoCryptoPaymentDetails>[1] & {
+    onUpdate: (
+        paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
+        userFriendlyStatus: GoCryptoUserFriendlyStatus,
+    ) => void,
+    onTimerTick?: (remainingTimeExpiryEarly: number, remainingTimeExpiryFinal: number) => void,
+};
+interface MonitoringState {
+    stopped: boolean,
+    paymentDetailsUpdateInterval: number,
+    expiryCountdownsUpdateInterval: number,
+    paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError | null,
+    userFriendlyStatus: GoCryptoUserFriendlyStatus | null,
+}
+
+export function monitorGoCryptoRequest(
+    paymentId: string,
+    options: MonitoringOptions,
+): () => void {
+    const state: MonitoringState = {
+        stopped: false,
+        paymentDetailsUpdateInterval: -1,
+        expiryCountdownsUpdateInterval: -1,
+        paymentDetails: null,
+        userFriendlyStatus: null,
+    };
+
+    monitorGoCryptoRequest_updatePaymentDetails(paymentId, options, state).then((shouldContinueMonitoring) => {
+        if (!shouldContinueMonitoring || state.stopped) return; // schedule neither continuous monitoring nor countdowns
+        state.paymentDetailsUpdateInterval = window.setInterval(
+            () => monitorGoCryptoRequest_updatePaymentDetails(paymentId, options, state),
+            5000,
+        );
+        // Start countdowns only after initial payment details update, as they're based on them.
+        const shouldContinueCountdowns = monitorGoCryptoRequest_updateExpiryCountdowns(options, state);
+        if (!shouldContinueCountdowns) return;
+        state.expiryCountdownsUpdateInterval = window.setInterval(
+            () => monitorGoCryptoRequest_updateExpiryCountdowns(options, state),
+            500,
+        );
+    });
+
+    return function stopMonitoring() {
+        state.stopped = true;
+        clearInterval(state.paymentDetailsUpdateInterval);
+        clearInterval(state.expiryCountdownsUpdateInterval);
+    };
+}
+
+async function monitorGoCryptoRequest_updatePaymentDetails(
+    paymentId: string,
+    options: MonitoringOptions,
+    state: MonitoringState,
+): Promise<boolean> {
+    state.paymentDetails = await fetchGoCryptoPaymentDetails({ paymentId }, options);
+    if (state.stopped) return false; // stopped while we were in asynchronous code
+    state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails);
+    try {
+        options.onUpdate(state.paymentDetails, state.userFriendlyStatus);
+    } catch (e) {}
+    if (state.userFriendlyStatus.paymentStatus === 'accepted') {
+        clearInterval(state.paymentDetailsUpdateInterval);
+        return false;
+    }
+    return true;
+}
+
+function monitorGoCryptoRequest_updateExpiryCountdowns(
+    options: MonitoringOptions,
+    state: MonitoringState,
+): boolean {
+    const paymentDetails = state.paymentDetails && 'id' in state.paymentDetails ? state.paymentDetails : null;
+    const { expiryEarly, expiryFinal } = paymentDetails
+        || { expiryEarly: -1, expiryFinal: -1 }; // paymentDetails unknown or an error
+
+    const now = Date.now();
+    const remainingTimeExpiryEarly = Math.max(expiryEarly - now, 0);
+    const remainingTimeExpiryFinal = Math.max(expiryFinal - now, 0);
+    if (options.onTimerTick) {
+        try {
+            options.onTimerTick(remainingTimeExpiryEarly, remainingTimeExpiryFinal);
+        } catch (e) {}
+    }
+
+    if (!remainingTimeExpiryEarly && paymentDetails && state.userFriendlyStatus?.paymentStatus !== 'failed') {
+        // Request an immediate monitoring update if the early countdown passed, and there's not already an error, like
+        // an expiry error.
+        monitorGoCryptoRequest_updatePaymentDetails(paymentDetails.id, options, state);
+    }
+    if ((!remainingTimeExpiryFinal && paymentDetails) || state.userFriendlyStatus?.paymentStatus === 'accepted') {
+        // Stop countdowns if the final countdown passed, or the payment was finished.
+        clearInterval(state.expiryCountdownsUpdateInterval);
+        return false;
+    }
+    return true;
 }
 
 function toUrl(link: string | URL): null | URL {

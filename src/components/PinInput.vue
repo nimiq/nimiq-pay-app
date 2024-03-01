@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { type PropType, computed, ref, watch, watchEffect } from 'vue'
 import { until } from '@vueuse/core'
-import { stepEmits } from '@/lib/flows/steps.types'
+import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
+import { Rail } from '@/types/transactions'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import { useToast } from '@/composables/useToast'
+import { useModal } from '@/composables/useModal'
+import { useGoCryptoMonitoring } from '@/composables/useGoCryptoMonitoring'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -15,6 +19,7 @@ const props = defineProps({
   isScrolling: { type: Boolean, required: false },
   showLoading: { type: Boolean, required: false },
   stepName: { type: String, required: false },
+  state: { type: Object as PropType<State>, required: false },
 })
 const emit = defineEmits(stepEmits)
 
@@ -76,6 +81,18 @@ function clearInput() {
   window.setTimeout(() => {
     pinCodeInput.value = ''
   }, 300)
+}
+
+// Monitor GoCrypto payments
+const qrScanResult = props.state?.[StepName.QRCodeScanner]
+if (qrScanResult && typeof qrScanResult === 'object' && qrScanResult.rail === Rail.GoCrypto) {
+  const { error } = useGoCryptoMonitoring(qrScanResult)
+  watchEffect(() => {
+    if (!error.value)
+      return
+    useToast().setToast({ message: error.value, error: true, duration: 10 * 1e3 })
+    useModal().closeModal()
+  })
 }
 </script>
 

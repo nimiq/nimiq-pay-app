@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonToggle } from '@ionic/vue'
-import { computed, ref, toRef, watch, watchEffect } from 'vue'
+import { computed, ref, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
@@ -12,10 +12,10 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Transfer } from '@/types/transactions'
 
 // TODO: async import
 import { useToast } from '@/composables/useToast'
+import { useGoCryptoMonitoring } from '@/composables/useGoCryptoMonitoring'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
@@ -28,7 +28,10 @@ const emit = defineEmits(stepEmits)
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 
-const payment = toRef(() => props.state[StepName.QRCodeScanner] as PaymentRequestData || { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment })
+const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
+  ? props.state[StepName.QRCodeScanner]
+  : { amount: 0, fee: 0, recipient: '' },
+)
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 
 const amounts = computedAsync(async () => {
@@ -59,7 +62,15 @@ const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentVali
    = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
 const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
-const disabled = computed(() => !(isEligible.value && paymentMethod.value === PaymentMethod.Points) && (!isHtlcActive.value || !hasEnoughNimBalance.value || consensus.value !== 'established'))
+// Note that we ignore potential updates of the payment request data, as GoCrypto continues to accept the original payment info.
+const { error: goCryptoError } = useGoCryptoMonitoring(payment)
+const disabled = computed(() =>
+  !(
+    (isEligible.value && paymentMethod.value === PaymentMethod.Points)
+    || (isHtlcActive.value && hasEnoughNimBalance.value && consensus.value === 'established')
+  )
+  || !!goCryptoError.value,
+)
 
 const loading = ref(false)
 
@@ -68,12 +79,12 @@ watchEffect(() => {
     checkPointsPaymentValidity()
 })
 
-watch(() => props.errorMsg, () => {
-  if (props.errorMsg) {
-    loading.value = false
-    useToast().setToast({ message: props.errorMsg, error: true, duration: 5 * 1e3 })
-  }
-})
+watch(() => goCryptoError.value || props.errorMsg, (message) => {
+  if (!message)
+    return
+  loading.value = false
+  useToast().setToast({ message, error: true, duration: (goCryptoError.value ? 10 : 5) * 1e3 })
+}, { immediate: true })
 
 function handlePay() {
   if (loading.value)

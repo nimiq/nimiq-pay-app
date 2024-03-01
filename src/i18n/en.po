@@ -231,11 +231,11 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:320
+#: src/composables/useGoCrypto.ts:321
 msgid "Error {errorCode}"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:319
+#: src/composables/useGoCrypto.ts:320
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
@@ -297,7 +297,7 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:290
+#: src/composables/useGoCrypto.ts:291
 msgid "GoCrypto API refused connecting"
 msgstr ""
 
@@ -317,15 +317,15 @@ msgstr ""
 msgid "I have a promo code"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:255
+#: src/composables/useGoCrypto.ts:256
 msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:367
+#: src/composables/useGoCrypto.ts:368
 msgid "If you already made a payment, wait for it to be confirmed instead."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:294
+#: src/composables/useGoCrypto.ts:295
 msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
 msgstr ""
 
@@ -346,43 +346,42 @@ msgstr ""
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:300
+#: src/composables/useGoCrypto.ts:301
 msgid "Invalid API response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:109
+#: src/composables/useStringParser.ts:118
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:94
+#: src/composables/useStringParser.ts:103
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:105
-#: src/composables/useStringParser.ts:88
+#: src/composables/useStringParser.ts:114
+#: src/composables/useStringParser.ts:97
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
-#: src/composables/useStringParser.ts:142
-#: src/composables/useStringParser.ts:146
-#: src/composables/useStringParser.ts:155
+#: src/composables/useGoCryptoMonitoring.ts:105
+#: src/composables/useStringParser.ts:133
 msgid "Invalid GoCrypto link."
 msgstr ""
 
-#: src/composables/useStringParser.ts:82
+#: src/composables/useStringParser.ts:91
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:60
+#: src/composables/useStringParser.ts:63
 msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:26
+#: src/composables/useStringParser.ts:25
 #: src/lib/flows/steps.ts:369
 msgid "Invalid Nimiq address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:38
+#: src/composables/useStringParser.ts:37
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
@@ -416,7 +415,7 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:51
+#: src/composables/useStringParser.ts:50
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -508,7 +507,7 @@ msgstr ""
 msgid "No payment details found"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:284
+#: src/composables/useGoCrypto.ts:285
 msgid "No payment request found"
 msgstr ""
 
@@ -530,7 +529,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:271
+#: src/composables/useGoCrypto.ts:272
 msgid "Not a pending payment request"
 msgstr ""
 
@@ -618,11 +617,11 @@ msgstr ""
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:254
+#: src/composables/useGoCrypto.ts:255
 msgid "Please ask the merchant to check the status of your payment."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:253
+#: src/composables/useGoCrypto.ts:254
 msgid "Please ask the merchant to create a new payment request."
 msgstr ""
 
@@ -699,7 +698,7 @@ msgstr ""
 msgid "Really delete your Points rewards account?"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:301
+#: src/composables/useGoCrypto.ts:302
 msgid "Received an invalid response from GoCrypto: {errorMessage}"
 msgstr ""
 
@@ -873,27 +872,27 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:358
+#: src/composables/useGoCrypto.ts:359
 msgid "The payment request expired"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:330
+#: src/composables/useGoCrypto.ts:331
 msgid "The payment request has already been paid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:364
+#: src/composables/useGoCrypto.ts:365
 msgid "The payment request is about to expire"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:334
+#: src/composables/useGoCrypto.ts:335
 msgid "The payment request is being processed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:273
+#: src/composables/useGoCrypto.ts:274
 msgid "The payment request might have been paid, expired, or cancelled."
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:351
+#: src/composables/useGoCrypto.ts:352
 msgid "The payment request was cancelled"
 msgstr ""
 
@@ -963,7 +962,7 @@ msgstr ""
 msgid "Unable to connect to the Points server"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:317
+#: src/composables/useGoCrypto.ts:318
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
@@ -1151,15 +1150,15 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:338
+#: src/composables/useGoCrypto.ts:339
 msgid "Your payment failed"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:342
+#: src/composables/useGoCrypto.ts:343
 msgid "Your payment is invalid"
 msgstr ""
 
-#: src/composables/useGoCrypto.ts:346
+#: src/composables/useGoCrypto.ts:347
 msgid "Your payment was refunded"
 msgstr ""
 
