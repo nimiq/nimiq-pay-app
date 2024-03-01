@@ -20,6 +20,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useLogger } from '@/composables/useLogger'
+import { useNotifications } from '@/composables/useNotifications'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -44,6 +45,7 @@ const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
+const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -59,24 +61,6 @@ const referralInfo = computedAsync(async () => {
 })
 const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
 const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
-
-// TODO: get this from somewhere
-const notificationArray: Ref<{ title: string; subtitle?: string | undefined; action?: (() => void) | undefined }[]> = ref([
-  // {
-  //   get title() { return i18n.t('Beta Testing') },
-  //   get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
-  //   action: () => logger.log('Notification Card 2 clicked'),
-  // },
-  {
-    get title() { return i18n.t('Welcome to Nimiq Pay') },
-    get subtitle() { return i18n.t('Your wallet is ready to use') },
-    // action: () => initializeFlow(FlowName.OnBoardingPoints),
-  },
-])
-
-function removeNotification(index: number) {
-  notificationArray.value.splice(index, 1)
-}
 
 function scrollToFirstNotification() {
   // Scroll to first notification
@@ -121,27 +105,26 @@ if (import.meta.env.DEV) {
 watch([referralCode, phoneNumberVerified], () => {
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
+    id: 'verify-phone-number',
     get title() { return i18n.t('Verify your phone number') },
     get subtitle() { return i18n.t('Get cashback and earn rewards') },
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
   const claimRewardsNotification = {
+    id: 'claim-rewards',
     get title() { return i18n.t('You have a reward to claim!') },
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
-
-  notificationArray.value = notificationArray.value.filter(notification =>
-    notification.title !== verifyNumberNotification.title && notification.title !== claimRewardsNotification.title)
 
   if (referralCode.value && phoneNumberVerified.value) {
     redeemReferral()
   }
   else if (!referralCode.value && !phoneNumberVerified.value) {
-    notificationArray.value.unshift(verifyNumberNotification)
+    addLocalNotification(verifyNumberNotification, true)
     scrollToFirstNotification()
   }
   else if (referralCode.value && !phoneNumberVerified.value) {
-    notificationArray.value.unshift(claimRewardsNotification)
+    addLocalNotification(claimRewardsNotification, true)
     scrollToFirstNotification()
   }
 }, { immediate: true })
@@ -245,13 +228,13 @@ onMounted(async () => {
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
         <!-- Notification Horizontal Scroll -->
-        <IonRow v-if="notificationArray.length" class="w-screen ml-[-21px]">
+        <IonRow v-if="localNotifications.length" class="w-screen ml-[-21px]">
           <ul
             ref="notificationList"
             class="flex w-full gap-x-3 gap-y-8 pb-4 scroll-pl-[21px] snap-mandatory snap-x overflow-auto hide-scrollbar"
           >
-            <li v-for="(notification, index) in notificationArray" :key="notification.title" class="snap-start shrink-0 first:pl-[21px] last:pr-[21px]">
-              <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
+            <li v-for="notification in localNotifications" :key="notification.id" class="snap-start shrink-0 first:pl-[21px] last:pr-[21px]">
+              <NotificationCard @click="notification.action" @close="() => removeLocalNotification(notification.id)">
                 {{ notification.title }}
                 <template v-if="notification.subtitle" #subtitle>
                   {{ notification.subtitle }}

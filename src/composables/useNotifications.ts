@@ -1,7 +1,9 @@
+import { storeToRefs } from 'pinia'
+
 // TODO: https://capacitorjs.com/docs/apis/background-runner
 // TODO: https://capacitorjs.com/docs/apis/local-notifications
 
-import { type Ref, ref } from 'vue'
+import { type Ref, computed, ref } from 'vue'
 import { type ActionPerformed, PushNotifications } from '@capacitor/push-notifications'
 import type { PermissionState } from '@capacitor/core'
 import { i18n } from '@/i18n/i18n-setup'
@@ -10,6 +12,7 @@ import { useDevice } from '@/composables/useDevice'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useLogger } from '@/composables/useLogger'
+import { useApp } from '@/stores/app'
 
 const logger = useLogger('useNotifications')
 
@@ -19,10 +22,40 @@ interface NotificationData {
   task_id?: string
 }
 
-const { isAndroid, isIOS, isWeb } = useDevice()
+interface LocalNotification {
+  id: string
+  title: string
+  subtitle?: string | undefined
+  action?: (() => void) | undefined
+}
+
+// TODO: get this from a server
+/**
+ * @description List of local notifications to show to the user
+ * @property {string} id - Unique identifier for the notification, can be used to remove it. It needs to be unique for each notification
+ * @property {string} title - The title of the notification
+ * @property {string} subtitle - The subtitle of the notification
+ * @property {() => void} action - The action to perform when the notification is clicked
+ */
+const localNotificationsArray: Ref<LocalNotification[]> = ref([
+  // {
+  //   id: 'beta-message',
+  //   get title() { return i18n.t('Beta Testing') },
+  //   get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
+  //   action: () => logger.log('Notification Card 2 clicked'),
+  // },
+  {
+    id: 'welcome-message',
+    get title() { return i18n.t('Welcome to Nimiq Pay') },
+    get subtitle() { return i18n.t('Your wallet is ready to use') },
+    // action: () => initializeFlow(FlowName.OnBoardingPoints),
+  },
+])
 
 export function useNotifications() {
   const status: Ref<PermissionState | undefined> = ref()
+  const { isAndroid, isIOS, isWeb } = useDevice()
+  const { closedNotifications } = storeToRefs(useApp())
 
   async function init() {
     if (isWeb)
@@ -121,11 +154,27 @@ export function useNotifications() {
     useModal().showModal(Modal.Task, { isOnTop: true, componentProps: { task } })
   }
 
+  function addLocalNotification(notification: LocalNotification, unshift = false) {
+    if (localNotificationsArray.value.some(n => n.id === notification.id))
+      return
+    if (unshift)
+      localNotificationsArray.value.unshift(notification)
+    else
+      localNotificationsArray.value.push(notification)
+  }
+
+  function removeLocalNotification(id: string) {
+    closedNotifications.value.push(id)
+  }
+
   return {
     init,
     status,
     addListeners,
     registerNotifications,
     getDeliveredNotifications,
+    localNotifications: computed(() => localNotificationsArray.value.filter(n => !closedNotifications.value.includes(n.id))),
+    addLocalNotification,
+    removeLocalNotification,
   }
 }

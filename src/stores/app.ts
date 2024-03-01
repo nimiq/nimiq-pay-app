@@ -33,7 +33,7 @@ export const useApp = defineStore('app', () => {
   const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
-  const phoneNumberVerified = computed(() => !!pointsToken.value)
+  const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -81,7 +81,7 @@ export const useApp = defineStore('app', () => {
   return {
     pinHash,
     phoneNumber,
-    phoneNumberVerified,
+    phoneNumberVerified: computed(() => !!phoneNumber.value),
     referralCode,
     setReferralCode,
     entropy,
@@ -94,5 +94,6 @@ export const useApp = defineStore('app', () => {
     updatePinInputTs,
     shouldAskPin,
     clearPinInputTs,
+    closedNotifications,
   }
 })
