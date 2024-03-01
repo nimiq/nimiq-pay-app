@@ -62,11 +62,11 @@ const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remain
 
 // TODO: get this from somewhere
 const notificationArray: Ref<{ title: string; subtitle?: string | undefined; action?: (() => void) | undefined }[]> = ref([
-  {
-    get title() { return i18n.t('Beta Testing') },
-    get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
-    action: () => logger.log('Notification Card 2 clicked'),
-  },
+  // {
+  //   get title() { return i18n.t('Beta Testing') },
+  //   get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
+  //   action: () => logger.log('Notification Card 2 clicked'),
+  // },
   {
     get title() { return i18n.t('Welcome to Nimiq Pay') },
     get subtitle() { return i18n.t('Your wallet is ready to use') },
@@ -232,7 +232,7 @@ onMounted(async () => {
       </QuickButton>
 
       <!-- Transaction List -->
-      <ol v-if="transactions.length">
+      <ol v-if="transactions.length" class="mt-8">
         <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash" :data-hash="tx.hash">
           <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />
         </li>
@@ -248,7 +248,7 @@ onMounted(async () => {
         <IonRow v-if="notificationArray.length" class="w-screen ml-[-21px]">
           <ul
             ref="notificationList"
-            class="flex w-full gap-x-3 gap-y-8 pb-4 scroll-pl-[21px] snap-mandatory snap-x overflow-auto hide-scrollbar py-14"
+            class="flex w-full gap-x-3 gap-y-8 pb-4 scroll-pl-[21px] snap-mandatory snap-x overflow-auto hide-scrollbar"
           >
             <li v-for="(notification, index) in notificationArray" :key="notification.title" class="snap-start shrink-0 first:pl-[21px] last:pr-[21px]">
               <NotificationCard @click="notification.action" @close="() => removeNotification(index)">
@@ -275,7 +275,7 @@ onMounted(async () => {
         </IonRow>
 
         <!-- Map -->
-        <IonRow>
+        <IonRow class="mt-2">
           <p class="ml-1 text-lg font-semibold">
             {{ $t('Find places that accept crypto!') }}
           </p>
