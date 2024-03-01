@@ -5,6 +5,9 @@ import type { AsyncResult } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useNimiqNetwork')
 
 const { setToast, clearToast } = useToast()
 
@@ -29,6 +32,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     head.value = await client.value.getHeadBlock()
 
     client.value.addConsensusChangedListener((newConsensus) => {
+      logger.log('Consensus:', newConsensus)
       if (newConsensus === 'established') { clearToast() }
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established') {
@@ -58,6 +62,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     ;(await client.value._consensus as Nimiq.BaseMiniConsensus).network.on('peers-changed', async () => {
       const stats = await client.value?.network.getStatistics()
       peerCount.value = stats?.totalPeerCount || 0
+      logger.log('Peer count changed', peerCount.value)
     })
   }
 
@@ -82,8 +87,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       0,
       height.value,
     )
-    // eslint-disable-next-line no-console
-    console.log('Claiming Cashlink', tx.toPlain())
+
+    logger.log('Claiming Cashlink', tx.toPlain())
     await client.value!.sendTransaction(tx)
   }
 

@@ -7,6 +7,9 @@ import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/f
 import FlowCmp from '@/components/Flow.vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { useToast } from '@/composables/useToast'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('flows/index.ts')
 
 const loginFlow: FlowInit = async () => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
@@ -169,8 +172,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
       // No translation as not user-facing. Dev error which should not occur in production.
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
-    // eslint-disable-next-line no-console
-    console.log(`🤑  Initializing payment process with ${method}`, request)
+    logger.log(`🤑  Initializing payment process with ${method}`, request)
 
     if (method === PaymentMethod.NIM) {
       const { useTransactions } = await import('@/stores/transactions')
@@ -200,7 +202,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
     useToast().setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
-    console.log('🤑  Cancelling payment process') // eslint-disable-line no-console
+    logger.log('🤑  Cancelling payment process')
   }
   return { flowName, steps, onDone, onCancel }
 }
@@ -303,8 +305,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
 
   const flow = await flows[name]()
 
-  // eslint-disable-next-line no-console
-  console.log(`🌊 Initializing flow ${name}`, flow)
+  logger.log(`🌊 Initializing flow ${name}`, flow)
 
   const isClosing = ref(false)
 
@@ -324,8 +325,7 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * all the triggers will return true, closing the modal.
      */
     canDismiss: async (data?: any, role?) => {
-      // eslint-disable-next-line no-console
-      console.log('🌊 Dismissing flow', flow)
+      logger.log('🌊 Dismissing flow', flow)
       isClosing.value = true
       if (role === 'gesture') {
         // Close modal immediately on swipe gesture, instead of waiting for snap-back animation to finish animating the

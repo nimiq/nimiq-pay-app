@@ -6,6 +6,9 @@ import type { RemoteSigner } from '@/lib/sql-queries'
 import type { Rail } from '@/types/transactions'
 import { useApp } from '@/stores/app'
 import { isDev } from '@/lib/index'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useApi')
 
 const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com/api/' : 'https://points.nimpay.app/api/')
 const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https://cs1.nimpay.app/')
@@ -28,7 +31,7 @@ async function api<T = undefined, E = undefined>(url: URL, { token, body: _body 
       }
       catch (e) {
       // If the response is not JSON or not exist, we don't do anything
-        console.error('Error parsing response', e, { response, url, method, headers, body })
+        logger.error('Error parsing response', e, { response, url, method, headers, body })
       }
       return {
         error: responseBody,
@@ -44,7 +47,7 @@ async function api<T = undefined, E = undefined>(url: URL, { token, body: _body 
     return { data: await response.json() as T, status: response.status, error: undefined, hasError: false }
   }
   catch (error) {
-    console.error('Error fetching', error)
+    logger.error('Error fetching', error)
     return { data: undefined, hasError: true, error: { message: i18n.t('Something went wrong'), statusCode: 520 } as E, status: 520 }
   }
 }

@@ -11,6 +11,9 @@ import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { useSync } from '@/composables/useSync'
 import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('transactions.ts')
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -49,16 +52,14 @@ export const useTransactions = defineStore('transactions', () => {
         return true
     })
 
-    // eslint-disable-next-line no-console
-    console.log(`📚 Selected ${txs.length} transactions`, txs)
-    // eslint-disable-next-line no-console
-    console.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
+    logger.log(`📚 Selected ${txs.length} transactions`, txs)
+
+    logger.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
     return filteredTxs
   }
 
   async function upsertTx(tx: Transaction) {
-    // eslint-disable-next-line no-console
-    console.log(`📚 Upsert-ing transaction`, tx)
+    logger.log(`📚 Upsert-ing transaction`, tx)
     await run(
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
@@ -72,8 +73,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction, string> {
-    // eslint-disable-next-line no-console
-    console.log('✈️  Preparing new transaction', {
+    logger.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
       remoteBalance: useRemoteSigner().remoteBalance,
@@ -85,20 +85,20 @@ export const useTransactions = defineStore('transactions', () => {
     })
     const { data: signedTx, error } = await getSignedTx(partialTx)
     if (error) {
-      console.error('Error while signing transaction', error)
+      logger.error('Error while signing transaction', error)
       return { data: undefined, error }
     }
 
     // Check if the tx is already in the transaction list
     if (transactions.value.some(tx => tx.hash === signedTx!.hash().toHex())) {
-      console.error('Transaction already sent', signedTx)
+      logger.error('Transaction already sent', signedTx)
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
 
     const details = await client.value!.sendTransaction(signedTx!)
     if (details.state === 'invalidated') {
       // Transaction was rejected by the mempool
-      console.error('Transaction invalid', details)
+      logger.error('Transaction invalid', details)
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
@@ -112,8 +112,7 @@ export const useTransactions = defineStore('transactions', () => {
     if (tx.transfer === Transfer.UserPaymentToMerchant)
       tx = { ...tx, paymentMethod: PaymentMethod.NIM }
 
-    // eslint-disable-next-line no-console
-    console.log(`✈️ Sending transaction`, tx)
+    logger.log(`✈️ Sending transaction`, tx)
 
     await upsertTx(tx)
 
@@ -136,7 +135,7 @@ export const useTransactions = defineStore('transactions', () => {
         })
       }
       else {
-        console.error('Transaction details are undefined, cannot update remote signer', tx)
+        logger.error('Transaction details are undefined, cannot update remote signer', tx)
       }
     }
     else if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {

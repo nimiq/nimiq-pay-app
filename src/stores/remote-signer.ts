@@ -6,6 +6,9 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('remote-signer')
 
 export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined>(remoteSigners: T): T {
   if (!remoteSigners)
@@ -29,8 +32,8 @@ function useRemoteSignerDb() {
     async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
       await run(SQLQuery.DeactivateRemoteSigners)
-      // eslint-disable-next-line no-console
-      console.log('✒️ Updating Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active })
+
+      logger.log('✒️ Updating Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active })
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
@@ -39,14 +42,12 @@ function useRemoteSignerDb() {
     },
 
     async updateBalance(newBalance: number, address: Nimiq.Address) {
-      // eslint-disable-next-line no-console
-      console.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
+      logger.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
       await run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
     },
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
-      // eslint-disable-next-line no-console
-      console.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
+      logger.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
       await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
     },
   }
@@ -80,8 +81,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
   async function updateRemoteSigner(signer: RemoteSigner | undefined) {
-    // eslint-disable-next-line no-console
-    console.log('📡 Updating remote signer', signer)
+    logger.log('📡 Updating remote signer', signer)
     if (signer)
       await setRemoteSigner(signer)
     else
@@ -103,8 +103,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   async function updateRemoteFromApi() {
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
     if (error || !remoteSignerApi) {
-      // eslint-disable-next-line no-console
-      console.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
+      logger.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
       return
     }
     await updateRemoteSigner(remoteSignerApi)
@@ -129,7 +128,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const addresses = remoteSignersToCheck.map(remoteSigner => remoteSigner.address)
     const { data: accounts, error } = await getAccounts(addresses)
     if (error || !accounts) {
-      console.error('Error getting accounts for Remote Signers', error)
+      logger.error('Error getting accounts for Remote Signers', error)
       return
     }
 
@@ -139,8 +138,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       const remoteSigner = remoteSignersToCheck[i]
       const newBalance = account.balance
       if (remoteSigner.balance !== newBalance) {
-        // eslint-disable-next-line no-console
-        console.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
+        logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
         await updateBalance(newBalance, remoteSigner.address)
       }
     }
@@ -156,8 +154,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   async function getRemoteSignersFromBlockchain() {
     const transactions = await client!.getTransactionsByAddress(localAddress.value)
     await until(remotePublicKey).not.toBeUndefined()
-    // eslint-disable-next-line no-console
-    console.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
+
+    logger.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
     const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
     for (const tx of htlcTransactions) {
       const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
@@ -190,8 +188,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     await updateSignersTableBalance()
 
     if (!remoteSigner.value) {
-      // eslint-disable-next-line no-console
-      console.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+      logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
       await getRemoteSignersFromBlockchain()
     }
 

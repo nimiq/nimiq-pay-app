@@ -9,6 +9,9 @@ import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useQRScanner')
 
 export enum QRScannerState {
   Idle = 'idle',
@@ -83,7 +86,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     const video = await setUpCameraFeed()
     if (!hasPermission.value) {
       state.value = QRScannerState.NoPermission
-      console.error('No permission to use the camera')
+      logger.error('No permission to use the camera')
       return
     }
     startScan({ video })
@@ -106,7 +109,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
         [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
       }[expect]
 
-      console.log(`💫 Using dummy data for QR scanner: ${dummyData}`) // eslint-disable-line no-console
+      logger.log(`💫 Using dummy data for QR scanner: ${dummyData}`)
       parseString(dummyData)
     }
   }

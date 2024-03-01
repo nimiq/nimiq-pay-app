@@ -5,6 +5,9 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { i18n } from '@/i18n/i18n-setup'
 import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('tx.ts')
 
 /**
  * Signs any transaction in the wallet.
@@ -132,11 +135,9 @@ interface GetSignedTxByRemoteArgs {
 async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
-  // eslint-disable-next-line no-console
-  console.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
+  logger.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
-  // eslint-disable-next-line no-console
-  console.log({ receipt, error })
+  logger.log({ receipt, error })
   if (hasError)
     return { data: undefined, error: error?.message || i18n.t('Something went wrong signing the transaction') }
   return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }

@@ -1,5 +1,8 @@
 import { useScroll } from '@vueuse/core'
 import { type MaybeRef, type Ref, computed, ref, toValue } from 'vue'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useCarousel')
 
 export interface UseCarouselOptions {
   columnGap?: number
@@ -14,7 +17,7 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, options
 
   function goToSlide(index: number) {
     if (!elRef.value || index < 0 || index >= elRef.value.children.length) {
-      console.warn('Cannot go to slide', index, { elRef: elRef.value })
+      logger.warn('Cannot go to slide', index, { elRef: elRef.value })
       return
     }
 

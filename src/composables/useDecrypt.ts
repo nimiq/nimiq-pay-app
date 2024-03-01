@@ -6,6 +6,9 @@ import { useDevice } from '@/composables/useDevice'
 import { useConn } from '@/stores/conn'
 import { useApp } from '@/stores/app'
 import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useDecrypt')
 
 /**
  * Hashes an input to SHA-256, encoded as hex
@@ -66,12 +69,11 @@ export function useDecrypt() {
         .catch(() => i18n.t('Something went wrong decrypting the database'))
 
     if (error) {
-      console.error(error)
+      logger.error(error)
       return error
     }
 
-    // eslint-disable-next-line no-console
-    console.log('🔑 Database initialized and encrypted in mobile')
+    logger.log('🔑 Database initialized and encrypted in mobile')
 
     await openDb()
   }

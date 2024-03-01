@@ -9,6 +9,9 @@ import { useToast } from '@/composables/useToast'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useApp } from '@/stores/app'
 import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('ValidateWords')
 
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const { closeModal } = useModal()
@@ -25,7 +28,7 @@ async function updateRandomWord() {
   const { data: words, error } = await getWords()
   if (error || !words) {
     // TODO: show error
-    console.error(error)
+    logger.error(error)
     return
   }
   do
@@ -51,7 +54,7 @@ async function handleGuess(word: string) {
   const { data: words, error } = await getWords()
   if (error || !words) {
     // TODO: show error
-    console.error(error)
+    logger.error(error)
     return
   }
   if (word === words[randomIndex.value]) {

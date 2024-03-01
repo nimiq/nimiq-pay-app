@@ -9,6 +9,9 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { Crypto } from '@/stores/app'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('ReferralModal')
 
 const { setToast } = useToast()
 const { getReferralInfo } = usePoints()
@@ -17,7 +20,7 @@ const { formatCrypto } = useCurrencyFormatter()
 const referralCode = computedAsync(async () => {
   const { data: code, error } = await getReferralInfo()
   if (error) {
-    console.error(error)
+    logger.error(error)
     return null
   }
   return code

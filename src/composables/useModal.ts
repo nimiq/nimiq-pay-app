@@ -2,6 +2,9 @@ import { defineAsyncComponent, ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useModal')
 
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
@@ -22,10 +25,8 @@ function _useModal() {
 
   async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
     const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
-    if (import.meta.env.MODE === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('showModal', modal)
-    }
+    if (import.meta.env.MODE === 'development')
+      logger.log('showModal', modal)
 
     let component: ComponentRef = null
     if (!isOnTop)
@@ -84,10 +85,9 @@ function _useModal() {
     // Close the top modal
     const modal = modalToClose || await modalController.getTop()
 
-    if (import.meta.env.MODE === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('closeModal', modal)
-    }
+    if (import.meta.env.MODE === 'development')
+      logger.log('closeModal', modal)
+
     if (modal)
       await modal.dismiss()
   }

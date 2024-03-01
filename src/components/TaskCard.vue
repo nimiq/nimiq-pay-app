@@ -5,7 +5,7 @@ import { chevronForwardOutline } from 'ionicons/icons'
 import { Modal, useModal } from '@/composables/useModal'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { usePoints } from '@/stores/points'
-import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { useLogger } from '@/composables/useLogger'
 
 const props = defineProps({
   progress: {
@@ -29,7 +29,11 @@ const props = defineProps({
     default: false,
   },
 })
+
 const emit = defineEmits(['click'])
+
+const logger = useLogger('TaskCard')
+
 const { getTaskById } = usePoints()
 const { showModal } = useModal()
 
@@ -47,7 +51,7 @@ async function handleClick() {
 
   // TODO: show error
   if (error) {
-    console.error(error)
+    logger.error(error)
     return
   }
   isLoading.value = false

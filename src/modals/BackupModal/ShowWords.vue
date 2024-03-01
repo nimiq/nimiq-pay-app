@@ -8,6 +8,9 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('ShowWords')
 
 const nav = (document.querySelector('[data-backup-nav]')) as Nav & HTMLElement
 const { getWords } = useLocalWallet()
@@ -15,7 +18,7 @@ const { getWords } = useLocalWallet()
 const words = asyncComputed(async () => {
   const { data, error } = await getWords()
   if (error) {
-    console.error(error)
+    logger.error(error)
     return []
   }
   if (data)

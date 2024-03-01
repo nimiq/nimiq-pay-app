@@ -12,6 +12,8 @@ PODS:
     - SQLCipher
     - ZIPFoundation
   - CapacitorCordova (5.7.0)
+  - CapacitorFilesystem (5.2.1):
+    - Capacitor
   - CapacitorHaptics (5.0.7):
     - Capacitor
   - CapacitorKeyboard (5.0.8):
@@ -131,6 +133,7 @@ DEPENDENCIES:
   - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@5.0.7_@capacitor+core@5.7.0/node_modules/@capacitor/clipboard`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@5.5.1-2_@capacitor+core@5.7.0/node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@5.7.0_@capacitor+core@5.7.0/node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@5.2.1_@capacitor+core@5.7.0/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@5.0.7_@capacitor+core@5.7.0/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@5.0.8_@capacitor+core@5.7.0/node_modules/@capacitor/keyboard`)"
   - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@5.3.0_@capacitor+core@5.7.0/node_modules/@capacitor-mlkit/barcode-scanning`)"
@@ -175,6 +178,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@5.5.1-2_@capacitor+core@5.7.0/node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
     :path: "../../node_modules/.pnpm/@capacitor+ios@5.7.0_@capacitor+core@5.7.0/node_modules/@capacitor/ios"
+  CapacitorFilesystem:
+    :path: "../../node_modules/.pnpm/@capacitor+filesystem@5.2.1_@capacitor+core@5.7.0/node_modules/@capacitor/filesystem"
   CapacitorHaptics:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@5.0.7_@capacitor+core@5.7.0/node_modules/@capacitor/haptics"
   CapacitorKeyboard:
@@ -197,6 +202,7 @@ SPEC CHECKSUMS:
   CapacitorClipboard: 45e5e25f2271f98712985d422776cdc5a779cca1
   CapacitorCommunitySqlite: 04fc95ca1b9ea9305bee5f5a34386851f6d2f061
   CapacitorCordova: e825fce1a2e14e4b5730641c7e098dccf74397b7
+  CapacitorFilesystem: 9f3e3c7fea2fff12f46dd5b07a2914f2103e4cfc
   CapacitorHaptics: 7c7c206f0c96a628fed073830c96d28c4b2e772e
   CapacitorKeyboard: aec619a578235c6ce279075009a2689c2cf5c42c
   CapacitorMlkitBarcodeScanning: ea08ef246e5d3511d5a231a59fae36b16ad9acb3
@@ -224,6 +230,6 @@ SPEC CHECKSUMS:
   SQLCipher: f2e96b3822e3006b379181a0e4fd145f6de29b56
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 0202d0d40ebe40ee95be6bff9de5251053a93b61
+PODFILE CHECKSUM: aae10183604524722937801f1984ff213130aa3d
 
 COCOAPODS: 1.15.2

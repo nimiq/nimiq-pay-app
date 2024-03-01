@@ -10,6 +10,9 @@ import { useTransactions } from '@/stores/transactions'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncOption } from '@/types'
 import { toMs } from '@/composables/useTime'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('usePoints')
 
 export const usePoints = defineStore('points', () => {
   const api = usePointsApi()
@@ -107,7 +110,7 @@ export const usePoints = defineStore('points', () => {
 
     const { data, error } = await getAllTasks()
     if (error || !data) {
-      console.error(error)
+      logger.error(error)
       return
     }
     tasks.value = data
@@ -205,8 +208,7 @@ export const usePoints = defineStore('points', () => {
     if (hasError)
       return { data: undefined, error: error?.message || i18n.t('Something went wrong paying with Points') }
 
-    // eslint-disable-next-line no-console
-    console.log(`📚 Upsert-ing points transaction`, request)
+    logger.log(`📚 Upsert-ing points transaction`, request)
     useTransactions().addPaymentToMerchantTransaction({
       transfer: Transfer.UserPaymentToMerchant,
       amount,

@@ -19,6 +19,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { i18n } from '@/i18n/i18n-setup'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
+import { useLogger } from '@/composables/useLogger'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
@@ -29,6 +30,8 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { toNim } from '@/composables/usePrice'
+
+const logger = useLogger('HomeView')
 
 const router = useRouter()
 const { showModal } = useModal()
@@ -49,7 +52,7 @@ const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalanc
 const referralInfo = computedAsync(async () => {
   const { data, error } = await getReferralInfo()
   if (error) {
-    console.error('Error getting referral info:', error)
+    logger.error('Error getting referral info:', error)
     return null
   }
   return data
@@ -62,7 +65,7 @@ const notificationArray: Ref<{ title: string; subtitle?: string | undefined; act
   {
     get title() { return i18n.t('Beta Testing') },
     get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
-    action: () => console.log('Notification Card 2 clicked'), // eslint-disable-line no-console
+    action: () => logger.log('Notification Card 2 clicked'),
   },
   {
     get title() { return i18n.t('Welcome to Nimiq Pay') },
@@ -86,7 +89,7 @@ function scrollToFirstNotification() {
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
-  console.log('Manual refresh triggered') // eslint-disable-line no-console
+  logger.log('Manual refresh triggered')
   // TODO: add a loading variable from useSync and don't refresh if already loading
   await Promise.all([
     sleep(2000),
@@ -103,12 +106,13 @@ if (import.meta.env.DEV) {
   watchEffect(() => {
     // eslint-disable-next-line no-console
     console.groupCollapsed('👛 Instant Pay Wallet')
-    // eslint-disable-next-line no-console
-    console.log('Ready:', isRemoteOk.value)
-    // eslint-disable-next-line no-console
-    console.log('Valid:', isHtlcActive.value)
-    // eslint-disable-next-line no-console
-    console.log('Balance:', remoteBalance.value)
+
+    logger.log('Ready:', isRemoteOk.value)
+
+    logger.log('Valid:', isHtlcActive.value)
+
+    logger.log('Balance:', remoteBalance.value)
+
     // eslint-disable-next-line no-console
     console.groupEnd()
   })
@@ -158,14 +162,12 @@ watch(isRecoveryWordsShown, () => {
 
 onMounted(async () => {
   if (!dbExists.value) {
-    // eslint-disable-next-line no-console
-    console.log('No DB found, redirecting to setup')
+    logger.log('No DB found, redirecting to setup')
     await router.replace('/setup')
     return
   }
   if (locked.value) {
-    // eslint-disable-next-line no-console
-    console.log('DB locked, redirecting to pin')
+    logger.log('DB locked, redirecting to pin')
     await router.replace('/pin')
     return
   }

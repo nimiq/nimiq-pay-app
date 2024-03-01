@@ -14,6 +14,9 @@ dependencies:
   '@capacitor/browser':
     specifier: ^5.2.0
     version: 5.2.0(@capacitor/core@5.7.0)
+  '@capacitor/filesystem':
+    specifier: ^5.2.1
+    version: 5.2.1(@capacitor/core@5.7.0)
   '@capacitor/share':
     specifier: ^5.0.7
     version: 5.0.7(@capacitor/core@5.7.0)
@@ -125,8 +128,8 @@ devDependencies:
     specifier: ^5.0.3
     version: 5.0.3(vite@5.1.0)(vue@3.4.16)
   '@vue/devtools':
-    specifier: ^7.0.13
-    version: 7.0.13(rollup@2.79.1)(vite@5.1.0)
+    specifier: ^7.0.15
+    version: 7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16)
   '@vue/eslint-config-typescript':
     specifier: ^12.0.0
     version: 12.0.0(eslint-plugin-vue@9.21.1)(eslint@8.56.0)(typescript@5.3.3)
@@ -1551,6 +1554,14 @@ packages:
     resolution: {integrity: sha512-wa9Fao+Axa1t2ZERMyQD9r0xyfglQyC4DHQKintzKaIqcRuVe9J31TmfD3IxROYi9LGpY4X8cq4m4bjb0W94Qg==}
     dependencies:
       tslib: 2.6.2
+
+  /@capacitor/filesystem@5.2.1(@capacitor/core@5.7.0):
+    resolution: {integrity: sha512-mexkJHUbNhydzfJywEUTIGARlB/HRogrtbjCZdA+mQxOi07T2887a70CwFaYRu1nKLMoKoliTM5UsLSsdl0PlA==}
+    peerDependencies:
+      '@capacitor/core': ^5.1.1
+    dependencies:
+      '@capacitor/core': 5.7.0
+    dev: false
 
   /@capacitor/haptics@5.0.7(@capacitor/core@5.7.0):
     resolution: {integrity: sha512-/j+7Qa4BxQA5aOU43cwXuiudfSXfoHFsAVfcehH5DkSjxLykZKWHEuE4uFJXqdkSIbAHjS37D0Sde6ENP6G/MA==}
@@ -3160,13 +3171,12 @@ packages:
   /@vue/devtools-api@6.5.1:
     resolution: {integrity: sha512-+KpckaAQyfbvshdDW5xQylLni1asvNSGme1JFs8I1+/H5pHEhqUKMEQD/qn3Nx5+/nycBq11qAEi8lk+LXI2dA==}
 
-  /@vue/devtools-core@7.0.13(rollup@2.79.1)(vite@5.1.0):
-    resolution: {integrity: sha512-cSnzDqR5TUyZ08XKHRFadLUHt+SJudU5W43+ImUKhes1BfQ/I6/SVjA9hepXxsMsHFDs7OgV8loopjsnZEojaA==}
+  /@vue/devtools-core@7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16):
+    resolution: {integrity: sha512-FTWknp0fDsAwPMRKjvQ6XKPED3Y9yPA+AefF/FOSkEfPh5Y2mLNwZaTHK/9zZjGXi76uJQMCDXycdQTxVoUIFQ==}
     dependencies:
-      '@vue/devtools-kit': 7.0.13
-      '@vue/devtools-schema': 7.0.13
-      '@vue/devtools-shared': 7.0.13
-      birpc: 0.2.14
+      '@vue/devtools-kit': 7.0.15(vue@3.4.16)
+      '@vue/devtools-shared': 7.0.15
+      birpc: 0.2.17
       fast-glob: 3.3.2
       image-meta: 0.2.0
       mitt: 3.0.1
@@ -3180,16 +3190,17 @@ packages:
       - rollup
       - supports-color
       - vite
+      - vue
     dev: true
 
-  /@vue/devtools-electron@7.0.13(rollup@2.79.1)(vite@5.1.0):
-    resolution: {integrity: sha512-PO1qwRyr3ExuO5qPyHptA8LVni+1KG8gBMY229FULudCK76WE6Xdxjk9Q9Gdo8alYSJVicDmf+TFOZjmX20R5g==}
+  /@vue/devtools-electron@7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16):
+    resolution: {integrity: sha512-vBFqqjj7ICpEv/NgB4Q9RKErvgbzETE7HRA5e1BK5wXYu3Of0/cD0JhVulHahs/7H3/CxXLROeNLQTMJ/5X95A==}
     dependencies:
-      '@vue/devtools-core': 7.0.13(rollup@2.79.1)(vite@5.1.0)
-      '@vue/devtools-shared': 7.0.13
-      electron: 28.2.0
+      '@vue/devtools-core': 7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16)
+      '@vue/devtools-shared': 7.0.15
+      electron: 28.2.5
       execa: 8.0.1
-      h3: 1.10.0
+      h3: 1.11.1
       ip: 1.1.8
       pathe: 1.1.2
       socket.io: 4.7.4
@@ -3199,44 +3210,46 @@ packages:
       - bufferutil
       - rollup
       - supports-color
+      - uWebSockets.js
       - utf-8-validate
       - vite
+      - vue
     dev: true
 
-  /@vue/devtools-kit@7.0.13:
-    resolution: {integrity: sha512-u1Ocu+epsQR67iwKF/eiPrmTDdh7DWnt11VjAw0/61wBDuhKrC9tipw33KCl4tTVrCXg0PJp4b38koGiNCn2dQ==}
+  /@vue/devtools-kit@7.0.15(vue@3.4.16):
+    resolution: {integrity: sha512-dT7OeCe1LUCIhHIb/yRR6Hn+XHh73r1o78onqCrxEKHdoZwBItiIeVnmJZPEUDFstIxfs+tJL231mySk3laTow==}
+    peerDependencies:
+      vue: ^3.0.0
     dependencies:
-      '@vue/devtools-schema': 7.0.13
-      '@vue/devtools-shared': 7.0.13
+      '@vue/devtools-shared': 7.0.15
       hookable: 5.5.3
       mitt: 3.0.1
       perfect-debounce: 1.0.0
       speakingurl: 14.0.1
+      vue: 3.4.16(typescript@5.3.3)
     dev: true
 
-  /@vue/devtools-schema@7.0.13:
-    resolution: {integrity: sha512-sDGPPPbi8OZHJMifWl+BQaAlpnkDfsSqcd8s3Uk9dYzHceO63BQjvi/qi1Ru4F+U/eJSuNWv4l/VhiqUNQ5ndw==}
-    dev: true
-
-  /@vue/devtools-shared@7.0.13:
-    resolution: {integrity: sha512-nSkUV4czv2UyloDXZwhpDoZic2/lcf3x2VRhK6xiCJY3cmO0+fL7qRDYDZYn11KwyLZngc7uiWF1f3AD0jyxVQ==}
+  /@vue/devtools-shared@7.0.15:
+    resolution: {integrity: sha512-fpfvMVvS7aDgO7x2JPFiTQ1MHcCc63/bE7yTgs278gMBybuO9b3hdiZ/k0Pw1rN+RefaU9yQiFA+5CCFc1D+6w==}
     dependencies:
       rfdc: 1.3.1
     dev: true
 
-  /@vue/devtools@7.0.13(rollup@2.79.1)(vite@5.1.0):
-    resolution: {integrity: sha512-ZzNJQAig8SMpJqdkvvo58MAcTV6YQsQqOaxg2XFFEDv7QLf3cYhEKvlQ51V79QdyN5nqOli9TcUL4Iuz6y2hRg==}
+  /@vue/devtools@7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16):
+    resolution: {integrity: sha512-NXcnNOs7Ymwm3WEYCeBUihEgsGAlUp77li8475TkeYhFxIU3vEuW/Eca19ioG60EohHHHVYDkpZHaVRYDwX2wg==}
     hasBin: true
     dependencies:
-      '@vue/devtools-electron': 7.0.13(rollup@2.79.1)(vite@5.1.0)
-      '@vue/devtools-kit': 7.0.13
+      '@vue/devtools-electron': 7.0.15(rollup@2.79.1)(vite@5.1.0)(vue@3.4.16)
+      '@vue/devtools-kit': 7.0.15(vue@3.4.16)
     transitivePeerDependencies:
       - '@nuxt/kit'
       - bufferutil
       - rollup
       - supports-color
+      - uWebSockets.js
       - utf-8-validate
       - vite
+      - vue
     dev: true
 
   /@vue/eslint-config-typescript@12.0.0(eslint-plugin-vue@9.21.1)(eslint@8.56.0)(typescript@5.3.3):
@@ -3965,8 +3978,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /birpc@0.2.14:
-    resolution: {integrity: sha512-37FHE8rqsYM5JEKCnXFyHpBCzvgHEExwVVTq+nUmloInU7l8ezD1TpOhKpS8oe1DTYFqEK27rFZVKG43oTqXRA==}
+  /birpc@0.2.17:
+    resolution: {integrity: sha512-+hkTxhot+dWsLpp3gia5AkVHIsKlZybNT5gIYiDlNzJrmYPcTM9k5/w2uaj3IPpd7LlEYpmCj4Jj1nC41VhDFg==}
     dev: true
 
   /bl@4.1.0:
@@ -4673,6 +4686,15 @@ packages:
       which: 2.0.2
     dev: true
 
+  /crossws@0.2.4:
+    resolution: {integrity: sha512-DAxroI2uSOgUKLz00NX6A8U/8EE3SZHmIND+10jkVSaypvyt57J5JEOxAQOL6lQxyzi/wZbTIwssU1uy69h5Vg==}
+    peerDependencies:
+      uWebSockets.js: '*'
+    peerDependenciesMeta:
+      uWebSockets.js:
+        optional: true
+    dev: true
+
   /crypto-random-string@2.0.0:
     resolution: {integrity: sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==}
     engines: {node: '>=8'}
@@ -4970,8 +4992,8 @@ packages:
     engines: {node: '>=0.4.0'}
     dev: true
 
-  /destr@2.0.2:
-    resolution: {integrity: sha512-65AlobnZMiCET00KaFFjUefxDX0khFA/E4myqZ7a6Sq1yZtR8+FVIvilVX66vF2uobSumxooYZChiRPCKNqhmg==}
+  /destr@2.0.3:
+    resolution: {integrity: sha512-2N3BOUU4gYMpTP24s5rF5iP7BDr7uNTCs4ozw3kf/eKfvWSIu93GEBi5m427YoyJoeOzQ5smuu4nNAPGb8idSQ==}
     dev: true
 
   /detect-libc@2.0.2:
@@ -5107,8 +5129,8 @@ packages:
     resolution: {integrity: sha512-/bKPPcgZVUziECqDc+0HkT87+0zhaWSZHNXqF8FLd2lQcptpmUFwoCSWjCdOng9Gdq+afKArPdEg/0ZW461Eng==}
     dev: true
 
-  /electron@28.2.0:
-    resolution: {integrity: sha512-22SylXQQ9IHtwLw4D+Z4Si7OUpeDtpHfJVTjy3yv53iLg5zJKKPOCWT4ZwgYGHQZ0eldyBrYBHF/P9FPd2CcVQ==}
+  /electron@28.2.5:
+    resolution: {integrity: sha512-qlvQkDNVAzN647NpiJJw7GYJqE0NwK4+1evkhrQ0Xv6Qgab1EtN50G4oDr4/x/+O5pGUG2P5d3isXu+37O3RDw==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
     requiresBuild: true
@@ -6433,17 +6455,21 @@ packages:
     resolution: {integrity: sha512-EtKwoO6kxCL9WO5xipiHTZlSzBm7WLT627TqC/uVRd0HKmq8NXyebnNYxDoBi7wt8eTWrUrKXCOVaFq9x1kgag==}
     dev: true
 
-  /h3@1.10.0:
-    resolution: {integrity: sha512-Tw1kcIC+AeimwRmviiObaD5EB430Yt+lTgOxLJxNr96Vd/fGRu04EF7aKfOAcpwKCI+U2JlbxOLhycD86p3Ciw==}
+  /h3@1.11.1:
+    resolution: {integrity: sha512-AbaH6IDnZN6nmbnJOH72y3c5Wwh9P97soSVdGSBbcDACRdkC0FEWf25pzx4f/NuOCK6quHmW18yF2Wx+G4Zi1A==}
     dependencies:
       cookie-es: 1.0.0
+      crossws: 0.2.4
       defu: 6.1.4
-      destr: 2.0.2
+      destr: 2.0.3
       iron-webcrypto: 1.0.0
+      ohash: 1.1.3
       radix3: 1.1.0
-      ufo: 1.3.2
+      ufo: 1.4.0
       uncrypto: 0.1.3
       unenv: 1.9.0
+    transitivePeerDependencies:
+      - uWebSockets.js
     dev: true
 
   /handlebars@4.7.8:
@@ -8109,6 +8135,10 @@ packages:
       call-bind: 1.0.5
       define-properties: 1.2.1
       es-abstract: 1.22.3
+    dev: true
+
+  /ohash@1.1.3:
+    resolution: {integrity: sha512-zuHHiGTYTA1sYJ/wZN+t5HKZaH23i4yI1HMwbuXm24Nid7Dv0KcuRlKoNKS9UNfAVSBlnGLcuQrnOKWOZoEGaw==}
     dev: true
 
   /once@1.4.0:
@@ -10271,6 +10301,10 @@ packages:
     resolution: {integrity: sha512-o+ORpgGwaYQXgqGDwd+hkS4PuZ3QnmqMMxRuajK/a38L6fTpcE5GPIfrf+L/KemFzfUpeUQc1rRS1iDBozvnFA==}
     dev: true
 
+  /ufo@1.4.0:
+    resolution: {integrity: sha512-Hhy+BhRBleFjpJ2vchUNN40qgkh0366FWJGqVLYBHev0vpHTrXSA0ryT+74UiW6KWsldNurQMKGqCm1M2zBciQ==}
+    dev: true
+
   /uglify-js@3.17.4:
     resolution: {integrity: sha512-T9q82TJI9e/C1TAxYvfb16xO120tMVFZrGA3f9/P4424DNu6ypK103y0GPFVa17yotwSyZW5iYXgjYHkGrJW/g==}
     engines: {node: '>=0.8.0'}
@@ -10443,7 +10477,7 @@ packages:
     peerDependencies:
       vite: ^2.9.0 || ^3.0.0-0 || ^4.0.0-0 || ^5.0.0-0
     dependencies:
-      birpc: 0.2.14
+      birpc: 0.2.17
       vite: 5.1.0(@types/node@20.10.6)(terser@5.27.0)
       vite-hot-client: 0.2.3(vite@5.1.0)
     dev: true

@@ -2,6 +2,9 @@ import { type MaybeRef, toValue } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useDevice } from './useDevice'
 import { useApp } from '@/stores/app'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useTime')
 
 const { language } = storeToRefs(useApp())
 
@@ -78,6 +81,6 @@ async function updateServerTimeOffset() {
   }
   catch (error) {
     serverTimeOffset = undefined
-    console.error(error)
+    logger.error(error)
   }
 }

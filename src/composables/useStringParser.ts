@@ -8,6 +8,9 @@ import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useStringParser')
 
 const CPL_URL_ID_PARAM = 'cpl_id'
 
@@ -111,7 +114,7 @@ export function useStringParser() {
 
     const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount }
 
-    console.log('📷 Parsed payment request data:', data) // eslint-disable-line no-console
+    logger.log('📷 Parsed payment request data:', data)
 
     return { data, error: undefined }
   }
@@ -163,7 +166,7 @@ export function useStringParser() {
       transfer: Transfer.UserPaymentToMerchant,
     }
 
-    console.log('📷 Parsed payment request data:', data) // eslint-disable-line no-console
+    logger.log('📷 Parsed payment request data:', data)
 
     return { data, error: undefined }
   }

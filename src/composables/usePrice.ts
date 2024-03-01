@@ -6,6 +6,9 @@ import { usePriceDb } from '@/composables/usePriceDb'
 import { type FormatCryptoOptions, type FormatFiatOptions, useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('usePrice')
 
 enum PriceStatus {
   Initial = 'initial',
@@ -85,7 +88,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     { immediate: false },
   )
 
-  watch([errorCryptoUsdApi, errorFiatUsdApi], console.error) // TODO Handle error
+  watch([errorCryptoUsdApi, errorFiatUsdApi], logger.error) // TODO Handle error
 
   const price = computed(() => priceDb.value || (priceCryptoUsd.value?.price || 0) * (priceFiatUsd.value?.price || 0))
 
@@ -142,7 +145,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     const rejected = promises.filter(p => p.status === 'rejected')
     if (rejected.length) {
       const reasons = rejected.map(p => (p as PromiseRejectedResult).reason)
-      console.error(reasons)
+      logger.error(reasons)
       state.value = PriceStatus.Error
       return
     }

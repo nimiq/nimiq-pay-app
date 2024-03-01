@@ -3,6 +3,9 @@ import { computed, ref } from 'vue'
 import { useApp } from './app'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResult, Result } from '@/types'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('local-wallet')
 
 export const useLocalWallet = defineStore('local-wallet', () => {
   const { entropyToMnemonic, mnemonicToExtendedPrivateKey, mnemonicToEntropy } = Nimiq.MnemonicUtils
@@ -43,7 +46,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
         errorMessage = i18n.t('Invalid recovery words')
       }
       else {
-        console.warn(`Untranslated message: ${errorMessage}`)
+        logger.warn(`Untranslated message: ${errorMessage}`)
       }
       return { error: errorMessage, data: undefined }
     }

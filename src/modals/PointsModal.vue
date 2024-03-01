@@ -14,6 +14,9 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import Gamepad from '@/components/icons/gamepad.vue'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('PointsModal')
 
 const { pointsBalance, tasks, isCampaignActive } = storeToRefs(usePoints())
 const { fiat } = usePrice(pointsBalance)
@@ -24,13 +27,13 @@ const { closeModal, showModal } = useModal()
 const referralInfo = computedAsync(async () => {
   const { data, error } = await getReferralInfo()
   if (error) {
-    console.error('Error getting referral info:', error)
+    logger.error('Error getting referral info:', error)
     return null
   }
   return data
 })
 const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
-const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
+// const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 

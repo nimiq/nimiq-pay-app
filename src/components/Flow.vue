@@ -9,6 +9,7 @@ import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, OnDoneStepValu
 import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
+import { useLogger } from '@/composables/useLogger'
 
 const props = defineProps({
   flow: {
@@ -24,6 +25,8 @@ const props = defineProps({
     required: false,
   },
 })
+
+const logger = useLogger('Flow.vue')
 
 const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName } = props.flow!
 const historyStack = ref([stepsInFlow[0]])
@@ -56,7 +59,7 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
 
     // Prevent execution if the hook has already run successfully.
     if (hasRunSuccessfully) {
-      console.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
+      logger.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
       return
     }
 
@@ -161,7 +164,7 @@ async function navigateTo(options: NavigateToOptions = 1) {
   else if ((options as { step: string }).step) {
     const stepIndex = stepsInFlow.findIndex(s => s.step === (options as { step: StepName }).step)
     if (stepIndex === -1) {
-      console.warn(`Step ${(options as { step: string }).step} not found in flow`)
+      logger.warn(`Step ${(options as { step: string }).step} not found in flow`)
       return
     }
     newIndex = stepIndex - activeIndex.value
@@ -255,7 +258,7 @@ useIntersectionObserver(
       blur()
 
     // TODO: remove when focus is working in every device (mobile + tablet)
-    console.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value }) // eslint-disable-line no-console
+    logger.log({ intersectionRatio, step: activeStep.value.step, activeIndex: activeIndex.value, autofocus: activeStep.value.autofocus, isActiveStepFullyVisible: isActiveStepFullyVisible.value })
   },
   // Note: previously, we used [0, 0.5, 1] as threshold, meaning that the observer should be called whenever any of
   // those values is reached/passed. However, occasionally but seldom it happened that the callback for reaching 1 was
@@ -278,7 +281,7 @@ function isStepVisible(stepName: StepName) {
 function focus() {
   const input = activeStepScrollerItem.value?.querySelector('input')
   // TODO: remove when focus is working in every device (mobile + tablet)
-  console.log('focus', input) // eslint-disable-line no-console
+  logger.log('focus', input)
   input?.focus()
 }
 
@@ -287,7 +290,7 @@ function blur() {
   if (activeElement instanceof HTMLElement)
     activeElement.blur()
   else
-    console.warn('Cannot blur', activeElement)
+    logger.warn('Cannot blur', activeElement)
 }
 </script>
 

@@ -5,6 +5,9 @@ import { computedAsync } from '@vueuse/core'
 import { useDevice } from '@/composables/useDevice'
 import { migrations } from '@/lib/sql-queries'
 import type { AsyncOption } from '@/types'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useConn')
 
 const DB_NAME = 'storage'
 const DB_VERSION = migrations.at(-1)!.version
@@ -30,7 +33,7 @@ export const useConn = defineStore('conn', () => {
     if (locked.value)
       await unlockPromise
     if (!db.value) {
-      console.error('The db instance is not defined')
+      logger.error('The db instance is not defined')
       return 'The db instance is not defined' // no translation as not user-facing; just a dev error
     }
     // if (locked.value)
@@ -50,8 +53,8 @@ export const useConn = defineStore('conn', () => {
     }
 
     if (import.meta.env.DEV)
-    // eslint-disable-next-line no-console
-      console.log(`📚 Initializing database`, migrations)
+
+      logger.log(`📚 Initializing database`, migrations)
 
     for (const { statements, version } of migrations)
       await sqlite.addUpgradeStatement(DB_NAME, version, statements)
@@ -91,7 +94,7 @@ export const useConn = defineStore('conn', () => {
   async function deleteDatabase(reload: boolean = true) {
     try {
       if (dbExists.value) {
-        console.log('Deleting database')
+        logger.log('Deleting database')
         await CapacitorSQLite.deleteDatabase({ database: DB_NAME })
         await db.value!.delete()
         await sqlite.closeAllConnections()
@@ -100,9 +103,9 @@ export const useConn = defineStore('conn', () => {
       }
     }
     catch (e) {
-      console.error(e)
+      logger.error(e)
     }
-    console.log('Database deleted, reloading', reload)
+    logger.log('Database deleted, reloading', reload)
     if (reload)
       globalThis.document?.location.reload()
   }

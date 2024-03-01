@@ -9,6 +9,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { usePoints } from '@/stores/points'
 import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
 
 const props = defineProps({
   task: {
@@ -16,6 +17,8 @@ const props = defineProps({
     default: null,
   },
 })
+
+const logger = useLogger('TaskModal')
 
 const { closeModal } = useModal()
 const { setToast } = useToast()
@@ -55,7 +58,7 @@ watchEffect(() => {
           try {
             const { data, error } = await claimTask({ id: props.task.id })
             if (error || !data) {
-              console.error(error)
+              logger.error(error)
               return
             }
             const { task_status } = data
@@ -92,7 +95,7 @@ async function handleSubmit() {
   if (!isAlreadyClaimed.value) {
     const { data, error } = await claimTask({ id: props.task.id, answer })
     if (error || !data) {
-      console.error(error)
+      logger.error(error)
       return
     }
     const { task_status } = data

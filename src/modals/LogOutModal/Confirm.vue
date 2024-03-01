@@ -8,6 +8,9 @@ import { useApp } from '@/stores/app'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('LogOutModal/Confirm')
 
 const { closeModal, showModal } = useModal()
 const router = useRouter()
@@ -17,8 +20,7 @@ const { localBalance } = storeToRefs(useLocalWallet())
 const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
-  // eslint-disable-next-line no-console
-  console.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
+  logger.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
     await deleteDatabase()

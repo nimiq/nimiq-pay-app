@@ -1,7 +1,6 @@
 // TODO: https://capacitorjs.com/docs/apis/background-runner
 // TODO: https://capacitorjs.com/docs/apis/local-notifications
 
-/* eslint-disable no-console */
 import { type Ref, ref } from 'vue'
 import { type ActionPerformed, PushNotifications } from '@capacitor/push-notifications'
 import type { PermissionState } from '@capacitor/core'
@@ -10,6 +9,9 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useDevice } from '@/composables/useDevice'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('useNotifications')
 
 type Action = 'openPoints' | 'openTask'
 interface NotificationData {
@@ -33,15 +35,15 @@ export function useNotifications() {
 
   async function addListeners() {
     await PushNotifications.addListener('registration', (token) => {
-      console.log('🔔 Registration token:', token.value)
+      logger.log('🔔 Registration token:', token.value)
     })
 
     await PushNotifications.addListener('registrationError', (err) => {
-      console.error('🔔 Registration error:', err.error)
+      logger.error('🔔 Registration error:', err.error)
     })
 
     await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('🔔 Push notification received:', notification)
+      logger.log('🔔 Push notification received:', notification)
     })
 
     await PushNotifications.addListener('pushNotificationActionPerformed', performAction)
@@ -55,7 +57,7 @@ export function useNotifications() {
       status.value = (await PushNotifications.requestPermissions()).receive
 
     if (status.value === 'denied') {
-      console.error('🔔🚫 User denied permissions!')
+      logger.error('🔔🚫 User denied permissions!')
       return false
     }
 
@@ -74,10 +76,10 @@ export function useNotifications() {
           vibration: true,
         })
       }
-      console.log('🔔 Registered for push notifications', status.value)
+      logger.log('🔔 Registered for push notifications', status.value)
     }
     catch (e) {
-      console.error('🔔 Error registering for push notifications', e)
+      logger.error('🔔 Error registering for push notifications', e)
       return false
     }
     return true
@@ -85,7 +87,7 @@ export function useNotifications() {
 
   async function getDeliveredNotifications() {
     const notificationList = await PushNotifications.getDeliveredNotifications()
-    console.log('🔔 Delivered notifications', notificationList)
+    logger.log('🔔 Delivered notifications', notificationList)
   }
 
   async function performAction(notification: ActionPerformed) {
@@ -94,7 +96,7 @@ export function useNotifications() {
     if (actionId !== 'tap' || !action)
       return
 
-    console.log('🔔 ⚡ Performing action', action, task_id ?? '', notification)
+    logger.log('🔔 ⚡ Performing action', action, task_id ?? '', notification)
     const { waitForUnlock } = (await import('@/stores/conn')).useConn()
     await waitForUnlock()
     const { phoneNumberVerified } = (await import('@/stores/app')).useApp()
@@ -112,7 +114,7 @@ export function useNotifications() {
     const { data: task, error } = await (await import('@/stores/points')).usePoints().getTaskById(task_id)
     // TODO: show error
     if (error) {
-      console.error(error)
+      logger.error(error)
       return
     }
 

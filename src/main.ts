@@ -35,6 +35,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { useNotifications } from '@/composables/useNotifications'
+import { useLogger } from '@/composables/useLogger'
 
 if (import.meta.env.DEV)
   // Change this based on your local IP address if you want to use vue-devtools
@@ -64,6 +65,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await useConn().init()
   useNimiqNetwork().init()
   useNotifications().init()
+  useLogger().init()
 
   const { isWeb } = useDevice()
 

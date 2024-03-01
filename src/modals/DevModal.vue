@@ -12,6 +12,9 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/composables/useSync'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('DevModal')
 
 // Note: no translations in this file as it's for dev purposes only.
 
@@ -45,8 +48,7 @@ async function handleClearTx() {
 
 async function getAllHtlcs() {
   const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
-  // eslint-disable-next-line no-console
-  console.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
+  logger.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
   const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
   htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
     return {
@@ -61,19 +63,19 @@ onMounted(async () => {
   getAllHtlcs()
 
   const remoteSignerTable = await query('SELECT * FROM remote_signers')
-  // eslint-disable-next-line no-console
-  console.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
+
+  logger.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
   const activeSigner = await query('SELECT * FROM remote_signers WHERE active = 1')
-  // eslint-disable-next-line no-console
-  console.log('Active Signer', activeSigner)
+
+  logger.log('Active Signer', activeSigner)
 
   const transacions = await query('SELECT * FROM transactions')
-  // eslint-disable-next-line no-console
-  console.log('Transactions from DB', transacions)
+
+  logger.log('Transactions from DB', transacions)
 
   const priceTable = await query('SELECT * FROM prices')
-  // eslint-disable-next-line no-console
-  console.log('Price table', priceTable)
+
+  logger.log('Price table', priceTable)
 
   client.value?.addTransactionListener(async (tx) => {
     txInMemPool.value = tx
