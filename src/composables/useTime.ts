@@ -1,12 +1,9 @@
 import { type MaybeRef, toValue } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useDevice } from './useDevice'
 import { useApp } from '@/stores/app'
 import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useTime')
-
-const { language } = storeToRefs(useApp())
 
 const defaultFormatter: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' }
 
@@ -15,12 +12,12 @@ const twentyFirstCentury = 1000000000000 /* 17:46:40 20/11/2001 GMT */
 type UseFormatTimeOptions = {
   /**
    * The locale to use when formatting the relative time.
-   * @default storeToRefs(useApp()).language.value
+   * @default useApp().language
    */
   locale?: string
 } & Intl.DateTimeFormatOptions
 
-export function useFormatTime(timestamp: number, { locale = language.value, ...options }: UseFormatTimeOptions = {}) {
+export function useFormatTime(timestamp: number, { locale = useApp().language, ...options }: UseFormatTimeOptions = {}) {
   return new Intl.DateTimeFormat(locale, { ...defaultFormatter, ...options }).format(toMs(timestamp))
 }
 
