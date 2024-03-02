@@ -61,6 +61,7 @@ export function useNotifications() {
     if (isWeb)
       return
     status.value = (await PushNotifications.checkPermissions()).receive
+    logger.log('🔔 Notification init, Permissions status:', status.value)
     await addListeners()
     if (status.value === 'granted')
       await registerNotifications()
@@ -86,7 +87,7 @@ export function useNotifications() {
     if (isWeb)
       return true
 
-    if (status.value === 'prompt' || status.value === 'prompt-with-rationale' || (!status.value && isIOS))
+    if (status.value === 'prompt' || status.value === 'prompt-with-rationale' || !status.value)
       status.value = (await PushNotifications.requestPermissions()).receive
 
     if (status.value === 'denied') {
