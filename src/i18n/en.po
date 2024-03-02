@@ -502,7 +502,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:104
+#: src/composables/useNotifications.ts:105
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -671,7 +671,7 @@ msgstr ""
 msgid "Reset search"
 msgstr ""
 
-#: src/composables/useNotifications.ts:103
+#: src/composables/useNotifications.ts:104
 msgid "Rewards Notifications"
 msgstr ""
 
