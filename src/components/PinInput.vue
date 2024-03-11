@@ -45,7 +45,7 @@ watch(pinCodeInput, async (pin) => {
 watch(() => props.errorMsg, (msg) => {
   if (msg) {
     wiggle.value = true
-    setTimeout(() => {
+    window.setTimeout(() => {
       wiggle.value = false
     }, 300)
     isLoading.value = false
@@ -73,7 +73,7 @@ function handleInputClick(i: number) {
 }
 
 function clearInput() {
-  setTimeout(() => {
+  window.setTimeout(() => {
     pinCodeInput.value = ''
   }, 300)
 }

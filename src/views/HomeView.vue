@@ -70,7 +70,7 @@ function scrollToFirstNotification() {
   })
 }
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')

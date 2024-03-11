@@ -158,7 +158,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     // The first time, we need to download the model, so it will take some time
     let maxMs = 10_000
     while (!ready() && maxMs > 0) {
-      await new Promise(r => setTimeout(r, 100))
+      await new Promise(r => window.setTimeout(r, 100))
       maxMs -= 100
     }
     if (maxMs <= 0) {

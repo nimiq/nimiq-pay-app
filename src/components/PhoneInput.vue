@@ -69,7 +69,7 @@ function showAlert() {
 }
 
 function handleSubmit() {
-  setTimeout(() => emit('done', phoneNumber.value), 200)
+  window.setTimeout(() => emit('done', phoneNumber.value), 200)
 }
 
 watch(() => props.errorMsg, () => {

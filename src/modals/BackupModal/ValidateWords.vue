@@ -65,7 +65,7 @@ async function handleGuess(word: string) {
     usedIndexes.value = []
     // TODO: improve this
     setToast({ message: i18n.t('Wrong word!'), error: true })
-    setTimeout(() => {
+    window.setTimeout(() => {
       nav.pop()
     }, 1000)
   }

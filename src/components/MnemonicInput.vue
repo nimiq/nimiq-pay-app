@@ -34,10 +34,10 @@ function inputHandler(e: Event) {
   // TODO: Jump to next word if valid
   if (wordList.includes(value)) { loginWords.value[index] = value }
   else {
-    timeout = setTimeout(() => {
+    timeout = window.setTimeout(() => {
       input.classList.add('animate-wiggle')
       input.classList.add('text-pumpkin')
-      setTimeout(() => {
+      window.setTimeout(() => {
         input.classList.remove('animate-wiggle')
       }, 1000)
     }, 2000)

@@ -180,7 +180,7 @@ export const usePoints = defineStore('points', () => {
     // TODO: if error, check code next time
     await api.claimReferral({ id: referralCode.value, token: pointsToken.value })
     referralCode.value = ''
-    setTimeout(() => {
+    window.setTimeout(() => {
       updatePointsBalance()
       useToast().setToast({ message: i18n.t('Cryptocity Points have been credited') })
     }, 750)

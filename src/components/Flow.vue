@@ -131,7 +131,7 @@ function defaultErrorHandler(errorMessage: string) {
   if (isInputStep(activeStepName) && !props.isClosing) {
     errors.value[activeStepName] = errorMessage
     // Clear the error message after 10 seconds
-    setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
+    window.setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
   else { setToast({ message: errorMessage, error: true, duration: 10 * 1e3 }) }
 }

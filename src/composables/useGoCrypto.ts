@@ -415,7 +415,7 @@ async function getServerTimeOffset(serverDateHeader?: string | null, getServerTi
     // Reset cached serverTimeOffset after one hour for the case that user changes his clock without killing or
     // reloading the app. Note that setTimeout is unaffected from changes to the user clock.
     clearTimeout(serverTimeOffsetResetTimeout);
-    serverTimeOffsetResetTimeout = setTimeout(() => serverTimeOffset = undefined, 60 * 60 * 1000);
+    serverTimeOffsetResetTimeout = window.setTimeout(() => serverTimeOffset = undefined, 60 * 60 * 1000);
 
     return serverTimeOffset;
 }

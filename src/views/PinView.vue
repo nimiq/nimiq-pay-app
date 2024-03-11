@@ -20,7 +20,7 @@ async function handleSubmit(pin: string) {
   const error = await decrypt(pin)
   if (error) {
     errorMsg.value = error
-    setTimeout(() => {
+    window.setTimeout(() => {
       errorMsg.value = ''
     }, 2000)
     return
@@ -30,7 +30,7 @@ async function handleSubmit(pin: string) {
 
 function shown() {
   const input = document.querySelector('input')
-  setTimeout(() => {
+  window.setTimeout(() => {
     // TODO: this is not working, idk why
     input?.focus()
     Keyboard.show()

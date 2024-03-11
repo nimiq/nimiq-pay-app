@@ -60,7 +60,7 @@ export function useRelativeTime({ timestamp: timestampMsOrS }: UseRelativeTimeOp
       // is smaller than diff as it's in the future (see above), no Math.abs() is required here.
       const timeToRoundingPoint = diff - roundingPoint
       const waitTime = timeToRoundingPoint + 10
-      updateTimeout = setTimeout(updateRelativeTime, waitTime)
+      updateTimeout = window.setTimeout(updateRelativeTime, waitTime)
     }
   }
 

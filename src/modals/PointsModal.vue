@@ -35,7 +35,7 @@ const referralInfo = computedAsync(async () => {
 const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
 // const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
   await Promise.all([
