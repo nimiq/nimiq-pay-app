@@ -17,7 +17,9 @@ const { language, selectedFiat } = storeToRefs(useApp())
 const htmlRefHook = ref<HTMLElement | null>(null)
 
 const appVersion = computedAsync(async () => {
-  try { return (await App.getInfo()).version }
+  try {
+    return (await App.getInfo()).version
+  }
   catch (e) {
     logger.error('Error getting app version:', e)
     return '0.0.0'

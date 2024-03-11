@@ -32,7 +32,9 @@ function inputHandler(e: Event) {
   }
   // Wait if user is still typing
   // TODO: Jump to next word if valid
-  if (wordList.includes(value)) { loginWords.value[index] = value }
+  if (wordList.includes(value)) {
+    loginWords.value[index] = value
+  }
   else {
     timeout = window.setTimeout(() => {
       input.classList.add('animate-wiggle')

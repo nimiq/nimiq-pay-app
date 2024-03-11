@@ -54,7 +54,7 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
 
 export function useNotifications() {
   const status: Ref<PermissionState | undefined> = ref()
-  const { isAndroid, isIOS, isWeb } = useDevice()
+  const { isAndroid, isWeb } = useDevice()
   const { closedNotifications } = storeToRefs(useApp())
 
   async function init() {
@@ -135,7 +135,9 @@ export function useNotifications() {
     await waitForUnlock()
     const { phoneNumberVerified } = (await import('@/stores/app')).useApp()
 
-    if (action === 'openPoints') { useModal().showModal(Modal.Points) }
+    if (action === 'openPoints') {
+      useModal().showModal(Modal.Points)
+    }
     else if (action === 'openTask' && task_id) {
       if (phoneNumberVerified)
         openTask(task_id)

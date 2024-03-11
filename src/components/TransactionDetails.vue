@@ -2,7 +2,7 @@
 import { type PropType, computed, ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import TransactionAmounts from './TransactionAmounts.vue'
-import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, translateTransactionState } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'

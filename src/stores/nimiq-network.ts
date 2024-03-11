@@ -33,7 +33,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     client.value.addConsensusChangedListener((newConsensus) => {
       logger.log('Consensus:', newConsensus)
-      if (newConsensus === 'established') { clearToast() }
+      if (newConsensus === 'established') {
+        clearToast()
+      }
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established') {
         setToast({

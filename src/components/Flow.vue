@@ -172,8 +172,12 @@ async function navigateTo(options: NavigateToOptions = 1) {
   // We need to be quite verbose here, since TypeScript doesn't allow to use
   // the same property name in different types. I think from TS v5.5, this will
   // be fixed
-  else if ((options as { goBackBy: number }).goBackBy) { newIndex = activeIndex.value - (options as { goBackBy: number }).goBackBy }
-  else if ((options as { skipAheadBy: number }).skipAheadBy) { newIndex = currentIndex + (options as { skipAheadBy: number }).skipAheadBy }
+  else if ((options as { goBackBy: number }).goBackBy) {
+    newIndex = activeIndex.value - (options as { goBackBy: number }).goBackBy
+  }
+  else if ((options as { skipAheadBy: number }).skipAheadBy) {
+    newIndex = currentIndex + (options as { skipAheadBy: number }).skipAheadBy
+  }
 
   if (newIndex < 0)
     throw new Error('Cannot navigate to a negative index')

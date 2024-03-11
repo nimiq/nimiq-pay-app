@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { IonContent, IonGrid, IonHeader, IonPage, IonRow, IonToolbar } from '@ionic/vue'
+import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { Keyboard } from '@capacitor/keyboard'

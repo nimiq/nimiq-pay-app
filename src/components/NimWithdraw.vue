@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { type PropType, computed, ref, toRef, watch } from 'vue'
-import { IonButton, IonIcon, IonSpinner } from '@ionic/vue'
+import { IonButton, IonIcon } from '@ionic/vue'
 import {
   SelectContent,
   SelectGroup,
