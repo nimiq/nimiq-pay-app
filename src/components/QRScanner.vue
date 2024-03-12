@@ -98,6 +98,9 @@ onBeforeUnmount(() => {
     <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
       {{ errorMessage }}
     </p>
+    <p v-else class="mx-auto mt-8 text-center text-space/60 small:leading-5 max-w-64" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
+      {{ $t('Scan a Nimiq or Bitcoin Lightning QR code to pay.') }}
+    </p>
   </div>
 </template>
 
