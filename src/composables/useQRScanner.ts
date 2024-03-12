@@ -80,8 +80,10 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   )
 
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
-  const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
+  const { startScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
   const state = ref(QRScannerState.Idle)
+
+  let stopScan: Function = () => {}
 
   async function start() {
     const video = await setUpCameraFeed()
@@ -90,7 +92,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
       logger.error('No permission to use the camera')
       return
     }
-    startScan({ video })
+    stopScan = await startScan({ video })
     state.value = QRScannerState.Scanning
   }
 
@@ -133,8 +135,8 @@ interface StartScannerOptions {
 }
 
 function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
-  let stopScan: Function = () => { } // We need to initialize this function to avoid TS errors
-  let resumeScan: Function
+  let stopScan: Function = () => {}
+  let resumeScan: Function | undefined
 
   async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
     const canvas = document.createElement('canvas')
@@ -148,10 +150,10 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
       parseString(result)
   }
 
-  async function startScan({ video }: StartScannerOptions) {
+  async function startScan({ video }: StartScannerOptions): Promise<Function> {
     if (resumeScan) {
       resumeScan()
-      return
+      return stopScan
     }
 
     const { ready, scan } = await import('qr-scanner-wechat')
@@ -164,7 +166,7 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     }
     if (maxMs <= 0) {
       onError?.(i18n.t('The QR scanner is not ready yet. Please try again.'))
-      return
+      return stopScan
     }
 
     const { useIntervalFn } = await import('@vueuse/core')
@@ -172,11 +174,12 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
     const { resume, pause } = useIntervalFn(() => scanFrame(video!, scan), 300, { immediate: true })
     stopScan = pause
     resumeScan = resume
+
+    return stopScan
   }
 
   return {
     startScan,
-    stopScan,
   }
 }
 
@@ -185,16 +188,14 @@ function useQRScannerMobile({ parseString }: UseQRScannerDeviceOptions) {
     const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
     await BarcodeScanner.addListener('barcodeScanned', ({ barcode }) => parseString(barcode.displayValue))
     await BarcodeScanner.startScan()
-  }
 
-  async function stopScan() {
-    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    await BarcodeScanner.removeAllListeners()
-    await BarcodeScanner.stopScan()
+    return async function stopScan() {
+      await BarcodeScanner.removeAllListeners()
+      await BarcodeScanner.stopScan()
+    }
   }
 
   return {
     startScan,
-    stopScan,
   }
 }
