@@ -10,6 +10,7 @@ import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLogger } from '@/composables/useLogger'
+import { isDev } from '../lib'
 
 const logger = useLogger('useQRScanner')
 
@@ -99,9 +100,9 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
     state.value = QRScannerState.Idle
   }
 
-  // setDummyData is only used in development mode to test the scanner. In production, it will be a no-op function.
-  let setDummyData = () => { }
-  if (import.meta.env.DEV) {
+  // setDummyData is only used in development mode to test the scanner. In production, it's a no-op.
+  let setDummyData = () => {}
+  if (isDev) {
     setDummyData = () => {
       const dummyData = {
         [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
