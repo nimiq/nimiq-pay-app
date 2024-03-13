@@ -1,4 +1,8 @@
 import type { ExtendedTransaction } from '@nimiq/core-web'
+import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
+import { SwapAsset } from '@nimiq/fastspot-api-v1'
+import { useFastspotApiV1 } from '../composables/useFastspotv1'
+import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
 import type { AsyncResult } from '@/types'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -38,6 +42,82 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* flags */ Nimiq.Transaction.Flag.NONE,
       /* data */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
     )
+    tx.proof = createResolveProof({ mode: 'early', tx })
+    return await getSignedTxByRemote(tx)
+  }
+  else if (partialArgs.transfer === Transfer.UserPaymentToAtomicSwap) {
+    if (!useRemoteSigner().remoteAddress)
+      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
+
+    // Confirm swap with Fastspot
+    const localWallet = useLocalWallet().localAddress
+    const { confirmSwap, getSwap } = await useFastspotApiV1()
+    let swap: Swap
+    try {
+      swap = await confirmSwap(
+        /* swap */ { id: partialArgs.paymentRef! } as PreSwap,
+        /* redeem */ { asset: SwapAsset.BTC_LN },
+        /* refund */ { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
+        /* uid */ localWallet.toUserFriendlyAddress(),
+      )
+    }
+    catch (error) {
+      if (error instanceof Error && error.message === 'The swap was already confirmed before.')
+        swap = await getSwap(partialArgs.paymentRef!) as Swap
+
+      else throw error
+    }
+
+    const decoded = await parseBitcoinLightningInvoice(partialArgs.recipient)
+
+    // Verify swap hash
+    if (swap.hash !== decoded.payment_hash)
+      return { error: i18n.t('Invalid swap hash'), data: undefined }
+
+    // Construct swap NIM HTLC data
+    const nimContract = swap.contracts[SwapAsset.NIM]
+    if (!nimContract)
+      return { error: i18n.t('No NIM HTLC found in swap'), data: undefined }
+
+    const nimHtlc = nimContract.htlc as NimHtlcDetails
+
+    const htlcAccount = new Nimiq.HashedTimeLockedContract(
+      nimContract.amount,
+      localWallet,
+      Nimiq.Address.fromUserFriendlyAddress(nimContract.redeemAddress),
+      new Nimiq.Hash(Nimiq.BufferUtils.fromHex(swap.hash), Nimiq.Hash.Algorithm.SHA256),
+      1,
+      nimHtlc.timeoutBlock,
+    )
+    const serializedHtlcAccount = htlcAccount.serialize()
+    // Cut off account-related data from the serialization:
+    // First byte is the account type
+    // Then 8 bytes for the account balance
+    // At the end, 8 bytes for the HTLC totalAmount
+    const data = serializedHtlcAccount.subarray(
+      9,
+      // `Nimiq.SerialBuffer.prototype.subarray()` does not support negative indices.
+      serializedHtlcAccount.byteLength - 8,
+    )
+
+    // Verify data gainst data given in swap
+    if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
+      return { error: i18n.t('Invalid NIM HTLC data in swap'), data: undefined }
+
+    // Setup HTLC creation transaction
+    const tx = new Nimiq.ExtendedTransaction(
+      /* sender */ useRemoteSigner().remoteAddress!,
+      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* recipient */ Nimiq.Address.CONTRACT_CREATION,
+      /* recipientType */ Nimiq.Account.Type.HTLC,
+      /* value */ partialArgs.amount, // Must be the exact amount
+      /* fee */ 0,
+      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
+      /* data */ data,
+    )
+
+    // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
     return await getSignedTxByRemote(tx)
   }

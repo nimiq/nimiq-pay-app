@@ -188,7 +188,7 @@ export function useStringParser() {
       merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the LN invoice
       rail: Rail.BitcoinLightning,
       paymentRef: quote.id,
-      transfer: Transfer.UserPaymentToMerchant,
+      transfer: Transfer.UserPaymentToAtomicSwap,
       message: decoded.description || undefined,
 
       feeIncludedInAmount: true,

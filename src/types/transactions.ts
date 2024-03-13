@@ -7,6 +7,11 @@ export enum Transfer {
   UserPaymentToMerchant = 'user-payment-to-merchant',
 
   /**
+   * Normal payment from the user creating a new HTLC contract to start an atomic swap
+   */
+  UserPaymentToAtomicSwap = 'user-payment-to-atomic-swap',
+
+  /**
    * Normal payment from the user to another user
    */
   UserPayment = 'user-payment',
@@ -161,7 +166,7 @@ export type UserReceiptTransaction = BaseTransaction & {
 }
 
 export type MerchantTransaction = BaseTransaction & {
-  transfer: Transfer.UserPaymentToMerchant
+  transfer: Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
   fiatCurrency: string
   fiatAmount: number
   fiatFeeAmount: number
@@ -234,14 +239,14 @@ export type Transaction = ExternalTransaction | SyncTransaction
  * Transactions that are not internal (synchronization) transactions
  */
 export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserReceipt].includes(tx.transfer)
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt].includes(tx.transfer)
 }
 
 /**
  * Outgoing transactions to an external recipient
  */
 export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUser {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant].includes(tx.transfer)
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap].includes(tx.transfer)
 }
 
 export type PartialSendTxArgs =
