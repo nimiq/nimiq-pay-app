@@ -14,6 +14,7 @@ import { useSync } from '@/composables/useSync'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
+import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 
 const logger = useLogger('transactions.ts')
 
@@ -91,11 +92,12 @@ export const useTransactions = defineStore('transactions', () => {
       localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
       localBalance: useLocalWallet().localBalance,
     })
-    const { data: signedTx, error } = await getSignedTx(partialTx)
-    if (error) {
-      logger.error('Error while signing transaction', error)
-      return { data: undefined, error }
+    const res = await getSignedTx(partialTx)
+    if (res.error) {
+      logger.error('Error while signing transaction', res.error)
+      return res
     }
+    const { signedTx, swap } = res.data!
 
     // Check if the tx is already in the transaction list
     if (transactions.value.some(tx => tx.hash === signedTx!.hash().toHex())) {
@@ -111,18 +113,36 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     if (partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-      // TODO: Signal to Fastspot that the transaction was sent
+      // Signal to Fastspot that the transaction was sent
+      const { provideFundingProof } = await useFastspotApiV2()
+      const patchedSwap = await provideFundingProof(
+        partialTx.paymentRef!,
+        swap!.contracts.NIM!.id,
+        Nimiq.BufferUtils.toHex(signedTx!.serialize()),
+      )
 
-      // Wait for swap to complete
-      const { getSwap } = await useFastspotApiV1()
-      const secret = await new Promise<string>((resolve) => {
-        const intervalId = window.setInterval(async () => {
-          const swap = await getSwap(partialTx.paymentRef!)
-          if (!('secret' in swap) || !swap.secret) return
-          window.clearInterval(intervalId)
-          resolve(swap.secret)
-        }, 1e3) // Check every second // TODO: Increase to check every 0.5s?
-      })
+      let secret: string
+      if (typeof patchedSwap.preimage === 'string' && patchedSwap.preimage.length > 0) {
+        secret = patchedSwap.preimage
+      } else {
+        // Wait for swap to complete
+        const { getSwap } = await useFastspotApiV1()
+        secret = await new Promise<string>((resolve) => {
+          let timeoutId: number
+          async function checkSecret() {
+            const swap = await getSwap((partialTx as MerchantTransaction).paymentRef)
+            if (!('secret' in swap) || !swap.secret) {
+              timeoutId = window.setTimeout(checkSecret, 1e3) // Check every second
+              return
+            }
+            window.clearTimeout(timeoutId)
+            resolve(swap.secret)
+          }
+
+          // Start checking for the secret
+          checkSecret()
+        })
+      }
 
       // Store secret in the transaction
       partialTx.meta = {

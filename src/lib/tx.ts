@@ -27,7 +27,7 @@ const logger = useLogger('tx.ts')
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<ExtendedTransaction, string> {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: ExtendedTransaction; swap?: Swap }, string> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
       return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
@@ -43,7 +43,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx)
+    const res = await getSignedTxByRemote(tx)
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data! }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.UserPaymentToAtomicSwap) {
     if (!useRemoteSigner().remoteAddress)
@@ -119,7 +122,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
 
     // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx)
+    const res = await getSignedTxByRemote(tx)
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data!, swap }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     const tx = new Nimiq.ExtendedTransaction(
@@ -134,7 +140,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ createDepositData(),
     )
     tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
-    return { data: tx, error: undefined }
+    return { data: { signedTx: tx }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
     if (!useRemoteSigner().isHtlcActive)
@@ -155,7 +161,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ new Uint8Array(0),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx)
+    const res = await getSignedTxByRemote(tx)
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data! }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
     const tx = new Nimiq.ExtendedTransaction(
@@ -170,7 +179,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ new Uint8Array(0),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx, { address: partialArgs.sender })
+    const res = await getSignedTxByRemote(tx, { address: partialArgs.sender })
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data! }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
     const tx = new Nimiq.ExtendedTransaction(
@@ -185,7 +197,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ new Uint8Array(0),
     )
     tx.proof = createResolveProof({ mode: 'timeout', tx })
-    return { data: tx, error: undefined }
+    return { data: { signedTx: tx }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.ExtendRemote) {
     const tx = new Nimiq.ExtendedTransaction(
@@ -200,7 +212,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<E
       /* data */ createDepositData(),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    return await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
+    const res = await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data! }, error: undefined }
   }
   else {
     return { data: undefined, error: i18n.t('Invalid transfer type') }
