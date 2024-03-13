@@ -108,7 +108,7 @@ async function openModal() {
 <template>
   <div class="flex flex-col self-start w-full h-full mt-8">
     <div class="relative grid grid-cols-[auto_0px_1fr] items-center w-full gap-x-4 border-2 border-space-space-200 rounded-lg p-4" :class="{ 'border-sky-sky-400': isFocussed }">
-      <button class="text-base text-space/60" @click="openModal">
+      <button aria-label="select calling code" class="text-base text-space/60" @click="openModal">
         +{{ selectedCountry.callingCode }}
       </button>
       <div class="h-[calc(100%+32px)] w-0 border border-space-space-200" :class="{ 'border-sky-sky-400': isFocussed }" />

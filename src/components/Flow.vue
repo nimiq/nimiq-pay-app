@@ -308,9 +308,9 @@ function blur() {
         />
       </IonButtons>
       <IonButtons slot="end">
-        <IonButton @click.stop="onCancel">
+        <button aria-label="close flow modal" class="px-3 py-2" @click.stop="onCancel">
           <IonIcon :icon="close" size="large" class="text-white bg-[#DADADA] rounded-full w-6 h-6 p-[2px]" />
-        </IonButton>
+        </button>
       </IonButtons>
     </IonToolbar>
   </IonHeader>

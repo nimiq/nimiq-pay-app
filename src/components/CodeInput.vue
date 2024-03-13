@@ -76,6 +76,7 @@ function handleDelete(event: KeyboardEvent) {
         v-for="i in inputLength"
         :id="(i - 1).toString()"
         :key="i"
+        :aria-label="`Digit ${i}`"
         v-model="pinCodeInput[i - 1]"
         :name="stepName"
         autocomplete="one-time-code"

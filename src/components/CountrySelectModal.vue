@@ -36,9 +36,9 @@ function handleClose() {
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click.stop="handleClose">
+        <button aria-label="close country modal" class="px-3 py-2" @click.stop="handleClose">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
-        </IonButton>
+        </button>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
@@ -60,7 +60,7 @@ function handleClose() {
         :item-size="36"
         key-field="countryCode"
       >
-        <IonRadio :value="item" label-placement="end" justify="start">
+        <IonRadio :value="item" label-placement="end" justify="start" :aria-label="item.countryName">
           <div class="flex justify-between w-full">
             <span>
               {{ item.countryName }}

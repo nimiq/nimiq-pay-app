@@ -63,9 +63,9 @@ onMounted(async () => {
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click="() => closeModal()">
+        <button aria-label="close points modal" class="px-3 py-2" @click="() => closeModal()">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
-        </IonButton>
+        </button>
       </IonButtons>
     </IonToolbar>
   </IonHeader>

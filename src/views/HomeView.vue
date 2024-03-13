@@ -194,6 +194,7 @@ onMounted(async () => {
         <IonButtons slot="end">
           <IonButton
             class="text-base normal-case"
+            aria-label="Earn Points"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
             @click="phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)"
           >
