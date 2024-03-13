@@ -20,7 +20,7 @@ const { formatted: relativeTime } = useRelativeTime({ timestamp })
 const { fiat, crypto } = usePrice(props.tx.amount, { timestamp: timestamp.value, formatter: { isPayment: isPaymentTx(props.tx) } })
 const paymentMethod = computed(() => {
   const { tx } = props
-  if (tx.transfer === Transfer.UserPaymentToMerchant)
+  if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
     return tx.paymentMethod || PaymentMethod.NIM
 
   return PaymentMethod.NIM
@@ -28,7 +28,7 @@ const paymentMethod = computed(() => {
 
 const category = computed(() => {
   const { tx } = props
-  if (tx.transfer === Transfer.UserPaymentToMerchant)
+  if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
     return tx.merchantCategory
   if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.Account.Type.HTLC && tx.recipientType === Nimiq.Account.Type.BASIC)
     return 'withdraw'

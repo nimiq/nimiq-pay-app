@@ -398,7 +398,7 @@ export const transactionDetail: StepInit = async () => {
     : null
   ) || i18n.t('Transaction'))
   const merchantCategory = computed(() => {
-    if (tx.value?.transfer === Transfer.UserPaymentToMerchant)
+    if (tx.value?.transfer === Transfer.UserPaymentToMerchant || tx.value?.transfer === Transfer.UserPaymentToAtomicSwap)
       return tx.value?.merchantCategory
     if (tx.value?.transfer === Transfer.UserPayment && tx.value?.senderType === Nimiq.Account.Type.HTLC && tx.value?.recipientType === Nimiq.Account.Type.BASIC)
       return 'withdraw'

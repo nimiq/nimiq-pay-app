@@ -71,7 +71,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatFeeAmount, tx.fiatCurrency, tx.isCashbackClaimed, tx.invoiced ? JSON.stringify(tx.invoiced) : null, tx.meta ? JSON.stringify(tx.meta) : null],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatFeeAmount, tx.fiatCurrency, tx.isCashbackClaimed, tx.invoiced ? JSON.stringify(tx.invoiced) : null, tx.meta ? JSON.stringify(tx.meta) : null],
     )
   }
 
@@ -111,12 +111,12 @@ export const useTransactions = defineStore('transactions', () => {
 
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx!.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx!.serializeContent())
-    const message = partialTx.transfer === Transfer.UserPaymentToMerchant ? partialTx.message : ''
+    const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
 
     let tx = { ...partialTx, fee, recipient, recipientType: signedTx!.recipientType, timestamp, status, hash, sender, senderType: signedTx!.senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
-    if (tx.transfer === Transfer.UserPaymentToMerchant)
+    if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
       tx = { ...tx, paymentMethod: PaymentMethod.NIM }
 
     logger.log(`✈️ Sending transaction`, tx)

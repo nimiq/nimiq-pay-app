@@ -344,7 +344,7 @@ export function _useSync() {
       // Checking for tx with cashback to claim
       // We need to check this if it's mined or confirmed just in case the user closes the app
       // before the tx is mined and opened again after it's confirmed
-      if ((dbTx.status === 'mined' || dbTx.status === 'confirmed') && dbTx.transfer === Transfer.UserPaymentToMerchant && dbTx.paymentMethod === PaymentMethod.NIM) {
+      if ((dbTx.status === 'mined' || dbTx.status === 'confirmed') && (dbTx.transfer === Transfer.UserPaymentToMerchant || dbTx.transfer === Transfer.UserPaymentToAtomicSwap) && dbTx.paymentMethod === PaymentMethod.NIM) {
         // Only check if cashback not claimed and user has points account, if not continue with the rest
         if (!dbTx.isCashbackClaimed && useApp().pointsToken) {
           const { error, errorType } = await usePoints().claimCashback(dbTx)
