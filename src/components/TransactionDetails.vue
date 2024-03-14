@@ -54,7 +54,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 
     <div
       v-if="tx"
-      class="grid justify-between w-full grid-cols-[1fr,1fr] gap-y-4  text-space/60 text-lg [&>*:nth-child(even)]:text-right"
+      class="grid justify-between w-full grid-cols-[1fr,1fr] gap-y-4 text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize" @click="() => handleCopy(tx.hash)">
@@ -70,6 +70,13 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </div>
       <div v-if="tx.title === 'Withdrawal'" @click="() => handleCopy(tx.recipient)">
         {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
+      </div>
+
+      <div v-if="tx.meta?.secret" class="max-w-full text-space/60 text-lg col-span-2">
+        {{ $t('Lightning Secret') }}
+        <div class="rounded-lg px-3 py-2 break-words font-mono mt-2 -mx-3 bg-space/5">
+          {{ tx.meta.secret }}
+        </div>
       </div>
 
       <!-- TODO Add the geo location name -->
