@@ -105,7 +105,7 @@ watch(errorMessage, (value) => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full px-8 mt-6 mb-8 gap-y-2">
+  <div class="flex flex-col items-center justify-center w-full px-2 mt-6 mb-8 gap-y-2">
     <AmountInput v-model="fiatAmount" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
       {{ formatCrypto(lunaAmount) }}
@@ -160,6 +160,7 @@ watch(errorMessage, (value) => {
                 {{ $t('Add NIM address') }}
               </SelectItemText>
             </SelectItem>
+            <!--
             <SelectSeparator class="h-[1.5px] bg-space-space-400" />
 
             <SelectItem
@@ -171,6 +172,7 @@ watch(errorMessage, (value) => {
                 {{ $t('To credit card / bank account') }}
               </SelectItemText>
             </SelectItem>
+            -->
           </SelectGroup>
         </SelectViewport>
 
