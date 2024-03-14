@@ -209,7 +209,7 @@ onMounted(async () => {
         <IonRefresherContent />
       </IonRefresher>
 
-      <TheHomeAmounts class="mt-[72px]" />
+      <TheHomeAmounts class="mt-[72px] mb-4" />
 
       <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
         {{ $t('Top Up') }}
