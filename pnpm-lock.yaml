@@ -27,8 +27,8 @@ dependencies:
     specifier: github:nimiq/fastspot-api#3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6
     version: github.com/nimiq/fastspot-api/3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6
   '@nimiq/fastspot-api-v2':
-    specifier: github:nimiq/fastspot-api#4ae010b7f62d6b1a885bcd6a4e5666fbd192c98b
-    version: github.com/nimiq/fastspot-api/4ae010b7f62d6b1a885bcd6a4e5666fbd192c98b
+    specifier: github:nimiq/fastspot-api#c0605a3204e29985ce8b63d98acdac64a5a3f5e3
+    version: github.com/nimiq/fastspot-api/c0605a3204e29985ce8b63d98acdac64a5a3f5e3
   '@nimiq/utils':
     specifier: ^0.9.3
     version: 0.9.3
@@ -12681,8 +12681,8 @@ packages:
     requiresBuild: true
     dev: false
 
-  github.com/nimiq/fastspot-api/4ae010b7f62d6b1a885bcd6a4e5666fbd192c98b:
-    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/4ae010b7f62d6b1a885bcd6a4e5666fbd192c98b}
+  github.com/nimiq/fastspot-api/c0605a3204e29985ce8b63d98acdac64a5a3f5e3:
+    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/c0605a3204e29985ce8b63d98acdac64a5a3f5e3}
     name: '@nimiq/fastspot-api'
     version: 2.0.0
     prepare: true

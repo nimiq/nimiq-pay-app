@@ -73,7 +73,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </div>
 
       <div v-if="tx.meta?.secret" class="max-w-full text-space/60 text-lg col-span-2">
-        {{ $t('Lightning Secret') }}
+        {{ $t('Payment Secret') }}
         <div class="rounded-lg px-3 py-2 break-words font-mono mt-2 -mx-3 bg-space/5">
           {{ tx.meta.secret }}
         </div>
