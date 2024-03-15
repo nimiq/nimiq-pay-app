@@ -1,6 +1,7 @@
 import type { scan as Scan } from 'qr-scanner-wechat'
 import { type Ref, ref } from 'vue'
 import { useThrottleFn } from '@vueuse/core'
+import { isDev } from '../lib'
 import { useDevice } from './useDevice'
 import { QRDataFormat, useStringParser } from './useStringParser'
 import { useCameraFeed } from './useCameraFeed'
@@ -10,7 +11,6 @@ import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLogger } from '@/composables/useLogger'
-import { isDev } from '../lib'
 
 const logger = useLogger('useQRScanner')
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { chevronForwardOutline, close } from 'ionicons/icons'
 import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'

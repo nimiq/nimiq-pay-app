@@ -2,7 +2,7 @@
 import { type PropType, computed, onMounted, reactive, ref, watch, watchEffect } from 'vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-import { IonBackButton, IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { nextTick } from 'vue'
 import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
