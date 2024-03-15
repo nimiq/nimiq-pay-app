@@ -1,7 +1,10 @@
 import { ValidationUtils } from '@nimiq/utils'
+import { AssetId } from '@nimiq/fastspot-api-v2'
 import { useCplApi } from './useApi'
 import { GOCRYPTO_ID_PARAM, parseGoCryptoRequestLink } from './useGoCrypto'
-import { nimiqDomainUrl } from '@/lib'
+import { parseBitcoinLightningInvoice } from './useBitcoinLightning'
+import { useFastspotApiV2 } from './useFastspotV2'
+import { isDev, nimiqDomainUrl } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
@@ -57,6 +60,9 @@ export function useStringParser() {
     else if (rail === Rail.GoCrypto) {
       result = await parseGoCryptoUrl(url)
     }
+    else if (rail === Rail.BitcoinLightning) {
+      result = await parseBitcoinLightningUrl(url)
+    }
     else {
       result = {
         error: i18n.t('Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported.'),
@@ -70,11 +76,13 @@ export function useStringParser() {
     return result
   }
 
-  function getRailFromUrl({ href, searchParams }: URL): Rail | undefined {
+  function getRailFromUrl({ href, searchParams, protocol }: URL): Rail | undefined {
     if (searchParams.has(CPL_URL_ID_PARAM))
       return Rail.CryptoPaymentLink
     else if (searchParams.has(GOCRYPTO_ID_PARAM) || parseGoCryptoRequestLink(href))
       return Rail.GoCrypto
+    else if (protocol === 'lightning:')
+      return Rail.BitcoinLightning
     else
       return undefined
   }
@@ -132,6 +140,68 @@ export function useStringParser() {
       return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
     const { fetchGoCryptoPaymentRequestData } = await import('@/composables/useGoCryptoMonitoring')
     return fetchGoCryptoPaymentRequestData(goCryptoRequestIdentifier)
+  }
+
+  async function parseBitcoinLightningUrl(url: URL): Promise<Result<PaymentRequestData, string>> {
+    let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
+    try {
+      decoded = await parseBitcoinLightningInvoice(url.pathname)
+    }
+    catch (e) {
+      console.error(e)
+      const errorMessage = e instanceof Error ? e.message : String(e)
+      return { error: `${i18n.t('Invalid Bitcoin Lightning invoice.')} Error: ${errorMessage}`, data: undefined }
+    }
+
+    const timestampSection = decoded.sections.find(section => section.name === 'timestamp') as TimestampSection
+    if (!timestampSection || !timestampSection.value)
+      return { error: i18n.t('Invalid Bitcoin Lightning invoice: missing timestamp.'), data: undefined }
+
+    // Show expiry error 20s before actual expiry
+    if (timestampSection.value + decoded.expiry < Date.now() / 1e3 - 20)
+      return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
+
+    const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection
+    const expectedNetwork = isDev ? 'tb' : 'bc'
+    if (coinNetworkSection.letters !== expectedNetwork)
+      return { error: `${i18n.t('Wrong network in Bitcoin Lightning invoice.')} Expected "${expectedNetwork}", got "${coinNetworkSection.letters}".`, data: undefined }
+
+    const amountSection = decoded.sections.find(section => section.name === 'amount') as AmountSection
+    if (!amountSection || !amountSection.value)
+      return { error: i18n.t('Invalid Bitcoin Lightning invoice: missing amount.'), data: undefined }
+
+    // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
+    const amountBtc = Number.parseInt(amountSection.value) / 1e11
+
+    const quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
+      { asset: AssetId.NIM },
+      { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
+    ))
+
+    if (quote.sell.asset !== AssetId.NIM)
+      return { error: i18n.t('Could not fetch NIM amount for Bitcoin Lightning swap.'), data: undefined }
+
+    const data: PaymentRequestData = {
+      recipient: decoded.paymentRequest,
+      amount: quote.sell.amount,
+      fee: 0,
+      merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the LN invoice
+      rail: Rail.BitcoinLightning,
+      paymentRef: quote.id,
+      transfer: Transfer.UserPaymentToMerchant,
+      message: decoded.description || undefined,
+
+      feeIncludedInAmount: true,
+
+      invoiced: {
+        amount: amountBtc,
+        currency: 'BTC',
+      },
+    }
+
+    logger.log('📷 Parsed payment request data:', data)
+
+    return { data, error: undefined }
   }
 
   return {

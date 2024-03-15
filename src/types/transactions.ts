@@ -51,6 +51,7 @@ export enum Rail {
   CryptoPaymentLink = 'CPL',
   GoCrypto = 'GoCrypto',
   Bluecode = 'bluecode',
+  BitcoinLightning = 'bitcoin-lightning',
   // Used when fetching old txs from blockchain
   Unknown = 'unknown',
 }
@@ -175,6 +176,9 @@ export type MerchantTransaction = BaseTransaction & {
   railMerchantId?: undefined // The merchant id in CPL is not exposed
 } | {
   rail: Rail.GoCrypto
+  railMerchantId: string
+} | {
+  rail: Rail.BitcoinLightning
   railMerchantId: string
 } | {
   rail: Rail.Unknown

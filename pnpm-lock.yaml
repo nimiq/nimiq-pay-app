@@ -23,6 +23,12 @@ dependencies:
   '@capawesome/capacitor-screen-orientation':
     specifier: ^5.0.1
     version: 5.0.1(@capacitor/core@6.0.0)
+  '@nimiq/fastspot-api-v1':
+    specifier: github:nimiq/fastspot-api#d8c415502f1d8b0d5a96f5abf4fa29bd2b9a6aed
+    version: github.com/nimiq/fastspot-api/d8c415502f1d8b0d5a96f5abf4fa29bd2b9a6aed
+  '@nimiq/fastspot-api-v2':
+    specifier: github:nimiq/fastspot-api#669204ef6bf5a68ea36f32b1ad94d418d82b92f4
+    version: github.com/nimiq/fastspot-api/669204ef6bf5a68ea36f32b1ad94d418d82b92f4
   '@nimiq/utils':
     specifier: ^0.9.3
     version: 0.9.3
@@ -44,6 +50,9 @@ dependencies:
   libphonenumber-js:
     specifier: ^1.10.61
     version: 1.10.61
+  light-bolt11-decoder:
+    specifier: ^3.0.0
+    version: 3.0.0
   pinia:
     specifier: ^2.1.7
     version: 2.1.7(typescript@5.4.5)(vue@3.4.24)
@@ -2858,6 +2867,10 @@ packages:
     requiresBuild: true
     dev: true
     optional: true
+
+  /@scure/base@1.1.1:
+    resolution: {integrity: sha512-ZxOhsSyxYwLJj3pLZCefNitxsj093tb2vq90mp2txoYeBqbcjDjqFhyM8eUjq/uFm6zJ+mUuqxlS2FkuSY1MTA==}
+    dev: false
 
   /@sinclair/typebox@0.27.8:
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
@@ -8199,6 +8212,12 @@ packages:
       immediate: 3.0.6
     dev: true
 
+  /light-bolt11-decoder@3.0.0:
+    resolution: {integrity: sha512-AKvOigD2pmC8ktnn2TIqdJu0K0qk6ukUmTvHwF3JNkm8uWCqt18Ijn33A/a7gaRZ4PghJ59X+8+MXrzLKdBTmQ==}
+    dependencies:
+      '@scure/base': 1.1.1
+    dev: false
+
   /lilconfig@2.1.0:
     resolution: {integrity: sha512-utWOt/GHzuUxnLKxB6dk81RoOeoNeHgbrXiuGk4yyF5qlRz+iIVWu56E2fqGHFrXz0QNUhLB/8nKqvRH66JKGQ==}
     engines: {node: '>=10'}
@@ -12653,6 +12672,21 @@ packages:
       sister: 3.0.2
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  github.com/nimiq/fastspot-api/669204ef6bf5a68ea36f32b1ad94d418d82b92f4:
+    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/669204ef6bf5a68ea36f32b1ad94d418d82b92f4}
+    name: '@nimiq/fastspot-api'
+    version: 2.0.0
+    prepare: true
+    requiresBuild: true
+    dev: false
+
+  github.com/nimiq/fastspot-api/d8c415502f1d8b0d5a96f5abf4fa29bd2b9a6aed:
+    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/d8c415502f1d8b0d5a96f5abf4fa29bd2b9a6aed}
+    name: '@nimiq/fastspot-api'
+    version: 1.8.0
+    requiresBuild: true
     dev: false
 
   github.com/nimiq/vue3-components/e63c554e934aa562926393c9689341c4ee3157bf:

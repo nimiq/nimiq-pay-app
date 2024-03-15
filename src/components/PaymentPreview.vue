@@ -192,6 +192,9 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
         <p v-else-if="hasCashback && paymentMethod !== PaymentMethod.Points" class="opacity-60 text-pretty">
           {{ pointsMessage }}
         </p>
+        <p v-else-if="payment.message" class="opacity-60 text-pretty">
+          {{ payment.message }}
+        </p>
       </Transition>
     </div>
     <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
