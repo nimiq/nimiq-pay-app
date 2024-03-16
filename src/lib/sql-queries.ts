@@ -63,7 +63,7 @@ export enum SQLQuery {
   CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
-  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block <= ?',
+  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
 }
 
 export const DEFAULT_LIMIT = 30

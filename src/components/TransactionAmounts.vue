@@ -8,6 +8,7 @@ defineProps<{
   cryptoTotal: number
   fiatFormatted: string
   paymentMethod: PaymentMethod
+  refunded?: boolean
 }>()
 
 const slots = useSlots()
@@ -24,14 +25,14 @@ const slots = useSlots()
       </div>
     </div>
 
-    <span class="text-5xl text-center uppercase">
+    <span class="text-5xl text-center uppercase" :class="{ 'line-through': refunded }">
       {{ fiatFormatted }}
 
       <!-- TODO: The info icon should be maybe just a slot for the payment preview -->
       <!-- <InfoIcon class="w-4 h-4 stroke-2 opacity-40" /> -->
     </span>
 
-    <div class="flex items-center justify-center gap-x-2.5 text-lg leading-8 font-semibold text-space/60">
+    <div class="flex items-center justify-center gap-x-2.5 text-lg leading-8 font-semibold text-space/60" :class="{ 'line-through': refunded }">
       <span v-if="slots.fee">
         <slot name="fee" />
       </span>

@@ -233,9 +233,8 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function addReceiptTransaction(tx: UserReceiptTransaction) {
     await upsertTx(tx)
-    const remoteAddressTable = await useRemoteSigner().getAllRemoteSigners()
-    // Don't add tx to the transaction list if it came from the remote signer (remote-to-local)
-    if (!remoteAddressTable.some(remoteAddress => remoteAddress.address.toUserFriendlyAddress() === tx.sender))
+    // Don't add tx to the transaction list if it came from an HTLC
+    if (tx.senderType !== Nimiq.Account.Type.HTLC)
       addTransaction(tx)
   }
 
@@ -305,6 +304,17 @@ export const useTransactions = defineStore('transactions', () => {
       tx.isCashbackClaimed = true
   }
 
+  async function setSwapHtlcRefunded(htlcAddress: string) {
+    const tx = transactions.value.find(tx => tx.recipient === htlcAddress)
+    if (tx) {
+      tx.meta = {
+        ...tx.meta,
+        refunded: true,
+      }
+      await upsertTx(tx)
+    }
+  }
+
   const status = computed(() => {
     if (transactions.value.length === 0)
       return TransactionListState.Empty
@@ -325,6 +335,7 @@ export const useTransactions = defineStore('transactions', () => {
     addWithdrawalTransaction,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
+    setSwapHtlcRefunded,
     clearTxHistory,
 
     // Search for transactions

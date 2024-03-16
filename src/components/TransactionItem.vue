@@ -40,7 +40,7 @@ const category = computed(() => {
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed' }">
+  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed', 'line-through': tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded }">
     <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
@@ -48,7 +48,10 @@ const category = computed(() => {
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time class="text-space/50 tabular-nums">{{ relativeTime }} </time>
-        <span v-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
+        <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded" class="italic text-pumpkin/90">
+          {{ $t('Swap pending') }}
+        </span>
+        <span v-else-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
           {{ translateTransactionState(tx.status) }}
         </span>
       </div>

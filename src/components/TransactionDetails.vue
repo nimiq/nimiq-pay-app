@@ -3,7 +3,7 @@ import { type PropType, computed, ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
 import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
-import { type ExternalTransaction, PaymentMethod, translateTransactionState } from '@/types/transactions'
+import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
@@ -39,7 +39,12 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 
 <template>
   <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
-    <TransactionAmounts :crypto-total="crypto.total" :fiat-formatted="fiat.formatted" :payment-method="tx.paymentMethod || PaymentMethod.NIM">
+    <TransactionAmounts
+      :crypto-total="crypto.total"
+      :fiat-formatted="fiat.formatted"
+      :payment-method="tx.paymentMethod || PaymentMethod.NIM"
+      :refunded="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded"
+    >
       <template v-if="tx.invoiced" #invoiced>
         {{ formatInvoiced(tx.invoiced) }}
       </template>
@@ -58,7 +63,15 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize" @click="() => handleCopy(tx.hash)">
-        {{ translateTransactionState(tx.status) }}
+        <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded">
+          {{ $t('Swap pending') }}
+        </template>
+        <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
+          {{ $t('Refunded') }}
+        </template>
+        <template v-else>
+          {{ translateTransactionState(tx.status) }}
+        </template>
       </div>
 
       <div>{{ $t('Date') }}</div>

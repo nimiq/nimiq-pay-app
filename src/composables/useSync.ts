@@ -1,9 +1,10 @@
 import type { Ref } from 'vue'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync, createSharedComposable, until } from '@vueuse/core'
-import type { ClientTransactionDetails } from '@nimiq/core-web'
+import type { BasicAccount, ClientTransactionDetails, HashedTimeLockedContract } from '@nimiq/core-web'
 import { usePrice } from './usePrice'
+import type { SwapHtlc } from '@/types/swapHtlcs'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -25,8 +26,8 @@ export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_L
 export function _useSync() {
   const { getAccount, getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
   const { query } = useConn()
-  const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { client, height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
+  const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { updateActiveWallet, getAllRemoteSigners } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
@@ -209,7 +210,7 @@ export function _useSync() {
         fee: tx.fee,
         proofSize: tx.proof.raw.length,
       })
-    }, [useLocalWallet().localAddress])
+    }, [localAddress.value])
   }
 
   const isUpdatingTransactions = ref(false)
@@ -459,6 +460,63 @@ export function _useSync() {
     await useRemoteSigner().updateSignersTableBalance()
     await ensureSingleRemoteSignerWithBalance()
   }
+
+  let lastExpiredSwapHtlcCheckHeight = 0
+  async function checkExpiredSwapHtlcs() {
+    const height = localHeight.value > 1 ? localHeight.value : await client.value!.getHeadHeight()
+    if (height <= lastExpiredSwapHtlcCheckHeight + 1)
+      return
+    lastExpiredSwapHtlcCheckHeight = height
+
+    const conn = useConn()
+    const expiredSwapHtlcs = await conn.query<SwapHtlc[]>(SQLQuery.GetExpiredSwapHtlcs, [height])
+    logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
+
+    for (const htlc of expiredSwapHtlcs) {
+      const account = await client.value!.getAccount(htlc.address) as BasicAccount | HashedTimeLockedContract
+      if (!account.balance) {
+        // TODO: Check if HTLC was redeemed, and add secret to tx
+
+        logger.log('Swap HTLC is empty, deleting from db', htlc)
+        await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+
+        continue
+      }
+
+      logger.log('Refunding swap HTLC', htlc, account)
+      const refundTx = new Nimiq.ExtendedTransaction(
+        Nimiq.Address.fromUserFriendlyAddress(htlc.address),
+        Nimiq.Account.Type.HTLC,
+        localAddress.value,
+        Nimiq.Account.Type.BASIC,
+        account.balance,
+        0,
+        height,
+        Nimiq.Transaction.Flag.NONE,
+        new Uint8Array(0),
+      )
+      const sig = localWallet.value.signTransaction(refundTx).serialize()
+      const proof = new Nimiq.SerialBuffer(1 + sig.length)
+      proof.writeUint8(Nimiq.HashedTimeLockedContract.ProofType.TIMEOUT_RESOLVE)
+      proof.write(sig)
+      refundTx.proof = proof
+      const txDetails = await client.value!.sendTransaction(refundTx)
+      if (txDetails.state !== 'invalidated') {
+        // Mark transaction as refunded
+        useTransactions().setSwapHtlcRefunded(htlc.address)
+      }
+    }
+  }
+
+  watch(consensus, (newConsensus, oldConsensus) => {
+    if (newConsensus === 'established' && (!oldConsensus || oldConsensus === 'syncing'))
+      checkExpiredSwapHtlcs()
+  }, { immediate: true })
+
+  watch(localHeight, async (newHeight) => {
+    if (newHeight > 1 && newHeight % 10 === 0)
+      checkExpiredSwapHtlcs()
+  })
 
   return {
     syncWallets,
