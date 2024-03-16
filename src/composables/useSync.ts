@@ -139,9 +139,8 @@ export function useSync() {
     await updateBalances()
     await verifyRemoteSignersDb()
 
-    console.group(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    console.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
-    console.groupEnd()
 
     client.value?.addHeadChangedListener(async () => {
       logger.log(`⛏️ New block mined. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)

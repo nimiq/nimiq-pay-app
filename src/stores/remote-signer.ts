@@ -124,7 +124,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
 
     // eslint-disable-next-line no-console
-    console.groupCollapsed('📡 Updating remote signers table balance')
+    console.log('📡 Updating remote signers table balance')
     const addresses = remoteSignersToCheck.map(remoteSigner => remoteSigner.address)
     const { data: accounts, error } = await getAccounts(addresses)
     if (error || !accounts) {
@@ -142,9 +142,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         await updateBalance(newBalance, remoteSigner.address)
       }
     }
-
-    // eslint-disable-next-line no-console
-    console.groupEnd()
   }
 
   /**

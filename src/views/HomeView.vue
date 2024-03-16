@@ -89,16 +89,11 @@ async function handleRefresh(event: CustomEvent) {
 if (import.meta.env.DEV) {
   watchEffect(() => {
     // eslint-disable-next-line no-console
-    console.groupCollapsed('👛 Instant Pay Wallet')
-
-    logger.log('Ready:', isRemoteOk.value)
-
-    logger.log('Valid:', isHtlcActive.value)
-
-    logger.log('Balance:', remoteBalance.value)
-
-    // eslint-disable-next-line no-console
-    console.groupEnd()
+    console.log('👛 Instant Pay Wallet', {
+      Ready: isRemoteOk.value,
+      Valid: isHtlcActive.value,
+      Balance: remoteBalance.value,
+    })
   })
 }
 
