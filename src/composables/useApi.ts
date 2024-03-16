@@ -1,5 +1,5 @@
 import { type MaybeRef, readonly, ref, toValue as v } from 'vue'
-import { toMs } from './useTime'
+import { toMs, toSeconds } from './useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResultApi } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'
@@ -213,7 +213,7 @@ export function useCurrencyPriceApi() {
 
   return {
     getPriceNow: ({ currency }: PriceNowArg) => api<PriceNowRes, PriceErrorRes>(new URL(`/prices/${v(currency)}/now`, baseCurrencyPriceUrl)),
-    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes, PriceErrorRes>(new URL(`/prices/${v(currency)}/time/${toMs(v(timestamp))}`, baseCurrencyPriceUrl)),
+    getPriceAt: ({ currency, timestamp }: PriceAtArg) => api<PriceAtRes, PriceErrorRes>(new URL(`/prices/${v(currency)}/time/${toSeconds(v(timestamp))}`, baseCurrencyPriceUrl)),
   }
 }
 

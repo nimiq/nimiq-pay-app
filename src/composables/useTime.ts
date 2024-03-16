@@ -30,6 +30,11 @@ export function toMs(_maybeSec: MaybeRef<number>) {
   return maybeSec < twentyFirstCentury ? maybeSec * 1000 : maybeSec
 }
 
+export function toSeconds(_maybeMs: MaybeRef<number>) {
+  const ms = toMs(_maybeMs)
+  return Math.round(ms / 1000)
+}
+
 export function countdownTo(timestamp: number, target = Date.now()) {
   const count = Math.max(0, toMs(timestamp) - target)
   const minutes = Math.floor(count / 60000)
