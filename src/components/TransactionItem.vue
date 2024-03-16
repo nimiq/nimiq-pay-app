@@ -17,7 +17,7 @@ const props = defineProps({
 
 const timestamp = computed(() => props.tx.timestamp)
 const { formatted: relativeTime } = useRelativeTime({ timestamp })
-const { fiat, crypto } = usePrice(props.tx.amount, { formatter: { isPayment: isPaymentTx(props.tx) } })
+const { fiat, crypto } = usePrice(props.tx.amount, { timestamp: timestamp.value, formatter: { isPayment: isPaymentTx(props.tx) } })
 const paymentMethod = computed(() => {
   const { tx } = props
   if (tx.transfer === Transfer.UserPaymentToMerchant)

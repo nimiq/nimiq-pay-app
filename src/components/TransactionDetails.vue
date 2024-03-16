@@ -15,7 +15,7 @@ const datetime = computed(() => useFormatTime(props.tx.timestamp))
 // const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
 const showMap = ref(false)
 
-const { crypto, fiat } = usePrice(props.tx.amount)
+const { crypto, fiat } = usePrice(props.tx.amount, { timestamp: props.tx.timestamp })
 const { setToast } = useToast()
 
 async function handleCopy(string: string) {
