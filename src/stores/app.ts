@@ -15,6 +15,12 @@ export enum Crypto {
   NIM = 'NIM',
 }
 
+export enum PushNotificationsStatus {
+  GRANTED = 'granted',
+  DENIED = 'denied',
+  PROMPT = 'prompt',
+}
+
 function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
@@ -33,6 +39,7 @@ export const useApp = defineStore('app', () => {
   const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
+  const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kv(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
 
   const pendingReferralCode = ref('')
@@ -94,6 +101,7 @@ export const useApp = defineStore('app', () => {
     updatePinInputTs,
     shouldAskPin,
     clearPinInputTs,
+    pushNotificationsStatus,
     closedNotifications,
   }
 })

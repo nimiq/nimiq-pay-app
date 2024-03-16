@@ -1,18 +1,18 @@
-import { storeToRefs } from 'pinia'
-
 // TODO: https://capacitorjs.com/docs/apis/background-runner
 // TODO: https://capacitorjs.com/docs/apis/local-notifications
 
+import { storeToRefs } from 'pinia'
 import { type Ref, computed, ref } from 'vue'
 import { type ActionPerformed, PushNotifications } from '@capacitor/push-notifications'
 import type { PermissionState } from '@capacitor/core'
+import { computedAsync } from '@vueuse/core'
 import { i18n } from '@/i18n/i18n-setup'
 import { Modal, useModal } from '@/composables/useModal'
 import { useDevice } from '@/composables/useDevice'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useLogger } from '@/composables/useLogger'
-import { useApp } from '@/stores/app'
+import { PushNotificationsStatus, useApp } from '@/stores/app'
 
 const logger = useLogger('useNotifications')
 
@@ -54,15 +54,20 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
 
 export function useNotifications() {
   const status: Ref<PermissionState | undefined> = ref()
+  const isStatusGranted = computedAsync(async () => (await PushNotifications.checkPermissions()).receive === 'granted')
   const { isAndroid, isWeb } = useDevice()
-  const { closedNotifications } = storeToRefs(useApp())
+  const { closedNotifications, pushNotificationsStatus } = storeToRefs(useApp())
 
   async function init() {
     if (isWeb)
       return
+
+    console.log('🔔 Notification init', pushNotificationsStatus.value)
+    if (pushNotificationsStatus.value === PushNotificationsStatus.DENIED)
+      return
+
     status.value = (await PushNotifications.checkPermissions()).receive
     logger.log('🔔 Notification init, Permissions status:', status.value)
-    await addListeners()
     if (status.value === 'granted')
       await registerNotifications()
   }
@@ -92,9 +97,11 @@ export function useNotifications() {
 
     if (status.value === 'denied') {
       logger.error('🔔🚫 User denied permissions!')
+      pushNotificationsStatus.value = PushNotificationsStatus.DENIED
       return false
     }
 
+    await addListeners()
     try {
       await PushNotifications.register()
       // Channels are only available on Android
@@ -111,12 +118,29 @@ export function useNotifications() {
         })
       }
       logger.log('🔔 Registered for push notifications', status.value)
+      pushNotificationsStatus.value = PushNotificationsStatus.GRANTED
     }
     catch (e) {
       logger.error('🔔 Error registering for push notifications', e)
+      pushNotificationsStatus.value = PushNotificationsStatus.PROMPT
       return false
     }
     return true
+  }
+
+  async function unregisterNotifications() {
+    if (isWeb)
+      return
+
+    pushNotificationsStatus.value = PushNotificationsStatus.DENIED
+    try {
+      await PushNotifications.unregister()
+      await PushNotifications.removeAllListeners()
+      logger.log('🔔 Unregistered from push notifications')
+    }
+    catch (e) {
+      logger.error('🔔 Error unregistering from push notifications', e)
+    }
   }
 
   async function getDeliveredNotifications() {
@@ -173,8 +197,10 @@ export function useNotifications() {
   return {
     init,
     status,
+    isStatusGranted,
     addListeners,
     registerNotifications,
+    unregisterNotifications,
     getDeliveredNotifications,
     localNotifications: computed(() => localNotificationsArray.value.filter(n => !closedNotifications.value.includes(n.id))),
     addLocalNotification,

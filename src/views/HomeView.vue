@@ -162,6 +162,7 @@ onMounted(async () => {
   }
 
   scrollToFirstNotification()
+  useNotifications().init()
   await useSync().syncWallets()
 })
 </script>
