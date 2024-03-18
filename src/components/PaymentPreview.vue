@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { IonButton, IonToggle } from '@ionic/vue'
-import { computed, ref, watch, watchEffect } from 'vue'
+import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
 import LoadingSpinner from './icons/loading-spinner.vue'
+import { Rail } from '@/types/transactions'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
@@ -15,7 +16,6 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 
 // TODO: async import
 import { useToast } from '@/composables/useToast'
-import { useGoCryptoMonitoring } from '@/composables/useGoCryptoMonitoring'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
@@ -61,9 +61,29 @@ const amounts = computedAsync(async () => {
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
    = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
+const goCryptoError = ref<string>()
+const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, async (isGoCrypto) => {
+  // Watch payment rail for whether it's a GoCrypto payment and if that's the case, lazy load and setup GoCrypto
+  // monitoring. As soon as we load it and set it up, the rail watcher can be stopped.
+  if (!isGoCrypto)
+    return
+  window.setTimeout(() => unwatchGoCryptoRail(), 0) // run after immediate invocation of watcher
+  // Have to create and dispose an effect scope manually as watchers/effects are not used synchronously in setup script.
+  // Could also stop monitoring manually, instead of defining a scope, but the scope already handles automatically not
+  // executing the run handler when it's already stopped, i.e. when the component has already been unmounted before the
+  // async code continues.
+  const scope = effectScope()
+  onUnmounted(() => scope.stop())
+  const { useGoCryptoMonitoring } = await import('@/composables/useGoCryptoMonitoring')
+  scope.run(() => {
+    // Note that we ignore potential updates of the payment request data, and only monitor for errors, as GoCrypto
+    // continues to accept payments for the original payment info.
+    const { error } = useGoCryptoMonitoring(payment)
+    watchEffect(() => goCryptoError.value = error.value)
+  })
+}, { immediate: true })
+
 const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
-// Note that we ignore potential updates of the payment request data, as GoCrypto continues to accept the original payment info.
-const { error: goCryptoError } = useGoCryptoMonitoring(payment)
 const disabled = computed(() =>
   !(
     (isEligible.value && paymentMethod.value === PaymentMethod.Points)

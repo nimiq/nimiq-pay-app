@@ -350,38 +350,38 @@ msgstr ""
 msgid "Invalid API response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:118
+#: src/composables/useStringParser.ts:117
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:103
+#: src/composables/useStringParser.ts:102
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:114
-#: src/composables/useStringParser.ts:97
+#: src/composables/useStringParser.ts:113
+#: src/composables/useStringParser.ts:96
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:105
-#: src/composables/useStringParser.ts:133
+#: src/composables/useStringParser.ts:132
 msgid "Invalid GoCrypto link."
 msgstr ""
 
-#: src/composables/useStringParser.ts:91
+#: src/composables/useStringParser.ts:90
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:63
+#: src/composables/useStringParser.ts:62
 msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:25
+#: src/composables/useStringParser.ts:24
 #: src/lib/flows/steps.ts:369
 msgid "Invalid Nimiq address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:37
+#: src/composables/useStringParser.ts:36
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
@@ -415,7 +415,7 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:50
+#: src/composables/useStringParser.ts:49
 msgid "Invalid URL: {url}"
 msgstr ""
 

@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { type PropType, computed, ref, watch, watchEffect } from 'vue'
+import { type PropType, computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { until } from '@vueuse/core'
 import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
 import { Rail } from '@/types/transactions'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
-import { useToast } from '@/composables/useToast'
-import { useModal } from '@/composables/useModal'
-import { useGoCryptoMonitoring } from '@/composables/useGoCryptoMonitoring'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -85,14 +82,26 @@ function clearInput() {
 
 // Monitor GoCrypto payments
 const qrScanResult = props.state?.[StepName.QRCodeScanner]
-if (qrScanResult && typeof qrScanResult === 'object' && qrScanResult.rail === Rail.GoCrypto) {
-  const { error } = useGoCryptoMonitoring(qrScanResult)
-  watchEffect(() => {
-    if (!error.value)
-      return
-    useToast().setToast({ message: error.value, error: true, duration: 10 * 1e3 })
-    useModal().closeModal()
-  })
+if (typeof qrScanResult === 'object' && qrScanResult?.rail === Rail.GoCrypto) {
+  // Lazy load GoCrypto api only if it's actually a GoCrypto payment. Have to create and dispose an effect scope
+  // manually as watchers/effects are not used synchronously in setup script. Could also stop watcher and monitoring
+  // manually, instead of defining a scope, but the scope already handles automatically not executing the run handler
+  // when it's already stopped, i.e. when the component has already been unmounted before the async code continues.
+  const scope = effectScope()
+  onUnmounted(() => scope.stop())
+  Promise.all([
+    import('@/composables/useGoCryptoMonitoring'),
+    import('@/composables/useToast'),
+    import('@/composables/useModal'),
+  ]).then(([{ useGoCryptoMonitoring }, { useToast }, { useModal }]) => scope.run(() => {
+    const { error } = useGoCryptoMonitoring(qrScanResult)
+    watchEffect(() => {
+      if (!error.value)
+        return
+      useToast().setToast({ message: error.value, error: true, duration: 10 * 1e3 })
+      useModal().closeModal()
+    })
+  }))
 }
 </script>
 

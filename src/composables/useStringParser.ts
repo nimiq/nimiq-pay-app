@@ -1,7 +1,6 @@
 import { ValidationUtils } from '@nimiq/utils'
 import { useCplApi } from './useApi'
 import { GOCRYPTO_ID_PARAM, parseGoCryptoRequestLink } from './useGoCrypto'
-import { fetchGoCryptoPaymentRequestData } from '@/composables/useGoCryptoMonitoring'
 import { nimiqDomainUrl } from '@/lib'
 import { i18n } from '@/i18n/i18n-setup'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
@@ -131,6 +130,7 @@ export function useStringParser() {
       || (searchParams.has(GOCRYPTO_ID_PARAM) ? { paymentId: searchParams.get(GOCRYPTO_ID_PARAM)! } : null)
     if (!goCryptoRequestIdentifier)
       return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
+    const { fetchGoCryptoPaymentRequestData } = await import('@/composables/useGoCryptoMonitoring')
     return fetchGoCryptoPaymentRequestData(goCryptoRequestIdentifier)
   }
 
