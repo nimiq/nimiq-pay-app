@@ -39,6 +39,6 @@ platform :ios do
     reset_simulator_contents
     sh "cd .. && ionic cap sync ios --prod"
 
-    capture_ios_screenshots(scheme: scheme, workspace: workspace, reinstall_app: true, override_status_bar: true, concurrent_simulators: true, disable_slide_to_type: true)
+    capture_ios_screenshots(scheme: scheme, workspace: workspace, reinstall_app: true, app_identifier: "com.nimiq.pay", override_status_bar: true, concurrent_simulators: false, disable_slide_to_type: true)
   end
 end
