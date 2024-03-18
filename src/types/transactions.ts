@@ -83,6 +83,11 @@ export interface BaseTransaction {
   hash: string
   proofSize: number
   message?: string
+  invoiced?: {
+    amount: number
+    currency: string
+  }
+  meta?: Record<string, any>
 }
 
 type KnownTransactionTitle = 'Top-Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
@@ -231,7 +236,7 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 }
 
 export type PartialSendTxArgs =
-  | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message'>
+  | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
   | Pick<LocalToRemoteTx, 'transfer'>
   | Pick<ExtendRemoteTx, 'transfer'>
   | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }

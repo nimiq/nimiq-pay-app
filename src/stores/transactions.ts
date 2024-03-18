@@ -52,6 +52,12 @@ export const useTransactions = defineStore('transactions', () => {
         return true
     })
 
+    // Convert JSON strings to objects
+    txs.forEach((tx) => {
+      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number; currency: string } : undefined
+      tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
+    })
+
     logger.log(`📚 Selected ${txs.length} transactions`, txs)
 
     logger.log(`📚 Filtered ${filteredTxs.length} transactions`, filteredTxs)
@@ -64,7 +70,7 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatFeeAmount, tx.fiatCurrency, tx.isCashbackClaimed],
+      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatFeeAmount, tx.fiatCurrency, tx.isCashbackClaimed, tx.invoiced ? JSON.stringify(tx.invoiced) : null, tx.meta ? JSON.stringify(tx.meta) : null],
     )
   }
 

@@ -229,14 +229,10 @@ export const stepEmits: EmitsOptions = {
 
 // Complex types for State
 
-export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
+export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
 & {
   transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant
   feeIncludedInAmount?: boolean
-  invoiced?: {
-    amount: number
-    currency: string
-  }
 }
 
 export interface NimWithdrawalSelection {

@@ -213,6 +213,7 @@ export function useSync() {
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
+    // No need to parse JSON fields, as those fields are not used here.
     const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
     const accountTxs = await getAccountTransactions(localAddress.value!)
 
@@ -247,6 +248,7 @@ export function useSync() {
    * Updates the transactions in the db if they have a different status or timestamp.
    */
   async function updateTransactionsInDb() {
+    // No need to parse JSON fields, as those fields are not used here.
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
 
     await Promise.all(dbTxs.map(async (dbTx) => {
