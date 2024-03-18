@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useSlots } from 'vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
+import InvoiceIcon from './icons/invoice.vue'
 import { PaymentMethod } from '@/types/transactions'
 
 defineProps<{
@@ -14,6 +15,15 @@ const slots = useSlots()
 
 <template>
   <div class="flex flex-col items-center justify-center w-full gap-y-2">
+    <div v-if="slots.invoiced" class="flex rounded-full mb-1">
+      <div class="pl-3 pr-2 py-1.5 text-space/40 border-2 border-space/15 rounded-s-full flex items-center">
+        <InvoiceIcon />
+      </div>
+      <div class="pl-2 pr-3 py-1.5 text-lg leading-none font-semibold text-space/60 border-t-2 border-r-2 border-b-2 rounded-e-full border-space/15 flex items-center">
+        <slot name="invoiced" />
+      </div>
+    </div>
+
     <span class="text-5xl text-center uppercase">
       {{ fiatFormatted }}
 

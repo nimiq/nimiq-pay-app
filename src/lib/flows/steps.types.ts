@@ -233,6 +233,10 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
 & {
   transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant
   feeIncludedInAmount?: boolean
+  invoiced?: {
+    amount: number
+    currency: string
+  }
 }
 
 export interface NimWithdrawalSelection {
