@@ -114,6 +114,7 @@ async function openModal() {
       <div class="h-[calc(100%+32px)] w-0 border border-space-space-200" :class="{ 'border-sky-sky-400': isFocussed }" />
       <input
         v-model="phoneNumberInput" :placeholder="$t('Your number')" type="tel" class="border-none focus:outline-none focus:ring-0"
+        autocomplete="tel-local"
         :name="stepName"
         size="16"
         @keydown.enter="showAlert"
