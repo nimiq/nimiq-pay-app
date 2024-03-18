@@ -85,7 +85,10 @@ function handlePay() {
 
 <template>
   <TransactionAmounts class="mt-8" :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
-    <template #fee>
+    <template v-if="payment.feeIncludedInAmount" #fee>
+      {{ $t('Including fees {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
+    </template>
+    <template v-else #fee>
       {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
     </template>
   </TransactionAmounts>

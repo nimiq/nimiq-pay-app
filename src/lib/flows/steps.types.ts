@@ -232,6 +232,7 @@ export const stepEmits: EmitsOptions = {
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
 & {
   transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant
+  feeIncludedInAmount?: boolean
 }
 
 export interface NimWithdrawalSelection {
