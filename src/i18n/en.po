@@ -305,6 +305,10 @@ msgstr ""
 msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
 msgstr ""
 
+#: src/components/PaymentPreview.vue:4
+msgid "Including fees {fee}"
+msgstr ""
+
 #: src/lib/flows/steps.ts:68
 msgid "Insert PIN to confirm"
 msgstr ""

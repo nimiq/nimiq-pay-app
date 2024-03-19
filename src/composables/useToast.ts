@@ -1,7 +1,10 @@
 import { toastController } from '@ionic/vue'
 import { ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
+import { useLogger } from './useLogger'
 import { check, xmark } from '@/components/icons'
+
+const logger = useLogger('useToast.ts')
 
 function _useToast() {
   const toast = ref<HTMLIonToastElement | null>(null)
@@ -19,6 +22,10 @@ function _useToast() {
 
   async function setToast({ message, error, keepOpen, duration = 3 * 1e3 }: Toast) {
     clearToast()
+
+    if (error)
+      logger.error(message)
+    else logger.log(message)
 
     toast.value = await toastController.create({
       message,

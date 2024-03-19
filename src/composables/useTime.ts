@@ -8,7 +8,7 @@ const logger = useLogger('useTime')
 
 const { language } = storeToRefs(useApp())
 
-const defaultFormatter: Intl.DateTimeFormatOptions = { dateStyle: 'short' }
+const defaultFormatter: Intl.DateTimeFormatOptions = { dateStyle: 'short', timeStyle: 'short' }
 
 const twentyFirstCentury = 1000000000000 /* 17:46:40 20/11/2001 GMT */
 

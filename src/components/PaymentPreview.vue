@@ -16,6 +16,7 @@ import { Transfer } from '@/types/transactions'
 
 // TODO: async import
 import { useToast } from '@/composables/useToast'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -81,11 +82,28 @@ function handlePay() {
   loading.value = true
   emit('done', paymentMethod.value)
 }
+
+function formatInvoiced({ currency, amount }: { currency: string; amount: number }) {
+  if (currency === 'BTC') {
+    return `₿ ${amount}`
+  }
+  else {
+    const { formatFiat } = useCurrencyFormatter()
+    return formatFiat(amount, { currency })
+  }
+}
 </script>
 
 <template>
   <TransactionAmounts class="mt-8" :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
-    <template #fee>
+    <template v-if="payment.invoiced" #invoiced>
+      {{ formatInvoiced(payment.invoiced) }}
+    </template>
+
+    <template v-if="payment.feeIncludedInAmount" #fee>
+      {{ $t('Incl. fees') }}
+    </template>
+    <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
       {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
     </template>
   </TransactionAmounts>

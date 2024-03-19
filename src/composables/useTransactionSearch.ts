@@ -11,7 +11,15 @@ export function useTransactionSearch() {
 
   const allTransactions = ref<ExternalTransaction[]>([])
 
-  watchOnce(searchQuery, async () => allTransactions.value = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions))
+  watchOnce(searchQuery, async () => {
+    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
+    // Convert JSON strings to objects
+    txs.forEach((tx) => {
+      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number; currency: string } : undefined
+      tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
+    })
+    allTransactions.value = txs
+  })
 
   const { results: filteredTransactions } = useFuse(searchQuery, allTransactions, { fuseOptions: {
     keys: [{

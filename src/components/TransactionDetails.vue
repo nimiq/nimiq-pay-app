@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { type PropType, computed, ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
+import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, PaymentMethod, translateTransactionState } from '@/types/transactions'
 import { useFormatTime } from '@/composables/useTime'
@@ -24,11 +25,25 @@ async function handleCopy(string: string) {
   })
   await setToast({ message: i18n.t('Copied to clipboard') })
 }
+
+function formatInvoiced({ currency, amount }: { currency: string; amount: number }) {
+  if (currency === 'BTC') {
+    return `₿ ${amount}`
+  }
+  else {
+    const { formatFiat } = useCurrencyFormatter()
+    return formatFiat(amount, { currency })
+  }
+}
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
-    <TransactionAmounts :crypto-total="crypto.total" :fiat-formatted="fiat.formatted" :payment-method="tx.paymentMethod || PaymentMethod.NIM" />
+    <TransactionAmounts :crypto-total="crypto.total" :fiat-formatted="fiat.formatted" :payment-method="tx.paymentMethod || PaymentMethod.NIM">
+      <template v-if="tx.invoiced" #invoiced>
+        {{ formatInvoiced(tx.invoiced) }}
+      </template>
+    </TransactionAmounts>
 
     <div v-if="showMap" class="grid w-[calc(100vw-18px)] border rounded-md border-space/10">
       <!-- TODO Replace the box below this with the map -->
