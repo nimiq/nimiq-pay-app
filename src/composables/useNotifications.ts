@@ -62,7 +62,7 @@ export function useNotifications() {
     if (isWeb)
       return
 
-    console.log('🔔 Notification init', pushNotificationsStatus.value)
+    logger.log('🔔 Notification init', pushNotificationsStatus.value)
     if (pushNotificationsStatus.value === PushNotificationsStatus.DENIED)
       return
 

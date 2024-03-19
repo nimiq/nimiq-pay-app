@@ -82,5 +82,5 @@ export const migrations: Migration[] = [
       SQLQuery.AddInvoicedColumnToTxsTable,
       SQLQuery.AddMetaColumnToTxsTable,
     ],
-  }
+  },
 ]

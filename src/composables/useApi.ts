@@ -1,5 +1,5 @@
 import { type MaybeRef, readonly, ref, toValue as v } from 'vue'
-import { toMs, toSeconds } from './useTime'
+import { toSeconds } from './useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import type { AsyncResultApi } from '@/types'
 import type { RemoteSigner } from '@/lib/sql-queries'

@@ -55,7 +55,7 @@ async function handlePushNotificationsToggle(event: CustomEvent) {
 }
 
 function handleDeletePoints() {
-  console.log('TODO')
+  console.log('TODO') // eslint-disable-line no-console
 }
 
 onLongPress(
