@@ -13,6 +13,7 @@ import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { useSync } from '@/composables/useSync'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
+import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 
 const logger = useLogger('transactions.ts')
 
@@ -109,6 +110,27 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
+    if (partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      // TODO: Signal to Fastspot that the transaction was sent
+
+      // Wait for swap to complete
+      const { getSwap } = await useFastspotApiV1()
+      const secret = await new Promise<string>((resolve) => {
+        const intervalId = window.setInterval(async () => {
+          const swap = await getSwap(partialTx.paymentRef!)
+          if (!('secret' in swap) || !swap.secret) return
+          window.clearInterval(intervalId)
+          resolve(swap.secret)
+        }, 1e3) // Check every second // TODO: Increase to check every 0.5s?
+      })
+
+      // Store secret in the transaction
+      partialTx.meta = {
+        ...partialTx.meta,
+        secret,
+      }
+    }
+
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx!.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx!.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
@@ -119,7 +141,7 @@ export const useTransactions = defineStore('transactions', () => {
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
       tx = { ...tx, paymentMethod: PaymentMethod.NIM }
 
-    logger.log(`✈️ Sending transaction`, tx)
+    logger.log(`✈️ Sent transaction`, tx)
 
     await upsertTx(tx)
 
