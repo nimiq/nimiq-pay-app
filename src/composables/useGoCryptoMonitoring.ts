@@ -25,7 +25,7 @@ export async function fetchGoCryptoPaymentRequestData(requestIdentifier: GoCrypt
   const fetchOptions = await getGoCryptoApiFetchOptions()
   const paymentDetails = await fetchGoCryptoPaymentDetails(requestIdentifier, fetchOptions)
   const translations = getGoCryptoApiTranslations()
-  const userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(paymentDetails, translations)
+  const userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(paymentDetails, { translations })
   return goCryptoPaymentDetailsToPaymentRequestData(paymentDetails, userFriendlyStatus)
 }
 
@@ -150,7 +150,7 @@ function getGoCryptoApiTranslations() {
 
 function goCryptoPaymentDetailsToPaymentRequestData(
   paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
-  userFriendlyStatus: GoCryptoUserFriendlyStatus,
+  userFriendlyStatus: GoCryptoUserFriendlyStatus<true>,
 ): Result<PaymentRequestData, string> {
   if (userFriendlyStatus.paymentStatus === 'accepted')
     // Report already paid request as error

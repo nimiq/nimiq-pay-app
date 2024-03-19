@@ -270,15 +270,22 @@ type ValueOf<T extends object> = T[keyof T];
 
 export type GoCryptoUserFriendlyStatusTitle = ValueOf<typeof USER_FRIENDLY_STATUS_TITLE>;
 export type GoCryptoUserFriendlyStatusMessage = ValueOf<typeof USER_FRIENDLY_STATUS_MESSAGE>;
-export type GoCryptoUserFriendlyStatus = { paymentStatus: 'pending' }
-    | { paymentStatus: 'accepted', title: string }
-    | { paymentStatus: 'failed', title: string, message: string };
-
-export function goCryptoStatusToUserFriendlyStatus(
-    paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
+export interface GoCryptoUserFriendlyStatusOptions<IM extends boolean> {
+    includeMessages?: IM,
     // Pass translations as Records, such that missing or superfluous entries in passed translations yield a type error.
-    translations?: Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string>,
-): GoCryptoUserFriendlyStatus {
+    translations?: IM extends true
+        ? Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string>
+        : Record<GoCryptoUserFriendlyStatusTitle, string>,
+}
+export type GoCryptoUserFriendlyStatus<IM extends boolean> = { paymentStatus: 'pending' }
+    | { paymentStatus: 'accepted', title: string }
+    // eslint-disable-next-line ts/ban-types
+    | ({ paymentStatus: 'failed', title: string } & (IM extends true ? { message: string } : {}));
+
+export function goCryptoStatusToUserFriendlyStatus<IM extends boolean = true>(
+    paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
+    options: GoCryptoUserFriendlyStatusOptions<IM> = {},
+): GoCryptoUserFriendlyStatus<IM> {
     const createErrorStatus = (
         titleKey: keyof typeof USER_FRIENDLY_STATUS_TITLE,
         messagePartKeys: Array<keyof typeof USER_FRIENDLY_STATUS_MESSAGE> = ['AskForNewPaymentRequest', 'Refund'],
@@ -290,15 +297,17 @@ export function goCryptoStatusToUserFriendlyStatus(
             : 'paymentId' in paymentDetails.request
                 ? paymentDetails.request.paymentId
                 : null;
+        const title = goCryptoStatusToUserFriendlyStatus_getTitle(titleKey, options.translations);
+        const message = goCryptoStatusToUserFriendlyStatus_getMessage(messagePartKeys, {
+            ...options,
+            interpolations,
+            ...(appendPaymentId && paymentId ? { appendPaymentId, paymentId } : null),
+        });
         return {
-            paymentStatus: 'failed' as const,
-            title: goCryptoStatusToUserFriendlyStatus_getTitle(titleKey, translations),
-            message: goCryptoStatusToUserFriendlyStatus_getMessage(messagePartKeys, {
-                translations,
-                interpolations,
-                ...(appendPaymentId && paymentId ? { appendPaymentId, paymentId } : null),
-            }),
-        };
+            paymentStatus: 'failed',
+            title,
+            ...(message ? { message } : null),
+        } as Extract<GoCryptoUserFriendlyStatus<IM>, { paymentStatus: 'failed' }>;
     };
 
     if ('errorCode' in paymentDetails) {
@@ -346,7 +355,7 @@ export function goCryptoStatusToUserFriendlyStatus(
         case GoCryptoPaymentStatus.Processing:
             return {
                 paymentStatus: 'accepted',
-                title: goCryptoStatusToUserFriendlyStatus_getTitle(status, translations),
+                title: goCryptoStatusToUserFriendlyStatus_getTitle(status, options.translations),
             };
         case GoCryptoPaymentStatus.Failed:
         case GoCryptoPaymentStatus.NotValid:
@@ -377,16 +386,20 @@ function goCryptoStatusToUserFriendlyStatus_getTitle(
     return translations?.[untranslatedTitle] ?? untranslatedTitle;
 }
 
-function goCryptoStatusToUserFriendlyStatus_getMessage(
+function goCryptoStatusToUserFriendlyStatus_getMessage<IM extends boolean = true>(
     messagePartKeys: Array<keyof typeof USER_FRIENDLY_STATUS_MESSAGE>,
-    options: {
-        translations?: Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string>,
+    options: GoCryptoUserFriendlyStatusOptions<IM> & {
         interpolations?: Record<string, string>,
     } & ({
         appendPaymentId: true,
         paymentId: string,
     } | Record<never, never>) = {},
-): string {
+): string | null {
+    const isOptionsWithIncludeMessages = (
+        (o: GoCryptoUserFriendlyStatusOptions<boolean>): o is GoCryptoUserFriendlyStatusOptions<true> =>
+            o.includeMessages !== false // undefined defaults to true
+    )(options);
+    if (!isOptionsWithIncludeMessages) return null;
     let message = messagePartKeys.map((partKey) => {
         const untranslatedPart = USER_FRIENDLY_STATUS_MESSAGE[partKey];
         const partTemplate = options.translations?.[untranslatedPart] ?? untranslatedPart;
@@ -399,28 +412,28 @@ function goCryptoStatusToUserFriendlyStatus_getMessage(
     return message;
 }
 
-type MonitoringOptions = Parameters<typeof fetchGoCryptoPaymentDetails>[1]
+type MonitoringOptions<IM extends boolean> = Parameters<typeof fetchGoCryptoPaymentDetails>[1]
+    & GoCryptoUserFriendlyStatusOptions<IM>
     & {
         onUpdate: (
             paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
-            userFriendlyStatus: GoCryptoUserFriendlyStatus,
+            userFriendlyStatus: GoCryptoUserFriendlyStatus<IM>,
         ) => void,
         onTimerTick?: (remainingTimeExpiryEarly: number, remainingTimeExpiryFinal: number) => void,
-        translations?: Parameters<typeof goCryptoStatusToUserFriendlyStatus>[1],
     };
-interface MonitoringState {
+interface MonitoringState<IM extends boolean> {
     stopped: boolean,
     paymentDetailsUpdateInterval: number,
     expiryCountdownsUpdateInterval: number,
     paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError | null,
-    userFriendlyStatus: GoCryptoUserFriendlyStatus | null,
+    userFriendlyStatus: GoCryptoUserFriendlyStatus<IM> | null,
 }
 
-export function monitorGoCryptoRequest(
+export function monitorGoCryptoRequest<IM extends boolean = true>(
     paymentId: string,
-    options: MonitoringOptions, // Changing of the options like translations during monitoring is supported.
+    options: MonitoringOptions<IM>, // Changing of the options like translations during monitoring is supported.
 ): () => void {
-    const state: MonitoringState = {
+    const state: MonitoringState<IM> = {
         stopped: false,
         paymentDetailsUpdateInterval: -1,
         expiryCountdownsUpdateInterval: -1,
@@ -450,14 +463,14 @@ export function monitorGoCryptoRequest(
     };
 }
 
-async function monitorGoCryptoRequest_updatePaymentDetails(
+async function monitorGoCryptoRequest_updatePaymentDetails<IM extends boolean>(
     paymentId: string,
-    options: MonitoringOptions,
-    state: MonitoringState,
+    options: MonitoringOptions<IM>,
+    state: MonitoringState<IM>,
 ): Promise<boolean> {
     state.paymentDetails = await fetchGoCryptoPaymentDetails({ paymentId }, options);
     if (state.stopped) return false; // stopped while we were in asynchronous code
-    state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails, options.translations);
+    state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails, options);
     try {
         options.onUpdate(state.paymentDetails, state.userFriendlyStatus);
     } catch (e) {}
@@ -468,9 +481,9 @@ async function monitorGoCryptoRequest_updatePaymentDetails(
     return true;
 }
 
-function monitorGoCryptoRequest_updateExpiryCountdowns(
-    options: MonitoringOptions,
-    state: MonitoringState,
+function monitorGoCryptoRequest_updateExpiryCountdowns<IM extends boolean>(
+    options: MonitoringOptions<IM>,
+    state: MonitoringState<IM>,
 ): boolean {
     const paymentDetails = state.paymentDetails && 'id' in state.paymentDetails ? state.paymentDetails : null;
     const { expiryEarly, expiryFinal } = paymentDetails
