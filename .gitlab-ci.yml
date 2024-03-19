@@ -1,0 +1,37 @@
+stages:
+  - check
+  - build
+
+lint:
+  stage: check
+  image: node:lts
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest-8 --activate
+    - pnpm config set store-dir .pnpm-store
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  script:
+    - pnpm install
+    - pnpm lint
+
+build-web:
+  stage: build
+  image: node:lts
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest-8 --activate
+    - pnpm config set store-dir .pnpm-store
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  script:
+    - pnpm install
+    - pnpm build
