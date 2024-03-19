@@ -1,10 +1,9 @@
-/* eslint-disable style/indent, style/semi, style/member-delimiter-style, antfu/if-newline, style/quote-props,
-style/type-annotation-spacing, style/brace-style, curly, arrow-parens --
+/* eslint-disable style/indent, style/semi, style/member-delimiter-style, antfu/if-newline,
+antfu/consistent-list-newline, style/quote-props, style/brace-style, curly, arrow-parens --
 The idea is to eventually move this into a separate lib, therefore we keep the file as close as possible to the variant
 using in the Nimiq Wallet */
 import type { CapacitorHttp } from '@capacitor/core';
 import { ValidationUtils } from '@nimiq/utils';
-import { i18n } from '@/i18n/i18n-setup';
 import { isDev } from '@/lib/index';
 
 const GO_CRYPTO_CONFIG = isDev
@@ -238,135 +237,130 @@ export async function fetchGoCryptoPaymentDetails(
     }
 }
 
+const USER_FRIENDLY_STATUS_TITLE = {
+    [GoCryptoPaymentApiErrorCode.PaymentNotFound]: 'Not a pending payment request',
+    [GoCryptoPaymentApiErrorCode.InvalidIdentifier]: 'No payment request found',
+    [GoCryptoPaymentApiErrorCode.TooManyRequests]: 'GoCrypto API refused connecting',
+    [GoCryptoPaymentApiErrorCode.InvalidResponse]: 'Invalid GoCrypto API response',
+    UnexpectedError: 'Unexpected GoCrypto error',
+    [GoCryptoPaymentStatus.Paid]: 'The payment request has already been paid',
+    [GoCryptoPaymentStatus.Processing]: 'The payment request is being processed',
+    [GoCryptoPaymentStatus.Failed]: 'Your payment failed',
+    [GoCryptoPaymentStatus.NotValid]: 'Your payment is invalid',
+    [GoCryptoPaymentStatus.Refund]: 'Your payment was refunded',
+    [GoCryptoPaymentStatus.Cancelled]: 'The payment request was cancelled',
+    [GoCryptoPaymentStatus.AutoClosed]: 'The payment request expired',
+    ExpiryEarly: 'The payment request is about to expire',
+} as const;
+const USER_FRIENDLY_STATUS_MESSAGE = {
+    NotPending: 'The payment request might have been paid, expired, or cancelled.',
+    InvalidResponse: 'Received an invalid response from GoCrypto: {errorMessage}.',
+    UnknownError: 'Error {errorCodeAndMessage}.',
+    AskForPaymentStatus: 'Please ask the merchant to check the status of your payment.',
+    AskForNewPaymentRequest: 'Please ask the merchant to create a new payment request.',
+    WaitForConfirmation: 'If you already made a payment, wait for it to be confirmed instead.',
+    Refund: 'If you already made a payment which was not accepted, please contact GoCrypto for a refund.',
+    // The user could also avoid the rate limit by switching to a different network, but more than likely if a rate
+    // limit occurred, the user is in the same network as the merchant, and the merchant is rate limited, too. GoCrypto
+    // blocks the IP for one hour.
+    RateLimit: `If you're in the same WiFi as the merchant, try both switching to mobile data. ${
+        'Otherwise, try again in one hour.'}`, // as template and not string concatenation for const string type
+} as const;
+type ValueOf<T extends object> = T[keyof T];
+
+export type GoCryptoUserFriendlyStatusTitle = ValueOf<typeof USER_FRIENDLY_STATUS_TITLE>;
+export type GoCryptoUserFriendlyStatusMessage = ValueOf<typeof USER_FRIENDLY_STATUS_MESSAGE>;
 export type GoCryptoUserFriendlyStatus = { paymentStatus: 'pending' }
     | { paymentStatus: 'accepted', title: string }
     | { paymentStatus: 'failed', title: string, message: string };
-export function goCryptoStatusToUserFriendlyStatus(paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError)
-: GoCryptoUserFriendlyStatus {
-    const paymentId = 'id' in paymentDetails
-        ? paymentDetails.id
-        : 'paymentId' in paymentDetails.request
-            ? paymentDetails.request.paymentId
-            : null;
-    const successDefaults = {
-        paymentStatus: 'accepted' as const,
-    };
-    const messageNewPaymentRequest = i18n.t('Please ask the merchant to create a new payment request.') as string;
-    const messageAskForPaymentStatus = i18n.t('Please ask the merchant to check the status of your payment.') as string;
-    const messageRefund = i18n.t('If you already made a payment which was not accepted, please contact GoCrypto for a '
-      + 'refund.') as string + (paymentId ? ` (GoCrypto id: ${paymentId})` : '');
-    const errorDefaults = {
-        paymentStatus: 'failed' as const,
-        // Concatenate sentences to re-use individual translations.
-        message: `${messageNewPaymentRequest} ${messageRefund}`,
+
+export function goCryptoStatusToUserFriendlyStatus(
+    paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
+    // Pass translations as Records, such that missing or superfluous entries in passed translations yield a type error.
+    translations?: Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string>,
+): GoCryptoUserFriendlyStatus {
+    const createErrorStatus = (
+        titleKey: keyof typeof USER_FRIENDLY_STATUS_TITLE,
+        messagePartKeys: Array<keyof typeof USER_FRIENDLY_STATUS_MESSAGE> = ['AskForNewPaymentRequest', 'Refund'],
+        interpolations: Record<string, string> = {},
+        appendPaymentId: boolean = true,
+    ) => {
+        const paymentId = 'id' in paymentDetails
+            ? paymentDetails.id
+            : 'paymentId' in paymentDetails.request
+                ? paymentDetails.request.paymentId
+                : null;
+        return {
+            paymentStatus: 'failed' as const,
+            title: goCryptoStatusToUserFriendlyStatus_getTitle(titleKey, translations),
+            message: goCryptoStatusToUserFriendlyStatus_getMessage(messagePartKeys, {
+                translations,
+                interpolations,
+                ...(appendPaymentId && paymentId ? { appendPaymentId, paymentId } : null),
+            }),
+        };
     };
 
     if ('errorCode' in paymentDetails) {
-        switch (paymentDetails.errorCode) {
+        const errorCode = paymentDetails.errorCode === GoCryptoPaymentApiErrorCode.PaymentNotFound
+            && 'merchantId' in paymentDetails.request
+            // For not found payment request by merchantId use InvalidIdentifier messaging, because the merchant's
+            // previous payment request expired, which might have been for another customer, and he did not set up a
+            // new request yet for the new customer.
+            ? GoCryptoPaymentApiErrorCode.InvalidIdentifier
+            : paymentDetails.errorCode;
+        const titleKey = errorCode in USER_FRIENDLY_STATUS_TITLE
+            ? errorCode as GoCryptoPaymentApiErrorCode
+            : 'UnexpectedError' as const;
+        switch (errorCode) {
             case GoCryptoPaymentApiErrorCode.PaymentNotFound:
                 // This surprisingly is returned for non-pending requests, for example paid, expired, or cancelled
                 // requests, instead of payment info with a status of for example Paid or AutoClosed.
-                if ('paymentId' in paymentDetails.request) {
-                    return {
-                        ...errorDefaults,
-                        title: i18n.t('Not a pending payment request') as string,
-                        // eslint-disable-next-line prefer-template
-                        message: i18n.t('The payment request might have been paid, expired, or cancelled.') + ' '
-                            + errorDefaults.message,
-                    };
-                }
-                // For payment request by merchantId fall through to the InvalidIdentifier case, because the merchant's
-                // previous payment request expired, which might have been for another customer, and he did not set up a
-                // new request yet for the new customer.
-                // eslint-disable-next-line no-fallthrough
-            case GoCryptoPaymentApiErrorCode.InvalidIdentifier: return {
+                return createErrorStatus(titleKey, ['NotPending', 'AskForNewPaymentRequest', 'Refund']);
+            case GoCryptoPaymentApiErrorCode.InvalidIdentifier:
                 // No payment request found for the given identifier.
-                ...errorDefaults,
-                title: i18n.t('No payment request found') as string,
-                message: messageNewPaymentRequest,
-            };
-            case GoCryptoPaymentApiErrorCode.TooManyRequests: return {
+                return createErrorStatus(titleKey, ['AskForNewPaymentRequest'], undefined, false);
+            case GoCryptoPaymentApiErrorCode.TooManyRequests:
                 // Rate limit hit.
-                ...errorDefaults,
-                title: i18n.t('GoCrypto API refused connecting') as string,
-                // The user could also avoid the rate limit by switching to a different network, but more than likely if
-                // a rate limit occurred, the user is in the same network as the merchant, and the merchant is rate
-                // limited, too. GoCrypto blocks the IP for one hour.
-                message: i18n.t('If you\'re in the same WiFi as the merchant, try both switching to mobile data. '
-                    + 'Otherwise, try again in one hour.') as string,
-            };
-            case GoCryptoPaymentApiErrorCode.InvalidResponse: return {
+                return createErrorStatus(titleKey, ['RateLimit'], undefined, false);
+            case GoCryptoPaymentApiErrorCode.InvalidResponse:
                 // Invalid data or generic HTTP error.
-                ...errorDefaults,
-                title: i18n.t('Invalid API response'),
-                message: `${i18n.t(
-                    'Received an invalid response from GoCrypto: {errorMessage}',
-                    { errorMessage: paymentDetails.errorMessage },
-                )}. ${messageAskForPaymentStatus} ${messageRefund}`,
-            };
+                return createErrorStatus(titleKey, ['InvalidResponse', 'AskForPaymentStatus', 'Refund'],
+                    { errorMessage: paymentDetails.errorMessage });
             default: {
                 // An error code we don't know and don't specifically handle.
                 // Split camel case error code into multiple upper case words.
-                const userFriendlyErrorCode = paymentDetails.errorCode
+                const userFriendlyErrorCode = errorCode
                     .replace(/^[a-z]|[A-Z]/g, (char, index) => `${index !== 0 ? ' ' : ''}${char.toUpperCase()}`);
-                const i18nInterpolation = {
-                    errorCode: userFriendlyErrorCode,
-                    errorMessage: paymentDetails.errorMessage,
-                };
-                return {
-                    ...errorDefaults,
-                    title: i18n.t('Unexpected GoCrypto error') as string,
-                    message: `${paymentDetails.errorMessage
-                        ? i18n.t('Error {errorCode}: {errorMessage}', i18nInterpolation)
-                        : i18n.t('Error {errorCode}', i18nInterpolation)
-                    }. ${messageAskForPaymentStatus} ${messageRefund}`,
-                };
+                const errorCodeAndMessage = userFriendlyErrorCode
+                    + (paymentDetails.errorMessage ? `: ${paymentDetails.errorMessage}` : '');
+                return createErrorStatus(titleKey, ['UnknownError', 'AskForPaymentStatus', 'Refund'],
+                    { errorCodeAndMessage });
             }
         }
     }
 
-    switch (paymentDetails.status) {
-        case GoCryptoPaymentStatus.Paid: return {
-            ...successDefaults,
-            title: i18n.t('The payment request has already been paid') as string,
-        };
-        case GoCryptoPaymentStatus.Processing: return {
-            ...successDefaults,
-            title: i18n.t('The payment request is being processed') as string,
-        };
-        case GoCryptoPaymentStatus.Failed: return {
-            ...errorDefaults,
-            title: i18n.t('Your payment failed') as string,
-        };
-        case GoCryptoPaymentStatus.NotValid: return {
-            ...errorDefaults,
-            title: i18n.t('Your payment is invalid') as string,
-        };
-        case GoCryptoPaymentStatus.Refund: return {
-            ...errorDefaults,
-            title: i18n.t('Your payment was refunded') as string,
-            message: messageNewPaymentRequest,
-        };
-        case GoCryptoPaymentStatus.Cancelled: return {
-            ...errorDefaults,
-            title: i18n.t('The payment request was cancelled') as string,
-        };
+    const { status } = paymentDetails;
+    switch (status) {
+        case GoCryptoPaymentStatus.Paid:
+        case GoCryptoPaymentStatus.Processing:
+            return {
+                paymentStatus: 'accepted',
+                title: goCryptoStatusToUserFriendlyStatus_getTitle(status, translations),
+            };
+        case GoCryptoPaymentStatus.Failed:
+        case GoCryptoPaymentStatus.NotValid:
+        case GoCryptoPaymentStatus.Cancelled:
+            return createErrorStatus(status);
+        case GoCryptoPaymentStatus.Refund:
+            return createErrorStatus(status, ['AskForNewPaymentRequest'], undefined, false);
         default: // do nothing and continue with checks below
     }
-    if (paymentDetails.status === GoCryptoPaymentStatus.AutoClosed || paymentDetails.expiryFinal < Date.now()) {
-        return {
-            ...errorDefaults,
-            title: i18n.t('The payment request expired') as string,
-        };
+    if (status === GoCryptoPaymentStatus.AutoClosed || paymentDetails.expiryFinal < Date.now()) {
+        return createErrorStatus(GoCryptoPaymentStatus.AutoClosed);
     }
     if (paymentDetails.expiryEarly < Date.now()) {
-        return {
-            ...errorDefaults,
-            title: i18n.t('The payment request is about to expire') as string,
-            // eslint-disable-next-line prefer-template
-            message: messageNewPaymentRequest + ' '
-                + i18n.t('If you already made a payment, wait for it to be confirmed instead.'),
-        };
+        return createErrorStatus('ExpiryEarly', ['AskForNewPaymentRequest', 'WaitForConfirmation'], undefined, false);
     }
 
     // Unpaid request without any errors.
@@ -375,13 +369,45 @@ export function goCryptoStatusToUserFriendlyStatus(paymentDetails: GoCryptoPayme
     };
 }
 
-type MonitoringOptions = Parameters<typeof fetchGoCryptoPaymentDetails>[1] & {
-    onUpdate: (
-        paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
-        userFriendlyStatus: GoCryptoUserFriendlyStatus,
-    ) => void,
-    onTimerTick?: (remainingTimeExpiryEarly: number, remainingTimeExpiryFinal: number) => void,
-};
+function goCryptoStatusToUserFriendlyStatus_getTitle(
+    key: keyof typeof USER_FRIENDLY_STATUS_TITLE,
+    translations?: Record<GoCryptoUserFriendlyStatusTitle, string>,
+): string {
+    const untranslatedTitle = USER_FRIENDLY_STATUS_TITLE[key];
+    return translations?.[untranslatedTitle] ?? untranslatedTitle;
+}
+
+function goCryptoStatusToUserFriendlyStatus_getMessage(
+    messagePartKeys: Array<keyof typeof USER_FRIENDLY_STATUS_MESSAGE>,
+    options: {
+        translations?: Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string>,
+        interpolations?: Record<string, string>,
+    } & ({
+        appendPaymentId: true,
+        paymentId: string,
+    } | Record<never, never>) = {},
+): string {
+    let message = messagePartKeys.map((partKey) => {
+        const untranslatedPart = USER_FRIENDLY_STATUS_MESSAGE[partKey];
+        const partTemplate = options.translations?.[untranslatedPart] ?? untranslatedPart;
+        return partTemplate.replace(/{(\w+?)}/g, (match, variable) => options.interpolations?.[variable] ?? match);
+    }).join(' ');
+
+    if ('appendPaymentId' in options && options.appendPaymentId) {
+        message += ` (GoCrypto ID: ${options.paymentId})`;
+    }
+    return message;
+}
+
+type MonitoringOptions = Parameters<typeof fetchGoCryptoPaymentDetails>[1]
+    & {
+        onUpdate: (
+            paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
+            userFriendlyStatus: GoCryptoUserFriendlyStatus,
+        ) => void,
+        onTimerTick?: (remainingTimeExpiryEarly: number, remainingTimeExpiryFinal: number) => void,
+        translations?: Parameters<typeof goCryptoStatusToUserFriendlyStatus>[1],
+    };
 interface MonitoringState {
     stopped: boolean,
     paymentDetailsUpdateInterval: number,
@@ -392,7 +418,7 @@ interface MonitoringState {
 
 export function monitorGoCryptoRequest(
     paymentId: string,
-    options: MonitoringOptions,
+    options: MonitoringOptions, // Changing of the options like translations during monitoring is supported.
 ): () => void {
     const state: MonitoringState = {
         stopped: false,
@@ -431,7 +457,7 @@ async function monitorGoCryptoRequest_updatePaymentDetails(
 ): Promise<boolean> {
     state.paymentDetails = await fetchGoCryptoPaymentDetails({ paymentId }, options);
     if (state.stopped) return false; // stopped while we were in asynchronous code
-    state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails);
+    state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails, options.translations);
     try {
         options.onUpdate(state.paymentDetails, state.userFriendlyStatus);
     } catch (e) {}
