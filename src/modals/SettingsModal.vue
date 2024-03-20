@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { IonAlert, IonBackButton, IonButtons, IonIcon, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
-import { chevronForwardOutline } from 'ionicons/icons'
+import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { App } from '@capacitor/app'
 import { computedAsync, onLongPress } from '@vueuse/core'
 import { ref } from 'vue'
-import { useModal } from '@/composables/useModal'
+import { Modal, useModal } from '@/composables/useModal'
 import { Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import ItemDivider from '@/components/ItemDivider.vue'
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, setLanguage } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 
 const logger = useLogger('SettingsModal')
 
-const { closeModal } = useModal()
-const { language, selectedFiat, pushNotificationsStatus } = storeToRefs(useApp())
+const { showModal, closeModal } = useModal()
+const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified } = storeToRefs(useApp())
 const { unregisterNotifications, registerNotifications } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
 
@@ -29,19 +27,6 @@ const appVersion = computedAsync(async () => {
     return '0.0.0'
   }
 })
-
-const deleteAlertButtons = [
-  {
-    text: 'Cancel',
-    role: 'cancel',
-  },
-  {
-    text: 'OK',
-    role: 'confirm',
-    handler: handleDeletePoints,
-  },
-]
-
 function onLongPressCallback() {
   logger.sendReport()
 }
@@ -52,10 +37,6 @@ async function handlePushNotificationsToggle(event: CustomEvent) {
 
   else if (!event.detail.checked && pushNotificationsStatus.value === PushNotificationsStatus.GRANTED)
     unregisterNotifications()
-}
-
-function handleDeletePoints() {
-  console.log('TODO') // eslint-disable-line no-console
 }
 
 onLongPress(
@@ -105,23 +86,13 @@ onLongPress(
           </IonToggle>
         </IonItem>
 
-        <ItemDivider />
-
-        <IonItem id="present-deletion-alert" button :detail="false">
-          <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
-          <IonIcon slot="end" :icon="chevronForwardOutline" size="large" class="h-5 text-space/50" aria-hidden="true" />
+        <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
+          <IonLabel>{{ $t('Delete Points rewards account') }}</IonLabel>
         </IonItem>
       </IonList>
       <code ref="htmlRefHook" class="p-4 pb-0 mt-auto text-sm opacity-60">v{{ appVersion }}</code>
     </div>
   </ModalTemplate>
-  <IonAlert
-    trigger="present-deletion-alert"
-    header="Are you sure?"
-    sub-header="This action will permanently delete your points"
-    message="To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable."
-    :buttons="deleteAlertButtons"
-  />
 </template>
 
 <style scoped>

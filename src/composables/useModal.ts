@@ -8,6 +8,7 @@ const logger = useLogger('useModal')
 
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
+  DeletePoints = '@/modals/DeletePointsModal.vue',
   Dev = '@/modals/DevModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
@@ -36,6 +37,9 @@ function _useModal() {
     switch (modal) {
       case Modal.Backup:
         component = defineAsyncComponent(() => import(Modal.Backup))
+        break
+      case Modal.DeletePoints:
+        component = defineAsyncComponent(() => import(Modal.DeletePoints))
         break
       case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
