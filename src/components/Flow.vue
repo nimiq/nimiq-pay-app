@@ -158,29 +158,26 @@ async function navigateTo(options: NavigateToOptions = 1) {
     return
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
   let newIndex: number = currentIndex + 1
-  if (Number.isInteger(options as number)) {
-    newIndex = currentIndex + (options as number)
+  if (typeof options === 'number') {
+    newIndex = currentIndex + options
   }
-  else if ((options as { step: string }).step) {
-    const stepIndex = stepsInFlow.findIndex(s => s.step === (options as { step: StepName }).step)
+  else if ('step' in options) {
+    const stepIndex = stepsInFlow.findIndex(s => s.step === options.step)
     if (stepIndex === -1) {
-      logger.warn(`Step ${(options as { step: string }).step} not found in flow`)
+      logger.warn(`Step ${options.step} not found in flow`)
       return
     }
-    newIndex = stepIndex - activeIndex.value
+    newIndex = stepIndex
   }
-  // We need to be quite verbose here, since TypeScript doesn't allow to use
-  // the same property name in different types. I think from TS v5.5, this will
-  // be fixed
-  else if ((options as { goBackBy: number }).goBackBy) {
-    newIndex = activeIndex.value - (options as { goBackBy: number }).goBackBy
+  else if ('goBackBy' in options && options.goBackBy) {
+    newIndex = activeIndex.value - options.goBackBy
   }
-  else if ((options as { skipAheadBy: number }).skipAheadBy) {
-    newIndex = currentIndex + (options as { skipAheadBy: number }).skipAheadBy
+  else if ('skipAheadBy' in options && options.skipAheadBy) {
+    newIndex = currentIndex + options.skipAheadBy
   }
 
-  if (newIndex < 0)
-    throw new Error('Cannot navigate to a negative index')
+  if (!Number.isInteger(newIndex) || newIndex < 0)
+    throw new Error(`Cannot navigate to index ${newIndex}`)
   else if (newIndex >= stepsInFlow.length)
     return await onFlowDone()
 
