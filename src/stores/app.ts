@@ -88,7 +88,7 @@ export const useApp = defineStore('app', () => {
   return {
     pinHash,
     phoneNumber,
-    phoneNumberVerified: computed(() => !!phoneNumber.value),
+    phoneNumberVerified: computed(() => !!pointsToken.value),
     referralCode,
     setReferralCode,
     entropy,
