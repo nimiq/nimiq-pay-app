@@ -96,35 +96,25 @@ async function getGoCryptoApiFetchOptions() {
 }
 
 function getGoCryptoApiUserFriendlyStatusOptions(): GoCryptoUserFriendlyStatusOptions<false> {
-  // As Record to typecheck for missing or superfluous entries.
+  // As Record to typecheck for missing or superfluous entries. Return entries via getters, such that translations are
+  // always based on currently selected language, even if it changes during monitoring.
+  /* eslint-disable no-useless-computed-key */
   const translations: Record<GoCryptoUserFriendlyStatusTitle, string> = {
-    'Not a pending payment request':
-      i18n.t('Not a pending payment request'),
-    'No payment request found':
-      i18n.t('No payment request found'),
-    'GoCrypto API refused connecting':
-      i18n.t('GoCrypto refused connecting'),
-    'Invalid GoCrypto API response':
-      i18n.t('Invalid GoCrypto response'),
-    'Unexpected GoCrypto error':
-      i18n.t('Unexpected GoCrypto error'),
-    'The payment request has already been paid':
-      i18n.t('Already paid'),
-    'The payment request is being processed':
-      i18n.t('Payment is being processed'),
-    'Your payment failed':
-      i18n.t('Payment unsuccessful'),
-    'Your payment is invalid':
-      i18n.t('Payment invalid'),
-    'Your payment was refunded':
-      i18n.t('Payment was refunded'),
-    'The payment request was cancelled':
-      i18n.t('Payment cancelled'),
-    'The payment request expired':
-      i18n.t('Payment expired'),
-    'The payment request is about to expire':
-      i18n.t('Payment expiring soon'),
+    get ['Not a pending payment request']() { return i18n.t('Not a pending payment request') },
+    get ['No payment request found']() { return i18n.t('No payment request found') },
+    get ['GoCrypto API refused connecting']() { return i18n.t('GoCrypto refused connecting') },
+    get ['Invalid GoCrypto API response']() { return i18n.t('Invalid GoCrypto response') },
+    get ['Unexpected GoCrypto error']() { return i18n.t('Unexpected GoCrypto error') },
+    get ['The payment request has already been paid']() { return i18n.t('Already paid') },
+    get ['The payment request is being processed']() { return i18n.t('Payment is being processed') },
+    get ['Your payment failed']() { return i18n.t('Payment unsuccessful') },
+    get ['Your payment is invalid']() { return i18n.t('Payment invalid') },
+    get ['Your payment was refunded']() { return i18n.t('Payment was refunded') },
+    get ['The payment request was cancelled']() { return i18n.t('Payment cancelled') },
+    get ['The payment request expired']() { return i18n.t('Payment expired') },
+    get ['The payment request is about to expire']() { return i18n.t('Payment expiring soon') },
   }
+  /* eslint-enable no-useless-computed-key */
   return {
     includeMessages: false,
     translations,
