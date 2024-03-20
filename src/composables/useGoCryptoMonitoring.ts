@@ -10,7 +10,7 @@ import {
   type GoCryptoPaymentDetails,
   type GoCryptoRequestIdentifier,
   type GoCryptoUserFriendlyStatus,
-  type GoCryptoUserFriendlyStatusMessage,
+  type GoCryptoUserFriendlyStatusOptions,
   type GoCryptoUserFriendlyStatusTitle,
   fetchGoCryptoPaymentDetails,
   goCryptoStatusToUserFriendlyStatus,
@@ -24,8 +24,8 @@ export async function fetchGoCryptoPaymentRequestData(requestIdentifier: GoCrypt
 : Promise<Result<PaymentRequestData, string>> { // eslint-disable-line style/type-annotation-spacing, style/indent
   const fetchOptions = await getGoCryptoApiFetchOptions()
   const paymentDetails = await fetchGoCryptoPaymentDetails(requestIdentifier, fetchOptions)
-  const translations = getGoCryptoApiTranslations()
-  const userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(paymentDetails, { translations })
+  const userFriendlyStatusOptions = getGoCryptoApiUserFriendlyStatusOptions()
+  const userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(paymentDetails, userFriendlyStatusOptions)
   return goCryptoPaymentDetailsToPaymentRequestData(paymentDetails, userFriendlyStatus)
 }
 
@@ -52,7 +52,7 @@ export function useGoCryptoMonitoring(paymentRequestToMonitor: MaybeRef<Pick<Pay
 
       currentStopMonitoringHandler = monitorGoCryptoRequest(paymentId, {
         ...await getGoCryptoApiFetchOptions(),
-        translations: getGoCryptoApiTranslations(),
+        ...getGoCryptoApiUserFriendlyStatusOptions(),
         onUpdate: (paymentDetails, userFriendlyStatus) => {
           ({ error: error.value, data: paymentRequestData.value } = goCryptoPaymentDetailsToPaymentRequestData(
             paymentDetails,
@@ -95,70 +95,51 @@ async function getGoCryptoApiFetchOptions() {
   }
 }
 
-function getGoCryptoApiTranslations() {
+function getGoCryptoApiUserFriendlyStatusOptions(): GoCryptoUserFriendlyStatusOptions<false> {
   // As Record to typecheck for missing or superfluous entries.
-  const translations: Record<GoCryptoUserFriendlyStatusTitle | GoCryptoUserFriendlyStatusMessage, string> = {
-    // Titles
+  const translations: Record<GoCryptoUserFriendlyStatusTitle, string> = {
     'Not a pending payment request':
       i18n.t('Not a pending payment request'),
     'No payment request found':
       i18n.t('No payment request found'),
     'GoCrypto API refused connecting':
-      i18n.t('GoCrypto API refused connecting'),
+      i18n.t('GoCrypto refused connecting'),
     'Invalid GoCrypto API response':
-      i18n.t('Invalid GoCrypto API response'),
+      i18n.t('Invalid GoCrypto response'),
     'Unexpected GoCrypto error':
       i18n.t('Unexpected GoCrypto error'),
     'The payment request has already been paid':
-      i18n.t('The payment request has already been paid'),
+      i18n.t('Already paid'),
     'The payment request is being processed':
-      i18n.t('The payment request is being processed'),
+      i18n.t('Payment is being processed'),
     'Your payment failed':
-      i18n.t('Your payment failed'),
+      i18n.t('Payment unsuccessful'),
     'Your payment is invalid':
-      i18n.t('Your payment is invalid'),
+      i18n.t('Payment invalid'),
     'Your payment was refunded':
-      i18n.t('Your payment was refunded'),
+      i18n.t('Payment was refunded'),
     'The payment request was cancelled':
-      i18n.t('The payment request was cancelled'),
+      i18n.t('Payment cancelled'),
     'The payment request expired':
-      i18n.t('The payment request expired'),
+      i18n.t('Payment expired'),
     'The payment request is about to expire':
-      i18n.t('The payment request is about to expire'),
-    // Messages
-    'The payment request might have been paid, expired, or cancelled.':
-      i18n.t('The payment request might have been paid, expired, or cancelled.'),
-    'Received an invalid response from GoCrypto: {errorMessage}.':
-      // Preserve placeholders as interpolation is handled by GoCrypto api.
-      i18n.t('Received an invalid response from GoCrypto: {errorMessage}.', { errorMessage: '{errorMessage}' }),
-    'Error {errorCodeAndMessage}.':
-      // Preserve placeholders as interpolation is handled by GoCrypto api.
-      i18n.t('Error {errorCodeAndMessage}.', { errorCodeAndMessage: '{errorCodeAndMessage}' }),
-    'Please ask the merchant to check the status of your payment.':
-      i18n.t('Please ask the merchant to check the status of your payment.'),
-    'Please ask the merchant to create a new payment request.':
-      i18n.t('Please ask the merchant to create a new payment request.'),
-    'If you already made a payment, wait for it to be confirmed instead.':
-      i18n.t('If you already made a payment, wait for it to be confirmed instead.'),
-    'If you already made a payment which was not accepted, please contact GoCrypto for a refund.':
-      i18n.t('If you already made a payment which was not accepted, please contact GoCrypto for a refund.'),
-    'If you\'re in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour.':
-      i18n.t('If you\'re in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour.'),
+      i18n.t('Payment expiring soon'),
   }
-  return translations
+  return {
+    includeMessages: false,
+    translations,
+  }
 }
 
-function goCryptoPaymentDetailsToPaymentRequestData(
+function goCryptoPaymentDetailsToPaymentRequestData<IM extends boolean>(
   paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
-  userFriendlyStatus: GoCryptoUserFriendlyStatus<true>,
+  userFriendlyStatus: GoCryptoUserFriendlyStatus<IM>,
 ): Result<PaymentRequestData, string> {
-  if (userFriendlyStatus.paymentStatus === 'accepted')
-    // Report already paid request as error
+  if (userFriendlyStatus.paymentStatus === 'failed'
+    || userFriendlyStatus.paymentStatus === 'accepted') // Also report already paid request as error
     return { error: userFriendlyStatus.title, data: undefined }
-  else if (userFriendlyStatus.paymentStatus === 'failed')
-    return { error: `${userFriendlyStatus.title}: ${userFriendlyStatus.message}`, data: undefined }
   else if ('errorCode' in paymentDetails)
-    // This case should already be entirely be covered by the other cases above, and is just included here as a type guard
+    // This case should already be entirely be covered by the case above, and is just included here as a type guard
     return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
 
   // still pending GoCrypto request

@@ -98,7 +98,7 @@ if (typeof qrScanResult === 'object' && qrScanResult?.rail === Rail.GoCrypto) {
     watchEffect(() => {
       if (!error.value)
         return
-      useToast().setToast({ message: error.value, error: true, duration: 10 * 1e3 })
+      useToast().setToast({ message: error.value, error: true, duration: 5 * 1e3 })
       useModal().closeModal()
     })
   }))
