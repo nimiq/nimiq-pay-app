@@ -15,9 +15,16 @@ const props = defineProps({
 const emit = defineEmits(stepEmits)
 
 const cameraFeedContainer = ref() as Ref<HTMLDivElement>
-const errorMessage = ref('') // last error; could be coming from external prop or from scanning
 
-watch(() => props.errorMsg, msg => errorMessage.value = msg || '', { immediate: true })
+async function onError(error: string) {
+  const { useToast } = await import('@/composables/useToast')
+  useToast().setToast({ message: error, error: true, duration: 5000 })
+}
+watch(() => props.errorMsg, (error) => {
+  if (!error)
+    return
+  onError(error)
+}, { immediate: true })
 
 const cameraFeedContainerTop = ref(0)
 watchEffect(() => {
@@ -33,7 +40,6 @@ watchEffect(() => {
 })
 
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
-const onError = (error: string) => errorMessage.value = error
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
 const { isWeb } = useDevice()
@@ -101,12 +107,8 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <p v-if="state === QRScannerState.NoPermission || errorMessage" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
-      {{
-        state === QRScannerState.NoPermission
-          ? $t('Please allow Nimiq Pay to access your camera and try again to scan QR codes.')
-          : errorMessage
-      }}
+    <p v-if="state === QRScannerState.NoPermission" class="mx-auto mt-8 text-center text-pumpkin small:leading-5" :class="{ 'absolute inset-x-8 bottom-8 small:inset-x-6 small:bottom-4': !isWeb }">
+      {{ $t('Please allow Nimiq Pay to access your camera and try again to scan QR codes.') }}
     </p>
   </div>
 </template>
