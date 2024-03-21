@@ -229,6 +229,7 @@ export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => undefined,
   select: (_: OnDoneStepValue) => undefined, // Just an alias for done
   skip: () => undefined,
+  back: () => undefined,
   focus: () => undefined,
 }
 

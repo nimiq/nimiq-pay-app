@@ -5,7 +5,7 @@ import { close } from 'ionicons/icons'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { nextTick } from 'vue'
 import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
-import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
 import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
@@ -213,6 +213,17 @@ async function navigateTo(options: NavigateToOptions = 1) {
   }
 }
 
+function makeSkipOrBackHandler(defaultNavigation: Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>) {
+  return (stepCountOrName?: number | StepName) => {
+    if (!stepCountOrName)
+      navigateTo(defaultNavigation)
+    else if (typeof stepCountOrName === 'number')
+      navigateTo(('skipAheadBy' in defaultNavigation ? 1 : -1) * stepCountOrName)
+    else
+      navigateTo({ step: stepCountOrName }) // note that this does not guarantee navigation in the desired direction
+  }
+}
+
 // TODO revise this
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
@@ -313,7 +324,7 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
+    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 text-2xl font-bold text-center small:mt-0 text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
@@ -324,7 +335,7 @@ function blur() {
       <component
         :is="main"
         v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-        v-on="{ focus, done: onStepDone, select: onStepDone, skip: () => navigateTo({ skipAheadBy }), blur }"
+        v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur }"
       />
     </li>
   </ul>

@@ -104,6 +104,9 @@ watch(() => goCryptoError.value || props.errorMsg, (message) => {
     return
   loading.value = false
   useToast().setToast({ message, error: true, duration: 5 * 1e3 })
+  if (goCryptoError.value)
+    // Go back to QR scanner
+    emit('back', StepName.QRCodeScanner)
 }, { immediate: true })
 
 function handlePay() {
