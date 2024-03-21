@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
       <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
         <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
       </svg>
-      <p class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
+      <p v-if="state !== QRScannerState.NoPermission" class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
         <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq or NAKA QR code to pay.') }} </span>
         <!-- TODO: use this when BTC Lightning is implemented -->
         <!-- <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay.') }} </span> -->
@@ -99,7 +99,7 @@ onBeforeUnmount(() => {
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
         </div>
-        <p class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
+        <p v-if="state !== QRScannerState.NoPermission" class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
           <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq or NAKA QR code to pay.') }} </span>
           <!-- TODO: use this when BTC Lightning is implemented -->
           <!-- <span v-if="expect === QRDataFormat.PaymentRequest"> {{ $t('Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay.') }} </span> -->
