@@ -64,7 +64,8 @@ const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentVali
 const goCryptoError = ref<string>()
 const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, async (isGoCrypto) => {
   // Watch payment rail for whether it's a GoCrypto payment and if that's the case, lazy load and setup GoCrypto
-  // monitoring. As soon as we load it and set it up, the rail watcher can be stopped.
+  // monitoring. As soon as we load it and set it up, the rail watcher can be stopped, as the monitoring itself will
+  // observe the payment ref and its rail for further changes.
   if (!isGoCrypto)
     return
   window.setTimeout(() => unwatchGoCryptoRail(), 0) // run after immediate invocation of watcher
@@ -73,6 +74,9 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   // executing the run handler when it's already stopped, i.e. when the component has already been unmounted before the
   // async code continues.
   const scope = effectScope()
+  // Note that we stop the monitoring only on unmount and not on step visibility change. This way, the monitoring also
+  // stays active throughout the following steps, for example PinInput, until the PaymentPreview step is unmounted, e.g.
+  // by the flow being dismissed or going back to a step before the PaymentPreview step.
   onUnmounted(() => scope.stop())
   const { useGoCryptoMonitoring } = await import('@/composables/useGoCryptoMonitoring')
   scope.run(() => {
