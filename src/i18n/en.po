@@ -23,17 +23,17 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:115
-#: src/stores/nimiq-network.ts:80
-#: src/stores/nimiq-network.ts:97
+#: src/stores/nimiq-network.ts:117
+#: src/stores/nimiq-network.ts:82
+#: src/stores/nimiq-network.ts:99
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:106
+#: src/stores/nimiq-network.ts:108
 msgid "Addresses missing"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:91
+#: src/components/NimWithdraw.vue:93
 msgid "All"
 msgstr ""
 
@@ -70,15 +70,19 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/components/PhoneInput.vue:64
+#: src/components/PhoneInput.vue:33
+msgid "By tapping “verify”, you agree to our data management practices."
+msgstr ""
+
+#: src/components/PhoneInput.vue:66
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:61
+#: src/composables/useQRScanner.ts:62
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:82
+#: src/stores/nimiq-network.ts:84
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -107,29 +111,29 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:101
+#: src/types/transactions.ts:123
 msgid "Confirmed"
 msgstr ""
 
 #. We display a just mined, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:98
+#: src/types/transactions.ts:120
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:127
+#: src/stores/nimiq-network.ts:129
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:125
+#: src/stores/nimiq-network.ts:127
 msgid "Consensus established."
 msgstr ""
 
-#: src/components/PhoneInput.vue:65
+#: src/components/PhoneInput.vue:67
 #: src/modals/BackupModal/ShowWords.vue:18
 msgid "Continue"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:25
+#: src/components/TransactionDetails.vue:26
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -173,12 +177,28 @@ msgstr ""
 msgid "Currency"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:21
+#: src/components/TransactionDetails.vue:25
 msgid "Date"
 msgstr ""
 
+#: src/modals/DeletePointsModal.vue:21
+msgid "Delete Points Account"
+msgstr ""
+
+#: src/modals/SettingsModal.vue:42
+msgid "Delete Points rewards account"
+msgstr ""
+
+#: src/modals/DeletePointsModal.vue:16
+msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
+msgstr ""
+
+#: src/modals/DisclaimerModal.vue:13
+msgid "Disclaimer"
+msgstr ""
+
 #: src/modals/PointsModal.vue:59
-#: src/views/HomeView.vue:33
+#: src/views/HomeView.vue:34
 msgid "Earn Points"
 msgstr ""
 
@@ -219,7 +239,7 @@ msgstr ""
 msgid "Error {errorCode}: {errorMessage}"
 msgstr ""
 
-#: src/types/transactions.ts:100
+#: src/types/transactions.ts:122
 msgid "Expired"
 msgstr ""
 
@@ -231,11 +251,11 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:4
+#: src/components/PaymentPreview.vue:11
 msgid "Fees may apply {fee}"
 msgstr ""
 
-#: src/views/HomeView.vue:95
+#: src/views/HomeView.vue:96
 msgid "Find places that accept crypto!"
 msgstr ""
 
@@ -243,7 +263,7 @@ msgstr ""
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:110
+#: src/views/HomeView.vue:105
 msgid "Get cashback and earn rewards"
 msgstr ""
 
@@ -269,7 +289,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:110
 msgid "Go to Crypto Map"
 msgstr ""
 
@@ -305,8 +325,8 @@ msgstr ""
 msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:4
-msgid "Including fees {fee}"
+#: src/components/PaymentPreview.vue:8
+msgid "Incl. fees"
 msgstr ""
 
 #: src/lib/flows/steps.ts:68
@@ -318,7 +338,7 @@ msgid "Insufficient funds"
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:99
+#: src/types/transactions.ts:121
 msgid "Invalid"
 msgstr ""
 
@@ -380,7 +400,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:70
+#: src/composables/useQRScanner.ts:71
 msgid "Invalid QR code"
 msgstr ""
 
@@ -405,16 +425,20 @@ msgid "Invite a friend and get {amount} each"
 msgstr ""
 
 #: src/modals/PointsModal.vue:52
-#: src/views/HomeView.vue:87
+#: src/views/HomeView.vue:88
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
-#: src/components/PhoneInput.vue:61
+#: src/components/PhoneInput.vue:63
 msgid "Is this your phone number?"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:15
 msgid "Language"
+msgstr ""
+
+#: src/components/PhoneInput.vue:38
+msgid "Learn more"
 msgstr ""
 
 #: src/components/TransactionList.vue:42
@@ -444,15 +468,15 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:40
+#: src/stores/nimiq-network.ts:42
 msgid "Network consensus lost."
 msgstr ""
 
-#: src/types/transactions.ts:96
+#: src/types/transactions.ts:118
 msgid "New"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:100
+#: src/stores/nimiq-network.ts:102
 msgid "No account found"
 msgstr ""
 
@@ -464,11 +488,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:109
+#: src/stores/nimiq-network.ts:111
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:71
+#: src/stores/nimiq-network.ts:73
 msgid "No Cashlink found"
 msgstr ""
 
@@ -494,7 +518,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:118
+#: src/stores/nimiq-network.ts:120
 msgid "No transactions found"
 msgstr ""
 
@@ -506,7 +530,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:105
+#: src/composables/useNotifications.ts:112
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -522,8 +546,8 @@ msgstr ""
 msgid "Open Wallet"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:54
-#: src/views/HomeView.vue:133
+#: src/components/PaymentPreview.vue:61
+#: src/views/HomeView.vue:134
 msgid "Pay"
 msgstr ""
 
@@ -544,7 +568,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:85
+#: src/types/transactions.ts:107
 msgid "Payment"
 msgstr ""
 
@@ -561,7 +585,7 @@ msgstr ""
 msgid "Payment successful"
 msgstr ""
 
-#: src/types/transactions.ts:97
+#: src/types/transactions.ts:119
 msgid "Pending"
 msgstr ""
 
@@ -630,11 +654,15 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:86
+#: src/types/transactions.ts:108
 msgid "Points Payment"
 msgstr ""
 
-#: src/views/HomeView.vue:121
+#: src/modals/DisclaimerModal.vue:17
+msgid "Privacy Policy"
+msgstr ""
+
+#: src/views/HomeView.vue:122
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
@@ -655,11 +683,15 @@ msgstr ""
 msgid "Purchase"
 msgstr ""
 
+#: src/modals/DeletePointsModal.vue:13
+msgid "Really delete your Points rewards account?"
+msgstr ""
+
 #: src/composables/useGoCrypto.ts:301
 msgid "Received an invalid response from GoCrypto: {errorMessage}"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:26
+#: src/components/TransactionDetails.vue:30
 msgid "Recipient"
 msgstr ""
 
@@ -675,7 +707,7 @@ msgstr ""
 msgid "Reset search"
 msgstr ""
 
-#: src/composables/useNotifications.ts:104
+#: src/composables/useNotifications.ts:111
 msgid "Rewards Notifications"
 msgstr ""
 
@@ -683,7 +715,8 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: src/components/QRScanner.vue:30
+#: src/components/QRScanner.vue:19
+#: src/components/QRScanner.vue:35
 msgid "Scan any Nimiq or NAKA QR code to pay."
 msgstr ""
 
@@ -703,7 +736,7 @@ msgstr ""
 msgid "Search for a country"
 msgstr ""
 
-#: src/views/HomeView.vue:57
+#: src/views/HomeView.vue:58
 msgid "See all"
 msgstr ""
 
@@ -715,7 +748,7 @@ msgstr ""
 msgid "Select withdrawal address"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:102
+#: src/components/NimWithdraw.vue:104
 msgid "Send"
 msgstr ""
 
@@ -737,7 +770,7 @@ msgid "Settings"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:9
-#: src/components/PhoneInput.vue:35
+#: src/components/PhoneInput.vue:45
 msgid "Skip for now"
 msgstr ""
 
@@ -800,11 +833,11 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
-#: src/components/PhoneInput.vue:18
+#: src/components/PhoneInput.vue:19
 msgid "Standard rates may apply."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:16
+#: src/components/TransactionDetails.vue:20
 msgid "Status"
 msgstr ""
 
@@ -812,7 +845,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:126
+#: src/stores/nimiq-network.ts:128
 msgid "Syncing with network."
 msgstr ""
 
@@ -848,7 +881,7 @@ msgstr ""
 msgid "The payment request was cancelled"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:165
+#: src/composables/useQRScanner.ts:168
 msgid "The QR scanner is not ready yet. Please try again."
 msgstr ""
 
@@ -857,7 +890,7 @@ msgstr ""
 msgid "There is no \"Forgot Password\""
 msgstr ""
 
-#: src/components/PaymentPreview.vue:41
+#: src/components/PaymentPreview.vue:48
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
@@ -881,16 +914,12 @@ msgstr ""
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:65
-msgid "To credit card / bank account"
-msgstr ""
-
 #: src/modals/MenuModal.vue:14
-#: src/views/HomeView.vue:46
+#: src/views/HomeView.vue:47
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:83
+#: src/types/transactions.ts:105
 msgid "Top-Up"
 msgstr ""
 
@@ -898,7 +927,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:95
+#: src/stores/transactions.ts:101
 msgid "Transaction already sent"
 msgstr ""
 
@@ -906,11 +935,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:102
+#: src/stores/transactions.ts:108
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:55
+#: src/stores/nimiq-network.ts:57
 msgid "Trying to establish network consensus:"
 msgstr ""
 
@@ -922,15 +951,15 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/types/transactions.ts:105
+#: src/types/transactions.ts:127
 msgid "Unknown"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:15
+#: src/components/PaymentPreview.vue:22
 msgid "Use {amount}"
 msgstr ""
 
-#: src/components/PhoneInput.vue:32
+#: src/components/PhoneInput.vue:42
 msgid "Verify"
 msgstr ""
 
@@ -939,7 +968,7 @@ msgid "Verify your ID"
 msgstr ""
 
 #: src/lib/flows/steps.ts:160
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:104
 msgid "Verify your phone number"
 msgstr ""
 
@@ -1011,12 +1040,16 @@ msgstr ""
 msgid "What's the 9th word?"
 msgstr ""
 
+#: src/modals/DisclaimerModal.vue:15
+msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgstr ""
+
 #: src/lib/flows/steps.ts:329
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:84
+#: src/types/transactions.ts:106
 msgid "Withdrawal"
 msgstr ""
 
@@ -1050,15 +1083,15 @@ msgstr ""
 msgid "You can not use this address"
 msgstr ""
 
-#: src/components/PhoneInput.vue:22
+#: src/components/PhoneInput.vue:23
 msgid "You can try again in"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:32
+#: src/components/PaymentPreview.vue:39
 msgid "You don't have enough NIM for this purchase."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:29
+#: src/components/PaymentPreview.vue:36
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr ""
 
@@ -1074,7 +1107,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:115
+#: src/views/HomeView.vue:110
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -1094,7 +1127,7 @@ msgstr ""
 msgid "Your account, funds and data will be lost if you log out without a backup."
 msgstr ""
 
-#: src/components/PaymentPreview.vue:26
+#: src/components/PaymentPreview.vue:33
 msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgstr ""
 

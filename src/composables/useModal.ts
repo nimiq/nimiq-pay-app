@@ -9,6 +9,7 @@ const logger = useLogger('useModal')
 export enum Modal {
   Backup = '@/modals/BackupModal/index.vue',
   DeletePoints = '@/modals/DeletePointsModal.vue',
+  Disclaimer = '@/modals/DisclaimerModal.vue',
   Dev = '@/modals/DevModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
@@ -24,8 +25,8 @@ function _useModal() {
   const isPresent = ref(false)
   const allModals: HTMLIonModalElement[] = []
 
-  async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef> }) {
-    const { isOnTop, isFullscreen, isSmall, componentProps } = options || {}
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef>; canDismiss?: boolean }) {
+    const { isOnTop, isFullscreen, isSmall, componentProps, canDismiss = true } = options || {}
     if (import.meta.env.MODE === 'development')
       logger.log('showModal', modal)
 
@@ -40,6 +41,9 @@ function _useModal() {
         break
       case Modal.DeletePoints:
         component = defineAsyncComponent(() => import(Modal.DeletePoints))
+        break
+      case Modal.Disclaimer:
+        component = defineAsyncComponent(() => import(Modal.Disclaimer))
         break
       case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
@@ -73,7 +77,7 @@ function _useModal() {
     const modalToShow = await modalController.create({
       component,
       handle: false,
-      canDismiss: true,
+      canDismiss,
       initialBreakpoint: isFullscreen ? undefined : 1,
       breakpoints: isFullscreen ? undefined : [0, 1],
       componentProps,
@@ -92,8 +96,10 @@ function _useModal() {
     if (import.meta.env.MODE === 'development')
       logger.log('closeModal', modal)
 
-    if (modal)
+    if (modal) {
+      modal.canDismiss = true
       await modal.dismiss()
+    }
   }
 
   async function closeAllModals() {

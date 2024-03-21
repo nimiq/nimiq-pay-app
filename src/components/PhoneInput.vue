@@ -10,6 +10,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
 import { countdownTo } from '@/composables/useTime'
+import { Modal, useModal } from '@/composables/useModal'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -18,6 +19,7 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, stepName: { type: String, required: false }, isVisible: { type: Boolean, default: false } })
 const emit = defineEmits(stepEmits)
 
+const { showModal } = useModal()
 const { language } = storeToRefs(useApp())
 const { nextRequestCapTs } = storeToRefs(usePoints())
 const timestamp = useTimestamp({ interval: 1000 })
@@ -136,6 +138,16 @@ async function openModal() {
       </p>
     </Transition>
     <div class="flex flex-col justify-center w-full pb-2 mt-auto">
+      <p class="mb-5 text-sm font-semibold text-center text-space/50">
+        {{ $t('By tapping “verify”, you agree to our data management practices.') }}
+        <!-- Disable dismiss modal to allow the user to scroll through the text without closing the modal -->
+        <a
+          class="underline"
+          @click="showModal(Modal.Disclaimer, { isOnTop: true, isSmall: true, canDismiss: false })"
+        >
+          {{ $t('Learn more') }}
+        </a>
+      </p>
       <IonButton size="small" class="text-base font-bold" :disabled="phoneNumberInput.length < 4 || nextRequestCapTs > timestamp" @click="showAlert">
         {{ $t('Verify') }}
       </IonButton>
