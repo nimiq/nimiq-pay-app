@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
 import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
@@ -154,7 +155,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
   </TransactionAmounts>
   <div class="flex flex-col items-center w-full pb-6 mt-auto">
     <IonToggle
-      v-if="pointsState !== PointsState.NotRegistered"
+      v-if="pointsState !== PointsState.NotRegistered && payment.rail !== Rail.BitcoinLightning"
       :disabled="!isEligible"
       label-placement="end" class="mb-4"
       :checked="paymentMethod === PaymentMethod.Points"
@@ -170,32 +171,43 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 
     <div class="mb-6 font-semibold text-center min-h-[4rem]">
       <Transition name="slide-fade" mode="out-in">
-        <p v-if="(!isHtlcActive || !isRemoteOk) && isEligible" class="text-pumpkin text-pretty">
+        <p v-if="(!isHtlcActive || !isRemoteOk) && isEligible" class="text-pumpkin">
           {{ $t('Your NIM balance is not available yet. You can only pay with Points.') }}
         </p>
-        <p v-else-if="!hasEnoughNimBalance && isEligible" class="text-pumpkin text-pretty">
+        <p v-else-if="!hasEnoughNimBalance && isEligible" class="text-pumpkin">
           {{ $t('You don\'t have enough NIM for this purchase. You can only pay with Points.') }}
         </p>
-        <p v-else-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin text-pretty">
+        <p v-else-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin">
           {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
         <p
           v-else-if="[PointsState.NotEligibleForPayment, PointsState.InsufficientPoints, PointsState.Error].includes(pointsState)"
-          class="text-pretty" :class="pointsState === PointsState.Error ? 'text-pumpkin' : 'opacity-60'"
+          :class="pointsState === PointsState.Error ? 'text-pumpkin' : 'opacity-60'"
         >
           {{ pointsMessage }}
         </p>
-        <p v-else-if="hasCashback && paymentMethod === PaymentMethod.Points" class="opacity-60 text-pretty">
+        <p v-else-if="hasCashback && paymentMethod === PaymentMethod.Points" class="opacity-60">
           {{ $t('There is no cashback reward when paying with Points.') }}
         </p>
-        <p v-else-if="hasCashback && paymentMethod !== PaymentMethod.Points" class="opacity-60 text-pretty">
+        <p v-else-if="hasCashback && paymentMethod !== PaymentMethod.Points" class="opacity-60">
           {{ pointsMessage }}
         </p>
-        <p v-else-if="payment.message" class="opacity-60 text-pretty">
+        <p v-else-if="payment.message" class="opacity-60">
           {{ payment.message }}
         </p>
       </Transition>
     </div>
+    <i18n-t
+      v-if="payment.rail === Rail.BitcoinLightning"
+      keypath="By tapping “pay”, you agree to Fastspot's {terms}"
+      tag="p" class="mb-4 font-semibold text-center opacity-50"
+    >
+      <template #terms>
+        <a class="underline" @click="Browser.open({ url: 'https://fastspot.io/terms/', toolbarColor: '#0582CA' })">
+          Terms of service
+        </a>
+      </template>
+    </i18n-t>
     <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
       <Transition
         mode="out-in"
