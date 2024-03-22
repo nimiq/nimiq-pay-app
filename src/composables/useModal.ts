@@ -1,4 +1,4 @@
-import { defineAsyncComponent, ref } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
@@ -22,7 +22,6 @@ export enum Modal {
 }
 
 function _useModal() {
-  const isPresent = ref(false)
   const allModals: HTMLIonModalElement[] = []
 
   async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef>; canDismiss?: boolean }) {
@@ -117,7 +116,6 @@ function _useModal() {
   return {
     closeModal,
     closeAllModals,
-    isPresent,
     showModal,
   }
 }
