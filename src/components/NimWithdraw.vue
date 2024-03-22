@@ -116,7 +116,7 @@ watch(errorMessage, (value) => {
   <div class="flex flex-col items-center justify-center w-full px-2 mt-6 mb-8 gap-y-2">
     <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
-      {{ formatCrypto(lunaAmount) }}
+      {{ formatCrypto(lunaAmount, { currency: Crypto.NIM }) }}
     </p>
   </div>
 

@@ -334,11 +334,12 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
+    const { Crypto } = (await import('@/stores/app'))
 
     if (amount > remoteBalance) {
       return err(i18n.t(
         'You don\'t have enough NIM. Your current balance is {balance}.',
-        { balance: formatCrypto(remoteBalance) },
+        { balance: formatCrypto(remoteBalance, { currency: Crypto.NIM }) },
       ))
     }
 

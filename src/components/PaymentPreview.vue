@@ -27,6 +27,7 @@ const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
+const { formatFiat, formatCrypto } = useCurrencyFormatter()
 
 const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
   ? props.state[StepName.QRCodeScanner]
@@ -130,18 +131,16 @@ function handlePay() {
 }
 
 function formatInvoiced({ currency, amount }: { currency: string; amount: number }) {
-  if (currency === 'BTC') {
+  if (currency === 'BTC')
     return `₿ ${amount}`
-  }
-  else {
-    const { formatFiat } = useCurrencyFormatter()
+
+  else
     return formatFiat(amount, { currency })
-  }
 }
 </script>
 
 <template>
-  <TransactionAmounts class="mt-8" :crypto-total="payment.amount / 1e5" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
+  <TransactionAmounts class="mt-8" :crypto-total="payment.amount" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
     <template v-if="payment.invoiced" #invoiced>
       {{ formatInvoiced(payment.invoiced) }}
     </template>
@@ -164,7 +163,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>
           <CryptoCityLogo class="w-5 h-5 ml-1.5 mr-1" />
-          {{ (payment.amount / 1e5).toLocaleString() }}
+          {{ formatCrypto(payment.amount) }}
         </template>
       </i18n-t>
     </IonToggle>
