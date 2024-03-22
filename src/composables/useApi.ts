@@ -15,8 +15,8 @@ const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https:
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 
-async function api<T = undefined, E = undefined>(url: URL, { token, body: _body }: { token?: string; body?: object } = {}): AsyncResultApi<T, E> {
-  const method = _body ? 'POST' : 'GET'
+async function api<T = undefined, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string; body?: object; delete?: boolean } = {}): AsyncResultApi<T, E> {
+  const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
@@ -65,6 +65,7 @@ export function usePointsApi() {
   interface TaskIdArg { id: MaybeRef<string>; token: MaybeRef<string> }
   interface ClaimTaskArg { id: MaybeRef<string>; answer?: MaybeRef<string>; token: MaybeRef<string> }
   interface ClaimCashbackArg { reference: MaybeRef<string>; tx_hash: MaybeRef<string>; token: MaybeRef<string> }
+  interface DeleteAccountArg { token: MaybeRef<string> }
 
   type AuthorizeRes = string
   interface VerifyRes { token: string }
@@ -125,6 +126,7 @@ export function usePointsApi() {
     getTaskById: ({ id, token }: TaskIdArg) => api<TaskIdRes, PointsErrorRes>(new URL(`task/${v(id)}`, basePointsUrl), { token: v(token) }),
     claimTask: ({ id, token, answer }: ClaimTaskArg) => api<ClaimTaskRes, PointsErrorRes>(new URL(`task/${v(id)}/claim`, basePointsUrl), { token: v(token), body: { proof: { answer: v(answer) } } }),
     getStatus: () => api<StatusRes, PointsErrorRes>(basePointsUrl),
+    deleteAccount: ({ token }: DeleteAccountArg) => api<undefined, PointsErrorRes>(new URL('participant/delete-account', basePointsUrl), { token: v(token), delete: true }),
   }
 }
 

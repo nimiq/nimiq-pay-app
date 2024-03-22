@@ -58,6 +58,28 @@ export const usePoints = defineStore('points', () => {
 
     if (referralCode.value)
       redeemReferral()
+
+    updatePointsBalance()
+    await updateStatus()
+    updateTasks()
+  }
+
+  /**
+   * Deletes the account from the server, it will be kept for 12 months in the server
+   * @returns success: true, if the account was deleted successfully
+   */
+  async function deleteAccount() {
+    if (!pointsToken.value)
+      return { success: true, error: undefined }
+
+    const { error, hasError } = await api.deleteAccount({ token: pointsToken.value })
+    if (hasError)
+      return { success: false, error: error?.message || i18n.t('Something went wrong deleting the account') }
+
+    pointsToken.value = ''
+    pointsBalance.value = 0
+    tasks.value = undefined
+    return { success: true, error: undefined }
   }
 
   async function updatePointsBalance(): AsyncOption<string> {
@@ -243,6 +265,7 @@ export const usePoints = defineStore('points', () => {
   return {
     authorize,
     verify,
+    deleteAccount,
     nextRequestCapTs,
     redeemReferral,
     updatePointsBalance,

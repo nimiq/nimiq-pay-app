@@ -1,12 +1,32 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
+import { i18n } from '@/i18n/i18n-setup'
 import { useModal } from '@/composables/useModal'
+import { usePoints } from '@/stores/points'
+import { useLogger } from '@/composables/useLogger'
+import { useToast } from '@/composables/useToast'
 
 const { closeModal } = useModal()
+const { deleteAccount } = usePoints()
+const logger = useLogger('DeletePointsModal')
 
-function handleDeletePointsAccount() {
-  console.log('TODO: Delete points account')
+async function handleDeletePointsAccount() {
+  const { success, error } = await deleteAccount()
+  if (success) {
+    useToast().setToast({
+      message: i18n.t('Points account deleted successfully'),
+    })
+  }
+  else {
+    logger.error('Failed to delete Points account', error)
+    useToast().setToast({
+      message: error || i18n.t('Failed to delete Points account'),
+      error: true,
+    })
+  }
+
+  closeModal()
 }
 </script>
 
