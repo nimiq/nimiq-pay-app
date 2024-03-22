@@ -24,11 +24,11 @@ dependencies:
     specifier: ^5.0.1
     version: 5.0.1(@capacitor/core@6.0.0)
   '@nimiq/fastspot-api-v1':
-    specifier: github:nimiq/fastspot-api#3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6
-    version: github.com/nimiq/fastspot-api/3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6
+    specifier: github:nimiq/fastspot-api#be7ef115a18491429245f4f3816fef8a1b191629
+    version: github.com/nimiq/fastspot-api/be7ef115a18491429245f4f3816fef8a1b191629
   '@nimiq/fastspot-api-v2':
-    specifier: github:nimiq/fastspot-api#c0605a3204e29985ce8b63d98acdac64a5a3f5e3
-    version: github.com/nimiq/fastspot-api/c0605a3204e29985ce8b63d98acdac64a5a3f5e3
+    specifier: github:nimiq/fastspot-api#3ef81c74836f14e534443b6ea6d98ed4041f6e63
+    version: github.com/nimiq/fastspot-api/3ef81c74836f14e534443b6ea6d98ed4041f6e63
   '@nimiq/utils':
     specifier: ^0.9.3
     version: 0.9.3
@@ -12674,18 +12674,18 @@ packages:
       - supports-color
     dev: false
 
-  github.com/nimiq/fastspot-api/3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6:
-    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/3a96c419ec6cbaf2fe16a3e4edc319a1a43c19c6}
-    name: '@nimiq/fastspot-api'
-    version: 1.8.0
-    requiresBuild: true
-    dev: false
-
-  github.com/nimiq/fastspot-api/c0605a3204e29985ce8b63d98acdac64a5a3f5e3:
-    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/c0605a3204e29985ce8b63d98acdac64a5a3f5e3}
+  github.com/nimiq/fastspot-api/3ef81c74836f14e534443b6ea6d98ed4041f6e63:
+    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/3ef81c74836f14e534443b6ea6d98ed4041f6e63}
     name: '@nimiq/fastspot-api'
     version: 2.0.0
     prepare: true
+    requiresBuild: true
+    dev: false
+
+  github.com/nimiq/fastspot-api/be7ef115a18491429245f4f3816fef8a1b191629:
+    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/be7ef115a18491429245f4f3816fef8a1b191629}
+    name: '@nimiq/fastspot-api'
+    version: 1.8.0
     requiresBuild: true
     dev: false
 

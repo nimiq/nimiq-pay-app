@@ -1,3 +1,6 @@
+import { nativeFetch } from '../lib/nativeFetch'
+import { useDevice } from './useDevice'
+
 let fastspot: typeof import('@nimiq/fastspot-api-v2') | undefined
 
 export async function useFastspotApiV2() {
@@ -5,10 +8,15 @@ export async function useFastspotApiV2() {
     return fastspot
 
   fastspot = await import('@nimiq/fastspot-api-v2')
-  // TODO: Move these variables into env
+
+  const { isAndroid, isIOS } = useDevice()
+
   fastspot.init(
     'https://api.test.fastspot.io',
     '447f6050-25a5-453e-9b4f-a2db55abbbec',
+    {
+      customFetch: isAndroid || isIOS ? nativeFetch : undefined,
+    },
   )
   return fastspot
 }
