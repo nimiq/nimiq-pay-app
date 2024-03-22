@@ -5,7 +5,9 @@ import { type MaybeRef, getCurrentScope, onScopeDispose, ref, toValue, watch } f
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
+import { useApp } from '@/stores/app'
 import {
+  GoCryptoFiatCurrency,
   type GoCryptoPaymentApiError,
   type GoCryptoPaymentDetails,
   type GoCryptoRequestIdentifier,
@@ -133,15 +135,28 @@ function goCryptoPaymentDetailsToPaymentRequestData<IM extends boolean>(
     return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
 
   // still pending GoCrypto request
+  const fiatCurrency = GoCryptoFiatCurrency[paymentDetails.fiatCurrency]
   const data: PaymentRequestData = {
     recipient: paymentDetails.recipient,
     amount: paymentDetails.amount,
     fee: 0,
+    feeIncludedInAmount: false, // there doesn't seem to be any fee applied by GoCrypto
     merchantName: paymentDetails.storeName,
     merchantCategory: MerchantCategory.Shop, // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
     rail: Rail.GoCrypto,
     paymentRef: paymentDetails.id,
     transfer: Transfer.UserPaymentToMerchant,
+    // eslint-disable-next-line style/multiline-ternary
+    ...(fiatCurrency === useApp().selectedFiat ? {
+      fiatAmount: paymentDetails.fiatAmount,
+      fiatFeeAmount: 0,
+      fiatCurrency,
+    } : {
+      invoiced: {
+        amount: paymentDetails.fiatAmount,
+        currency: fiatCurrency,
+      },
+    }),
   }
   return { error: undefined, data }
 }

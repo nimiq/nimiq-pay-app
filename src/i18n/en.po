@@ -41,7 +41,7 @@ msgstr ""
 msgid "All transactions"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:108
+#: src/composables/useGoCryptoMonitoring.ts:110
 msgid "Already paid"
 msgstr ""
 
@@ -293,7 +293,7 @@ msgstr ""
 msgid "Go to Crypto Map"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:105
+#: src/composables/useGoCryptoMonitoring.ts:107
 msgid "GoCrypto refused connecting"
 msgstr ""
 
@@ -343,12 +343,12 @@ msgstr ""
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:133
+#: src/composables/useGoCryptoMonitoring.ts:135
 #: src/composables/useStringParser.ts:132
 msgid "Invalid GoCrypto link."
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:106
+#: src/composables/useGoCryptoMonitoring.ts:108
 msgid "Invalid GoCrypto response"
 msgstr ""
 
@@ -491,7 +491,7 @@ msgstr ""
 msgid "No payment details found"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:104
+#: src/composables/useGoCryptoMonitoring.ts:106
 msgid "No payment request found"
 msgstr ""
 
@@ -513,7 +513,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:103
+#: src/composables/useGoCryptoMonitoring.ts:105
 msgid "Not a pending payment request"
 msgstr ""
 
@@ -559,24 +559,24 @@ msgstr ""
 msgid "Payment"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:113
+#: src/composables/useGoCryptoMonitoring.ts:115
 msgid "Payment cancelled"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:114
+#: src/composables/useGoCryptoMonitoring.ts:116
 msgid "Payment expired"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:115
+#: src/composables/useGoCryptoMonitoring.ts:117
 msgid "Payment expiring soon"
 msgstr ""
 
 #: src/composables/useApi.ts:107
-#: src/composables/useGoCryptoMonitoring.ts:111
+#: src/composables/useGoCryptoMonitoring.ts:113
 msgid "Payment invalid"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:109
+#: src/composables/useGoCryptoMonitoring.ts:111
 msgid "Payment is being processed"
 msgstr ""
 
@@ -589,11 +589,11 @@ msgstr ""
 msgid "Payment successful"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:110
+#: src/composables/useGoCryptoMonitoring.ts:112
 msgid "Payment unsuccessful"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:112
+#: src/composables/useGoCryptoMonitoring.ts:114
 msgid "Payment was refunded"
 msgstr ""
 
@@ -935,7 +935,7 @@ msgstr ""
 msgid "Unable to connect to the Points server"
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:107
+#: src/composables/useGoCryptoMonitoring.ts:109
 msgid "Unexpected GoCrypto error"
 msgstr ""
 

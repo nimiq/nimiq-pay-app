@@ -19,6 +19,58 @@ const MERCHANT_ID_PARAM = 'merchant_id';
 
 export type GoCryptoRequestIdentifier = { merchantId: string } | { paymentId: string };
 
+// As defined in GoCrypto wallet integration manual v1.1, section 3.8
+export enum GoCryptoFiatCurrency {
+    EUR,
+    HRK = 11,
+    TRY,
+    CHF,
+    USD,
+    JPY,
+    BGN = 50,
+    CZK,
+    DKK,
+    GBP,
+    HUF,
+    PLN,
+    RON,
+    SEK,
+    ISK,
+    NOK,
+    RUB,
+    AUD,
+    BRL,
+    CAD,
+    CNY,
+    HKD,
+    IDR,
+    ILS,
+    INR,
+    KRW,
+    MXN,
+    MYR,
+    NZD,
+    PHP,
+    SGD,
+    THB,
+    ZAR,
+    NGN = 78,
+    CLP,
+    CRC,
+    EGP,
+    GEL,
+    GHS,
+    KES,
+    MAD,
+    PEN,
+    LKR,
+    AED,
+    UYU,
+    XOF,
+    XCD,
+}
+
+// As defined in GoCrypto wallet integration manual v1.1, section 3.9
 export enum GoCryptoPaymentStatus {
     Opened,
     InPayment, // This is the standard case when a request link is scanned.
@@ -38,7 +90,9 @@ export interface GoCryptoPaymentDetails {
     expiryEarly: number; // timestamp in ms; expiryFinal minus a safety buffer for transaction to get confirmed
     storeName: string;
     recipient: string;
-    amount: number;
+    amount: number; // NIM amount in luna
+    fiatAmount: number; // fiat amount in fiatCurrency
+    fiatCurrency: GoCryptoFiatCurrency;
 }
 
 // The errors listed here are the ones we encountered so far. The API errors are unfortunately not mentioned in the
@@ -194,8 +248,7 @@ export async function fetchGoCryptoPaymentDetails(
             || ('paymentId' in requestIdentifier && id !== requestIdentifier.paymentId)) throw new Error('Invalid id');
 
         const status: GoCryptoPaymentStatus = data.status;
-        if (typeof status !== 'number'
-            || !Object.values(GoCryptoPaymentStatus).includes(status)) throw new Error('Invalid status');
+        if (typeof status !== 'number' || !(status in GoCryptoPaymentStatus)) throw new Error('Invalid status');
 
         const serverTimeOffset = await getServerTimeOffset(responseDateHeader, getServerTime);
         const expiryFinal = Date.parse(data.expires_at) - serverTimeOffset; // convert expiry to user's clock
@@ -218,6 +271,13 @@ export async function fetchGoCryptoPaymentDetails(
         const amount = Math.round(Number.parseFloat(nimiqPaymentOptions.amount) * 1e5);
         if (Number.isNaN(amount) || !Number.isFinite(amount)) throw new Error('Invalid amount');
 
+        const fiatAmount = Number.parseFloat(data.amount)
+        if (Number.isNaN(fiatAmount) || !Number.isFinite(fiatAmount)) throw new Error('Invalid fiatAmount');
+
+        const fiatCurrency: GoCryptoFiatCurrency = data.currency;
+        if (typeof fiatCurrency !== 'number'
+            || !(fiatCurrency in GoCryptoFiatCurrency)) throw new Error('Invalid fiatCurrency');
+
         return {
             id,
             status,
@@ -226,6 +286,8 @@ export async function fetchGoCryptoPaymentDetails(
             storeName,
             recipient,
             amount,
+            fiatAmount,
+            fiatCurrency,
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
