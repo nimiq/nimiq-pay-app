@@ -204,7 +204,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
     >
       <template #terms>
         <a class="underline" @click="Browser.open({ url: 'https://fastspot.io/terms/', toolbarColor: '#0582CA' })">
-          Terms of service
+          {{ $t('Terms of service') }}
         </a>
       </template>
     </i18n-t>
