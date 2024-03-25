@@ -93,7 +93,10 @@ const verifyPhoneFlow: FlowInit = async () => {
   const { phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints } = await import('./steps')
   const flowName = FlowName.VerifyPhone
   const steps = await Promise.all([phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints].map(s => s({ flowName })))
-  const onDone: Flow['onDone'] = async () => useModal().showModal(Modal.Points)
+  const onDone: Flow['onDone'] = async () => {
+    useModal().showModal(Modal.Points)
+    return { prevent: true }
+  }
   return { flowName, steps, onDone }
 }
 

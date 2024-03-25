@@ -16,7 +16,12 @@ export enum FlowName {
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
 }
 
-export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<void>
+interface FlowHookCbReturn {
+  // Prevents the default behavior.
+  // e.g. onDone will close the modal by default.
+  prevent?: boolean
+}
+export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<FlowHookCbReturn | void>
 
 export interface Flow {
   flowName: FlowName

@@ -75,12 +75,12 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
       }
 
       // Execute the original handler with the provided state and utilities.
-      await originalHandler(state.value, { err, setToast })
+      const { prevent } = await originalHandler(state.value, { err, setToast }) || { prevent: false }
       if (!hasError)
         hasRunSuccessfully = true
 
       // If no error occurred, proceed to close the modal unless it's already closing.
-      if (!hasError && !props.isClosing)
+      if (!hasError && !props.isClosing && !prevent)
         await useModal().closeModal()
     }
     finally {
