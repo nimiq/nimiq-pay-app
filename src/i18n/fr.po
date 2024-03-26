@@ -1,0 +1,766 @@
+# Daniel 2024.
+# Mathéo Raveux 2024.
+msgid ""
+msgstr ""
+"PO-Revision-Date: 2024-03-01 13:20+0000\n"
+"Last-Translator: Mathéo Raveux\n"
+"Language: fr\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 4.18.2\n"
+
+msgid "\"{word}\" is an invalid recovery word"
+msgstr "\"{word}\" est un mot de récupération non valide"
+
+msgid "{count} of {total} remaining."
+msgstr "{count} sur {total} restant."
+
+msgid "Activate Cashback & Rewards"
+msgstr "Activer les Cashback et les Récompenses"
+
+msgid "Add NIM address"
+msgstr "Ajouter une adresse NIM"
+
+msgid "Address copied to clipboard"
+msgstr "Adresse copiée dans le presse-papiers"
+
+msgid "Address missing"
+msgstr "Adresse manquante"
+
+msgid "Addresses missing"
+msgstr "Adresses manquantes"
+
+msgid "All"
+msgstr "Tout"
+
+msgid "All transactions"
+msgstr "Toutes les transactions"
+
+msgid "An unknown error occurred while importing words"
+msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+
+msgid "Are you sure you want to log out?"
+msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
+
+msgid "Backup Account"
+msgstr "Sauvegarder votre compte"
+
+msgid "Backup successful"
+msgstr "Sauvegarde réussie"
+
+msgid "Backup your account before logging out"
+msgstr "Sauvegardez votre compte avant de vous déconnecter"
+
+msgid "Beta Testing"
+msgstr "Bêta-test"
+
+msgid "Bluecode is a European payment service that now supports NIM."
+msgstr "Bluecode est un service de paiement européen qui prend désormais en charge NIM."
+
+msgid "Both expected and the given PIN are empty"
+msgstr "Le code PIN attendu et le code PIN donné sont tous deux vides"
+
+msgid "Cancel"
+msgstr "Annuler"
+
+msgid "Cashlink claimed successfully"
+msgstr "Cashlink réclamé avec succès"
+
+msgid "Cashlink has no balance"
+msgstr "Le Cashlink n'a pas de solde"
+
+msgid "Choose a PIN"
+msgstr "Choisir un code PIN"
+
+msgid "Claim Promo Code"
+msgstr "Réclamer le code promo"
+
+msgid "Complete"
+msgstr "Compléter"
+
+msgid "Confirm"
+msgstr "Confirmer"
+
+msgid "Confirm your phone number"
+msgstr "Confirmez votre numéro de téléphone"
+
+msgid "Confirm your PIN"
+msgstr "Confirmez votre code PIN"
+
+msgid "Confirmed"
+msgstr "Confirmé"
+
+#. We display a just mined, but not yet confirmed transactions as confirming.
+msgid "Confirming"
+msgstr "Confirmation"
+
+msgid "Connecting to network."
+msgstr "Connexion au réseau."
+
+msgid "Consensus established."
+msgstr "Consensus établi."
+
+msgid "Continue"
+msgstr "Continuer"
+
+msgid "Copied to the clipboard!"
+msgstr "Copié dans le presse-papiers !"
+
+msgid "Copy address"
+msgstr "Copier l'adresse"
+
+msgid "Copy code"
+msgstr "Copier le code"
+
+msgid "Copy or scan the address"
+msgstr "Copier ou scanner l'adresse"
+
+msgid "Create a backup. It's the only way to recover your account."
+msgstr "Créez une sauvegarde. C'est le seul moyen de récupérer votre compte."
+
+msgid "Create a Bluecode Barcode and show it at the cashier to pay."
+msgstr "Créez un code-barres Bluecode et montrez-le au caissier pour payer."
+
+msgid "Cryptocity Points"
+msgstr "Points Cryptocity"
+
+msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
+msgstr "Les Points Cryptocity sont des points de fidélité que vous pouvez gagner et payer. Ils ont la même valeur que les NIM ( Point Cryptocity : 1 NIM)."
+
+msgid "Cryptocity Points have been credited"
+msgstr "Les points Cryptocity ont été crédités"
+
+msgid "Currency"
+msgstr "Devise"
+
+msgid "Date"
+msgstr "Date"
+
+msgid "Earn Points"
+msgstr "Gagner des points"
+
+msgid "Enable notifications"
+msgstr "Activer les notifications"
+
+msgid "Enter Address"
+msgstr "Saisir l'adresse"
+
+msgid "Enter PIN"
+msgstr "Saisir le code PIN"
+
+msgid "Enter recovery words"
+msgstr "Saisir les mots de récupération"
+
+msgid "Enter the code from the SMS sent to you."
+msgstr "Saisissez le code figurant dans le SMS qui vous a été envoyé."
+
+msgid "Enter your promo code"
+msgstr "Entrez votre code promo"
+
+msgid "Enter your referral promo code."
+msgstr "Saisissez votre code promo de parrainage."
+
+msgid "Error {errorCode}"
+msgstr "Erreur {errorCode}"
+
+msgid "Error {errorCode}: {errorMessage}"
+msgstr "Erreur {errorCode}: {errorMessage}"
+
+msgid "Error during {method} request to {url}: {error}"
+msgstr "Erreur lors de la requête {method} vers {url} : {error}"
+
+msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
+msgstr "Erreur de récupération de l'API {url} : {status} - {statusText}. Données reçues : {data}. Métadonnées de la réponse : {metadata}."
+
+msgid "Expired"
+msgstr "Expiré"
+
+msgid "Expiring Points"
+msgstr "Points en cours d'expiration"
+
+msgid "Featured"
+msgstr "En vedette"
+
+msgid "Fees may apply {fee}"
+msgstr "Des frais peuvent s'appliquer {fee}"
+
+msgid "Find places that accept crypto!"
+msgstr "Trouvez des lieux qui acceptent les crypto-monnaies !"
+
+msgid "Find places to pay with, and earn Cryptocity Points"
+msgstr "Trouvez des endroits où payer et gagner des Points Cryptocity"
+
+msgid "Get cashback and earn rewards"
+msgstr "Obtenez du cashback et gagnez des récompenses"
+
+msgid "Get Cryptocity Points"
+msgstr "Obtenez des points Cryptocity"
+
+msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
+msgstr "Obtenez des points Cryptocity comme récompenses de cashback ou complétez des défis pour les gagner."
+
+msgid "Get important info on transactions, top-ups, security and more."
+msgstr "Obtenez des informations importantes sur les transactions, les recharges, la sécurité et plus encore."
+
+msgid "Get Points"
+msgstr "Obtenir des points"
+
+msgid "Get Started"
+msgstr "Commencer"
+
+msgid "Go to Crypto Map"
+msgstr "Aller à Crypto Map"
+
+msgid "GoCrypto API refused connecting"
+msgstr "L'API GoCrypto refuse de se connecter"
+
+msgid "Got it"
+msgstr "J'ai compris"
+
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+msgstr "Aidez à développer le mouvement d'adoption des crypto-monnaies. Invite un ami et vous recevrez tous les deux {amount} en points Cryptocity."
+
+msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
+msgstr "Rejoignez-moi sur l'application Nimiq Pay et gagnez des Cryptocity Points pour payer vos achats en crypto ! Utilisez mon code {code} pour gagner {amount} en points Cryptocity à l'inscription."
+
+msgid "I have a promo code"
+msgstr "J'ai un code promo"
+
+msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
+msgstr "Si vous avez déjà effectué un paiement qui n'a pas été accepté, veuillez contacter GoCrypto pour obtenir un remboursement."
+
+msgid "If you already made a payment, wait for it to be confirmed instead."
+msgstr "Si vous avez déjà effectué un paiement, attendez qu'il soit confirmé."
+
+msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
+msgstr "Si vous êtes connecté au même réseau WiFi que le commerçant, essayez de passer tout les deux sur les données mobiles. Sinon, réessayez dans une heure."
+
+msgid "Insert PIN to confirm"
+msgstr "Insérer le code PIN pour confirmer"
+
+msgid "Insufficient funds"
+msgstr "Fonds insuffisants"
+
+#. For transactions that got rejected by the mempool.
+msgid "Invalid"
+msgstr "Invalide"
+
+msgid "Invalid API response"
+msgstr "Réponse invalide de l'API"
+
+msgid "Invalid CPLink. Could not fetch payment details."
+msgstr "CPLink non valide. Impossible d'obtenir les détails du paiement."
+
+msgid "Invalid CPLink. Missing amount or recipient."
+msgstr "CPLink non valide. Montant ou bénéficiaire manquant."
+
+msgid "Invalid CPLink. Missing id."
+msgstr "CPLink non valide. ID manquant."
+
+msgid "Invalid GoCrypto link."
+msgstr "Lien GoCrypto non valide."
+
+msgid "Invalid link format. CPLinks are only supported for NIM."
+msgstr "Format de lien non valide. Les CPLinks ne sont pris en charge que pour NIM."
+
+msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgstr "Format de lien non valide. Seuls les CPLinks pour NIM et les requêtes GoCrypto pour NIM sont pris en charge."
+
+msgid "Invalid Nimiq address"
+msgstr "Adresse Nimiq invalide"
+
+msgid "Invalid Nimiq Cashlink"
+msgstr "Cashlink Nimiq invalide"
+
+msgid "Invalid phone number"
+msgstr "Numéro de téléphone invalide"
+
+msgid "Invalid PIN"
+msgstr "PIN invalide"
+
+msgid "Invalid PIN code"
+msgstr "Code PIN invalide"
+
+msgid "Invalid PIN length {length}"
+msgstr "Longueur du code PIN invalide {length}"
+
+msgid "Invalid QR code"
+msgstr "QR Code invalide"
+
+msgid "Invalid recovery words"
+msgstr "Mots de récupération non valides"
+
+msgid "Invalid transfer type"
+msgstr "Type de transfert non valide"
+
+msgid "Invalid URL: {url}"
+msgstr "URL non valide : {url}"
+
+msgid "Invite a Friend"
+msgstr "Inviter un ami"
+
+msgid "Invite a friend and earn up to 200 Points each!"
+msgstr "Invitez un ami et gagnez jusqu'à 200 points chacun !"
+
+msgid "Invite a friend and get {amount} each"
+msgstr "Invitez un ami et obtenez {amount} chacun"
+
+msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
+msgstr "Invitez un(e) ami(e) ! | Invitez un(e) ami(e) et obtenez {amount} point chacun ! | Invitez un(e) ami(e) et obtenez {amount} points chacun !"
+
+msgid "Is this your phone number?"
+msgstr "Est-ce votre numéro de téléphone ?"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Loading"
+msgstr "Chargement"
+
+msgid "Loading tasks…"
+msgstr "Chargement des tâches…"
+
+msgid "Loading…"
+msgstr "Chargement…"
+
+msgid ""
+"Log in again with your recovery words.\n"
+"Please ensure that you have them available before logging out."
+msgstr "Reconnectez-vous avec vos mots de passe de récupération. Assurez-vous de les avoir à disposition avant de vous déconnecter."
+
+msgid "Log Out"
+msgstr "Se déconnecter"
+
+msgid "Login"
+msgstr "Connexion"
+
+msgid "Network consensus lost."
+msgstr "Le consensus du réseau a été perdu."
+
+msgid "New"
+msgstr "Nouveau"
+
+msgid "No account found"
+msgstr "Pas de compte trouvé"
+
+msgid "No account has been created yet, or it is currently processing funds"
+msgstr "Aucun compte n'a encore été créé, ou les fonds sont en cours de traitement"
+
+msgid "No account has been found"
+msgstr "Aucun compte n'a été trouvé"
+
+msgid "No accounts found"
+msgstr "Aucun compte trouvé"
+
+msgid "No Cashlink found"
+msgstr "Aucun Cashlink trouvé"
+
+msgid "No one can see me. Continue to words"
+msgstr "Personne ne peut me voir. Continuer vers les mots"
+
+msgid "No payment details found"
+msgstr "Aucun détail de paiement n'a été trouvé"
+
+msgid "No payment request found"
+msgstr "Aucune demande de paiement trouvée"
+
+msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
+msgstr "Aucun point n'expire actuellement | {amount} expire bientôt | {amount} expirent bientôt"
+
+msgid "No transactions found"
+msgstr "Aucune transaction trouvée"
+
+msgid "No transactions found for \"{searchQuery}\""
+msgstr "Aucune transaction trouvée pour \"{searchQuery}\""
+
+msgid "Not a pending payment request"
+msgstr "Pas de demande de paiement en cours"
+
+msgid "Only {count} out of {total} remaining."
+msgstr "Il ne reste que {count} sur {total}."
+
+msgid "Open Wallet"
+msgstr "Ouvrir le Wallet"
+
+msgid "Pay"
+msgstr "Payer"
+
+msgid "Pay with Bluecode"
+msgstr "Payer avec Bluecode"
+
+msgid "Pay with Cryptocity Points"
+msgstr "Payer avec des points Cryptocity"
+
+msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
+msgstr "Payez avec des points Cryptocity au lieu de NIM partout où ils sont acceptés."
+
+msgid "Pay with Points"
+msgstr "Payer avec des points"
+
+msgid "Payment"
+msgstr "Paiement"
+
+msgid "Payment invalid"
+msgstr "Paiement non valide"
+
+msgid "Payment preview"
+msgstr "Aperçu des paiements"
+
+msgid "Pending"
+msgstr "En attente"
+
+msgid "Phone number missing"
+msgstr "Numéro de téléphone manquant"
+
+msgid "Phone number not verified"
+msgstr "Numéro de téléphone non vérifié"
+
+msgid "PIN did not match"
+msgstr "Le code PIN ne correspond pas"
+
+msgid "Please ask the merchant to check the status of your payment."
+msgstr "Veuillez demander au commerçant de vérifier l'état de votre paiement."
+
+msgid "Please ask the merchant to create a new payment request."
+msgstr "Veuillez demander au commerçant de créer une nouvelle demande de paiement."
+
+msgid "Please confirm your PIN code"
+msgstr "Veuillez confirmer votre code PIN"
+
+msgid "Please enter a phone number"
+msgstr "Veuillez saisir un numéro de téléphone"
+
+msgid "Please enter a PIN code"
+msgstr "Veuillez saisir un code PIN"
+
+msgid "Please enter a promo code"
+msgstr "Veuillez saisir un code promo"
+
+msgid "Please enter a verification code"
+msgstr "Veuillez saisir un code de vérification"
+
+msgid "Please enter at least ten characters"
+msgstr "Veuillez saisir au moins dix caractères"
+
+msgid "Please watch the full video"
+msgstr "Veuillez regarder la vidéo complète"
+
+msgid "Points are loyalty rewards you can earn and pay with."
+msgstr "Les points sont des récompenses de fidélité que vous pouvez gagner et utiliser pour payer."
+
+msgid "Points Payment"
+msgstr "Paiement des points"
+
+msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+msgstr "Traitement des fonds... | Traitement des fonds. Veuillez patienter ~{blocks} minute pour payer. | Traitement des fonds. Veuillez patienter ~{blocks} minutes pour payer."
+
+msgid "Promo code missing"
+msgstr "Code promo manquant"
+
+msgid "Protect your Nimiq Pay app with a pin."
+msgstr "Protégez votre application Nimiq Pay avec un code PIN."
+
+msgid "Purchase"
+msgstr "Acheter"
+
+msgid "Received an invalid response from GoCrypto: {errorMessage}"
+msgstr "Réception d'une réponse invalide de GoCrypto : {errorMessage}"
+
+msgid "Recipient"
+msgstr "Bénéficiaire"
+
+msgid "Recovery Words"
+msgstr "Mots de récupération"
+
+msgid "Resend"
+msgstr "Renvoyer"
+
+msgid "Reset search"
+msgstr "Réinitialiser la recherche"
+
+msgid "Save"
+msgstr "Sauvegarder"
+
+msgid "Scan Cashlink"
+msgstr "Scanner un Cashlink"
+
+msgid "Scan QR code"
+msgstr "Scanner un QR Code"
+
+msgid "Search"
+msgstr "Rechercher"
+
+msgid "See all"
+msgstr "Voir tout"
+
+msgid "Select an address…"
+msgstr "Sélectionnez une adresse…"
+
+msgid "Select withdrawal address"
+msgstr "Sélectionner l'adresse de retrait"
+
+msgid "Send"
+msgstr "Envoyer"
+
+msgid "Send a transaction to the address below. Top up as much as you like."
+msgstr "Envoyez une transaction à l'adresse ci-dessous. Rechargez autant que vous le souhaitez."
+
+msgid "Send NIM to this address"
+msgstr "Envoyer les NIM à cette adresse"
+
+msgid "Send NIM to top up"
+msgstr "Envoyez des NIM pour recharger"
+
+msgid "Settings"
+msgstr "Paramètres"
+
+msgid "Skip for now"
+msgstr "Ignorer pour l'instant"
+
+msgid "Something went wrong"
+msgstr "Quelque chose n'a pas fonctionné"
+
+msgid "Something went wrong checking the promo code"
+msgstr "Un problème s'est produit lors de la vérification du code promo"
+
+msgid "Something went wrong claiming the cashback"
+msgstr "Un problème s'est produit lors de la demande de cashback"
+
+msgid "Something went wrong decrypting the database"
+msgstr "Un problème est survenu lors du décryptage de la base de données"
+
+msgid "Something went wrong syncing your account"
+msgstr "Un problème est survenu lors de la synchronisation de votre compte"
+
+msgid "Something went wrong updating the tasks"
+msgstr "Un problème s'est produit lors de la mise à jour des tâches"
+
+msgid "Something went wrong updating your Points"
+msgstr "Un problème s'est produit lors de la mise à jour de vos points"
+
+msgid "Something went wrong verifying the phone number"
+msgstr "La vérification du numéro de téléphone a échoué"
+
+msgid "Standard rates may apply."
+msgstr "Les tarifs standard peuvent s'appliquer."
+
+msgid "Status"
+msgstr "Statut"
+
+msgid "Submit"
+msgstr "Valider"
+
+msgid "Syncing with network."
+msgstr "Synchronisation avec le réseau."
+
+msgid "Test your backup"
+msgstr "Testez votre sauvegarde"
+
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr "La sauvegarde est une liste de 12 mots anglais. Assurez-vous que personne ne peut voir votre écran avant de continuer."
+
+msgid "The payment request expired"
+msgstr "La demande de paiement a expiré"
+
+msgid "The payment request has already been paid"
+msgstr "La demande de paiement a déjà été payée"
+
+msgid "The payment request is about to expire"
+msgstr "La demande de paiement est sur le point d'expirer"
+
+msgid "The payment request is being processed"
+msgstr "La demande de paiement est en cours de traitement"
+
+msgid "The payment request might have been paid, expired, or cancelled."
+msgstr "La demande de paiement a probablement été payée, a expiré ou a été annulée."
+
+msgid "The payment request was cancelled"
+msgstr "La demande de paiement a été annulée"
+
+msgid "The QR scanner is not ready yet. Please try again."
+msgstr "Le scanner QR n'est pas encore prêt. Veuillez réessayer."
+
+msgid "There is no \"Forgot Password\""
+msgstr "Il n'y a pas de \"mot de passe oublié\""
+
+msgid "There is no cashback reward when paying with Points."
+msgstr "Il n'y a pas de cashback lorsque vous payez avec des points."
+
+msgid "These Points are made for spending. Get out there and help drive crypto adoption."
+msgstr "Ces points sont faits pour être dépensés. Allez-y et contribuez à l'adoption des crypto-monnaies."
+
+msgid "This is an early beta version, please report any bugs and remember to backup your words"
+msgstr "Il s'agit d'une première version bêta, merci de nous signaler les éventuels bugs et n'oubliez pas de sauvegarder vos mots"
+
+msgid "This payment is not eligible for receiving or paying with Points."
+msgstr "Ce paiement n'est pas éligible pour recevoir ou payer avec des points."
+
+msgid "This promo code has been claimed too many times"
+msgstr "Ce code promo a été réclamé trop souvent"
+
+msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
+msgstr "Cet achat vous donne droit à {amount} Point. | Cet achat vous rapporte {amount} Points."
+
+msgid "To credit card / bank account"
+msgstr "Vers la carte de crédit / le compte bancaire"
+
+msgid "Top Up"
+msgstr "Recharger"
+
+msgid "Top-Up"
+msgstr "Recharge"
+
+msgid "Transaction"
+msgstr "Transaction"
+
+msgid "Transaction failed: {error}"
+msgstr "La transaction a échoué : {error}"
+
+msgid "Transaction invalid"
+msgstr "Transaction invalide"
+
+msgid "Trying to establish network consensus:"
+msgstr "Tentative d'établissement d'un consensus au sein du réseau :"
+
+msgid "Unexpected GoCrypto error"
+msgstr "Erreur inattendue de GoCrypto"
+
+msgid "Unknown"
+msgstr "Inconnu"
+
+msgid "Use {amount}"
+msgstr "Utiliser {amount}"
+
+msgid "Verify"
+msgstr "Vérifier"
+
+msgid "Verify your ID"
+msgstr "Vérifiez votre identité"
+
+msgid "Verify your phone number"
+msgstr "Vérifiez votre numéro de téléphone"
+
+msgid "We value your opinion. Please enter at least ten characters."
+msgstr "Votre avis nous intéresse. Veuillez saisir au moins dix caractères."
+
+msgid "Welcome to Cryptocity Points"
+msgstr "Découvrez les Points Cryptocity"
+
+msgid "Welcome to Nimiq Pay"
+msgstr "Bienvenue sur Nimiq Pay"
+
+msgid "What are Cryptocity Points?"
+msgstr "Que sont les points Cryptocity ?"
+
+msgid "What is Bluecode?"
+msgstr "Bluecode, qu'est-ce que c'est ?"
+
+msgid "What's the 10th word?"
+msgstr "Quel est le 10ème mot ?"
+
+msgid "What's the 11th word?"
+msgstr "Quel est le 11ème mot ?"
+
+msgid "What's the 12th word?"
+msgstr "Quel est le 12ème mot ?"
+
+msgid "What's the 1st word?"
+msgstr "Quel est le 1er mot ?"
+
+msgid "What's the 2nd word?"
+msgstr "Quel est le 2ème mot ?"
+
+msgid "What's the 3rd word?"
+msgstr "Quel est le 3ème mot ?"
+
+msgid "What's the 4th word?"
+msgstr "Quel est le 4ème mot ?"
+
+msgid "What's the 5th word?"
+msgstr "Quel est le 5ème mot ?"
+
+msgid "What's the 6th word?"
+msgstr "Quel est le 6ème mot ?"
+
+msgid "What's the 7th word?"
+msgstr "Quel est le 7ème mot ?"
+
+msgid "What's the 8th word?"
+msgstr "Quel est le 8ème mot ?"
+
+msgid "What's the 9th word?"
+msgstr "Quel est le 9ème mot ?"
+
+msgid "Withdraw"
+msgstr "Retirer"
+
+msgid "Withdrawal"
+msgstr "Retrait"
+
+msgid "Withdrawal successful"
+msgstr "Retrait réussi"
+
+msgid "Write down these words"
+msgstr "Écrivez ces mots"
+
+msgid ""
+"Write the words below on a piece of paper in the exact order.\n"
+"Keep your recovery words safe and never share them with anyone!"
+msgstr ""
+"Écrivez les mots ci-dessous sur une feuille de papier, dans l'ordre exact.\n"
+"Conservez précieusement vos mots de récupération et ne les partagez jamais avec qui que ce soit !"
+
+msgid "Wrong answer"
+msgstr "Mauvaise réponse"
+
+msgid "Wrong number of recovery words"
+msgstr "Nombre incorrect de mots de récupération"
+
+msgid "Wrong word!"
+msgstr "Mauvais mot !"
+
+msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
+msgstr "Vous ne pouvez pas encore payer avec NIM, attendez que la recharge soit terminée"
+
+msgid "You don't have enough NIM for this purchase."
+msgstr "Vous n'avez pas assez de NIM pour cet achat."
+
+msgid "You don't have enough NIM. Your current balance is {balance}."
+msgstr "Vous n'avez pas assez de NIM. Votre solde actuel est {balance}."
+
+msgid "You don't have enough Points for this purchase."
+msgstr "Vous n'avez pas assez de points pour cet achat."
+
+msgid "You earn {amount}"
+msgstr "Vous gagnez {amount}"
+
+msgid "You have a reward to claim!"
+msgstr "Vous avez une récompense à réclamer !"
+
+msgid "You received Cryptocity Points"
+msgstr "Vous avez reçu des points Cryptocity"
+
+msgid "You will receive {amount} Point | You will receive {amount} Points"
+msgstr "Vous recevrez {amount} Point | Vous recevrez {amount} Points"
+
+msgid "You will receive an SMS with a verification code"
+msgstr "Vous recevrez un SMS avec un code de vérification"
+
+msgid "Your account, funds and data will be lost if you log out without a backup."
+msgstr "Votre compte, vos fonds et vos données seront perdus si vous vous déconnectez sans sauvegarde."
+
+msgid "Your number"
+msgstr "Votre numéro"
+
+msgid "Your payment failed"
+msgstr "Votre paiement a échoué"
+
+msgid "Your payment is invalid"
+msgstr "Votre paiement n'est pas valide"
+
+msgid "Your payment was refunded"
+msgstr "Votre paiement a été remboursé"
+
+msgid "Your wallet is ready to use"
+msgstr "Votre wallet est prêt à l'emploi"

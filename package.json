@@ -20,7 +20,7 @@
     "lint": "eslint src",
     "i18n:extract": "node ./node_modules/webpack-i18n-tools/index.js ./src/i18n/en.po",
     "i18n:push": "./weblate-sync.sh --pushSource",
-    "i18n:pull": "./weblate-sync.sh --pullTranslations=de",
+    "i18n:pull": "./weblate-sync.sh --pullTranslations=de,es,fr,pt",
     "i18n:sync": "pnpm i18n:extract && pnpm i18n:push && pnpm i18n:pull"
   },
   "dependencies": {
