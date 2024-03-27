@@ -42,8 +42,10 @@ const loginFlow: FlowInit = async () => {
 
     await router.replace('/app')
     const { phoneNumberVerified } = useApp()
-    if (phoneNumberVerified)
+    if (phoneNumberVerified) {
       await useModal().showModal(Modal.Points)
+      return { prevent: true }
+    }
   }
   const onCancel: Flow['onCancel'] = async () => {
     const [
@@ -74,8 +76,10 @@ const setupFlow: FlowInit = async () => {
 
     await router.replace('/app')
     const { phoneNumberVerified } = useApp()
-    if (phoneNumberVerified)
+    if (phoneNumberVerified) {
       await useModal().showModal(Modal.Points)
+      return { prevent: true }
+    }
   }
   const onCancel: Flow['onCancel'] = async () => {
     const [
@@ -136,6 +140,7 @@ const onBoardingPointsFlow: FlowInit = async () => {
       await useModal().showModal(Modal.Points)
     else
       await initializeFlow(FlowName.VerifyPhone)
+    return { prevent: true }
   }
   return { flowName, steps, onDone }
 }
