@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-02-13 20:13+0000\n"
+"PO-Revision-Date: 2024-03-27 00:32+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -36,6 +36,9 @@ msgstr "Alles"
 msgid "All transactions"
 msgstr "Alle Transaktionen"
 
+msgid "Already paid"
+msgstr "Bereits bezahlt"
+
 msgid "An unknown error occurred while importing words"
 msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
 
@@ -51,14 +54,14 @@ msgstr "Backup erfolgreich erstellt"
 msgid "Backup your account before logging out"
 msgstr "Erstelle ein Konto-Backup bevor du dich ausloggst"
 
-msgid "Beta Testing"
-msgstr "Beta-Test"
-
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode is ein europäischer Zahlungsdienstleister, der nun NIM unterstützt."
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Sowohl die erwartete, als auch die eingegebene PIN sind ungesetzt"
+
+msgid "By tapping “verify”, you agree to our data management practices."
+msgstr "Durch Antippen von \"Verifizieren\", stimmst du unserer Datenschutzerklärung zu."
 
 msgid "Cancel"
 msgstr "Abbrechen"
@@ -103,6 +106,9 @@ msgstr "Konsens erreicht."
 msgid "Continue"
 msgstr "Fortfahren"
 
+msgid "Copied to clipboard"
+msgstr "In die Zwischenablage kopiert"
+
 msgid "Copied to the clipboard!"
 msgstr "Code wurde kopiert."
 
@@ -136,6 +142,18 @@ msgstr "Währung"
 msgid "Date"
 msgstr "Datum"
 
+msgid "Delete Points Account"
+msgstr "Punkte-Konto löschen"
+
+msgid "Delete Points rewards account"
+msgstr "Bonus-Punkte-Konto löschen"
+
+msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
+msgstr "Die Löschung deiner Telefonnummer aus dem Bonus-Punkte-System führt zum unwiderruflichen Verlust deiner aktuell gehaltenen Punkte."
+
+msgid "Disclaimer"
+msgstr "Haftungsausschluss"
+
 msgid "Earn Points"
 msgstr "Punkte verdienen"
 
@@ -160,23 +178,14 @@ msgstr "Promo-Code eingeben"
 msgid "Enter your referral promo code."
 msgstr "Gib deinen Empfehlungscode ein."
 
-msgid "Error {errorCode}"
-msgstr "Fehler {errorCode}"
-
-msgid "Error {errorCode}: {errorMessage}"
-msgstr "Fehler {errorCode}: {errorMessage}"
-
-msgid "Error during {method} request to {url}: {error}"
-msgstr "Fehler während der {method}-Anfrage an {url}: {error}"
-
-msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
-msgstr "Fehler während der API-Anfrage an {url}: {status} - {statusText}. Empfangene Daten: {data}. Metadaten: {metadata}."
-
 msgid "Expired"
 msgstr "Abgelaufen"
 
 msgid "Expiring Points"
 msgstr "Verfallende Punkte"
+
+msgid "Failed to delete Points account"
+msgstr "Löschung des Punkte-Kontos fehlgeschlagen"
 
 msgid "Featured"
 msgstr "Empfohlen"
@@ -211,8 +220,8 @@ msgstr "Los geht's"
 msgid "Go to Crypto Map"
 msgstr "Zur Crypto Map gehen"
 
-msgid "GoCrypto API refused connecting"
-msgstr "Die GoCrypto API hat die Verbindung unterbunden"
+msgid "GoCrypto refused connecting"
+msgstr "GoCrypto hat die Verbindung unterbunden"
 
 msgid "Got it"
 msgstr "Verstanden"
@@ -226,14 +235,8 @@ msgstr "Hallo! Registriere dich in der Nimiq Pay App und erhalte Kryptostadt-Pun
 msgid "I have a promo code"
 msgstr "Ich habe einen Promo-Code"
 
-msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
-msgstr "Wenn du bereits eine Zahlung vorgenommen hast, die nicht akzeptiert wurde, kontaktiere GoCrypto bezüglich einer Rückzahlung."
-
-msgid "If you already made a payment, wait for it to be confirmed instead."
-msgstr "Wenn du bereits eine Zahlung vorgenommen hast, warte stattdessen auf ihre Bestätigung."
-
-msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
-msgstr "Wenn du im selben WLAN bist wie der Händler, versucht beide auf mobile Daten zu wechseln. Andernfalls, versucht es erneut in einer Stunde."
+msgid "Incl. fees"
+msgstr "Inkl. Gebühren"
 
 msgid "Insert PIN to confirm"
 msgstr "Zur Bestätigung PIN eingeben"
@@ -244,9 +247,6 @@ msgstr "Unzureichendes Guthaben"
 #. For transactions that got rejected by the mempool.
 msgid "Invalid"
 msgstr "Ungültig"
-
-msgid "Invalid API response"
-msgstr "Ungültige API-Antwort"
 
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "Ungültiger CPLink. Die Zahlungsdetails konnten nicht abgerufen werden."
@@ -259,6 +259,9 @@ msgstr "Ungültiger CPLink. ID fehlt."
 
 msgid "Invalid GoCrypto link."
 msgstr "Ungültiger GoCrypto-Link."
+
+msgid "Invalid GoCrypto response"
+msgstr "Ungültige GoCrypto API-Antwort"
 
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Ungültiges Link-Format. CPLinks werden nur für NIM unterstützt."
@@ -299,9 +302,6 @@ msgstr "Ungültige URL: {url}"
 msgid "Invite a Friend"
 msgstr "Eine/n Freund/in einladen"
 
-msgid "Invite a friend and earn up to 200 Points each!"
-msgstr "Lade eine/n Freund/in ein und erhaltet jeweils bis zu 200 Punkte."
-
 msgid "Invite a friend and get {amount} each"
 msgstr "Lade eine/n Freund/in ein und erhaltet jeweils {amount}"
 
@@ -313,6 +313,9 @@ msgstr "Ist das deine Telefonnummer?"
 
 msgid "Language"
 msgstr "Sprache"
+
+msgid "Learn more"
+msgstr "Mehr erfahren"
 
 msgid "Loading"
 msgstr "Lade"
@@ -367,6 +370,13 @@ msgstr "Keine Zahlungsanfrage gefunden"
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Aktuell verfallen keine Punkte | {amount} verfällt bald | {amount} verfallen bald"
 
+msgid ""
+"No tasks available.\n"
+"Stay tuned."
+msgstr ""
+"Keine Aufgaben verfügbar.\n"
+"Schau später wieder rein."
+
 msgid "No transactions found"
 msgstr "Keine Transaktionen gefunden"
 
@@ -375,6 +385,12 @@ msgstr "Keine Transaktionen gefunden für \"{searchQuery}\""
 
 msgid "Not a pending payment request"
 msgstr "Keine ausstehende Zahlungsanfrage"
+
+msgid "Notifications about new campaigns and other important events"
+msgstr "Benachrichtigungen zu neuen Kampagnen und sonstigen Ereignissen"
+
+msgid "Notifications cannot be enabled, skipping this step."
+msgstr "Benachrichtigungen können nicht aktiviert werden, überspringe."
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Nur {count} von {total} übrig."
@@ -400,11 +416,32 @@ msgstr "Mit Punkten bezahlen"
 msgid "Payment"
 msgstr "Zahlung"
 
+msgid "Payment cancelled"
+msgstr "Zahlung abgebrochen"
+
+msgid "Payment expired"
+msgstr "Zahlung abgelaufen"
+
+msgid "Payment expiring soon"
+msgstr "Zahlung läuft bald ab"
+
 msgid "Payment invalid"
 msgstr "Zahlung ungültig"
 
+msgid "Payment is being processed"
+msgstr "Zahlung wird verarbeitet"
+
 msgid "Payment preview"
 msgstr "Zahlungsvorschau"
+
+msgid "Payment successful"
+msgstr "Zahlung erfolgt"
+
+msgid "Payment unsuccessful"
+msgstr "Zahlung fehlgeschlagen"
+
+msgid "Payment was refunded"
+msgstr "Zahlung wurde zurückerstattet"
 
 msgid "Pending"
 msgstr "Ausstehend"
@@ -418,11 +455,8 @@ msgstr "Telefonnummer nicht verifiziert"
 msgid "PIN did not match"
 msgstr "PIN stimmt nicht überein"
 
-msgid "Please ask the merchant to check the status of your payment."
-msgstr "Bitte den Händler, den Stand deiner Zahlung zu überprüfen."
-
-msgid "Please ask the merchant to create a new payment request."
-msgstr "Bitte den Händler eine neue Zahlungsanfrage zu erstellen."
+msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
+msgstr "Bitte erlaube Nimiq Pay den Zugriff auf deine Kamera und versuche erneut QR-Codes zu lesen."
 
 msgid "Please confirm your PIN code"
 msgstr "Bitte PIN-Code bestätigen"
@@ -442,8 +476,14 @@ msgstr "Bitte einen Verifizierungscode eingeben"
 msgid "Please enter at least ten characters"
 msgstr "Bitte gib mindestens zehn Zeichen ein"
 
+msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
+msgstr "Warte {time} Minute, bis du erneut einen Code anfragen kannst | Warte {time} Minuten, bis du erneut einen Code anfragen kannst"
+
 msgid "Please watch the full video"
 msgstr "Bitte sieh dir das ganze Video an"
+
+msgid "Points account deleted successfully"
+msgstr "Punkte-Konto erfolgreich gelöscht"
 
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr "Punkte sind Treue-Boni, die du verdienen und zum Bezahlen benutzen kannst."
@@ -451,11 +491,17 @@ msgstr "Punkte sind Treue-Boni, die du verdienen und zum Bezahlen benutzen kanns
 msgid "Points Payment"
 msgstr "Zahlung mit Punkten"
 
+msgid "Privacy Policy"
+msgstr "Datenschutzerklärung"
+
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr "Guthaben wird verarbeitet… | Guthaben wird verarbeitet. Warte ~{blocks} Minute, bis du zahlen kannst. | Guthaben wird verarbeitet. Warte ~{blocks} Minuten, bis du zahlen kannst."
 
 msgid "Promo code missing"
 msgstr "Promo-Code fehlt"
+
+msgid "Promo code not found"
+msgstr "Promo-Code nicht gefunden"
 
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr "Schütze deine Nimiq Pay App mit einer PIN."
@@ -463,8 +509,8 @@ msgstr "Schütze deine Nimiq Pay App mit einer PIN."
 msgid "Purchase"
 msgstr "Kauf"
 
-msgid "Received an invalid response from GoCrypto: {errorMessage}"
-msgstr "Ungültige GoCrypto-Antwort erhalten: {errorMessage}"
+msgid "Really delete your Points rewards account?"
+msgstr "Willst du wirklich dein Bonus-Punkte-Konto löschen?"
 
 msgid "Recipient"
 msgstr "Empfänger"
@@ -478,8 +524,14 @@ msgstr "Erneut senden"
 msgid "Reset search"
 msgstr "Suche zurücksetzen"
 
+msgid "Rewards Notifications"
+msgstr "Boni-Benachrichtigungen"
+
 msgid "Save"
 msgstr "Speichern"
+
+msgid "Scan any Nimiq or NAKA QR code to pay."
+msgstr "Scanne einen Nimiq- oder Naka-QR-Code um zu zahlen."
 
 msgid "Scan Cashlink"
 msgstr "Cashlink scannen"
@@ -489,6 +541,9 @@ msgstr "QR-Code scannen"
 
 msgid "Search"
 msgstr "Suchen"
+
+msgid "Search for a country"
+msgstr "Nach einem Land suchen"
 
 msgid "See all"
 msgstr "Alle anzeigen"
@@ -520,6 +575,9 @@ msgstr "Zunächst überspringen"
 msgid "Something went wrong"
 msgstr "Etwas ist schiefgelaufen"
 
+msgid "Something went wrong authorizing the phone number"
+msgstr "Etwas ist bei der Autorisierung der Telefonnummer schiefgelaufen"
+
 msgid "Something went wrong checking the promo code"
 msgstr "Etwas ist bei der Überprüfung des Promo-Codes schiefgelaufen"
 
@@ -528,6 +586,18 @@ msgstr "Etwas ist bei der Gutschrift des Cashbacks schiefgelaufen"
 
 msgid "Something went wrong decrypting the database"
 msgstr "Etwas ist beim Entschlüsseln der Datenbank schiefgelaufen"
+
+msgid "Something went wrong deleting the account"
+msgstr "Etwas ist bei der Löschung deines Kontos schiefgelaufen"
+
+msgid "Something went wrong getting the Points cashback data."
+msgstr "Etwas ist beim Abrufen der Cashback-Daten schiefgelaufen."
+
+msgid "Something went wrong paying with Points"
+msgstr "Etwas ist bei der Punkte-Zahlung schiefgelaufen"
+
+msgid "Something went wrong signing the transaction"
+msgstr "Etwas ist beim Signieren der Transaktion schiefgelaufen"
 
 msgid "Something went wrong syncing your account"
 msgstr "Etwas ist beim Abruf deines Kontos schiefgelaufen"
@@ -559,26 +629,8 @@ msgstr "Backup testen"
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
 
-msgid "The payment request expired"
-msgstr "Die Zahlungsanfrage is abgelaufen"
-
-msgid "The payment request has already been paid"
-msgstr "Die Zahlungsanfrage wurde bereits bezahlt"
-
-msgid "The payment request is about to expire"
-msgstr "Die Zahlungsanfrage läuft gleich ab"
-
-msgid "The payment request is being processed"
-msgstr "Die Zahlungsanfrage wird verarbeitet"
-
-msgid "The payment request might have been paid, expired, or cancelled."
-msgstr "Die Zahlungsanfrage wurde zwischenzeitlich bezahlt, abgebrochen oder ist abgelaufen."
-
-msgid "The payment request was cancelled"
-msgstr "Die Zahlungsanfrage wurde abgebrochen"
-
-msgid "The QR scanner is not ready yet. Please try again."
-msgstr "Der QR-Code-Scanner ist noch nicht bereit. Bitte erneut versuchen."
+msgid "The QR scanner is not ready yet. Please wait."
+msgstr "Der QR-Code-Scanner ist noch nicht bereit. Bitte warten."
 
 msgid "There is no \"Forgot Password\""
 msgstr "Es gibt kein \"Passwort vergessen\""
@@ -589,8 +641,8 @@ msgstr "Es gibt keinen Casback bei der Zahlung mit Punkten."
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Diese Punkte sind zum Ausgeben da. Verwende sie für deinen nächsten Einkauf und sei so Teil der Krypto-Bewegung."
 
-msgid "This is an early beta version, please report any bugs and remember to backup your words"
-msgstr "Dies ist eine frühe Testversion. Bitte melde uns etwaige Funktionsfehler und erstelle ein Backup deines Kontos"
+msgid "This merchant is not registered to receive Points payments."
+msgstr "Dieser Händler ist nicht registriert, um Punkte-Zahlungen entgegenzunehmen."
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Bei dieser Zahlung kannst du weder Kryptostadt-Punkte erhalten noch einsetzen."
@@ -601,9 +653,6 @@ msgstr "Dieser Promo-Code wurde zu oft eingelöst"
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr "Bei dieser Zahlung erhältst du {amount} Punkt. | Bei dieser Zahlung erhälst du {amount} Punkte."
 
-msgid "To credit card / bank account"
-msgstr "An Kreditkarte/Bankkonto"
-
 msgid "Top Up"
 msgstr "Aufladen"
 
@@ -613,6 +662,9 @@ msgstr "Aufladung"
 msgid "Transaction"
 msgstr "Transaktion"
 
+msgid "Transaction already sent"
+msgstr "Transaktion bereits geschickt"
+
 msgid "Transaction failed: {error}"
 msgstr "Transaktion fehlgeschlagen: {error}"
 
@@ -621,6 +673,9 @@ msgstr "Transaktion ungültig"
 
 msgid "Trying to establish network consensus:"
 msgstr "Versuche Netzwerk-Konsens zu erreichen:"
+
+msgid "Unable to connect to the Points server"
+msgstr "Verbindung zum Punkte-Server fehlgeschlagen"
 
 msgid "Unexpected GoCrypto error"
 msgstr "Unerwarteter GoCrypto Fehler"
@@ -693,6 +748,9 @@ msgstr "Was ist das achte Wort?"
 msgid "What's the 9th word?"
 msgstr "Was ist das neunte Wort?"
 
+msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgstr "Mit der Registrierung eines Punkte-Kontos in Nimiq Pay stimmst du den Datenverarbeitungspraktiken unserer {privacyPolicy} zu. Die Wahrung deiner Privatsphäre und deiner Kontrolle über deine Daten ist uns ein wichtiges Anliegen. Du kannst dein Punkte-Konto jederzeit innerhalb der App löschen, wodurch deine persönlichen Daten, wie deine Telefonnummer, dauerhaft aus unserem System gelöscht werden. Um Betrug vorzubeugen, bleibt die Löschung deines Kontos für 12 Monate protokolliert. Solltest du dich für eine Neuanmeldung entscheiden, können frühere Daten und Aktivitäten nicht wiederhergestellt werden. Teil unseres Engagements für deine Datensicherheit ist ein unkompliziertes Verfahren zur Kontolöschung innerhalb der App, das sich an bewährten Praktiken der Branche orientiert, um die Autonomie der Nutzer und den Datenschutz zu gewährleisten. Anweisungen zum Löschen deines Kontos und weitere Informationen findest du in den Kontoeinstellungen innerhalb der App."
+
 msgid "Withdraw"
 msgstr "Abbuchen"
 
@@ -721,11 +779,17 @@ msgstr "Ungültige Zahl an Wiederherstellungswörtern"
 msgid "Wrong word!"
 msgstr "Falsches Wort!"
 
-msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
-msgstr "Du kannst noch nicht mit NIM bezahlen bis der Aufladungsvorgang abgeschlossen ist"
+msgid "You can not use this address"
+msgstr "Du kannst diese Adresse nicht verwenden"
+
+msgid "You can try again in {remainingTime}"
+msgstr "Versuche es erneut in {remainingTime}"
 
 msgid "You don't have enough NIM for this purchase."
 msgstr "Du hast nicht genug NIM für diesen Einkauf."
+
+msgid "You don't have enough NIM for this purchase. You can only pay with Points."
+msgstr "Du hast nicht genug NIM für diesen Einkauf. Du kannst nur mit Punkten bezahlen."
 
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr "Du hast nicht genug NIM. Dein aktuelles Guthaben beträgt {balance}."
@@ -751,26 +815,86 @@ msgstr "Du bekommst eine SMS mit einem Verifizierungscode"
 msgid "Your account, funds and data will be lost if you log out without a backup."
 msgstr "Dein Konto, dein Guthaben und deine Daten gehen verloren, wenn du dich ohne ein Backup ausloggst."
 
+msgid "Your NIM balance is not available yet. You can only pay with Points."
+msgstr "Dein NIM-Guthaben ist noch nicht verfügbar. Du kannst nur mit Punkten bezahlen."
+
 msgid "Your number"
 msgstr "Deine Telefonnummer"
-
-msgid "Your payment failed"
-msgstr "Deine Zahlung ist fehlgeschlagen"
-
-msgid "Your payment is invalid"
-msgstr "Deine Zahlung ist ungültig"
-
-msgid "Your payment was refunded"
-msgstr "Deine Zahlung wurde zurückerstattet"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
 
+#~ msgid "Beta Testing"
+#~ msgstr "Beta-Test"
+
+#~ msgid "Error {errorCode}"
+#~ msgstr "Fehler {errorCode}"
+
+#~ msgid "Error {errorCode}: {errorMessage}"
+#~ msgstr "Fehler {errorCode}: {errorMessage}"
+
+#~ msgid "Error during {method} request to {url}: {error}"
+#~ msgstr "Fehler während der {method}-Anfrage an {url}: {error}"
+
+#~ msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
+#~ msgstr "Fehler während der API-Anfrage an {url}: {status} - {statusText}. Empfangene Daten: {data}. Metadaten: {metadata}."
+
+#~ msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
+#~ msgstr "Wenn du bereits eine Zahlung vorgenommen hast, die nicht akzeptiert wurde, kontaktiere GoCrypto bezüglich einer Rückzahlung."
+
+#~ msgid "If you already made a payment, wait for it to be confirmed instead."
+#~ msgstr "Wenn du bereits eine Zahlung vorgenommen hast, warte stattdessen auf ihre Bestätigung."
+
+#~ msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
+#~ msgstr "Wenn du im selben WLAN bist wie der Händler, versucht beide auf mobile Daten zu wechseln. Andernfalls, versucht es erneut in einer Stunde."
+
+#~ msgid "Invalid API response"
+#~ msgstr "Ungültige API-Antwort"
+
+#~ msgid "Invite a friend and earn up to 200 Points each!"
+#~ msgstr "Lade eine/n Freund/in ein und erhaltet jeweils bis zu 200 Punkte."
+
+#~ msgid "Please ask the merchant to check the status of your payment."
+#~ msgstr "Bitte den Händler, den Stand deiner Zahlung zu überprüfen."
+
+#~ msgid "Please ask the merchant to create a new payment request."
+#~ msgstr "Bitte den Händler eine neue Zahlungsanfrage zu erstellen."
+
+#~ msgid "Received an invalid response from GoCrypto: {errorMessage}"
+#~ msgstr "Ungültige GoCrypto-Antwort erhalten: {errorMessage}"
+
+#~ msgid "The payment request expired"
+#~ msgstr "Die Zahlungsanfrage is abgelaufen"
+
+#~ msgid "The payment request has already been paid"
+#~ msgstr "Die Zahlungsanfrage wurde bereits bezahlt"
+
+#~ msgid "The payment request is about to expire"
+#~ msgstr "Die Zahlungsanfrage läuft gleich ab"
+
+#~ msgid "The payment request might have been paid, expired, or cancelled."
+#~ msgstr "Die Zahlungsanfrage wurde zwischenzeitlich bezahlt, abgebrochen oder ist abgelaufen."
+
+#~ msgid "The payment request was cancelled"
+#~ msgstr "Die Zahlungsanfrage wurde abgebrochen"
+
+#~ msgid "This is an early beta version, please report any bugs and remember to backup your words"
+#~ msgstr "Dies ist eine frühe Testversion. Bitte melde uns etwaige Funktionsfehler und erstelle ein Backup deines Kontos"
+
+#~ msgid "To credit card / bank account"
+#~ msgstr "An Kreditkarte/Bankkonto"
+
+#~ msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
+#~ msgstr "Du kannst noch nicht mit NIM bezahlen bis der Aufladungsvorgang abgeschlossen ist"
+
+#~ msgid "Your payment failed"
+#~ msgstr "Deine Zahlung ist fehlgeschlagen"
+
+#~ msgid "Your payment is invalid"
+#~ msgstr "Deine Zahlung ist ungültig"
+
 #~ msgid "Minimum length is 10 characters"
 #~ msgstr "Bitte gib mindestens zehn Zeichen ein"
-
-#~ msgid "Your payment was cancelled"
-#~ msgstr "Deine Zahlung wurde abgebrochen"
 
 #~ msgid "You can't pay with Points for this purchase."
 #~ msgstr "Diesen Einkauf kannst du nicht mit Punkten bezahlen."
@@ -786,9 +910,6 @@ msgstr "Deine Wallet ist bereit zur Benutzung"
 
 #~ msgid "Invalid QR code. Only NIM transactions from Crypto Payment Links are supported."
 #~ msgstr "Ungültiger QR-Code. Es werden nur NIM-Transaktionen über Crypto Payment Links unterstützt."
-
-#~ msgid "{amount} expiring soon"
-#~ msgstr "{amount} laufen bald ab"
 
 #~ msgid "Backup account"
 #~ msgstr "Account-Backup erstellen"
