@@ -185,16 +185,16 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
+#: src/modals/SettingsModal.vue:42
+msgid "Delete Cryptocity Points account"
+msgstr ""
+
 #: src/modals/DeletePointsModal.vue:21
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/modals/SettingsModal.vue:42
-msgid "Delete Points rewards account"
-msgstr ""
-
 #: src/modals/DeletePointsModal.vue:16
-msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
+msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr ""
 
 #: src/modals/DisclaimerModal.vue:13
@@ -585,7 +585,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/lib/flows/index.ts:205
+#: src/lib/flows/index.ts:210
 msgid "Payment successful"
 msgstr ""
 
@@ -696,7 +696,7 @@ msgid "Purchase"
 msgstr ""
 
 #: src/modals/DeletePointsModal.vue:13
-msgid "Really delete your Points rewards account?"
+msgid "Really delete your Cryptocity Points account?"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:30
@@ -783,7 +783,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:51
-#: src/lib/flows/index.ts:253
+#: src/lib/flows/index.ts:258
 msgid "Something went wrong"
 msgstr ""
 
@@ -919,7 +919,7 @@ msgstr ""
 msgid "Transaction already sent"
 msgstr ""
 
-#: src/lib/flows/index.ts:187
+#: src/lib/flows/index.ts:192
 msgid "Transaction failed: {error}"
 msgstr ""
 
@@ -1029,7 +1029,7 @@ msgid "What's the 9th word?"
 msgstr ""
 
 #: src/modals/DisclaimerModal.vue:15
-msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr ""
 
 #: src/lib/flows/steps.ts:329
@@ -1041,7 +1041,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:255
+#: src/lib/flows/index.ts:260
 msgid "Withdrawal successful"
 msgstr ""
 

@@ -42,10 +42,10 @@ async function handleDeletePointsAccount() {
   </IonHeader>
   <div class="flex flex-col items-center h-full p-8 pt-0 text-center">
     <h1 class="text-2xl font-bold">
-      {{ $t('Really delete your Points rewards account?') }}
+      {{ $t('Really delete your Cryptocity Points account?') }}
     </h1>
     <p class="mt-5 font-medium text-pumpkin">
-      {{ $t('Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold.') }}
+      {{ $t('Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold.') }}
     </p>
 
     <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="handleDeletePointsAccount">

@@ -87,7 +87,7 @@ onLongPress(
         </IonItem>
 
         <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
-          <IonLabel>{{ $t('Delete Points rewards account') }}</IonLabel>
+          <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
         </IonItem>
       </IonList>
       <code ref="htmlRefHook" class="p-4 pb-0 mt-auto text-sm opacity-60">v{{ appVersion }}</code>
