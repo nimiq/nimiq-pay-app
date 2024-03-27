@@ -129,7 +129,7 @@ async function openModal() {
     </p>
     <Transition name="slide-fade">
       <p v-if="showCountdown" class="mt-4 text-sm font-semibold text-center text-space/80">
-        {{ $t('You can try again in') }} {{ nextRequestIn }}
+        {{ $t('You can try again in {remainingTime}', { remainingTime: nextRequestIn }) }}
       </p>
     </Transition>
     <Transition name="slide-fade">

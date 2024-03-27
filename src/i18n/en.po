@@ -1072,7 +1072,7 @@ msgid "You can not use this address"
 msgstr ""
 
 #: src/components/PhoneInput.vue:23
-msgid "You can try again in"
+msgid "You can try again in {remainingTime}"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:39
