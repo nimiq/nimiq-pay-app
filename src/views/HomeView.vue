@@ -175,7 +175,7 @@ onMounted(async () => {
         <IonButtons slot="end">
           <IonButton
             fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)"
-            size="small" @click="showModal(Modal.Backup)"
+            size="small" @click="initializeFlow(FlowName.Backup)"
           >
             {{ $t('Recovery Words') }}
           </IonButton>

@@ -18,8 +18,11 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   const localBalance = ref(0)
 
   async function getWords(): AsyncResult<string[], string> {
-    if (!entropy.value)
-      return { error: i18n.t('No account has been found'), data: undefined }
+    if (!entropy.value) {
+      const err = i18n.t('No account has been found')
+      logger.error(err)
+      return { error: err, data: undefined }
+    }
     return { data: entropyToMnemonic(entropy.value), error: undefined }
   }
 

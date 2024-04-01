@@ -59,7 +59,7 @@ onLongPress(
     <IonItem ref="htmlRefHook" button :detail="false" @click="showModal(Modal.Settings, { isOnTop: true })">
       {{ $t('Settings') }}
     </IonItem>
-    <IonItem button :detail="false" @click="showModal(Modal.Backup)">
+    <IonItem button :detail="false" @click="initializeFlow(FlowName.Backup)">
       {{ $t('Backup Account') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">

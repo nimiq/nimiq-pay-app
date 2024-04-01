@@ -22,6 +22,9 @@ const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddre
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
 const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue'))
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue'))
+const BackupIntroduction = defineAsyncComponent(() => import('@/components/BackupIntroduction.vue'))
+const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'))
+const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -415,3 +418,24 @@ export const transactionDetail: StepInit = async () => {
     },
   } satisfies Step
 }
+
+export const backupIntroductionStep: StepInit = async () => ({
+  step: StepName.BackupIntroduction,
+  get title() { return i18n.t('There is no "Forgot password"') },
+  get description() { return i18n.t('Create a backup. It\'s the only way to recover your account.') },
+  main: markRaw(BackupIntroduction),
+} satisfies Step)
+
+export const showWordsStep: StepInit = async () => ({
+  step: StepName.ShowWords,
+  get title() { return i18n.t('Write down these words') },
+  get description() { return i18n.t('Write the words below on a piece of paper in the exact order.\nKeep your recovery words safe and never share them with anyone!') },
+  main: markRaw(ShowWords),
+} satisfies Step)
+
+export const validateWordsStep: StepInit = async () => ({
+  step: StepName.ValidateWords,
+  get title() { return i18n.t('Test your backup') },
+  main: markRaw(ValidateWords),
+  goBackBy: 1,
+} satisfies Step)

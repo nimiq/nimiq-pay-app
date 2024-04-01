@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { Modal, useModal } from '@/composables/useModal'
+import { useModal } from '@/composables/useModal'
 import InfoIcon from '@/components/icons/info.vue'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
 
 const { showModal, closeAllModals } = useModal()
 </script>
@@ -26,7 +28,7 @@ const { showModal, closeAllModals } = useModal()
       <span>{{ $t('Your account, funds and data will be lost if you log out without a backup.') }}</span>
     </div>
 
-    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="showModal(Modal.Backup)">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="initializeFlow(FlowName.Backup)">
       {{ $t('Backup Account') }}
     </IonButton>
   </div>

@@ -6,7 +6,6 @@ import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/f
 
 import FlowCmp from '@/components/Flow.vue'
 import { i18n } from '@/i18n/i18n-setup'
-import { useToast } from '@/composables/useToast'
 import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('flows/index.ts')
@@ -207,6 +206,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
         return err(error)
     }
 
+    const { useToast } = await import('@/composables/useToast')
     useToast().setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
@@ -286,6 +286,19 @@ const viewTransactionDetailFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
+const backupFlow: FlowInit = async () => {
+  const { backupIntroductionStep, showWordsStep, validateWordsStep } = await import('./steps')
+  const flowName = FlowName.Backup
+  const steps = (await Promise.all([backupIntroductionStep, showWordsStep, validateWordsStep].map(s => s({ flowName }))))
+  const onDone: Flow['onDone'] = async () => {
+    const { useApp } = await import('@/stores/app')
+    useApp().hasDoneBackup = true
+    const { useToast } = await import('@/composables/useToast')
+    setTimeout(() => useToast().setToast({ message: i18n.t('Backup successful') }), 400) // Delay to allow the last step to animate out
+  }
+  return { flowName, steps, onDone }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -299,6 +312,7 @@ const flows = {
   [FlowName.NimTopUp]: nimTopUpFlow,
   [FlowName.ViewTransactions]: viewTransactionsFlow,
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
+  [FlowName.Backup]: backupFlow,
 }
 
 /**
