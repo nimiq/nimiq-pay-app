@@ -6,7 +6,7 @@ import InfoIcon from '@/components/icons/info.vue'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 
-const { showModal, closeAllModals } = useModal()
+const { closeAllModals } = useModal()
 </script>
 
 <template>

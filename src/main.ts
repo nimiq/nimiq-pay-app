@@ -36,7 +36,7 @@ import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { useLogger } from '@/composables/useLogger'
 
-if (import.meta.env.DEV)
+if (import.meta.env.DEV || false)
   // Change this based on your local IP address if you want to use vue-devtools
   // If you don't know your IP address, open vue-devtools and check the URL
   devtools.connect('http://10.0.0.43', 8098)
