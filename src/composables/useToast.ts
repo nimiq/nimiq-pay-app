@@ -2,7 +2,7 @@ import { toastController } from '@ionic/vue'
 import { ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
 import { useLogger } from './useLogger'
-import { check, xmark } from '@/components/icons'
+import { toastError, toastSuccess } from '@/components/icons'
 
 const logger = useLogger('useToast.ts')
 
@@ -30,8 +30,8 @@ function _useToast() {
     toast.value = await toastController.create({
       message,
       duration: keepOpen ? undefined : duration,
-      icon: error ? xmark : check,
-      cssClass: `notification-alert-toast ${error && 'toast-error'}`,
+      icon: error ? toastError : toastSuccess,
+      cssClass: 'notification-alert-toast',
       position: 'top',
       swipeGesture: 'vertical',
       // animated: true,

@@ -90,19 +90,12 @@ ion-toast.notification-alert-toast{
 }
 
 ion-toast.notification-alert-toast::part(container){
-  padding: 0px 2px;
+  padding: 0 6px;
 }
 
 ion-toast.notification-alert-toast::part(icon) {
     width: 16px;
     height: 16px;
-    color: #21BCA5;
-}
-
-ion-toast.toast-error::part(icon) {
-    width: 24px;
-    height: 24px;
-    color: #D13030;
 }
 
 ion-toast.notification-alert-toast::part(message) {
