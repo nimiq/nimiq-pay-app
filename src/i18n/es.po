@@ -2,7 +2,7 @@
 # Roberto Cruz 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-02-20 18:20+0000\n"
+"PO-Revision-Date: 2024-04-02 08:05+0000\n"
 "Last-Translator: Roberto Cruz\n"
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -38,7 +38,7 @@ msgid "All transactions"
 msgstr "Todas las transacciones"
 
 msgid "Already paid"
-msgstr ""
+msgstr "Ya está pagado"
 
 msgid "An unknown error occurred while importing words"
 msgstr "Ocurrió un error desconocido al importar las palabras"
@@ -62,7 +62,7 @@ msgid "Both expected and the given PIN are empty"
 msgstr "El PIN esperado y el proporcionado están vacíos"
 
 msgid "By tapping “verify”, you agree to our data management practices."
-msgstr ""
+msgstr "Al tocar 'verificar', aceptas nuestras prácticas de gestión de datos."
 
 msgid "Cancel"
 msgstr "Cancelar"
@@ -107,10 +107,8 @@ msgstr "Consenso establecido."
 msgid "Continue"
 msgstr "Continuar"
 
-#, fuzzy
-#| msgid "Copied to the clipboard!"
 msgid "Copied to clipboard"
-msgstr "¡Copiado al portapapeles!"
+msgstr "Copiado al portapapeles"
 
 msgid "Copied to the clipboard!"
 msgstr "¡Copiado al portapapeles!"
@@ -145,17 +143,21 @@ msgstr "Moneda"
 msgid "Date"
 msgstr "Fecha"
 
+#, fuzzy
+#| msgid "Get Cryptocity Points"
+msgid "Delete Cryptocity Points account"
+msgstr "Recibe Puntos Criptociudad"
+
 msgid "Delete Points Account"
-msgstr ""
+msgstr "Eliminar cuenta de puntos"
 
-msgid "Delete Points rewards account"
-msgstr ""
-
-msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
-msgstr ""
+#, fuzzy
+#| msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
+msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
+msgstr "Eliminar tu número de teléfono del sistema de recompensas por puntos resultará en la pérdida permanente de cualquier punto que tengas actualmente."
 
 msgid "Disclaimer"
-msgstr ""
+msgstr "Aviso legal"
 
 msgid "Earn Points"
 msgstr "Gana Puntos"
@@ -188,7 +190,7 @@ msgid "Expiring Points"
 msgstr "Puntos por vencer"
 
 msgid "Failed to delete Points account"
-msgstr ""
+msgstr "No se pudo eliminar la cuenta de puntos"
 
 msgid "Featured"
 msgstr "Destacado"
@@ -223,10 +225,8 @@ msgstr "Comenzar"
 msgid "Go to Crypto Map"
 msgstr "Ir al Mapa Cripto"
 
-#, fuzzy
-#| msgid "GoCrypto API refused connecting"
 msgid "GoCrypto refused connecting"
-msgstr "La API de GoCrypto rechazó la conexión"
+msgstr "GoCrypto rechazó la conexión"
 
 msgid "Got it"
 msgstr "Entendido"
@@ -241,7 +241,7 @@ msgid "I have a promo code"
 msgstr "Tengo un código promocional"
 
 msgid "Incl. fees"
-msgstr ""
+msgstr "Tarifas incluidas"
 
 msgid "Insert PIN to confirm"
 msgstr "Inserta el PIN para confirmar"
@@ -265,10 +265,8 @@ msgstr "CPLink inválido. Falta el identificador."
 msgid "Invalid GoCrypto link."
 msgstr "Enlace de GoCrypto inválido."
 
-#, fuzzy
-#| msgid "Invalid GoCrypto link."
 msgid "Invalid GoCrypto response"
-msgstr "Enlace de GoCrypto inválido."
+msgstr "Respuesta inválida de GoCrypto"
 
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Formato de enlace inválido. Los CPLink solo son compatibles para NIM."
@@ -322,13 +320,18 @@ msgid "Language"
 msgstr "Lenguaje"
 
 msgid "Learn more"
-msgstr ""
+msgstr "Saber más"
 
 msgid "Loading"
 msgstr "Cargando"
 
 msgid "Loading tasks…"
 msgstr "Cargando tareas…"
+
+#, fuzzy
+#| msgid "Loading"
+msgid "Loading..."
+msgstr "Cargando"
 
 msgid "Loading…"
 msgstr "Cargando…"
@@ -365,7 +368,9 @@ msgstr "No se encontraron cuentas"
 msgid "No Cashlink found"
 msgstr "No se encontró ningún Cashlink"
 
-msgid "No one can see me. Continue to words"
+#, fuzzy
+#| msgid "No one can see me. Continue to words"
+msgid "No one can see me"
 msgstr "Nadie puede verme. Continuar a palabras"
 
 msgid "No payment details found"
@@ -381,6 +386,8 @@ msgid ""
 "No tasks available.\n"
 "Stay tuned."
 msgstr ""
+"No hay tareas disponibles.\n"
+"Permanece atento."
 
 msgid "No transactions found"
 msgstr "No se encontraron transacciones"
@@ -392,10 +399,10 @@ msgid "Not a pending payment request"
 msgstr "No es una solicitud de pago pendiente"
 
 msgid "Notifications about new campaigns and other important events"
-msgstr ""
+msgstr "Notificaciones sobre nuevas campañas y otros eventos importantes"
 
 msgid "Notifications cannot be enabled, skipping this step."
-msgstr ""
+msgstr "No se pueden habilitar las notificaciones, se omitirá este paso."
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Solo {count} de {total} restantes."
@@ -421,46 +428,32 @@ msgstr "Pagar con Puntos"
 msgid "Payment"
 msgstr "Pago"
 
-#, fuzzy
-#| msgid "Payment invalid"
 msgid "Payment cancelled"
-msgstr "Pago inválido"
+msgstr "Pago cancelado"
 
-#, fuzzy
-#| msgid "Payment preview"
 msgid "Payment expired"
-msgstr "Prevista del pago"
+msgstr "El pago ha expirado"
 
-#, fuzzy
-#| msgid "Payment preview"
 msgid "Payment expiring soon"
-msgstr "Prevista del pago"
+msgstr "Pago a punto de expirar"
 
 msgid "Payment invalid"
 msgstr "Pago inválido"
 
-#, fuzzy
-#| msgid "The payment request is being processed"
 msgid "Payment is being processed"
-msgstr "La solicitud de pago está siendo procesada"
+msgstr "El pago está siendo procesado"
 
 msgid "Payment preview"
 msgstr "Prevista del pago"
 
-#, fuzzy
-#| msgid "Backup successful"
 msgid "Payment successful"
-msgstr "Respaldo exitoso"
+msgstr "Pago exitoso"
 
-#, fuzzy
-#| msgid "Backup successful"
 msgid "Payment unsuccessful"
-msgstr "Respaldo exitoso"
+msgstr "Pago sin éxito"
 
-#, fuzzy
-#| msgid "Your payment was refunded"
 msgid "Payment was refunded"
-msgstr "Tu pago fue reembolsado"
+msgstr "El pago fue reembolsado"
 
 msgid "Pending"
 msgstr "Pendiente"
@@ -475,7 +468,7 @@ msgid "PIN did not match"
 msgstr "El PIN no coincide"
 
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
-msgstr ""
+msgstr "Permite que Nimiq Pay acceda a tu cámara e intenta escanear los códigos QR nuevamente."
 
 msgid "Please confirm your PIN code"
 msgstr "Confirma tu código PIN"
@@ -496,15 +489,13 @@ msgid "Please enter at least ten characters"
 msgstr "Introduce al menos diez caracteres"
 
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
-msgstr ""
+msgstr "Espera {time} minuto antes de solicitar un nuevo código\" | \"Espera {time} minutos antes de solicitar un nuevo código"
 
 msgid "Please watch the full video"
 msgstr "Mira el video completo"
 
-#, fuzzy
-#| msgid "Cashlink claimed successfully"
 msgid "Points account deleted successfully"
-msgstr "Cashlink reclamado exitosamente"
+msgstr "Cuenta de Puntos eliminada exitosamente"
 
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr "Los puntos son recompensas de lealtad que puedes ganar y usar para pagar."
@@ -513,7 +504,7 @@ msgid "Points Payment"
 msgstr "Pago con puntos"
 
 msgid "Privacy Policy"
-msgstr ""
+msgstr "Política de privacidad"
 
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr "Procesando fondos... | Procesando fondos. Espera ~{blocks} minuto para pagar. | Procesando fondos. Espera ~{blocks} minutos para pagar."
@@ -521,10 +512,8 @@ msgstr "Procesando fondos... | Procesando fondos. Espera ~{blocks} minuto para p
 msgid "Promo code missing"
 msgstr "Falta el código promocional"
 
-#, fuzzy
-#| msgid "No account found"
 msgid "Promo code not found"
-msgstr "No se encontró ninguna cuenta"
+msgstr "Código promocional no encontrado"
 
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr "Protege tu aplicación Nimiq Pay con un PIN."
@@ -532,8 +521,10 @@ msgstr "Protege tu aplicación Nimiq Pay con un PIN."
 msgid "Purchase"
 msgstr "Compra"
 
-msgid "Really delete your Points rewards account?"
-msgstr ""
+#, fuzzy
+#| msgid "Really delete your Points rewards account?"
+msgid "Really delete your Cryptocity Points account?"
+msgstr "¿Realmente deseas eliminar tu cuenta de recompensas por puntos?"
 
 msgid "Recipient"
 msgstr "Destinatario"
@@ -547,16 +538,14 @@ msgstr "Reenviar"
 msgid "Reset search"
 msgstr "Reiniciar búsqueda"
 
-#, fuzzy
-#| msgid "Enable notifications"
 msgid "Rewards Notifications"
-msgstr "Activar notificaciones"
+msgstr "Notificaciones de recompensas"
 
 msgid "Save"
 msgstr "Guardar"
 
 msgid "Scan any Nimiq or NAKA QR code to pay."
-msgstr ""
+msgstr "Escanee cualquier código QR de Nimiq o NAKA para pagar."
 
 msgid "Scan Cashlink"
 msgstr "Escanear Cashlink"
@@ -568,10 +557,15 @@ msgid "Search"
 msgstr "Buscar"
 
 msgid "Search for a country"
-msgstr ""
+msgstr "Buscar un país"
 
 msgid "See all"
 msgstr "Ver todo"
+
+#, fuzzy
+#| msgid "Recovery Words"
+msgid "See words"
+msgstr "Palabras de recuperación"
 
 msgid "Select an address…"
 msgstr "Seleccionar una dirección…"
@@ -583,7 +577,7 @@ msgid "Send"
 msgstr "Enviar"
 
 msgid "Send a transaction to the address below. Top up as much as you like."
-msgstr "Envía una transacción a la dirección siguiente. Recarga el saldo tanto como desees."
+msgstr "Envía una transacción a la siguiente dirección. Recarga el saldo tanto como desees."
 
 msgid "Send NIM to this address"
 msgstr "Envíar NIM a esta dirección"
@@ -600,10 +594,8 @@ msgstr "Omitir por ahora"
 msgid "Something went wrong"
 msgstr "Algo salió mal"
 
-#, fuzzy
-#| msgid "Something went wrong verifying the phone number"
 msgid "Something went wrong authorizing the phone number"
-msgstr "Algo salió mal verificando el número de teléfono"
+msgstr "Algo salió mal autorizando el número de teléfono"
 
 msgid "Something went wrong checking the promo code"
 msgstr "Algo salió mal al verificar el código promocional"
@@ -614,25 +606,17 @@ msgstr "Algo salió mal al reclamar el cashback"
 msgid "Something went wrong decrypting the database"
 msgstr "Algo salió mal al descifrar la base de datos"
 
-#, fuzzy
-#| msgid "Something went wrong syncing your account"
 msgid "Something went wrong deleting the account"
-msgstr "Algo salió mal sincronizando tu cuenta"
+msgstr "Algo salió mal al eliminar la cuenta"
 
-#, fuzzy
-#| msgid "Something went wrong claiming the cashback"
 msgid "Something went wrong getting the Points cashback data."
-msgstr "Algo salió mal al reclamar el cashback"
+msgstr "Algo salió mal al obtener los datos de cashback de Puntos."
 
-#, fuzzy
-#| msgid "Something went wrong updating your Points"
 msgid "Something went wrong paying with Points"
-msgstr "Algo salió mal actualizando tus Puntos"
+msgstr "Algo salió mal al pagar con Puntos"
 
-#, fuzzy
-#| msgid "Something went wrong claiming the cashback"
 msgid "Something went wrong signing the transaction"
-msgstr "Algo salió mal al reclamar el cashback"
+msgstr "Algo salió mal al firmar la transacción"
 
 msgid "Something went wrong syncing your account"
 msgstr "Algo salió mal sincronizando tu cuenta"
@@ -661,13 +645,16 @@ msgstr "Sincronizando con la red."
 msgid "Test your backup"
 msgstr "Prueba tu respaldo"
 
-msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-msgstr "El respaldo de seguridad es una lista de 12 palabras en inglés. Asegúrate de que nadie pueda ver tu pantalla antes de continuar."
+msgid "The correct answer is \"{correct}\"."
+msgstr ""
+
+msgid "The QR scanner is not ready yet. Please wait."
+msgstr "El escáner de códigos QR aún no está listo. Por favor, espera."
 
 #, fuzzy
-#| msgid "The QR scanner is not ready yet. Please try again."
-msgid "The QR scanner is not ready yet. Please wait."
-msgstr "El escáner de código QR aún no está listo. Por favor, inténtalo de nuevo."
+#| msgid "There is no \"Forgot Password\""
+msgid "There is no \"Forgot password\""
+msgstr "No hay \"Olvidé mi contraseña\""
 
 msgid "There is no \"Forgot Password\""
 msgstr "No hay \"Olvidé mi contraseña\""
@@ -678,10 +665,8 @@ msgstr "No hay cashback al pagar con Puntos."
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Estos Puntos están hechos para gastar. Sal y ayuda a impulsar la adopción de criptomonedas."
 
-#, fuzzy
-#| msgid "This payment is not eligible for receiving or paying with Points."
 msgid "This merchant is not registered to receive Points payments."
-msgstr "Este pago no es elegible para recibir o pagar con Puntos."
+msgstr "Este comerciante no está registrado para recibir pagos con Puntos."
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Este pago no es elegible para recibir o pagar con Puntos."
@@ -693,7 +678,7 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr "Esta compra te da {amount} Punto. | Esta compra te da {amount} Puntos."
 
 msgid "Top Up"
-msgstr "Recargar"
+msgstr "Recargar saldo"
 
 msgid "Top-Up"
 msgstr "Recargar saldo"
@@ -701,10 +686,8 @@ msgstr "Recargar saldo"
 msgid "Transaction"
 msgstr "Transacción"
 
-#, fuzzy
-#| msgid "Transaction failed: {error}"
 msgid "Transaction already sent"
-msgstr "Transacción fallida: {error}"
+msgstr "Transacción ya enviada"
 
 msgid "Transaction failed: {error}"
 msgstr "Transacción fallida: {error}"
@@ -712,11 +695,14 @@ msgstr "Transacción fallida: {error}"
 msgid "Transaction invalid"
 msgstr "Transacción inválida"
 
+msgid "Try again"
+msgstr ""
+
 msgid "Trying to establish network consensus:"
 msgstr "Intentando establecer consenso de red:"
 
 msgid "Unable to connect to the Points server"
-msgstr ""
+msgstr "No se puede conectar al servidor de Puntos"
 
 msgid "Unexpected GoCrypto error"
 msgstr "Error inesperado de GoCrypto"
@@ -747,6 +733,11 @@ msgstr "Bienvenido a Nimiq Pay"
 
 msgid "What are Cryptocity Points?"
 msgstr "¿Qué son los Puntos Criptociudad?"
+
+#, fuzzy
+#| msgid "Are you sure you want to log out?"
+msgid "What do you want to do?"
+msgstr "¿Estás seguro de que quieres cerrar sesión?"
 
 msgid "What is Bluecode?"
 msgstr "¿Qué es Bluecode?"
@@ -787,8 +778,10 @@ msgstr "¿Cuál es la palabra número 8?"
 msgid "What's the 9th word?"
 msgstr "¿Cuál es la palabra número 9?"
 
-msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
-msgstr ""
+#, fuzzy
+#| msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgstr "Cuando te registras para una cuenta de Puntos en Nimiq Pay, das tu consentimiento a nuestras prácticas de gestión de datos según se detalla en nuestra {privacyPolicy}. Priorizamos tu derecho a la privacidad y control sobre tus datos, por lo tanto, proporcionamos una opción dentro de la aplicación para eliminar tu cuenta de Puntos en cualquier momento. Esta acción eliminará permanentemente tu información personal, como tu número de teléfono, de nuestros registros. Para disuadir el fraude, se conservará un registro seguro de cuentas eliminadas durante un período de 12 meses. Si decides volver a inscribirte, no se podrán recuperar actividades o datos anteriores. Nuestro compromiso con la seguridad de tus datos incluye un proceso sencillo dentro de la aplicación para eliminar la cuenta, en línea con las mejores prácticas de la industria para garantizar la autonomía del usuario y la protección de datos. Para obtener instrucciones sobre cómo eliminar tu cuenta o para obtener más información, consulta la configuración de la cuenta dentro de la aplicación."
 
 msgid "Withdraw"
 msgstr "Retirar"
@@ -815,24 +808,17 @@ msgstr "Respuesta incorrecta"
 msgid "Wrong number of recovery words"
 msgstr "Número incorrecto de palabras de recuperación"
 
-msgid "Wrong word!"
-msgstr "¡Palabra incorrecta!"
-
-#, fuzzy
-#| msgid "Send NIM to this address"
 msgid "You can not use this address"
-msgstr "Envíar NIM a esta dirección"
+msgstr "No puedes usar esta dirección"
 
 msgid "You can try again in {remainingTime}"
-msgstr ""
+msgstr "Puedes intentarlo nuevamente en {remainingTime}"
 
 msgid "You don't have enough NIM for this purchase."
 msgstr "No tienes suficiente NIM para esta compra."
 
-#, fuzzy
-#| msgid "You don't have enough NIM for this purchase."
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
-msgstr "No tienes suficiente NIM para esta compra."
+msgstr "No tienes suficiente NIM para esta compra. Solo puedes pagar con Puntos."
 
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr "No tienes suficiente NIM. Tu saldo actual es {balance}."
@@ -845,6 +831,9 @@ msgstr "Tu ganas {amount}"
 
 msgid "You have a reward to claim!"
 msgstr "¡Tienes una recompensa por reclamar!"
+
+msgid "You have chosen \"{selected}\"."
+msgstr ""
 
 msgid "You received Cryptocity Points"
 msgstr "Has recibido Puntos Criptociudad"
@@ -859,13 +848,22 @@ msgid "Your account, funds and data will be lost if you log out without a backup
 msgstr "Tu cuenta, fondos y datos se perderán si cierras sesión sin hacer un respaldo de seguridad."
 
 msgid "Your NIM balance is not available yet. You can only pay with Points."
-msgstr ""
+msgstr "Tu saldo de NIM aún no está disponible. Solo puedes pagar con Puntos."
 
 msgid "Your number"
 msgstr "Tu número"
 
 msgid "Your wallet is ready to use"
 msgstr "Tu billetera está lista para usar"
+
+#~ msgid "Delete Points rewards account"
+#~ msgstr "Eliminar cuenta de recompensas de Puntos"
+
+#~ msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+#~ msgstr "El respaldo de seguridad es una lista de 12 palabras en inglés. Asegúrate de que nadie pueda ver tu pantalla antes de continuar."
+
+#~ msgid "Wrong word!"
+#~ msgstr "¡Palabra incorrecta!"
 
 #~ msgid "Beta Testing"
 #~ msgstr "Pruebas beta"

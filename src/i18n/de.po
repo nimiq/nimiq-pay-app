@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-03-27 00:32+0000\n"
+"PO-Revision-Date: 2024-04-02 08:54+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -142,14 +142,14 @@ msgstr "Währung"
 msgid "Date"
 msgstr "Datum"
 
+msgid "Delete Cryptocity Points account"
+msgstr "Kryptostadt-Punkte-Konto löschen"
+
 msgid "Delete Points Account"
 msgstr "Punkte-Konto löschen"
 
-msgid "Delete Points rewards account"
-msgstr "Bonus-Punkte-Konto löschen"
-
-msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
-msgstr "Die Löschung deiner Telefonnummer aus dem Bonus-Punkte-System führt zum unwiderruflichen Verlust deiner aktuell gehaltenen Punkte."
+msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
+msgstr "Die Löschung deiner Telefonnummer aus dem Kryptostadt-Punkte-System führt zum unwiderruflichen Verlust deiner aktuell gehaltenen Punkte."
 
 msgid "Disclaimer"
 msgstr "Haftungsausschluss"
@@ -323,6 +323,9 @@ msgstr "Lade"
 msgid "Loading tasks…"
 msgstr "Aufgaben werden geladen…"
 
+msgid "Loading..."
+msgstr "Lade…"
+
 msgid "Loading…"
 msgstr "Lade…"
 
@@ -358,8 +361,8 @@ msgstr "Kein Konto gefunden"
 msgid "No Cashlink found"
 msgstr "Kein Cashlink gefunden"
 
-msgid "No one can see me. Continue to words"
-msgstr "Ich bin allein. Weiter zu den Wötern"
+msgid "No one can see me"
+msgstr "Ich bin allein"
 
 msgid "No payment details found"
 msgstr "Keine Zahlungsdetails gefunden"
@@ -509,8 +512,8 @@ msgstr "Schütze deine Nimiq Pay App mit einer PIN."
 msgid "Purchase"
 msgstr "Kauf"
 
-msgid "Really delete your Points rewards account?"
-msgstr "Willst du wirklich dein Bonus-Punkte-Konto löschen?"
+msgid "Really delete your Cryptocity Points account?"
+msgstr "Willst du wirklich dein Kryptostadt-Punkte-Konto löschen?"
 
 msgid "Recipient"
 msgstr "Empfänger"
@@ -547,6 +550,9 @@ msgstr "Nach einem Land suchen"
 
 msgid "See all"
 msgstr "Alle anzeigen"
+
+msgid "See words"
+msgstr "Wörter ansehen"
 
 msgid "Select an address…"
 msgstr "Eine Adresse auswählen…"
@@ -626,11 +632,14 @@ msgstr "Synchronisiere mit dem Netzwerk."
 msgid "Test your backup"
 msgstr "Backup testen"
 
-msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
+msgid "The correct answer is \"{correct}\"."
+msgstr "Die richtige Antwort ist \"{correct}\"."
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "Der QR-Code-Scanner ist noch nicht bereit. Bitte warten."
+
+msgid "There is no \"Forgot password\""
+msgstr "Es gibt kein \"Passwort vergessen\""
 
 msgid "There is no \"Forgot Password\""
 msgstr "Es gibt kein \"Passwort vergessen\""
@@ -671,6 +680,9 @@ msgstr "Transaktion fehlgeschlagen: {error}"
 msgid "Transaction invalid"
 msgstr "Transaktion ungültig"
 
+msgid "Try again"
+msgstr "Nochmals versuchen"
+
 msgid "Trying to establish network consensus:"
 msgstr "Versuche Netzwerk-Konsens zu erreichen:"
 
@@ -708,6 +720,9 @@ msgstr "Willkommen bei Nimiq Pay"
 
 msgid "What are Cryptocity Points?"
 msgstr "Was sind Kryptostadt-Punkte?"
+
+msgid "What do you want to do?"
+msgstr "Was möchtest du tun?"
 
 msgid "What is Bluecode?"
 msgstr "Was ist Bluecode?"
@@ -748,8 +763,8 @@ msgstr "Was ist das achte Wort?"
 msgid "What's the 9th word?"
 msgstr "Was ist das neunte Wort?"
 
-msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
-msgstr "Mit der Registrierung eines Punkte-Kontos in Nimiq Pay stimmst du den Datenverarbeitungspraktiken unserer {privacyPolicy} zu. Die Wahrung deiner Privatsphäre und deiner Kontrolle über deine Daten ist uns ein wichtiges Anliegen. Du kannst dein Punkte-Konto jederzeit innerhalb der App löschen, wodurch deine persönlichen Daten, wie deine Telefonnummer, dauerhaft aus unserem System gelöscht werden. Um Betrug vorzubeugen, bleibt die Löschung deines Kontos für 12 Monate protokolliert. Solltest du dich für eine Neuanmeldung entscheiden, können frühere Daten und Aktivitäten nicht wiederhergestellt werden. Teil unseres Engagements für deine Datensicherheit ist ein unkompliziertes Verfahren zur Kontolöschung innerhalb der App, das sich an bewährten Praktiken der Branche orientiert, um die Autonomie der Nutzer und den Datenschutz zu gewährleisten. Anweisungen zum Löschen deines Kontos und weitere Informationen findest du in den Kontoeinstellungen innerhalb der App."
+msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
+msgstr "Mit der Registrierung eines Kryptostadt-Punkte-Kontos in Nimiq Pay stimmst du den Datenverarbeitungspraktiken unserer {privacyPolicy} zu. Die Wahrung deiner Privatsphäre und deiner Kontrolle über deine Daten ist uns ein wichtiges Anliegen. Du kannst dein Kryptostadt-Punkte-Konto jederzeit innerhalb der App löschen, wodurch deine persönlichen Daten, wie deine Telefonnummer, dauerhaft aus unserem System gelöscht werden. Um Betrug vorzubeugen, bleibt die Löschung deines Kontos für 12 Monate protokolliert. Solltest du dich für eine Neuanmeldung entscheiden, können frühere Daten und Aktivitäten nicht wiederhergestellt werden. Teil unseres Engagements für deine Datensicherheit ist ein unkompliziertes Verfahren zur Kontolöschung innerhalb der App, das sich an bewährten Praktiken der Branche orientiert, um die Autonomie der Nutzer und den Datenschutz zu gewährleisten. Anweisungen zum Löschen deines Kontos und weitere Informationen findest du in den Kontoeinstellungen innerhalb der App."
 
 msgid "Withdraw"
 msgstr "Abbuchen"
@@ -776,9 +791,6 @@ msgstr "Falsche Antwort"
 msgid "Wrong number of recovery words"
 msgstr "Ungültige Zahl an Wiederherstellungswörtern"
 
-msgid "Wrong word!"
-msgstr "Falsches Wort!"
-
 msgid "You can not use this address"
 msgstr "Du kannst diese Adresse nicht verwenden"
 
@@ -803,6 +815,9 @@ msgstr "Du verdienst {amount}"
 msgid "You have a reward to claim!"
 msgstr "Du kannst dir deinen Bonus abholen!"
 
+msgid "You have chosen \"{selected}\"."
+msgstr "Du hast \"{selected}\" ausgewählt."
+
 msgid "You received Cryptocity Points"
 msgstr "Du hast Kryptostadt-Punkte erhalten"
 
@@ -823,6 +838,18 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#~ msgid "Delete Points rewards account"
+#~ msgstr "Bonus-Punkte-Konto löschen"
+
+#~ msgid "No one can see me. Continue to words"
+#~ msgstr "Ich bin allein. Weiter zu den Wötern"
+
+#~ msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+#~ msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
+
+#~ msgid "Wrong word!"
+#~ msgstr "Falsches Wort!"
 
 #~ msgid "Beta Testing"
 #~ msgstr "Beta-Test"
@@ -934,9 +961,6 @@ msgstr "Deine Wallet ist bereit zur Benutzung"
 
 #~ msgid "No Nimiq Wallet address found"
 #~ msgstr "Keine Nimiq-Wallet-Adresse gefunden"
-
-#~ msgid "No One can See me"
-#~ msgstr "Ich bin allein"
 
 #~ msgid "No order found"
 #~ msgstr "Keine Zahlungsdetails gefunden"

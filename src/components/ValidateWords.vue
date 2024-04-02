@@ -137,7 +137,7 @@ function seeWords() {
         {{ $t('The correct answer is "{correct}".', { correct: activeWord.correctWord[1] }) }}
       </p>
       <p class="text-space/70 mt-2 font-semibold text-sm">
-        {{ $t('What do you want do?') }}
+        {{ $t('What do you want to do?') }}
       </p>
       <div class="flex gap-x-4 justify-around mt-2">
         <QuickButton show-chevron center @click="reset">
