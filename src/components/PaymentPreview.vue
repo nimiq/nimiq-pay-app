@@ -62,13 +62,14 @@ const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentVali
    = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
 const goCryptoError = ref<string>()
+const goCryptoIsAboutToExpire = ref<boolean>()
 const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, async (isGoCrypto) => {
   // Watch payment rail for whether it's a GoCrypto payment and if that's the case, lazy load and setup GoCrypto
   // monitoring. As soon as we load it and set it up, the rail watcher can be stopped, as the monitoring itself will
   // observe the payment ref and its rail for further changes.
   if (!isGoCrypto)
     return
-  window.setTimeout(() => unwatchGoCryptoRail(), 0) // run after immediate invocation of watcher
+  window.setTimeout(() => unwatchGoCryptoRail(), 0) // run after watcher invocation
   // Have to create and dispose an effect scope manually as watchers/effects are not used synchronously in setup script.
   // Could also stop monitoring manually, instead of defining a scope, but the scope already handles automatically not
   // executing the run handler when it's already stopped, i.e. when the component has already been unmounted before the
@@ -82,8 +83,11 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   scope.run(() => {
     // Note that we ignore potential updates of the payment request data, and only monitor for errors, as GoCrypto
     // continues to accept payments for the original payment info.
-    const { error } = useGoCryptoMonitoring(payment)
-    watchEffect(() => goCryptoError.value = error.value)
+    const { error, remainingTimeExpiryEarly, remainingTimeExpiryFinal } = useGoCryptoMonitoring(payment)
+    watchEffect(() => {
+      goCryptoError.value = error.value
+      goCryptoIsAboutToExpire.value = !remainingTimeExpiryEarly.value && !!remainingTimeExpiryFinal.value
+    })
   })
 }, { immediate: true })
 
@@ -107,7 +111,11 @@ watch(() => goCryptoError.value || props.errorMsg, (message) => {
   if (!message)
     return
   loading.value = false
-  useToast().setToast({ message, type: 'error', duration: 5 * 1e3 })
+  useToast().setToast({
+    message,
+    type: goCryptoError.value && goCryptoIsAboutToExpire.value ? 'warning' : 'error',
+    duration: 5 * 1e3,
+  })
   if (goCryptoError.value)
     // Go back to QR scanner
     emit('back', StepName.QRCodeScanner)
