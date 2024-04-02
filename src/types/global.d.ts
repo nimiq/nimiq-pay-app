@@ -20,7 +20,7 @@ type TaskType = 'question' | 'text-input' | 'yt-video'
 
 interface Toast {
   message: string
-  error?: boolean
+  type?: 'success' | 'warning' | 'error' | 'spinner'
   keepOpen?: boolean
   duration?: number
 }

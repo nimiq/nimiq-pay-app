@@ -40,7 +40,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       else if (consensus.value === 'established') {
         setToast({
           message: `${i18n.t('Network consensus lost.')} ${translateConsensus(newConsensus)}`,
-          error: true,
+          type: 'error',
           keepOpen: true,
         })
       }
@@ -55,7 +55,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     catch {
       setToast({
         message: `${i18n.t('Trying to establish network consensus:')} ${translateConsensus(consensus.value)}`,
-        error: true,
+        type: 'error',
         keepOpen: true,
       })
     }

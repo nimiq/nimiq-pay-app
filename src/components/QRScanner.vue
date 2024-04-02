@@ -18,7 +18,7 @@ const cameraFeedContainer = ref() as Ref<HTMLDivElement>
 
 async function onError(error: string) {
   const { useToast } = await import('@/composables/useToast')
-  useToast().setToast({ message: error, error: true, duration: 5000 })
+  useToast().setToast({ message: error, type: 'error', duration: 5000 })
 }
 watch(() => props.errorMsg, (error) => {
   if (!error)

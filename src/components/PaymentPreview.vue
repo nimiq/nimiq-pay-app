@@ -107,7 +107,7 @@ watch(() => goCryptoError.value || props.errorMsg, (message) => {
   if (!message)
     return
   loading.value = false
-  useToast().setToast({ message, error: true, duration: 5 * 1e3 })
+  useToast().setToast({ message, type: 'error', duration: 5 * 1e3 })
   if (goCryptoError.value)
     // Go back to QR scanner
     emit('back', StepName.QRCodeScanner)

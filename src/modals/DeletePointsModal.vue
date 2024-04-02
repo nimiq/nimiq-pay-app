@@ -22,7 +22,7 @@ async function handleDeletePointsAccount() {
     logger.error('Failed to delete Points account', error)
     useToast().setToast({
       message: error || i18n.t('Failed to delete Points account'),
-      error: true,
+      type: 'error',
     })
   }
 
