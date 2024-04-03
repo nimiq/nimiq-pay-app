@@ -2,7 +2,7 @@
 # Mathéo Raveux 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-03-29 12:20+0000\n"
+"PO-Revision-Date: 2024-04-03 15:04+0000\n"
 "Last-Translator: Mathéo Raveux\n"
 "Language: fr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -143,18 +143,14 @@ msgstr "Devise"
 msgid "Date"
 msgstr "Date"
 
-#, fuzzy
-#| msgid "Get Cryptocity Points"
 msgid "Delete Cryptocity Points account"
-msgstr "Obtenez des points Cryptocity"
+msgstr "Supprimer le compte de points Cryptocity"
 
 msgid "Delete Points Account"
 msgstr "Supprimer le compte"
 
-#, fuzzy
-#| msgid "Deleting your phone number from the Points rewards system will result in the permanent loss of any Points you currently hold."
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
-msgstr "La suppression de votre numéro de téléphone du système de récompenses de points Cryptocity entraînera la perte définitive de tous les points que vous détenez actuellement."
+msgstr "La suppression de votre numéro de téléphone du système de points Cryptocity entraînera la perte définitive de tous les points que vous détenez actuellement."
 
 msgid "Disclaimer"
 msgstr "Clause de non-responsabilité"
@@ -328,10 +324,8 @@ msgstr "Chargement"
 msgid "Loading tasks…"
 msgstr "Chargement des tâches…"
 
-#, fuzzy
-#| msgid "Loading"
 msgid "Loading..."
-msgstr "Chargement"
+msgstr "Chargement..."
 
 msgid "Loading…"
 msgstr "Chargement…"
@@ -368,10 +362,8 @@ msgstr "Aucun compte trouvé"
 msgid "No Cashlink found"
 msgstr "Aucun Cashlink trouvé"
 
-#, fuzzy
-#| msgid "No one can see me. Continue to words"
 msgid "No one can see me"
-msgstr "Personne ne peut me voir. Continuer vers les mots"
+msgstr "Personne ne peut me voir"
 
 msgid "No payment details found"
 msgstr "Aucun détail de paiement n'a été trouvé"
@@ -521,10 +513,8 @@ msgstr "Protégez votre application Nimiq Pay avec un code PIN."
 msgid "Purchase"
 msgstr "Acheter"
 
-#, fuzzy
-#| msgid "Really delete your Points rewards account?"
 msgid "Really delete your Cryptocity Points account?"
-msgstr "Voulez-vous vraiment supprimer votre compte Points Cryptocity ?"
+msgstr "Voulez-vous vraiment supprimer votre compte de points Cryptocity ?"
 
 msgid "Recipient"
 msgstr "Bénéficiaire"
@@ -562,10 +552,8 @@ msgstr "Rechercher un pays"
 msgid "See all"
 msgstr "Voir tout"
 
-#, fuzzy
-#| msgid "Recovery Words"
 msgid "See words"
-msgstr "Mots de récupération"
+msgstr "Voir les mots"
 
 msgid "Select an address…"
 msgstr "Sélectionnez une adresse…"
@@ -646,13 +634,11 @@ msgid "Test your backup"
 msgstr "Testez votre sauvegarde"
 
 msgid "The correct answer is \"{correct}\"."
-msgstr ""
+msgstr "La bonne réponse est \"{correct}\"."
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "Le scanner QR n'est pas encore prêt. Veuillez patienter."
 
-#, fuzzy
-#| msgid "There is no \"Forgot Password\""
 msgid "There is no \"Forgot password\""
 msgstr "Il n'y a pas de \"mot de passe oublié\""
 
@@ -696,7 +682,7 @@ msgid "Transaction invalid"
 msgstr "Transaction invalide"
 
 msgid "Try again"
-msgstr ""
+msgstr "Réessayer"
 
 msgid "Trying to establish network consensus:"
 msgstr "Tentative d'établissement d'un consensus au sein du réseau :"
@@ -734,10 +720,8 @@ msgstr "Bienvenue sur Nimiq Pay"
 msgid "What are Cryptocity Points?"
 msgstr "Que sont les points Cryptocity ?"
 
-#, fuzzy
-#| msgid "Are you sure you want to log out?"
 msgid "What do you want to do?"
-msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
+msgstr "Que voulez-vous faire ?"
 
 msgid "What is Bluecode?"
 msgstr "Bluecode, qu'est-ce que c'est ?"
@@ -778,10 +762,8 @@ msgstr "Quel est le 8ème mot ?"
 msgid "What's the 9th word?"
 msgstr "Quel est le 9ème mot ?"
 
-#, fuzzy
-#| msgid "When you register for a Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
-msgstr "Lorsque vous vous inscrivez pour un compte de Points Cryptocity dans Nimiq Pay, vous consentez à nos pratiques de gestion des données telles que détaillées dans notre {privacyPolicy}. Nous donnons la priorité à votre droit à la vie privée et au contrôle de vos données, en fournissant donc une option dans l'application pour supprimer votre compte de Points Cryptocity à tout moment. Cette action supprimera définitivement vos informations personnelles, telles que votre numéro de téléphone, de nos dossiers. Afin de prévenir les fraudes, un journal sécurisé des comptes supprimés sera conservé pendant une période de 12 mois. Si vous décidez de vous réinscrire, les activités ou données antérieures ne seront pas récupérables. Notre engagement envers la sécurité de vos données comprend un processus de suppression de compte simple et intégré à l'application, conforme aux meilleures pratiques du secteur afin de garantir l'autonomie de l'utilisateur et la protection des données. Pour obtenir des instructions sur la suppression de votre compte ou pour plus d'informations, veuillez vous référer aux paramètres du compte dans l'application."
+msgstr "Lorsque vous vous inscrivez pour un compte Cryptocity Points dans Nimiq Pay, vous consentez à nos pratiques de gestion des données telles que détaillées dans notre {privacyPolicy}. Nous donnons la priorité à votre droit à la vie privée et au contrôle de vos données, en fournissant donc une option dans l'application pour supprimer votre compte de points Cryptocity à tout moment. Cette action supprimera définitivement vos informations personnelles, telles que votre numéro de téléphone, de nos dossiers. Afin de prévenir la fraude, un journal sécurisé des comptes supprimés sera conservé pendant une période de 12 mois. Si vous décidez de vous réinscrire, les activités ou données antérieures ne seront pas récupérables. Notre engagement envers la sécurité de vos données comprend un processus de suppression de compte simple et intégré à l'application, conforme aux meilleures pratiques du secteur afin de garantir l'autonomie de l'utilisateur et la protection des données. Pour obtenir des instructions sur la suppression de votre compte ou pour plus d'informations, veuillez vous référer aux paramètres du compte dans l'application."
 
 msgid "Withdraw"
 msgstr "Retirer"
@@ -833,7 +815,7 @@ msgid "You have a reward to claim!"
 msgstr "Vous avez une récompense à réclamer !"
 
 msgid "You have chosen \"{selected}\"."
-msgstr ""
+msgstr "Vous avez choisi \"{selected}\"."
 
 msgid "You received Cryptocity Points"
 msgstr "Vous avez reçu des points Cryptocity"
