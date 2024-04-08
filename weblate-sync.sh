@@ -84,9 +84,6 @@ if [ ! -z "$PULL_TRANSLATIONS" ]; then
 
     # Remove translator's email addresses and Language-Team entry from translation files.
     for language in $(echo "$PULL_TRANSLATIONS" | sed "s/,/ /g"); do
-        sed -i'' -e '0,/^$/ { # Within first paragraph, starting from first line until first empty line,
-            s/ \?[^ ]\+@[^ ]\+\.[^ \]\+//g; # remove all email addresses
-            /Language-Team/ d; # and delete Language-Team line which exposes the url of our internal Weblate instance.
-        }' "${FOLDER}${language}.po"
+        awk ' BEGIN {p=1} /^$/ {p=0} p && /^\s*Language-Team/ {next} p {gsub(/ <[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}>(,)?/,"")} 1 ' "${FOLDER}${language}.po" > temp && mv temp "${FOLDER}${language}.po"
     done
 fi
