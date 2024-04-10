@@ -82,7 +82,7 @@ onLongPress(
 
         <IonItem>
           <IonToggle :checked="pushNotificationsStatus === PushNotificationsStatus.GRANTED" @ion-change="handlePushNotificationsToggle">
-            Receive Push Notifications
+            {{ $t('Receive Push Notifications') }}
           </IonToggle>
         </IonItem>
 

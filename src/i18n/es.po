@@ -1,9 +1,10 @@
 # Daniel 2024.
 # Roberto Cruz 2024.
+# Alberto Monterroso 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-03 14:42+0000\n"
-"Last-Translator: Roberto Cruz\n"
+"PO-Revision-Date: 2024-04-10 22:22+0000\n"
+"Last-Translator: Alberto Monterroso\n"
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -17,7 +18,7 @@ msgid "{count} of {total} remaining."
 msgstr "{count} de {total} restantes."
 
 msgid "Activate Cashback & Rewards"
-msgstr "Activar Cashback & Recompensas"
+msgstr "Activar Cashback y Recompensas"
 
 msgid "Add NIM address"
 msgstr "Agregar dirección NIM"
@@ -26,10 +27,10 @@ msgid "Address copied to clipboard"
 msgstr "La dirección se ha copiado al portapapeles"
 
 msgid "Address missing"
-msgstr "Dirección faltante"
+msgstr "Dirección no encontrada"
 
 msgid "Addresses missing"
-msgstr "Direcciones faltantes"
+msgstr "Direcciones no encontradas"
 
 msgid "All"
 msgstr "Todo"
@@ -219,7 +220,7 @@ msgid "Get Started"
 msgstr "Comenzar"
 
 msgid "Go to Crypto Map"
-msgstr "Ir al Mapa Cripto"
+msgstr "Ir al Cripto Mapa"
 
 msgid "GoCrypto refused connecting"
 msgstr "GoCrypto rechazó la conexión"
@@ -516,6 +517,9 @@ msgstr "Compra"
 msgid "Really delete your Cryptocity Points account?"
 msgstr "¿Realmente deseas eliminar tu cuenta de Puntos Criptociudad?"
 
+msgid "Receive Push Notifications"
+msgstr "Recibir Notificaciones Push"
+
 msgid "Recipient"
 msgstr "Destinatario"
 
@@ -565,7 +569,7 @@ msgid "Send"
 msgstr "Enviar"
 
 msgid "Send a transaction to the address below. Top up as much as you like."
-msgstr "Envía una transacción a la siguiente dirección. Recarga el saldo tanto como desees."
+msgstr "Envía una transacción a la siguiente dirección. Recarga tanto saldo como desees."
 
 msgid "Send NIM to this address"
 msgstr "Envíar NIM a esta dirección"

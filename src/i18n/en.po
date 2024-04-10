@@ -702,6 +702,10 @@ msgstr ""
 msgid "Really delete your Cryptocity Points account?"
 msgstr ""
 
+#: src/modals/SettingsModal.vue:37
+msgid "Receive Push Notifications"
+msgstr ""
+
 #: src/components/TransactionDetails.vue:30
 msgid "Recipient"
 msgstr ""

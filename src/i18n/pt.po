@@ -516,6 +516,11 @@ msgstr "Comprar"
 msgid "Really delete your Cryptocity Points account?"
 msgstr "Tens a certeza que queres apagar a tua conta de Pontos Cryptocity?"
 
+#, fuzzy
+#| msgid "Rewards Notifications"
+msgid "Receive Push Notifications"
+msgstr "Notificações de Recompensas"
+
 msgid "Recipient"
 msgstr "Destinatário"
 
