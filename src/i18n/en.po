@@ -876,6 +876,10 @@ msgstr ""
 msgid "Test your backup"
 msgstr ""
 
+#: src/components/BackupIntroduction.vue:6
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr ""
+
 #: src/components/ValidateWords.vue:19
 msgid "The correct answer is \"{correct}\"."
 msgstr ""

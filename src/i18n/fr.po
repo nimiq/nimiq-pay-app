@@ -638,6 +638,9 @@ msgstr "Synchronisation avec le réseau."
 msgid "Test your backup"
 msgstr "Testez votre sauvegarde"
 
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr "La sauvegarde est une liste de 12 mots anglais. Assurez-vous que personne ne peut voir votre écran avant de continuer."
+
 msgid "The correct answer is \"{correct}\"."
 msgstr "La bonne réponse est \"{correct}\"."
 
@@ -845,9 +848,6 @@ msgstr "Votre wallet est prêt à l'emploi"
 
 #~ msgid "Delete Points rewards account"
 #~ msgstr "Supprimer votre compte de points Cryptocity"
-
-#~ msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-#~ msgstr "La sauvegarde est une liste de 12 mots anglais. Assurez-vous que personne ne peut voir votre écran avant de continuer."
 
 #~ msgid "Wrong word!"
 #~ msgstr "Mauvais mot !"

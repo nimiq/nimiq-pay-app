@@ -637,6 +637,9 @@ msgstr "Synchronisiere mit dem Netzwerk."
 msgid "Test your backup"
 msgstr "Backup testen"
 
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
+
 msgid "The correct answer is \"{correct}\"."
 msgstr "Die richtige Antwort ist \"{correct}\"."
 
@@ -849,9 +852,6 @@ msgstr "Deine Wallet ist bereit zur Benutzung"
 
 #~ msgid "No one can see me. Continue to words"
 #~ msgstr "Ich bin allein. Weiter zu den Wötern"
-
-#~ msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-#~ msgstr "Das Backup besteht aus 12 englischen Wörtern. Bitte vergewissere dich, dass niemand deinen Bildschirm sehen kann, bevor du fortfährst."
 
 #~ msgid "Wrong word!"
 #~ msgstr "Falsches Wort!"

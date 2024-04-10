@@ -638,6 +638,9 @@ msgstr "A sincronizar com a rede."
 msgid "Test your backup"
 msgstr "Testa o teu backup"
 
+msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
+msgstr "O backup é uma lista de 12 palavras em Inglês. Por favor garante que ninguém consegue ver o teu ecrã antes de continuar."
+
 msgid "The correct answer is \"{correct}\"."
 msgstr "A resposta correta é \"{correct}\"."
 
@@ -845,9 +848,6 @@ msgstr "A tua wallet está pronta para usar"
 
 #~ msgid "Delete Points rewards account"
 #~ msgstr "Apagar Pontos de Recompensas da Conta"
-
-#~ msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-#~ msgstr "O backup é uma lista de 12 palavras em Inglês. Por favor garante que ninguém consegue ver o teu ecrã antes de continuar."
 
 #~ msgid "Wrong word!"
 #~ msgstr "Palavra errada!"
