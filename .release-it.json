@@ -4,11 +4,6 @@
   },
   "gitlab": {
     "release": true,
-    "assets": [
-      {
-        "path": "builds/ios/NimiqPay-*.ipa",
-        "label": "Nimiq Pay iOS"
-      }
-    ]
+    "assets": ["builds/ios/NimiqPay-*.ipa"]
   }
 }
