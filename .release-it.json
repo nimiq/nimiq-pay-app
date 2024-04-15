@@ -1,0 +1,14 @@
+{
+  "git": {
+    "commitMessage": "🚀 release v${version}"
+  },
+  "gitlab": {
+    "release": true,
+    "assets": [
+      {
+        "path": "builds/ios/NimiqPay-*.ipa",
+        "label": "Nimiq Pay iOS"
+      }
+    ]
+  }
+}
