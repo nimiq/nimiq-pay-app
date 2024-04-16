@@ -1,6 +1,6 @@
 {
   "git": {
-    "commitMessage": "🚀 release v${version}"
+    "commitMessage": "🚀 Release v${version}"
   },
   "gitlab": {
     "release": true,

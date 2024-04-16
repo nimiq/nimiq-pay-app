@@ -17,10 +17,9 @@ platform :ios do
   lane :beta do
     sh "cd .. && ionic cap sync ios --prod"
 
-    # capture_ios_screenshots(scheme: scheme, workspace: workspace, reinstall_app: true, override_status_bar: true, concurrent_simulators: true, disable_slide_to_type: true)
     app_store_connect_api_key(
-      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
-      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"],
       key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"]
     )
     
