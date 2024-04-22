@@ -21,7 +21,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane ios beta
 ```
 
-Push a new beta build to TestFlight
+Build a new beta version for testing
 
 ### ios screenshots
 
@@ -30,6 +30,19 @@ Push a new beta build to TestFlight
 ```
 
 Generate screenshots for the App Store
+
+----
+
+
+## Android
+
+### android beta
+
+```sh
+[bundle exec] fastlane android beta
+```
+
+Build a new beta version for testing
 
 ----
 
