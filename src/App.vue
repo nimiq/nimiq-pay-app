@@ -51,6 +51,15 @@ input.phone {
   font-size: 20px;
 }
 
+/* iOS shit... */
+.ios ion-modal {
+  --border-radius: 20px;
+}
+
+.md ion-modal {
+  --border-radius: 20px 20px 0 0;
+}
+
 ion-modal ion-toolbar {
     --border-color: transparent;
     --background: var(--ion-background-color, #fff);
