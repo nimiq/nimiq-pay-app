@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "after:bump": [
+      "pnpm build:ios",
+      "pnpm build:android"
+    ],
+    "after:release": [
+      "rm builds/android/NimiqPay-*.aab",
+      "rm builds/ios/NimiqPay-*.ipa",
+      "rm builds/ios/NimiqPay-*.zip"
+    ]
+  },
+  "git": {
+    "commitMessage": "🚀 Release v${version}"
+  },
+  "gitlab": {
+    "release": true,
+    "assets": [
+      "builds/ios/NimiqPay-*.ipa",
+      "builds/android/NimiqPay-*.aab"
+    ]
+  }
+}

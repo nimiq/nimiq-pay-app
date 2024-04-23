@@ -33,6 +33,13 @@ npm-debug.log*
 /plugins
 /www
 
+.env
+
 android/.idea
 AndroidManifest.xml.orig
 report.xml
+*.zip
+*.ipa
+*.apk
+*.aab
+google-service-account.json
