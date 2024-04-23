@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
+import { Browser } from '@capacitor/browser'
 import { close } from 'ionicons/icons'
 import { ref } from 'vue'
 import { onLongPress } from '@vueuse/core'
@@ -61,6 +62,9 @@ onLongPress(
     </IonItem>
     <IonItem button :detail="false" @click="initializeFlow(FlowName.Backup)">
       {{ $t('Backup Account') }}
+    </IonItem>
+    <IonItem button :detail="false" @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })">
+      {{ $t('About') }}
     </IonItem>
     <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
       {{ $t('Log Out') }}
