@@ -10,7 +10,7 @@ import { useLogger } from '@/composables/useLogger'
 const logger = useLogger('useConn')
 
 const DB_NAME = 'storage'
-const DB_VERSION = migrations.at(-1)!.version
+const DB_VERSION = migrations.at(-1)!.toVersion
 
 export const useConn = defineStore('conn', () => {
   const { isWeb } = useDevice()
@@ -56,8 +56,7 @@ export const useConn = defineStore('conn', () => {
 
       logger.log(`📚 Initializing database`, migrations)
 
-    for (const { statements, version } of migrations)
-      await sqlite.addUpgradeStatement(DB_NAME, version, statements)
+    await sqlite.addUpgradeStatement(DB_NAME, migrations)
 
     if (isWeb) {
       await open()

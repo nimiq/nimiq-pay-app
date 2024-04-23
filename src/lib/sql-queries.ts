@@ -62,13 +62,13 @@ export interface DbPagination {
 }
 
 interface Migration {
-  version: number
+  toVersion: number
   statements: string[]
 }
 
 export const migrations: Migration[] = [
   {
-    version: 1,
+    toVersion: 1,
     statements: [
       SQLQuery.CreateKvTable,
       SQLQuery.CreateTxsTable,
@@ -77,7 +77,7 @@ export const migrations: Migration[] = [
     ],
   },
   {
-    version: 2,
+    toVersion: 2,
     statements: [
       SQLQuery.AddInvoicedColumnToTxsTable,
       SQLQuery.AddMetaColumnToTxsTable,

@@ -10,6 +10,10 @@ msgstr ""
 msgid "{count} of {total} remaining."
 msgstr ""
 
+#: src/modals/MenuModal.vue:39
+msgid "About"
+msgstr ""
+
 #: src/modals/MenuModal.vue:27
 msgid "Activate Cashback & Rewards"
 msgstr ""
@@ -450,7 +454,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:39
+#: src/modals/MenuModal.vue:42
 msgid "Log Out"
 msgstr ""
 
