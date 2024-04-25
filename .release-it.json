@@ -6,6 +6,7 @@
     ],
     "after:release": [
       "rm builds/android/NimiqPay-*.aab",
+      "rm builds/android/NimiqPay-*.apk",
       "rm builds/ios/NimiqPay-*.ipa",
       "rm builds/ios/NimiqPay-*.zip"
     ]
@@ -16,8 +17,9 @@
   "gitlab": {
     "release": true,
     "assets": [
-      "builds/ios/NimiqPay-*.ipa",
-      "builds/android/NimiqPay-*.aab"
+      "builds/ios/NimiqPay-${version}.ipa",
+      "builds/android/NimiqPay-${version}.aab",
+      "builds/android/NimiqPay-${version}.apk"
     ]
   }
 }
