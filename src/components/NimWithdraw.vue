@@ -62,11 +62,15 @@ const price = computed(() => data.value?.price || 0)
 const fiatDecimals = 6
 
 const fiatAmount = ref(0)
-const lunaAmount = computed(() => fiatAmount.value / (10 ** fiatDecimals) / price.value * 1e5)
+const fiatAmountModel = ref(0)
+watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
+// JS and their precision issues...
+// Lunas are integers, so no problem in rounding down to the nearest integer.
+const lunaAmount = computed(() => Math.floor(fiatAmount.value / price.value * 1e5))
 
 const hasEnoughAmount = computed(() => lunaAmount.value <= remoteBalance.value)
 
-const remoteBalanceFiat = computed(() => remoteBalance.value * price.value / 1e5 * (10 ** fiatDecimals))
+const remoteBalanceFiat = computed(() => remoteBalance.value / 1e5 * price.value)
 
 const isSelectOpen = ref(false)
 const selected = ref('')
@@ -106,7 +110,7 @@ watch(errorMessage, (value) => {
 
 <template>
   <div class="flex flex-col items-center justify-center w-full px-2 mt-6 mb-8 gap-y-2">
-    <AmountInput v-model="fiatAmount" :decimals="fiatDecimals" />
+    <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
       {{ formatCrypto(lunaAmount) }}
     </p>
@@ -186,13 +190,13 @@ watch(errorMessage, (value) => {
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
   <div class="flex w-full mt-auto mb-4 justify-evenly">
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25 * 10 ** fiatDecimals">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25">
       {{ formatFiat(25, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50 * 10 ** fiatDecimals">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50">
       {{ formatFiat(50, { short: true }) }}
     </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100 * 10 ** fiatDecimals">
+    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
       {{ formatFiat(100, { short: true }) }}
     </button>
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
