@@ -16,8 +16,9 @@
   "gitlab": {
     "release": true,
     "assets": [
-      "builds/ios/NimiqPay-*.ipa",
-      "builds/android/NimiqPay-*.aab"
+      "builds/ios/NimiqPay-${version}.ipa",
+      "builds/android/NimiqPay-${version}.aab",
+      "builds/ios/NimiqPay-${version}.apk"
     ]
   }
 }
