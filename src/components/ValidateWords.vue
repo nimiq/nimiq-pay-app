@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
 import { computed, onMounted, ref } from 'vue'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLogger } from '@/composables/useLogger'
@@ -117,29 +118,31 @@ function seeWords() {
 </script>
 
 <template>
-  <div v-if="activeWord" class="flex flex-col items-center w-full h-full mt-2">
+  <div v-if="activeWord" class="flex flex-col items-center w-full h-full mt-[30%]">
     <p class="text-6xl font-semibold" :class="hasError ? 'opacity-70' : ''">
       {{ (activeWord.correctWord[0] + 1).toLocaleString() }}
     </p>
-    <p class="text-lg font-medium text-space/70 mt-2" :class="hasError ? 'opacity-70' : ''">
+    <p class="mt-2 text-lg font-medium text-space/70" :class="hasError ? 'opacity-70' : ''">
       {{ randomIndexInstructions }}
     </p>
-    <div class="grid grid-cols-3 gap-4 mt-8">
-      <button v-for="([, word]) in activeWord.options" :key="word" :disabled="hasError" class="px-4 py-2 font-semibold bg-[#F2F2F4] rounded whitespace-nowrap disabled:opacity-40" @click="() => handleGuess(word)">
+    <div class="grid grid-cols-2 gap-4 mt-8">
+      <IonButton v-for="([, word]) in activeWord.options" :key="word" size="small" :disabled="hasError" class="font-semibold whitespace-nowrap disabled:opacity-40" @click="() => handleGuess(word)">
         {{ word }}
-      </button>
+      </IonButton>
     </div>
-    <div v-if="hasError" class="mt-8 animate-slideUpAndFade w-full">
-      <p class="text-tomato font-semibold text-sm">
-        {{ $t('You have chosen "{selected}".', { selected: lastSelected }) }}
-      </p>
-      <p class="text-space/70 font-semibold text-sm">
-        {{ $t('The correct answer is "{correct}".', { correct: activeWord.correctWord[1] }) }}
-      </p>
-      <p class="text-space/70 mt-2 font-semibold text-sm">
-        {{ $t('What do you want to do?') }}
-      </p>
-      <div class="flex gap-x-4 justify-around mt-2">
+    <div v-if="hasError" class="w-full mt-10 animate-slideUpAndFade">
+      <div class="mx-auto text-sm font-semibold text-center">
+        <p class="text-tomato">
+          {{ $t('You have chosen "{selected}".', { selected: lastSelected }) }}
+        </p>
+        <p class="text-space/70">
+          {{ $t('The correct answer is "{correct}".', { correct: activeWord.correctWord[1] }) }}
+        </p>
+        <p class="mt-4 text-space/70">
+          {{ $t('What do you want to do?') }}
+        </p>
+      </div>
+      <div class="flex justify-around mt-2 gap-x-4">
         <QuickButton show-chevron center @click="reset">
           {{ $t('Try again') }}
         </QuickButton>
@@ -150,3 +153,12 @@ function seeWords() {
     </div>
   </div>
 </template>
+
+<style scoped>
+ion-button {
+  --padding-top: 12px;
+  --padding-bottom: 12px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+}
+</style>

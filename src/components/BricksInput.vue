@@ -3,6 +3,7 @@ import { IonButton } from '@ionic/vue'
 import { type Ref, ref } from 'vue'
 import { computed } from 'vue'
 import MnemonicInput from '@/components/MnemonicInput.vue'
+import InfoIcon from '@/components/icons/info.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
 
@@ -21,16 +22,22 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
 </script>
 
 <template>
-  <div class="flex flex-col justify-center mt-auto">
-    <MnemonicInput :recovery-words="isDevImport ? loginWords : undefined" @login-words="(v) => loginWords = v" />
+  <div class="flex flex-col h-full my-4">
+    <MnemonicInput :recovery-words="isDevImport ? loginWords : undefined" class="mt-auto" @login-words="(v) => loginWords = v" />
     <button v-if="isDev" class="mt-8 text-sm italic text-blue-300" @click="() => { loginWords = devWallet; isDevImport = true }">
       Import dev wallet
     </button>
-    <p v-if="errorMsg" class="text-center text-pumpkin">
+    <div class="flex justify-center items-baseline gap-2 mt-12 w-[max(80%,14rem)] mx-auto">
+      <InfoIcon class="size-3 stroke-[1.5] text-space/60 shrink-0" />
+      <p class="font-semibold text-space/60">
+        {{ $t('Nimiq Pay and Nimiq Wallet use different recovery words.') }}
+      </p>
+    </div>
+    <p v-if="errorMsg" class="mt-auto mb-4 text-center text-pumpkin">
       {{ errorMsg }}
     </p>
   </div>
-  <IonButton expand="block" class="w-full mt-auto mb-4 font-bold" :disabled="!isValidMnemonic" @click="$emit('done', loginWords)">
+  <IonButton expand="block" class="w-full mb-4 font-bold min-h-14" :disabled="!isValidMnemonic" @click="$emit('done', loginWords)">
     {{ $t('Confirm') }}
   </IonButton>
 </template>

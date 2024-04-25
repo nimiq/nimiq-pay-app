@@ -21,11 +21,13 @@ function inputHandler(e: Event) {
   timeout && clearTimeout(timeout)
 
   const input = e.target as HTMLInputElement
+  // Get parent element
+  const parent = input.parentElement as HTMLElement
   const value = input.value.toLowerCase().trim()
   const index = Number(input.placeholder) - 1
 
-  if (input.classList.contains('text-pumpkin'))
-    input.classList.remove('text-pumpkin')
+  if (parent.classList.contains('!text-pumpkin'))
+    parent.classList.remove('!text-pumpkin')
   if (value === '') {
     loginWords.value[index] = ''
     return
@@ -38,7 +40,7 @@ function inputHandler(e: Event) {
   else {
     timeout = window.setTimeout(() => {
       input.classList.add('animate-wiggle')
-      input.classList.add('text-pumpkin')
+      parent.classList.add('!text-pumpkin')
       window.setTimeout(() => {
         input.classList.remove('animate-wiggle')
       }, 1000)
@@ -48,26 +50,29 @@ function inputHandler(e: Event) {
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-2">
-    <input
-      v-for="(word, i) in recoveryWords"
-      :key="word + i"
-      name="recovery-word"
-      tabindex="0"
-      class="lowercase"
-      type="text"
-      :value="word"
-      :disabled="!!word"
-      :placeholder="(i + 1).toString().padStart(2, '0')"
-      autocomplete="off"
-      autocorrect="off"
-      @input="inputHandler"
+  <div class="grid grid-cols-2 gap-2">
+    <div
+      v-for="(word, i) in recoveryWords" :key="word + i"
+      class="flex items-center gap-2 px-3 py-1 transition-colors border-2 rounded border-space focus-within:border-sky focus-within:border-opacity-30 focus-within:text-sky border-opacity-30"
     >
+      <span class="font-semibold opacity-40">{{ (i + 1).toString().padStart(2, '0') }}</span>
+      <input
+        name="recovery-word"
+        tabindex="0"
+        class="lowercase"
+        type="text"
+        :value="word"
+        :disabled="!!word"
+        autocomplete="off"
+        autocorrect="off"
+        @input="inputHandler"
+      >
+    </div>
   </div>
 </template>
 
 <style scoped>
-input, input:disabled{
-  @apply bg-[#F2F2F4] border-0 outline-none py-1 px-2 text-center opacity-100 font-semibold placeholder:text-space-space-500/40;
+input, input:disabled {
+  @apply border-0 outline-none py-1 font-medium w-full bg-transparent;
 }
 </style>

@@ -12,8 +12,8 @@ const words = asyncComputed(() => useLocalWallet().getWords().then(({ data }) =>
 
 <template>
   <div class="flex flex-col items-center w-full h-full">
-    <MnemonicDisplay :recovery-words="words" class="mt-8" />
-    <IonButton size="small" class="text-base font-bold mt-auto mb-6 self-stretch" @click="$emit('done')">
+    <MnemonicDisplay :recovery-words="words" class="mt-[30%]" />
+    <IonButton size="small" class="self-stretch mt-auto mb-6 text-base font-bold" @click="$emit('done')">
       {{ $t('Continue') }}
     </IonButton>
   </div>
