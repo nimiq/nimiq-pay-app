@@ -18,7 +18,7 @@
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",
       "builds/android/NimiqPay-${version}.aab",
-      "builds/ios/NimiqPay-${version}.apk"
+      "builds/android/NimiqPay-${version}.apk"
     ]
   }
 }
