@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { chevronForward } from 'ionicons/icons'
 import { type Ref, computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -24,6 +24,7 @@ import { useNotifications } from '@/composables/useNotifications'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
+import BackupNotification from '@/components/BackupNotification.vue'
 import { useTransactions } from '@/stores/transactions'
 import { useSync } from '@/composables/useSync'
 import { useDevice } from '@/composables/useDevice'
@@ -124,20 +125,6 @@ watch([referralCode, phoneNumberVerified], () => {
   }
 }, { immediate: true })
 
-watch(isRecoveryWordsShown, () => {
-  if (useDevice().isWeb)
-    return
-  // If no backup done and balance > 0
-  if (isRecoveryWordsShown.value) {
-    StatusBar.setBackgroundColor({ color: '#dbeafe' })
-    StatusBar.setStyle({ style: Style.Light })
-  }
-  else {
-    StatusBar.setBackgroundColor({ color: '#F8F8F8' })
-    StatusBar.setStyle({ style: Style.Light })
-  }
-}, { immediate: true })
-
 onMounted(async () => {
   if (!dbExists.value) {
     logger.log('No DB found, redirecting to setup')
@@ -165,22 +152,7 @@ onMounted(async () => {
 <template>
   <IonPage class="bg-[#F8F8F8]">
     <IonHeader class="ion-no-border">
-      <IonToolbar v-if="isRecoveryWordsShown" class="px-1 bg-blue-100" :class="{ 'pb-2 mb-2': isPlatform('ios') }">
-        <div slot="start" class="flex items-center gap-2 ml-2">
-          <div class="w-3 h-3 bg-blue-600 rounded-full" />
-          <p class="font-semibold">
-            {{ $t('There is no "Forgot Password"') }}
-          </p>
-        </div>
-        <IonButtons slot="end">
-          <IonButton
-            fill="solid" class="font-bold normal-case" style="--background: var(--radial-gradient-light-blue)"
-            size="small" @click="initializeFlow(FlowName.Backup)"
-          >
-            {{ $t('Recovery Words') }}
-          </IonButton>
-        </IonButtons>
-      </IonToolbar>
+      <BackupNotification v-if="isRecoveryWordsShown" />
       <IonToolbar class="px-2">
         <IonButtons slot="start">
           <IonButton @click="showModal(Modal.Menu, { isSmall: true })">
