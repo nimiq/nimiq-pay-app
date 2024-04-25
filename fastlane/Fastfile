@@ -64,13 +64,22 @@ platform :android do
 
     android_set_version_code(version_code: current_build_number, gradle_file: gradle_file_path)
     android_set_version_name(version_name: version, gradle_file: gradle_file_path )
+    # Generate the .aab bundle
     gradle(
           task: 'clean bundle',
           build_type: 'Debug',
           project_dir: android_project_dir,
         )
     # Move the generated bundle to the builds folder
-    sh "ls"
     sh "mv #{lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH]} ../builds/android/NimiqPay-#{version}.aab"
+
+    # Generate the .apk file
+    gradle(
+          task: 'clean assemble',
+          build_type: 'Debug',
+          project_dir: android_project_dir,
+        )
+    # Move the generated apk file to the builds folder
+    sh "mv #{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]} ../builds/android/NimiqPay-#{version}.apk"
   end
 end
