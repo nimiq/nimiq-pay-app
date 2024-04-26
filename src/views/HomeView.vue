@@ -4,9 +4,9 @@ import { chevronForward } from 'ionicons/icons'
 import { type Ref, computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
-import { StatusBar, Style } from '@capacitor/status-bar'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
+import InfoIcon from '@/components/icons/info.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -254,16 +254,19 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <Transition name="slide-fade">
-          <p v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="p-2 text-base font-semibold text-center text-pumpkin">
-            {{ $tc(
-              'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
-              blocksUntilHtlcActive,
-              { blocks: blocksUntilHtlcActive },
-            ) }}
-          </p>
+          <div v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-[#EBEBED]">
+            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-space/60" />
+            <p class="font-medium text-center text-space/50">
+              {{ $tc(
+                'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
+                blocksUntilHtlcActive,
+                { blocks: blocksUntilHtlcActive },
+              ) }}
+            </p>
+          </div>
         </Transition>
         <IonButton
-          class="w-3/4 mx-auto text-base" expand="block"
+          class="w-3/4 py-2 mx-auto text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
@@ -288,8 +291,6 @@ ion-content {
 
 ion-footer>ion-toolbar {
   --background: white;
-  --padding-top: 8px;
-  --padding-bottom: 8px;
   box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
 }
 
