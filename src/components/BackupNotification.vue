@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonToolbar } from '@ionic/vue'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import InfoIcon from '@/components/icons/info.vue'
