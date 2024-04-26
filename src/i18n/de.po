@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-02 08:54+0000\n"
+"PO-Revision-Date: 2024-04-12 15:20+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -14,6 +14,9 @@ msgstr "\"{word}\" ist ein ungültiges Wiederherstellungswort"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} von {total} verbleibend."
+
+msgid "About"
+msgstr ""
 
 msgid "Activate Cashback & Rewards"
 msgstr "Cashback & Boni aktivieren"
@@ -346,6 +349,9 @@ msgstr "Netzwerk-Konsens verloren."
 msgid "New"
 msgstr "Neu"
 
+msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
 msgid "No account found"
 msgstr "Kein Konto gefunden"
 
@@ -515,10 +521,8 @@ msgstr "Kauf"
 msgid "Really delete your Cryptocity Points account?"
 msgstr "Willst du wirklich dein Kryptostadt-Punkte-Konto löschen?"
 
-#, fuzzy
-#| msgid "Rewards Notifications"
 msgid "Receive Push Notifications"
-msgstr "Boni-Benachrichtigungen"
+msgstr "Erhalte Benachrichtigungen"
 
 msgid "Recipient"
 msgstr "Empfänger"

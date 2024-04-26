@@ -2,7 +2,7 @@
 # Mathéo Raveux 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-03 15:04+0000\n"
+"PO-Revision-Date: 2024-04-15 13:20+0000\n"
 "Last-Translator: Mathéo Raveux\n"
 "Language: fr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -15,6 +15,9 @@ msgstr "\"{word}\" est un mot de récupération non valide"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} sur {total} restant."
+
+msgid "About"
+msgstr ""
 
 msgid "Activate Cashback & Rewards"
 msgstr "Activer les Cashback et les Récompenses"
@@ -347,6 +350,9 @@ msgstr "Le consensus du réseau a été perdu."
 msgid "New"
 msgstr "Nouveau"
 
+msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
 msgid "No account found"
 msgstr "Pas de compte trouvé"
 
@@ -516,10 +522,8 @@ msgstr "Acheter"
 msgid "Really delete your Cryptocity Points account?"
 msgstr "Voulez-vous vraiment supprimer votre compte de points Cryptocity ?"
 
-#, fuzzy
-#| msgid "Rewards Notifications"
 msgid "Receive Push Notifications"
-msgstr "Notifications de récompenses"
+msgstr "Recevoir les notifications push"
 
 msgid "Recipient"
 msgstr "Bénéficiaire"

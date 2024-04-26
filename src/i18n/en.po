@@ -106,7 +106,7 @@ msgstr ""
 msgid "Complete"
 msgstr ""
 
-#: src/components/BricksInput.vue:12
+#: src/components/BricksInput.vue:18
 #: src/modals/LogOutModal/Confirm.vue:20
 msgid "Confirm"
 msgstr ""
@@ -206,7 +206,7 @@ msgid "Disclaimer"
 msgstr ""
 
 #: src/modals/PointsModal.vue:59
-#: src/views/HomeView.vue:34
+#: src/views/HomeView.vue:19
 msgid "Earn Points"
 msgstr ""
 
@@ -259,7 +259,7 @@ msgstr ""
 msgid "Fees may apply {fee}"
 msgstr ""
 
-#: src/views/HomeView.vue:96
+#: src/views/HomeView.vue:81
 msgid "Find places that accept crypto!"
 msgstr ""
 
@@ -267,7 +267,7 @@ msgstr ""
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:105
+#: src/views/HomeView.vue:106
 msgid "Get cashback and earn rewards"
 msgstr ""
 
@@ -293,7 +293,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:110
+#: src/views/HomeView.vue:95
 msgid "Go to Crypto Map"
 msgstr ""
 
@@ -325,7 +325,7 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:89
+#: src/components/NimWithdraw.vue:93
 msgid "Insufficient funds"
 msgstr ""
 
@@ -416,7 +416,7 @@ msgid "Invite a friend and get {amount} each"
 msgstr ""
 
 #: src/modals/PointsModal.vue:52
-#: src/views/HomeView.vue:88
+#: src/views/HomeView.vue:73
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -468,6 +468,10 @@ msgstr ""
 
 #: src/types/transactions.ts:118
 msgid "New"
+msgstr ""
+
+#: src/components/BricksInput.vue:10
+msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
 #: src/stores/nimiq-network.ts:102
@@ -541,7 +545,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:61
-#: src/views/HomeView.vue:134
+#: src/views/HomeView.vue:122
 msgid "Pay"
 msgstr ""
 
@@ -681,7 +685,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:122
+#: src/views/HomeView.vue:109
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
@@ -714,7 +718,7 @@ msgstr ""
 msgid "Recipient"
 msgstr ""
 
-#: src/views/HomeView.vue:16
+#: src/components/BackupNotification.vue:16
 msgid "Recovery Words"
 msgstr ""
 
@@ -755,11 +759,11 @@ msgstr ""
 msgid "Search for a country"
 msgstr ""
 
-#: src/views/HomeView.vue:58
+#: src/views/HomeView.vue:43
 msgid "See all"
 msgstr ""
 
-#: src/components/ValidateWords.vue:29
+#: src/components/ValidateWords.vue:31
 msgid "See words"
 msgstr ""
 
@@ -884,7 +888,7 @@ msgstr ""
 msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
 msgstr ""
 
-#: src/components/ValidateWords.vue:19
+#: src/components/ValidateWords.vue:20
 msgid "The correct answer is \"{correct}\"."
 msgstr ""
 
@@ -896,7 +900,7 @@ msgstr ""
 msgid "There is no \"Forgot password\""
 msgstr ""
 
-#: src/views/HomeView.vue:8
+#: src/components/BackupNotification.vue:7
 msgid "There is no \"Forgot Password\""
 msgstr ""
 
@@ -925,7 +929,7 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr ""
 
 #: src/modals/MenuModal.vue:14
-#: src/views/HomeView.vue:47
+#: src/views/HomeView.vue:32
 msgid "Top Up"
 msgstr ""
 
@@ -949,7 +953,7 @@ msgstr ""
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/components/ValidateWords.vue:26
+#: src/components/ValidateWords.vue:28
 msgid "Try again"
 msgstr ""
 
@@ -982,7 +986,7 @@ msgid "Verify your ID"
 msgstr ""
 
 #: src/lib/flows/steps.ts:163
-#: src/views/HomeView.vue:104
+#: src/views/HomeView.vue:105
 msgid "Verify your phone number"
 msgstr ""
 
@@ -1002,7 +1006,7 @@ msgstr ""
 msgid "What are Cryptocity Points?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:22
+#: src/components/ValidateWords.vue:23
 msgid "What do you want to do?"
 msgstr ""
 
@@ -1010,51 +1014,51 @@ msgstr ""
 msgid "What is Bluecode?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:81
+#: src/components/ValidateWords.vue:82
 msgid "What's the 10th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:82
+#: src/components/ValidateWords.vue:83
 msgid "What's the 11th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:83
+#: src/components/ValidateWords.vue:84
 msgid "What's the 12th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:72
+#: src/components/ValidateWords.vue:73
 msgid "What's the 1st word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:73
+#: src/components/ValidateWords.vue:74
 msgid "What's the 2nd word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:74
+#: src/components/ValidateWords.vue:75
 msgid "What's the 3rd word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:75
+#: src/components/ValidateWords.vue:76
 msgid "What's the 4th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:76
+#: src/components/ValidateWords.vue:77
 msgid "What's the 5th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:77
+#: src/components/ValidateWords.vue:78
 msgid "What's the 6th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:78
+#: src/components/ValidateWords.vue:79
 msgid "What's the 7th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:79
+#: src/components/ValidateWords.vue:80
 msgid "What's the 8th word?"
 msgstr ""
 
-#: src/components/ValidateWords.vue:80
+#: src/components/ValidateWords.vue:81
 msgid "What's the 9th word?"
 msgstr ""
 
@@ -1121,11 +1125,11 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:110
+#: src/views/HomeView.vue:111
 msgid "You have a reward to claim!"
 msgstr ""
 
-#: src/components/ValidateWords.vue:16
+#: src/components/ValidateWords.vue:17
 msgid "You have chosen \"{selected}\"."
 msgstr ""
 

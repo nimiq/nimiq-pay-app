@@ -2,7 +2,7 @@
 # Inês Marques 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-02 12:00+0000\n"
+"PO-Revision-Date: 2024-04-12 15:20+0000\n"
 "Last-Translator: Inês Marques\n"
 "Language: pt\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -15,6 +15,9 @@ msgstr "\"{word}\" é uma palavra de recuperação inválida"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} em falta."
+
+msgid "About"
+msgstr ""
 
 msgid "Activate Cashback & Rewards"
 msgstr "Ativar Cashback e Recompensas"
@@ -347,6 +350,9 @@ msgstr "Consenso da rede perdido."
 msgid "New"
 msgstr "Novo"
 
+msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
 msgid "No account found"
 msgstr "Conta não encontrada"
 
@@ -516,10 +522,8 @@ msgstr "Comprar"
 msgid "Really delete your Cryptocity Points account?"
 msgstr "Tens a certeza que queres apagar a tua conta de Pontos Cryptocity?"
 
-#, fuzzy
-#| msgid "Rewards Notifications"
 msgid "Receive Push Notifications"
-msgstr "Notificações de Recompensas"
+msgstr "Recebe notificações Push"
 
 msgid "Recipient"
 msgstr "Destinatário"

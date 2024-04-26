@@ -3,7 +3,7 @@
 # Alberto Monterroso 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-10 22:22+0000\n"
+"PO-Revision-Date: 2024-04-26 16:50+0000\n"
 "Last-Translator: Alberto Monterroso\n"
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -16,6 +16,9 @@ msgstr "\"{word}\" es una palabra de recuperación inválida"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} restantes."
+
+msgid "About"
+msgstr ""
 
 msgid "Activate Cashback & Rewards"
 msgstr "Activar Cashback y Recompensas"
@@ -348,6 +351,9 @@ msgstr "Se ha perdido el consenso de la red."
 msgid "New"
 msgstr "Nuevo"
 
+msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
 msgid "No account found"
 msgstr "No se encontró ninguna cuenta"
 
@@ -674,7 +680,7 @@ msgid "Top Up"
 msgstr "Recargar saldo"
 
 msgid "Top-Up"
-msgstr "Recargar saldo"
+msgstr "Recarga"
 
 msgid "Transaction"
 msgstr "Transacción"
