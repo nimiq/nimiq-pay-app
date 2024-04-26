@@ -24,7 +24,7 @@ function inputHandler(e: Event) {
   // Get parent element
   const parent = input.parentElement as HTMLElement
   const value = input.value.toLowerCase().trim()
-  const index = Number(input.placeholder) - 1
+  const index = Number(input.id) - 1
 
   if (parent.classList.contains('!text-pumpkin'))
     parent.classList.remove('!text-pumpkin')
@@ -32,6 +32,7 @@ function inputHandler(e: Event) {
     loginWords.value[index] = ''
     return
   }
+
   // Wait if user is still typing
   // TODO: Jump to next word if valid
   if (wordList.includes(value)) {
@@ -57,6 +58,7 @@ function inputHandler(e: Event) {
     >
       <span class="font-semibold opacity-40">{{ (i + 1).toString().padStart(2, '0') }}</span>
       <input
+        :id="(i + 1).toString().padStart(2, '0')"
         name="recovery-word"
         tabindex="0"
         class="lowercase"
