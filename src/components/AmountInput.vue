@@ -80,6 +80,16 @@ function updateValue(newValue: number) {
   updateWidth()
 }
 
+function preventCaretJump(event: KeyboardEvent) {
+  console.log(event)
+  const element = event.target as HTMLInputElement
+  const caret = element.selectionStart
+  window.requestAnimationFrame(() => {
+    element.selectionStart = caret
+    element.selectionEnd = caret
+  })
+}
+
 async function updateWidth() {
   await nextTick() // Await updated DOM
   if (!widthPlaceholder.value || !widthValue.value)
@@ -104,7 +114,8 @@ watch(
       <span ref="widthPlaceholder" class="width-finder"> 0 </span>
       <span ref="widthValue" class="width-finder">{{ formattedValue || '' }}</span>
       <input
-        ref="input" v-model="formattedValue"
+        ref="input"
+        :value="formattedValue"
         type="number"
         name="amount"
         inputmode="decimal"
@@ -112,6 +123,7 @@ watch(
         placeholder="0"
         pattern="[0-9]*"
         :style="{ 'width': `${width}px`, 'box-shadow': `inset 0 0 0 .15rem ${isFocussed ? 'var(--border-color-focus)' : 'var(--border-color)'}` }"
+        @input="formattedValue = ($event.target as HTMLTextAreaElement).value"
         @focus="isFocussed = true"
         @blur="isFocussed = false"
       >
