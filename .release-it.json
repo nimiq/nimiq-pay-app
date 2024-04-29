@@ -18,6 +18,7 @@
     "release": true,
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",
+      "builds/ios/NimiqPay-${version}.app.tgz",
       "builds/android/NimiqPay-${version}.aab",
       "builds/android/NimiqPay-${version}.apk"
     ]

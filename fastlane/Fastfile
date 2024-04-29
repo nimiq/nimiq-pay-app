@@ -27,6 +27,27 @@ platform :ios do
     increment_build_number(xcodeproj: project,  build_number: current_build_number)
     increment_version_number(xcodeproj: project, version_number: version)
 
+    # Generate the .app file
+    build_app(
+      clean: true, 
+      scheme: scheme, 
+      workspace: workspace,
+      output_directory: "builds/ios",
+      output_name: "NimiqPay-#{version}",
+      export_method: "ad-hoc",
+      skip_package_ipa: true,
+      skip_archive: true,
+      destination: "generic/platform=iOS Simulator",
+      derived_data_path: "builds/ios/bundle",
+      export_options: {
+        provisioningProfiles: {
+          "com.nimiq.pay" => "Nimiq Pay iOS Testing"
+        }
+      }
+      )
+    sh "tar -C ../builds/ios/bundle/Build/Products/Debug-iphonesimulator -czf ../builds/ios/NimiqPay-#{version}.app.tgz App.app"
+
+    # Generate the .ipa file
     build_app(
       clean: true, 
       scheme: scheme, 
