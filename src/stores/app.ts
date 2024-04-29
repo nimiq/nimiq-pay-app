@@ -39,6 +39,8 @@ export const useApp = defineStore('app', () => {
   const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
+  const withdrawalAddressesHistory = useStorageAsync<string[]>('withdrawalAddressesHistory', [], kv(), sharedOptions)
+  const topUpAddresses = useStorageAsync<string[]>('topUpAddresses', [], kv(), sharedOptions)
   const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kv(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
 
@@ -85,6 +87,24 @@ export const useApp = defineStore('app', () => {
     return Date.now() - lastPinInputTs.value > MIN_PIN_INPUT_INTERVAL
   }
 
+  function addNewTopUpAddress(address: string) {
+    const addresses = topUpAddresses.value
+    addresses.push(address)
+    topUpAddresses.value = addresses
+    // Limit the number of addresses to 2
+    if (addresses.length > 3)
+      topUpAddresses.value = addresses.slice(addresses.length - 2)
+  }
+
+  function addNewWithdrawalAddress(address: string) {
+    const addresses = withdrawalAddressesHistory.value
+    addresses.push(address)
+    withdrawalAddressesHistory.value = addresses
+    // Limit the number of addresses to 3
+    if (addresses.length > 3)
+      withdrawalAddressesHistory.value = addresses.slice(addresses.length - 3)
+  }
+
   return {
     pinHash,
     phoneNumber,
@@ -98,6 +118,10 @@ export const useApp = defineStore('app', () => {
     pointsToken,
     setEntropy,
     withdrawalAddress,
+    withdrawalAddressesHistory,
+    addNewWithdrawalAddress,
+    topUpAddresses,
+    addNewTopUpAddress,
     updatePinInputTs,
     shouldAskPin,
     clearPinInputTs,

@@ -189,6 +189,7 @@ export function useSync() {
         return
 
       logger.log(`📬 Saving pending transaction with ${usePrice(tx.value).crypto.formatted}`)
+      useApp().addNewTopUpAddress(tx.sender.toUserFriendlyAddress())
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
