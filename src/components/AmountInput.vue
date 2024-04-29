@@ -80,16 +80,6 @@ function updateValue(newValue: number) {
   updateWidth()
 }
 
-function preventCaretJump(event: KeyboardEvent) {
-  console.log(event)
-  const element = event.target as HTMLInputElement
-  const caret = element.selectionStart
-  window.requestAnimationFrame(() => {
-    element.selectionStart = caret
-    element.selectionEnd = caret
-  })
-}
-
 async function updateWidth() {
   await nextTick() // Await updated DOM
   if (!widthPlaceholder.value || !widthValue.value)
