@@ -22,11 +22,13 @@ export interface RemoteSigner {
 }
 
 export enum SQLQuery {
+  // Key-Value Store
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
   SelectKv = 'SELECT value FROM kv WHERE key = ?',
   UpsertKv = 'INSERT OR REPLACE INTO kv (key, value) VALUES (?, ?)',
   DeleteKv = 'DELETE FROM kv WHERE key = ?',
 
+  // Transactions
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railMerchantId TEXT, merchantName TEXT, merchantCategory TEXT, paymentRef TEXT, paymentMethod TEXT, fiatAmount REAL, fiatFeeAmount REAL, fiatCurrency TEXT, isCashbackClaimed INTEGER)',
   SelectPaginationTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\') ORDER BY timestamp DESC LIMIT ? OFFSET ?`, // eslint-disable-line ts/prefer-literal-enum-member
   SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\') ORDER BY timestamp DESC`, // eslint-disable-line ts/prefer-literal-enum-member
@@ -38,6 +40,7 @@ export enum SQLQuery {
   AddInvoicedColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN invoiced_json TEXT',
   AddMetaColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN meta_json TEXT',
 
+  // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
   GetActiveRemoteSigner = 'SELECT * FROM remote_signers WHERE active = 1',
   GetAllRemoteSigners = 'SELECT * FROM remote_signers',
@@ -50,10 +53,17 @@ export enum SQLQuery {
   GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
   GetDeactivatedRemoteSignersWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0 AND active = 0',
 
+  // NIM Prices
   CreateNimPricesTable = 'CREATE TABLE IF NOT EXISTS prices (fiat TEXT NOT NULL, checkpoint INTEGER NOT NULL, price INTEGER NOT NULL, crypto TEXT, UNIQUE(fiat, checkpoint, crypto))',
   InsertPrice = 'INSERT OR REPLACE INTO prices (fiat, checkpoint, price, crypto) VALUES (?, ?, ?, ?)',
   GetPriceAt = 'SELECT * FROM prices WHERE checkpoint = ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
   GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
+
+  // Swap HTLCs
+  CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
+  InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)',
+  DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
+  GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block <= ?',
 }
 
 export const DEFAULT_LIMIT = 30
@@ -83,6 +93,12 @@ export const migrations: Migration[] = [
     statements: [
       SQLQuery.AddInvoicedColumnToTxsTable,
       SQLQuery.AddMetaColumnToTxsTable,
+    ],
+  },
+  {
+    toVersion: 3,
+    statements: [
+      SQLQuery.CreateSwapHtlcTable,
     ],
   },
 ]

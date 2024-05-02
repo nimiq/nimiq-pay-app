@@ -1,5 +1,7 @@
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, readonly, ref } from 'vue'
+import type { Swap } from '@nimiq/fastspot-api-v2'
+import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
@@ -98,68 +100,67 @@ export const useTransactions = defineStore('transactions', () => {
     }
     const { signedTx, swap } = res.data!
 
+    let patchedSwap: Promise<Swap> | undefined
+    if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      // Signal the signed transaction to Fastspot as early as possible
+      const { provideFundingProof } = await useFastspotApiV2()
+      patchedSwap = provideFundingProof(
+        partialTx.paymentRef!,
+        swap!.contracts.NIM!.id,
+        Nimiq.BufferUtils.toHex(signedTx.serialize()),
+      )
+
+      // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later
+      await run(
+        SQLQuery.InsertSwapHtlc,
+        [
+          signedTx.recipient.toUserFriendlyAddress(),
+          signedTx.value,
+          (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutBlock,
+          swap.id,
+          swap.status,
+        ],
+      )
+    }
+
     // Check if the tx is already in the transaction list
-    if (transactions.value.some(tx => tx.hash === signedTx!.hash().toHex())) {
+    if (transactions.value.some(tx => tx.hash === signedTx.hash().toHex())) {
       logger.error('Transaction already sent', signedTx)
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
 
-    const details = await client.value!.sendTransaction(signedTx!)
+    const details = await client.value!.sendTransaction(signedTx)
     if (details.state === 'invalidated') {
       // Transaction was rejected by the mempool
       logger.error('Transaction invalid', details)
+
+      if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        const serverSwap = await patchedSwap?.catch(() => undefined)
+        if (!serverSwap || !serverSwap.preimage) {
+          // Delete the swap HTLC from the database
+          await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
+        }
+      }
+
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
-    if (partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-      // Signal to Fastspot that the transaction was sent
-      const { provideFundingProof, getSwap } = await useFastspotApiV2()
-      const patchedSwap = await provideFundingProof(
-        partialTx.paymentRef!,
-        swap!.contracts.NIM!.id,
-        Nimiq.BufferUtils.toHex(signedTx!.serialize()),
-      )
-
-      // Wait for swap to complete
-      const secret = patchedSwap.preimage || await new Promise<string>((resolve) => {
-        let timeoutId: number
-        async function checkSecret() {
-          const swap = await getSwap((partialTx as MerchantTransaction).paymentRef)
-          if ('preimage' in swap && swap.preimage) {
-            window.clearTimeout(timeoutId)
-            resolve(swap.preimage)
-          } else {
-            timeoutId = window.setTimeout(checkSecret, 1e3) // Check every second
-          }
-        }
-
-        // Start checking for the secret
-        checkSecret()
-      })
-
-      // Store secret in the transaction
-      partialTx.meta = {
-        ...partialTx.meta,
-        secret,
-      }
-    }
-
-    const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx!.toPlain()
-    const raw = Nimiq.BufferUtils.toHex(signedTx!.serializeContent())
+    const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
+    const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
     const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
 
-    let tx = { ...partialTx, fee, recipient, recipientType: signedTx!.recipientType, timestamp, status, hash, sender, senderType: signedTx!.senderType, amount, raw, message, proofSize: signedTx!.proof.length } as TransactionSentByUser
+    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, timestamp, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length } as TransactionSentByUser
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-      tx = { ...tx, paymentMethod: PaymentMethod.NIM }
+      tx.paymentMethod = PaymentMethod.NIM
 
     logger.log(`✈️ Sent transaction`, tx)
 
     await upsertTx(tx)
 
     if (isExternalTx(tx))
-      transactions.value = [tx, ...transactions.value]
+      transactions.value.unshift(tx)
 
     if (tx.transfer === Transfer.LocalToRemote || tx.transfer === Transfer.ExtendRemote) {
       if (details) {
@@ -187,6 +188,38 @@ export const useTransactions = defineStore('transactions', () => {
     }
     else {
       updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
+    }
+
+    if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      // Wait for swap to complete
+      const secret = (await patchedSwap).preimage || await new Promise<string>((resolve) => {
+        let timeoutId: number
+        async function checkSecret() {
+          const { getSwap } = await useFastspotApiV2()
+          const swap = await getSwap((partialTx as MerchantTransaction).paymentRef)
+          if ('preimage' in swap && swap.preimage) {
+            window.clearTimeout(timeoutId)
+            resolve(swap.preimage)
+          }
+          else {
+            timeoutId = window.setTimeout(checkSecret, 1e3) // Check every second
+          }
+        }
+
+        // Start checking for the secret
+        checkSecret()
+      })
+
+      // Store secret in the transaction and database
+      tx.meta = { secret }
+      await upsertTx(tx)
+      // The transaction we are looking for is most likey still the first one, so not much overhead
+      const index = transactions.value.findIndex(tx => tx.hash === hash)
+      transactions.value[index].meta = {
+        secret,
+      }
+      // Delete the swap HTLC from the database
+      await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
     }
 
     return { data: tx, error: undefined }
