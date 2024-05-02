@@ -17,18 +17,21 @@ import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
+import { ClientTransactionDetails } from '@nimiq/core-web'
 
 const logger = useLogger('useSync')
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
-function _useSync() {
-  const { getAccount, getAccountTransactions } = useNimiqNetwork()
+export function useSync() {
+  const { getAccount, getAccountTransactions, getAllTransactionsFromHtlcs } = useNimiqNetwork()
+  const { query } = useConn()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
-  const { updateActiveWallet } = useRemoteSigner()
+  const { updateActiveWallet, getAllRemoteSigners } = useRemoteSigner()
+  const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -63,7 +66,7 @@ function _useSync() {
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
 
     if (remoteBalance === 0 && !isHtlcPending.value) {
-      const { error } = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+      const { error } = await sendTx({ transfer: Transfer.LocalToRemote })
       if (error)
         logger.error('Error while creating HTLC', error)
       return
@@ -73,7 +76,7 @@ function _useSync() {
       return
 
     if (isHtlcActive.value && isRemoteOk.value) {
-      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocal })
+      const { error } = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (error)
         logger.error('Error while liquidating HTLC', error)
       return
@@ -87,7 +90,7 @@ function _useSync() {
       return
     logger.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
     if (htlcCanBeExtended.value) {
-      const { error } = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote })
+      const { error } = await sendTx({ transfer: Transfer.ExtendRemote })
       if (error)
         logger.error('Error while extending HTLC validity', error)
     }
@@ -251,59 +254,62 @@ function _useSync() {
       })
     }))
 
-    const allTransactions = await useConn().query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
-    const topUpAddresses = ((await useConn().query(SQLQuery.GetAllUserReceipts)) as UserReceiptTransaction[]).map(tx => tx.sender)
+    const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
+    const topUpAddresses = ((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender)
     // Check for transactions made from the remote signers
-    const remoteSigners = await useRemoteSigner().getAllRemoteSigners()
-    for (const remoteSigner of remoteSigners) {
+    for (const remoteSigner of await getAllRemoteSigners()) {
       const accountTxs = await getAccountTransactions(remoteSigner.address)
-      await Promise.all(accountTxs.data.map(async (tx) => {
-        if (!tx.sender.equals(remoteSigner.address) || tx.recipient.equals(localAddress.value))
-          return
-        const dbTx = allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
-        if (dbTx)
-          return
-        // If recipient is HTLC it could mean that it's a BTC_LN payment or a remote extension
-        if (tx.recipientType === Nimiq.Account.Type.HTLC) {
-          const txs = await useNimiqNetwork().getAllTransactionsFromHtlcs(tx.recipient)
-          for (tx of txs) {
-            if (tx.recipient.equals(localAddress.value))
-              continue
-            if (tx.recipientType !== Nimiq.Account.Type.BASIC)
-              continue
+      const txsToProcess = accountTxs.data
+        .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value)) // Only transactions sent from the remote signer to other addresses
+        .filter(tx => !allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex())) // Only transactions not already in the db
+
+      const [htlcTxs, withdrawalTxs, unknownTxs] = txsToProcess.reduce((acc, tx) => {
+        if (tx.recipientType === Nimiq.Account.Type.HTLC) acc[0].push(tx)
+        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) acc[1].push(tx)
+        else acc[2].push(tx)
+        return acc
+      }, [[], [], []] as [ClientTransactionDetails[], ClientTransactionDetails[], ClientTransactionDetails[]])
+
+      async function handleHtlcTxs(txs: ClientTransactionDetails[]) {
+        txs
+          .filter(tx => !tx.recipient.equals(remoteSigner.address) && tx.recipientType === Nimiq.Account.Type.BASIC)
+          .forEach(tx => {
             // TODO: mark payment as BTC_LN
             if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
               logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
 
-            useTransactions().addUnknownPaymentToMerchantTransaction(tx)
-          }
-        }
-        else {
-          // Transactions to other addresses will be considered as payments
-          logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-          if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) {
-            // This is a withdrawal
-            useTransactions().addWithdrawalTransaction({
-              transfer: Transfer.UserPayment,
-              amount: tx.value,
-              sender: tx.sender.toUserFriendlyAddress(),
-              senderType: tx.senderType,
-              recipient: tx.recipient.toUserFriendlyAddress(),
-              recipientType: tx.recipientType,
-              hash: tx.transactionHash.toHex(),
-              status: tx.state,
-              timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
-              title: 'Withdrawal', // translated at display time
-              fee: tx.fee,
-              proofSize: tx.proof.raw.length,
-            })
-          }
-          else {
-            // This has to be a payment, it could be another withdrawal but we don't have the information
-            useTransactions().addUnknownPaymentToMerchantTransaction(tx)
-          }
-        }
-      }))
+            addUnknownPaymentToMerchantTransaction(tx)
+          })
+      }
+
+      function handleWithdrawalTxs(tx: ClientTransactionDetails) {
+        logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+        addWithdrawalTransaction({
+          transfer: Transfer.UserPayment,
+          amount: tx.value,
+          sender: tx.sender.toUserFriendlyAddress(),
+          senderType: tx.senderType,
+          recipient: tx.recipient.toUserFriendlyAddress(),
+          recipientType: tx.recipientType,
+          hash: tx.transactionHash.toHex(),
+          status: tx.state,
+          timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+          title: 'Withdrawal', // translated at display time
+          fee: tx.fee,
+          proofSize: tx.proof.raw.length,
+        })
+      }
+
+      function handleUnknownTxs(tx: ClientTransactionDetails) {
+        logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+        addUnknownPaymentToMerchantTransaction(tx)
+      }
+
+      await Promise.all([
+        ...htlcTxs.map(tx => getAllTransactionsFromHtlcs(tx.recipient).then(handleHtlcTxs)),
+        ...withdrawalTxs.map(handleWithdrawalTxs),
+        ...unknownTxs.map(handleUnknownTxs),
+      ])
     }
     isUpdatingTransactions.value = false
   }
@@ -327,10 +333,10 @@ function _useSync() {
             logger.error(error)
             // TODO: get errors from enum
             if (errorType === 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED' || errorType === 'CPL_MERCHANT_NOT_FOUND')
-              useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+              updateTransactionCashbackClaimed({ hash: dbTx.hash })
           }
           else {
-            useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+            updateTransactionCashbackClaimed({ hash: dbTx.hash })
           }
         }
       }
@@ -359,7 +365,7 @@ function _useSync() {
         }
         if (dbTx.status !== txStatus) {
           logger.log(`📬 Updating transaction ${dbTx.hash} ${txStatus}`)
-          useTransactions().updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
+          updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
         }
       }
       else {
@@ -370,7 +376,7 @@ function _useSync() {
         // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
         if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
           logger.log(`📬 Updating transaction ${tx.transactionHash.toHex()} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
-          useTransactions().updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
+          updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
         }
       }
     }))
@@ -385,11 +391,8 @@ function _useSync() {
       logger.error('Error while draining remote signer. Amount is undefined', { address: address.toUserFriendlyAddress(), amount })
       return
     }
-    if (end < localHeight.value)
-      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount, sender: address })
-    else
-      useTransactions().sendTx({ transfer: Transfer.RemoteToLocalImmediateReclaim, sender: address, amount })
-
+    const transfer = end < localHeight.value ? Transfer.RemoteToLocalAfterTimeout : Transfer.RemoteToLocalImmediateReclaim
+    sendTx({ transfer, amount, sender: address })
     logger.log('Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
   }
 

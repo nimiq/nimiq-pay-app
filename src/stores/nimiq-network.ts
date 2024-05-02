@@ -138,19 +138,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
    * @param htlcAddress
    * @returns Txs from HTLCs and extensions
    */
-  async function getAllTransactionsFromHtlcs(htlcAddress: Nimiq.Address): Promise<Nimiq.ClientTransactionDetails[]> {
+  async function getAllTransactionsFromHtlcs(htlcAddress: Nimiq.Address, txs: Nimiq.ClientTransactionDetails[] = []): Promise<Nimiq.ClientTransactionDetails[]> {
     try {
-      const transactions: Nimiq.ClientTransactionDetails[] = []
-      const txs = await client.value?.getTransactionsByAddress(htlcAddress) || []
-      for (const tx of txs) {
-        if (tx.recipient.equals(htlcAddress))
-          continue
-        transactions.push(tx)
-        if (tx.recipientType === Nimiq.Account.Type.HTLC) {
-          const txs = await getAllTransactionsFromHtlcs(tx.recipient)
-          transactions.push(...txs)
-        }
-      }
+      const _txs = (await client.value?.getTransactionsByAddress(htlcAddress) || []).filter(tx => !tx.recipient.equals(htlcAddress))
+      txs.push(..._txs)
+      await Promise.all(_txs.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC).map(tx => getAllTransactionsFromHtlcs(tx.recipient, txs)))
       return txs
     }
     catch (error) {
