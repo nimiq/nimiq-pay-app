@@ -253,9 +253,9 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-[#EBEBED]">
-            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-space/60" />
-            <p class="font-medium text-center text-space/50">
+          <div v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
+            <p class="font-medium text-center text-pumpkin">
               {{ $tc(
                 'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
                 blocksUntilHtlcActive,
