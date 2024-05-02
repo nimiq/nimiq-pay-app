@@ -1,5 +1,6 @@
 import { nativeFetch } from '../lib/nativeFetch'
 import { useDevice } from './useDevice'
+import { isDev } from '@/lib/index'
 
 let fastspot: typeof import('@nimiq/fastspot-api-v2') | undefined
 
@@ -12,8 +13,8 @@ export async function useFastspotApiV2() {
   const { isAndroid, isIOS } = useDevice()
 
   fastspot.init(
-    'https://api.test.fastspot.io',
-    '447f6050-25a5-453e-9b4f-a2db55abbbec',
+    isDev ? 'https://api.test.fastspot.io' : 'https://api.go.fastspot.io',
+    '447f6050-25a5-453e-9b4f-a2db55abbbec', // API Key is the same for testnet and mainnet Fastspot
     {
       customFetch: isAndroid || isIOS ? nativeFetch : undefined,
     },
