@@ -8,9 +8,11 @@ import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, type Transaction, Transfer, type UserReceiptTransaction } from '@/types/transactions'
+import { PaymentMethod, PointsHashPrefix, Transfer } from '@/types/transactions'
+import type { ExternalTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { fastspotAddress } from '@/lib'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
@@ -214,14 +216,14 @@ export function useSync() {
    */
   async function updateTransactionHistory() {
     // No need to parse JSON fields, as those fields are not used here.
-    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+    const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
     const accountTxs = await getAccountTransactions(localAddress.value!)
 
     await Promise.all(accountTxs.data.map(async (tx) => {
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
         return
 
-      const dbTx = dbTxs.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
+      const dbTx = userReceipts.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
       if (dbTx)
         return
 
@@ -242,6 +244,61 @@ export function useSync() {
         proofSize: tx.proof.raw.length,
       })
     }))
+
+    const allTransactions = await useConn().query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
+    const topUpAddresses = ((await useConn().query(SQLQuery.GetAllUserReceipts)) as UserReceiptTransaction[]).map(tx => tx.sender)
+    // Check for transactions made from the remote signers
+    const remoteSigners = await useRemoteSigner().getAllRemoteSigners()
+    for (const remoteSigner of remoteSigners) {
+      const accountTxs = await getAccountTransactions(remoteSigner.address)
+      await Promise.all(accountTxs.data.map(async (tx) => {
+        if (!tx.sender.equals(remoteSigner.address) || tx.recipient.equals(localAddress.value))
+          return
+        const dbTx = allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
+        if (dbTx)
+          return
+        // If recipient is HTLC it could mean that it's a BTC_LN payment or a remote extension
+        if (tx.recipientType === Nimiq.Account.Type.HTLC) {
+          const txs = await useNimiqNetwork().getAllTransactionsFromHtlcs(tx.recipient)
+          for (tx of txs) {
+            if (tx.recipient.equals(localAddress.value))
+              continue
+            if (tx.recipientType !== Nimiq.Account.Type.BASIC)
+              continue
+            // TODO: mark payment as BTC_LN
+            if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
+              logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+
+            useTransactions().addUnknownPaymentToMerchantTransaction(tx)
+          }
+        }
+        else {
+          // Transactions to other addresses will be considered as payments
+          logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+          if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) {
+            // This is a withdrawal
+            useTransactions().addWithdrawalTransaction({
+              transfer: Transfer.UserPayment,
+              amount: tx.value,
+              sender: tx.sender.toUserFriendlyAddress(),
+              senderType: tx.senderType,
+              recipient: tx.recipient.toUserFriendlyAddress(),
+              recipientType: tx.recipientType,
+              hash: tx.transactionHash.toHex(),
+              status: tx.state,
+              timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+              title: 'Withdrawal', // translated at display time
+              fee: tx.fee,
+              proofSize: tx.proof.raw.length,
+            })
+          }
+          else {
+            // This has to be a payment, it could be another withdrawal but we don't have the information
+            useTransactions().addUnknownPaymentToMerchantTransaction(tx)
+          }
+        }
+      }))
+    }
   }
 
   /**
@@ -256,19 +313,18 @@ export function useSync() {
       // We need to check this if it's mined or confirmed just in case the user closes the app
       // before the tx is mined and opened again after it's confirmed
       if ((dbTx.status === 'mined' || dbTx.status === 'confirmed') && dbTx.transfer === Transfer.UserPaymentToMerchant && dbTx.paymentMethod === PaymentMethod.NIM) {
-        if (dbTx.isCashbackClaimed)
-          return
-        if (!useApp().pointsToken)
-          return
-        const { error, errorType } = await usePoints().claimCashback(dbTx)
-        if (error) {
-          logger.error(error)
-          // TODO: get errors from enum
-          if (errorType === 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED' || errorType === 'CPL_MERCHANT_NOT_FOUND')
+        // Only check if cashback not claimed and user has points account, if not continue with the rest
+        if (!dbTx.isCashbackClaimed && useApp().pointsToken) {
+          const { error, errorType } = await usePoints().claimCashback(dbTx)
+          if (error) {
+            logger.error(error)
+            // TODO: get errors from enum
+            if (errorType === 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED' || errorType === 'CPL_MERCHANT_NOT_FOUND')
+              useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+          }
+          else {
             useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
-        }
-        else {
-          useTransactions().updateTransactionCashbackClaimed({ hash: dbTx.hash })
+          }
         }
       }
 

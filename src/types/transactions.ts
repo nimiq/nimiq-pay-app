@@ -51,6 +51,8 @@ export enum Rail {
   CryptoPaymentLink = 'CPL',
   GoCrypto = 'GoCrypto',
   Bluecode = 'bluecode',
+  // Used when fetching old txs from blockchain
+  Unknown = 'unknown',
 }
 
 export const PointsHashPrefix = 'PointsPayment#'
@@ -174,6 +176,9 @@ export type MerchantTransaction = BaseTransaction & {
 } | {
   rail: Rail.GoCrypto
   railMerchantId: string
+} | {
+  rail: Rail.Unknown
+  railMerchantId?: undefined
 } /* | {
   // TODO
   rail: Rail.Bluecode

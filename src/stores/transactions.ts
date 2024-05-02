@@ -3,7 +3,8 @@ import { computed, onMounted, readonly, ref } from 'vue'
 import { useRemoteSigner } from './remote-signer'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
-import { type ExternalTransaction, type MerchantTransaction, type PartialSendTxArgs, PaymentMethod, type Transaction, type TransactionSentByUser, Transfer, type UserReceiptTransaction, isExternalTx } from '@/types/transactions'
+import { MerchantCategory, PaymentMethod, Rail, Transfer, isExternalTx } from '@/types/transactions'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -175,6 +176,39 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
+  async function addUnknownPaymentToMerchantTransaction(tx: Nimiq.ClientTransactionDetails) {
+    const newTx = {
+      transfer: Transfer.UserPaymentToMerchant,
+      amount: tx.value,
+      sender: tx.sender.toUserFriendlyAddress(),
+      senderType: tx.senderType,
+      recipient: tx.recipient.toUserFriendlyAddress(),
+      recipientType: tx.recipientType,
+      hash: tx.transactionHash.toHex(),
+      status: tx.state,
+      timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+      title: 'Payment', // translated at display time
+      fee: tx.fee,
+      proofSize: tx.proof.raw.length,
+      isCashbackClaimed: true,
+      merchantName: '',
+      paymentMethod: PaymentMethod.NIM,
+      paymentRef: '',
+      fiatAmount: 0,
+      fiatCurrency: '',
+      fiatFeeAmount: 0,
+      merchantCategory: MerchantCategory.Shop,
+      rail: Rail.Unknown,
+    } as MerchantTransaction
+    await upsertTx(newTx)
+    addTransaction(newTx)
+  }
+
+  async function addWithdrawalTransaction(tx: UserTransaction) {
+    await upsertTx(tx)
+    addTransaction(tx)
+  }
+
   function addTransaction(tx: ExternalTransaction) {
     transactions.value = [tx, ...transactions.value].sort((a, b) => b.timestamp - a.timestamp)
   }
@@ -209,6 +243,8 @@ export const useTransactions = defineStore('transactions', () => {
     sendTx,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
+    addUnknownPaymentToMerchantTransaction,
+    addWithdrawalTransaction,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     clearTxHistory,

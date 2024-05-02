@@ -133,6 +133,32 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       : consensusStateTranslations.syncing
   }
 
+  /**
+   * Get all transactions from HTLCs and their consecutive extensions
+   * @param htlcAddress
+   * @returns Txs from HTLCs and extensions
+   */
+  async function getAllTransactionsFromHtlcs(htlcAddress: Nimiq.Address): Promise<Nimiq.ClientTransactionDetails[]> {
+    try {
+      const transactions: Nimiq.ClientTransactionDetails[] = []
+      const txs = await client.value?.getTransactionsByAddress(htlcAddress) || []
+      for (const tx of txs) {
+        if (tx.recipient.equals(htlcAddress))
+          continue
+        transactions.push(tx)
+        if (tx.recipientType === Nimiq.Account.Type.HTLC) {
+          const txs = await getAllTransactionsFromHtlcs(tx.recipient)
+          transactions.push(...txs)
+        }
+      }
+      return txs
+    }
+    catch (error) {
+      logger.error('Error getting transactions from HTLCs', error)
+      return []
+    }
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -144,6 +170,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAccount,
     getAccounts,
     getAccountTransactions,
+    getAllTransactionsFromHtlcs,
     networkName,
   }
 })
