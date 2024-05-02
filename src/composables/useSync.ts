@@ -2,7 +2,7 @@
 import type { Ref } from 'vue'
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { computedAsync, until } from '@vueuse/core'
+import { computedAsync, createSharedComposable, until } from '@vueuse/core'
 import { usePrice } from './usePrice'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -23,7 +23,7 @@ const logger = useLogger('useSync')
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
-export function useSync() {
+function _useSync() {
   const { getAccount, getAccountTransactions } = useNimiqNetwork()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
@@ -211,10 +211,16 @@ export function useSync() {
     }, [useLocalWallet().localAddress])
   }
 
+  const isUpdatingTransactions = ref(false)
   /**
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
+    if (isUpdatingTransactions.value) {
+      logger.log('📬 Transactions are already being updated')
+      return
+    }
+    isUpdatingTransactions.value = true
     // No need to parse JSON fields, as those fields are not used here.
     const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
     const accountTxs = await getAccountTransactions(localAddress.value!)
@@ -299,6 +305,7 @@ export function useSync() {
         }
       }))
     }
+    isUpdatingTransactions.value = false
   }
 
   /**
@@ -436,7 +443,10 @@ export function useSync() {
     updateBalances,
     updateTransactionHistory,
     pendingTransactions,
+    isUpdatingTransactions,
 
     verifyRemoteSignersDb,
   }
 }
+
+export const useSync = createSharedComposable(_useSync)
