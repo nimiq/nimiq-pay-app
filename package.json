@@ -21,6 +21,7 @@
     "test:e2e": "cypress run",
     "test:unit": "vitest",
     "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
     "i18n:extract": "node ./node_modules/webpack-i18n-tools/index.js ./src/i18n/en.po",
     "i18n:push": "./weblate-sync.sh --pushSource",
     "i18n:pull": "./weblate-sync.sh --pullTranslations=de,es,fr,pt",

@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync, createSharedComposable, until } from '@vueuse/core'
+import type { ClientTransactionDetails } from '@nimiq/core-web'
 import { usePrice } from './usePrice'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -16,14 +17,13 @@ import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
-import { ClientTransactionDetails } from '@nimiq/core-web'
 
 const logger = useLogger('useSync')
 
 const MAX_BLOCK_HEIGHT_MISMATCH = 5
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
-export function useSync() {
+export function _useSync() {
   const { getAccount, getAccountTransactions, getAllTransactionsFromHtlcs } = useNimiqNetwork()
   const { query } = useConn()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
@@ -143,7 +143,7 @@ export function useSync() {
     await updateBalances()
     await verifyRemoteSignersDb()
 
-    console.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionHistory(), updateTransactionsInDb()])
 
     client.value?.addHeadChangedListener(async () => {
@@ -286,20 +286,22 @@ export function useSync() {
       addUnknownPaymentToMerchantTransaction(tx)
     }
 
+    const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
+    const topUpAddresses = ((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender)
     function categorizeTransactions(txs: ClientTransactionDetails[]) {
       const htlcTxs: ClientTransactionDetails[] = []
       const withdrawalTxs: ClientTransactionDetails[] = []
       const unknownTxs: ClientTransactionDetails[] = []
       for (const tx of txs) {
-        if (tx.recipientType === Nimiq.Account.Type.HTLC) htlcTxs.push(tx)
-        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) withdrawalTxs.push(tx)
+        if (tx.recipientType === Nimiq.Account.Type.HTLC)
+          htlcTxs.push(tx)
+        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress()))
+          withdrawalTxs.push(tx)
         else unknownTxs.push(tx)
       }
       return [htlcTxs, withdrawalTxs, unknownTxs] as const
     }
 
-    const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
-    const topUpAddresses = ((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender)
     // Check for transactions made from the remote signers
     for (const remoteSigner of await getAllRemoteSigners()) {
       const accountTxs = await getAccountTransactions(remoteSigner.address)
@@ -317,7 +319,7 @@ export function useSync() {
           return txs.map(tx => handleHtlcTx(tx, { remoteSigner })).flat()
         }),
         withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
-        unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner }))
+        unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
       ].flat())
     }
     isUpdatingTransactions.value = false
