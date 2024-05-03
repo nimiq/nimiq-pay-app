@@ -142,7 +142,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     try {
       const _txs = (await client.value?.getTransactionsByAddress(htlcAddress) || []).filter(tx => !tx.recipient.equals(htlcAddress))
       txs.push(..._txs)
-      await Promise.all(_txs.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC).map(tx => getAllTransactionsFromHtlcs(tx.recipient, txs)))
+      _txs
+        .filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+        .forEach(tx => getAllTransactionsFromHtlcs(tx.recipient, txs))
       return txs
     }
     catch (error) {
