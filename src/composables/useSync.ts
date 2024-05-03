@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import type { Ref } from 'vue'
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -254,62 +253,72 @@ export function useSync() {
       })
     }))
 
+    async function handleHtlcTx(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+      if (tx.recipient.equals(localAddress.value) || tx.recipientType !== Nimiq.Account.Type.BASIC)
+        return
+      // TODO: mark payment as BTC_LN
+      if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
+        logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+
+      await addUnknownPaymentToMerchantTransaction(tx)
+    }
+
+    function handleWithdrawalTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+      logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+      addWithdrawalTransaction({
+        transfer: Transfer.UserPayment,
+        amount: tx.value,
+        sender: tx.sender.toUserFriendlyAddress(),
+        senderType: tx.senderType,
+        recipient: tx.recipient.toUserFriendlyAddress(),
+        recipientType: tx.recipientType,
+        hash: tx.transactionHash.toHex(),
+        status: tx.state,
+        timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+        title: 'Withdrawal', // translated at display time
+        fee: tx.fee,
+        proofSize: tx.proof.raw.length,
+      })
+    }
+
+    function handleUnknownTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+      logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+      addUnknownPaymentToMerchantTransaction(tx)
+    }
+
+    function categorizeTransactions(txs: ClientTransactionDetails[]) {
+      const htlcTxs: ClientTransactionDetails[] = []
+      const withdrawalTxs: ClientTransactionDetails[] = []
+      const unknownTxs: ClientTransactionDetails[] = []
+      for (const tx of txs) {
+        if (tx.recipientType === Nimiq.Account.Type.HTLC) htlcTxs.push(tx)
+        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) withdrawalTxs.push(tx)
+        else unknownTxs.push(tx)
+      }
+      return [htlcTxs, withdrawalTxs, unknownTxs] as const
+    }
+
     const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
     const topUpAddresses = ((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender)
     // Check for transactions made from the remote signers
     for (const remoteSigner of await getAllRemoteSigners()) {
       const accountTxs = await getAccountTransactions(remoteSigner.address)
       const txsToProcess = accountTxs.data
-        .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value)) // Only transactions sent from the remote signer to other addresses
-        .filter(tx => !allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex())) // Only transactions not already in the db
+        // Only transactions sent from the remote signer to other addresses
+        .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value))
+        // Only transactions not already in the db
+        .filter(tx => !allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex()))
 
-      const [htlcTxs, withdrawalTxs, unknownTxs] = txsToProcess.reduce((acc, tx) => {
-        if (tx.recipientType === Nimiq.Account.Type.HTLC) acc[0].push(tx)
-        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) acc[1].push(tx)
-        else acc[2].push(tx)
-        return acc
-      }, [[], [], []] as [ClientTransactionDetails[], ClientTransactionDetails[], ClientTransactionDetails[]])
-
-      async function handleHtlcTxs(txs: ClientTransactionDetails[]) {
-        txs
-          .filter(tx => !tx.recipient.equals(remoteSigner.address) && tx.recipientType === Nimiq.Account.Type.BASIC)
-          .forEach(tx => {
-            // TODO: mark payment as BTC_LN
-            if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
-              logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-
-            addUnknownPaymentToMerchantTransaction(tx)
-          })
-      }
-
-      function handleWithdrawalTxs(tx: ClientTransactionDetails) {
-        logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-        addWithdrawalTransaction({
-          transfer: Transfer.UserPayment,
-          amount: tx.value,
-          sender: tx.sender.toUserFriendlyAddress(),
-          senderType: tx.senderType,
-          recipient: tx.recipient.toUserFriendlyAddress(),
-          recipientType: tx.recipientType,
-          hash: tx.transactionHash.toHex(),
-          status: tx.state,
-          timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
-          title: 'Withdrawal', // translated at display time
-          fee: tx.fee,
-          proofSize: tx.proof.raw.length,
-        })
-      }
-
-      function handleUnknownTxs(tx: ClientTransactionDetails) {
-        logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-        addUnknownPaymentToMerchantTransaction(tx)
-      }
+      const [htlcTxs, withdrawalTxs, unknownTxs] = categorizeTransactions(txsToProcess)
 
       await Promise.all([
-        ...htlcTxs.map(tx => getAllTransactionsFromHtlcs(tx.recipient).then(handleHtlcTxs)),
-        ...withdrawalTxs.map(handleWithdrawalTxs),
-        ...unknownTxs.map(handleUnknownTxs),
-      ])
+        htlcTxs.map(async (tx) => {
+          const txs = await getAllTransactionsFromHtlcs(tx.recipient)
+          return txs.map(tx => handleHtlcTx(tx, { remoteSigner })).flat()
+        }),
+        withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
+        unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner }))
+      ].flat())
     }
     isUpdatingTransactions.value = false
   }
