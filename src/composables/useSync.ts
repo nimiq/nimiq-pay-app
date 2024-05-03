@@ -253,16 +253,6 @@ export function _useSync() {
       })
     }))
 
-    async function handleHtlcTx(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      if (tx.recipient.equals(localAddress.value) || tx.recipientType !== Nimiq.Account.Type.BASIC)
-        return
-      // TODO: mark payment as BTC_LN
-      if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
-        logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-
-      await addUnknownPaymentToMerchantTransaction(tx)
-    }
-
     function handleWithdrawalTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
       logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
       addWithdrawalTransaction({
@@ -283,11 +273,15 @@ export function _useSync() {
 
     function handleUnknownTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
       logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+      // TODO: mark payment as BTC_LN
+      if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
+        logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+
       addUnknownPaymentToMerchantTransaction(tx)
     }
 
     const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
-    const topUpAddresses = ((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender)
+    const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
     function categorizeTransactions(txs: ClientTransactionDetails[]) {
       const htlcTxs: ClientTransactionDetails[] = []
       const withdrawalTxs: ClientTransactionDetails[] = []
@@ -313,11 +307,16 @@ export function _useSync() {
 
       const [htlcTxs, withdrawalTxs, unknownTxs] = categorizeTransactions(txsToProcess)
 
+      await Promise.all(htlcTxs.map(async (tx) => {
+        const txs = await getAllTransactionsFromHtlcs(tx.recipient)
+        // Check if txs are withdrawals or unknown payments
+        const categorized = categorizeTransactions(txs)
+        if (categorized[0].length > 0)
+          logger.error('HTLC txs should not have HTLCs')
+        withdrawalTxs.concat(categorized[1])
+        unknownTxs.concat(categorized[2])
+      }))
       await Promise.all([
-        htlcTxs.map(async (tx) => {
-          const txs = await getAllTransactionsFromHtlcs(tx.recipient)
-          return txs.map(tx => handleHtlcTx(tx, { remoteSigner })).flat()
-        }),
         withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
         unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
       ].flat())
