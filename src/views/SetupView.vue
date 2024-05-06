@@ -29,7 +29,7 @@ import { initializeFlow } from '@/lib/flows'
           <IonButton class="w-full text-base" expand="block" @click="initializeFlow(FlowName.Setup)">
             {{ $t('Get Started') }}
           </IonButton>
-          <div class="flex justify-around">
+          <div class="grid grid-cols-[repeat(2,auto)]">
             <IonButton class="text-base tracking-normal normal-case" fill="clear" @click="initializeFlow(FlowName.SetupWithPromoCode)">
               {{ $t('I have a promo code') }}
             </IonButton>
