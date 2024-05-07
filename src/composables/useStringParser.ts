@@ -69,7 +69,9 @@ export function useStringParser() {
     }
     else {
       result = {
-        error: i18n.t('Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported.'),
+        error: __ENABLE_BTC_LN__
+          ? i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported.')
+          : i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM are supported.'),
         data: undefined,
       }
     }
@@ -85,7 +87,7 @@ export function useStringParser() {
       return Rail.CryptoPaymentLink
     else if (searchParams.has(GOCRYPTO_ID_PARAM) || parseGoCryptoRequestLink(href))
       return Rail.GoCrypto
-    else if (protocol === 'lightning:')
+    else if (protocol === 'lightning:' && __ENABLE_BTC_LN__)
       return Rail.BitcoinLightning
     else
       return undefined

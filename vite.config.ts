@@ -30,5 +30,6 @@ export default defineConfig({
     __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component
     __VUE_I18N_LEGACY_API__: true, // We use the legacy api, which is also vue-i18n's default
     __INTLIFY_PROD_DEVTOOLS__: false,
+    __ENABLE_BTC_LN__: process.env.ENABLE_BTC_LN ? true : false,
   },
 })
