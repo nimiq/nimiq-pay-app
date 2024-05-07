@@ -1,5 +1,5 @@
 import { storeToRefs } from 'pinia'
-import { type MaybeRef, computed, onMounted, reactive, ref, toRef, toValue, watch } from 'vue'
+import { type MaybeRef, computed, reactive, ref, toRef, toValue, watch } from 'vue'
 import { Crypto, Fiat, useApp } from '@/stores/app'
 import { toMs } from '@/composables/useTime'
 import { usePriceDb } from '@/composables/usePriceDb'
@@ -166,10 +166,8 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
     getFiatPrice()
   })
 
-  onMounted(() => {
-    if (immediate)
-      getFiatPrice()
-  })
+  if (immediate)
+    getFiatPrice()
 
   return {
     getFiatPrice,
