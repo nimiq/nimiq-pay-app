@@ -3,13 +3,16 @@ import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync, createSharedComposable, until } from '@vueuse/core'
 import type { BasicAccount, ClientTransactionDetails, HashedTimeLockedContract } from '@nimiq/core-web'
+import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
+import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { usePrice } from './usePrice'
+import { useFastspotApiV1 } from './useFastspotv1'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Transfer } from '@/types/transactions'
+import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 import type { ExternalTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
@@ -255,6 +258,39 @@ export function _useSync() {
       })
     }))
 
+    async function handleSwapTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+      let contract: ContractWithEstimate<SwapAsset>
+      try {
+        const fastspot = await useFastspotApiV1()
+        contract = await fastspot.getContract(SwapAsset.NIM, tx.recipient.toUserFriendlyAddress())
+      }
+      catch (error: any) {
+        logger.error('Error fetching contract info from Fastspot:', error.message)
+        addUnknownPaymentToMerchantTransaction(tx)
+        return
+      }
+
+      // Check swap type
+      if (contract.from.asset !== SwapAsset.NIM) {
+        logger.error(`Found a swap from another asset than NIM (${contract.from.asset}) - This type of swap cannot yet be handled`)
+        // Fall through
+      }
+      else if (contract.to.asset === SwapAsset.BTC_LN) {
+        logger.log(`📬 BTC_LN swap found with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+        addUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
+          amount: (contract.to.amount - contract.to.fee) / 1e8,
+          currency: 'BTC',
+        })
+        return
+      }
+      else {
+        logger.error(`Found a swap to another asset than BTC_LN (${contract.to.asset}) - This type of swap cannot yet be handled`)
+        // Fall through
+      }
+
+      addUnknownPaymentToMerchantTransaction(tx)
+    }
+
     function handleWithdrawalTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
       logger.log(`📬 New withdrawal transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
       addWithdrawalTransaction({
@@ -282,17 +318,30 @@ export function _useSync() {
     const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
 
     function categorizeTransactions(txs: ClientTransactionDetails[]) {
-      const htlcTxs: ClientTransactionDetails[] = []
+      const htlcExtensionTxs: ClientTransactionDetails[] = []
+      const htlcSwapTxs: ClientTransactionDetails[] = []
       const withdrawalTxs: ClientTransactionDetails[] = []
       const unknownTxs: ClientTransactionDetails[] = []
       for (const tx of txs) {
-        if (tx.recipientType === Nimiq.Account.Type.HTLC)
-          htlcTxs.push(tx)
-        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress()))
+        if (tx.recipientType === Nimiq.Account.Type.HTLC) {
+          // Differentiate between HTLC extensions (hashRoot is zeroes) and swap HTLCs (hashRoot is non-zeroes)
+          const data = 'hashRoot' in tx.data ? tx.data : Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
+          if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
+            htlcExtensionTxs.push(tx)
+          else
+            htlcSwapTxs.push(tx)
+        }
+        else if (topUpAddresses.includes(tx.recipient.toUserFriendlyAddress())) {
           withdrawalTxs.push(tx)
-        else unknownTxs.push(tx)
+        }
+        else { unknownTxs.push(tx) }
       }
-      return [htlcTxs, withdrawalTxs, unknownTxs] as const
+      return {
+        htlcExtensionTxs,
+        htlcSwapTxs,
+        withdrawalTxs,
+        unknownTxs,
+      }
     }
 
     // Check for transactions made from the remote signers
@@ -315,18 +364,17 @@ export function _useSync() {
           return true
         })
 
-      const [htlcTxs, withdrawalTxs, unknownTxs] = categorizeTransactions(txsToProcess)
+      const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
 
-      await Promise.all(htlcTxs.map(async (tx) => {
+      await Promise.all(htlcExtensionTxs.map(async (tx) => {
         const txs = await getAllOutgoingTransactionsFromHtlcs(tx.recipient)
-        // Check if txs are withdrawals or unknown payments
         const categorized = categorizeTransactions(txs)
-        if (categorized[0].length > 0)
-          logger.error('HTLC txs should not have HTLCs')
-        withdrawalTxs.concat(categorized[1])
-        unknownTxs.concat(categorized[2])
+        htlcSwapTxs.concat(categorized.htlcSwapTxs)
+        withdrawalTxs.concat(categorized.withdrawalTxs)
+        unknownTxs.concat(categorized.unknownTxs)
       }))
       await Promise.all([
+        htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
         withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
         unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
       ].flat())
