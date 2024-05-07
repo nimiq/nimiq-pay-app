@@ -334,11 +334,12 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
+    const { Crypto } = (await import('@/stores/app'))
 
     if (amount > remoteBalance) {
       return err(i18n.t(
         'You don\'t have enough NIM. Your current balance is {balance}.',
-        { balance: formatCrypto(remoteBalance) },
+        { balance: formatCrypto(remoteBalance, { currency: Crypto.NIM }) },
       ))
     }
 
@@ -398,7 +399,7 @@ export const transactionDetail: StepInit = async () => {
     : null
   ) || i18n.t('Transaction'))
   const merchantCategory = computed(() => {
-    if (tx.value?.transfer === Transfer.UserPaymentToMerchant)
+    if (tx.value?.transfer === Transfer.UserPaymentToMerchant || tx.value?.transfer === Transfer.UserPaymentToAtomicSwap)
       return tx.value?.merchantCategory
     if (tx.value?.transfer === Transfer.UserPayment && tx.value?.senderType === Nimiq.Account.Type.HTLC && tx.value?.recipientType === Nimiq.Account.Type.BASIC)
       return 'withdraw'

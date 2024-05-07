@@ -241,7 +241,7 @@ export const stepEmits: EmitsOptions = {
 
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
 & {
-  transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant
+  transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
   feeIncludedInAmount?: boolean
 }
 
