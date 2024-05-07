@@ -33,7 +33,7 @@
     "@capacitor/filesystem": "^6.0.0",
     "@capacitor/share": "^6.0.0",
     "@capawesome/capacitor-screen-orientation": "^5.0.1",
-    "@nimiq/fastspot-api-v1": "github:nimiq/fastspot-api#be7ef115a18491429245f4f3816fef8a1b191629",
+    "@nimiq/fastspot-api-v1": "github:nimiq/fastspot-api#7d40ede12f86e9f9523d61c19ad99fc1663f5898",
     "@nimiq/fastspot-api-v2": "github:nimiq/fastspot-api#3ef81c74836f14e534443b6ea6d98ed4041f6e63",
     "@nimiq/utils": "^0.9.3",
     "@nimiq/vue3-components": "github:nimiq/vue3-components#build/full",
