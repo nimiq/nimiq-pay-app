@@ -44,6 +44,10 @@ export function useStringParser() {
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
   async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
+    // Add a protocol to Bitcoin Lightning invoices if it's missing, to pass URL parsing
+    if (content.toLowerCase().startsWith(isDev ? 'lntb' : 'lnbc'))
+      content = `lightning:${content}`
+
     let url: URL
     try {
       url = new URL(content)
