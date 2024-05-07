@@ -280,6 +280,9 @@ export function _useSync() {
         addUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
           amount: (contract.to.amount - contract.to.fee) / 1e8,
           currency: 'BTC',
+        }, {
+          // TODO: Find if the swap was completed (set `secret`) or refunded (set `refunded`)
+          imported: true,
         })
         return
       }

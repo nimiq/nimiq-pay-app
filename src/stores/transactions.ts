@@ -252,6 +252,7 @@ export const useTransactions = defineStore('transactions', () => {
       amount: number
       currency: string
     },
+    meta?: Record<string, any>,
   ) {
     const newTx = {
       transfer,
@@ -276,6 +277,7 @@ export const useTransactions = defineStore('transactions', () => {
       merchantCategory: MerchantCategory.Shop,
       rail,
       invoiced,
+      meta,
     } as MerchantTransaction
     await upsertTx(newTx)
     addTransaction(newTx)

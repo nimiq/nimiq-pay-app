@@ -48,7 +48,7 @@ const category = computed(() => {
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time class="text-space/50 tabular-nums">{{ relativeTime }} </time>
-        <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded" class="italic text-pumpkin/90">
+        <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported" class="italic text-pumpkin/90">
           {{ $t('Swap pending') }}
         </span>
         <span v-else-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
