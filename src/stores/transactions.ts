@@ -176,9 +176,18 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
-  async function addUnknownPaymentToMerchantTransaction(tx: Nimiq.ClientTransactionDetails) {
+  async function addUnknownPaymentToMerchantTransaction(
+    tx: Nimiq.ClientTransactionDetails,
+    transfer = Transfer.UserPaymentToMerchant,
+    rail = Rail.Unknown,
+    paymentRef = '',
+    invoiced?: {
+      amount: number
+      currency: string
+    },
+  ) {
     const newTx = {
-      transfer: Transfer.UserPaymentToMerchant,
+      transfer,
       amount: tx.value,
       sender: tx.sender.toUserFriendlyAddress(),
       senderType: tx.senderType,
@@ -193,12 +202,13 @@ export const useTransactions = defineStore('transactions', () => {
       isCashbackClaimed: true,
       merchantName: '',
       paymentMethod: PaymentMethod.NIM,
-      paymentRef: '',
+      paymentRef,
       fiatAmount: 0,
       fiatCurrency: '',
       fiatFeeAmount: 0,
       merchantCategory: MerchantCategory.Shop,
-      rail: Rail.Unknown,
+      rail,
+      invoiced,
     } as MerchantTransaction
     await upsertTx(newTx)
     addTransaction(newTx)

@@ -105,7 +105,7 @@ function clearInput() {
   </div>
   <input
     ref="inputRef" type="password" inputmode="numeric" class="sr-only caret-transparent" pattern="[0-9]*"
-    autocomplete="false" on-paste="return false" on-drop="return false"
+    autocomplete="false" onpaste.prevent ondrop.prevent
     :name="stepName"
     :aria-label="stepName"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
