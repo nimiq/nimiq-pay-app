@@ -24,7 +24,7 @@ const MAX_BLOCK_HEIGHT_MISMATCH = 5
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function _useSync() {
-  const { getAccount, getAccountTransactions, getAllTransactionsFromHtlcs } = useNimiqNetwork()
+  const { getAccount, getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
   const { query } = useConn()
   const { client, height: localHeight } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
@@ -308,7 +308,7 @@ export function _useSync() {
       const [htlcTxs, withdrawalTxs, unknownTxs] = categorizeTransactions(txsToProcess)
 
       await Promise.all(htlcTxs.map(async (tx) => {
-        const txs = await getAllTransactionsFromHtlcs(tx.recipient)
+        const txs = await getAllOutgoingTransactionsFromHtlcs(tx.recipient)
         // Check if txs are withdrawals or unknown payments
         const categorized = categorizeTransactions(txs)
         if (categorized[0].length > 0)
