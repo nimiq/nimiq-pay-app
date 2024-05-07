@@ -12,7 +12,6 @@ import { PaymentMethod, PointsHashPrefix, Transfer } from '@/types/transactions'
 import type { ExternalTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
 import { useConn } from '@/stores/conn'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
-import { fastspotAddress } from '@/lib'
 import { usePoints } from '@/stores/points'
 import { useApp } from '@/stores/app'
 import { useCplApi } from '@/composables/useApi'
@@ -228,11 +227,13 @@ export function _useSync() {
     const accountTxs = await getAccountTransactions(localAddress.value!)
 
     await Promise.all(accountTxs.data.map(async (tx) => {
+      // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
+
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
         return
 
-      const dbTx = userReceipts.find(dbTx => dbTx.hash === tx.transactionHash.toHex())
-      if (dbTx)
+      const txHash = tx.transactionHash.toHex()
+      if (userReceipts.find(dbTx => dbTx.hash === txHash))
         return
 
       logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
@@ -254,7 +255,7 @@ export function _useSync() {
     }))
 
     function handleWithdrawalTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+      logger.log(`📬 New withdrawal transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
       addWithdrawalTransaction({
         transfer: Transfer.UserPayment,
         amount: tx.value,
@@ -272,16 +273,13 @@ export function _useSync() {
     }
 
     function handleUnknownTxs(tx: ClientTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      logger.log(`📬 New transaction sent with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-      // TODO: mark payment as BTC_LN
-      if (fastspotAddress.some(add => tx.recipient.equals(Nimiq.Address.fromString(add))))
-        logger.log(`📬 New BTC_LN payment detected with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-
+      logger.log(`📬 New merchant transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
       addUnknownPaymentToMerchantTransaction(tx)
     }
 
     const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
     const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
+
     function categorizeTransactions(txs: ClientTransactionDetails[]) {
       const htlcTxs: ClientTransactionDetails[] = []
       const withdrawalTxs: ClientTransactionDetails[] = []
@@ -303,7 +301,18 @@ export function _useSync() {
         // Only transactions sent from the remote signer to other addresses
         .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value))
         // Only transactions not already in the db
-        .filter(tx => !allTransactions.find(dbTx => dbTx.hash === tx.transactionHash.toHex()))
+        .filter((tx) => {
+          const hash = tx.transactionHash.toHex()
+          for (const dbTx of allTransactions) {
+            // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
+            if (dbTx.timestamp < tx.timestamp)
+              break
+            // If the tx is already known, do not process it further
+            if (dbTx.hash === hash)
+              return false
+          }
+          return true
+        })
 
       const [htlcTxs, withdrawalTxs, unknownTxs] = categorizeTransactions(txsToProcess)
 
