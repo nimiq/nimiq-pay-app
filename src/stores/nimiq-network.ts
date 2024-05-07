@@ -112,7 +112,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: accounts, error: undefined }
   }
 
-  async function getAccountTransactions(address: Nimiq.Address | undefined, limit = 30) {
+  async function getAccountTransactions(address: Nimiq.Address | undefined, limit?: number) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
     const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, limit)
