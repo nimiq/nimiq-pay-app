@@ -40,7 +40,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 <template>
   <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
     <TransactionAmounts
-      :crypto-total="crypto.total"
+      :crypto-total="crypto.totalLuna"
       :fiat-formatted="fiat.formatted"
       :payment-method="tx.paymentMethod || PaymentMethod.NIM"
       :refunded="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded"
