@@ -192,7 +192,7 @@ export const useTransactions = defineStore('transactions', () => {
 
     if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
       // Wait for swap to complete
-      const secret = (await patchedSwap).preimage || await new Promise<string>((resolve) => {
+      const secret = (await patchedSwap.catch(() => undefined))?.preimage || await new Promise<string>((resolve) => {
         let timeoutId: number
         async function checkSecret() {
           const { getSwap } = await useFastspotApiV2()
