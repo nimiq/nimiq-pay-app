@@ -123,7 +123,7 @@ watch(errorMessage, (value) => {
   <!-- Address Selector -->
   <SelectRoot v-model="selected" @update:open="x => isSelectOpen = x">
     <SelectTrigger
-      class="flex gap-x-3 items-center w-11/12 min-w-80 mx-2 p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400 relative"
+      class="flex gap-x-3 items-center w-11/12 min-w-80 mx-2 p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400"
       :class="{ 'rounded-b-none': isSelectOpen }"
       :aria-label="$t('Select withdrawal address')"
     >
@@ -134,17 +134,18 @@ watch(errorMessage, (value) => {
 
     <SelectPortal>
       <SelectContent
-        class="rounded will-change-[opacity,transform] data-[side=top]:animate-slideUpAndFade data-[side=right]:animate-slideLeftAndFade data-[side=bottom]:animate-slideDownAndFade data-[side=left]:animate-slideRightAndFade z-[100]"
+        class="rounded will-change-[opacity,transform] data-[side=bottom]:animate-slideDownAndFade"
         position="popper"
         :side-offset="-4"
-        style="width: var(--radix-select-trigger-width);"
+        :align-offset="-16"
+        style="width: calc(var(--radix-popper-anchor-width) + 32px);"
       >
         <!-- <SelectScrollUpButton class="flex items-center justify-center h-[25px] cursor-default">
           <IonIcon :icon="chevronUp" />
         </SelectScrollUpButton> -->
 
         <SelectViewport>
-          <SelectGroup class="p-1 rounded-md w-[calc(100%+2rem)] fixed left-1/2 -translate-x-1/2 shadow-sm" style="background: radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%);">
+          <SelectGroup class="p-1 rounded-md shadow-sm" style="background: radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%);">
             <template v-for="option in options" :key="option">
               <!-- We need to have this as hidden, not rendering it causes the Select to break -->
               <SelectItem
