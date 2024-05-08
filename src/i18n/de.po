@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-12 15:20+0000\n"
+"PO-Revision-Date: 2024-04-28 08:20+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -16,7 +16,7 @@ msgid "{count} of {total} remaining."
 msgstr "{count} von {total} verbleibend."
 
 msgid "About"
-msgstr ""
+msgstr "Über die App"
 
 msgid "Activate Cashback & Rewards"
 msgstr "Cashback & Boni aktivieren"
@@ -57,11 +57,19 @@ msgstr "Backup erfolgreich erstellt"
 msgid "Backup your account before logging out"
 msgstr "Erstelle ein Konto-Backup bevor du dich ausloggst"
 
+msgid "Bitcoin Lightning invoice expired."
+msgstr ""
+
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode is ein europäischer Zahlungsdienstleister, der nun NIM unterstützt."
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Sowohl die erwartete, als auch die eingegebene PIN sind ungesetzt"
+
+#, fuzzy
+#| msgid "By tapping “verify”, you agree to our data management practices."
+msgid "By tapping “pay”, you agree to Fastspot's {terms}"
+msgstr "Durch Antippen von \"Verifizieren\", stimmst du unserer Datenschutzerklärung zu."
 
 msgid "By tapping “verify”, you agree to our data management practices."
 msgstr "Durch Antippen von \"Verifizieren\", stimmst du unserer Datenschutzerklärung zu."
@@ -123,6 +131,9 @@ msgstr "Code kopieren"
 
 msgid "Copy or scan the address"
 msgstr "Die Adresse kopieren oder scannen"
+
+msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
+msgstr ""
 
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Erstelle ein Backup. Es ist der einzige Weg, dein Konto wiederherzustellen."
@@ -251,6 +262,15 @@ msgstr "Unzureichendes Guthaben"
 msgid "Invalid"
 msgstr "Ungültig"
 
+msgid "Invalid Bitcoin Lightning invoice: missing amount."
+msgstr ""
+
+msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
+msgstr ""
+
+msgid "Invalid Bitcoin Lightning invoice."
+msgstr ""
+
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "Ungültiger CPLink. Die Zahlungsdetails konnten nicht abgerufen werden."
 
@@ -269,8 +289,18 @@ msgstr "Ungültige GoCrypto API-Antwort"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Ungültiges Link-Format. CPLinks werden nur für NIM unterstützt."
 
-msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr "Ungültiges Link-Format. Nur CPLinks für NIM und GoCrypto-Zahlungsanfragen für NIM werden unterstützt."
+
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgstr "Ungültiges Link-Format. Nur CPLinks für NIM und GoCrypto-Zahlungsanfragen für NIM werden unterstützt."
+
+msgid "Invalid NIM HTLC data in swap"
+msgstr ""
 
 msgid "Invalid Nimiq address"
 msgstr "Ungültige Nimiq-Adresse"
@@ -295,6 +325,11 @@ msgstr "Ungültiger QR-Code"
 
 msgid "Invalid recovery words"
 msgstr "Ungültige Wiederherstellungswörter"
+
+#, fuzzy
+#| msgid "Invalid Nimiq Cashlink"
+msgid "Invalid swap hash"
+msgstr "Ungültiger Nimiq Cashlink"
 
 msgid "Invalid transfer type"
 msgstr "Ungültige Transferart"
@@ -350,7 +385,7 @@ msgid "New"
 msgstr "Neu"
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
-msgstr ""
+msgstr "Nimiq Pay und die Nimiq Wallet verwenden unterschiedliche Wiederherstellungswörter."
 
 msgid "No account found"
 msgstr "Kein Konto gefunden"
@@ -366,6 +401,9 @@ msgstr "Kein Konto gefunden"
 
 msgid "No Cashlink found"
 msgstr "Kein Cashlink gefunden"
+
+msgid "No NIM HTLC found in swap"
+msgstr ""
 
 msgid "No one can see me"
 msgstr "Ich bin allein"
@@ -442,6 +480,11 @@ msgstr "Zahlung wird verarbeitet"
 
 msgid "Payment preview"
 msgstr "Zahlungsvorschau"
+
+#, fuzzy
+#| msgid "Payment expired"
+msgid "Payment Secret"
+msgstr "Zahlung abgelaufen"
 
 msgid "Payment successful"
 msgstr "Zahlung erfolgt"
@@ -530,6 +573,9 @@ msgstr "Empfänger"
 msgid "Recovery Words"
 msgstr "Wiederherstellungswörter"
 
+msgid "Refunded"
+msgstr ""
+
 msgid "Resend"
 msgstr "Erneut senden"
 
@@ -543,6 +589,11 @@ msgid "Save"
 msgstr "Speichern"
 
 msgid "Scan any Nimiq or NAKA QR code to pay."
+msgstr "Scanne einen Nimiq- oder Naka-QR-Code um zu zahlen."
+
+#, fuzzy
+#| msgid "Scan any Nimiq or NAKA QR code to pay."
+msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgstr "Scanne einen Nimiq- oder Naka-QR-Code um zu zahlen."
 
 msgid "Scan Cashlink"
@@ -635,8 +686,16 @@ msgstr "Status"
 msgid "Submit"
 msgstr "Abschicken"
 
+#, fuzzy
+#| msgid "Pending"
+msgid "Swap pending"
+msgstr "Ausstehend"
+
 msgid "Syncing with network."
 msgstr "Synchronisiere mit dem Netzwerk."
+
+msgid "Terms of service"
+msgstr ""
 
 msgid "Test your backup"
 msgstr "Backup testen"
@@ -799,6 +858,9 @@ msgstr ""
 
 msgid "Wrong answer"
 msgstr "Falsche Antwort"
+
+msgid "Wrong network in Bitcoin Lightning invoice."
+msgstr ""
 
 msgid "Wrong number of recovery words"
 msgstr "Ungültige Zahl an Wiederherstellungswörtern"

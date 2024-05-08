@@ -59,11 +59,19 @@ msgstr "Respaldo exitoso"
 msgid "Backup your account before logging out"
 msgstr "Haz un respaldo de seguridad de tu cuenta antes de cerrar sesión"
 
+msgid "Bitcoin Lightning invoice expired."
+msgstr ""
+
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode es un servicio de pago europeo que ahora admite NIM."
 
 msgid "Both expected and the given PIN are empty"
 msgstr "El PIN esperado y el proporcionado están vacíos"
+
+#, fuzzy
+#| msgid "By tapping “verify”, you agree to our data management practices."
+msgid "By tapping “pay”, you agree to Fastspot's {terms}"
+msgstr "Al tocar 'verificar', aceptas nuestras prácticas de gestión de datos."
 
 msgid "By tapping “verify”, you agree to our data management practices."
 msgstr "Al tocar 'verificar', aceptas nuestras prácticas de gestión de datos."
@@ -125,6 +133,9 @@ msgstr "Copiar código"
 
 msgid "Copy or scan the address"
 msgstr "Copia o escanea la dirección"
+
+msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
+msgstr ""
 
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Crea una respaldo de seguridad. Es la única forma de recuperar tu cuenta."
@@ -253,6 +264,15 @@ msgstr "Fondos insuficientes"
 msgid "Invalid"
 msgstr "Inválido"
 
+msgid "Invalid Bitcoin Lightning invoice: missing amount."
+msgstr ""
+
+msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
+msgstr ""
+
+msgid "Invalid Bitcoin Lightning invoice."
+msgstr ""
+
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink inválido. No se pudieron obtener los detalles del pago."
 
@@ -271,8 +291,18 @@ msgstr "Respuesta inválida de GoCrypto"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Formato de enlace inválido. Los CPLink solo son compatibles para NIM."
 
-msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr "Formato de enlace inválido. Solo se admiten CPLinks para NIM y solicitudes de GoCrypto para NIM."
+
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgstr "Formato de enlace inválido. Solo se admiten CPLinks para NIM y solicitudes de GoCrypto para NIM."
+
+msgid "Invalid NIM HTLC data in swap"
+msgstr ""
 
 msgid "Invalid Nimiq address"
 msgstr "Dirección Nimiq inválida"
@@ -297,6 +327,11 @@ msgstr "Código QR inválido"
 
 msgid "Invalid recovery words"
 msgstr "Palabras de recuperación inválidas"
+
+#, fuzzy
+#| msgid "Invalid Nimiq Cashlink"
+msgid "Invalid swap hash"
+msgstr "Nimiq Cashlink invalido"
 
 msgid "Invalid transfer type"
 msgstr "Tipo de transferencia inválido"
@@ -368,6 +403,9 @@ msgstr "No se encontraron cuentas"
 
 msgid "No Cashlink found"
 msgstr "No se encontró ningún Cashlink"
+
+msgid "No NIM HTLC found in swap"
+msgstr ""
 
 msgid "No one can see me"
 msgstr "Nadie puede verme"
@@ -444,6 +482,11 @@ msgstr "El pago está siendo procesado"
 
 msgid "Payment preview"
 msgstr "Prevista del pago"
+
+#, fuzzy
+#| msgid "Payment expired"
+msgid "Payment Secret"
+msgstr "El pago ha expirado"
 
 msgid "Payment successful"
 msgstr "Pago exitoso"
@@ -532,6 +575,9 @@ msgstr "Destinatario"
 msgid "Recovery Words"
 msgstr "Palabras de recuperación"
 
+msgid "Refunded"
+msgstr ""
+
 msgid "Resend"
 msgstr "Reenviar"
 
@@ -545,6 +591,11 @@ msgid "Save"
 msgstr "Guardar"
 
 msgid "Scan any Nimiq or NAKA QR code to pay."
+msgstr "Escanee cualquier código QR de Nimiq o NAKA para pagar."
+
+#, fuzzy
+#| msgid "Scan any Nimiq or NAKA QR code to pay."
+msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgstr "Escanee cualquier código QR de Nimiq o NAKA para pagar."
 
 msgid "Scan Cashlink"
@@ -637,8 +688,16 @@ msgstr "Estado"
 msgid "Submit"
 msgstr "Enviar"
 
+#, fuzzy
+#| msgid "Pending"
+msgid "Swap pending"
+msgstr "Pendiente"
+
 msgid "Syncing with network."
 msgstr "Sincronizando con la red."
+
+msgid "Terms of service"
+msgstr ""
 
 msgid "Test your backup"
 msgstr "Prueba tu respaldo"
@@ -799,6 +858,9 @@ msgstr ""
 
 msgid "Wrong answer"
 msgstr "Respuesta incorrecta"
+
+msgid "Wrong network in Bitcoin Lightning invoice."
+msgstr ""
 
 msgid "Wrong number of recovery words"
 msgstr "Número incorrecto de palabras de recuperación"
