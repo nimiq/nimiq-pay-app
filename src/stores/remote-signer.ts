@@ -37,6 +37,15 @@ function useRemoteSignerDb() {
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
+    /**
+     * Adds a new remote signer to the database, but doesn't set it as active.
+     * Used when we get an old remote signer from the blockchain.
+     */
+    async addInactiveRemoteSigner({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
+      logger.log('✒️ Adding Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end })
+      await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, false])
+    },
+
     async deactivateAllRemoteSigners() {
       await run(SQLQuery.DeactivateRemoteSigners)
     },
@@ -58,7 +67,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const { height } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners } = useRemoteSignerDb()
+  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, addInactiveRemoteSigner } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
@@ -79,6 +88,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const isHtlcPending = computed(() => start.value > height.value)
 
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
+
+  async function addRemoteSigner(signer: RemoteSigner) {
+    if (!remoteSigner.value)
+      await updateRemoteSigner(signer)
+    else
+      await addInactiveRemoteSigner(signer)
+  }
 
   async function updateRemoteSigner(signer: RemoteSigner | undefined) {
     logger.log('📡 Updating remote signer', signer)
@@ -216,6 +232,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     hasHtlcExpired,
     isHtlcPending,
 
+    addRemoteSigner,
     updateBalance,
     updateActiveWallet,
     updateRemoteSigner,

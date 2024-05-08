@@ -121,6 +121,13 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: transactions, error: undefined }
   }
 
+  async function getBalance(address: Nimiq.Address) {
+    const account = await client.value?.getAccount(address)
+    if (!account)
+      return { data: 0, error: 'No account found' } // No user facing
+    return { data: account.balance, error: undefined }
+  }
+
   function translateConsensus(consensusState: Nimiq.Client.ConsensusState) {
     // Define translations as record such that ts warns us if a translation for a consensus state is missing
     const consensusStateTranslations: Record<Nimiq.Client.ConsensusState, string> = {
@@ -165,6 +172,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAccounts,
     getAccountTransactions,
     getAllOutgoingTransactionsFromHtlcs,
+    getBalance,
     networkName,
   }
 })

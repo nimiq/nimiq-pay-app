@@ -27,12 +27,12 @@ const MAX_BLOCK_HEIGHT_MISMATCH = 5
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = 120
 
 export function _useSync() {
-  const { getAccount, getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
+  const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs, getBalance } = useNimiqNetwork()
   const { query } = useConn()
   const { client, height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
-  const { updateActiveWallet, getAllRemoteSigners } = useRemoteSigner()
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey } = storeToRefs(useRemoteSigner())
+  const { updateActiveWallet, getAllRemoteSigners, addRemoteSigner } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
   // Whether the remote wallet is synced with the local wallet or not.
@@ -62,7 +62,7 @@ export function _useSync() {
       return
     }
 
-    const remoteBalance = (await getAccount(remoteAddress.value!)).data?.balance || 0
+    const remoteBalance = (await getBalance(remoteAddress.value!)).data || 0
 
     logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
@@ -121,11 +121,11 @@ export function _useSync() {
   async function updateBalances() {
     usePoints().updatePointsBalance()
     if (localAddress.value)
-      localBalance.value = (await getAccount(localAddress.value)).data?.balance || 0
+      localBalance.value = (await getBalance(localAddress.value)).data || 0
     else
       logger.log('Local address not found')
     if (remoteAddress.value) {
-      remoteBalance.value = (await getAccount(remoteAddress.value!)).data?.balance || 0
+      remoteBalance.value = (await getBalance(remoteAddress.value!)).data || 0
       logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}`)
     }
     else { logger.warn('Remote address not found') }
@@ -346,8 +346,31 @@ export function _useSync() {
       }
     }
 
+    // Make sure all the created HTLCs are in the remote signers db
+    // This would prevent a missing HTLC when the user closes the app before the HTLC is stored in the db
+    // TODO: Get also extended HTLCs
+    const htlcTransactions = accountTxs.data.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+    const remoteSigners = await getAllRemoteSigners()
+    for (const tx of htlcTransactions) {
+      const remoteSigner = remoteSigners.find(remoteSigner => remoteSigner.address.equals(tx.recipient))
+      if (remoteSigner)
+        continue
+
+      logger.error('Remote signer not found in db', tx.toPlain())
+      const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
+      addRemoteSigner({
+        active: false,
+        balance: (await getBalance(tx.recipient)).data,
+        address: tx.recipient,
+        publicKey: remotePublicKey.value!,
+        start: tx.validityStartHeight,
+        end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+        proofSize: tx.proof.raw.length,
+      })
+    }
+
     // Check for transactions made from the remote signers
-    for (const remoteSigner of await getAllRemoteSigners()) {
+    for (const remoteSigner of remoteSigners) {
       const accountTxs = await getAccountTransactions(remoteSigner.address)
       const txsToProcess = accountTxs.data
         // Only transactions sent from the remote signer to other addresses
@@ -455,10 +478,11 @@ export function _useSync() {
   /**
    * Sends all the funds from the remote signer to the local signer.
    */
-  async function drainRemoteSigner({ address, balance, end }: RemoteSigner) {
-    const amount = await useNimiqNetwork().getAccount(address).then(account => account.data?.balance || balance)
+  async function drainRemoteSigner({ address, end }: RemoteSigner) {
+    const { data: balance, error } = (await useNimiqNetwork().getBalance(address))
+    const amount = error ? 0 : balance
     if (!amount) {
-      logger.error('Error while draining remote signer. Amount is undefined', { address: address.toUserFriendlyAddress(), amount })
+      logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress(), amount })
       return
     }
     const transfer = end < localHeight.value ? Transfer.RemoteToLocalAfterTimeout : Transfer.RemoteToLocalImmediateReclaim
