@@ -24,11 +24,11 @@ dependencies:
     specifier: ^5.0.1
     version: 5.0.1(@capacitor/core@6.0.0)
   '@nimiq/fastspot-api-v1':
-    specifier: github:nimiq/fastspot-api#7d40ede12f86e9f9523d61c19ad99fc1663f5898
-    version: github.com/nimiq/fastspot-api/7d40ede12f86e9f9523d61c19ad99fc1663f5898
+    specifier: npm:@nimiq/fastspot-api@^1.9.0
+    version: /@nimiq/fastspot-api@1.9.0
   '@nimiq/fastspot-api-v2':
-    specifier: github:nimiq/fastspot-api#3ef81c74836f14e534443b6ea6d98ed4041f6e63
-    version: github.com/nimiq/fastspot-api/3ef81c74836f14e534443b6ea6d98ed4041f6e63
+    specifier: npm:@nimiq/fastspot-api@^2.0.0-beta.0
+    version: /@nimiq/fastspot-api@2.0.0-beta.0
   '@nimiq/utils':
     specifier: ^0.9.3
     version: 0.9.3
@@ -2481,6 +2481,14 @@ packages:
   /@nimiq/core-web@1.6.2:
     resolution: {integrity: sha512-b12CcwKgRy5YzSD1oDp3TU7JNm4vv3ua0OKFhxyFBW8JqbPGGqzU7GsRY9/nKtF77zMfE/dVayWweS0ecHPzVA==}
     dev: true
+
+  /@nimiq/fastspot-api@1.9.0:
+    resolution: {integrity: sha512-Tpl16uEAXMqpFcODAnoLiFEePgoBQLJCdKOR7JUkeh0W/jkjTI2KxFyF7N09GA01d0dk3GDlyRyVWMJzsZyYow==}
+    dev: false
+
+  /@nimiq/fastspot-api@2.0.0-beta.0:
+    resolution: {integrity: sha512-f+Iltez0OLO8LZ1Mhp3B4U8oCaMbTULfniQttDvhyv1QdgQaleZBYkbJEPmd0RZERDJvuAiDjZ5kPwymU1kqbg==}
+    dev: false
 
   /@nimiq/identicons@1.6.2:
     resolution: {integrity: sha512-O8XaSRoOwDjnQjOaWIi4wnELoYSu48WXfApYtz2dzMlFpY+pzekTmQaqS2kYR9uj+6KUiUfBSIVPJUhpWkp88w==}
@@ -12671,21 +12679,6 @@ packages:
       sister: 3.0.2
     transitivePeerDependencies:
       - supports-color
-    dev: false
-
-  github.com/nimiq/fastspot-api/3ef81c74836f14e534443b6ea6d98ed4041f6e63:
-    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/3ef81c74836f14e534443b6ea6d98ed4041f6e63}
-    name: '@nimiq/fastspot-api'
-    version: 2.0.0
-    requiresBuild: true
-    dev: false
-
-  github.com/nimiq/fastspot-api/7d40ede12f86e9f9523d61c19ad99fc1663f5898:
-    resolution: {tarball: https://codeload.github.com/nimiq/fastspot-api/tar.gz/7d40ede12f86e9f9523d61c19ad99fc1663f5898}
-    name: '@nimiq/fastspot-api'
-    version: 1.8.0
-    prepare: true
-    requiresBuild: true
     dev: false
 
   github.com/nimiq/vue3-components/e63c554e934aa562926393c9689341c4ee3157bf:
