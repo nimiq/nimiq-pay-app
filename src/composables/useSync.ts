@@ -158,7 +158,7 @@ export function _useSync() {
         const { state } = await client.value!.getTransaction(tx.transactionHash)
         if (state !== Nimiq.Client.TransactionState.PENDING) {
           logger.log(`Removing transaction ${tx.transactionHash.toHex()} from pending transactions`)
-          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash.toHex() !== tx.transactionHash.toHex())
+          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => !pendingTx.transactionHash.equals(tx.transactionHash))
         }
       }
 
@@ -177,7 +177,7 @@ export function _useSync() {
       // Only handle pending transactions, mined ones are handled by the block listener
       if (tx.state !== Nimiq.Client.TransactionState.PENDING) {
         // Removing the tx from the pending array
-        pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash.toHex() !== tx.transactionHash.toHex())
+        pendingTransactions.value = pendingTransactions.value.filter(pendingTx => !pendingTx.transactionHash.equals(tx.transactionHash))
         return
       }
 
@@ -191,8 +191,8 @@ export function _useSync() {
 
       // Check if tx is already in DB
       const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
-      const isTxInDB = dbTxs.some(dbTx => dbTx.hash === tx.transactionHash.toHex())
-      if (isTxInDB)
+      const hash = tx.transactionHash.toHex()
+      if (dbTxs.some(dbTx => dbTx.hash === hash))
         return
 
       logger.log(`📬 Saving pending transaction with ${usePrice(tx.value).crypto.formatted}`)
@@ -204,10 +204,9 @@ export function _useSync() {
         senderType: tx.senderType,
         recipient: tx.recipient.toUserFriendlyAddress(),
         recipientType: tx.recipientType,
-        hash: tx.transactionHash.toHex(),
+        hash,
         status: tx.state,
-        // Timestamp is not available for pending transactions
-        timestamp: Math.ceil(Date.now() / 1000),
+        timestamp: Math.ceil(Date.now() / 1000), // Timestamp is not available for pending transactions
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
@@ -236,8 +235,8 @@ export function _useSync() {
       if (tx.sender.equals(localAddress.value) || (remoteAddress.value && tx.sender.equals(remoteAddress.value)))
         return
 
-      const txHash = tx.transactionHash.toHex()
-      if (userReceipts.find(dbTx => dbTx.hash === txHash))
+      const hash = tx.transactionHash.toHex()
+      if (userReceipts.some(dbTx => dbTx.hash === hash))
         return
 
       logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
@@ -248,7 +247,7 @@ export function _useSync() {
         senderType: tx.senderType,
         recipient: tx.recipient.toUserFriendlyAddress(),
         recipientType: tx.recipientType,
-        hash: tx.transactionHash.toHex(),
+        hash,
         status: tx.state,
         timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
         title: 'Top-Up', // translated at display time
