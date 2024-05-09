@@ -136,11 +136,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:136
+#: src/stores/nimiq-network.ts:138
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:134
+#: src/stores/nimiq-network.ts:136
 msgid "Consensus established."
 msgstr ""
 
@@ -935,7 +935,7 @@ msgstr ""
 msgid "Swap pending"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:135
+#: src/stores/nimiq-network.ts:137
 msgid "Syncing with network."
 msgstr ""
 

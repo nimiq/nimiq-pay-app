@@ -122,6 +122,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   }
 
   async function getBalance(address: Nimiq.Address) {
+    if (!address)
+      return { data: 0, error: 'Address missing' } // No user facing
     const account = await client.value?.getAccount(address)
     if (!account)
       return { data: 0, error: 'No account found' } // No user facing
