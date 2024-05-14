@@ -234,7 +234,7 @@ onMounted(async () => {
         <IonRow>
           <a class="w-full mt-2 bg-white rounded-lg h-80">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
-            <iframe class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups" src="https://map.nimiq.com/"></iframe>
+            <iframe class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups" src="https://map.nimiq.com/?layout=compact"></iframe>
           </a>
         </IonRow>
         <IonRow class="ion-justify-content-center">
