@@ -11,6 +11,16 @@ const logger = useLogger('useNimiqNetwork')
 
 const { setToast, clearToast } = useToast()
 
+export const CashlinkExtraData = {
+  FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
+  CLAIMING: new Uint8Array([0, 139, 136, 141, 138]), // 'LINK'.split('').map(c => c.charCodeAt(0) + 63)
+}
+
+export const CashlinkExtraDataHex = {
+  FUNDING: CashlinkExtraData.FUNDING.reduce((hex, value) => hex + value.toString(16).padStart(2, '0'), ''),
+  CLAIMING: CashlinkExtraData.CLAIMING.reduce((hex, value) => hex + value.toString(16).padStart(2, '0'), ''),
+}
+
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Nimiq.Client>()
   const consensus = ref<Nimiq.Client.ConsensusState>('connecting')
@@ -83,12 +93,27 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (amount <= 0)
       throw new Error(i18n.t('Cashlink has no balance'))
 
-    const tx = wallet.createTransaction(
-      address,
-      amount,
-      0,
+    const tx = new Nimiq.ExtendedTransaction(
+      wallet.address, // sender address
+      Nimiq.Account.Type.BASIC, // sender type
+      address, // recipient address
+      Nimiq.Account.Type.BASIC, // recipient type
+      balance,
+      0, // fee
       height.value,
+      Nimiq.Transaction.Flag.NONE,
+      CashlinkExtraData.CLAIMING, // extraData
     )
+    const signature = Nimiq.Signature.create(
+      keyPair.privateKey,
+      keyPair.publicKey,
+      tx.serializeContent(),
+    )
+    const proof = Nimiq.SignatureProof.singleSig(
+      keyPair.publicKey,
+      signature,
+    ).serialize()
+    tx.proof = proof
 
     logger.log('Claiming Cashlink', tx.toPlain())
     await client.value!.sendTransaction(tx)

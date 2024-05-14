@@ -9,7 +9,7 @@ import { usePrice } from './usePrice'
 import { useFastspotApiV1 } from './useFastspotv1'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useTransactions } from '@/stores/transactions'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
@@ -196,7 +196,11 @@ export function _useSync() {
         return
 
       logger.log(`📬 Saving pending transaction with ${usePrice(tx.value).crypto.formatted}`)
-      useApp().addNewTopUpAddress(tx.sender.toUserFriendlyAddress())
+
+      // Only add non cashlink address to the withdrawal list
+      if (tx.toPlain().data.raw !== CashlinkExtraDataHex.CLAIMING)
+        useApp().addNewTopUpAddress(tx.sender.toUserFriendlyAddress())
+
       useTransactions().addReceiptTransaction({
         transfer: Transfer.UserReceipt,
         amount: tx.value,
