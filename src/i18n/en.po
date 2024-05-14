@@ -27,13 +27,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:117
-#: src/stores/nimiq-network.ts:82
-#: src/stores/nimiq-network.ts:99
+#: src/stores/nimiq-network.ts:124
+#: src/stores/nimiq-network.ts:142
+#: src/stores/nimiq-network.ts:92
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:108
+#: src/stores/nimiq-network.ts:133
 msgid "Addresses missing"
 msgstr ""
 
@@ -98,7 +98,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:84
+#: src/stores/nimiq-network.ts:94
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -136,11 +136,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:138
+#: src/stores/nimiq-network.ts:163
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:136
+#: src/stores/nimiq-network.ts:161
 msgid "Consensus established."
 msgstr ""
 
@@ -498,7 +498,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:42
+#: src/stores/nimiq-network.ts:52
 msgid "Network consensus lost."
 msgstr ""
 
@@ -510,7 +510,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:102
+#: src/stores/nimiq-network.ts:127
 msgid "No account found"
 msgstr ""
 
@@ -522,11 +522,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:111
+#: src/stores/nimiq-network.ts:136
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:73
+#: src/stores/nimiq-network.ts:83
 msgid "No Cashlink found"
 msgstr ""
 
@@ -556,7 +556,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:120
+#: src/stores/nimiq-network.ts:145
 msgid "No transactions found"
 msgstr ""
 
@@ -935,7 +935,7 @@ msgstr ""
 msgid "Swap pending"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:137
+#: src/stores/nimiq-network.ts:162
 msgid "Syncing with network."
 msgstr ""
 
@@ -1020,7 +1020,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:57
+#: src/stores/nimiq-network.ts:67
 msgid "Trying to establish network consensus:"
 msgstr ""
 

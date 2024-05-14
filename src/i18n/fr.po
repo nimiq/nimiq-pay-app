@@ -2,7 +2,7 @@
 # Mathéo Raveux 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-04-15 13:20+0000\n"
+"PO-Revision-Date: 2024-05-11 13:20+0000\n"
 "Last-Translator: Mathéo Raveux\n"
 "Language: fr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -17,7 +17,7 @@ msgid "{count} of {total} remaining."
 msgstr "{count} sur {total} restant."
 
 msgid "About"
-msgstr ""
+msgstr "À propos"
 
 msgid "Activate Cashback & Rewards"
 msgstr "Activer les Cashback et les Récompenses"
@@ -59,7 +59,7 @@ msgid "Backup your account before logging out"
 msgstr "Sauvegardez votre compte avant de vous déconnecter"
 
 msgid "Bitcoin Lightning invoice expired."
-msgstr ""
+msgstr "La facture Bitcoin Lightning a expiré."
 
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode est un service de paiement européen qui prend désormais en charge NIM."
@@ -67,10 +67,8 @@ msgstr "Bluecode est un service de paiement européen qui prend désormais en ch
 msgid "Both expected and the given PIN are empty"
 msgstr "Le code PIN attendu et le code PIN donné sont tous deux vides"
 
-#, fuzzy
-#| msgid "By tapping “verify”, you agree to our data management practices."
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
-msgstr "En cliquant sur \"vérifier\", vous acceptez nos politiques de gestion des données."
+msgstr "En cliquant sur « payer », vous acceptez les {terms} de Fastspot"
 
 msgid "By tapping “verify”, you agree to our data management practices."
 msgstr "En cliquant sur \"vérifier\", vous acceptez nos politiques de gestion des données."
@@ -134,7 +132,7 @@ msgid "Copy or scan the address"
 msgstr "Copier ou scanner l'adresse"
 
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
-msgstr ""
+msgstr "Impossible de récupérer le montant de NIM pour l'échange Bitcoin Lightning."
 
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Créez une sauvegarde. C'est le seul moyen de récupérer votre compte."
@@ -264,13 +262,13 @@ msgid "Invalid"
 msgstr "Invalide"
 
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
-msgstr ""
+msgstr "Facture Bitcoin Lightning invalide : montant manquant."
 
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
-msgstr ""
+msgstr "Facture Bitcoin Lightning invalide : date et heure manquantes."
 
 msgid "Invalid Bitcoin Lightning invoice."
-msgstr ""
+msgstr "Facture Bitcoin Lightning invalide."
 
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink non valide. Impossible d'obtenir les détails du paiement."
@@ -290,18 +288,14 @@ msgstr "Réponse invalide de GoCrypto"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Format de lien non valide. Les CPLinks ne sont pris en charge que pour NIM."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
-msgstr "Format de lien non valide. Seuls les CPLinks pour NIM et les requêtes GoCrypto pour NIM sont pris en charge."
+msgstr "Format de lien non valide. Seuls les CPLinks, les requêtes NAKA pour NIM et les requêtes Bitcoin Lightning sont pris en charge."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks for NIM and GoCrypto requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
-msgstr "Format de lien non valide. Seuls les CPLinks pour NIM et les requêtes GoCrypto pour NIM sont pris en charge."
+msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
 
 msgid "Invalid NIM HTLC data in swap"
-msgstr ""
+msgstr "Données NIM HTLC non valides dans le swap"
 
 msgid "Invalid Nimiq address"
 msgstr "Adresse Nimiq invalide"
@@ -327,10 +321,8 @@ msgstr "QR Code invalide"
 msgid "Invalid recovery words"
 msgstr "Mots de récupération non valides"
 
-#, fuzzy
-#| msgid "Invalid Nimiq Cashlink"
 msgid "Invalid swap hash"
-msgstr "Cashlink Nimiq invalide"
+msgstr "Hash su swap invalide"
 
 msgid "Invalid transfer type"
 msgstr "Type de transfert non valide"
@@ -386,7 +378,7 @@ msgid "New"
 msgstr "Nouveau"
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
-msgstr ""
+msgstr "L'application Nimiq Pay et le Wallet Nimiq utilisent des mots de récupération différents."
 
 msgid "No account found"
 msgstr "Pas de compte trouvé"
@@ -404,7 +396,7 @@ msgid "No Cashlink found"
 msgstr "Aucun Cashlink trouvé"
 
 msgid "No NIM HTLC found in swap"
-msgstr ""
+msgstr "Aucun HTLC NIM n'a été trouvé dans le swap"
 
 msgid "No one can see me"
 msgstr "Personne ne peut me voir"
@@ -482,10 +474,8 @@ msgstr "Le paiement est en cours de traitement"
 msgid "Payment preview"
 msgstr "Aperçu des paiements"
 
-#, fuzzy
-#| msgid "Payment expired"
 msgid "Payment Secret"
-msgstr "Paiement expiré"
+msgstr "Secret du paiement"
 
 msgid "Payment successful"
 msgstr "Paiement réussi"
@@ -575,7 +565,7 @@ msgid "Recovery Words"
 msgstr "Mots de récupération"
 
 msgid "Refunded"
-msgstr ""
+msgstr "Remboursé"
 
 msgid "Resend"
 msgstr "Renvoyer"
@@ -592,10 +582,8 @@ msgstr "Sauvegarder"
 msgid "Scan any Nimiq or NAKA QR code to pay."
 msgstr "Scannez n'importe quel QR code Nimiq ou NAKA pour payer."
 
-#, fuzzy
-#| msgid "Scan any Nimiq or NAKA QR code to pay."
 msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
-msgstr "Scannez n'importe quel QR code Nimiq ou NAKA pour payer."
+msgstr "Scannez n'importe quel QR code Nimiq, Bitcoin Lightning ou NAKA pour payer."
 
 msgid "Scan Cashlink"
 msgstr "Scanner un Cashlink"
@@ -687,16 +675,14 @@ msgstr "Statut"
 msgid "Submit"
 msgstr "Valider"
 
-#, fuzzy
-#| msgid "Pending"
 msgid "Swap pending"
-msgstr "En attente"
+msgstr "Swap en attente"
 
 msgid "Syncing with network."
 msgstr "Synchronisation avec le réseau."
 
 msgid "Terms of service"
-msgstr ""
+msgstr "Conditions d'utilisation"
 
 msgid "Test your backup"
 msgstr "Testez votre sauvegarde"
@@ -859,7 +845,7 @@ msgid "Wrong answer"
 msgstr "Mauvaise réponse"
 
 msgid "Wrong network in Bitcoin Lightning invoice."
-msgstr ""
+msgstr "Mauvais réseau dans la facture Bitcoin Lightning."
 
 msgid "Wrong number of recovery words"
 msgstr "Nombre incorrect de mots de récupération"
