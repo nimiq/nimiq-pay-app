@@ -41,6 +41,9 @@ dependencies:
   '@vueuse/integrations':
     specifier: ^10.9.0
     version: 10.9.0(fuse.js@7.0.0)(vue@3.4.27)
+  bech32:
+    specifier: ^2.0.0
+    version: 2.0.0
   fuse.js:
     specifier: ^7.0.0
     version: 7.0.0
@@ -4381,6 +4384,10 @@ packages:
     dependencies:
       tweetnacl: 0.14.5
     dev: true
+
+  /bech32@2.0.0:
+    resolution: {integrity: sha512-LcknSilhIGatDAsY1ak2I8VtGaHNhgMSYVxFrGLXv+xLHytaKZKcaUJJUE7qmBr7h33o5YQwP55pMI0xmkpJwg==}
+    dev: false
 
   /before-after-hook@2.2.3:
     resolution: {integrity: sha512-NzUnlZexiaH/46WDhANlyR2bXRopNg4F/zuSA3OpZnllCUgRaOF2znDioDWrmbNVsuZk6l9pMquQB38cfBZwkQ==}

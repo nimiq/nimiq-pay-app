@@ -179,10 +179,17 @@ export function useStringParser() {
     // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
     const amountBtc = Number.parseInt(amountSection.value) / 1e11
 
-    const quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
-      { asset: AssetId.NIM },
-      { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
-    ))
+    let quote
+    try {
+      quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
+        { asset: AssetId.NIM },
+        { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
+      ))
+    }
+    catch (e) {
+      console.error(e)
+      return { error: i18n.t('Unknown error creating swap'), data: undefined }
+    }
 
     if (quote.sell.asset !== AssetId.NIM)
       return { error: i18n.t('Could not fetch NIM amount for Bitcoin Lightning swap.'), data: undefined }
