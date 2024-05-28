@@ -188,7 +188,7 @@ export function useStringParser() {
     }
     catch (e) {
       console.error(e)
-      return { error: i18n.t('Unknown error creating swap'), data: undefined }
+      return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
     }
 
     if (quote.sell.asset !== AssetId.NIM)

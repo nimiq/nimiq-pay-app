@@ -73,6 +73,9 @@ async function parseServiceResponse(data: { [key: string]: string | number }) {
   const max = Number(data.maxSendable)
   if (!(min && max) || min > max)
     return null
+  // We only support fixed amounts for now
+  if (min !== max)
+    throw new Error('Variable amounts are not supported')
 
   let metadata: Array<Array<string>> = []
   try {
@@ -123,8 +126,6 @@ export async function parseBitcoinLightningInvoice(url: string) {
   const invoice = await parseLnurlPayRequest(url)
   if (invoice === null)
     throw new Error('Invalid LNURL')
-  if (!invoice.fixed)
-    throw new Error('Variable amounts are not supported')
 
   return {
     ...decode(invoice.pr),
