@@ -59,14 +59,14 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 
     <div
       v-if="tx"
-      class="grid justify-between w-full grid-cols-[1fr,1fr] gap-y-4 text-space/60 text-lg [&>*:nth-child(even)]:text-right"
+      class="grid justify-between w-full grid-cols-[auto,1fr] gap-y-4 text-space/60 text-lg [&>*:nth-child(even)]:text-right"
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize" @click="() => handleCopy(tx.hash)">
         <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported">
           {{ $t('Swap pending') }}
         </template>
-        <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
+        <template v-else-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
           {{ $t('Refunded') }}
         </template>
         <template v-else>
@@ -85,9 +85,9 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
         {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
       </div>
 
-      <div v-if="tx.meta?.secret" class="max-w-full text-space/60 text-lg col-span-2">
+      <div v-if="tx.meta?.secret" class="max-w-full col-span-2 text-lg text-space/60">
         {{ $t('Payment Secret') }}
-        <div class="rounded-lg px-3 py-2 break-words font-mono mt-2 -mx-3 bg-space/5">
+        <div class="px-3 py-2 mt-2 -mx-3 font-mono break-words rounded-lg bg-space/5">
           {{ tx.meta.secret }}
         </div>
       </div>
