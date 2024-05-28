@@ -284,6 +284,19 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
     main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
+    async beforeRender(state, { next }) {
+      const { qrCodeScanner } = state
+      // If it's a string, assume that it's a payment request
+      if (qrCodeScanner && typeof qrCodeScanner === 'string') {
+        const { getPaymentRequestData } = (await import('@/composables/useStringParser')).useStringParser()
+        const { data, error } = await getPaymentRequestData(qrCodeScanner)
+        if (error || !data)
+          // We don't throw an error here, as we don't want to stop the flow. Let the user scan the QR code again.
+          return console.error('Error parsing QR code when opening from appUrlOpen', error)
+        state[StepName.QRCodeScanner] = data
+        next()
+      }
+    },
     beforeNext: async (_, { next, prev }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest)
         next()
