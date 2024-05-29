@@ -49,6 +49,10 @@ msgstr ""
 msgid "Already paid"
 msgstr ""
 
+#: src/composables/useBitcoinLightning.ts:70
+msgid "Amount too small"
+msgstr ""
+
 #: src/stores/local-wallet.ts:38
 msgid "An unknown error occurred while importing words"
 msgstr ""
@@ -92,6 +96,10 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:66
 msgid "Cancel"
+msgstr ""
+
+#: src/composables/useStringParser.ts:191
+msgid "Cannot create NIM/BTC_LN swap"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:62
@@ -165,15 +173,15 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:362
+#: src/lib/flows/steps.ts:375
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:188
+#: src/composables/useStringParser.ts:195
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/lib/flows/steps.ts:426
+#: src/lib/flows/steps.ts:439
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
@@ -358,6 +366,10 @@ msgstr ""
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
+#: src/composables/useBitcoinLightning.ts:52
+msgid "Invalid callback URL"
+msgstr ""
+
 #: src/composables/useStringParser.ts:131
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
@@ -392,12 +404,16 @@ msgstr ""
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
+#: src/composables/useBitcoinLightning.ts:129
+msgid "Invalid LNURL"
+msgstr ""
+
 #: src/lib/tx.ts:108
 msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
 #: src/composables/useStringParser.ts:27
-#: src/lib/flows/steps.ts:373
+#: src/lib/flows/steps.ts:386
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -631,8 +647,8 @@ msgstr ""
 msgid "Payment is being processed"
 msgstr ""
 
-#: src/lib/flows/steps.ts:300
-#: src/lib/flows/steps.ts:312
+#: src/lib/flows/steps.ts:313
+#: src/lib/flows/steps.ts:325
 msgid "Payment preview"
 msgstr ""
 
@@ -832,15 +848,15 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:384
+#: src/lib/flows/steps.ts:397
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:361
+#: src/lib/flows/steps.ts:374
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:383
+#: src/lib/flows/steps.ts:396
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -943,7 +959,7 @@ msgstr ""
 msgid "Terms of service"
 msgstr ""
 
-#: src/lib/flows/steps.ts:439
+#: src/lib/flows/steps.ts:452
 msgid "Test your backup"
 msgstr ""
 
@@ -959,7 +975,7 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/steps.ts:425
+#: src/lib/flows/steps.ts:438
 msgid "There is no \"Forgot password\""
 msgstr ""
 
@@ -1000,7 +1016,7 @@ msgstr ""
 msgid "Top-Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:400
+#: src/lib/flows/steps.ts:413
 msgid "Transaction"
 msgstr ""
 
@@ -1038,6 +1054,10 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:22
 msgid "Use {amount}"
+msgstr ""
+
+#: src/composables/useBitcoinLightning.ts:79
+msgid "Variable amounts are not supported"
 msgstr ""
 
 #: src/components/PhoneInput.vue:43
@@ -1129,7 +1149,7 @@ msgstr ""
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr ""
 
-#: src/lib/flows/steps.ts:332
+#: src/lib/flows/steps.ts:345
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
@@ -1142,11 +1162,11 @@ msgstr ""
 msgid "Withdrawal successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:432
+#: src/lib/flows/steps.ts:445
 msgid "Write down these words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:433
+#: src/lib/flows/steps.ts:446
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -1180,7 +1200,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr ""
 
-#: src/lib/flows/steps.ts:340
+#: src/lib/flows/steps.ts:353
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 

@@ -1,4 +1,5 @@
 import type { LNServiceResponse } from '@/types'
+import { i18n } from '@/i18n/i18n-setup'
 
 const TAG_PAY_REQUEST = 'payRequest'
 // https://github.com/dolcalmi/lnurl-pay/blob/c780358f4bd51bd69690bed135c3b78653fbd109/src/utils.ts#L11C1-L12C75
@@ -48,7 +49,7 @@ async function decodeCallbackUrl(url: string) {
   const array = bech32.fromWords(decoded.words)
   const data = Nimiq.BufferUtils.toAscii(new Uint8Array(array))
   if (!isURL(data))
-    throw new Error('Invalid callback URL')
+    throw new Error(i18n.t('Invalid callback URL'))
   return data
 }
 
@@ -66,7 +67,7 @@ async function parseServiceResponse(data: { [key: string]: string | number }) {
     return null
 
   if (Number(data.minSendable) < 1)
-    throw new Error('Amount too small')
+    throw new Error(i18n.t('Amount too small'))
 
   // minSendable and maxSendable are in millisatoshi
   const min = Number(data.minSendable)
@@ -75,7 +76,7 @@ async function parseServiceResponse(data: { [key: string]: string | number }) {
     return null
   // We only support fixed amounts for now
   if (min !== max)
-    throw new Error('Variable amounts are not supported')
+    throw new Error(i18n.t('Variable amounts are not supported'))
 
   let metadata: Array<Array<string>> = []
   try {
@@ -125,7 +126,7 @@ export async function parseBitcoinLightningInvoice(url: string) {
   // But LNURL invoices need to be decoded first, get the invoice from the service and then decode the lightning invoice
   const invoice = await parseLnurlPayRequest(url)
   if (invoice === null)
-    throw new Error('Invalid LNURL')
+    throw new Error(i18n.t('Invalid LNURL'))
 
   return {
     ...decode(invoice.pr),

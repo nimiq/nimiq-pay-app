@@ -43,6 +43,9 @@ msgstr "Todas as transações"
 msgid "Already paid"
 msgstr "Já está pago"
 
+msgid "Amount too small"
+msgstr ""
+
 msgid "An unknown error occurred while importing words"
 msgstr "Ocorreu um erro desconhecido ao importar as palavras"
 
@@ -75,6 +78,9 @@ msgstr "Ao clicares em \"verificar\", concordas com as nossas práticas de gest�
 
 msgid "Cancel"
 msgstr "Cancelar"
+
+msgid "Cannot create NIM/BTC_LN swap"
+msgstr ""
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado com sucesso"
@@ -270,6 +276,9 @@ msgstr "Fatura Bitcoin Lightning inválida: carimbo de data/hora em falta."
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Fatura Bitcoin Lightning inválida."
 
+msgid "Invalid callback URL"
+msgstr ""
+
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink inválido. Impossível obter detalhes de pagamento."
 
@@ -293,6 +302,11 @@ msgstr "Formato do link inválido. Apenas CPLinks e NAKA para pedidos NIM e pedi
 
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Formato do link inválido. Apenas pedidos de CPLinks e NAKA para NIM são suportados."
+
+#, fuzzy
+#| msgid "Invalid PIN"
+msgid "Invalid LNURL"
+msgstr "PIN inválido"
 
 msgid "Invalid NIM HTLC data in swap"
 msgstr "Dados do HTLC de NIM inválidos na troca"
@@ -755,6 +769,9 @@ msgstr "Desconhecido"
 
 msgid "Use {amount}"
 msgstr "Usar {amount}"
+
+msgid "Variable amounts are not supported"
+msgstr ""
 
 msgid "Verify"
 msgstr "Verificar"
