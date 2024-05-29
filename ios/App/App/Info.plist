@@ -53,7 +53,7 @@
 	<string>com.nimiq.pay</string>
 	<key>CFBundleURLSchemes</key>
 	<array>
-			<string>lightning</string>
+		<string>lightning</string>
 	</array>
 </dict>
 </plist>
