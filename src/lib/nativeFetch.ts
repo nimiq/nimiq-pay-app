@@ -12,6 +12,10 @@ export async function nativeFetch(url: URL | RequestInfo, options?: RequestInit)
     data: options?.body,
     // webFetchExtra: options,
   })
+  if (response.status !== 200) {
+    const { useLogger } = await import('@/composables/useLogger')
+    useLogger('nativeFetch').error(`Failed to fetch ${url}: ${JSON.stringify({ request, response })}`)
+  }
 
   return Response.json(response.data, {
     headers: response.headers,
