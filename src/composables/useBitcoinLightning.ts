@@ -61,7 +61,7 @@ async function decodeCallbackUrl(url: string) {
  * @param response
  * @returns Parsed response
  */
-async function parseServiceResponse(response: LNServiceResponse) {
+async function parseServiceResponse(response: Partial<LNServiceResponse>) {
   if (response.tag !== TAG_PAY_REQUEST)
     return null
 
@@ -79,18 +79,25 @@ async function parseServiceResponse(response: LNServiceResponse) {
     return null
   // We only support fixed amounts for now
   if (min !== max)
-    throw new Error(i18n.t('Variable amounts are not supported'))
+    throw new Error(i18n.t('Lightning request is for a variable payment amount, but variable amounts are not supported'))
 
-  let metadata: string[][] = []
+  let description = ''
   try {
     // https://github.com/lnurl/luds/blob/luds/06.md
-    metadata = JSON.parse(response.metadata as string) as string[][]
+    const metadata = JSON.parse(response.metadata as string)
+    if (!Array.isArray(metadata))
+      throw new Error('Invalid metadata')
+
+    const descMeta = metadata.find(
+      metaPair => Array.isArray(metaPair) && metaPair.length >= 2 && metaPair[0] === 'text/plain' && typeof metaPair[1] === 'string',
+    ) as ['text/plain', string] | undefined
+
+    description = descMeta?.[1] || ''
   }
   catch {
     // Ignore failing metadata parsing, as it only means we'd have no description
   }
 
-  const description = metadata.find(([k]) => k === 'text/plain')?.[1] || ''
   const callbackUrl = new URL(callback)
 
   // We need to fetch the invoice with an amount parameter to get the payment request (pr). Since we only support fixed amounts, using min or max is the same.
@@ -99,10 +106,10 @@ async function parseServiceResponse(response: LNServiceResponse) {
     const res = await fetch(callbackUrl)
     if (!res.ok)
       throw new Error(`Failed to fetch payment request: ${JSON.stringify({ status: res.status, statusText: res.statusText, url: res.url })}`)
-    const responseBody = await res.json() as LNServicePaymentRequest
-    const { pr } = responseBody
-    if (!pr)
+    const responseBody = await res.json()
+    if (!responseBody || typeof responseBody !== 'object' || !('pr' in responseBody) || typeof responseBody.pr !== 'string')
       throw new Error(`No payment request found: ${JSON.stringify({ responseBody, url: res.url })}`)
+    const { pr } = responseBody as LNServicePaymentRequest
 
     return {
       pr,
@@ -118,15 +125,15 @@ async function parseServiceResponse(response: LNServiceResponse) {
 async function parseLnurlPayRequest(url: string) {
   // First we get the callback URL from the LNURL
   const callbackUrl = await decodeCallbackUrl(url)
-  let serviceResponse: LNServiceResponse
+  let serviceResponse: unknown
   try {
     // Then we fetch the data from that callback
     const res = await fetch(callbackUrl)
     if (!res.ok)
       throw new Error(`Failed to fetch LNURL service: ${JSON.stringify({ status: res.status, statusText: res.statusText, url: res.url })}`)
-    serviceResponse = await res.json() as LNServiceResponse
-    if (!serviceResponse)
-      throw new Error(`No response body found: ${JSON.stringify({ url: res.url })}`)
+    serviceResponse = await res.json()
+    if (!serviceResponse || typeof serviceResponse !== 'object')
+      throw new Error(`Invalid server response: ${JSON.stringify({ url: res.url })}`)
   }
   catch (error) {
     logger.error((error as Error).message)
