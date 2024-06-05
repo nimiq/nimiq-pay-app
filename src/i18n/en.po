@@ -49,7 +49,7 @@ msgstr ""
 msgid "Already paid"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:70
+#: src/composables/useBitcoinLightning.ts:73
 msgid "Amount too small"
 msgstr ""
 
@@ -271,6 +271,14 @@ msgstr ""
 msgid "Failed to delete Points account"
 msgstr ""
 
+#: src/composables/useBitcoinLightning.ts:140
+msgid "Failed to fetch LNURL service"
+msgstr ""
+
+#: src/composables/useBitcoinLightning.ts:121
+msgid "Failed to fetch payment request"
+msgstr ""
+
 #: src/modals/PointsModal.vue:45
 msgid "Featured"
 msgstr ""
@@ -366,7 +374,7 @@ msgstr ""
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:52
+#: src/composables/useBitcoinLightning.ts:55
 msgid "Invalid callback URL"
 msgstr ""
 
@@ -404,7 +412,7 @@ msgstr ""
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:129
+#: src/composables/useBitcoinLightning.ts:155
 msgid "Invalid LNURL"
 msgstr ""
 
@@ -482,6 +490,10 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:39
 msgid "Learn more"
+msgstr ""
+
+#: src/composables/useBitcoinLightning.ts:82
+msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr ""
 
 #: src/components/TransactionList.vue:42
@@ -1054,10 +1066,6 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:22
 msgid "Use {amount}"
-msgstr ""
-
-#: src/composables/useBitcoinLightning.ts:79
-msgid "Variable amounts are not supported"
 msgstr ""
 
 #: src/components/PhoneInput.vue:43

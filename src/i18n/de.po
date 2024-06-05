@@ -1,7 +1,7 @@
 # Daniel 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-05-11 13:20+0000\n"
+"PO-Revision-Date: 2024-05-31 20:20+0000\n"
 "Last-Translator: Daniel\n"
 "Language: de\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -43,7 +43,7 @@ msgid "Already paid"
 msgstr "Bereits bezahlt"
 
 msgid "Amount too small"
-msgstr ""
+msgstr "Betrag zu klein"
 
 msgid "An unknown error occurred while importing words"
 msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
@@ -79,7 +79,7 @@ msgid "Cancel"
 msgstr "Abbrechen"
 
 msgid "Cannot create NIM/BTC_LN swap"
-msgstr ""
+msgstr "Konnte keinen NIM/BTC-LN-Tausch erstellen"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink erfolgreich eingelöst"
@@ -205,6 +205,14 @@ msgstr "Verfallende Punkte"
 msgid "Failed to delete Points account"
 msgstr "Löschung des Punkte-Kontos fehlgeschlagen"
 
+msgid "Failed to fetch LNURL service"
+msgstr ""
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Failed to fetch payment request"
+msgstr "Keine ausstehende Zahlungsanfrage"
+
 msgid "Featured"
 msgstr "Empfohlen"
 
@@ -276,7 +284,7 @@ msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Ungültige Bitcoin-Lightning-Rechnung (Invoice)."
 
 msgid "Invalid callback URL"
-msgstr ""
+msgstr "Ungültige Callback-URL"
 
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "Ungültiger CPLink. Die Zahlungsdetails konnten nicht abgerufen werden."
@@ -302,10 +310,8 @@ msgstr "Ungültiges Link-Format. Nur CPLinks, NIM-NAKA- und Bitcoin-Lightning-Za
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Ungültiges Link-Format. Nur CPLinks und NAKA-Zahlungsanfragen für NIM werden unterstützt."
 
-#, fuzzy
-#| msgid "Invalid PIN"
 msgid "Invalid LNURL"
-msgstr "Ungültige PIN"
+msgstr "Ungültige LNURL"
 
 msgid "Invalid NIM HTLC data in swap"
 msgstr "Ungültige NIM-HTLC-Daten für den Tausch"
@@ -360,6 +366,9 @@ msgstr "Sprache"
 
 msgid "Learn more"
 msgstr "Mehr erfahren"
+
+msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
+msgstr ""
 
 msgid "Loading"
 msgstr "Lade"
@@ -769,9 +778,6 @@ msgstr "Unbekannt"
 msgid "Use {amount}"
 msgstr "{amount} benutzen"
 
-msgid "Variable amounts are not supported"
-msgstr ""
-
 msgid "Verify"
 msgstr "Überprüfen"
 
@@ -915,6 +921,9 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#~ msgid "Variable amounts are not supported"
+#~ msgstr "Variable Beträge werden nicht unterstützt."
 
 #~ msgid "Delete Points rewards account"
 #~ msgstr "Bonus-Punkte-Konto löschen"

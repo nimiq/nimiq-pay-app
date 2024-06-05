@@ -206,6 +206,14 @@ msgstr "Points en cours d'expiration"
 msgid "Failed to delete Points account"
 msgstr "Échec de la suppression du compte de Points Cryptocity"
 
+msgid "Failed to fetch LNURL service"
+msgstr ""
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Failed to fetch payment request"
+msgstr "Pas de demande de paiement en cours"
+
 msgid "Featured"
 msgstr "En vedette"
 
@@ -361,6 +369,9 @@ msgstr "Langue"
 
 msgid "Learn more"
 msgstr "En savoir plus"
+
+msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
+msgstr ""
 
 msgid "Loading"
 msgstr "Chargement"
@@ -769,9 +780,6 @@ msgstr "Inconnu"
 
 msgid "Use {amount}"
 msgstr "Utiliser {amount}"
-
-msgid "Variable amounts are not supported"
-msgstr ""
 
 msgid "Verify"
 msgstr "Vérifier"

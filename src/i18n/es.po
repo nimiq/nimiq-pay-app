@@ -207,6 +207,14 @@ msgstr "Puntos por vencer"
 msgid "Failed to delete Points account"
 msgstr "No se pudo eliminar la cuenta de puntos"
 
+msgid "Failed to fetch LNURL service"
+msgstr ""
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Failed to fetch payment request"
+msgstr "No es una solicitud de pago pendiente"
+
 msgid "Featured"
 msgstr "Destacado"
 
@@ -362,6 +370,9 @@ msgstr "Lenguaje"
 
 msgid "Learn more"
 msgstr "Saber más"
+
+msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
+msgstr ""
 
 msgid "Loading"
 msgstr "Cargando"
@@ -770,9 +781,6 @@ msgstr "Desconocido"
 
 msgid "Use {amount}"
 msgstr "Usa {amount}"
-
-msgid "Variable amounts are not supported"
-msgstr ""
 
 msgid "Verify"
 msgstr "Verificar"
