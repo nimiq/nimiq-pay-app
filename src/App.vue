@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
+import type { URLOpenListenerEvent } from '@capacitor/app'
+import { App } from '@capacitor/app'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView } from 'vue-router'
 import { StatusBar, Style } from '@capacitor/status-bar'
 
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { onMounted } from 'vue'
+import { until } from '@vueuse/core'
 import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
 import { isDev } from '@/lib/index'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
 
 onMounted(async () => {
   if (!useDevice().isWeb)
@@ -20,6 +25,18 @@ if (!useDevice().isWeb) {
   StatusBar.setStyle({ style: Style.Light })
   StatusBar.setOverlaysWebView({ overlay: false })
 }
+
+App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
+  // Wait until the pin code is entered to show the payment request modal
+  const { useDecrypt } = await import('@/composables/useDecrypt')
+  await until(useDecrypt().decrypted).toBeTruthy()
+  // Detect if the app was open with the lightning scheme
+  const url = new URL(event.url)
+  if (url.protocol === 'lightning:') {
+    // Open the payment request modal
+    initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: url.toString() })
+  }
+})
 </script>
 
 <template>

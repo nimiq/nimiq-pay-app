@@ -47,7 +47,7 @@ const category = computed(() => {
         {{ translateTransactionTitle(tx.title) }}
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
-        <time class="text-space/50 tabular-nums">{{ relativeTime }} </time>
+        <time class="text-space/50 tabular-nums text-nowrap">{{ relativeTime }} </time>
         <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported" class="italic text-pumpkin/90">
           {{ $t('Swap pending') }}
         </span>
@@ -58,11 +58,11 @@ const category = computed(() => {
     </div>
     <div class="flex flex-col items-end ml-auto gap-y-1">
       <span class="text-base font-bold">{{ fiat.formatted }}</span>
-      <time v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">
+      <time v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
         <CryptoCityLogo class="h-3 mr-1" />
         {{ crypto.total.toLocaleString() }}
       </time>
-      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums">
+      <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
         <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
         {{ crypto.total.toLocaleString() }} {{ paymentMethod }}
       </time>

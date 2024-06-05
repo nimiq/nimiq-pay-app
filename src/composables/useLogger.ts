@@ -117,7 +117,7 @@ export function useLogger(name: string = '') {
       else
         console.error(`${name}:`, ...args)
     }
-    logs.value.push()
+    logs.value.push(formatLogs(args))
   }
 
   function formatLogs(args: any[]) {

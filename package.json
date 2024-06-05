@@ -39,6 +39,7 @@
     "@nimiq/vue3-components": "github:nimiq/vue3-components#build/full",
     "@vueuse/core": "^10.9.0",
     "@vueuse/integrations": "^10.9.0",
+    "bech32": "^2.0.0",
     "fuse.js": "^7.0.0",
     "jssha": "^3.3.1",
     "libphonenumber-js": "^1.10.61",

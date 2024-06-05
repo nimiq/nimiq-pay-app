@@ -152,7 +152,7 @@ type BaseStep = {
    * dynamic values of the UI (e.g. in the payment preview we would like to set
    * the title of the `merchantName`)
    */
-  beforeRender?: (state: State) => Promise<void> | undefined
+  beforeRender?: (state: State, callbacks: StepCallbacks) => Promise<void> | undefined
 
   /**
    * Hook that will be triggered when the `main` component has emitted `done` or
@@ -162,12 +162,12 @@ type BaseStep = {
    * should declare that logic inside this hook. Use the `callbacks` to
    * programme the behaviour you want.
    */
-  beforeNext?: (state: State, callbacks: BeforeNextCallbacks) => Promise<void>
+  beforeNext?: (state: State, callbacks: StepCallbacks) => Promise<void>
 } & NavigationControl
 
 export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>
 
-interface BeforeNextCallbacks {
+export interface StepCallbacks {
   /**
    * Callback function to go to a specific slide of the flow. This function is
    * mainly used for creating branches in a flow. Either set `skipAheadBy` to go

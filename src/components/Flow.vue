@@ -122,6 +122,8 @@ type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
 watchEffect(() => errors.value = reactive(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 
+const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next: navigateTo, prev: () => navigateTo(-1) }))
+
 function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
 }
@@ -185,7 +187,7 @@ async function navigateTo(options: NavigateToOptions = 1) {
   if (!newActiveStep)
     return
 
-  await newActiveStep?.beforeRender?.(state.value)
+  await newActiveStep?.beforeRender?.(state.value, stepCallbacks.value)
 
   const isGoingForward = newIndex > activeIndex.value
   if (isGoingForward) {
@@ -228,7 +230,7 @@ function makeSkipOrBackHandler(defaultNavigation: Pick<NavigationControl, 'goBac
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
 
 onMounted(async () => {
-  await stepsInFlow[activeIndex.value].beforeRender?.(state.value)
+  await stepsInFlow[activeIndex.value].beforeRender?.(state.value, stepCallbacks.value)
 
   if (shouldAutofocus.value)
     focus()
@@ -244,11 +246,11 @@ async function onStepDone(value: OnDoneStepValue) {
     state.value[activeStepName] = value
     errors.value[activeStepName] = '' // Clear error message
   }
-  const next = () => navigateTo(1)
   if (activeStep.value.beforeNext)
-    await activeStep.value.beforeNext(state.value, { err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next, prev: () => navigateTo(-1) })
+    await activeStep.value.beforeNext(state.value, stepCallbacks.value)
   else
-    next()
+    // Next step
+    navigateTo(1)
 }
 
 async function onCancel() {
