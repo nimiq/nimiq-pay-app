@@ -75,7 +75,8 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const amountInLuna = toRef(_amountInLuna)
   const amountInNim = computed(() => toNim(amountInLuna.value))
 
-  const checkpoint = toMs(Math.floor(toMs(timestamp) / 600000) * 600)
+  // Checkpoints are at 10-minute intervals
+  const checkpoint = Math.floor(toMs(timestamp) / 1000 / 60 / 10) * 1000 * 60 * 10
 
   const priceFn = (currency: MaybeRef<Fiat | Crypto>) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
 
