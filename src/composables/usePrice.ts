@@ -63,7 +63,7 @@ export const toNim = (amount: number) => amount / 1e5
 export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOption = {}) {
   const { selectedFiat } = storeToRefs(useApp())
   const { fiatCurrency = selectedFiat, timestamp = Date.now(), cryptoCurrency = Crypto.NIM, immediate = true } = options
-  const { reactiveToNetwork } = options.timestamp ? { reactiveToNetwork: false } : { reactiveToNetwork: options.reactiveToNetwork ?? true }
+  const reactiveToNetwork = options.timestamp ? false : (options.reactiveToNetwork ?? true)
 
   const { getPriceDb, insertPrice, getClosestPreviousPrice } = usePriceDb()
   const { formatFiat, formatCrypto } = useCurrencyFormatter()
@@ -96,7 +96,9 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   const closestPreviousPrice = ref<number>()
 
   const usingClosestPreviousPrice = computed(() => state.value === PriceStatus.ClosestPrice)
-  const fiatTotal = computed(() => usingClosestPreviousPrice.value ? (closestPreviousPrice.value || 0) * amountInNim.value : price.value * amountInNim.value)
+  const fiatTotal = computed(() => usingClosestPreviousPrice.value
+    ? (closestPreviousPrice.value || 0) * amountInNim.value
+    : price.value * amountInNim.value)
   const fiat = reactive({
     total: fiatTotal,
     usd: computed(() => fiatTotal.value * (priceFiatUsd.value?.price || 0)),
@@ -150,6 +152,12 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
       return
     }
 
+    if (!priceCryptoUsd.value?.price || !priceFiatUsd.value?.price) {
+      logger.error('Prices failed to set from API:', priceCryptoUsd.value?.price, priceFiatUsd.value?.price)
+      state.value = PriceStatus.Error
+      return
+    }
+
     state.value = PriceStatus.Loaded
 
     if (price.value !== 0)
@@ -175,7 +183,7 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
     price: {
       nim: price,
-      luna: computed(() => price.value * 1e5),
+      luna: computed(() => price.value / 1e5),
     },
 
     fiat,
