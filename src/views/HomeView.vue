@@ -12,7 +12,7 @@ import TransactionItem from '@/components/TransactionItem.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useApp } from '@/stores/app'
+import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -30,7 +30,7 @@ import { useSync } from '@/composables/useSync'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { toNim } from '@/composables/usePrice'
+import { toCoins } from '@/composables/usePrice'
 
 const logger = useLogger('HomeView')
 
@@ -59,7 +59,7 @@ const referralInfo = computedAsync(async () => {
   }
   return data
 })
-const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
+const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward || 0, Crypto.NIM))
 const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 function scrollToFirstNotification() {

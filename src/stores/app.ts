@@ -13,6 +13,12 @@ export enum Fiat {
 
 export enum Crypto {
   NIM = 'NIM',
+  BTC = 'BTC',
+}
+
+export const DECIMALS: Record<Crypto, number> = {
+  [Crypto.NIM]: 5,
+  [Crypto.BTC]: 8,
 }
 
 export enum PushNotificationsStatus {

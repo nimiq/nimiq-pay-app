@@ -243,6 +243,9 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
 & {
   transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
   feeIncludedInAmount?: boolean
+  swap?: {
+    fees: { asset: string; amount: number }[]
+  }
 }
 
 export interface NimWithdrawalSelection {

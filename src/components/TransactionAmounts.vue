@@ -28,11 +28,9 @@ const { formatCrypto } = useCurrencyFormatter()
       </div>
     </div>
 
-    <span class="text-5xl text-center uppercase" :class="{ 'line-through': refunded }">
-      {{ fiatFormatted }}
-
-      <!-- TODO: The info icon should be maybe just a slot for the payment preview -->
-      <!-- <InfoIcon class="w-4 h-4 stroke-2 opacity-40" /> -->
+    <span class="text-center uppercase flex items-center gap-2">
+      <span class="text-5xl" :class="{ 'line-through': refunded }">{{ fiatFormatted }}</span>
+      <slot name="amount-after" />
     </span>
 
     <div class="flex items-center justify-center gap-x-2.5 text-lg leading-8 font-semibold text-space/60" :class="{ 'line-through': refunded }">

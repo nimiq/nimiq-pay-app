@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
+import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
 import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import type { PropType } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync } from '@vueuse/core'
+import type { Crypto } from '../stores/app'
 import LoadingSpinner from './icons/loading-spinner.vue'
+import InfoIcon from './icons/info.vue'
 import { Rail } from '@/types/transactions'
 import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
@@ -23,7 +26,11 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
+const props = defineProps({
+  errorMsg: { type: String },
+  canSkip: { type: Boolean },
+  state: { type: Object as PropType<State>, required: true },
+})
 const emit = defineEmits(stepEmits)
 
 const { consensus } = storeToRefs(useNimiqNetwork())
@@ -45,7 +52,10 @@ const amounts = computedAsync(async () => {
   if (!useDefaultFiat) {
     // If the tx has its own fiat values, use them
     const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
-    return { formattedFiat: formatFiat(payment.value.fiatAmount!, { currency: payment.value.fiatCurrency }), formattedFee: formatFiat(payment.value.fiatFeeAmount!, { currency: payment.value.fiatCurrency }) }
+    return {
+      formattedFiat: formatFiat(payment.value.fiatAmount!, { currency: payment.value.fiatCurrency }),
+      formattedFee: formatFiat(payment.value.fiatFeeAmount!, { currency: payment.value.fiatCurrency }),
+    }
   }
   else {
     // Otherwise, use the API to get the fiat values
@@ -59,6 +69,23 @@ const amounts = computedAsync(async () => {
     return { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
   }
 })
+
+const swapFee = computedAsync(async () => {
+  if (!payment.value.swap?.fees)
+    return null
+
+  const { usePrice } = await import('@/composables/usePrice')
+  let total = 0
+  for (const fee of payment.value.swap.fees) {
+    const fiatAmount = usePrice(fee.amount, {
+      cryptoCurrency: fee.asset as Crypto,
+      reactiveToNetwork: false,
+    })
+    await fiatAmount.getFiatPrice()
+    total += fiatAmount.fiat.total
+  }
+  return total
+}, null)
 
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
    = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
@@ -146,7 +173,29 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       {{ formatInvoiced(payment.invoiced) }}
     </template>
 
-    <template v-if="payment.feeIncludedInAmount" #fee>
+    <template v-if="payment.swap" #amount-after>
+      <PopoverRoot class="bg-space/10">
+        <PopoverTrigger as-child>
+          <InfoIcon class="w-[1.125rem] h-[1.125rem] opacity-40 -mr-[1.625rem]" />
+        </PopoverTrigger>
+        <PopoverPortal>
+          <PopoverContent class="bg-gradient-to-br from-space to-[#260133] font-semibold max-w-60 px-4 py-3 rounded" align="end" :align-offset="-32">
+            <p v-if="swapFee" class="text-white text-base">
+              {{ $t('Includes {fee} in fees', { fee: formatFiat(swapFee) }) }}
+            </p>
+            <p class="text-white/60 text-sm mt-1">
+              {{ $t('When paying with BTC Lightning, NIM are swapped to BTC.') }}
+            </p>
+            <p class="text-white/60 text-sm mt-2">
+              {{ $t('This conversion and the operation of a BTC Lightning channel require fees.') }}
+            </p>
+            <PopoverArrow class="fill-[#260133] pb-2" :height="16" :width="14" />
+          </PopoverContent>
+        </PopoverPortal>
+      </PopoverRoot>
+    </template>
+
+    <template v-if="payment.feeIncludedInAmount && !payment.swap" #fee>
       {{ $t('Incl. fees') }}
     </template>
     <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
