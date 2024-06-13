@@ -240,7 +240,7 @@ export const usePoints = defineStore('points', () => {
       recipientType: Nimiq.Account.Type.BASIC,
       hash: `${PointsHashPrefix}${Date.now().toString()}${Math.random().toString()}`,
       status: Nimiq.Client.TransactionState.PENDING,
-      timestamp: Math.ceil(Date.now() / 1000),
+      timestamp: undefined,
       title: merchantName ? markAsUnknownTransactionTitle(merchantName) : 'Points Payment',
       message,
       fee,

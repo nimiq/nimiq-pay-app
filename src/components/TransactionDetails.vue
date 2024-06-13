@@ -11,7 +11,7 @@ import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
-const datetime = computed(() => useFormatTime(props.tx.timestamp))
+const datetime = computed(() => props.tx.timestamp ? useFormatTime(props.tx.timestamp) : '')
 // TODO: Get the map info from crypto map API
 // const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
 const showMap = ref(false)
@@ -74,8 +74,12 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
         </template>
       </div>
 
-      <div>{{ $t('Date') }}</div>
-      <div>{{ datetime }}</div>
+      <div v-if="datetime">
+        {{ $t('Date') }}
+      </div>
+      <div v-if="datetime">
+        {{ datetime }}
+      </div>
 
       <!-- Only display first 4 and last 4 characters -->
       <div v-if="tx.title === 'Withdrawal'">

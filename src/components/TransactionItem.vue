@@ -47,7 +47,7 @@ const category = computed(() => {
         {{ translateTransactionTitle(tx.title) }}
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
-        <time class="text-space/50 tabular-nums text-nowrap">{{ relativeTime }} </time>
+        <time v-if="timestamp" class="text-space/50 tabular-nums text-nowrap">{{ relativeTime }} </time>
         <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported" class="italic text-pumpkin/90">
           {{ $t('Swap pending') }}
         </span>
