@@ -118,13 +118,8 @@ const nimAddressLimits = computedAsync(async () => {
   }
 }, null /* Initial state */)
 
-const currentUsdLimit = computed(() => nimAddressLimits.value ? nimAddressLimits.value.reference.current / 100 : 0)
-const lunaSwapLimit = computed(() => {
-  if (!nimAddressLimits.value)
-    return 0
-  const lunaRate = (nimAddressLimits.value.reference.monthly / 100) / nimAddressLimits.value.monthly
-  return Math.floor(currentUsdLimit.value / lunaRate)
-})
+// Buffer 1% of the swap limit to avoid slippage
+const lunaSwapLimit = computed(() => nimAddressLimits.value ? Math.floor(nimAddressLimits.value.current - nimAddressLimits.value.current / 100) : 0)
 const remainingFiatLimits = computedAsync(async () => {
   // Don't need to do extra computation if the payment is not atomic swap or the swap is not over the limit
   if (!isAtomicSwap.value || lunaSwapLimit.value < payment.value.amount)
@@ -137,7 +132,7 @@ const remainingFiatLimits = computedAsync(async () => {
 })
 
 const disabled = computed(() =>
-  (isAtomicSwap.value && !currentUsdLimit.value) /* Not loaded yet */
+  (isAtomicSwap.value && loadingSwapLimits.value) /* Not loaded yet */
   || (isAtomicSwap.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
   || !(
     (isEligible.value && paymentMethod.value === PaymentMethod.Points)
@@ -229,7 +224,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
           {{ $t('Loading swap limits...') }}
         </p>
         <p v-else-if="isAtomicSwap && payment.amount > lunaSwapLimit" class="text-pumpkin">
-          {{ $t('Exceeding 30-day swap limit. Your payment allowance is {remainingFiatLimits}', { remainingFiatLimits }) }}
+          {{ $t('Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}', { remainingFiatLimits }) }}
         </p>
         <p
           v-else-if="[PointsState.NotEligibleForPayment, PointsState.InsufficientPoints, PointsState.Error].includes(pointsState)"
