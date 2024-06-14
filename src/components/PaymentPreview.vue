@@ -133,7 +133,8 @@ const remainingFiatLimits = computedAsync(async () => {
 
 const disabled = computed(() =>
   (isAtomicSwap.value && loadingSwapLimits.value) /* Not loaded yet */
-  || (isAtomicSwap.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
+  // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
+  || (isAtomicSwap.value && !!nimAddressLimits.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
   || !(
     (isEligible.value && paymentMethod.value === PaymentMethod.Points)
     || (isHtlcActive.value && hasEnoughNimBalance.value && consensus.value === 'established')
