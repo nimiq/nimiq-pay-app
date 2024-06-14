@@ -119,7 +119,7 @@ const nimAddressLimits = computedAsync(async () => {
 }, null /* Initial state */)
 
 // Buffer 1% of the swap limit to avoid slippage
-const lunaSwapLimit = computed(() => nimAddressLimits.value ? Math.floor(nimAddressLimits.value.current - nimAddressLimits.value.current / 100) : 0)
+const lunaSwapLimit = computed(() => nimAddressLimits.value ? Math.floor(nimAddressLimits.value.current * 0.99) : 0)
 const remainingFiatLimits = computedAsync(async () => {
   // Don't need to do extra computation if the payment is not atomic swap or the swap is not over the limit
   if (!isAtomicSwap.value || lunaSwapLimit.value < payment.value.amount)
