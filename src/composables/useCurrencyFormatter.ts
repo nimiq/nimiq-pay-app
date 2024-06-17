@@ -47,7 +47,7 @@ export function useCurrencyFormatter() {
     const locale = toValue(options.locale || language)
     const digitsOptions = options.short ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }
     const formatter = new Intl.NumberFormat(locale, { currency, ...baseFormatterOptions, ...digitsOptions })
-    return `${options.isPayment ? '- ' : ''}${amount < 0.01 ? '~' : ''}${formatter.format(amount)}`
+    return `${options.isPayment ? '- ' : ''}${amount < 0.01 && amount > 0 ? '~' : ''}${formatter.format(amount)}`
   }
 
   function formatCrypto(amountInLuna: number, options?: FormatCryptoOptions) {
