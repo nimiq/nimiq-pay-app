@@ -126,7 +126,7 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
 const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
 
 const loadingSwapLimits = ref(false)
-const isAtomicSwap = computed(() => payment.value.rail === Rail.BitcoinLightning)
+const isAtomicSwap = computed(() => !!payment.value.swap)
 const nimAddressLimits = computedAsync(async () => {
   if (!isAtomicSwap.value)
     return null
@@ -213,20 +213,20 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       {{ formatInvoiced(payment.invoiced) }}
     </template>
 
-    <template v-if="payment.swap" #amount-after>
+    <template v-if="isAtomicSwap" #amount-after>
       <PopoverRoot class="bg-space/10">
         <PopoverTrigger as-child>
           <InfoIcon class="w-[1.125rem] h-[1.125rem] opacity-40 -mr-[1.625rem]" />
         </PopoverTrigger>
         <PopoverPortal>
           <PopoverContent class="bg-gradient-to-br from-space to-[#260133] font-semibold max-w-60 px-4 py-3 rounded" align="end" :align-offset="-32">
-            <p v-if="swapFee" class="text-white text-base">
+            <p v-if="swapFee" class="text-base text-white">
               {{ $t('Includes {fee} in fees', { fee: formatFiat(swapFee) }) }}
             </p>
-            <p class="text-white/60 text-sm mt-1">
+            <p class="mt-1 text-sm text-white/60">
               {{ $t('When paying with BTC Lightning, NIM are swapped to BTC.') }}
             </p>
-            <p class="text-white/60 text-sm mt-2">
+            <p class="mt-2 text-sm text-white/60">
               {{ $t('This conversion and the operation of a BTC Lightning channel require fees.') }}
             </p>
             <PopoverArrow class="fill-[#260133] pb-2" :height="16" :width="14" />
@@ -235,7 +235,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </PopoverRoot>
     </template>
 
-    <template v-if="payment.feeIncludedInAmount && !payment.swap" #fee>
+    <template v-if="payment.feeIncludedInAmount && !isAtomicSwap" #fee>
       {{ $t('Incl. fees') }}
     </template>
     <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
