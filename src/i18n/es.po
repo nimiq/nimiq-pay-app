@@ -198,6 +198,9 @@ msgstr "Ingresa tu código promocional"
 msgid "Enter your referral promo code."
 msgstr "Ingresa tu código promocional de referencia."
 
+msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
+msgstr ""
+
 msgid "Expired"
 msgstr "Expirado"
 
@@ -265,6 +268,9 @@ msgstr "Tengo un código promocional"
 
 msgid "Incl. fees"
 msgstr "Tarifas incluidas"
+
+msgid "Includes {fee} in fees"
+msgstr ""
 
 msgid "Insert PIN to confirm"
 msgstr "Inserta el PIN para confirmar"
@@ -376,6 +382,11 @@ msgstr ""
 
 msgid "Loading"
 msgstr "Cargando"
+
+#, fuzzy
+#| msgid "Loading..."
+msgid "Loading swap limits..."
+msgstr "Cargando..."
 
 msgid "Loading tasks…"
 msgstr "Cargando tareas…"
@@ -734,6 +745,9 @@ msgstr "No hay cashback al pagar con Puntos."
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Estos Puntos están hechos para gastar. Sal y ayuda a impulsar la adopción de criptomonedas."
 
+msgid "This conversion and the operation of a BTC Lightning channel require fees."
+msgstr ""
+
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Este comerciante no está registrado para recibir pagos con Puntos."
 
@@ -844,6 +858,9 @@ msgstr "¿Cuál es la palabra número 8?"
 
 msgid "What's the 9th word?"
 msgstr "¿Cuál es la palabra número 9?"
+
+msgid "When paying with BTC Lightning, NIM are swapped to BTC."
+msgstr ""
 
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr "Cuando te registras para una cuenta de Puntos Criptociudad en Nimiq Pay, das tu consentimiento a nuestras prácticas de gestión de datos según se detalla en nuestra {privacyPolicy}. Priorizamos tu derecho a la privacidad y control sobre tus datos, por lo tanto, proporcionamos una opción dentro de la aplicación para eliminar tu cuenta de Puntos Criptociudad en cualquier momento. Esta acción eliminará permanentemente tu información personal, como tu número de teléfono, de nuestros registros. Para disuadir el fraude, se conservará un registro seguro de cuentas eliminadas durante un período de 12 meses. Si decides volver a inscribirte, no se podrán recuperar actividades o datos anteriores. Nuestro compromiso con la seguridad de tus datos incluye un proceso sencillo dentro de la aplicación para eliminar la cuenta, en línea con las mejores prácticas de la industria para garantizar la autonomía del usuario y la protección de datos. Para obtener instrucciones sobre cómo eliminar tu cuenta o para obtener más información, consulta la configuración de la cuenta dentro de la aplicación."

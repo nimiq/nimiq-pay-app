@@ -197,6 +197,9 @@ msgstr "Entrez votre code promo"
 msgid "Enter your referral promo code."
 msgstr "Saisissez votre code promo de parrainage."
 
+msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
+msgstr ""
+
 msgid "Expired"
 msgstr "Expiré"
 
@@ -264,6 +267,9 @@ msgstr "J'ai un code promo"
 
 msgid "Incl. fees"
 msgstr "Frais inclus"
+
+msgid "Includes {fee} in fees"
+msgstr ""
 
 msgid "Insert PIN to confirm"
 msgstr "Insérer le code PIN pour confirmer"
@@ -375,6 +381,11 @@ msgstr ""
 
 msgid "Loading"
 msgstr "Chargement"
+
+#, fuzzy
+#| msgid "Loading..."
+msgid "Loading swap limits..."
+msgstr "Chargement..."
 
 msgid "Loading tasks…"
 msgstr "Chargement des tâches…"
@@ -733,6 +744,9 @@ msgstr "Il n'y a pas de cashback lorsque vous payez avec des points."
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Ces points sont faits pour être dépensés. Allez-y et contribuez à l'adoption des crypto-monnaies."
 
+msgid "This conversion and the operation of a BTC Lightning channel require fees."
+msgstr ""
+
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Ce commerçant n'est pas enregistré pour recevoir des paiements en points."
 
@@ -843,6 +857,9 @@ msgstr "Quel est le 8ème mot ?"
 
 msgid "What's the 9th word?"
 msgstr "Quel est le 9ème mot ?"
+
+msgid "When paying with BTC Lightning, NIM are swapped to BTC."
+msgstr ""
 
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr "Lorsque vous vous inscrivez pour un compte Cryptocity Points dans Nimiq Pay, vous consentez à nos pratiques de gestion des données telles que détaillées dans notre {privacyPolicy}. Nous donnons la priorité à votre droit à la vie privée et au contrôle de vos données, en fournissant donc une option dans l'application pour supprimer votre compte de points Cryptocity à tout moment. Cette action supprimera définitivement vos informations personnelles, telles que votre numéro de téléphone, de nos dossiers. Afin de prévenir la fraude, un journal sécurisé des comptes supprimés sera conservé pendant une période de 12 mois. Si vous décidez de vous réinscrire, les activités ou données antérieures ne seront pas récupérables. Notre engagement envers la sécurité de vos données comprend un processus de suppression de compte simple et intégré à l'application, conforme aux meilleures pratiques du secteur afin de garantir l'autonomie de l'utilisateur et la protection des données. Pour obtenir des instructions sur la suppression de votre compte ou pour plus d'informations, veuillez vous référer aux paramètres du compte dans l'application."
