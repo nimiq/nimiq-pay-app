@@ -235,7 +235,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </PopoverRoot>
     </template>
 
-    <template v-if="payment.feeIncludedInAmount && !isAtomicSwap" #fee>
+    <template v-if="payment.feeIncludedInAmount" #fee>
       {{ $t('Incl. fees') }}
     </template>
     <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
