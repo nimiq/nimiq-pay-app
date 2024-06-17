@@ -63,7 +63,7 @@ export const toCoins = (amount: number, asset: Crypto) => amount / 10 ** DECIMAL
 export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOption = {}) {
   const { selectedFiat } = storeToRefs(useApp())
   const { fiatCurrency = selectedFiat, timestamp = Date.now(), cryptoCurrency = Crypto.NIM, immediate = true } = options
-  const { reactiveToNetwork } = options.timestamp ? { reactiveToNetwork: false } : { reactiveToNetwork: options.reactiveToNetwork ?? true }
+  const reactiveToNetwork = options.timestamp ? false : (options.reactiveToNetwork ?? true)
 
   const { getPriceDb, insertPrice, getClosestPreviousPrice } = usePriceDb()
   const { formatFiat, formatCrypto } = useCurrencyFormatter()
@@ -75,7 +75,8 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
   const amountInUnits = toRef(_amountInUnits)
   const amountInCoins = computed(() => toCoins(amountInUnits.value, toValue(cryptoCurrency)))
 
-  const checkpoint = toMs(Math.floor(toMs(timestamp) / 600000) * 600)
+  // Checkpoints are at 10-minute intervals
+  const checkpoint = Math.floor(toMs(timestamp) / 1000 / 60 / 10) * 1000 * 60 * 10
 
   const priceFn = (currency: MaybeRef<Fiat | Crypto>) => options.timestamp ? getPriceAt({ currency, timestamp: checkpoint }) : getPriceNow({ currency })
 
@@ -152,6 +153,12 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
       return
     }
 
+    if (!priceCryptoUsd.value?.price || !priceFiatUsd.value?.price) {
+      logger.error('Prices failed to set from API:', priceCryptoUsd.value?.price, priceFiatUsd.value?.price)
+      state.value = PriceStatus.Error
+      return
+    }
+
     state.value = PriceStatus.Loaded
 
     if (price.value !== 0)
@@ -177,7 +184,7 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
 
     price: {
       nim: price,
-      luna: computed(() => price.value * 1e5),
+      luna: computed(() => price.value / 1e5),
     },
 
     fiat,

@@ -15,8 +15,10 @@ import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
+import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 // TODO: async import
 import { useToast } from '@/composables/useToast'
@@ -36,6 +38,7 @@ const emit = defineEmits(stepEmits)
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
+const { localAddress } = storeToRefs(useLocalWallet())
 
 const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
   ? props.state[StepName.QRCodeScanner]
@@ -121,8 +124,45 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
 }, { immediate: true })
 
 const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
+
+const loadingSwapLimits = ref(false)
+const isAtomicSwap = computed(() => payment.value.rail === Rail.BitcoinLightning)
+const nimAddressLimits = computedAsync(async () => {
+  if (!isAtomicSwap.value)
+    return null
+
+  loadingSwapLimits.value = true
+  // https://github.com/nimiq/wallet/blob/1102b802030833d5d84d9c304baa85331ba51362/src/composables/useSwapLimits.ts#L252
+  const { getLimits, SwapAsset } = await useFastspotApiV1()
+  try {
+    const limits = await getLimits(SwapAsset.NIM, localAddress.value.toUserFriendlyAddress(), localAddress.value.toHex())
+    loadingSwapLimits.value = false
+    return limits
+  }
+  catch (error) {
+    loadingSwapLimits.value = false
+    return null
+  }
+}, null /* Initial state */)
+
+// Buffer 1% of the swap limit to avoid slippage
+const lunaSwapLimit = computed(() => nimAddressLimits.value ? Math.floor(nimAddressLimits.value.current * 0.99) : 0)
+const remainingFiatLimits = computedAsync(async () => {
+  // Don't need to do extra computation if the payment is not atomic swap or the swap is not over the limit
+  if (!isAtomicSwap.value || lunaSwapLimit.value < payment.value.amount)
+    return
+
+  const { usePrice } = await import('@/composables/usePrice')
+  const fiatAmount = usePrice(lunaSwapLimit)
+  await fiatAmount.getFiatPrice()
+  return fiatAmount.fiat.formatted
+})
+
 const disabled = computed(() =>
-  !(
+  (isAtomicSwap.value && loadingSwapLimits.value) /* Not loaded yet */
+  // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
+  || (isAtomicSwap.value && !!nimAddressLimits.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
+  || !(
     (isEligible.value && paymentMethod.value === PaymentMethod.Points)
     || (isHtlcActive.value && hasEnoughNimBalance.value && consensus.value === 'established')
   )
@@ -229,6 +269,13 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
         <p v-else-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin">
           {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
+        <p v-else-if="isAtomicSwap && loadingSwapLimits" class="flex opacity-60 gap-x-2">
+          <LoadingSpinner class="w-4 h-4 m-auto" />
+          {{ $t('Loading swap limits...') }}
+        </p>
+        <p v-else-if="isAtomicSwap && payment.amount > lunaSwapLimit" class="text-pumpkin">
+          {{ $t('Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}', { remainingFiatLimits }) }}
+        </p>
         <p
           v-else-if="[PointsState.NotEligibleForPayment, PointsState.InsufficientPoints, PointsState.Error].includes(pointsState)"
           :class="pointsState === PointsState.Error ? 'text-pumpkin' : 'opacity-60'"
@@ -247,7 +294,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </Transition>
     </div>
     <i18n-t
-      v-if="payment.rail === Rail.BitcoinLightning"
+      v-if="isAtomicSwap"
       keypath="By tapping “pay”, you agree to Fastspot's {terms}"
       tag="p" class="mb-4 font-semibold text-center opacity-50"
     >
