@@ -154,7 +154,7 @@ export function useStringParser() {
       decoded = await parseBitcoinLightningInvoice(url.pathname)
     }
     catch (e) {
-      console.error(e)
+      logger.error(e)
       const errorMessage = e instanceof Error ? e.message : String(e)
       return { error: `${i18n.t('Invalid Bitcoin Lightning invoice.')} Error: ${errorMessage}`, data: undefined }
     }
@@ -187,7 +187,7 @@ export function useStringParser() {
       ))
     }
     catch (e) {
-      console.error(e)
+      logger.error(e)
       return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
     }
 
