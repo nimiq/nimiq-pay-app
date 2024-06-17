@@ -1,6 +1,6 @@
 import { storeToRefs } from 'pinia'
 import { type MaybeRef, computed, reactive, ref, toRef, toValue, watch } from 'vue'
-import { Crypto, Fiat, useApp } from '@/stores/app'
+import { Crypto, DECIMALS, Fiat, useApp } from '@/stores/app'
 import { toMs } from '@/composables/useTime'
 import { usePriceDb } from '@/composables/usePriceDb'
 import { type FormatCryptoOptions, type FormatFiatOptions, useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
@@ -49,7 +49,7 @@ type UsePriceOption = UsePriceTime & {
   immediate?: boolean
 }
 
-export const toNim = (amount: number) => amount / 1e5
+export const toCoins = (amount: number, asset: Crypto) => amount / 10 ** DECIMALS[asset]
 
 /**
  * Retrieves and formats the price for a specified amount of LUNA. This function first attempts to fetch the price
@@ -60,7 +60,7 @@ export const toNim = (amount: number) => amount / 1e5
  * and fiat currency. Additionally, it offers a fallback mechanism where the nearest previous price from the database
  * is used as a temporary value while the latest price is being loaded from the API.
  */
-export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOption = {}) {
+export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOption = {}) {
   const { selectedFiat } = storeToRefs(useApp())
   const { fiatCurrency = selectedFiat, timestamp = Date.now(), cryptoCurrency = Crypto.NIM, immediate = true } = options
   const reactiveToNetwork = options.timestamp ? false : (options.reactiveToNetwork ?? true)
@@ -72,8 +72,8 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   const state = ref<PriceStatus>(PriceStatus.Initial)
 
-  const amountInLuna = toRef(_amountInLuna)
-  const amountInNim = computed(() => toNim(amountInLuna.value))
+  const amountInUnits = toRef(_amountInUnits)
+  const amountInCoins = computed(() => toCoins(amountInUnits.value, toValue(cryptoCurrency)))
 
   // Checkpoints are at 10-minute intervals
   const checkpoint = Math.floor(toMs(timestamp) / 1000 / 60 / 10) * 1000 * 60 * 10
@@ -98,8 +98,8 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
 
   const usingClosestPreviousPrice = computed(() => state.value === PriceStatus.ClosestPrice)
   const fiatTotal = computed(() => usingClosestPreviousPrice.value
-    ? (closestPreviousPrice.value || 0) * amountInNim.value
-    : price.value * amountInNim.value)
+    ? (closestPreviousPrice.value || 0) * amountInCoins.value
+    : price.value * amountInCoins.value)
   const fiat = reactive({
     total: fiatTotal,
     usd: computed(() => fiatTotal.value * (priceFiatUsd.value?.price || 0)),
@@ -109,11 +109,11 @@ export function usePrice(_amountInLuna: MaybeRef<number>, options: UsePriceOptio
   })
 
   const crypto = reactive({
-    total: amountInNim,
-    totalLuna: amountInLuna,
-    usd: computed(() => amountInNim.value * (priceCryptoUsd.value?.price || 0)),
+    total: amountInCoins,
+    totalUnits: amountInUnits,
+    usd: computed(() => amountInCoins.value * (priceCryptoUsd.value?.price || 0)),
     currency: cryptoCurrency,
-    formatted: computed(() => formatCrypto(amountInLuna.value, { currency: cryptoCurrency, ...options.formatter })),
+    formatted: computed(() => formatCrypto(amountInUnits.value, { currency: cryptoCurrency, ...options.formatter })),
   })
 
   async function getPricesFromDb() {

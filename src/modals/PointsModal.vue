@@ -7,9 +7,9 @@ import { computedAsync } from '@vueuse/core'
 import { Modal, useModal } from '@/composables/useModal'
 import TaskCard from '@/components/TaskCard.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import { toNim, usePrice } from '@/composables/usePrice'
+import { toCoins, usePrice } from '@/composables/usePrice'
 import { usePoints } from '@/stores/points'
-import { useApp } from '@/stores/app'
+import { Crypto, useApp } from '@/stores/app'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
@@ -32,7 +32,7 @@ const referralInfo = computedAsync(async () => {
   }
   return data
 })
-const referralRewardAmount = computed(() => toNim(referralInfo.value?.reward || 0))
+const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward || 0, Crypto.NIM))
 // const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))

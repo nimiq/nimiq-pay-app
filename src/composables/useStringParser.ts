@@ -210,6 +210,14 @@ export function useStringParser() {
         amount: amountBtc,
         currency: 'BTC',
       },
+
+      swap: {
+        fees: [...quote.fees.reduce((map, fee) => {
+          const entry = map.get(fee.asset) || 0
+          map.set(fee.asset, entry + fee.amount)
+          return map
+        }, new Map<string, number>()).entries()].map(([asset, amount]) => ({ asset, amount })),
+      },
     }
 
     logger.log('📷 Parsed payment request data:', data)
