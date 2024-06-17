@@ -148,10 +148,9 @@ export const useTransactions = defineStore('transactions', () => {
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
-    const timestamp = Math.floor(Date.now() / 1000)
     const status = Nimiq.Client.TransactionState.PENDING
 
-    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, timestamp, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length } as TransactionSentByUser
+    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length } as TransactionSentByUser
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
       tx.paymentMethod = PaymentMethod.NIM
 
@@ -264,7 +263,7 @@ export const useTransactions = defineStore('transactions', () => {
       recipientType: tx.recipientType,
       hash: tx.transactionHash.toHex(),
       status: tx.state,
-      timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+      timestamp: tx.timestamp,
       title: 'Payment', // translated at display time
       fee: tx.fee,
       proofSize: tx.proof.raw.length,
@@ -290,14 +289,18 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   function addTransaction(tx: ExternalTransaction) {
-    transactions.value = [tx, ...transactions.value].sort((a, b) => b.timestamp - a.timestamp)
+    transactions.value = [tx, ...transactions.value].sort(
+      (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+    )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number }) {
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number | undefined }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
     const tx = transactions.value.find(tx => tx.hash === hash)
-    if (tx)
+    if (tx) {
       tx.status = status
+      tx.timestamp = timestamp
+    }
   }
 
   async function updateTransactionCashbackClaimed({ hash }: { hash: string }) {

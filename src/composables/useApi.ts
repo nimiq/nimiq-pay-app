@@ -15,7 +15,7 @@ const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https:
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 
-async function api<T = undefined, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string; body?: object; delete?: boolean } = {}): AsyncResultApi<T, E> {
+async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string; body?: object; delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
@@ -44,7 +44,13 @@ async function api<T = undefined, E = undefined>(url: URL, { token, body: _body,
     if (response.status === 204)
       return { data: true as T, status: response.status, hasError: false, error: undefined }
 
-    return { data: await response.json() as T, status: response.status, error: undefined, hasError: false }
+    const data = await response.json() as T
+
+    // Handle price API responding with 200 OK when there is an error
+    if (data && typeof data === 'object' && 'error' in data)
+      return { data: undefined, hasError: true, error: data.error as E, status: response.status }
+
+    return { data, status: response.status, error: undefined, hasError: false }
   }
   catch (error) {
     logger.error('Error fetching', error)

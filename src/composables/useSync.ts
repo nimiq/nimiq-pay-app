@@ -210,7 +210,7 @@ export function _useSync() {
         recipientType: tx.recipientType,
         hash,
         status: tx.state,
-        timestamp: Math.ceil(Date.now() / 1000), // Timestamp is not available for pending transactions
+        timestamp: tx.timestamp,
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
@@ -253,7 +253,7 @@ export function _useSync() {
         recipientType: tx.recipientType,
         hash,
         status: tx.state,
-        timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+        timestamp: tx.timestamp,
         title: 'Top-Up', // translated at display time
         message: Nimiq.BufferUtils.toAscii(tx.data.raw),
         fee: tx.fee,
@@ -308,7 +308,7 @@ export function _useSync() {
         recipientType: tx.recipientType,
         hash: tx.transactionHash.toHex(),
         status: tx.state,
-        timestamp: tx.timestamp || Math.ceil(Date.now() / 1000),
+        timestamp: tx.timestamp,
         title: 'Withdrawal', // translated at display time
         fee: tx.fee,
         proofSize: tx.proof.raw.length,
@@ -384,7 +384,7 @@ export function _useSync() {
           const hash = tx.transactionHash.toHex()
           for (const dbTx of allTransactions) {
             // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
-            if (dbTx.timestamp < tx.timestamp)
+            if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
               break
             // If the tx is already known, do not process it further
             if (dbTx.hash === hash)

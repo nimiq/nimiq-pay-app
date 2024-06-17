@@ -85,7 +85,7 @@ export interface BaseTransaction {
   recipient: string
   recipientType: Nimiq.Account.Type
   status: Nimiq.Client.TransactionState
-  timestamp: number
+  timestamp: number | undefined
   amount: number
   fee: number
   hash: string
