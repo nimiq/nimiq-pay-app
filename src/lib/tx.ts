@@ -61,7 +61,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
         /* swap */ { id: partialArgs.paymentRef! } as PreSwap,
         /* redeem */ { asset: SwapAsset.BTC_LN },
         /* refund */ { asset: SwapAsset.NIM, address: localWallet.toUserFriendlyAddress() },
-        /* uid */ localWallet.toUserFriendlyAddress(),
+        /* uid */ localWallet.toHex(),
       )
     }
     catch (error) {
