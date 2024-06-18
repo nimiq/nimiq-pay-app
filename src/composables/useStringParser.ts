@@ -220,8 +220,6 @@ export function useStringParser() {
       },
     }
 
-    logger.log('📷 Parsed payment request data:', data)
-
     return { data, error: undefined }
   }
 
