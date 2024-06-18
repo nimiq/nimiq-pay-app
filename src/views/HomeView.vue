@@ -38,14 +38,15 @@ const router = useRouter()
 const { showModal } = useModal()
 
 const { localBalance } = storeToRefs(useLocalWallet())
-const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive } = storeToRefs(useRemoteSigner())
+const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive, remoteHeight } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
-const { consensus } = storeToRefs(useNimiqNetwork())
+const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
+const { nodesAreSynced } = useSync()
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -253,7 +254,13 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+          <div v-if="consensus === 'established' && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
+            <p class="font-medium text-center text-pumpkin">
+              {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
+            </p>
+          </div>
+          <div v-else-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
             <p class="font-medium text-center text-pumpkin">
               {{ $tc(
@@ -266,7 +273,7 @@ onMounted(async () => {
         </Transition>
         <IonButton
           class="w-3/4 py-2 mx-auto text-base" expand="block"
-          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0)"
+          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0) || !nodesAreSynced"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
           {{ $t('Pay') }}

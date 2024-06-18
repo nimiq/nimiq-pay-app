@@ -456,6 +456,11 @@ msgstr "Keine Transaktionen gefunden"
 msgid "No transactions found for \"{searchQuery}\""
 msgstr "Keine Transaktionen gefunden für \"{searchQuery}\""
 
+msgid ""
+"Nodes are not synced.\n"
+"Remote: {remoteHeight}, Local: {localHeight}"
+msgstr ""
+
 msgid "Not a pending payment request"
 msgstr "Keine ausstehende Zahlungsanfrage"
 

@@ -299,7 +299,7 @@ msgstr ""
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:105
+#: src/views/HomeView.vue:106
 msgid "Get cashback and earn rewards"
 msgstr ""
 
@@ -604,6 +604,12 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
+#: src/views/HomeView.vue:109
+msgid ""
+"Nodes are not synced.\n"
+"Remote: {remoteHeight}, Local: {localHeight}"
+msgstr ""
+
 #: src/composables/useGoCryptoMonitoring.ts:105
 msgid "Not a pending payment request"
 msgstr ""
@@ -625,7 +631,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:122
+#: src/views/HomeView.vue:128
 msgid "Pay"
 msgstr ""
 
@@ -769,7 +775,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:115
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
@@ -1093,7 +1099,7 @@ msgid "Verify your ID"
 msgstr ""
 
 #: src/lib/flows/steps.ts:163
-#: src/views/HomeView.vue:104
+#: src/views/HomeView.vue:105
 msgid "Verify your phone number"
 msgstr ""
 
@@ -1240,7 +1246,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:110
+#: src/views/HomeView.vue:111
 msgid "You have a reward to claim!"
 msgstr ""
 

@@ -601,6 +601,7 @@ export function _useSync() {
     updateBalances,
     updateTransactionHistory,
     pendingTransactions,
+    nodesAreSynced,
     isUpdatingTransactions,
 
     verifyRemoteSignersDb,
