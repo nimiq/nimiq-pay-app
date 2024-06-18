@@ -25,17 +25,6 @@ function parseLnUrl(url: string): string | null {
   return result ? result[1] : null
 }
 
-function isURL(url: string) {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url)
-    return true
-  }
-  catch {
-    return false
-  }
-}
-
 /**
  * Decodes the callback URL from a LNURL.
  * @param url
@@ -51,7 +40,7 @@ async function decodeCallbackUrl(url: string) {
   const decoded = bech32.decode(parsedUrl, Number.MAX_SAFE_INTEGER)
   const array = bech32.fromWords(decoded.words)
   const callbackUrl = new TextDecoder().decode(new Uint8Array(array))
-  if (!isURL(callbackUrl))
+  if (!URL.canParse(callbackUrl))
     throw new Error(i18n.t('Invalid callback URL'))
   return callbackUrl
 }
@@ -66,7 +55,7 @@ async function parseServiceResponse(response: Partial<LNServiceResponse>) {
     return null
 
   const callback = (`${response.callback}`).trim()
-  if (!isURL(callback))
+  if (!URL.canParse(callback))
     return null
 
   if (Number(response.minSendable) < 1)
