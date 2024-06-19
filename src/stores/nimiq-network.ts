@@ -78,6 +78,23 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     })
   }
 
+  async function reconnect() {
+    logger.log('Reconnecting to network')
+    const peers = await client.value?.network.getPeers()
+    if (peers)
+      await Promise.all(peers.map(peer => client.value?.network.disconnect(peer.peerAddress)))
+
+    await client.value?.resetConsensus()
+
+    if (peers && peers.length > 0) {
+      const interval = window.setInterval(() => {
+        peers.forEach(peer => client.value?.network.connect(peer.peerAddress))
+      }, 1000)
+      await client.value?.waitForConsensusEstablished()
+      window.clearInterval(interval)
+    }
+  }
+
   async function claimCashlink(cashlink: string, address: Nimiq.Address) {
     if (!cashlink)
       throw new Error(i18n.t('No Cashlink found'))
@@ -201,5 +218,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAllOutgoingTransactionsFromHtlcs,
     getBalance,
     networkName,
+    reconnect,
   }
 })

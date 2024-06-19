@@ -9,11 +9,15 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { onMounted } from 'vue'
 import { until } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { useDevice } from './composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
 import { isDev } from '@/lib/index'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { useLogger } from '@/composables/useLogger'
+
+const logger = useLogger('App.vue')
 
 onMounted(async () => {
   if (!useDevice().isWeb)
@@ -35,6 +39,24 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
     initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: url.toString() })
+  }
+})
+
+App.addListener('resume', async () => {
+  const { useRemoteSignerApi } = await import('@/composables/useApi')
+  const { useNimiqNetwork } = await import('@/stores/nimiq-network')
+  const { height: localHeight } = storeToRefs(useNimiqNetwork())
+
+  const { getStatus } = useRemoteSignerApi()
+  const { data, hasError } = await getStatus()
+  if (hasError)
+    return
+  const { blockHeight: remoteHeight } = data
+
+  logger.log('App resumed', { localHeight: localHeight.value, remoteHeight })
+  if (localHeight.value < remoteHeight - 5) {
+    logger.log('Local height is behind remote height, reconnecting...')
+    useNimiqNetwork().reconnect()
   }
 })
 </script>
