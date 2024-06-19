@@ -103,6 +103,7 @@ export const useTransactions = defineStore('transactions', () => {
     let patchedSwap: Promise<Swap> | undefined
     if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
       // Signal the signed transaction to Fastspot as early as possible
+      logger.log('Signaling signed transaction to Fastspot', { swap })
       const { provideFundingProof } = await useFastspotApiV2()
       patchedSwap = provideFundingProof(
         partialTx.paymentRef!,
