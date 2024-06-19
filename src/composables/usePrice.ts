@@ -155,7 +155,7 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
 
     if (!priceCryptoUsd.value?.price || !priceFiatUsd.value?.price) {
       logger.error('Prices failed to set from API:', priceCryptoUsd.value?.price, priceFiatUsd.value?.price)
-      state.value = PriceStatus.Error
+      state.value = closestPreviousPrice.value ? PriceStatus.ClosestPrice : PriceStatus.Error
       return
     }
 
