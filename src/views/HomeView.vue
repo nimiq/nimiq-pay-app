@@ -300,6 +300,12 @@ ion-footer>ion-toolbar {
   box-shadow: 0px 0px 4.12454px 0px rgba(31, 35, 72, 0.03), 0px 0px 12.51868px 0px rgba(31, 35, 72, 0.05), 0px 0px 32.00036px 0px rgba(31, 35, 72, 0.06), 0px 0px 80px 0px rgba(31, 35, 72, 0.07);
 }
 
+ion-toolbar.ios {
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+}
+
 .footer-md {
   box-shadow: none;
 }
