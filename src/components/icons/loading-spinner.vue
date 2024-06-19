@@ -24,6 +24,7 @@
 
 <style scoped>
 .spinner {
+  display: inline-block;
   animation: spin 1s linear infinite;
 }
 
