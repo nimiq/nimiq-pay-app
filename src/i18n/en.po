@@ -27,13 +27,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:124
-#: src/stores/nimiq-network.ts:142
-#: src/stores/nimiq-network.ts:92
+#: src/stores/nimiq-network.ts:109
+#: src/stores/nimiq-network.ts:141
+#: src/stores/nimiq-network.ts:159
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:133
+#: src/stores/nimiq-network.ts:150
 msgid "Addresses missing"
 msgstr ""
 
@@ -49,7 +49,7 @@ msgstr ""
 msgid "Already paid"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:73
+#: src/composables/useBitcoinLightning.ts:62
 msgid "Amount too small"
 msgstr ""
 
@@ -106,7 +106,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:94
+#: src/stores/nimiq-network.ts:111
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -144,11 +144,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:163
+#: src/stores/nimiq-network.ts:180
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:161
+#: src/stores/nimiq-network.ts:178
 msgid "Consensus established."
 msgstr ""
 
@@ -275,11 +275,11 @@ msgstr ""
 msgid "Failed to delete Points account"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:140
+#: src/composables/useBitcoinLightning.ts:129
 msgid "Failed to fetch LNURL service"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:121
+#: src/composables/useBitcoinLightning.ts:110
 msgid "Failed to fetch payment request"
 msgstr ""
 
@@ -382,7 +382,7 @@ msgstr ""
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:55
+#: src/composables/useBitcoinLightning.ts:44
 msgid "Invalid callback URL"
 msgstr ""
 
@@ -420,7 +420,7 @@ msgstr ""
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:155
+#: src/composables/useBitcoinLightning.ts:144
 msgid "Invalid LNURL"
 msgstr ""
 
@@ -500,7 +500,7 @@ msgstr ""
 msgid "Learn more"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:82
+#: src/composables/useBitcoinLightning.ts:71
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr ""
 
@@ -550,7 +550,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:127
+#: src/stores/nimiq-network.ts:144
 msgid "No account found"
 msgstr ""
 
@@ -562,11 +562,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:136
+#: src/stores/nimiq-network.ts:153
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:83
+#: src/stores/nimiq-network.ts:100
 msgid "No Cashlink found"
 msgstr ""
 
@@ -596,7 +596,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:145
+#: src/stores/nimiq-network.ts:162
 msgid "No transactions found"
 msgstr ""
 
@@ -981,7 +981,7 @@ msgstr ""
 msgid "Swap pending"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:162
+#: src/stores/nimiq-network.ts:179
 msgid "Syncing with network."
 msgstr ""
 
@@ -1054,7 +1054,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:129
+#: src/stores/transactions.ts:130
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1062,7 +1062,7 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:145
+#: src/stores/transactions.ts:146
 msgid "Transaction invalid"
 msgstr ""
 
