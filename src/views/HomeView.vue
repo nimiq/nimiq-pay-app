@@ -254,7 +254,7 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="consensus === 'established' && localHeight > 0 && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
             <p class="font-medium text-center text-pumpkin">
               {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}

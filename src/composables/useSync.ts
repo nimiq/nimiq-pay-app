@@ -127,6 +127,7 @@ export function _useSync() {
     if (remoteAddress.value) {
       remoteBalance.value = (await getBalance(remoteAddress.value!)).data || 0
       logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}`)
+      // TODO: move this to a separate function
       // Sometimes the extended HTLC was not saved in the DB, so we assume that an address with 0 balance can be an HTLC extension
       if (remoteBalance.value === 0) {
         const [txs, remoteSigners] = await Promise.all([getAllOutgoingTransactionsFromHtlcs(remoteAddress.value), getAllRemoteSigners()])
