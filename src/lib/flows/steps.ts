@@ -25,6 +25,7 @@ const TransactionDetails = defineAsyncComponent(() => import('@/components/Trans
 const BackupIntroduction = defineAsyncComponent(() => import('@/components/BackupIntroduction.vue'))
 const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'))
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
+const BitrefillWidget = defineAsyncComponent(() => import('@/components/BitrefillWidget.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -65,7 +66,7 @@ export const recoveryWordsStep: StepInit = async () => ({
 
 export const pinCodeStep: StepInit = async ({ flowName }) => {
   const { FlowName: Flow } = await import('@/lib/flows/steps.types')
-  const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw].includes(f)
+  const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw, Flow.Bitrefill].includes(f)
   return {
     step: StepName.PinCode,
     get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
@@ -319,11 +320,11 @@ export const paymentPreviewStep: StepInit = async () => {
     titleIcon,
     main: markRaw(PaymentPreview),
     autofocus: false, // Don't autofocus on the toggle button
-    async beforeRender({ qrCodeScanner }) {
-      if (!qrCodeScanner || typeof qrCodeScanner === 'string')
+    async beforeRender({ qrCodeScanner, bitrefillWidget }) {
+      if (!qrCodeScanner || typeof qrCodeScanner === 'string' || !bitrefillWidget)
         return
-      title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
-      merchantCategory.value = qrCodeScanner.merchantCategory
+      title.value = (qrCodeScanner || bitrefillWidget).merchantName || i18n.t('Payment preview')
+      merchantCategory.value = (qrCodeScanner || bitrefillWidget).merchantCategory
     },
     beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
@@ -452,4 +453,11 @@ export const validateWordsStep: StepInit = async () => ({
   get title() { return i18n.t('Test your backup') },
   main: markRaw(ValidateWords),
   goBackBy: 1,
+} satisfies Step)
+
+export const bitrefillWidgetStep: StepInit = async () => ({
+  step: StepName.BitrefillWidget,
+  // get title() { return i18n.t('Shop') },
+  // get description() { return i18n.t('Buy NIM with a credit card or other payment methods.') },
+  main: markRaw(BitrefillWidget),
 } satisfies Step)

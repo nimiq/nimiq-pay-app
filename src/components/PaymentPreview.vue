@@ -42,7 +42,9 @@ const { localAddress } = storeToRefs(useLocalWallet())
 
 const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
   ? props.state[StepName.QRCodeScanner]
-  : { amount: 0, fee: 0, recipient: '' },
+  : typeof props.state[StepName.BitrefillWidget] === 'object'
+    ? props.state[StepName.BitrefillWidget]
+    : { amount: 0, fee: 0, recipient: '' },
 )
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 

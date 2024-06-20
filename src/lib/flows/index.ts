@@ -299,6 +299,17 @@ const backupFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
+const bitrefillFlow: FlowInit = async () => {
+  const { bitrefillWidgetStep, paymentPreviewStep, pinCodeStep } = await import('./steps')
+  const flowName = FlowName.Bitrefill
+  const steps = (await Promise.all([
+    bitrefillWidgetStep,
+    paymentPreviewStep,
+    pinCodeStep,
+  ].map(s => s({ flowName }))))
+  return { flowName, steps }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -313,6 +324,7 @@ const flows = {
   [FlowName.ViewTransactions]: viewTransactionsFlow,
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
+  [FlowName.Bitrefill]: bitrefillFlow,
 }
 
 /**

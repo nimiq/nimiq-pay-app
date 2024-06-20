@@ -15,6 +15,7 @@ export enum FlowName {
   ViewTransactions = 'viewTransactions',
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
   Backup = 'backup',
+  Bitrefill = 'bitrefill',
 }
 
 interface FlowHookCbReturn {
@@ -70,9 +71,10 @@ export enum StepName {
   BackupIntroduction = 'backupIntroduction',
   ShowWords = 'showWords',
   ValidateWords = 'validateWords',
+  BitrefillWidget = 'bitrefillWidget',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.BitrefillWidget] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -98,6 +100,7 @@ export interface State {
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string
   [StepName.TransactionList]: ExternalTransaction // User selects a transaction
+  [StepName.BitrefillWidget]: PaymentRequestData
 }
 
 export interface NavigationControl {

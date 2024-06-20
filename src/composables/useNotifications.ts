@@ -50,6 +50,12 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
     get subtitle() { return i18n.t('Your wallet is ready to use') },
     // action: () => initializeFlow(FlowName.OnBoardingPoints),
   },
+  {
+    id: 'bitrefill',
+    get title() { return i18n.t('Shop worldwide!') },
+    get subtitle() { return i18n.t('Buy giftcards with Bitrefill') },
+    action: () => initializeFlow(FlowName.Bitrefill),
+  },
 ])
 
 export function useNotifications() {
