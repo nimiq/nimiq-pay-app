@@ -127,6 +127,34 @@ export function _useSync() {
     if (remoteAddress.value) {
       remoteBalance.value = (await getBalance(remoteAddress.value!)).data || 0
       logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}`)
+      // Sometimes the extended HTLC was not saved in the DB, so we assume that an address with 0 balance can be an HTLC extension
+      if (remoteBalance.value === 0) {
+        const [txs, remoteSigners] = await Promise.all([getAllOutgoingTransactionsFromHtlcs(remoteAddress.value), getAllRemoteSigners()])
+
+        txs.forEach(async (tx) => {
+          // HTLC extension, set that as the active HTLC
+          if ('hashRoot' in tx.data && tx.data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000') {
+            const remoteSigner = remoteSigners.find(remoteSigner => remoteSigner.address.equals(tx.recipient))
+            if (remoteSigner)
+              return
+
+            logger.log('Found an HTLC extension that is not in the remote signer table', tx)
+            const account = await client.value!.getAccount(tx.recipient) as BasicAccount | HashedTimeLockedContract
+            const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
+            await useRemoteSigner().updateRemoteSigner({
+              active: true,
+              balance: account.balance,
+              address: tx.recipient,
+              publicKey: remotePublicKey.value!,
+              start: tx.validityStartHeight,
+              end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+              proofSize: tx.proof.raw.length,
+            })
+            // Updating balance because the active remote signer has changed
+            updateBalances()
+          }
+        })
+      }
     }
     else { logger.warn('Remote address not found') }
   }
