@@ -109,7 +109,7 @@ export function _useSync() {
       return
     logger.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
     if (hasHtlcExpired.value) {
-      const { error } = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      const { error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error)
         logger.error('Error while recovering funds from Remote', error)
     }
@@ -630,6 +630,7 @@ export function _useSync() {
     updateBalances,
     updateTransactionHistory,
     pendingTransactions,
+    isTransactionPending,
     nodesAreSynced,
     isUpdatingTransactions,
 

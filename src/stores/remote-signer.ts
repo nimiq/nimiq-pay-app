@@ -184,6 +184,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
   }
 
+  async function updateActiveRemoteBalance(newBalance: number) {
+    remoteBalance.value = newBalance
+    await updateBalance(newBalance, remoteSigner.value!.address)
+  }
+
   /**
    * Initializes the remote signer variables with the following algorithm:
    * 1. Check if we have a local wallet:
@@ -233,7 +238,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     isHtlcPending,
 
     addRemoteSigner,
-    updateBalance,
+    updateActiveRemoteBalance,
     updateActiveWallet,
     updateRemoteSigner,
     updateSignersTableBalance,

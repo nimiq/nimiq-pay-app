@@ -37,8 +37,8 @@ export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
 
-  const { updateBalance } = useRemoteSigner()
-  const { remoteBalance, remoteAddress } = storeToRefs(useRemoteSigner())
+  const { updateActiveRemoteBalance } = useRemoteSigner()
+  const { remoteBalance } = storeToRefs(useRemoteSigner())
 
   const transactions = ref<ExternalTransaction[]>([])
 
@@ -187,7 +187,7 @@ export const useTransactions = defineStore('transactions', () => {
       useSync().pendingTransactions.value.push(details)
     }
     else {
-      updateBalance(remoteBalance.value + tx.amount, remoteAddress.value!)
+      await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
     }
 
     if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
