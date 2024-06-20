@@ -46,7 +46,7 @@ const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getRefer
 const { transactions } = storeToRefs(useTransactions())
 const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced } = useSync()
+const { nodesAreSynced, isTransactionPending } = useSync()
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -260,7 +260,7 @@ onMounted(async () => {
               {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
             </p>
           </div>
-          <div v-else-if="(remoteBalance > 0 || localBalance > 0) && !isHtlcActive" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
             <p class="font-medium text-center text-pumpkin">
               {{ $tc(
