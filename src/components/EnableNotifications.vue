@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
 import NotificationBell from './icons/notification-bell.vue'
+import { stepEmits } from '@/lib/flows/steps.types'
 
-defineEmits<{ done: []; skip: [] }>()
+defineEmits(stepEmits)
 </script>
 
 <template>

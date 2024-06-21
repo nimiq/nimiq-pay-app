@@ -11,8 +11,6 @@ export enum Modal {
   Disclaimer = '@/modals/DisclaimerModal.vue',
   Dev = '@/modals/DevModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
-  LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
-  LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   Menu = '@/modals/MenuModal.vue',
   Points = '@/modals/PointsModal.vue',
   Settings = '@/modals/SettingsModal.vue',
@@ -42,12 +40,6 @@ function _useModal() {
         break
       case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
-        break
-      case Modal.LogoutConfirm:
-        component = defineAsyncComponent(() => import(Modal.LogoutConfirm))
-        break
-      case Modal.LogoutWarning:
-        component = defineAsyncComponent(() => import(Modal.LogoutWarning))
         break
       case Modal.Menu:
         component = defineAsyncComponent(() => import(Modal.Menu))

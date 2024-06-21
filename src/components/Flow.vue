@@ -4,9 +4,9 @@ import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { nextTick } from 'vue'
+import { modalController } from '@ionic/core'
 import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
-import { useModal } from '@/composables/useModal'
 import { useCarousel } from '@/composables/useCarousel'
 import { useToast } from '@/composables/useToast'
 import { useLogger } from '@/composables/useLogger'
@@ -51,7 +51,7 @@ let hasRunSuccessfully = false // Flag to track if the hook has run successfully
 function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
   // If no custom handler is not provided, the default behavior is to close the modal.
   if (!originalHandler)
-    originalHandler = async () => useModal().closeModal()
+    originalHandler = async () => await modalController.getTop().then((modal) => { modal?.dismiss() })
 
   const fn = async function (_err = defaultErrorHandler) {
     // Wait for the lock to be released before proceeding.
@@ -81,7 +81,7 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
 
       // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing && !prevent)
-        await useModal().closeModal()
+        await modalController.getTop().then((modal) => { modal?.dismiss() })
     }
     finally {
       // Release the lock for subsequent operations and reset the lock state.

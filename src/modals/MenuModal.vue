@@ -66,7 +66,7 @@ onLongPress(
     <IonItem button :detail="false" @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })">
       {{ $t('About') }}
     </IonItem>
-    <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
+    <IonItem button :detail="false" @click="initializeFlow(FlowName.Logout, { heightAuto: true })">
       {{ $t('Log Out') }}
     </IonItem>
   </IonList>

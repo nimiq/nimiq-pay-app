@@ -38,7 +38,7 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   const url = new URL(event.url)
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
-    initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: url.toString() })
+    initializeFlow(FlowName.NimOrPointsPayment, { initialState: { qrCodeScanner: url.toString() } })
   }
 })
 

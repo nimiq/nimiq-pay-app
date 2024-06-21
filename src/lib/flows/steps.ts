@@ -25,6 +25,7 @@ const TransactionDetails = defineAsyncComponent(() => import('@/components/Trans
 const BackupIntroduction = defineAsyncComponent(() => import('@/components/BackupIntroduction.vue'))
 const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'))
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
+const LogoutSlider = defineAsyncComponent(() => import('@/components/LogoutSlider.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -452,4 +453,23 @@ export const validateWordsStep: StepInit = async () => ({
   get title() { return i18n.t('Test your backup') },
   main: markRaw(ValidateWords),
   goBackBy: 1,
+} satisfies Step)
+
+export const logoutSliderStep: StepInit = async () => ({
+  step: StepName.LogoutSlider,
+  get title() { return i18n.t('Make sure your backup is accessible.') },
+  get description() { return i18n.t('The login words are the only way to log in again. Double-check your backup or all data and funds might get lost.') },
+  main: markRaw(LogoutSlider),
+  beforeNext: async (_, { next }) => {
+    const { hasDoneBackup } = await import('@/stores/app').then(a => a.useApp())
+    if (hasDoneBackup)
+      // All good, he can log out
+      return next()
+
+    // User hasn't done the backup yet, so we redirect him to the backup flow
+    // Once he finishes the backup, he will come back to this step because modal
+    // is not closed
+    const { initializeFlow } = await import('@/lib/flows/index')
+    initializeFlow(FlowName.Backup, { closeCurrentModal: false })
+  },
 } satisfies Step)

@@ -299,6 +299,34 @@ const backupFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
+const logoutFlow: FlowInit = async () => {
+  const { logoutSliderStep } = await import('./steps')
+  const flowName = FlowName.Logout
+  const steps = (await Promise.all([logoutSliderStep({ flowName })]))
+  const onDone: Flow['onDone'] = async (_state, { err }) => {
+    // The step SliderLogout handles the logout process, nonetheless
+    // we have another validation here to ensure the user has done the backup
+    const { hasDoneBackup } = await import('@/stores/app').then(a => a.useApp())
+    if (!hasDoneBackup) {
+      const error = 'First, you need to backup your wallet before logging out'
+      err(error)
+      logger.error('User tried to logout without backup. Redirecting to Backup Modal flow', error)
+      initializeFlow(FlowName.Backup, { closeCurrentModal: false })
+      return err('You need to backup your wallet before logging out')
+    }
+
+    const [{ deleteDatabase }, router] = await Promise.all([
+      import('@/stores/conn').then(c => c.useConn()),
+      import('@/router').then(r => r.default),
+    ])
+
+    logger.log('logging out user')
+    await deleteDatabase()
+    await router.replace('/setup')
+  }
+  return { flowName, steps, onDone }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -313,15 +341,34 @@ const flows = {
   [FlowName.ViewTransactions]: viewTransactionsFlow,
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
+  [FlowName.Logout]: logoutFlow,
 }
 
+export interface InitializeFlowOptions {
+  initialState?: Partial<State>
+
+  /**
+   * If true the current top modal will be closed before opening the new one.
+   * @default true
+   */
+  closeCurrentModal?: boolean
+
+  /**
+   * If true, the height of the modal will be automatically adjusted to the content.
+   * @default false
+   */
+  heightAuto?: boolean
+}
 /**
  * It initializes the flow given the name opening a new modal with the flow component
  * which handles the carousel of steps.
  */
-export async function initializeFlow(name: FlowName, initialState?: Partial<State>) {
-  // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
-  await useModal().closeModal()
+export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
+  const { initialState, heightAuto = false, closeCurrentModal = true } = options
+
+  // Close current opened modal or flow, potentially invoking its cancel handler via canDismiss.
+  if (closeCurrentModal)
+    await modalController.getTop().then(async modal => modal && modal.dismiss())
 
   const isFullscreen = false
 
@@ -361,5 +408,9 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
     initialBreakpoint: isFullscreen ? undefined : 1,
     breakpoints: isFullscreen ? undefined : [0, 1],
   })
+
+  if (heightAuto)
+    modal.style.setProperty('--height', 'auto')
+
   await modal.present()
 }

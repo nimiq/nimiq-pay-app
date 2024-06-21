@@ -15,11 +15,14 @@ export enum FlowName {
   ViewTransactions = 'viewTransactions',
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
   Backup = 'backup',
+  Logout = 'logout',
 }
 
 interface FlowHookCbReturn {
-  // Prevents the default behavior.
-  // e.g. onDone will close the modal by default.
+  /**
+   * Prevents the default behavior.
+   * e.g. `onDone` will close the modal by default.
+   */
   prevent?: boolean
 }
 export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<FlowHookCbReturn | void>
@@ -70,11 +73,12 @@ export enum StepName {
   BackupIntroduction = 'backupIntroduction',
   ShowWords = 'showWords',
   ValidateWords = 'validateWords',
+  LogoutSlider = 'logoutSlider',
 }
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords] as const
+const infoSteps = [StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.LogoutSlider] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
