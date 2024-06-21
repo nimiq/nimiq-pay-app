@@ -326,7 +326,8 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
+    <li v-for="({ main, step, preTitle, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
+      <component :is="preTitle" v-if="preTitle" />
       <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 text-2xl font-bold text-center small:mt-0 text-balance gap-x-3">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}

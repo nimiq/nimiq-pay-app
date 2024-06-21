@@ -127,6 +127,12 @@ export interface NavigationControl {
 
 type BaseStep = {
   /**
+   * A component which will be rendered on top of the title.
+   * Useful for the 'Don't lose access' label in the backup flow
+   */
+  preTitle?: Component
+
+  /**
    * Title of the modal
    */
   title?: string | Ref<string>

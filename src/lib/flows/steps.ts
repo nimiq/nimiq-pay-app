@@ -436,8 +436,11 @@ export const transactionDetail: StepInit = async () => {
 
 export const backupIntroductionStep: StepInit = async () => ({
   step: StepName.BackupIntroduction,
-  get title() { return i18n.t('There is no "Forgot password"') },
-  get description() { return i18n.t('Create a backup. It\'s the only way to recover your account.') },
+  get preTitle() {
+    return h('div', { class: 'text-pumpkin text-sm uppercase tracking-widest font-bold leading-none mb-1' }, i18n.t('Don\'t lose access'))
+  },
+  get title() { return i18n.t('Save your login words, the key to your account') },
+  get description() { return i18n.t('The login words are a unique list of 12 words in a specific order. They grant full access to your account.') },
   main: markRaw(BackupIntroduction),
 } satisfies Step)
 
