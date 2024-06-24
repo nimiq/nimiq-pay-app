@@ -1,6 +1,7 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { isValidPhoneNumber } from 'libphonenumber-js/mobile'
 import { QRDataFormat } from '../../composables/useStringParser'
+import { usePayment } from '../../composables/usePayment'
 import { FlowName, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
@@ -88,9 +89,10 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
       const { reset } = (await import('@/composables/useDecrypt')).useDecrypt()
       reset()
     },
-    beforeNext: async ({ pinCode }, { next, err }) => {
+    beforeNext: async (state, { next, err, navigateTo }) => {
       const { useApp } = (await import('@/stores/app'))
       const { pinHash } = useApp()
+      const { pinCode } = state
       if (!pinCode) {
         err(i18n.t('Please enter a PIN code'))
       }
@@ -105,7 +107,16 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
         }
         else {
           useApp().updatePinInputTs()
-          next()
+          if (flowName === FlowName.Bitrefill) {
+            const { [StepName.PaymentPreview]: method, [StepName.BitrefillWidget]: request } = state
+            if (!request)
+              // No translation as not user-facing. Dev error which should not occur in production.
+              throw new Error(`${flowName} flow expected a parsed payment request`)
+
+            if (await usePayment().makePayment(method, request, err))
+              navigateTo({ step: StepName.BitrefillWidget })
+          }
+          else { next() }
         }
       }
       else { next() }
@@ -309,7 +320,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
   } satisfies Step
 }
 
-export const paymentPreviewStep: StepInit = async () => {
+export const paymentPreviewStep: StepInit = async ({ flowName }) => {
   // As refs to be reactive
   const title = ref(i18n.t('Payment preview'))
   const merchantCategory = ref<MerchantCategory>()
@@ -326,17 +337,35 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = (qrCodeScanner || bitrefillWidget).merchantName || i18n.t('Payment preview')
       merchantCategory.value = (qrCodeScanner || bitrefillWidget).merchantCategory
     },
-    beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
+    beforeNext: async (state, { next, navigateTo, err }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
-      if (_request instanceof String)
+      const stepNameWithThePaymentRequest = ({
+        [FlowName.NimOrPointsPayment]: StepName.QRCodeScanner,
+        [FlowName.Bitrefill]: StepName.BitrefillWidget,
+      } as const)[flowName as string]
+      if (!stepNameWithThePaymentRequest)
         // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`Request is a string: ${_request}`)
+        throw new Error(`No payment request step key found for flow: ${flowName}`)
 
-      // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
-      if ((await import('@/stores/app')).useApp().shouldAskPin())
+      const { [stepNameWithThePaymentRequest]: request } = state
+      if (typeof request === 'string')
+        // No translation as not user-facing. Dev error which should not occur in production.
+        throw new Error(`Request is a string: ${request}`)
+
+      // If it has been more than 5 minutes since the last pin input, we go to the next step, which it is the pin input
+      if ((await import('@/stores/app')).useApp().shouldAskPin()) {
         next()
-      else
-        navigateTo({ skipAheadBy: 2 })
+      }
+      else if (flowName === FlowName.Bitrefill) {
+        const { [StepName.PaymentPreview]: method } = state
+        if (!request)
+          // No translation as not user-facing. Dev error which should not occur in production.
+          throw new Error(`${flowName} flow expected a parsed payment request`)
+
+        if (await usePayment().makePayment(method, request, err))
+          navigateTo({ step: StepName.BitrefillWidget })
+      }
+      else { navigateTo({ skipAheadBy: 2 }) }
     },
   } satisfies Step
 }

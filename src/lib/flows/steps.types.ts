@@ -1,5 +1,5 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
-import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
+import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -254,9 +254,4 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
-}
-
-export enum PaymentMethod {
-  NIM = 'nim',
-  Points = 'points',
 }

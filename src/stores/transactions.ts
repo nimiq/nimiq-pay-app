@@ -213,6 +213,7 @@ export const useTransactions = defineStore('transactions', () => {
       // Store secret in the transaction and database
       tx.meta = { secret }
       tx.status = Nimiq.Client.TransactionState.CONFIRMED // If we already have a secret, that means the BTC LN were already received
+      tx.timestamp = Date.now()
       await upsertTx(tx)
       // The transaction we are looking for is most likey still the first one, so not much overhead
       const index = transactions.value.findIndex(tx => tx.hash === hash)

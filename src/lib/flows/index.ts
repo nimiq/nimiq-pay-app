@@ -7,6 +7,7 @@ import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/f
 import FlowCmp from '@/components/Flow.vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
+import { usePayment } from '@/composables/usePayment'
 
 const logger = useLogger('flows/index.ts')
 
@@ -172,42 +173,12 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
   ].map(s => s({ flowName }))))
 
   const onDone: Flow['onDone'] = async (state, { err }) => {
-    const { markAsUnknownTransactionTitle, PaymentMethod } = await import('@/types/transactions')
-
     const { [StepName.PaymentPreview]: method, [StepName.QRCodeScanner]: request } = state
     if (!request || typeof request === 'string')
       // No translation as not user-facing. Dev error which should not occur in production.
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
-    logger.log(`🤑  Initializing payment process with ${method}`, request)
-
-    if (method === PaymentMethod.NIM) {
-      const { useTransactions } = await import('@/stores/transactions')
-      const { error } = await useTransactions().sendTx({
-        ...request,
-        title: request.merchantName
-          ? markAsUnknownTransactionTitle(request.merchantName)
-          : 'Payment', // translated at display time
-      }).catch(error => ({ error: i18n.t(
-        'Transaction failed: {error}',
-        { error: error instanceof Error ? error.message : String(error) },
-      ) }))
-      if (error)
-        return err(error)
-    }
-    else if (method === PaymentMethod.Points) {
-      if (!request.rail || !request.paymentRef)
-        // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(request)}`)
-
-      const { usePoints } = await import('@/stores/points')
-      const { error } = await usePoints().payWithPoints(request)
-      if (error)
-        return err(error)
-    }
-
-    const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('Payment successful') })
+    await usePayment().makePayment(method, request, err)
   }
   const onCancel: Flow['onCancel'] = async () => {
     logger.log('🤑  Cancelling payment process')

@@ -89,7 +89,14 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
         {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
       </div>
 
-      <div v-if="tx.meta?.secret" class="max-w-full col-span-2 text-lg text-space/60">
+      <div v-if="tx.message" class="max-w-full col-span-2 !text-left text-lg text-space/60">
+        {{ $t('Message') }}
+        <div class="px-3 py-2 mt-2 -mx-3 font-mono break-words rounded-lg bg-space/5">
+          {{ tx.message }}
+        </div>
+      </div>
+
+      <div v-if="tx.meta?.secret" class="max-w-full col-span-2 !text-left text-lg text-space/60">
         {{ $t('Payment Secret') }}
         <div class="px-3 py-2 mt-2 -mx-3 font-mono break-words rounded-lg bg-space/5">
           {{ tx.meta.secret }}
