@@ -25,7 +25,7 @@ const firstWord = asyncComputed(() => useLocalWallet().getWords().then(({ data }
     </div>
     <div class="flex items-baseline gap-2 mt-auto">
       <InfoIcon class="size-3 stroke-[1.5] text-space/50 shrink-0" />
-      <p class="text-space/60 text-pretty">
+      <p class="text-space/60 text-center text-pretty">
         {{ $t('Please make sure no one can see your screen before continuing.') }}
       </p>
     </div>
