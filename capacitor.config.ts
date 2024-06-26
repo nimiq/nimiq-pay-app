@@ -5,9 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Nimiq Pay',
   webDir: 'dist',
   server: {
-    androidScheme: 'https',
-    allowNavigation: ['*'],
-    cleartext: true,
+    errorPath: 'error.html',
   },
   loggingBehavior: 'debug',
   appendUserAgent: 'Nimiq Pay',
