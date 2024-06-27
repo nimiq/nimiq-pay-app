@@ -112,6 +112,12 @@ watch([referralCode, phoneNumberVerified], () => {
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
 
+  // Remove notification if user has just verified their phone number
+  if (phoneNumberVerified.value) {
+    removeLocalNotification(verifyNumberNotification.id, false)
+    removeLocalNotification(claimRewardsNotification.id, false)
+  }
+
   if (referralCode.value && phoneNumberVerified.value) {
     redeemReferral()
   }
@@ -156,7 +162,7 @@ onMounted(async () => {
       <IonToolbar class="px-2">
         <IonButtons slot="start">
           <IonButton @click="showModal(Modal.Menu, { isSmall: true })">
-            <MenuIcon class="h-5 w-7 opacity-30" />
+            <MenuIcon class="w-7 h-5 opacity-30" />
           </IonButton>
         </IonButtons>
         <IonButtons slot="end">
@@ -195,14 +201,14 @@ onMounted(async () => {
       </QuickButton>
 
       <!-- TODO: replace with an html grid -->
-      <IonGrid class="flex flex-col mt-10 gap-y-2">
+      <IonGrid class="flex flex-col gap-y-2 mt-10">
         <!-- Notification Horizontal Scroll -->
-        <IonRow v-if="localNotifications.length" class="w-screen ml-[-21px]">
+        <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
           <ul
             ref="notificationList"
-            class="flex w-full gap-x-3 gap-y-8 pb-4 scroll-pl-[21px] snap-mandatory snap-x overflow-auto hide-scrollbar"
+            class="hide-scrollbar scroll-pl-[21px] w-full overflow-auto flex gap-x-3 gap-y-8 pb-4 snap-x snap-mandatory"
           >
-            <li v-for="notification in localNotifications" :key="notification.id" class="snap-start shrink-0 first:pl-[21px] last:pr-[21px]">
+            <li v-for="notification in localNotifications" :key="notification.id" class="shrink-0 snap-start first:pl-[21px] last:pr-[21px]">
               <NotificationCard @click="notification.action" @close="() => removeLocalNotification(notification.id)">
                 {{ notification.title }}
                 <template v-if="notification.subtitle" #subtitle>
@@ -220,7 +226,7 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
             @close="isReferralCardShown = false"
           >
-            <span class="text-lg text-pumpkin">
+            <span class="text-pumpkin text-lg">
               {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
             </span>
           </NotificationCard>
@@ -233,7 +239,7 @@ onMounted(async () => {
           </p>
         </IonRow>
         <IonRow>
-          <a class="w-full mt-2 bg-white rounded-lg h-80">
+          <a class="w-full h-80 mt-2 bg-white rounded-lg">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
             <iframe class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups" src="https://map.nimiq.com/?layout=compact"></iframe>
           </a>
@@ -254,15 +260,15 @@ onMounted(async () => {
     <IonFooter>
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
-            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
-            <p class="font-medium text-center text-pumpkin">
+          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="bg-pumpkin/15 flex justify-center items-center gap-2 p-2">
+            <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
+            <p class="text-pumpkin font-medium text-center">
               {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
             </p>
           </div>
-          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
-            <InfoIcon class="size-3 stroke-[1.5] shrink-0 text-pumpkin/60" />
-            <p class="font-medium text-center text-pumpkin">
+          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="bg-pumpkin/15 flex justify-center items-center gap-2 p-2">
+            <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
+            <p class="text-pumpkin font-medium text-center">
               {{ $tc(
                 'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
                 blocksUntilHtlcActive,
@@ -272,7 +278,7 @@ onMounted(async () => {
           </div>
         </Transition>
         <IonButton
-          class="w-3/4 py-2 mx-auto text-base" expand="block"
+          class="mx-auto w-3/4 py-2 text-base" expand="block"
           :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0) || !nodesAreSynced"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >

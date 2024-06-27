@@ -190,8 +190,11 @@ export function useNotifications() {
       localNotificationsArray.value.push(notification)
   }
 
-  function removeLocalNotification(id: string) {
-    closedNotifications.value.push(id)
+  function removeLocalNotification(id: string, permanent = true) {
+    localNotificationsArray.value = localNotificationsArray.value.filter(n => n.id !== id)
+
+    if (permanent)
+      closedNotifications.value.push(id)
   }
 
   return {
