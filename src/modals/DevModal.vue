@@ -24,7 +24,7 @@ const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
-const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
+const txInMemPool: Ref<Nimiq.PlainTransactionDetails | undefined> = ref()
 const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
 
 async function writeToClipboard(string: string) {
@@ -48,11 +48,11 @@ async function handleClearTx() {
 
 async function getAllHtlcs() {
   const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
-  logger.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
-  const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+  logger.log('All Transactions from Blockchain', transactions?.map(tx => tx))
+  const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
   htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
     return {
-      address: tx.recipient.toUserFriendlyAddress(),
+      address: tx.recipient,
       validityStart: tx.validityStartHeight,
       value: tx.value / 1e5,
     }
@@ -97,7 +97,7 @@ onMounted(async () => {
         <p>Consensus state: <strong>{{ consensus }}</strong></p>
         <p>
           Head <strong>{{ height }}</strong>:
-          <code>{{ head?.hash()?.toHex() }}</code>
+          <code>{{ head?.hash }}</code>
         </p>
         <p>Network: <strong>{{ networkName }}</strong></p>
       </IonCardContent>
@@ -158,11 +158,11 @@ onMounted(async () => {
       </IonCardHeader>
       <IonCardContent>
         <p class="flex flex-col">
-          <span>Recipient: {{ txInMemPool?.recipient.toUserFriendlyAddress() }}</span>
-          <span>Sender: {{ txInMemPool?.sender.toUserFriendlyAddress() }}</span>
+          <span>Recipient: {{ txInMemPool?.recipient }}</span>
+          <span>Sender: {{ txInMemPool?.sender }}</span>
           <span>Value: {{ (txInMemPool?.value || 0) / 1e5 }} NIM</span>
           <span>State: {{ txInMemPool?.state }} </span>
-          <span>Hash: {{ txInMemPool?.transactionHash.toHex() }} </span>
+          <span>Hash: {{ txInMemPool?.transactionHash }} </span>
           <span>Network: {{ txInMemPool?.network }}</span>
         </p>
       </IonCardContent>

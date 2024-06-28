@@ -23,22 +23,22 @@ export const CashlinkExtraDataHex = {
 }
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
-  const client = ref<Client>()
-  const consensus = ref<Client.ConsensusState>('connecting')
-  const head = ref<Block>()
+  const client = ref<Nimiq.Client>()
+  const consensus = ref<Nimiq.ConsensusState>('connecting')
+  const head = ref<Nimiq.PlainBlock>()
   const height = computed<number>(() => head.value?.height || -1)
   const peerCount = ref(0)
   const networkName = ref('')
 
   async function init() {
-    isDev
-      ? Nimiq.GenesisConfig.test()
-      : Nimiq.GenesisConfig.main()
+    networkName.value = isDev ? 'TestAlbatross' : 'MainAlbatross'
 
-    networkName.value = Nimiq.GenesisConfig.NETWORK_NAME
+    // @ts-expect-error Default not part of the type exports
+    await Nimiq.default()
 
-    await Nimiq.WasmHelper.doImport()
-    client.value = Nimiq.Client.Configuration.builder().instantiateClient()
+    const config = new Nimiq.ClientConfiguration()
+    config.network(networkName.value)
+    client.value = await Nimiq.Client.create(config.build())
 
     head.value = await client.value.getHeadBlock()
 
@@ -83,29 +83,27 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       })
     }
 
-    // @ts-expect-error Private property access
-    ;(await client.value._consensus as Nimiq.BaseMiniConsensus).network.on('peers-changed', async () => {
-      const stats = await client.value?.network.getStatistics()
-      peerCount.value = stats?.totalPeerCount || 0
+    client.value.addPeerChangedListener(async (_peerId, _reason, newPeerCount) => {
+      peerCount.value = newPeerCount
       logger.log('Peer count changed', peerCount.value)
     })
   }
 
   async function reconnect() {
-    logger.log('Reconnecting to network')
-    const peers = await client.value?.network.getPeers()
-    if (peers)
-      await Promise.all(peers.map(peer => client.value?.network.disconnect(peer.peerAddress)))
+    // logger.log('Reconnecting to network')
+    // const peers = await client.value?.network.getPeers()
+    // if (peers)
+    //   await Promise.all(peers.map(peer => client.value?.network.disconnect(peer.peerAddress)))
 
-    await client.value?.resetConsensus()
+    // await client.value?.resetConsensus()
 
-    if (peers && peers.length > 0) {
-      const interval = window.setInterval(() => {
-        peers.forEach(peer => client.value?.network.connect(peer.peerAddress))
-      }, 1000)
-      await client.value?.waitForConsensusEstablished()
-      window.clearInterval(interval)
-    }
+    // if (peers && peers.length > 0) {
+    //   const interval = window.setInterval(() => {
+    //     peers.forEach(peer => client.value?.network.connect(peer.peerAddress))
+    //   }, 1000)
+    //   await client.value?.waitForConsensusEstablished()
+    //   window.clearInterval(interval)
+    // }
   }
 
   async function claimCashlink(cashlink: string, address: Address) {
@@ -114,42 +112,30 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     cashlink = cashlink.split('cashlink/#')[1].replace(/~/g, '').replace(/=*$/, match => Array.from({ length: match.length }).fill('.').join(''))
     const buf = Nimiq.BufferUtils.fromBase64Url(cashlink)
-    const keyPair = Nimiq.KeyPair.derive(Nimiq.PrivateKey.unserialize(buf))
-    const wallet = new Nimiq.Wallet(keyPair)
-    const { balance } = await client.value!.getAccount(wallet.address)
+    const keyPair = Nimiq.KeyPair.derive(Nimiq.PrivateKey.unserialize(buf.read(32)))
+    const { balance } = await client.value!.getAccount(keyPair.toAddress())
     const amount = Math.min(buf.readUint64(), balance)
     if (!address)
       throw new Error(i18n.t('Address missing'))
     if (amount <= 0)
       throw new Error(i18n.t('Cashlink has no balance'))
 
-    const tx = new Nimiq.ExtendedTransaction(
-      wallet.address, // sender address
-      Nimiq.Account.Type.BASIC, // sender type
+    const tx = Nimiq.TransactionBuilder.newBasicWithData(
+      keyPair.toAddress(), // sender address
       address, // recipient address
-      Nimiq.Account.Type.BASIC, // recipient type
-      balance,
-      0, // fee
-      height.value,
-      Nimiq.Transaction.Flag.NONE,
       CashlinkExtraData.CLAIMING, // extraData
+      BigInt(balance),
+      0n, // fee
+      height.value,
+      await client.value!.getNetworkId(),
     )
-    const signature = Nimiq.Signature.create(
-      keyPair.privateKey,
-      keyPair.publicKey,
-      tx.serializeContent(),
-    )
-    const proof = Nimiq.SignatureProof.singleSig(
-      keyPair.publicKey,
-      signature,
-    ).serialize()
-    tx.proof = proof
+    tx.sign(keyPair)
 
     logger.log('Claiming Cashlink', tx.toPlain())
     await client.value!.sendTransaction(tx)
   }
 
-  async function getAccount(address: Address | undefined): AsyncResult<Account, string> {
+  async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.PlainAccount, string> {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
     const account = await client.value?.getAccount(address)
@@ -158,7 +144,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account, error: undefined }
   }
 
-  async function getAccounts(addressArray: Address[]): AsyncResult<Account[], string> {
+  async function getAccounts(addressArray: Nimiq.Address[]): AsyncResult<Nimiq.PlainAccount[], string> {
     if (addressArray.length === 0)
       return { data: undefined, error: i18n.t('Addresses missing') }
     const accounts = await client.value?.getAccounts(addressArray)
@@ -185,9 +171,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account.balance, error: undefined }
   }
 
-  function translateConsensus(consensusState: Client.ConsensusState) {
+  function translateConsensus(consensusState: Nimiq.ConsensusState) {
     // Define translations as record such that ts warns us if a translation for a consensus state is missing
-    const consensusStateTranslations: Record<Client.ConsensusState, string> = {
+    const consensusStateTranslations: Record<Nimiq.ConsensusState, string> = {
       established: i18n.t('Consensus established.'),
       syncing: i18n.t('Syncing with network.'),
       connecting: i18n.t('Connecting to network.'),
@@ -202,13 +188,16 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
    * @param htlcAddress
    * @returns Txs from HTLCs and extensions
    */
-  async function getAllOutgoingTransactionsFromHtlcs(htlcAddress: Address, txs: ClientTransactionDetails[] = []): Promise<ClientTransactionDetails[]> {
+  async function getAllOutgoingTransactionsFromHtlcs(htlcAddress: Nimiq.Address, txs: Nimiq.PlainTransactionDetails[] = []): Promise<Nimiq.PlainTransactionDetails[]> {
     try {
-      const _txs = (await client.value?.getTransactionsByAddress(htlcAddress) || []).filter(tx => !tx.recipient.equals(htlcAddress))
+      const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
+      const _txs = (await client.value?.getTransactionsByAddress(htlcAddress) || []).filter(
+        tx => tx.recipient !== plainHtlcAddress,
+      )
       txs.push(..._txs)
       await Promise.all(_txs
-        .filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
-        .map(tx => getAllOutgoingTransactionsFromHtlcs(tx.recipient, txs)))
+        .filter(tx => tx.recipientType === 'htlc')
+        .map(tx => getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient), txs)))
       return txs
     }
     catch (error) {

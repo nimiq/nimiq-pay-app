@@ -179,7 +179,7 @@ export function useRemoteSignerApi() {
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<RemoteSigner, RemoteErrorRes> {
-    const { data, error, status, hasError } = await api<GetRemoteSignerRes, RemoteErrorRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress(false)}`, baseCosignerUrl))
+    const { data, error, status, hasError } = await api<GetRemoteSignerRes, RemoteErrorRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress().replaceAll(' ', '')}`, baseCosignerUrl))
     if (error || !data?.address || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
@@ -202,7 +202,7 @@ export function useRemoteSignerApi() {
     getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction, RemoteErrorRes>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
     getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[], RemoteErrorRes>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
     getRemoteSigner,
-    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(tx).toPlain() }),
+    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
     sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),
   }
 }

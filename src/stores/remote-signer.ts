@@ -172,18 +172,18 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const transactions = await client!.getTransactionsByAddress(localAddress.value)
     await until(remotePublicKey).not.toBeUndefined()
 
-    logger.log('All Transactions from Blockchain', transactions?.map(tx => tx.toPlain()))
-    const htlcTransactions = transactions?.filter(tx => tx.recipientType === Nimiq.Account.Type.HTLC)
+    logger.log('All Transactions from Blockchain', transactions)
+    const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
     for (const tx of htlcTransactions) {
-      const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(tx.data.raw)
+      const htlcData = tx.data
       await updateRemoteSigner({
         active: false,
         balance: 0,
-        address: tx.recipient as Nimiq.Address,
+        address: Nimiq.Address.fromString(tx.recipient),
         publicKey: remotePublicKey.value!,
         start: tx.validityStartHeight,
         end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-        proofSize: tx.proof.raw.length,
+        proofSize: 'raw' in tx.proof ? tx.proof.raw?.length / 2 : 0,
       })
     }
   }

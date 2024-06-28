@@ -17,6 +17,18 @@ import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
 import { useRemoteSigner } from './remote-signer'
 
+import { MerchantCategory, PaymentMethod, Rail, Transfer, isExternalTx } from '@/types/transactions'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { AsyncResult } from '@/types'
+import { getSignedTx, toAccountType } from '@/lib/tx'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
+import { useTransactionSearch } from '@/composables/useTransactionSearch'
+import { useSync } from '@/composables/useSync'
+import { i18n } from '@/i18n/i18n-setup'
+import { useLogger } from '@/composables/useLogger'
+import { useFastspotApiV2 } from '@/composables/useFastspotV2'
+
 const logger = useLogger('transactions.ts')
 
 export enum TransactionListState {
@@ -51,7 +63,7 @@ export const useTransactions = defineStore('transactions', () => {
     // TODO: Temporary, don't handle tx from HTLCs if tx is UserReceiptTransaction
     const filteredTxs = txs.filter((tx) => {
       if (tx.transfer === Transfer.UserReceipt)
-        return tx.senderType !== Nimiq.Account.Type.HTLC
+        return tx.senderType !== Nimiq.AccountType.HTLC
       else
         return true
     })
@@ -125,7 +137,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     // Check if the tx is already in the transaction list
-    if (transactions.value.some(tx => tx.hash === signedTx.hash().toHex())) {
+    if (transactions.value.some(tx => tx.hash === signedTx.hash())) {
       logger.error('Transaction already sent', signedTx)
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
@@ -149,7 +161,7 @@ export const useTransactions = defineStore('transactions', () => {
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
-    const status = Nimiq.Client.TransactionState.PENDING
+    const status = 'pending'
 
     const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length } as TransactionSentByUser
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
@@ -164,8 +176,8 @@ export const useTransactions = defineStore('transactions', () => {
 
     if (tx.transfer === Transfer.LocalToRemote || tx.transfer === Transfer.ExtendRemote) {
       if (details) {
-        const plain = details?.toPlain()
-        const htlcData = Nimiq.HashedTimeLockedContract.dataToPlain(details.data.raw)
+        const plain = details
+        const htlcData = details.data
         await useRemoteSigner().updateRemoteSigner({
           active: true,
           balance: plain.value,
@@ -212,7 +224,7 @@ export const useTransactions = defineStore('transactions', () => {
 
       // Store secret in the transaction and database
       tx.meta = { secret }
-      tx.status = Nimiq.Client.TransactionState.CONFIRMED // If we already have a secret, that means the BTC LN were already received
+      tx.status = 'confirmed' // If we already have a secret, that means the BTC LN were already received
       await upsertTx(tx)
       // The transaction we are looking for is most likey still the first one, so not much overhead
       const index = transactions.value.findIndex(tx => tx.hash === hash)
@@ -235,7 +247,7 @@ export const useTransactions = defineStore('transactions', () => {
   async function addReceiptTransaction(tx: UserReceiptTransaction) {
     await upsertTx(tx)
     // Don't add tx to the transaction list if it came from an HTLC
-    if (tx.senderType !== Nimiq.Account.Type.HTLC)
+    if (tx.senderType !== Nimiq.AccountType.HTLC)
       addTransaction(tx)
   }
 
@@ -245,7 +257,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function addUnknownPaymentToMerchantTransaction(
-    tx: Nimiq.ClientTransactionDetails,
+    tx: Nimiq.PlainTransactionDetails,
     transfer = Transfer.UserPaymentToMerchant,
     rail = Rail.Unknown,
     paymentRef = '',
@@ -258,16 +270,16 @@ export const useTransactions = defineStore('transactions', () => {
     const newTx = {
       transfer,
       amount: tx.value,
-      sender: tx.sender.toUserFriendlyAddress(),
-      senderType: tx.senderType,
-      recipient: tx.recipient.toUserFriendlyAddress(),
-      recipientType: tx.recipientType,
-      hash: tx.transactionHash.toHex(),
+      sender: tx.sender,
+      senderType: toAccountType(tx.senderType),
+      recipient: tx.recipient,
+      recipientType: toAccountType(tx.recipientType),
+      hash: tx.transactionHash,
       status: tx.state,
       timestamp: tx.timestamp,
       title: 'Payment', // translated at display time
       fee: tx.fee,
-      proofSize: tx.proof.raw.length,
+      proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
       isCashbackClaimed: true,
       merchantName: '',
       paymentMethod: PaymentMethod.NIM,
@@ -295,7 +307,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: Nimiq.Client.TransactionState, timestamp: number | undefined }) {
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: Nimiq.TransactionState, timestamp: number | undefined }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
     const tx = transactions.value.find(tx => tx.hash === hash)
     if (tx) {

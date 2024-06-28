@@ -83,10 +83,10 @@ export enum MerchantCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
-  senderType: Nimiq.Account.Type
+  senderType: Nimiq.AccountType
   recipient: string
-  recipientType: Nimiq.Account.Type
-  status: Nimiq.Client.TransactionState
+  recipientType: Nimiq.AccountType
+  status: Nimiq.TransactionState
   timestamp: number | undefined
   amount: number
   fee: number
@@ -122,12 +122,12 @@ export function translateTransactionTitle(title: TransactionTitle) {
     : title
 }
 
-export function translateTransactionState(state: Nimiq.Client.TransactionState) {
+export function translateTransactionState(state: Nimiq.TransactionState) {
   // Define translations as record such that ts warns us if a translation for a transaction state is missing
-  const transactionStateTranslations: Record<Nimiq.Client.TransactionState, string> = {
+  const transactionStateTranslations: Record<Nimiq.TransactionState, string> = {
     new: i18n.t('New'),
     pending: i18n.t('Pending'),
-    mined: i18n.t('Confirming'), // We display a just mined, but not yet confirmed transactions as confirming.
+    included: i18n.t('Confirming'), // We display just included, but not yet confirmed transactions as confirming.
     invalidated: i18n.t('Invalid'), // For transactions that got rejected by the mempool.
     expired: i18n.t('Expired'),
     confirmed: i18n.t('Confirmed'),

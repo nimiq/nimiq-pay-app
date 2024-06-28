@@ -8,12 +8,12 @@ import { useApp } from './app'
 const logger = useLogger('local-wallet')
 
 export const useLocalWallet = defineStore('local-wallet', () => {
-  const { entropyToMnemonic, mnemonicToExtendedPrivateKey, mnemonicToEntropy } = Nimiq.MnemonicUtils
-
   const { entropy } = storeToRefs(useApp())
-  const localWallet = computed(() => new Nimiq.Wallet(Nimiq.KeyPair.derive(mnemonicToExtendedPrivateKey(entropyToMnemonic(entropy.value)).derivePath(`m/44'/242'/0'/0'`).privateKey)))
+  const localWallet = computed(() => Nimiq.KeyPair.derive(
+    Nimiq.Entropy.fromHex(entropy.value).toExtendedPrivateKey().derivePath(`m/44'/242'/0'/0'`).privateKey,
+  ))
 
-  const localAddress = computed(() => localWallet.value.address)
+  const localAddress = computed(() => localWallet.value.toAddress())
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
   const localBalance = ref(0)
 
@@ -23,7 +23,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       logger.error(err)
       return { error: err, data: undefined }
     }
-    return { data: entropyToMnemonic(entropy.value), error: undefined }
+    return { data: Nimiq.Entropy.fromHex(entropy.value).toMnemonic(), error: undefined }
   }
 
   function importWords(words: string[]): Result<void, string> {
@@ -31,7 +31,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       // eslint-disable-next-line ts/ban-ts-comment
       // @ts-expect-error
       Nimiq.Entropy.SIZE = 16
-      entropy.value = mnemonicToEntropy(words).toHex()
+      entropy.value = Nimiq.MnemonicUtils.mnemonicToEntropy(words).toHex()
       return { data: undefined, error: undefined }
     }
     catch (error) {

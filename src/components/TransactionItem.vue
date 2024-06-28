@@ -32,7 +32,7 @@ const category = computed(() => {
   const { tx } = props
   if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
     return tx.merchantCategory
-  if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.Account.Type.HTLC && tx.recipientType === Nimiq.Account.Type.BASIC)
+  if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.AccountType.HTLC && tx.recipientType === Nimiq.AccountType.Basic)
     return 'withdraw'
   if (tx.transfer === Transfer.UserReceipt)
     return 'deposit'
@@ -42,7 +42,7 @@ const category = computed(() => {
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'mined' && tx.status !== 'confirmed', 'line-through': tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded }">
+  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'included' && tx.status !== 'confirmed', 'line-through': tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded }">
     <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
@@ -53,7 +53,7 @@ const category = computed(() => {
         <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported" class="italic text-pumpkin/90">
           {{ $t('Pending') }}
         </span>
-        <span v-else-if="tx.status !== 'mined' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
+        <span v-else-if="tx.status !== 'included' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
           {{ translateTransactionState(tx.status) }}
         </span>
       </div>

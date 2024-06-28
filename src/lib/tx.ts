@@ -1,10 +1,11 @@
 import type { AsyncResult } from '@/types'
-import type { ExtendedTransaction } from '@nimiq/core-web'
+import type { Transaction } from '@nimiq/core/web'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
@@ -31,16 +32,18 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
       return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
-    const tx = new Nimiq.ExtendedTransaction(
+    const tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
       /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
-      /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ Math.ceil(partialArgs.amount),
-      /* fee */ 0,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
+      /* value */ BigInt(Math.ceil(partialArgs.amount)),
+      /* fee */ 0n,
+      /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.NONE,
-      /* data */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     const res = await getSignedTxByRemote(tx)
@@ -83,40 +86,52 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
 
     const nimHtlc = nimContract.htlc as NimHtlcDetails
 
-    const htlcAccount = new Nimiq.HashedTimeLockedContract(
-      nimContract.amount,
-      localWallet,
-      Nimiq.Address.fromUserFriendlyAddress(nimContract.redeemAddress),
-      new Nimiq.Hash(Nimiq.BufferUtils.fromHex(swap.hash), Nimiq.Hash.Algorithm.SHA256),
-      1,
-      nimHtlc.timeoutBlock,
+    const data = new Nimiq.SerialBuffer(
+      /* sender */ 20
+      /* recipient */ + 20
+      /* hashAlgorithm */ + 1
+      /* hashRoot */ + 32
+      /* hashCount */ + 1
+      /* timeout */ + 4,
     )
-    const serializedHtlcAccount = htlcAccount.serialize()
-    // Cut off account-related data from the serialization:
-    // First byte is the account type
-    // Then 8 bytes for the account balance
-    // At the end, 8 bytes for the HTLC totalAmount
-    const data = serializedHtlcAccount.subarray(
-      9,
-      // `Nimiq.SerialBuffer.prototype.subarray()` does not support negative indices.
-      serializedHtlcAccount.byteLength - 8,
-    )
+    data.write(localWallet.serialize())
+    data.write(Nimiq.Address.fromUserFriendlyAddress(nimContract.redeemAddress).serialize())
+    data.writeUint8(/* SHA256 */ 3)
+    data.write(Nimiq.BufferUtils.fromHex(swap.hash))
+    data.writeUint8(1)
+    data.writeUint32(nimHtlc.timeoutBlock)
 
     // Verify data gainst data given in swap
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
       return { error: i18n.t('Invalid NIM HTLC data in swap'), data: undefined }
 
     // Setup HTLC creation transaction
-    const tx = new Nimiq.ExtendedTransaction(
+    let tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.Account.Type.HTLC,
-      /* recipient */ Nimiq.Address.CONTRACT_CREATION,
-      /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* value */ partialArgs.amount, // Must be the exact amount
-      /* fee */ 0,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      /* recipientType */ Nimiq.AccountType.HTLC,
+      /* recipientData */ data,
+      /* value */ BigInt(partialArgs.amount), // Must be the exact amount
+      /* fee */ 0n,
+      /* flags */ 1,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
-      /* data */ data,
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
+    )
+    const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
+    tx = new Nimiq.Transaction(
+      tx.sender,
+      tx.senderType,
+      tx.senderData,
+      contractAddress,
+      tx.recipientType,
+      tx.data,
+      tx.value,
+      tx.fee,
+      tx.flags,
+      tx.validityStartHeight,
+      tx.networkId,
     )
 
     // Get it signed by cosigner
@@ -127,18 +142,34 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     return { data: { signedTx: res.data!, swap }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
-    const tx = new Nimiq.ExtendedTransaction(
+    let tx = new Nimiq.Transaction(
       /* sender */ useLocalWallet().localAddress,
-      /* senderType */ Nimiq.Account.Type.BASIC,
-      /* recipient */ Nimiq.Address.CONTRACT_CREATION,
-      /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* value */ useLocalWallet().localBalance,
-      /* fee */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
+      /* senderType */ Nimiq.AccountType.Basic,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      /* recipientType */ Nimiq.AccountType.HTLC,
       /* data */ createDepositData(),
+      /* value */ BigInt(useLocalWallet().localBalance),
+      /* fee */ 0n,
+      /* flags */ 1,
+      /* validityStartHeight */ getValidityStartHeight(),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
     )
-    tx.proof = useLocalWallet().localWallet.signTransaction(tx).serialize()
+    const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
+    tx = new Nimiq.Transaction(
+      tx.sender,
+      tx.senderType,
+      tx.senderData,
+      contractAddress,
+      tx.recipientType,
+      tx.data,
+      tx.value,
+      tx.fee,
+      tx.flags,
+      tx.validityStartHeight,
+      tx.networkId,
+    )
+    tx.sign(useLocalWallet().localWallet)
     return { data: { signedTx: tx }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
@@ -148,16 +179,18 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     if (!sender)
       return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
 
-    const tx = new Nimiq.ExtendedTransaction(
+    const tx = new Nimiq.Transaction(
       /* sender */ sender,
-      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
       /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ useRemoteSigner().remoteBalance,
-      /* fee */ 0,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ new Uint8Array(0),
+      /* value */ BigInt(useRemoteSigner().remoteBalance),
+      /* fee */ 0n,
+      /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.NONE,
-      /* data */ new Uint8Array(0),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     const res = await getSignedTxByRemote(tx)
@@ -166,16 +199,18 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     return { data: { signedTx: res.data! }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
-    const tx = new Nimiq.ExtendedTransaction(
+    const tx = new Nimiq.Transaction(
       /* sender */ partialArgs.sender,
-      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
       /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ partialArgs.amount,
-      /* fee */ 0,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ new Uint8Array(0),
+      /* value */ BigInt(partialArgs.amount),
+      /* fee */ 0n,
+      /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.NONE,
-      /* data */ new Uint8Array(0),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     const res = await getSignedTxByRemote(tx, { address: partialArgs.sender })
@@ -184,31 +219,49 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     return { data: { signedTx: res.data! }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
-    const tx = new Nimiq.ExtendedTransaction(
+    const tx = new Nimiq.Transaction(
       /* sender */ partialArgs.sender,
-      /* senderType */ Nimiq.Account.Type.HTLC,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
       /* recipient */ useLocalWallet().localAddress,
-      /* recipientType */ Nimiq.Account.Type.BASIC,
-      /* value */ partialArgs.amount,
-      /* fee */ 0,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ new Uint8Array(0),
+      /* value */ BigInt(partialArgs.amount),
+      /* fee */ 0n,
+      /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.NONE,
-      /* data */ new Uint8Array(0),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
     )
     tx.proof = createResolveProof({ mode: 'timeout', tx })
     return { data: { signedTx: tx }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.ExtendRemote) {
-    const tx = new Nimiq.ExtendedTransaction(
+    let tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
-      /* senderType */ Nimiq.Account.Type.HTLC,
-      /* recipient */ Nimiq.Address.CONTRACT_CREATION,
-      /* recipientType */ Nimiq.Account.Type.HTLC,
-      /* value */ useRemoteSigner().remoteBalance,
-      /* fee */ 0,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      /* recipientType */ Nimiq.AccountType.HTLC,
+      /* recipientData */ createDepositData(),
+      /* value */ BigInt(useRemoteSigner().remoteBalance),
+      /* fee */ 0n,
+      /* flags */ 1,
       /* validityStartHeight */ getValidityStartHeight(),
-      /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
-      /* data */ createDepositData(),
+      /* networkId */ await useNimiqNetwork().client!.getNetworkId(),
+    )
+    const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
+    tx = new Nimiq.Transaction(
+      tx.sender,
+      tx.senderType,
+      tx.senderData,
+      contractAddress,
+      tx.recipientType,
+      tx.data,
+      tx.value,
+      tx.fee,
+      tx.flags,
+      tx.validityStartHeight,
+      tx.networkId,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
     const res = await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
@@ -226,15 +279,30 @@ interface GetSignedTxByRemoteArgs {
   address?: Nimiq.Address
 }
 
-async function getSignedTxByRemote(tx: ExtendedTransaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
+async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
   logger.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
-  const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress(false), tx })
+  const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
   logger.log({ receipt, error })
   if (hasError)
     return { data: undefined, error: error?.message || i18n.t('Something went wrong signing the transaction') }
-  return { data: Nimiq.Transaction.fromAny(receipt!.details), error: undefined }
+  return {
+    data: new Nimiq.Transaction(
+      Nimiq.Address.fromString(receipt.details.sender),
+      typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType as Nimiq.PlainAccountType),
+      new Uint8Array(0),
+      Nimiq.Address.fromString(receipt.details.recipient),
+      typeof receipt.details.recipientType === 'number' ? receipt.details.recipientType : toAccountType(receipt.details.recipientType as Nimiq.PlainAccountType),
+      Nimiq.BufferUtils.fromHex(typeof receipt.details.data === 'string' ? receipt.details.data : receipt.details.data.raw),
+      BigInt(receipt.details.value),
+      BigInt(receipt.details.fee),
+      receipt.details.flags,
+      receipt.details.validityStartHeight,
+      typeof receipt.details.network === 'number' ? receipt.details.network : (receipt.details.network === 'main' ? 42 : 1),
+    ),
+    error: undefined,
+  }
 }
 
 function createDepositData() {
@@ -242,9 +310,9 @@ function createDepositData() {
   if (!remotePublicKey)
     throw new Error('Remote public key is undefined') // no translation as not user-facing
   const data = new Nimiq.SerialBuffer(78)
-  useLocalWallet().localWallet.address.serialize(data)
-  Nimiq.PublicKey.fromAny(remotePublicKey).toAddress().serialize(data)
-  data.writeUint8(Nimiq.Hash.Algorithm.BLAKE2B)
+  data.write(useLocalWallet().localWallet.toAddress().serialize())
+  data.write(Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().serialize())
+  data.writeUint8(1 /* BLAKE2B */)
   data.write(new Uint8Array(32))
   data.writeUint8(1)
   data.writeUint32(useRemoteSigner().remoteHeight + 60 * 24 * 14)
@@ -257,11 +325,12 @@ interface CreateResolveProofArgs {
 }
 
 export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
-  const sig = useLocalWallet().localWallet.signTransaction(tx).serialize()
+  const { privateKey, publicKey } = useLocalWallet().localWallet
+  const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent()).serialize()
   const isEarly = mode === 'early'
   const proofLen = 1 + sig.length + (isEarly ? useRemoteSigner().remoteProofSize : 0)
   const proof = new Nimiq.SerialBuffer(proofLen)
-  proof.writeUint8(isEarly ? Nimiq.HashedTimeLockedContract.ProofType.EARLY_RESOLVE : Nimiq.HashedTimeLockedContract.ProofType.TIMEOUT_RESOLVE)
+  proof.writeUint8(isEarly ? /* EARLY_RESOLVE */ 2 : /* TIMEOUT_RESOLVE */ 3)
   proof.writePos += isEarly ? useRemoteSigner().remoteProofSize : 0
   proof.write(sig)
   return proof
@@ -275,4 +344,13 @@ export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
 function getValidityStartHeight() {
   const { remoteHeight, start } = useRemoteSigner()
   return Math.max(remoteHeight, start + 1)
+}
+
+export function toAccountType(type: Nimiq.PlainAccountType): Nimiq.AccountType {
+  switch (type) {
+    case 'basic': return Nimiq.AccountType.Basic
+    case 'vesting': return Nimiq.AccountType.Vesting
+    case 'htlc': return Nimiq.AccountType.HTLC
+    case 'staking': return Nimiq.AccountType.Staking
+  }
 }

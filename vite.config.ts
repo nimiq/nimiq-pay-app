@@ -5,10 +5,14 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
+import wasm from 'vite-plugin-wasm'
+import topLevelAwait from 'vite-plugin-top-level-await'
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    wasm(),
+    topLevelAwait(),
     vue({ script: { defineModel: true } }),
     poLoader(),
     poOptimizer(),
@@ -19,6 +23,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+  },
+  optimizeDeps: {
+    exclude: ['@nimiq/core'],
   },
   test: {
     globals: true,
