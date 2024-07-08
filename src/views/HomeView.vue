@@ -102,8 +102,8 @@ watch([referralCode, phoneNumberVerified], () => {
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
-    get title() { return i18n.t('Verify your phone number') },
-    get subtitle() { return i18n.t('Get cashback and earn rewards') },
+    get title() { return i18n.t('Activate Cashback & Rewards') },
+    get subtitle() { return i18n.t('Requires Phone Number') },
     action: () => initializeFlow(FlowName.VerifyPhone),
   }
   const claimRewardsNotification = {
