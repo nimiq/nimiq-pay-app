@@ -38,7 +38,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ Math.ceil(partialArgs.amount),
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.NONE,
       /* data */ Nimiq.BufferUtils.fromAscii(partialArgs.message || ''),
     )
@@ -115,7 +115,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.HTLC,
       /* value */ partialArgs.amount, // Must be the exact amount
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
       /* data */ data,
     )
@@ -135,7 +135,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.HTLC,
       /* value */ useLocalWallet().localBalance,
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
       /* data */ createDepositData(),
     )
@@ -156,7 +156,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.NONE,
       /* data */ new Uint8Array(0),
     )
@@ -174,7 +174,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ partialArgs.amount,
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.NONE,
       /* data */ new Uint8Array(0),
     )
@@ -192,7 +192,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.BASIC,
       /* value */ partialArgs.amount,
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.NONE,
       /* data */ new Uint8Array(0),
     )
@@ -207,7 +207,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.Account.Type.HTLC,
       /* value */ useRemoteSigner().remoteBalance,
       /* fee */ 0,
-      /* validityStartHeight */ useRemoteSigner().remoteHeight,
+      /* validityStartHeight */ getValidityStartHeight(),
       /* flags */ Nimiq.Transaction.Flag.CONTRACT_CREATION,
       /* data */ createDepositData(),
     )
@@ -266,4 +266,14 @@ export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
   proof.writePos += isEarly ? useRemoteSigner().remoteProofSize : 0
   proof.write(sig)
   return proof
+}
+
+/**
+ * Since the validity start height of the transaction must be greater than the validity start height of the remote wallet,
+ * we need to get the maximum between the remote height and the start height of the remote wallet plus one, just in case.
+ * @returns The height at which the validity of the transaction starts
+ */
+function getValidityStartHeight() {
+  const { remoteHeight, start } = useRemoteSigner()
+  return Math.max(remoteHeight, start + 1)
 }
