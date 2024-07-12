@@ -4,6 +4,7 @@ import { Preferences } from '@capacitor/preferences'
 import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { Preferences } from '@capacitor/preferences'
 import { useConn } from './conn'
 
 export enum Fiat {
