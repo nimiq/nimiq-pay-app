@@ -11,6 +11,12 @@ importers:
 
   .:
     dependencies:
+      '@aparajita/capacitor-biometric-auth':
+        specifier: ^8.0.0
+        version: 8.0.0
+      '@aparajita/capacitor-secure-storage':
+        specifier: ^6.0.0
+        version: 6.0.0
       '@capacitor-mlkit/barcode-scanning':
         specifier: ^6.1.0
         version: 6.1.0(@capacitor/core@6.1.0)
@@ -20,6 +26,9 @@ importers:
       '@capacitor/filesystem':
         specifier: ^6.0.0
         version: 6.0.0(@capacitor/core@6.1.0)
+      '@capacitor/preferences':
+        specifier: ^6.0.1
+        version: 6.0.1(@capacitor/core@6.1.0)
       '@capacitor/share':
         specifier: ^6.0.1
         version: 6.0.1(@capacitor/core@6.1.0)
@@ -242,6 +251,14 @@ packages:
   '@antfu/eslint-define-config@1.23.0-2':
     resolution: {integrity: sha512-LvxY21+ZhpuBf/aHeBUtGQhSEfad4PkNKXKvDOSvukaM3XVTfBhwmHX2EKwAsdq5DlfjbT3qqYyMiueBIO5iDQ==}
     engines: {node: '>=18.0.0', npm: '>=9.0.0', pnpm: '>= 8.6.0'}
+
+  '@aparajita/capacitor-biometric-auth@8.0.0':
+    resolution: {integrity: sha512-ILRZMvPkx6BvDozJP39Xg6YWQq4rEXCq7itQIAQpi2/+HBi7UM/3a7Ws9fpQBrPTjrenle/h4T2M1MMHyc8dvw==}
+    engines: {node: '>=18'}
+
+  '@aparajita/capacitor-secure-storage@6.0.0':
+    resolution: {integrity: sha512-bInwcVFA3Nq71AiIkiSZMhb8+EFn4LN+yl2yrfsPtcYI1W0L8unVWjWGuPaYAEmjTmHn46iDz5NVKgUWZqENnw==}
+    engines: {node: '>=16.15.1'}
 
   '@apideck/better-ajv-errors@0.3.6':
     resolution: {integrity: sha512-P+ZygBLZtkp0qqOAJJVX4oX/sFo5JR3eBWwwuqHHhK0GIgQOKWrAfiAaWX0aArHkRWHMuggFEgAZNxVPwPZYaA==}
@@ -921,6 +938,11 @@ packages:
 
   '@capacitor/keyboard@6.0.1':
     resolution: {integrity: sha512-fBjqQaMc5uhFj6ycLnLa2hzQsR77pj/iuLLATkWihMUze3dD+IkwqFnEyOLsyk+52uoOYM7WkziSpNTquU1sZA==}
+    peerDependencies:
+      '@capacitor/core': ^6.0.0
+
+  '@capacitor/preferences@6.0.1':
+    resolution: {integrity: sha512-5UvSK3O/tgPcQ1QyX0zYjb0uujFw+PQgYUSt6i2evf609jAIo7QG1IUZzGb6swEPCpk621wEc6R7Yq/Ywa3GPA==}
     peerDependencies:
       '@capacitor/core': ^6.0.0
 
@@ -5960,11 +5982,6 @@ packages:
       uglify-js:
         optional: true
 
-  terser@5.31.1:
-    resolution: {integrity: sha512-37upzU1+viGvuFtBo9NPufCb9dwM0+l9hMxYyWfBA+fbwrPqNJAhbZ6W47bBFnZHKHTUBnMvi87434qq+qnxOg==}
-    engines: {node: '>=10'}
-    hasBin: true
-
   terser@5.31.2:
     resolution: {integrity: sha512-LGyRZVFm/QElZHy/CPr/O4eNZOZIzsrQ92y4v9UJe/pFJjypje2yI3C2FmPtvUEnhadlSbmG2nXtdcjHOjCfxw==}
     engines: {node: '>=10'}
@@ -6844,6 +6861,20 @@ snapshots:
       - vitest
 
   '@antfu/eslint-define-config@1.23.0-2': {}
+
+  '@aparajita/capacitor-biometric-auth@8.0.0':
+    dependencies:
+      '@capacitor/android': 6.1.0(@capacitor/core@6.1.0)
+      '@capacitor/app': 6.0.0(@capacitor/core@6.1.0)
+      '@capacitor/core': 6.1.0
+      '@capacitor/ios': 6.1.0(@capacitor/core@6.1.0)
+
+  '@aparajita/capacitor-secure-storage@6.0.0':
+    dependencies:
+      '@capacitor/android': 6.1.0(@capacitor/core@6.1.0)
+      '@capacitor/app': 6.0.0(@capacitor/core@6.1.0)
+      '@capacitor/core': 6.1.0
+      '@capacitor/ios': 6.1.0(@capacitor/core@6.1.0)
 
   '@apideck/better-ajv-errors@0.3.6(ajv@8.12.0)':
     dependencies:
@@ -7762,6 +7793,10 @@ snapshots:
       '@capacitor/core': 6.1.0
 
   '@capacitor/keyboard@6.0.1(@capacitor/core@6.1.0)':
+    dependencies:
+      '@capacitor/core': 6.1.0
+
+  '@capacitor/preferences@6.0.1(@capacitor/core@6.1.0)':
     dependencies:
       '@capacitor/core': 6.1.0
 
@@ -10474,7 +10509,7 @@ snapshots:
 
   eslint-import-resolver-node@0.3.9:
     dependencies:
-      debug: 3.2.7(supports-color@5.5.0)
+      debug: 3.2.7(supports-color@8.1.1)
       is-core-module: 2.13.1
       resolve: 1.22.8
     transitivePeerDependencies:
@@ -10482,7 +10517,7 @@ snapshots:
 
   eslint-module-utils@2.8.1(@typescript-eslint/parser@6.21.0(eslint@8.57.0)(typescript@5.4.5))(eslint-import-resolver-node@0.3.9)(eslint@8.57.0):
     dependencies:
-      debug: 3.2.7(supports-color@5.5.0)
+      debug: 3.2.7(supports-color@8.1.1)
     optionalDependencies:
       '@typescript-eslint/parser': 6.21.0(eslint@8.57.0)(typescript@5.4.5)
       eslint: 8.57.0
@@ -12974,7 +13009,7 @@ snapshots:
       jest-worker: 26.6.2
       rollup: 2.79.1
       serialize-javascript: 4.0.0
-      terser: 5.31.1
+      terser: 5.31.2
 
   rollup@2.79.1:
     optionalDependencies:
@@ -13576,15 +13611,8 @@ snapshots:
       jest-worker: 27.5.1
       schema-utils: 3.3.0
       serialize-javascript: 6.0.2
-      terser: 5.31.1
+      terser: 5.31.2
       webpack: 5.91.0
-
-  terser@5.31.1:
-    dependencies:
-      '@jridgewell/source-map': 0.3.6
-      acorn: 8.11.3
-      commander: 2.20.3
-      source-map-support: 0.5.21
 
   terser@5.31.2:
     dependencies:

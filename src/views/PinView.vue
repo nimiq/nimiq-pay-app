@@ -31,7 +31,6 @@ async function handleSubmit(pin: string) {
 function shown() {
   const input = document.querySelector('input')
   window.setTimeout(() => {
-    // TODO: this is not working, idk why
     input?.focus()
     Keyboard.show()
   }, 200)
@@ -51,12 +50,12 @@ onMounted(() => {
     <IonHeader class="ion-no-border">
       <IonToolbar />
     </IonHeader>
-    <IonContent class="text-center ion-padding" style="--background: #F8F8F8">
-      <IonGrid class="flex flex-col h-full">
+    <IonContent class="ion-padding text-center" style="--background: #F8F8F8">
+      <IonGrid class="h-full flex flex-col">
         <h1 class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>
-        <PinInput :input-length="4" :error-msg="errorMsg" @done="handleSubmit" />
+        <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" @done="handleSubmit" />
       </IonGrid>
     </IonContent>
   </IonPage>

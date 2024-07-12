@@ -28,9 +28,12 @@
     "i18n:sync": "pnpm i18n:extract && pnpm i18n:push && pnpm i18n:pull"
   },
   "dependencies": {
+    "@aparajita/capacitor-biometric-auth": "^8.0.0",
+    "@aparajita/capacitor-secure-storage": "^6.0.0",
     "@capacitor-mlkit/barcode-scanning": "^6.1.0",
     "@capacitor/browser": "^6.0.1",
     "@capacitor/filesystem": "^6.0.0",
+    "@capacitor/preferences": "^6.0.1",
     "@capacitor/share": "^6.0.1",
     "@capawesome/capacitor-screen-orientation": "^6.0.1",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.9.0",

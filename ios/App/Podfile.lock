@@ -1,4 +1,9 @@
 PODS:
+  - AparajitaCapacitorBiometricAuth (8.0.0):
+    - Capacitor
+  - AparajitaCapacitorSecureStorage (6.0.0):
+    - Capacitor
+    - KeychainSwift (~> 21.0)
   - Capacitor (6.1.0):
     - CapacitorCordova
   - CapacitorApp (6.0.0):
@@ -18,16 +23,18 @@ PODS:
     - Capacitor
   - CapacitorKeyboard (6.0.1):
     - Capacitor
-  - CapacitorMlkitBarcodeScanning (5.4.0):
+  - CapacitorMlkitBarcodeScanning (6.1.0):
     - Capacitor
-    - GoogleMLKit/BarcodeScanning (= 4.0.0)
+    - GoogleMLKit/BarcodeScanning (= 5.0.0)
+  - CapacitorPreferences (6.0.1):
+    - Capacitor
   - CapacitorPushNotifications (6.0.1):
     - Capacitor
   - CapacitorShare (6.0.1):
     - Capacitor
   - CapacitorStatusBar (6.0.0):
     - Capacitor
-  - CapawesomeCapacitorScreenOrientation (5.0.1):
+  - CapawesomeCapacitorScreenOrientation (6.0.1):
     - Capacitor
   - Firebase/CoreOnly (10.21.0):
     - FirebaseCore (= 10.21.0)
@@ -58,11 +65,11 @@ PODS:
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30910.0, >= 2.30908.0)
     - PromisesObjC (< 3.0, >= 1.2)
-  - GoogleMLKit/BarcodeScanning (4.0.0):
+  - GoogleMLKit/BarcodeScanning (5.0.0):
     - GoogleMLKit/MLKitCore
-    - MLKitBarcodeScanning (~> 3.0.0)
-  - GoogleMLKit/MLKitCore (4.0.0):
-    - MLKitCommon (~> 9.0.0)
+    - MLKitBarcodeScanning (~> 4.0.0)
+  - GoogleMLKit/MLKitCore (5.0.0):
+    - MLKitCommon (~> 10.0.0)
   - GoogleToolboxForMac/DebugUtils (2.3.2):
     - GoogleToolboxForMac/Defines (= 2.3.2)
   - GoogleToolboxForMac/Defines (2.3.2)
@@ -94,25 +101,26 @@ PODS:
     - GoogleUtilities/Logger
   - GoogleUtilitiesComponents (1.1.0):
     - GoogleUtilities/Logger
-  - GTMSessionFetcher/Core (2.3.0)
-  - MLImage (1.0.0-beta4)
-  - MLKitBarcodeScanning (3.0.0):
-    - MLKitCommon (~> 9.0)
-    - MLKitVision (~> 5.0)
-  - MLKitCommon (9.0.0):
+  - GTMSessionFetcher/Core (3.5.0)
+  - KeychainSwift (21.0.0)
+  - MLImage (1.0.0-beta5)
+  - MLKitBarcodeScanning (4.0.0):
+    - MLKitCommon (~> 10.0)
+    - MLKitVision (~> 6.0)
+  - MLKitCommon (10.0.0):
     - GoogleDataTransport (~> 9.0)
     - GoogleToolboxForMac/Logger (~> 2.1)
     - "GoogleToolboxForMac/NSData+zlib (~> 2.1)"
     - "GoogleToolboxForMac/NSDictionary+URLArguments (~> 2.1)"
     - GoogleUtilities/UserDefaults (~> 7.0)
     - GoogleUtilitiesComponents (~> 1.0)
-    - GTMSessionFetcher/Core (< 3.0, >= 1.1)
-  - MLKitVision (5.0.0):
+    - GTMSessionFetcher/Core (< 4.0, >= 1.1)
+  - MLKitVision (6.0.0):
     - GoogleToolboxForMac/Logger (~> 2.1)
     - "GoogleToolboxForMac/NSData+zlib (~> 2.1)"
-    - GTMSessionFetcher/Core (< 3.0, >= 1.1)
-    - MLImage (= 1.0.0-beta4)
-    - MLKitCommon (~> 9.0)
+    - GTMSessionFetcher/Core (< 4.0, >= 1.1)
+    - MLImage (= 1.0.0-beta5)
+    - MLKitCommon (~> 10.0)
   - nanopb (2.30909.1):
     - nanopb/decode (= 2.30909.1)
     - nanopb/encode (= 2.30909.1)
@@ -127,6 +135,8 @@ PODS:
   - ZIPFoundation (0.9.16)
 
 DEPENDENCIES:
+  - "AparajitaCapacitorBiometricAuth (from `../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@8.0.0/node_modules/@aparajita/capacitor-biometric-auth`)"
+  - "AparajitaCapacitorSecureStorage (from `../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@6.0.0/node_modules/@aparajita/capacitor-secure-storage`)"
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@6.1.0_@capacitor+core@6.1.0/node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@6.0.0_@capacitor+core@6.1.0/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/browser`)"
@@ -136,11 +146,12 @@ DEPENDENCIES:
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@6.0.0_@capacitor+core@6.1.0/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@6.0.0_@capacitor+core@6.1.0/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/keyboard`)"
-  - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@5.4.0_@capacitor+core@6.1.0/node_modules/@capacitor-mlkit/barcode-scanning`)"
+  - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.1.0_@capacitor+core@6.1.0/node_modules/@capacitor-mlkit/barcode-scanning`)"
+  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/preferences`)"
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/push-notifications`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@6.0.0_@capacitor+core@6.1.0/node_modules/@capacitor/status-bar`)"
-  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@5.0.1_@capacitor+core@6.1.0/node_modules/@capawesome/capacitor-screen-orientation`)"
+  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.1.0/node_modules/@capawesome/capacitor-screen-orientation`)"
   - Firebase/Messaging
 
 SPEC REPOS:
@@ -156,6 +167,7 @@ SPEC REPOS:
     - GoogleUtilities
     - GoogleUtilitiesComponents
     - GTMSessionFetcher
+    - KeychainSwift
     - MLImage
     - MLKitBarcodeScanning
     - MLKitCommon
@@ -166,6 +178,10 @@ SPEC REPOS:
     - ZIPFoundation
 
 EXTERNAL SOURCES:
+  AparajitaCapacitorBiometricAuth:
+    :path: "../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@8.0.0/node_modules/@aparajita/capacitor-biometric-auth"
+  AparajitaCapacitorSecureStorage:
+    :path: "../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@6.0.0/node_modules/@aparajita/capacitor-secure-storage"
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@6.1.0_@capacitor+core@6.1.0/node_modules/@capacitor/ios"
   CapacitorApp:
@@ -185,7 +201,9 @@ EXTERNAL SOURCES:
   CapacitorKeyboard:
     :path: "../../node_modules/.pnpm/@capacitor+keyboard@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/keyboard"
   CapacitorMlkitBarcodeScanning:
-    :path: "../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@5.4.0_@capacitor+core@6.1.0/node_modules/@capacitor-mlkit/barcode-scanning"
+    :path: "../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.1.0_@capacitor+core@6.1.0/node_modules/@capacitor-mlkit/barcode-scanning"
+  CapacitorPreferences:
+    :path: "../../node_modules/.pnpm/@capacitor+preferences@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
     :path: "../../node_modules/.pnpm/@capacitor+push-notifications@6.0.1_@capacitor+core@6.1.0/node_modules/@capacitor/push-notifications"
   CapacitorShare:
@@ -193,9 +211,11 @@ EXTERNAL SOURCES:
   CapacitorStatusBar:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@6.0.0_@capacitor+core@6.1.0/node_modules/@capacitor/status-bar"
   CapawesomeCapacitorScreenOrientation:
-    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@5.0.1_@capacitor+core@6.1.0/node_modules/@capawesome/capacitor-screen-orientation"
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.1.0/node_modules/@capawesome/capacitor-screen-orientation"
 
 SPEC CHECKSUMS:
+  AparajitaCapacitorBiometricAuth: b30db5f1a0d68d14c3a46d2ed95a009703eda3f5
+  AparajitaCapacitorSecureStorage: b3e4c419898d0e6c0dc71de94cb8340b5d13f5f0
   Capacitor: 187bd7847b6f71467015a20200a1a071be3e5f14
   CapacitorApp: 9d53aec7101f7b030a950c5bdc4df8612576b279
   CapacitorBrowser: 473c7fd70ddbe541608ff09ec1be14da0078279e
@@ -205,31 +225,33 @@ SPEC CHECKSUMS:
   CapacitorFilesystem: 60e59ba274c234a979e7a3be2552feaadcee4263
   CapacitorHaptics: 9ebc9363f0e9b8eb4295088a0b474530acf1859b
   CapacitorKeyboard: 5f32a712adf41e07a61caafb82cf29fb6d8ba123
-  CapacitorMlkitBarcodeScanning: 8fb81cbef3c6ffe0c0e2dbd15ed6dca889a5a062
+  CapacitorMlkitBarcodeScanning: 63e217d376f8f63b1be84c0d19568f318e87f4d3
+  CapacitorPreferences: 72909b165bc7807103778ddbb86d5d8ce06abf71
   CapacitorPushNotifications: 293fabe42c7229756078e81f2d3a60394ba4e5d8
   CapacitorShare: 02222f2457ff003e642370a9c1ecd101baaa27c8
   CapacitorStatusBar: 2e4369f99166125435641b1908d05f561eaba6f6
-  CapawesomeCapacitorScreenOrientation: a757a72cd4a113142638c049af61441793721f07
+  CapawesomeCapacitorScreenOrientation: 9cc68ecd085fcea2e1755475a3ed60d85e604a6c
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
   FirebaseCoreInternal: 43c1788eaeee9d1b97caaa751af567ce11010d00
   FirebaseInstallations: 390ea1d10a4d02b20c965cbfd527ee9b3b412acb
   FirebaseMessaging: b285329399cc6edd73b5b32864c68454177bcf3f
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
-  GoogleMLKit: 2bd0dc6253c4d4f227aad460f69215a504b2980e
+  GoogleMLKit: 90ba06e028795a50261f29500d238d6061538711
   GoogleToolboxForMac: 8bef7c7c5cf7291c687cf5354f39f9db6399ad34
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
   GoogleUtilitiesComponents: 679b2c881db3b615a2777504623df6122dd20afe
-  GTMSessionFetcher: 3a63d75eecd6aa32c2fc79f578064e1214dfdec2
-  MLImage: 7bb7c4264164ade9bf64f679b40fb29c8f33ee9b
-  MLKitBarcodeScanning: 04e264482c5f3810cb89ebc134ef6b61e67db505
-  MLKitCommon: c1b791c3e667091918d91bda4bba69a91011e390
-  MLKitVision: 8baa5f46ee3352614169b85250574fde38c36f49
+  GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
+  KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
+  MLImage: 1824212150da33ef225fbd3dc49f184cf611046c
+  MLKitBarcodeScanning: 9cb0ec5ec65bbb5db31de4eba0a3289626beab4e
+  MLKitCommon: afcd11b6c0735066a0dde8b4bf2331f6197cbca2
+  MLKitVision: 90922bca854014a856f8b649d1f1f04f63fd9c79
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
   SQLCipher: f2e96b3822e3006b379181a0e4fd145f6de29b56
   ZIPFoundation: d170fa8e270b2a32bef9dcdcabff5b8f1a5deced
 
-PODFILE CHECKSUM: 12321f9c4ef711a9cbe925a042817edf384a26cf
+PODFILE CHECKSUM: e772c77a01632fff914e01e5840fb6fcc3e38400
 
 COCOAPODS: 1.15.2

@@ -1,6 +1,7 @@
 import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { Preferences } from '@capacitor/preferences'
 import { useConn } from './conn'
 import { SQLQuery } from '@/lib/sql-queries'
 import { type SupportedLanguage, guessUserLanguage } from '@/i18n/i18n-setup'
@@ -35,6 +36,20 @@ function kv(): StorageLikeAsync {
   }
 }
 
+/**
+ * This storage will be available even before the user has logged in.
+ * Meant to only store non-sensitive data that doesn't require high read/write load.
+ * Uses UserDefaults on iOS and SharedPreferences on Android.
+ * Stored data is cleared if the app is uninstalled.
+ */
+function kvPreferences(): StorageLikeAsync {
+  return {
+    getItem: async key => Preferences.get({ key }).then(x => x.value),
+    setItem: async (key, value) => Preferences.set({ key, value }),
+    removeItem: async key => Preferences.remove({ key }),
+  }
+}
+
 export const useApp = defineStore('app', () => {
   const sharedOptions = { writeDefaults: false }
   const pinHash = useStorageAsync('pinHash', '', kv(), sharedOptions)
@@ -47,8 +62,9 @@ export const useApp = defineStore('app', () => {
   const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
   const withdrawalAddressesHistory = useStorageAsync<string[]>('withdrawalAddressesHistory', [], kv(), sharedOptions)
   const topUpAddresses = useStorageAsync<string[]>('topUpAddresses', [], kv(), sharedOptions)
-  const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kv(), sharedOptions)
+  const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
+  const isBiometricEnabled = useStorageAsync('isBiometricEnabled', false, kvPreferences())
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -133,5 +149,6 @@ export const useApp = defineStore('app', () => {
     clearPinInputTs,
     pushNotificationsStatus,
     closedNotifications,
+    isBiometricEnabled,
   }
 })

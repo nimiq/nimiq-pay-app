@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { type PropType, computed, ref, watch } from 'vue'
+import { type PropType, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { until } from '@vueuse/core'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import { useBiometric } from '@/composables/useBiometric'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -10,21 +11,24 @@ defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
   errorMsg: { type: String },
-  canSkip: { type: Boolean },
   inputLength: { type: Number, required: true },
   isScrolling: { type: Boolean, required: false },
   showLoading: { type: Boolean, required: false },
   stepName: { type: String, required: false },
   state: { type: Object as PropType<State>, required: false },
+  canUseBiometric: { type: Boolean, required: false },
+  shouldAutoFocus: { type: Boolean, required: false },
 })
 const emit = defineEmits(stepEmits)
 
+const { updateBiometryInfo, addBiometricResumeListener, removeBiometricResumeListener, getPinFromSecureStorage, isBiometricEnabled, isBiometricSupported, BiometryErrorType } = useBiometric()
 const isScrolling = computed(() => props.isScrolling)
 const inputRef = ref<HTMLInputElement | null>(null)
 const isInputFocused = ref(false)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 const isLoading = ref(false)
+const customError = ref('')
 
 watch(pinCodeInput, async (pin) => {
   if (pin.length === props.inputLength) {
@@ -51,6 +55,7 @@ watch(() => props.errorMsg, (msg) => {
     }, 300)
     isLoading.value = false
     clearInput()
+    customError.value = msg
   }
 })
 
@@ -78,33 +83,55 @@ function clearInput() {
     pinCodeInput.value = ''
   }, 300)
 }
+
+onMounted(async () => {
+  await updateBiometryInfo()
+  addBiometricResumeListener()
+
+  if (props.shouldAutoFocus) {
+    window.setTimeout(() => {
+      inputRef.value?.focus()
+      // Keyboard.show()
+    }, 200)
+  }
+
+  if (props.canUseBiometric && isBiometricEnabled.value && isBiometricSupported.value) {
+    const { pinCode, success, error, errorType } = await getPinFromSecureStorage()
+    if (success && pinCode)
+      pinCodeInput.value = pinCode.toString()
+    else if (error && errorType !== BiometryErrorType.userCancel)
+      customError.value = error
+  }
+})
+
+onBeforeUnmount(removeBiometricResumeListener)
 </script>
 
 <template>
-  <div class="relative m-auto">
+  <div class="m-auto relative">
     <Transition name="slide-fade" mode="out-in">
       <LoadingSpinner
-        v-if="isLoading" class="w-8 h-8 m-auto text-space"
+        v-if="isLoading" class="m-auto text-space w-8 h-8"
       />
       <div
         v-else
-        class="flex justify-center px-2 py-4 mx-auto gap-x-8" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()"
+        class="mx-auto flex justify-center gap-x-8 px-2 py-4" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()"
       >
         <div
           v-for="i in inputLength" :key="i"
-          class="w-4 h-4 transition-colors rounded-full bg-space"
+          class="bg-space w-4 h-4 rounded-full transition-colors"
           :title="i.toString()"
           :class="{ 'opacity-40': pinCodeInput.length < i, 'animate-bounce': isInputFocused && pinCodeInput.length === i - 1 }"
           @click="handleInputClick(i)"
         />
       </div>
     </Transition>
-    <p v-if="errorMsg" class="absolute w-full text-base text-center top-20 text-pumpkin">
-      {{ errorMsg }}
+    <p v-if="customError" class="text-pumpkin w-full absolute top-20 text-base text-center">
+      {{ customError }}
     </p>
   </div>
   <input
-    ref="inputRef" type="password" inputmode="numeric" class="sr-only caret-transparent" pattern="[0-9]*"
+    ref="inputRef" type="password" inputmode="numeric" class="caret-transparent sr-only" pattern="[0-9]*"
     autocomplete="false" onpaste.prevent ondrop.prevent
     :name="stepName"
     :aria-label="stepName"

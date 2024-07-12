@@ -10,6 +10,7 @@ export enum Modal {
   DeletePoints = '@/modals/DeletePointsModal.vue',
   Disclaimer = '@/modals/DisclaimerModal.vue',
   Dev = '@/modals/DevModal.vue',
+  EnableBiometric = '@/modals/EnableBiometricModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
@@ -39,6 +40,9 @@ function _useModal() {
         break
       case Modal.Disclaimer:
         component = defineAsyncComponent(() => import(Modal.Disclaimer))
+        break
+      case Modal.EnableBiometric:
+        component = defineAsyncComponent(() => import(Modal.EnableBiometric))
         break
       case Modal.ExpiringPoints:
         component = defineAsyncComponent(() => import(Modal.ExpiringPoints))
@@ -79,6 +83,8 @@ function _useModal() {
     })
     if (isSmall)
       modalToShow.style.setProperty('--height', 'auto')
+    if (isFullscreen)
+      modalToShow.style.setProperty('--border-radius', '0')
 
     allModals.unshift(modalToShow)
     await modalToShow.present()

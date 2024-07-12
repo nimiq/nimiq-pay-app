@@ -6,6 +6,7 @@ import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { i18n } from '@/i18n/i18n-setup'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { hash } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -25,6 +26,7 @@ const TransactionDetails = defineAsyncComponent(() => import('@/components/Trans
 const BackupIntroduction = defineAsyncComponent(() => import('@/components/BackupIntroduction.vue'))
 const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'))
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
+const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -70,7 +72,7 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
     step: StepName.PinCode,
     get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
     get description() { return isTxFlow(flowName) ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
-    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName) })),
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName), canUseBiometric: isTxFlow(flowName) })),
     beforeRender: async (state) => {
       // We only care about login/setup flows
       if (isTxFlow(flowName))
@@ -117,7 +119,7 @@ export const pinCodeConfirmStep: StepInit = async () => ({
   get title() { return i18n.t('Confirm your PIN') },
   get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
   main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
-  beforeNext: async (state, { next, err }) => {
+  beforeNext: async (state, { next, navigateTo, err }) => {
     const { pinCode, pinCodeConfirm } = state
     if (!pinCodeConfirm) {
       err(i18n.t('Please confirm your PIN code'))
@@ -149,11 +151,45 @@ export const pinCodeConfirmStep: StepInit = async () => ({
       return
     }
 
+    const { isBiometricSupported } = (await import('@/composables/useBiometric')).useBiometric()
+
+    if (isBiometricSupported.value) {
+      next()
+    }
+    else {
+      // Clear pin code from memory just in case
+      // Since state is a JSON object, we take advantage of the fact that it's a reference
+      state[StepName.PinCode] = ''
+      state[StepName.PinCodeConfirm] = ''
+
+      navigateTo({ skipAheadBy: 2 })
+    }
+  },
+} satisfies Step)
+
+export const enableBiometricStep: StepInit = async ({ skipAheadBy = 1, goBackBy = 1 } = defaultStepInitOptions) => ({
+  step: StepName.EnableBiometric,
+  get title() { return i18n.t('Biometric Authentication') },
+  get description() { return useDevice().isIOS ? i18n.t('Unlock the app using Touch ID/Face ID instead of PIN') : i18n.t('Unlock the app using Fingerprint instead of PIN') },
+  skipAheadBy,
+  goBackBy,
+  main: markRaw(EnableBiometric),
+  beforeNext: async (state, { next, err }) => {
+    const { pinCode } = state
+    const { setPinToSecureStorage, isBiometricEnabled } = (await import('@/composables/useBiometric')).useBiometric()
+
+    const { success, error } = await setPinToSecureStorage(pinCode)
+    if (!success) {
+      err(error || i18n.t('Cannot enable biometric'))
+      isBiometricEnabled.value = false
+      return
+    }
+    isBiometricEnabled.value = true
+
     // Clear pin code from memory just in case
     // Since state is a JSON object, we take advantage of the fact that it's a reference
     state[StepName.PinCode] = ''
     state[StepName.PinCodeConfirm] = ''
-
     next()
   },
 } satisfies Step)

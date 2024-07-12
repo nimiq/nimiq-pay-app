@@ -3,17 +3,19 @@ import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSe
 import { storeToRefs } from 'pinia'
 import { App } from '@capacitor/app'
 import { computedAsync, onLongPress } from '@vueuse/core'
-import { ref } from 'vue'
+import { onBeforeMount, ref } from 'vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, setLanguage } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
+import { useBiometric } from '@/composables/useBiometric'
 
 const logger = useLogger('SettingsModal')
 
 const { showModal, closeModal } = useModal()
+const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified } = storeToRefs(useApp())
 const { unregisterNotifications, registerNotifications } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
@@ -31,7 +33,7 @@ function onLongPressCallback() {
   logger.sendReport()
 }
 
-async function handlePushNotificationsToggle(event: CustomEvent) {
+function handlePushNotificationsToggle(event: CustomEvent) {
   if (event.detail.checked && pushNotificationsStatus.value !== PushNotificationsStatus.GRANTED)
     registerNotifications()
 
@@ -39,11 +41,20 @@ async function handlePushNotificationsToggle(event: CustomEvent) {
     unregisterNotifications()
 }
 
+function handleBiometricToggle(event: CustomEvent) {
+  if (event.detail.checked)
+    showModal(Modal.EnableBiometric, { isOnTop: true })
+  else
+    isBiometricEnabled.value = false
+}
+
 onLongPress(
   htmlRefHook,
   onLongPressCallback,
   { modifiers: { prevent: true }, delay: 3 * 1e3 },
 )
+
+onBeforeMount(updateBiometryInfo)
 </script>
 
 <template>
@@ -53,8 +64,8 @@ onLongPress(
         <IonBackButton default-href="/" @click.prevent="closeModal()" />
       </IonButtons>
     </template>
-    <div class="flex flex-col w-full h-full">
-      <p class="text-sm font-bold text-left uppercase text-space/60">
+    <div class="w-full h-full flex flex-col">
+      <p class="text-space/60 text-sm font-bold text-left uppercase">
         {{ $t('Settings') }}
       </p>
       <IonList lines="none">
@@ -86,11 +97,17 @@ onLongPress(
           </IonToggle>
         </IonItem>
 
+        <IonItem v-if="isBiometricSupported">
+          <IonToggle :checked="isBiometricEnabled" @ion-change="handleBiometricToggle">
+            {{ $t('Biometric Authentication') }}
+          </IonToggle>
+        </IonItem>
+
         <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
           <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
         </IonItem>
       </IonList>
-      <code ref="htmlRefHook" class="p-4 pb-0 mt-auto text-sm opacity-60">v{{ appVersion }}</code>
+      <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60">v{{ appVersion }}</code>
     </div>
   </ModalTemplate>
 </template>
