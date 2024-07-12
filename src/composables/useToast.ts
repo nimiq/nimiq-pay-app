@@ -1,7 +1,8 @@
 import { toastController } from '@ionic/vue'
 import { ref } from 'vue'
 import { createSharedComposable } from '@vueuse/core'
-import { useLogger } from './useLogger'
+import { Haptics, NotificationType } from '@capacitor/haptics'
+import { useLogger } from '@/composables/useLogger'
 import { toastError, toastSpinner, toastSuccess, toastWarning } from '@/components/icons'
 
 const logger = useLogger('useToast.ts')
@@ -43,6 +44,15 @@ function _useToast() {
       // enterAnimation,
     })
     toast.value.present()
+
+    const hapticType = {
+      success: NotificationType.Success,
+      warning: NotificationType.Warning,
+      error: NotificationType.Error,
+      spinner: undefined,
+    }[type]
+    if (hapticType)
+      Haptics.notification({ type: hapticType })
   }
 
   function clearToast() {

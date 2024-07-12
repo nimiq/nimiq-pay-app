@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { type PropType, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { until } from '@vueuse/core'
+import { Haptics, NotificationType } from '@capacitor/haptics'
 import { type State, stepEmits } from '@/lib/flows/steps.types'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useBiometric } from '@/composables/useBiometric'
@@ -56,6 +57,7 @@ watch(() => props.errorMsg, (msg) => {
     isLoading.value = false
     clearInput()
     customError.value = msg
+    Haptics.notification({ type: NotificationType.Error })
   }
 })
 
@@ -108,7 +110,7 @@ onBeforeUnmount(removeBiometricResumeListener)
 </script>
 
 <template>
-  <div class="m-auto relative">
+  <div class="my-auto w-full relative">
     <Transition name="slide-fade" mode="out-in">
       <LoadingSpinner
         v-if="isLoading" class="m-auto text-space w-8 h-8"

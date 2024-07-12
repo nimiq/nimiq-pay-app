@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { type PropType, type Ref, ref, watchEffect } from 'vue'
+import { Haptics, NotificationType } from '@capacitor/haptics'
 
 defineProps({
   recoveryWords: {
@@ -42,6 +43,7 @@ function inputHandler(e: Event) {
     timeout = window.setTimeout(() => {
       input.classList.add('animate-wiggle')
       parent.classList.add('!text-pumpkin')
+      Haptics.notification({ type: NotificationType.Warning })
       window.setTimeout(() => {
         input.classList.remove('animate-wiggle')
       }, 1000)
@@ -54,7 +56,7 @@ function inputHandler(e: Event) {
   <div class="grid grid-cols-2 gap-2">
     <div
       v-for="(word, i) in recoveryWords" :key="word + i"
-      class="flex items-center gap-2 px-3 py-1 transition-colors border-2 rounded border-space focus-within:border-sky focus-within:border-opacity-30 focus-within:text-sky border-opacity-30"
+      class="border-opacity-30 border-space flex items-center gap-2 px-3 py-1 rounded border-2 transition-colors focus-within:border-sky focus-within:border-opacity-30 focus-within:text-sky"
     >
       <span class="font-semibold opacity-40">{{ (i + 1).toString().padStart(2, '0') }}</span>
       <input

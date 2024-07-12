@@ -4,6 +4,7 @@ import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { nextTick } from 'vue'
+import { Haptics, NotificationType } from '@capacitor/haptics'
 import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
 import { useModal } from '@/composables/useModal'
@@ -136,6 +137,7 @@ function defaultErrorHandler(errorMessage: string) {
     window.setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
   else { setToast({ message: errorMessage, type: 'error', duration: 10 * 1e3 }) }
+  Haptics.notification({ type: NotificationType.Error })
 }
 
 /**
@@ -309,7 +311,7 @@ function blur() {
 </script>
 
 <template>
-  <IonHeader class="tall:pt-1 ion-no-border">
+  <IonHeader class="ion-no-border tall:pt-1">
     <IonToolbar>
       <IonButtons slot="start">
         <IonBackButton
@@ -319,19 +321,19 @@ function blur() {
       </IonButtons>
       <IonButtons slot="end">
         <button aria-label="close flow modal" class="px-3 py-2" @click.stop="onCancel">
-          <IonIcon :icon="close" size="large" class="text-white bg-[#DADADA] rounded-full w-6 h-6 p-[2px]" />
+          <IonIcon :icon="close" size="large" class="bg-[#DADADA] p-[2px] w-6 h-6 text-white rounded-full" />
         </button>
       </IonButtons>
     </IonToolbar>
   </IonHeader>
 
-  <ul ref="scroller" class="flex h-full mb-auto overflow-x-hidden hide-scrollbar snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="relative flex flex-col items-center w-full max-w-[100vw] h-full px-8 pt-2 shrink-0 snap-center snap-always overflow-y-hidden">
-      <h2 v-if="title" class="z-10 flex items-center justify-center mt-3 text-2xl font-bold text-center small:mt-0 text-balance gap-x-3">
+  <ul ref="scroller" class="hide-scrollbar mb-auto h-full overflow-x-hidden flex snap-x snap-mandatory">
+    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="max-w-[100vw] w-full h-full overflow-y-hidden relative flex flex-col shrink-0 items-center px-8 pt-2 snap-center snap-always">
+      <h2 v-if="title" class="z-10 flex justify-center items-center gap-x-3 mt-3 text-2xl font-bold text-balance text-center small:mt-0">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
       </h2>
-      <p v-if="description" class="z-10 mt-4 text-center text-pretty opacity-60">
+      <p v-if="description" class="z-10 mt-4 text-pretty text-center opacity-60">
         {{ description }}
       </p>
       <component
