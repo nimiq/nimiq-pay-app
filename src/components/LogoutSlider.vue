@@ -1,68 +1,108 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { IonButton } from '@ionic/vue'
-import { useDraggable } from '@vueuse/core'
+import { ref, watch } from 'vue'
+import { TransitionPresets, executeTransition, useCssVar } from '@vueuse/core'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 
 const emit = defineEmits(stepEmits)
+const container = ref<HTMLInputElement | null>(null)
+const progress = ref(0)
+const progressCss = useCssVar('--progress', container, { initialValue: '0' })
+
+watch(progress, (value) => {
+  progressCss.value = value.toString()
+})
 
 function openBackupFlow() {
   initializeFlow(FlowName.Backup, { closeCurrentModal: false })
 }
 
-const thumb = ref<HTMLElement>()
-const track = ref<HTMLElement>()
-
-const { style, isDragging, position } = useDraggable(thumb, { axis: 'x', containerElement: track })
-
-watch(position, () => position.value.x = Math.min(position.value.x, 260))
-watch(isDragging, () => {
-  thumb.value?.style.setProperty('transition-duration', isDragging.value ? '700ms' : '300ms')
-  if (isDragging.value)
-    return
-  if (position.value.x > 259) {
-    emit('done')
-    setTimeout(() => position.value.x = 0, 800) // In case we open the backup flow, then reset ui
-    return
+async function onThumbRelease() {
+  // Detect if the event is triggered by the thumb
+  if (progress.value < 100) {
+    const from = progress.value
+    await executeTransition(progress, from, 0, {
+      duration: 250,
+      transition: TransitionPresets.easeInOutSine,
+    })
   }
-  position.value.x = 0
-})
+
+  // In case we open the backup flow, then reset ui
+  setTimeout(() => progress.value = 0, 800)
+  // emit('done')
+}
 </script>
 
 <template>
-  <div class="w-full flex flex-col justify-end h-full">
-    <div class="mt-16 w-full max-w-xs mx-auto grid *:row-span-full *:col-span-full" :style="`--left-distance: ${position.x}`">
-      <label class="h-full grid place-content-center">
-        <span class="sr-only">{{ $t('Swipe to') }}</span>
-        <span class="text-space/40 uppercase font-bold text-base tracking-wider">{{ $t('Log out') }}</span>
+  <div class="w-full h-full flex flex-col justify-end">
+    <div ref="container" class="mx-auto w-full max-w-xs grid mt-16 *:col-span-full *:row-span-full">
+      <label for="progress" class="z-10 grid place-content-center pointer-events-none">
+        <span class="sr-only">{{ $t('Swipe for') }}</span>
+        <span class="text-space/40 text-base font-bold tracking-wider uppercase first-letter:pr-[1px]">{{ $t('Log out') }}</span>
       </label>
-      <div ref="track" class="bg-space/15 w-full h-16 rounded-full p-0.5 relative">
-        <div class="bg-[#dedee4] absolute inset-y-0 left-6 z-10 curtain" :style="`width: ${position.x}px`" />
-        <div ref="thumb" class="rounded-full grid place-content-center relative thumb h-[60px] aspect-square z-10" :style="style">
-          <svg aria-hidden width="24" height="16" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 1L22.9995 7.89033L16 14.7787" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            <line x1="22" y1="7.90625" x2="1" y2="7.90625" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
-      </div>
+      <svg
+        class="w-7 h-16 z-10 pointer-events-none"
+        aria-hidden viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+        style="margin-left: calc(18px + var(--progress) / 100 * (100% - 60px));"
+      >
+        <path d="M16 1L22.9995 7.89033L16 14.7787" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <line x1="22" y1="7.90625" x2="1" y2="7.90625" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+
+      <input
+        id="slider"
+        type="range"
+        :value="progress"
+        @input="progress = Number(($event.target as HTMLInputElement).value)"
+        @change="onThumbRelease"
+      >
     </div>
 
-    <IonButton fill="clear" class="text-base font-bold normal-case my-5" style="--padding-top: 8px; --padding-bottom: 8px;" @click="openBackupFlow">
+    <IonButton
+      fill="clear" class="my-5 text-base font-bold normal-case"
+      style="--padding-top: 8px; --padding-bottom: 8px;" @click="openBackupFlow"
+    >
       {{ $t('Show login words') }}
     </IonButton>
   </div>
 </template>
 
 <style scoped>
-.thumb {
-  transition: left 300ms;
-  transition-timing-function: linear(0 0%, 0.4322 6.7%, 0.5876 9.63%, 0.7165 12.53%, 0.8238 15.53%, 0.9087 18.63%, 0.9731 21.89%, 1.0188 25.4%, 1.0377 27.67%, 1.0507 30.11%, 1.058 32.77%, 1.0598 35.74%, 1.0528 41.1%, 1.0164 56.54%, 1.004 65.49%, 0.998 78.52%, 1 100%);
-  background: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%);
+input[type="range"] {
+  --height: 4rem;
+  outline: 0;
+  border: 0;
+  border-radius: 220px;
+  width: 100%;
+  transition: box-shadow 0.2s ease-in-out;
+  appearance: none;
+  height: var(--height);
+  overflow: hidden;
+  background-color: #ddd;
+
+  &::-webkit-slider-runnable-track {
+    appearance: none;
+    height: var(--height);
+    transition: box-shadow 0.2s ease-in-out;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--height);
+    height: var(--height);
+    box-shadow: -350px 0 0 320px #0582CA;
+    border-radius: 50%;
+    transition: box-shadow 0.2s ease-in-out;
+    position: relative;
+    background: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%);
+  }
 }
 
 label {
-  opacity: calc(1.15 - (var(--left-distance) / 260) * 3);
-  scale: clamp(0.9, calc(1.22 - (var(--left-distance) / 260)), 1);
+  opacity: calc(1.25 - (var(--progress) / 100) * 3);
+  scale: max(calc(1 - (var(--progress) / 100)), 0.5);
+  transition: scale 100ms;
+  transition-timing-function: var(--timing);
 }
 </style>
