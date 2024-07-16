@@ -34,6 +34,7 @@ const { fiat, crypto } = usePrice(balance)
 <style scoped>
 ion-skeleton-text {
   --border-radius: 6px;
+  --background: rgba(31, 35, 72, .1);
 }
 
 ion-skeleton-text.small {

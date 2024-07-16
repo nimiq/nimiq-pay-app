@@ -5,32 +5,32 @@ import { type Ref, computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { Browser } from '@capacitor/browser'
 import { storeToRefs } from 'pinia'
-import { computedAsync } from '@vueuse/core'
-import InfoIcon from '@/components/icons/info.vue'
-import { Modal, useModal } from '@/composables/useModal'
-import TransactionItem from '@/components/TransactionItem.vue'
-import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import MenuIcon from '@/components/icons/menu.vue'
+import { computedAsync, until } from '@vueuse/core'
+import { i18n } from '@/i18n/i18n-setup'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
+import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { i18n } from '@/i18n/i18n-setup'
-import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
-import QuickButton from '@/components/QuickButton.vue'
+import { Modal, useModal } from '@/composables/useModal'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
+import { useSync } from '@/composables/useSync'
+import InfoIcon from '@/components/icons/info.vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import MenuIcon from '@/components/icons/menu.vue'
+import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
+import QuickButton from '@/components/QuickButton.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import BackupNotification from '@/components/BackupNotification.vue'
-import { useTransactions } from '@/stores/transactions'
-import { useSync } from '@/composables/useSync'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { toCoins } from '@/composables/usePrice'
+import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 
 const logger = useLogger('HomeView')
 
@@ -46,7 +46,7 @@ const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getRefer
 const { transactions } = storeToRefs(useTransactions())
 const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced, isTransactionPending } = useSync()
+const { nodesAreSynced, isTransactionPending, isUpdatingTransactions } = useSync()
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -84,6 +84,7 @@ async function handleRefresh(event: CustomEvent) {
     useSync().updateTransactionHistory(),
   ])
   await useSync().verifyRemoteSignersDb()
+  await until(isUpdatingTransactions).toBe(false)
   event.detail.complete()
 }
 
@@ -190,11 +191,7 @@ onMounted(async () => {
       </QuickButton>
 
       <!-- Transaction List -->
-      <ol v-if="transactions.length" class="mt-8">
-        <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash" :data-hash="tx.hash">
-          <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />
-        </li>
-      </ol>
+      <TheHomeTransactions class="mt-8" />
 
       <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
         {{ $t('See all') }}
