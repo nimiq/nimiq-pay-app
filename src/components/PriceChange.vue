@@ -24,10 +24,10 @@ const priceChange = computedAsync(async () => {
 </script>
 
 <template>
-  <div v-if="priceChange" class="flex items-center justify-center gap-x-1">
-    <PriceChangeIcon class="h-3 text-space/50" :is-down="priceChange < 0" />
+  <div v-if="priceChange" class="flex justify-center items-center gap-x-1">
+    <PriceChangeIcon class="text-space/50 h-3" :is-down="priceChange < 0" />
     <span class="whitespace-nowrap">
-      {{ priceChange.toFixed(1) }}%
+      {{ priceChange < 0 ? '' : '+' }}{{ priceChange.toFixed(1) }}%
     </span>
   </div>
 </template>

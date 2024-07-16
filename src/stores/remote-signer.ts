@@ -77,7 +77,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
-  const remoteBalance = ref(0)
+  const remoteBalance = ref(-1)
   const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
 
   // Checks if the remote is in the validity window, which means that the remote
