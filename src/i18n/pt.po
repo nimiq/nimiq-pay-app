@@ -2,7 +2,7 @@
 # Inês Marques 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-05-11 13:20+0000\n"
+"PO-Revision-Date: 2024-07-16 14:20+0000\n"
 "Last-Translator: Inês Marques\n"
 "Language: pt\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -44,9 +44,19 @@ msgid "Already paid"
 msgstr "Já está pago"
 
 msgid "Amount too small"
-msgstr ""
+msgstr "Valor demasiado pequeno"
 
 msgid "An unknown error occurred while importing words"
+msgstr "Ocorreu um erro desconhecido ao importar as palavras"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
+msgid "An unknown error ocurred, biometric cannot be used"
+msgstr "Ocorreu um erro desconhecido ao importar as palavras"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
+msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Ocorreu um erro desconhecido ao importar as palavras"
 
 msgid "Are you sure you want to log out?"
@@ -60,6 +70,15 @@ msgstr "Backup bem-sucedido"
 
 msgid "Backup your account before logging out"
 msgstr "Faz backup da tua conta antes de encerrares sessão"
+
+msgid "Biometric Authentication"
+msgstr ""
+
+msgid "Biometric authentication enabled"
+msgstr ""
+
+msgid "Biometric is not supported on this device"
+msgstr ""
 
 msgid "Bitcoin Lightning invoice expired."
 msgstr "Fatura Bitcoin Lightning expirada."
@@ -80,6 +99,9 @@ msgid "Cancel"
 msgstr "Cancelar"
 
 msgid "Cannot create NIM/BTC_LN swap"
+msgstr "Não é possível criar troca NIM/BTC_LN"
+
+msgid "Cannot enable biometric"
 msgstr ""
 
 msgid "Cashlink claimed successfully"
@@ -176,8 +198,14 @@ msgstr "Isenção de responsabilidade"
 msgid "Earn Points"
 msgstr "Ganhar Pontos"
 
+msgid "Enable Fingerprint"
+msgstr ""
+
 msgid "Enable notifications"
 msgstr "Ativar notificações"
+
+msgid "Enable Touch ID/Face ID"
+msgstr ""
 
 msgid "Enter Address"
 msgstr "Inserir endereço"
@@ -191,14 +219,23 @@ msgstr "Inserir palavras de recuperação"
 msgid "Enter the code from the SMS sent to you."
 msgstr "Introduz o código enviado por SMS."
 
+msgid "Enter your PIN to enable biometric authentication"
+msgstr ""
+
 msgid "Enter your promo code"
 msgstr "Inserir o teu código promocional"
 
 msgid "Enter your referral promo code."
 msgstr "Inserir o teu código promocional de referência."
 
-msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
+msgid "Error using BiometricAuth"
 msgstr ""
+
+msgid "Error using SecureStorage"
+msgstr ""
+
+msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
+msgstr "Perto de exceder o limite de troca de 30 dias. O teu limite de pagamento para BTC LN é {remainingFiatLimits}"
 
 msgid "Expired"
 msgstr "Expirado"
@@ -210,7 +247,7 @@ msgid "Failed to delete Points account"
 msgstr "Falha ao apagar conta de Pontos"
 
 msgid "Failed to fetch LNURL service"
-msgstr ""
+msgstr "Falha ao buscar o serviço LNURL"
 
 #, fuzzy
 #| msgid "Not a pending payment request"
@@ -228,9 +265,6 @@ msgstr "Encontra lugares que aceitem cripto!"
 
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr "Encontra lugares para pagar e ganhar Pontos Cryptocity"
-
-msgid "Get cashback and earn rewards"
-msgstr "Receber cashback e ganhar recompensas"
 
 msgid "Get Cryptocity Points"
 msgstr "Receber Pontos Cryptocity"
@@ -256,7 +290,9 @@ msgstr "O GoCrypto recusou conexão"
 msgid "Got it"
 msgstr "Percebido"
 
-msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+#, fuzzy
+#| msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
 msgstr "Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão receber {amount} em Pontos Cryptocity."
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
@@ -269,7 +305,7 @@ msgid "Incl. fees"
 msgstr "Taxas incluídas"
 
 msgid "Includes {fee} in fees"
-msgstr ""
+msgstr "Incluí {fee} em taxas"
 
 msgid "Insert PIN to confirm"
 msgstr "Inserir o PIN para confirmar"
@@ -291,7 +327,7 @@ msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Fatura Bitcoin Lightning inválida."
 
 msgid "Invalid callback URL"
-msgstr ""
+msgstr "URL de retorno de chamada inválido"
 
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink inválido. Impossível obter detalhes de pagamento."
@@ -331,6 +367,16 @@ msgstr "Endereço Nimiq inválido"
 msgid "Invalid Nimiq Cashlink"
 msgstr "Nimiq Cashlink inválido"
 
+#, fuzzy
+#| msgid "Invalid CPLink. Missing amount or recipient."
+msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+msgstr "CPLink inválido. Montante ou destinatário em falta."
+
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
+msgstr "Formato do link inválido. Apenas pedidos de CPLinks e NAKA para NIM são suportados."
+
 msgid "Invalid phone number"
 msgstr "Número de telemóvel inválido"
 
@@ -361,9 +407,6 @@ msgstr "URL inválido: {url}"
 msgid "Invite a Friend"
 msgstr "Convida um amigo"
 
-msgid "Invite a friend and get {amount} each"
-msgstr "Convida um amigo e recebam {amount} cada um"
-
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr "Convida um amigo! | Convida um amigo e recebam {amount} ponto cada! | Convida um amigo e recebam {amount} pontos cada!"
 
@@ -377,7 +420,7 @@ msgid "Learn more"
 msgstr "Sabe mais"
 
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
-msgstr ""
+msgstr "O pedido Lightning é para um valor de pagamento variável, mas valores variáveis não são suportados"
 
 msgid "Loading"
 msgstr "A carregar"
@@ -463,6 +506,8 @@ msgid ""
 "Nodes are not synced.\n"
 "Remote: {remoteHeight}, Local: {localHeight}"
 msgstr ""
+"Os nós não estão sincronizados.\n"
+"Servidor: {remoteHeight}, Local: {localHeight}"
 
 msgid "Not a pending payment request"
 msgstr "Nenhum pedido de pagamento pendente"
@@ -608,6 +653,11 @@ msgstr "Palavras de Recuperação"
 msgid "Refunded"
 msgstr "Devolvido"
 
+#, fuzzy
+#| msgid "Verify your phone number"
+msgid "Requires Phone Number"
+msgstr "Verificar o teu número de telemóvel"
+
 msgid "Resend"
 msgstr "Reenviar"
 
@@ -750,7 +800,7 @@ msgid "These Points are made for spending. Get out there and help drive crypto a
 msgstr "Estes pontos foram feitos para ser gastos. Vai por aí e ajuda a impulsionar a adoção cripto."
 
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
-msgstr ""
+msgstr "Esta conversão e a operação de um canal BTC Lightning requer uma taxa."
 
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Este comerciante não está registado para receber pagamentos de pontos."
@@ -796,6 +846,15 @@ msgstr "GoCrypto erro inesperado"
 
 msgid "Unknown"
 msgstr "Desconhecido"
+
+msgid "Unlock Nimiq Pay with your biometric data"
+msgstr ""
+
+msgid "Unlock the app using Fingerprint instead of PIN"
+msgstr ""
+
+msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
 
 msgid "Use {amount}"
 msgstr "Usar {amount}"
@@ -864,7 +923,7 @@ msgid "What's the 9th word?"
 msgstr "Qual é a 9ª palavra?"
 
 msgid "When paying with BTC Lightning, NIM are swapped to BTC."
-msgstr ""
+msgstr "Ao pagar com BTC Lightning, NIM é trocado por BTC."
 
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr "Ao fazer o resgisto para uma conta de Pontos Cryptocity na Nimiq Pay, concordas com nossas práticas de gestão de dados, conforme detalhado em nossa {privacyPolicy}. Prioritizamos o teu direito à privacidade e controlo sobre os teus dados, proporcionando assim uma opção dentro da aplicação para apagar a tua conta de Pontos Cryptocity a qualquer momento. Esta ação vai remover permanentemente as tuas informações pessoais, como o teu número de telemóvel, dos nossos registos. Para impedir fraudes, um registo seguro das contas apagadas vai ser mantido por um período de 12 meses. No caso de decidires inscrever-te novamente, as atividades ou dados anteriores não podem ser recuperados. O nosso compromisso com a segurança dos teus dados inclui um processo direto na aplicação para a eliminação de contas, alinhado às melhores práticas do setor para garantir a autonomia do usuário e a proteção de dados. Para obter instruções sobre como apagar a tua conta ou obter mais informações, consulta as configurações da conta na aplicação."
@@ -944,6 +1003,12 @@ msgstr "O teu número"
 
 msgid "Your wallet is ready to use"
 msgstr "A tua wallet está pronta para usar"
+
+#~ msgid "Get cashback and earn rewards"
+#~ msgstr "Receber cashback e ganhar recompensas"
+
+#~ msgid "Invite a friend and get {amount} each"
+#~ msgstr "Convida um amigo e recebam {amount} cada um"
 
 #~ msgid "Delete Points rewards account"
 #~ msgstr "Apagar Pontos de Recompensas da Conta"

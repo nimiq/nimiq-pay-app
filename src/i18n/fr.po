@@ -49,6 +49,16 @@ msgstr ""
 msgid "An unknown error occurred while importing words"
 msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
 
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
+msgid "An unknown error ocurred, biometric cannot be used"
+msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
+msgid "An unknown error ocurred, please manually input your PIN"
+msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+
 msgid "Are you sure you want to log out?"
 msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 
@@ -60,6 +70,15 @@ msgstr "Sauvegarde réussie"
 
 msgid "Backup your account before logging out"
 msgstr "Sauvegardez votre compte avant de vous déconnecter"
+
+msgid "Biometric Authentication"
+msgstr ""
+
+msgid "Biometric authentication enabled"
+msgstr ""
+
+msgid "Biometric is not supported on this device"
+msgstr ""
 
 msgid "Bitcoin Lightning invoice expired."
 msgstr "La facture Bitcoin Lightning a expiré."
@@ -80,6 +99,9 @@ msgid "Cancel"
 msgstr "Annuler"
 
 msgid "Cannot create NIM/BTC_LN swap"
+msgstr ""
+
+msgid "Cannot enable biometric"
 msgstr ""
 
 msgid "Cashlink claimed successfully"
@@ -176,8 +198,14 @@ msgstr "Clause de non-responsabilité"
 msgid "Earn Points"
 msgstr "Gagner des points"
 
+msgid "Enable Fingerprint"
+msgstr ""
+
 msgid "Enable notifications"
 msgstr "Activer les notifications"
+
+msgid "Enable Touch ID/Face ID"
+msgstr ""
 
 msgid "Enter Address"
 msgstr "Saisir l'adresse"
@@ -191,11 +219,20 @@ msgstr "Saisir les mots de récupération"
 msgid "Enter the code from the SMS sent to you."
 msgstr "Saisissez le code figurant dans le SMS qui vous a été envoyé."
 
+msgid "Enter your PIN to enable biometric authentication"
+msgstr ""
+
 msgid "Enter your promo code"
 msgstr "Entrez votre code promo"
 
 msgid "Enter your referral promo code."
 msgstr "Saisissez votre code promo de parrainage."
+
+msgid "Error using BiometricAuth"
+msgstr ""
+
+msgid "Error using SecureStorage"
+msgstr ""
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
@@ -229,9 +266,6 @@ msgstr "Trouvez des lieux qui acceptent les crypto-monnaies !"
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr "Trouvez des endroits où payer et gagner des Points Cryptocity"
 
-msgid "Get cashback and earn rewards"
-msgstr "Obtenez du cashback et gagnez des récompenses"
-
 msgid "Get Cryptocity Points"
 msgstr "Obtenez des points Cryptocity"
 
@@ -256,7 +290,9 @@ msgstr "GoCrypto a refusé la connexion"
 msgid "Got it"
 msgstr "J'ai compris"
 
-msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+#, fuzzy
+#| msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
 msgstr "Aidez à développer le mouvement d'adoption des crypto-monnaies. Invite un ami et vous recevrez tous les deux {amount} en points Cryptocity."
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
@@ -331,6 +367,16 @@ msgstr "Adresse Nimiq invalide"
 msgid "Invalid Nimiq Cashlink"
 msgstr "Cashlink Nimiq invalide"
 
+#, fuzzy
+#| msgid "Invalid CPLink. Missing amount or recipient."
+msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+msgstr "CPLink non valide. Montant ou bénéficiaire manquant."
+
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
+msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
+
 msgid "Invalid phone number"
 msgstr "Numéro de téléphone invalide"
 
@@ -360,9 +406,6 @@ msgstr "URL non valide : {url}"
 
 msgid "Invite a Friend"
 msgstr "Inviter un ami"
-
-msgid "Invite a friend and get {amount} each"
-msgstr "Invitez un ami et obtenez {amount} chacun"
 
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr "Invitez un(e) ami(e) ! | Invitez un(e) ami(e) et obtenez {amount} point chacun ! | Invitez un(e) ami(e) et obtenez {amount} points chacun !"
@@ -608,6 +651,11 @@ msgstr "Mots de récupération"
 msgid "Refunded"
 msgstr "Remboursé"
 
+#, fuzzy
+#| msgid "Verify your phone number"
+msgid "Requires Phone Number"
+msgstr "Vérifiez votre numéro de téléphone"
+
 msgid "Resend"
 msgstr "Renvoyer"
 
@@ -797,6 +845,15 @@ msgstr "Erreur inattendue de GoCrypto"
 msgid "Unknown"
 msgstr "Inconnu"
 
+msgid "Unlock Nimiq Pay with your biometric data"
+msgstr ""
+
+msgid "Unlock the app using Fingerprint instead of PIN"
+msgstr ""
+
+msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
+
 msgid "Use {amount}"
 msgstr "Utiliser {amount}"
 
@@ -944,6 +1001,12 @@ msgstr "Votre numéro"
 
 msgid "Your wallet is ready to use"
 msgstr "Votre wallet est prêt à l'emploi"
+
+#~ msgid "Get cashback and earn rewards"
+#~ msgstr "Obtenez du cashback et gagnez des récompenses"
+
+#~ msgid "Invite a friend and get {amount} each"
+#~ msgstr "Invitez un ami et obtenez {amount} chacun"
 
 #~ msgid "Delete Points rewards account"
 #~ msgstr "Supprimer votre compte de points Cryptocity"

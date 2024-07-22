@@ -15,6 +15,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
+#: src/views/HomeView.vue:106
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -57,6 +58,15 @@ msgstr ""
 msgid "An unknown error occurred while importing words"
 msgstr ""
 
+#: src/composables/useBiometric.ts:93
+#: src/modals/EnableBiometricModal.vue:44
+msgid "An unknown error ocurred, biometric cannot be used"
+msgstr ""
+
+#: src/composables/useBiometric.ts:122
+msgid "An unknown error ocurred, please manually input your PIN"
+msgstr ""
+
 #: src/modals/LogOutModal/Confirm.vue:13
 msgid "Are you sure you want to log out?"
 msgstr ""
@@ -66,7 +76,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:297
+#: src/lib/flows/index.ts:295
 msgid "Backup successful"
 msgstr ""
 
@@ -74,11 +84,27 @@ msgstr ""
 msgid "Backup your account before logging out"
 msgstr ""
 
-#: src/composables/useStringParser.ts:168
+#: src/composables/useBiometric.ts:41
+#: src/lib/flows/steps.ts:172
+#: src/modals/EnableBiometricModal.vue:4
+#: src/modals/SettingsModal.vue:43
+msgid "Biometric Authentication"
+msgstr ""
+
+#: src/modals/EnableBiometricModal.vue:34
+msgid "Biometric authentication enabled"
+msgstr ""
+
+#: src/composables/useBiometric.ts:101
+#: src/composables/useBiometric.ts:76
+msgid "Biometric is not supported on this device"
+msgstr ""
+
+#: src/composables/useStringParser.ts:175
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
-#: src/lib/flows/steps.ts:264
+#: src/lib/flows/steps.ts:300
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr ""
 
@@ -95,14 +121,19 @@ msgid "By tapping “verify”, you agree to our data management practices."
 msgstr ""
 
 #: src/components/PhoneInput.vue:66
+#: src/composables/useBiometric.ts:40
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useStringParser.ts:191
+#: src/composables/useStringParser.ts:198
 msgid "Cannot create NIM/BTC_LN swap"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:62
+#: src/lib/flows/steps.ts:183
+msgid "Cannot enable biometric"
+msgstr ""
+
+#: src/composables/useQRScanner.ts:70
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -110,7 +141,7 @@ msgstr ""
 msgid "Cashlink has no balance"
 msgstr ""
 
-#: src/lib/flows/steps.ts:71
+#: src/lib/flows/steps.ts:73
 msgid "Choose a PIN"
 msgstr ""
 
@@ -127,20 +158,20 @@ msgstr ""
 msgid "Confirm"
 msgstr ""
 
-#: src/lib/flows/steps.ts:191
+#: src/lib/flows/steps.ts:227
 msgid "Confirm your phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:117
+#: src/lib/flows/steps.ts:119
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:131
+#: src/types/transactions.ts:132
 msgid "Confirmed"
 msgstr ""
 
 #. We display a just mined, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:128
+#: src/types/transactions.ts:129
 msgid "Confirming"
 msgstr ""
 
@@ -161,7 +192,7 @@ msgstr ""
 msgid "Copied to clipboard"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:36
+#: src/modals/ReferralModal.vue:39
 msgid "Copied to the clipboard!"
 msgstr ""
 
@@ -173,19 +204,19 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:375
+#: src/lib/flows/steps.ts:411
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:195
+#: src/composables/useStringParser.ts:202
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/lib/flows/steps.ts:439
+#: src/lib/flows/steps.ts:475
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
-#: src/lib/flows/steps.ts:271
+#: src/lib/flows/steps.ts:307
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
@@ -193,7 +224,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:237
+#: src/lib/flows/steps.ts:273
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr ""
 
@@ -209,7 +240,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: src/modals/SettingsModal.vue:42
+#: src/modals/SettingsModal.vue:48
 msgid "Delete Cryptocity Points account"
 msgstr ""
 
@@ -230,9 +261,17 @@ msgstr ""
 msgid "Earn Points"
 msgstr ""
 
+#: src/components/EnableBiometric.vue:13
+msgid "Enable Fingerprint"
+msgstr ""
+
 #: src/components/EnableNotifications.vue:6
-#: src/lib/flows/steps.ts:214
+#: src/lib/flows/steps.ts:250
 msgid "Enable notifications"
+msgstr ""
+
+#: src/components/EnableBiometric.vue:13
+msgid "Enable Touch ID/Face ID"
 msgstr ""
 
 #: src/components/NimAddressInput.vue:5
@@ -243,27 +282,40 @@ msgstr ""
 msgid "Enter PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:50
+#: src/lib/flows/steps.ts:52
 msgid "Enter recovery words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:192
+#: src/lib/flows/steps.ts:228
 msgid "Enter the code from the SMS sent to you."
 msgstr ""
 
-#: src/lib/flows/steps.ts:33
+#: src/modals/EnableBiometricModal.vue:7
+msgid "Enter your PIN to enable biometric authentication"
+msgstr ""
+
+#: src/lib/flows/steps.ts:35
 msgid "Enter your promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:34
+#: src/lib/flows/steps.ts:36
 msgid "Enter your referral promo code."
+msgstr ""
+
+#: src/composables/useBiometric.ts:85
+msgid "Error using BiometricAuth"
+msgstr ""
+
+#: src/composables/useBiometric.ts:118
+#: src/composables/useBiometric.ts:89
+msgid "Error using SecureStorage"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:68
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:130
+#: src/types/transactions.ts:131
 msgid "Expired"
 msgstr ""
 
@@ -291,29 +343,25 @@ msgstr ""
 msgid "Fees may apply {fee}"
 msgstr ""
 
-#: src/views/HomeView.vue:81
+#: src/views/HomeView.vue:77
 msgid "Find places that accept crypto!"
 msgstr ""
 
-#: src/lib/flows/steps.ts:257
+#: src/lib/flows/steps.ts:293
 msgid "Find places to pay with, and earn Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:106
-msgid "Get cashback and earn rewards"
-msgstr ""
-
-#: src/lib/flows/steps.ts:250
+#: src/lib/flows/steps.ts:286
 msgid "Get Cryptocity Points"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:34
-#: src/lib/flows/steps.ts:251
-#: src/lib/flows/steps.ts:278
+#: src/lib/flows/steps.ts:287
+#: src/lib/flows/steps.ts:314
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
-#: src/lib/flows/steps.ts:215
+#: src/lib/flows/steps.ts:251
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr ""
 
@@ -325,7 +373,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:95
+#: src/views/HomeView.vue:91
 msgid "Go to Crypto Map"
 msgstr ""
 
@@ -338,10 +386,10 @@ msgid "Got it"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:7
-msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
+msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
 msgstr ""
 
-#: src/modals/ReferralModal.vue:44
+#: src/modals/ReferralModal.vue:47
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
@@ -357,7 +405,7 @@ msgstr ""
 msgid "Includes {fee} in fees"
 msgstr ""
 
-#: src/lib/flows/steps.ts:71
+#: src/lib/flows/steps.ts:73
 msgid "Insert PIN to confirm"
 msgstr ""
 
@@ -366,19 +414,19 @@ msgid "Insufficient funds"
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:129
+#: src/types/transactions.ts:130
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useStringParser.ts:177
+#: src/composables/useStringParser.ts:184
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr ""
 
-#: src/composables/useStringParser.ts:164
+#: src/composables/useStringParser.ts:171
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
 msgstr ""
 
-#: src/composables/useStringParser.ts:159
+#: src/composables/useStringParser.ts:166
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
@@ -386,21 +434,21 @@ msgstr ""
 msgid "Invalid callback URL"
 msgstr ""
 
-#: src/composables/useStringParser.ts:131
+#: src/composables/useStringParser.ts:138
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:116
+#: src/composables/useStringParser.ts:123
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:110
-#: src/composables/useStringParser.ts:127
+#: src/composables/useStringParser.ts:117
+#: src/composables/useStringParser.ts:134
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:135
-#: src/composables/useStringParser.ts:146
+#: src/composables/useStringParser.ts:153
 msgid "Invalid GoCrypto link."
 msgstr ""
 
@@ -408,15 +456,15 @@ msgstr ""
 msgid "Invalid GoCrypto response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:104
+#: src/composables/useStringParser.ts:111
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:73
+#: src/composables/useStringParser.ts:78
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:74
+#: src/composables/useStringParser.ts:79
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
@@ -429,7 +477,7 @@ msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
 #: src/composables/useStringParser.ts:27
-#: src/lib/flows/steps.ts:386
+#: src/lib/flows/steps.ts:422
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -437,17 +485,26 @@ msgstr ""
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:174
+#: src/composables/useStringParser.ts:241
+msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+msgstr ""
+
+#: src/composables/useStringParser.ts:235
+msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
+msgstr ""
+
+#: src/lib/flows/steps.ts:210
 msgid "Invalid phone number"
 msgstr ""
 
 #: src/composables/useDecrypt.ts:52
 #: src/composables/useDecrypt.ts:65
+#: src/modals/EnableBiometricModal.vue:24
 msgid "Invalid PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:103
-#: src/lib/flows/steps.ts:99
+#: src/lib/flows/steps.ts:101
+#: src/lib/flows/steps.ts:105
 msgid "Invalid PIN code"
 msgstr ""
 
@@ -455,7 +512,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:71
+#: src/composables/useQRScanner.ts:79
 msgid "Invalid QR code"
 msgstr ""
 
@@ -471,7 +528,7 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:56
+#: src/composables/useStringParser.ts:57
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -479,12 +536,9 @@ msgstr ""
 msgid "Invite a Friend"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:4
-msgid "Invite a friend and get {amount} each"
-msgstr ""
-
 #: src/modals/PointsModal.vue:52
-#: src/views/HomeView.vue:73
+#: src/modals/ReferralModal.vue:4
+#: src/views/HomeView.vue:69
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -542,7 +596,7 @@ msgstr ""
 msgid "Network consensus lost."
 msgstr ""
 
-#: src/types/transactions.ts:126
+#: src/types/transactions.ts:127
 msgid "New"
 msgstr ""
 
@@ -604,7 +658,7 @@ msgstr ""
 msgid "No transactions found for \"{searchQuery}\""
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:105
 msgid ""
 "Nodes are not synced.\n"
 "Remote: {remoteHeight}, Local: {localHeight}"
@@ -618,7 +672,7 @@ msgstr ""
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
-#: src/lib/flows/steps.ts:223
+#: src/lib/flows/steps.ts:259
 msgid "Notifications cannot be enabled, skipping this step."
 msgstr ""
 
@@ -631,20 +685,20 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:128
+#: src/views/HomeView.vue:124
 msgid "Pay"
 msgstr ""
 
-#: src/lib/flows/steps.ts:270
+#: src/lib/flows/steps.ts:306
 msgid "Pay with Bluecode"
 msgstr ""
 
-#: src/lib/flows/steps.ts:243
+#: src/lib/flows/steps.ts:279
 msgid "Pay with Cryptocity Points"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:28
-#: src/lib/flows/steps.ts:244
+#: src/lib/flows/steps.ts:280
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
@@ -652,7 +706,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:115
+#: src/types/transactions.ts:116
 msgid "Payment"
 msgstr ""
 
@@ -677,8 +731,8 @@ msgstr ""
 msgid "Payment is being processed"
 msgstr ""
 
-#: src/lib/flows/steps.ts:313
-#: src/lib/flows/steps.ts:325
+#: src/lib/flows/steps.ts:349
+#: src/lib/flows/steps.ts:361
 msgid "Payment preview"
 msgstr ""
 
@@ -686,7 +740,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:210
+#: src/lib/flows/index.ts:208
 msgid "Payment successful"
 msgstr ""
 
@@ -698,7 +752,7 @@ msgstr ""
 msgid "Payment was refunded"
 msgstr ""
 
-#: src/types/transactions.ts:127
+#: src/types/transactions.ts:128
 msgid "Pending"
 msgstr ""
 
@@ -719,7 +773,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/steps.ts:127
+#: src/lib/flows/steps.ts:129
 msgid "PIN did not match"
 msgstr ""
 
@@ -727,23 +781,23 @@ msgstr ""
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgstr ""
 
-#: src/lib/flows/steps.ts:123
+#: src/lib/flows/steps.ts:125
 msgid "Please confirm your PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:171
+#: src/lib/flows/steps.ts:207
 msgid "Please enter a phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:94
+#: src/lib/flows/steps.ts:96
 msgid "Please enter a PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:38
+#: src/lib/flows/steps.ts:40
 msgid "Please enter a promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:196
+#: src/lib/flows/steps.ts:232
 msgid "Please enter a verification code"
 msgstr ""
 
@@ -751,7 +805,7 @@ msgstr ""
 msgid "Please enter at least ten characters"
 msgstr ""
 
-#: src/lib/flows/steps.ts:178
+#: src/lib/flows/steps.ts:214
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
 msgstr ""
 
@@ -767,7 +821,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:116
+#: src/types/transactions.ts:117
 msgid "Points Payment"
 msgstr ""
 
@@ -775,7 +829,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:115
+#: src/views/HomeView.vue:111
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
@@ -787,8 +841,8 @@ msgstr ""
 msgid "Promo code not found"
 msgstr ""
 
-#: src/lib/flows/steps.ts:118
-#: src/lib/flows/steps.ts:72
+#: src/lib/flows/steps.ts:120
+#: src/lib/flows/steps.ts:74
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
@@ -816,7 +870,11 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/lib/flows/steps.ts:193
+#: src/views/HomeView.vue:107
+msgid "Requires Phone Number"
+msgstr ""
+
+#: src/lib/flows/steps.ts:229
 msgid "Resend"
 msgstr ""
 
@@ -846,7 +904,7 @@ msgstr ""
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/lib/flows/steps.ts:285
+#: src/lib/flows/steps.ts:321
 msgid "Scan QR code"
 msgstr ""
 
@@ -858,7 +916,7 @@ msgstr ""
 msgid "Search for a country"
 msgstr ""
 
-#: src/views/HomeView.vue:43
+#: src/views/HomeView.vue:39
 msgid "See all"
 msgstr ""
 
@@ -878,15 +936,15 @@ msgstr ""
 msgid "Send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:397
+#: src/lib/flows/steps.ts:433
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:374
+#: src/lib/flows/steps.ts:410
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:396
+#: src/lib/flows/steps.ts:432
 msgid "Send NIM to top up"
 msgstr ""
 
@@ -895,13 +953,14 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
+#: src/components/EnableBiometric.vue:16
 #: src/components/EnableNotifications.vue:9
 #: src/components/PhoneInput.vue:46
 msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:57
-#: src/lib/flows/index.ts:258
+#: src/lib/flows/index.ts:256
 msgid "Something went wrong"
 msgstr ""
 
@@ -921,7 +980,7 @@ msgstr ""
 
 #: src/composables/useDecrypt.ts:66
 #: src/composables/useDecrypt.ts:69
-#: src/lib/flows/steps.ts:148
+#: src/lib/flows/steps.ts:150
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
@@ -989,7 +1048,7 @@ msgstr ""
 msgid "Terms of service"
 msgstr ""
 
-#: src/lib/flows/steps.ts:452
+#: src/lib/flows/steps.ts:488
 msgid "Test your backup"
 msgstr ""
 
@@ -1001,11 +1060,11 @@ msgstr ""
 msgid "The correct answer is \"{correct}\"."
 msgstr ""
 
-#: src/composables/useQRScanner.ts:167
+#: src/composables/useQRScanner.ts:175
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/steps.ts:438
+#: src/lib/flows/steps.ts:474
 msgid "There is no \"Forgot password\""
 msgstr ""
 
@@ -1046,11 +1105,11 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:113
+#: src/types/transactions.ts:114
 msgid "Top-Up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:413
+#: src/lib/flows/steps.ts:449
 msgid "Transaction"
 msgstr ""
 
@@ -1058,7 +1117,7 @@ msgstr ""
 msgid "Transaction already sent"
 msgstr ""
 
-#: src/lib/flows/index.ts:191
+#: src/lib/flows/index.ts:189
 msgid "Transaction failed: {error}"
 msgstr ""
 
@@ -1082,8 +1141,20 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/types/transactions.ts:135
+#: src/types/transactions.ts:136
 msgid "Unknown"
+msgstr ""
+
+#: src/composables/useBiometric.ts:39
+msgid "Unlock Nimiq Pay with your biometric data"
+msgstr ""
+
+#: src/lib/flows/steps.ts:173
+msgid "Unlock the app using Fingerprint instead of PIN"
+msgstr ""
+
+#: src/lib/flows/steps.ts:173
+msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:44
@@ -1094,12 +1165,11 @@ msgstr ""
 msgid "Verify"
 msgstr ""
 
-#: src/lib/flows/steps.ts:277
+#: src/lib/flows/steps.ts:313
 msgid "Verify your ID"
 msgstr ""
 
-#: src/lib/flows/steps.ts:163
-#: src/views/HomeView.vue:105
+#: src/lib/flows/steps.ts:199
 msgid "Verify your phone number"
 msgstr ""
 
@@ -1115,7 +1185,7 @@ msgstr ""
 msgid "Welcome to Nimiq Pay"
 msgstr ""
 
-#: src/lib/flows/steps.ts:236
+#: src/lib/flows/steps.ts:272
 msgid "What are Cryptocity Points?"
 msgstr ""
 
@@ -1123,7 +1193,7 @@ msgstr ""
 msgid "What do you want to do?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:263
+#: src/lib/flows/steps.ts:299
 msgid "What is Bluecode?"
 msgstr ""
 
@@ -1183,24 +1253,24 @@ msgstr ""
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr ""
 
-#: src/lib/flows/steps.ts:345
+#: src/lib/flows/steps.ts:381
 #: src/modals/MenuModal.vue:17
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:114
+#: src/types/transactions.ts:115
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:260
+#: src/lib/flows/index.ts:258
 msgid "Withdrawal successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:445
+#: src/lib/flows/steps.ts:481
 msgid "Write down these words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:446
+#: src/lib/flows/steps.ts:482
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -1210,7 +1280,7 @@ msgstr ""
 msgid "Wrong answer"
 msgstr ""
 
-#: src/composables/useStringParser.ts:173
+#: src/composables/useStringParser.ts:180
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
@@ -1234,7 +1304,7 @@ msgstr ""
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr ""
 
-#: src/lib/flows/steps.ts:353
+#: src/lib/flows/steps.ts:389
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr ""
 
@@ -1246,7 +1316,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:111
+#: src/views/HomeView.vue:112
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -1262,7 +1332,7 @@ msgstr ""
 msgid "You will receive {amount} Point | You will receive {amount} Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:164
+#: src/lib/flows/steps.ts:200
 msgid "You will receive an SMS with a verification code"
 msgstr ""
 
