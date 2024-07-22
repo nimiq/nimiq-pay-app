@@ -7,10 +7,11 @@ import { QRDataFormat, useStringParser } from './useStringParser'
 import { useCameraFeed } from './useCameraFeed'
 import { useToast } from './useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { FlowName, type PaymentRequestData } from '@/lib/flows/steps.types'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLogger } from '@/composables/useLogger'
+import { initializeFlow } from '@/lib/flows'
 
 const logger = useLogger('useQRScanner')
 
@@ -48,6 +49,13 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           onData(data)
         }
         else if (expect === QRDataFormat.PaymentRequest) {
+          // Some users might scan an address QR code wanting to withdraw, if this is the case, redirect to the withdraw flow
+          const { data: nimAddress } = getNimAddress(raw)
+          if (nimAddress) {
+            initializeFlow(FlowName.NimWithdraw, { nimAddressInput: nimAddress })
+            return
+          }
+
           const { data, error } = await getPaymentRequestData(raw)
           if (error || !data)
             throw new Error(error)
