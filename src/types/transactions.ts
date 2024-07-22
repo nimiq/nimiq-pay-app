@@ -57,6 +57,7 @@ export enum Rail {
   GoCrypto = 'GoCrypto',
   Bluecode = 'bluecode',
   BitcoinLightning = 'bitcoin-lightning',
+  NimiqWallet = 'nimiq-wallet',
   // Used when fetching old txs from blockchain
   Unknown = 'unknown',
 }
@@ -185,6 +186,9 @@ export type MerchantTransaction = BaseTransaction & {
 } | {
   rail: Rail.BitcoinLightning
   railMerchantId: string
+} | {
+  rail: Rail.NimiqWallet
+  railMerchantId?: undefined
 } | {
   rail: Rail.Unknown
   railMerchantId?: undefined

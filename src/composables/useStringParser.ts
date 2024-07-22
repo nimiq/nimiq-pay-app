@@ -53,6 +53,7 @@ export function useStringParser() {
       url = new URL(content)
     }
     catch (e) {
+      logger.error(`Error invalid URL: ${content}`, e)
       return { error: i18n.t('Invalid URL: {url}', { url: content }), data: undefined }
     }
 
@@ -66,6 +67,10 @@ export function useStringParser() {
     }
     else if (rail === Rail.BitcoinLightning) {
       result = await parseBitcoinLightningUrl(url)
+    }
+    // If it is a payment request from the Nimiq Wallet, redirect to the withdrawal flow
+    else if (rail === Rail.NimiqWallet) {
+      result = parseNimiqWalletRequest(url)
     }
     else {
       result = {
@@ -89,6 +94,8 @@ export function useStringParser() {
       return Rail.GoCrypto
     else if (protocol === 'lightning:' && __ENABLE_BTC_LN__)
       return Rail.BitcoinLightning
+    else if (protocol === 'nimiq:')
+      return Rail.NimiqWallet
     else
       return undefined
   }
@@ -221,6 +228,33 @@ export function useStringParser() {
     }
 
     return { data, error: undefined }
+  }
+
+  function parseNimiqWalletRequest({ searchParams, pathname: recipient, protocol }: URL) {
+    if (protocol !== 'nimiq:')
+      return { error: i18n.t('Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported.'), data: undefined }
+
+    const rawAmount = searchParams.get('amount') || '0'
+    const nimAmount = Number.parseFloat(rawAmount)
+
+    if (!nimAmount || !recipient)
+      return { error: i18n.t('Invalid Nimiq Wallet request. Missing amount or recipient.'), data: undefined }
+
+    const data: PaymentRequestData = {
+      recipient,
+      amount: Math.round(nimAmount * 1e5),
+      fee: 0,
+      merchantCategory: MerchantCategory.Shop, // We don't have a way of knowing the shop category from the Nimiq Wallet request
+      rail: Rail.NimiqWallet,
+      paymentRef: '',
+      transfer: Transfer.UserPaymentToMerchant,
+      message: undefined,
+    }
+
+    return {
+      data,
+      error: undefined,
+    }
   }
 
   return {
