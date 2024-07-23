@@ -120,6 +120,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
     if (error || !remoteSignerApi) {
       logger.log('📡 No remote signer found in the database and no remote signer found in the API. Waiting for funds to be sent')
+      remoteBalance.value = 0
       return
     }
     await updateRemoteSigner(remoteSignerApi)
