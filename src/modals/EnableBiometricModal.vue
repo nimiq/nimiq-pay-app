@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { Keyboard } from '@capacitor/keyboard'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { useBiometric } from '@/composables/useBiometric'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import PinInput from '@/components/PinInput.vue'
