@@ -9,7 +9,7 @@ import { Crypto } from '@/stores/app'
 defineProps<{
   cryptoTotal: number
   fiatFormatted: string
-  paymentMethod: PaymentMethod
+  paymentMethod?: PaymentMethod
   refunded?: boolean
 }>()
 
@@ -18,27 +18,27 @@ const { formatCrypto } = useCurrencyFormatter()
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full gap-y-2">
+  <div class="w-full flex flex-col justify-center items-center gap-y-2">
     <div v-if="slots.invoiced" class="flex mb-1 rounded-full">
-      <div class="pl-3 pr-2 py-1.5 text-space/40 border-2 border-space/15 rounded-s-full flex items-center">
+      <div class="border-space/15 text-space/40 flex items-center py-1.5 pr-2 pl-3 rounded-s-full border-2">
         <InvoiceIcon />
       </div>
-      <div class="pl-2 pr-3 py-1.5 text-lg leading-none font-semibold text-space/60 border-t-2 border-r-2 border-b-2 rounded-e-full border-space/15 flex items-center">
+      <div class="border-space/15 text-space/60 flex items-center py-1.5 pr-3 pl-2 text-lg font-semibold leading-none rounded-e-full border-t-2 border-r-2 border-b-2">
         <slot name="invoiced" />
       </div>
     </div>
 
-    <span class="text-center uppercase flex items-center gap-2">
+    <span class="flex items-center gap-2 text-center uppercase">
       <span class="text-5xl" :class="{ 'line-through': refunded }">{{ fiatFormatted }}</span>
       <slot name="amount-after" />
     </span>
 
-    <div class="flex items-center justify-center gap-x-2.5 text-lg leading-8 font-semibold text-space/60" :class="{ 'line-through': refunded }">
+    <div class="text-space/60 flex justify-center items-center gap-x-2.5 text-lg font-semibold leading-8" :class="{ 'line-through': refunded }">
       <span v-if="slots.fee">
         <slot name="fee" />
       </span>
 
-      <div v-if="slots.fee" class="w-1 h-1 rounded-full bg-space/50" />
+      <div v-if="slots.fee" class="bg-space/50 w-1 h-1 rounded-full" />
 
       <span v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-center">
         <CryptoCityLogo class="h-4 mr-1" />

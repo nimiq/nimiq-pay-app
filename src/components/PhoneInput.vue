@@ -108,9 +108,9 @@ async function openModal() {
 </script>
 
 <template>
-  <div class="flex flex-col self-start w-full h-full mt-8">
-    <div class="relative grid grid-cols-[auto_0px_1fr] items-center w-full gap-x-4 border-2 border-space-space-200 rounded-lg p-4" :class="{ 'border-sky-sky-400': isFocussed }">
-      <button aria-label="select calling code" class="text-base text-space/60" @click="openModal">
+  <div class="w-full h-full flex flex-col self-start mt-8">
+    <div class="border-space-space-200 grid-cols-[auto_0px_1fr] w-full relative grid items-center gap-x-4 p-4 rounded-lg border-2" :class="{ 'border-sky-sky-400': isFocussed }">
+      <button aria-label="select calling code" class="text-space/60 text-base" @click="openModal">
         +{{ selectedCountry.callingCode }}
       </button>
       <div class="h-[calc(100%+32px)] w-0 border border-space-space-200" :class="{ 'border-sky-sky-400': isFocussed }" />
@@ -124,21 +124,21 @@ async function openModal() {
         @blur="isFocussed = false"
       >
     </div>
-    <p class="mt-1 text-sm font-semibold text-center text-space/50">
+    <p class="text-space/50 mt-1 text-sm font-semibold text-center">
       {{ $t('Standard rates may apply.') }}
     </p>
     <Transition name="slide-fade">
-      <p v-if="showCountdown" class="mt-4 text-sm font-semibold text-center text-space/80">
+      <p v-if="showCountdown" class="text-space/80 mt-4 text-sm font-semibold text-center">
         {{ $t('You can try again in {remainingTime}', { remainingTime: nextRequestIn }) }}
       </p>
     </Transition>
     <Transition name="slide-fade">
-      <p v-if="errorMessage" class="mx-auto mt-8 text-center text-pumpkin">
+      <p v-if="errorMessage" class="text-pumpkin mx-auto mt-8 text-center">
         {{ errorMessage }}
       </p>
     </Transition>
-    <div class="flex flex-col justify-center w-full pb-2 mt-auto">
-      <p class="mb-5 text-sm font-semibold text-center text-space/50">
+    <div class="mt-auto w-full flex flex-col justify-center pb-2">
+      <p class="text-space/50 mb-5 text-sm font-semibold text-center">
         {{ $t('By tapping “verify”, you agree to our data management practices.') }}
         <!-- Disable dismiss modal to allow the user to scroll through the text without closing the modal -->
         <a

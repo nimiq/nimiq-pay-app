@@ -41,11 +41,24 @@ export function useStringParser() {
     return { data: maybeCashlink, error: undefined }
   }
 
+  function isPaymentRequest(content: string): boolean {
+    try {
+      return isLightningInvoice(content) || getRailFromUrl(new URL(content)) !== undefined
+    }
+    catch {
+      return false
+    }
+  }
+
+  function isLightningInvoice(content: string): boolean {
+    return content.toLowerCase().startsWith(isDev ? 'lntb' : 'lnbc') || content.toLowerCase().startsWith('lnurl')
+  }
+
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
   async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
     // Add a protocol to Bitcoin Lightning invoices if it's missing, to pass URL parsing
-    if (content.toLowerCase().startsWith(isDev ? 'lntb' : 'lnbc') || content.toLowerCase().startsWith('lnurl'))
+    if (isLightningInvoice(content))
       content = `lightning:${content}`
 
     let url: URL
@@ -261,5 +274,7 @@ export function useStringParser() {
     getNimAddress,
     getPaymentRequestData,
     getCashlink,
+    isPaymentRequest,
+    isLightningInvoice,
   }
 }

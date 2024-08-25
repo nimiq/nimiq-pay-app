@@ -46,6 +46,7 @@ export type FlowInit = (options?: FlowInitOptions) => Promise<Flow>
 
 export enum StepName {
   EnableBiometric = 'enableBiometric',
+  PaymentRequestManualInput = 'paymentRequestManualInput',
   PromoCode = 'promoCode',
   PinCode = 'pinCode',
   PinCodeConfirm = 'pinCodeConfirm',
@@ -73,7 +74,7 @@ export enum StepName {
   ValidateWords = 'validateWords',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -95,6 +96,7 @@ export interface State {
   [StepName.PhoneNumberConfirm]: string
   [StepName.RecoveryWordsStep]: string[]
   [StepName.QRCodeScanner]: PaymentRequestData | string
+  [StepName.PaymentRequestManualInput]: PaymentRequestData | string
   [StepName.PaymentPreview]: PaymentMethod
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string

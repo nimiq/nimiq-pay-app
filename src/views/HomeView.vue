@@ -3,34 +3,38 @@ import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIc
 import { chevronForward } from 'ionicons/icons'
 import { type Ref, computed, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
+import { Clipboard } from '@capacitor/clipboard'
 import { Browser } from '@capacitor/browser'
 import { storeToRefs } from 'pinia'
-import { computedAsync, until } from '@vueuse/core'
-import { i18n } from '@/i18n/i18n-setup'
+import { computedAsync, until, useElementSize, useSwipe } from '@vueuse/core'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { App } from '@capacitor/app'
+import InfoIcon from '@/components/icons/info.vue'
+import { Modal, useModal } from '@/composables/useModal'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import MenuIcon from '@/components/icons/menu.vue'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { usePoints } from '@/stores/points'
 import { useTransactions } from '@/stores/transactions'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { Modal, useModal } from '@/composables/useModal'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { useSync } from '@/composables/useSync'
-import InfoIcon from '@/components/icons/info.vue'
-import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import MenuIcon from '@/components/icons/menu.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import QuickButton from '@/components/QuickButton.vue'
 
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import BackupNotification from '@/components/BackupNotification.vue'
+import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
 import { FlowName } from '@/lib/flows/steps.types'
 import { initializeFlow } from '@/lib/flows'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { toCoins } from '@/composables/usePrice'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
+import { i18n } from '@/i18n/i18n-setup'
 
 const logger = useLogger('HomeView')
 
@@ -39,7 +43,7 @@ const { showModal } = useModal()
 
 const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive, remoteHeight } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, referralCode, hasDoneBackup } = storeToRefs(useApp())
+const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
@@ -48,9 +52,41 @@ const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { nodesAreSynced, isTransactionPending, isUpdatingTransactions } = useSync()
 
+const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
+const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
+const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value)
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
+
+// Payment Request Notification
+const prNotificationRef = ref<HTMLDivElement | null>(null)
+const detectedPaymentRequest = ref<string | null>('')
+const { lengthX, isSwiping } = useSwipe(prNotificationRef, {
+  threshold: 10,
+  onSwipe: () => {
+    if (lengthX.value > 0) {
+      const distance = Math.abs(lengthX.value)
+      prNotificationRef.value!.style.left = `-${distance}px`
+      prNotificationRef.value!.style.opacity = `${1.25 - distance / prNotificationRef.value!.clientWidth}`
+    }
+    else {
+      prNotificationRef.value!.style.left = '0'
+      prNotificationRef.value!.style.opacity = '1'
+    }
+  },
+  onSwipeEnd() {
+    if (lengthX.value > 0 && (Math.abs(lengthX.value) / prNotificationRef.value!.clientWidth) >= 0.5) {
+      prNotificationRef.value!.style.left = '-100%'
+      prNotificationRef.value!.style.opacity = '0'
+      detectedPaymentRequest.value = null
+    }
+    else {
+      prNotificationRef.value!.style.left = '0'
+      prNotificationRef.value!.style.opacity = '1'
+    }
+  },
+})
 
 const referralInfo = computedAsync(async () => {
   const { data, error } = await getReferralInfo()
@@ -132,6 +168,34 @@ watch([referralCode, phoneNumberVerified], () => {
   }
 }, { immediate: true })
 
+async function detectPaymentRequest() {
+  try {
+    const { type, value: pr } = await Clipboard.read()
+    if (type === 'text/plain' && pr) {
+      if (displayedPaymentRequests.value.includes(pr))
+        return
+      const { useStringParser } = await import('@/composables/useStringParser')
+      const { isPaymentRequest, getPaymentRequestData } = useStringParser()
+      if (isPaymentRequest(pr)) {
+        // Invoice could be expired, so we don't want to show the notification if it's invalid
+        const { error } = await getPaymentRequestData(pr)
+        if (!error) {
+          detectedPaymentRequest.value = pr
+          displayedPaymentRequests.value.push(pr)
+          await until(isPaymentDisabled).toBe(false)
+          // Wait for the animation to start before vibrating
+          // It feels weird if the vibration happens before the notification is even shown
+          await sleep(100)
+          Haptics.impact({ style: ImpactStyle.Light })
+        }
+      }
+    }
+  }
+  catch (error) {
+    logger.error('Error reading clipboard:', error)
+  }
+}
+
 onMounted(async () => {
   if (!dbExists.value) {
     logger.log('No DB found, redirecting to setup')
@@ -152,8 +216,11 @@ onMounted(async () => {
 
   scrollToFirstNotification()
   useNotifications().init()
-  await useSync().syncWallets()
+  useSync().syncWallets()
+  detectPaymentRequest()
 })
+
+App.addListener('resume', detectPaymentRequest)
 </script>
 
 <template>
@@ -163,7 +230,7 @@ onMounted(async () => {
       <IonToolbar class="px-2">
         <IonButtons slot="start">
           <IonButton @click="showModal(Modal.Menu, { isSmall: true })">
-            <MenuIcon class="w-7 h-5 opacity-30" />
+            <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>
         </IonButtons>
         <IonButtons slot="end">
@@ -198,7 +265,7 @@ onMounted(async () => {
       </QuickButton>
 
       <!-- TODO: replace with an html grid -->
-      <IonGrid class="flex flex-col gap-y-2 mt-10">
+      <IonGrid class="flex flex-col mt-10 gap-y-2">
         <!-- Notification Horizontal Scroll -->
         <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
           <ul
@@ -223,7 +290,7 @@ onMounted(async () => {
             @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
             @close="isReferralCardShown = false"
           >
-            <span class="text-pumpkin text-lg">
+            <span class="text-lg text-pumpkin">
               {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
             </span>
           </NotificationCard>
@@ -236,7 +303,7 @@ onMounted(async () => {
           </p>
         </IonRow>
         <IonRow>
-          <a class="w-full h-80 mt-2 bg-white rounded-lg">
+          <a class="w-full mt-2 bg-white rounded-lg h-80">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
             <iframe class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups" src="https://map.nimiq.com/?layout=compact"></iframe>
           </a>
@@ -253,19 +320,31 @@ onMounted(async () => {
       </IonGrid>
     </IonContent>
 
+    <Transition name="slide-left" style="--slide-left-distance: 100vw">
+      <div
+        v-if="detectedPaymentRequest && !isPaymentDisabled"
+        ref="prNotificationRef"
+        class="absolute left-0 w-full px-2 py-3"
+        :class="{ 'transition-all': !isSwiping }"
+        :style="{ bottom: `${footerHeight}px` }"
+      >
+        <PaymentRequestDetectedNotification :invoice="detectedPaymentRequest" @on-continue="detectedPaymentRequest = null" />
+      </div>
+    </Transition>
+
     <!-- Footer -->
-    <IonFooter>
+    <IonFooter ref="footerRef">
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="bg-pumpkin/15 flex justify-center items-center gap-2 p-2">
+          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
-            <p class="text-pumpkin font-medium text-center">
+            <p class="font-medium text-center text-pumpkin">
               {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
             </p>
           </div>
-          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="bg-pumpkin/15 flex justify-center items-center gap-2 p-2">
+          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
-            <p class="text-pumpkin font-medium text-center">
+            <p class="font-medium text-center text-pumpkin">
               {{ $tc(
                 'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
                 blocksUntilHtlcActive,
@@ -275,8 +354,8 @@ onMounted(async () => {
           </div>
         </Transition>
         <IonButton
-          class="mx-auto w-3/4 py-2 text-base" expand="block"
-          :disabled="pointsBalance === 0 && (!(isRemoteOk && isHtlcActive) || consensus !== 'established' || remoteBalance === 0) || !nodesAreSynced"
+          class="w-3/4 py-2 mx-auto text-base" expand="block"
+          :disabled="isPaymentDisabled"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >
           {{ $t('Pay') }}

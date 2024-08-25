@@ -198,7 +198,7 @@ watch(errorMessage, (value) => {
   </div>
 
   <div class="flex flex-col justify-center w-full pb-6">
-    <IonButton id="present-alert" size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
+    <IonButton size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
       <Transition
         mode="out-in"
         name="slide-fade"

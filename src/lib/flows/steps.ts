@@ -27,6 +27,7 @@ const BackupIntroduction = defineAsyncComponent(() => import('@/components/Backu
 const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'))
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
 const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
+const PaymentRequestManualInput = defineAsyncComponent(() => import('@/components/PaymentRequestManualInput.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -320,7 +321,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
     main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
-    async beforeRender(state, { next }) {
+    async beforeRender(state, { navigateTo }) {
       const { qrCodeScanner } = state
       // If it's a string, assume that it's a payment request
       if (qrCodeScanner && typeof qrCodeScanner === 'string') {
@@ -328,18 +329,36 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
         const { data, error } = await getPaymentRequestData(qrCodeScanner)
         if (error || !data)
           // We don't throw an error here, as we don't want to stop the flow. Let the user scan the QR code again.
-          return console.error('Error parsing QR code when opening from appUrlOpen', error)
+          return console.error('Error parsing QR code/invoice when opening from appUrlOpen/detected invoice:', error)
         state[StepName.QRCodeScanner] = data
-        next()
+        navigateTo({ step: StepName.PaymentPreview })
       }
     },
-    beforeNext: async (_, { next, prev }) => {
-      if (options?.props?.expect === QRDataFormat.PaymentRequest)
+    beforeNext: async (state, { next, prev, navigateTo }) => {
+      if (options?.props?.expect === QRDataFormat.PaymentRequest) {
+        if (state.qrCodeScanner === undefined)
+          navigateTo({ step: StepName.PaymentRequestManualInput })
+        else
+          navigateTo({ step: StepName.PaymentPreview })
+      }
+      else if (options?.props?.expect === QRDataFormat.NimCashlink) {
         next()
-      else if (options?.props?.expect === QRDataFormat.NimCashlink)
-        next()
-      else // For Top-Up and Withdrawal, we go back to the previous step
+      }
+      else { // For Top-Up and Withdrawal, we go back to the previous step
         prev()
+      }
+    },
+  } satisfies Step
+}
+
+export const paymentRequestManualInputStep: StepInit = async () => {
+  return {
+    step: StepName.PaymentRequestManualInput,
+    get title() { return i18n.t('Enter payment request') },
+    main: markRaw(PaymentRequestManualInput),
+    beforeNext: async (state, { next }) => {
+      state.qrCodeScanner = state.paymentRequestManualInput
+      next()
     },
   } satisfies Step
 }

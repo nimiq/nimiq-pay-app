@@ -65,6 +65,8 @@ export const useApp = defineStore('app', () => {
   const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
   const isBiometricEnabled = useStorageAsync('isBiometricEnabled', false, kvPreferences())
+  // TODO: maybe clean this from time to time?
+  const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -150,5 +152,6 @@ export const useApp = defineStore('app', () => {
     pushNotificationsStatus,
     closedNotifications,
     isBiometricEnabled,
+    displayedPaymentRequests,
   }
 })
