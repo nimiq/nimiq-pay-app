@@ -5,7 +5,6 @@ import { App } from '@capacitor/app'
 import { bugOutline } from 'ionicons/icons'
 import { RouterView } from 'vue-router'
 import { StatusBar, Style } from '@capacitor/status-bar'
-
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { onMounted } from 'vue'
 import { until } from '@vueuse/core'
@@ -36,6 +35,7 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   await until(useDecrypt().decrypted).toBeTruthy()
   // Detect if the app was open with the lightning scheme
   const url = new URL(event.url)
+  // TODO: accept also nimiq: scheme?
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
     initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: url.toString() })

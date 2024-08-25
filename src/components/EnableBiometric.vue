@@ -31,7 +31,7 @@ onBeforeUnmount(removeBiometricResumeListener)
       {{ errorMsg }}
     </p>
     <div class="w-full flex flex-col justify-center pb-2 mt-8">
-      <IonButton id="present-alert" size="small" class="text-base font-bold" :disabled="!isBiometricSupported" @click="$emit('done')">
+      <IonButton size="small" class="text-base font-bold" :disabled="!isBiometricSupported" @click="$emit('done')">
         {{ isIOS ? $t('Enable Touch ID/Face ID') : $t('Enable Fingerprint') }}
       </IonButton>
       <IonButton fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">

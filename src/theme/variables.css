@@ -102,6 +102,8 @@
   --radial-gradient-light-blue: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%);
   --radial-gradient-green: radial-gradient(100% 100% at 100% 100%, #41A38E 0%, #21BCA5 100%);
   --radial-gradient-orange: radial-gradient(100% 100% at 100% 100%, #FD6216 0%, #FC8701 100%);
+
+  --slide-left-distance: 200px;
 }
 
 /* Transitions */
@@ -118,6 +120,15 @@
 
 .slide-fade-leave-to, .slide-fade-enter-from {
   transform: translateY(20px);
+  opacity: 0;
+}
+
+.slide-left-enter-active, .slide-left-leave-active {
+  transition: all 0.5s cubic-bezier(0.5, 0, 0.15, 1);
+}
+
+.slide-left-leave-to, .slide-left-enter-from {
+  transform: translateX(var(--slide-left-distance));
   opacity: 0;
 }
 

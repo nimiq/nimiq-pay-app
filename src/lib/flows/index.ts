@@ -158,13 +158,14 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
 
 const nimOrPointsPaymentFlow: FlowInit = async () => {
   const [
-    { paymentPreviewStep, qrCodeScannerStep, pinCodeStep },
+    { paymentPreviewStep, qrCodeScannerStep, pinCodeStep, paymentRequestManualInputStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
 
   const flowName = FlowName.NimOrPointsPayment
   const steps = (await Promise.all([
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.PaymentRequest } }),
+    paymentRequestManualInputStep,
     paymentPreviewStep,
     pinCodeStep,
   ].map(s => s({ flowName }))))
