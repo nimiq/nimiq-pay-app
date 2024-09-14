@@ -211,6 +211,14 @@ msgstr ""
 msgid "Enter Address"
 msgstr "Ingresar dirección"
 
+msgid "Enter manually"
+msgstr ""
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Enter payment request"
+msgstr "No es una solicitud de pago pendiente"
+
 msgid "Enter PIN"
 msgstr "Ingresar PIN"
 
@@ -526,6 +534,9 @@ msgstr "Abrir Billetera"
 msgid "Pay"
 msgstr "Pagar"
 
+msgid "PAY"
+msgstr ""
+
 msgid "Pay with Bluecode"
 msgstr "Pagar con Bluecode"
 
@@ -558,6 +569,11 @@ msgstr "El pago está siendo procesado"
 
 msgid "Payment preview"
 msgstr "Prevista del pago"
+
+#, fuzzy
+#| msgid "Payment Secret"
+msgid "Payment Request"
+msgstr "Secreto de Pago"
 
 msgid "Payment Secret"
 msgstr "Secreto de Pago"
