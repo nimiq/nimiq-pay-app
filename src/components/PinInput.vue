@@ -110,14 +110,14 @@ onBeforeUnmount(removeBiometricResumeListener)
 </script>
 
 <template>
-  <div class="my-auto w-full relative">
+  <div class="my-auto w-full relative flex items-center justify-center">
     <Transition name="slide-fade" mode="out-in">
       <LoadingSpinner
-        v-if="isLoading" class="m-auto text-space w-8 h-8"
+        v-if="isLoading" class="text-space w-8 h-8"
       />
       <div
         v-else
-        class="mx-auto flex justify-center gap-x-8 px-2 py-4" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()"
+        class="flex justify-center gap-x-8 px-2 py-4" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()"
       >
         <div
           v-for="i in inputLength" :key="i"
