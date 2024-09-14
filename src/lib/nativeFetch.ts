@@ -17,8 +17,8 @@ export async function nativeFetch(url: URL | RequestInfo, options?: RequestInit)
     useLogger('nativeFetch').error(`Failed to fetch ${url}: ${JSON.stringify({ request, response })}`)
   }
 
-  return Response.json(response.data, {
-    headers: response.headers,
+  return new Response(JSON.stringify(response.data), {
+    headers: { 'Content-Type': 'application/json', ...response.headers },
     status: response.status,
   })
 }
