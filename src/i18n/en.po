@@ -188,7 +188,7 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:26
+#: src/components/TransactionDetails.vue:54
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -768,6 +768,8 @@ msgstr ""
 msgid "Payment was refunded"
 msgstr ""
 
+#: src/components/TransactionDetails.vue:28
+#: src/components/TransactionItem.vue:11
 #: src/types/transactions.ts:128
 msgid "Pending"
 msgstr ""
@@ -1051,11 +1053,6 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:28
-#: src/components/TransactionItem.vue:11
-msgid "Swap pending"
-msgstr ""
-
 #: src/stores/nimiq-network.ts:179
 msgid "Syncing with network."
 msgstr ""
@@ -1106,6 +1103,18 @@ msgstr ""
 
 #: src/composables/usePointsPayment.ts:46
 msgid "This payment is not eligible for receiving or paying with Points."
+msgstr ""
+
+#: src/components/TransactionDetails.vue:64
+msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
+msgstr ""
+
+#: src/components/TransactionDetails.vue:38
+msgid "This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days"
+msgstr ""
+
+#: src/components/TransactionDetails.vue:41
+msgid "This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
 #: src/components/GenericInput.vue:34

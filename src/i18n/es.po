@@ -781,9 +781,6 @@ msgstr "Estado"
 msgid "Submit"
 msgstr "Enviar"
 
-msgid "Swap pending"
-msgstr "Intercambio pendiente"
-
 msgid "Syncing with network."
 msgstr "Sincronizando con la red."
 
@@ -822,6 +819,15 @@ msgstr "Este comerciante no está registrado para recibir pagos con Puntos."
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Este pago no es elegible para recibir o pagar con Puntos."
+
+msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
+msgstr ""
+
+msgid "This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days"
+msgstr ""
+
+msgid "This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours"
+msgstr ""
 
 msgid "This promo code has been claimed too many times"
 msgstr "Este código promocional ha sido reclamado demasiadas veces"
@@ -1018,6 +1024,9 @@ msgstr "Tu número"
 
 msgid "Your wallet is ready to use"
 msgstr "Tu billetera está lista para usar"
+
+#~ msgid "Swap pending"
+#~ msgstr "Intercambio pendiente"
 
 #~ msgid "Get cashback and earn rewards"
 #~ msgstr "Recibe cashback y gana recompensas"

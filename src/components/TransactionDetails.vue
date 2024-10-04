@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { type PropType, computed, ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
 import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
@@ -8,16 +10,42 @@ import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
+const { consensus, height } = storeToRefs(useNimiqNetwork())
+const { crypto, fiat } = usePrice(props.tx.amount, { timestamp: props.tx.timestamp })
+const { setToast } = useToast()
+const { query } = useConn()
+
 const datetime = computed(() => props.tx.timestamp ? useFormatTime(props.tx.timestamp) : '')
+const isSwapPending = computed(() => props.tx.transfer === Transfer.UserPaymentToAtomicSwap && !props.tx.meta?.secret && !props.tx.meta?.refunded && !props.tx.meta?.imported)
+const swapTimeoutBlock = computedAsync(async () => {
+  if (isSwapPending.value) {
+    const timeoutBlock = await query<number>(SQLQuery.GetSwapTimeoutBlock, [props.tx.recipient], { single: true })
+    return timeoutBlock
+  }
+})
+const timeUntilTimeout = computed(() => {
+  if (swapTimeoutBlock.value && consensus.value === 'established' && height.value > 0) {
+    // TODO: this is only correct for Nimiq 1.0, for Nimiq 2.0 we need to use a different block time
+    const hours = Math.max(Math.ceil((swapTimeoutBlock.value - height.value) / 60), 1)
+    if (hours > 48) {
+      const days = Math.floor(hours / 24)
+      return i18n.tc('This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days', days, { days })
+    }
+    else {
+      return i18n.tc('This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours', hours, { hours })
+    }
+  }
+  return null
+})
 // TODO: Get the map info from crypto map API
 // const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
 const showMap = ref(false)
-
-const { crypto, fiat } = usePrice(props.tx.amount, { timestamp: props.tx.timestamp })
-const { setToast } = useToast()
 
 async function handleCopy(string: string) {
   await Clipboard.write({
@@ -38,7 +66,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full gap-10 mt-8">
+  <div class="flex flex-col w-full h-full gap-10 py-8">
     <TransactionAmounts
       :crypto-total="crypto.totalUnits"
       :fiat-formatted="fiat.formatted"
@@ -63,7 +91,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
     >
       <div>{{ $t('Status') }}</div>
       <div class="capitalize" @click="() => handleCopy(tx.hash)">
-        <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported">
+        <template v-if="isSwapPending">
           {{ $t('Pending') }}
         </template>
         <template v-else-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
@@ -97,6 +125,11 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       </div>
 
       <!-- TODO Add the geo location name -->
+    </div>
+    <div v-if="isSwapPending" class="text-pumpkin mt-auto text-center">
+      {{
+        timeUntilTimeout || $t('This pending transaction will automatically be refunded if it is not completed before the time limit')
+      }}
     </div>
   </div>
 </template>

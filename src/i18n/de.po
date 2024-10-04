@@ -775,9 +775,6 @@ msgstr "Status"
 msgid "Submit"
 msgstr "Abschicken"
 
-msgid "Swap pending"
-msgstr "Tausch wird ausgeführt"
-
 msgid "Syncing with network."
 msgstr "Synchronisiere mit dem Netzwerk."
 
@@ -816,6 +813,15 @@ msgstr "Dieser Händler ist nicht registriert, um Punkte-Zahlungen entgegenzuneh
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Bei dieser Zahlung kannst du weder Kryptostadt-Punkte erhalten noch einsetzen."
+
+msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
+msgstr ""
+
+msgid "This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days"
+msgstr ""
+
+msgid "This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours"
+msgstr ""
 
 msgid "This promo code has been claimed too many times"
 msgstr "Dieser Promo-Code wurde zu oft eingelöst"
@@ -1014,6 +1020,9 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#~ msgid "Swap pending"
+#~ msgstr "Tausch wird ausgeführt"
 
 #~ msgid "Get cashback and earn rewards"
 #~ msgstr "Erhalte Cashback und Boni"
