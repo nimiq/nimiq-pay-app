@@ -25,7 +25,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Client>()
   const consensus = ref<ConsensusState>('connecting')
   const head = ref<PlainBlock>()
-  const height = computed(() => head.value?.height || -1)
+  const height = computed<number>(() => head.value?.height || -1)
   const peerCount = ref(0)
   const networkName = ref('')
 
