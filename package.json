@@ -88,7 +88,7 @@
     "jeep-sqlite": "2.5.6",
     "jsdom": "^24.1.0",
     "postcss": "^8.4.39",
-    "release-it": "^17.5.0",
+    "release-it": "^17.7.0",
     "tailwindcss": "^3.4.4",
     "tailwindcss-nimiq-theme": "^0.2.2",
     "terser": "^5.31.2",
