@@ -13,11 +13,13 @@ const logger = useLogger('PaymentRequestManualInput')
 
 const { textarea, input: invoice } = useTextareaAutosize()
 const isFocused = ref(false)
+const paymentRequestError = ref<string | null>(null)
 
 const payment = computedAsync(async () => {
   const { data, error } = await useStringParser().getPaymentRequestData(invoice.value)
   if (error) {
     logger.error(error)
+    paymentRequestError.value = error
     return null
   }
   return data
@@ -60,6 +62,12 @@ function handleContinue() {
       <IonButton v-if="payment && !isFocused" expand="block" class="w-full mt-auto text-base font-bold" @click="handleContinue">
         {{ $t('Continue and Pay') }}
       </IonButton>
+    </Transition>
+
+    <Transition name="slide-fade">
+      <p v-if="payment === null" class="text-pumpkin">
+        {{ paymentRequestError || $t('Unknown error processing payment request') }}
+      </p>
     </Transition>
   </div>
 </template>
