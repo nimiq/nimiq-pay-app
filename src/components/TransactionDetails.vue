@@ -64,7 +64,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
       <div>{{ $t('Status') }}</div>
       <div class="capitalize" @click="() => handleCopy(tx.hash)">
         <template v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported">
-          {{ $t('Swap pending') }}
+          {{ $t('Pending') }}
         </template>
         <template v-else-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
           {{ $t('Refunded') }}
