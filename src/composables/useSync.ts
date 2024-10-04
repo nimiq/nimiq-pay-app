@@ -470,7 +470,8 @@ export function _useSync() {
       // If tx is confirmed, we can guarantee that the status and timestamp in the db are correct
       // so we don't need to check it and that prevents us from making an unnecessary request to the blockchain
       // that can get us rate limited
-      if (dbTx.status === Nimiq.Client.TransactionState.CONFIRMED)
+      // In the case of a swap, the tx timestamp is undefined, so we need to check the blockchain
+      if (dbTx.status === Nimiq.Client.TransactionState.CONFIRMED && dbTx.timestamp)
         return
 
       if (dbTx.hash.includes(PointsHashPrefix)) {
