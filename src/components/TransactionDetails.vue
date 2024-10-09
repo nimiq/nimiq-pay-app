@@ -35,10 +35,10 @@ const timeUntilTimeout = computed(() => {
     const hours = Math.max(Math.ceil((swapTimeoutBlock.value - height.value) / 60), 1)
     if (hours > 48) {
       const days = Math.floor(hours / 24)
-      return i18n.tc('This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days', days, { days })
+      return i18n.tc('This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days', days, { days })
     }
     else {
-      return i18n.tc('This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours', hours, { hours })
+      return i18n.tc('This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours', hours, { hours })
     }
   }
   return null
