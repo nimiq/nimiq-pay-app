@@ -28,13 +28,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:109
-#: src/stores/nimiq-network.ts:141
-#: src/stores/nimiq-network.ts:159
+#: src/stores/nimiq-network.ts:121
+#: src/stores/nimiq-network.ts:153
+#: src/stores/nimiq-network.ts:171
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:150
+#: src/stores/nimiq-network.ts:162
 msgid "Addresses missing"
 msgstr ""
 
@@ -137,7 +137,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:111
+#: src/stores/nimiq-network.ts:123
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -175,11 +175,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:180
+#: src/stores/nimiq-network.ts:192
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:178
+#: src/stores/nimiq-network.ts:190
 msgid "Consensus established."
 msgstr ""
 
@@ -600,7 +600,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:52
+#: src/stores/nimiq-network.ts:60
 msgid "Network consensus lost."
 msgstr ""
 
@@ -612,7 +612,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:144
+#: src/stores/nimiq-network.ts:156
 msgid "No account found"
 msgstr ""
 
@@ -624,11 +624,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:153
+#: src/stores/nimiq-network.ts:165
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:100
+#: src/stores/nimiq-network.ts:112
 msgid "No Cashlink found"
 msgstr ""
 
@@ -658,7 +658,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:162
+#: src/stores/nimiq-network.ts:174
 msgid "No transactions found"
 msgstr ""
 
@@ -1053,7 +1053,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:179
+#: src/stores/nimiq-network.ts:191
 msgid "Syncing with network."
 msgstr ""
 
@@ -1110,11 +1110,11 @@ msgid "This pending transaction will automatically be refunded if it is not comp
 msgstr ""
 
 #: src/components/TransactionDetails.vue:38
-msgid "This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days"
+msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:41
-msgid "This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours"
+msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
 #: src/components/GenericInput.vue:34
@@ -1154,7 +1154,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:67
+#: src/stores/nimiq-network.ts:79
 msgid "Trying to establish network consensus:"
 msgstr ""
 

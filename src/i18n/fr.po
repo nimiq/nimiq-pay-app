@@ -822,10 +822,10 @@ msgstr "Ce paiement n'est pas éligible pour recevoir ou payer avec des points."
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-msgid "This pending transaction will automatically be refunded if it is not completed within the next day | This pending transaction will automatically be refunded if it is not completed within the next {days} days"
+msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-msgid "This pending transaction will automatically be refunded if it is not completed within the next hour | This pending transaction will automatically be refunded if it is not completed within the next {hours} hours"
+msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
 msgid "This promo code has been claimed too many times"
