@@ -57,7 +57,7 @@ const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value)
 const isReferralCardShown = ref(true)
-const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && remoteBalance.value > 0)
+const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
 
 // Payment Request Notification
 const prNotificationRef = ref<HTMLDivElement | null>(null)
