@@ -403,40 +403,43 @@ export function _useSync() {
     }
 
     // Check for transactions made from the remote signers
-    for (const remoteSigner of remoteSigners) {
-      const accountTxs = await getAccountTransactions(remoteSigner.address)
-      const txsToProcess = accountTxs.data
+    if (remoteSigners && remoteSigners.length) {
+      for (const remoteSigner of remoteSigners) {
+        const accountTxs = await getAccountTransactions(remoteSigner.address)
+        const txsToProcess = accountTxs.data
         // Only transactions sent from the remote signer to other addresses
-        .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value))
+          .filter(tx => tx.sender.equals(remoteSigner.address) && !tx.recipient.equals(localAddress.value))
         // Only transactions not already in the db
-        .filter((tx) => {
-          const hash = tx.transactionHash.toHex()
-          for (const dbTx of allTransactions) {
+          .filter((tx) => {
+            const hash = tx.transactionHash.toHex()
+            for (const dbTx of allTransactions) {
             // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
-            if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
-              break
-            // If the tx is already known, do not process it further
-            if (dbTx.hash === hash)
-              return false
-          }
-          return true
-        })
+              if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
+                break
+              // If the tx is already known, do not process it further
+              if (dbTx.hash === hash)
+                return false
+            }
+            return true
+          })
 
-      const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
+        const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
 
-      await Promise.all(htlcExtensionTxs.map(async (tx) => {
-        const txs = await getAllOutgoingTransactionsFromHtlcs(tx.recipient)
-        const categorized = categorizeTransactions(txs)
-        htlcSwapTxs.concat(categorized.htlcSwapTxs)
-        withdrawalTxs.concat(categorized.withdrawalTxs)
-        unknownTxs.concat(categorized.unknownTxs)
-      }))
-      await Promise.all([
-        htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
-        withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
-        unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
-      ].flat())
+        await Promise.all(htlcExtensionTxs.map(async (tx) => {
+          const txs = await getAllOutgoingTransactionsFromHtlcs(tx.recipient)
+          const categorized = categorizeTransactions(txs)
+          htlcSwapTxs.concat(categorized.htlcSwapTxs)
+          withdrawalTxs.concat(categorized.withdrawalTxs)
+          unknownTxs.concat(categorized.unknownTxs)
+        }))
+        await Promise.all([
+          htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
+          withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
+          unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
+        ].flat())
+      }
     }
+
     isUpdatingTransactions.value = false
   }
 

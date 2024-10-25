@@ -103,6 +103,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     else
       await deactivateAllRemoteSigners()
     remoteSigner.value = signer
+    // Set the balance even when it's not confirmed to avoid the user to see the skeleton for a long time
+    // TODO: check if this is causing any issues like seeing the wrong balance
+    remoteBalance.value = signer?.balance || -1
   }
 
   async function updateActiveWallet() {
@@ -112,7 +115,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (error || !remoteSignerApi)
       return
     remoteSigner.value = remoteSignerApi
-    remoteBalance.value = remoteSignerApi.balance || 0
+    remoteBalance.value = remoteSignerApi.balance
     await _updateActiveWallet(remoteSignerApi)
   }
 
@@ -216,7 +219,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     client!.addHeadChangedListener(async () => {
       // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
       // Mainly for the case when the user recovers the wallet from the words
-      if (remoteBalance.value === 0 && height.value % 10 === 0)
+      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % 10 === 0)
         await updateRemoteFromApi()
     })
   }

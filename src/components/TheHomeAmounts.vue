@@ -1,18 +1,28 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { IonSkeletonText } from '@ionic/vue'
+import { computed } from 'vue'
 import { usePrice } from '@/composables/usePrice'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import PriceChange from '@/components/PriceChange.vue'
+import { useSync } from '@/composables/useSync'
 
 const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
-
+const { nodesAreSynced } = useSync()
 const { fiat, crypto } = usePrice(balance)
+
+/**
+ * Show skeleton if:
+ *  - Balance is not set (fetching)
+ *  - The nodes are not synced (we don't know the balance yet)
+ *   - The HTLC is being created and the tx is not mined yet (balance -1)
+ */
+const showSkeleton = computed(() => balance.value < 0 || !nodesAreSynced.value)
 </script>
 
 <template>
   <div class="w-full flex flex-col items-center gap-y-8">
-    <div v-if="balance < 0" class="max-w-[80%] w-48 flex flex-col items-center gap-y-2">
+    <div v-if="showSkeleton" class="max-w-[80%] w-48 flex flex-col items-center gap-y-2">
       <IonSkeletonText animated class="w-full h-11" />
       <div class="w-full h-5 flex gap-x-4 px-2">
         <IonSkeletonText animated class="small w-3/5" />
