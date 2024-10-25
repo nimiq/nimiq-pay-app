@@ -1,7 +1,7 @@
 import type { Ref } from 'vue'
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { computedAsync, createSharedComposable, until } from '@vueuse/core'
+import { computedAsync, createSharedComposable, until, useTimeoutFn } from '@vueuse/core'
 import type { BasicAccount, ClientTransactionDetails, HashedTimeLockedContract } from '@nimiq/core-web'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
@@ -627,6 +627,21 @@ export function _useSync() {
   watch(localHeight, async (newHeight) => {
     if (newHeight > 1 && newHeight % 10 === 0)
       checkExpiredSwapHtlcs()
+  })
+
+  // Reconnect the network if the nodes are not synced after 2 minutes of waiting
+  const { isPending, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
+    useNimiqNetwork().reconnect()
+  }, 2 * 60 * 1e3) // 2 minutes
+  watch(nodesAreSynced, (synced) => {
+    if (synced && isPending.value) {
+      logger.log('Nodes are synced. Stopping reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPending.value })
+      stopReconnectNetwork()
+    }
+    else if (!synced && !isPending.value) {
+      logger.log('Nodes are not synced. Starting reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPending.value })
+      startReconnectNetwork()
+    }
   })
 
   return {
