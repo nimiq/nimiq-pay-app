@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { until } from '@vueuse/core'
+import { until, useTimeoutFn } from '@vueuse/core'
 import type { AsyncResult } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -41,10 +41,18 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     head.value = await client.value.getHeadBlock()
 
+    const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
+      useNimiqNetwork().reconnect()
+    }, 2 * 60 * 1e3) // 2 minutes
+
     client.value.addConsensusChangedListener((newConsensus) => {
       logger.log('Consensus:', newConsensus)
       if (newConsensus === 'established') {
         clearToast()
+        if (isPendingReconnectNetwork.value) {
+          logger.log('Consensus established, stopping reconnect')
+          stopReconnectNetwork()
+        }
       }
       // If consensus was established before, but now is not, show error toast
       else if (consensus.value === 'established') {
@@ -53,6 +61,10 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
           type: 'spinner',
           keepOpen: true,
         })
+        if (!isPendingReconnectNetwork.value) {
+          logger.log('Starting reconnect')
+          startReconnectNetwork()
+        }
       }
 
       consensus.value = newConsensus

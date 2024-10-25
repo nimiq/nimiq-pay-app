@@ -630,16 +630,16 @@ export function _useSync() {
   })
 
   // Reconnect the network if the nodes are not synced after 2 minutes of waiting
-  const { isPending, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
+  const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
     useNimiqNetwork().reconnect()
   }, 2 * 60 * 1e3) // 2 minutes
   watch(nodesAreSynced, (synced) => {
-    if (synced && isPending.value) {
-      logger.log('Nodes are synced. Stopping reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPending.value })
+    if (synced && isPendingReconnectNetwork.value) {
+      logger.log('Nodes are synced. Stopping reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPendingReconnectNetwork.value })
       stopReconnectNetwork()
     }
-    else if (!synced && !isPending.value) {
-      logger.log('Nodes are not synced. Starting reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPending.value })
+    else if (!synced && !isPendingReconnectNetwork.value) {
+      logger.log('Nodes are not synced. Starting reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPendingReconnectNetwork.value })
       startReconnectNetwork()
     }
   })
