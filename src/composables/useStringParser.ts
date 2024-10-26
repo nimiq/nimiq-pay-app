@@ -207,7 +207,7 @@ export function useStringParser() {
       ))
     }
     catch (e) {
-      logger.error(e)
+      logger.error('Error creating NIM/BTC_LN swap:', { error: e, amountBtc, decoded })
       return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
     }
 
