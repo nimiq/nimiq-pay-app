@@ -2,7 +2,7 @@ import type { Ref } from 'vue'
 import { computed, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { computedAsync, createSharedComposable, until, useTimeoutFn } from '@vueuse/core'
-import type { BasicAccount, ClientTransactionDetails, HashedTimeLockedContract } from '@nimiq/core-web'
+import type { BasicAccount, Client, ClientTransactionDetails, HashedTimeLockedContract } from '@nimiq/core-web'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { usePrice } from './usePrice'
@@ -42,7 +42,7 @@ export function _useSync() {
   // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
   const htlcCanBeExtended = computed(() => (end.value - (end.value - start.value) / 2) < (localHeight.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA))
 
-  const pendingTransactions: Ref<Nimiq.Client.TransactionDetails[]> = ref([])
+  const pendingTransactions: Ref<Client.TransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0)
 
   /**
@@ -246,6 +246,31 @@ export function _useSync() {
         proofSize: tx.proof.raw.length,
       })
     }, [localAddress.value])
+  }
+
+  async function updateSingleTransaction(hash: string) {
+    if (!hasLocalWallet.value)
+      return
+
+    await until(client).toBeTruthy()
+    await client.value?.waitForConsensusEstablished()
+
+    try {
+      const tx = await client.value?.getTransaction(hash)
+      if (!tx) {
+        logger.error(`Transaction not found: ${hash}`)
+        return
+      }
+      if (tx.state !== Nimiq.Client.TransactionState.PENDING && pendingTransactions.value.some(pendingTx => pendingTx.transactionHash.equals(tx.transactionHash))) {
+        logger.log(`Removing transaction ${tx.transactionHash.toHex()} from pending transactions`)
+        pendingTransactions.value = pendingTransactions.value.filter(pendingTx => !pendingTx.transactionHash.equals(tx.transactionHash))
+      }
+
+      updateTransactionStatus({ hash: tx.transactionHash.toHex(), status: tx.state, timestamp: tx.timestamp })
+    }
+    catch (error) {
+      logger.error(`Error while getting transaction: ${hash}`, error)
+    }
   }
 
   const isUpdatingTransactions = ref(false)
@@ -488,7 +513,7 @@ export function _useSync() {
           return
         }
 
-        const txStatus = data?.status as Nimiq.Client.TransactionState
+        const txStatus = data?.status as Client.TransactionState
         if (!txStatus) {
           logger.error('No status from CPL API')
           return
@@ -647,6 +672,7 @@ export function _useSync() {
   return {
     syncWallets,
     updateBalances,
+    updateSingleTransaction,
     updateTransactionHistory,
     pendingTransactions,
     isTransactionPending,
