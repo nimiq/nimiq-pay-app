@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { until, useTimeoutFn } from '@vueuse/core'
+import type { Account, Address, Block, Client, ClientTransactionDetails } from '@nimiq/core-web'
 import type { AsyncResult } from '@/types'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -22,9 +23,9 @@ export const CashlinkExtraDataHex = {
 }
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
-  const client = ref<Nimiq.Client>()
-  const consensus = ref<Nimiq.Client.ConsensusState>('connecting')
-  const head = ref<Nimiq.Block>()
+  const client = ref<Client>()
+  const consensus = ref<Client.ConsensusState>('connecting')
+  const head = ref<Block>()
   const height = computed<number>(() => head.value?.height || -1)
   const peerCount = ref(0)
   const networkName = ref('')
@@ -107,7 +108,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
-  async function claimCashlink(cashlink: string, address: Nimiq.Address) {
+  async function claimCashlink(cashlink: string, address: Address) {
     if (!cashlink)
       throw new Error(i18n.t('No Cashlink found'))
 
@@ -148,7 +149,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     await client.value!.sendTransaction(tx)
   }
 
-  async function getAccount(address: Nimiq.Address | undefined): AsyncResult<Nimiq.Account, string> {
+  async function getAccount(address: Address | undefined): AsyncResult<Account, string> {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
     const account = await client.value?.getAccount(address)
@@ -157,7 +158,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account, error: undefined }
   }
 
-  async function getAccounts(addressArray: Nimiq.Address[]): AsyncResult<Nimiq.Account[], string> {
+  async function getAccounts(addressArray: Address[]): AsyncResult<Account[], string> {
     if (addressArray.length === 0)
       return { data: undefined, error: i18n.t('Addresses missing') }
     const accounts = await client.value?.getAccounts(addressArray)
@@ -166,7 +167,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: accounts, error: undefined }
   }
 
-  async function getAccountTransactions(address: Nimiq.Address | undefined, limit?: number) {
+  async function getAccountTransactions(address: Address | undefined, limit?: number) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
     const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, limit)
@@ -175,7 +176,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: transactions, error: undefined }
   }
 
-  async function getBalance(address: Nimiq.Address) {
+  async function getBalance(address: Address) {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
     const account = await client.value?.getAccount(address)
@@ -184,9 +185,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: account.balance, error: undefined }
   }
 
-  function translateConsensus(consensusState: Nimiq.Client.ConsensusState) {
+  function translateConsensus(consensusState: Client.ConsensusState) {
     // Define translations as record such that ts warns us if a translation for a consensus state is missing
-    const consensusStateTranslations: Record<Nimiq.Client.ConsensusState, string> = {
+    const consensusStateTranslations: Record<Client.ConsensusState, string> = {
       established: i18n.t('Consensus established.'),
       syncing: i18n.t('Syncing with network.'),
       connecting: i18n.t('Connecting to network.'),
@@ -201,7 +202,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
    * @param htlcAddress
    * @returns Txs from HTLCs and extensions
    */
-  async function getAllOutgoingTransactionsFromHtlcs(htlcAddress: Nimiq.Address, txs: Nimiq.ClientTransactionDetails[] = []): Promise<Nimiq.ClientTransactionDetails[]> {
+  async function getAllOutgoingTransactionsFromHtlcs(htlcAddress: Address, txs: ClientTransactionDetails[] = []): Promise<ClientTransactionDetails[]> {
     try {
       const _txs = (await client.value?.getTransactionsByAddress(htlcAddress) || []).filter(tx => !tx.recipient.equals(htlcAddress))
       txs.push(..._txs)

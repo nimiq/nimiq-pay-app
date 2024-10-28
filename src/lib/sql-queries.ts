@@ -1,10 +1,11 @@
+import type { Address } from '@nimiq/core-web'
 import { Transfer } from '../types/transactions'
 
 // We store the remote Wallet.
 // The only thing we store about the local wallet is the entropy, and from that we can derive the private key
 // and its remote wallet
 export interface RemoteSigner {
-  address: Nimiq.Address
+  address: Address
   balance: number
   proofSize: number
   publicKey: string
