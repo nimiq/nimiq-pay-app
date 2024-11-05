@@ -227,7 +227,7 @@ importers:
         version: 2.1.10(typescript@5.6.3)
       webpack-i18n-tools:
         specifier: github:nimiq/webpack-i18n-tools
-        version: https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56(rollup@2.79.1)(webpack@5.91.0(@swc/core@1.6.5(@swc/helpers@0.5.10)))
+        version: https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56(rollup@2.79.2)(webpack@5.91.0)
 
 packages:
 
@@ -353,6 +353,12 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0
 
+  '@babel/helper-create-regexp-features-plugin@7.25.9':
+    resolution: {integrity: sha512-ORPNZ3h6ZRkOyAa/SaHU+XsLZr0UQzRwuDQ0cczIA17nAzZ+85G5cVkOJIj7QavLZGSe8QXUmNFxSZzjcZF9bw==}
+    engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0
+
   '@babel/helper-define-polyfill-provider@0.6.2':
     resolution: {integrity: sha512-LV76g+C502biUK6AyZ3LK10vDpDyCzZnhZFXkH1L75zHPj68+qc8Zfpx2th+gzwA2MzyK+1g/3EPl62yFnVttQ==}
     peerDependencies:
@@ -452,6 +458,12 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.13.0
+
+  '@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly@7.25.9':
+    resolution: {integrity: sha512-aLnMXYPnzwwqhYSCyXfKkIkYgJ8zv9RK+roo9DkTXz38ynIhd9XCbN08s3MGvqL2MYGVUGdRQLL/JqBIeJhJBg==}
+    engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0
 
   '@babel/plugin-bugfix-v8-static-class-fields-redefine-readonly@7.25.9':
     resolution: {integrity: sha512-aLnMXYPnzwwqhYSCyXfKkIkYgJ8zv9RK+roo9DkTXz38ynIhd9XCbN08s3MGvqL2MYGVUGdRQLL/JqBIeJhJBg==}
@@ -782,6 +794,12 @@ packages:
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': ^7.0.0
+
+  '@babel/preset-env@7.26.0':
+    resolution: {integrity: sha512-H84Fxq0CQJNdPFT2DrfnylZ3cf5K43rGfWK4LJGPpjKHiZlk0/RzwEus3PDDZZg+/Er7lCA03MVacueUuXdzfw==}
+    engines: {node: '>=6.9.0'}
+    peerDependencies:
+      '@babel/core': ^7.0.0-0
 
   '@babel/preset-env@7.26.0':
     resolution: {integrity: sha512-H84Fxq0CQJNdPFT2DrfnylZ3cf5K43rGfWK4LJGPpjKHiZlk0/RzwEus3PDDZZg+/Er7lCA03MVacueUuXdzfw==}
@@ -5660,6 +5678,10 @@ packages:
     resolution: {integrity: sha512-k67Nb9jvwJcJmVpw0jPttR1/zVfnKf8Km0IPatrU/zJ5XeG3+Slx0xLXs9HByJSzXzrlz5EDvN6yLNMDc2qdnw==}
     engines: {node: '>=4'}
 
+  regexpu-core@6.1.1:
+    resolution: {integrity: sha512-k67Nb9jvwJcJmVpw0jPttR1/zVfnKf8Km0IPatrU/zJ5XeG3+Slx0xLXs9HByJSzXzrlz5EDvN6yLNMDc2qdnw==}
+    engines: {node: '>=4'}
+
   registry-auth-token@5.0.2:
     resolution: {integrity: sha512-o/3ikDxtXaA59BmZuZrJZDJv8NMDGSj+6j6XaeBmHw8eY1i1qd9+6H+LjVvQXx3HN6aRCGa1cUdJ9RaJZUugnQ==}
     engines: {node: '>=14'}
@@ -8711,7 +8733,7 @@ snapshots:
     optionalDependencies:
       rollup: 2.79.1
 
-  '@rollup/pluginutils@3.1.0(rollup@2.79.1)':
+  '@rollup/pluginutils@3.1.0(rollup@2.79.2)':
     dependencies:
       '@types/estree': 0.0.39
       estree-walker: 1.0.1
@@ -9800,6 +9822,13 @@ snapshots:
       node-releases: 2.0.18
       update-browserslist-db: 1.1.1(browserslist@4.24.2)
 
+  browserslist@4.24.2:
+    dependencies:
+      caniuse-lite: 1.0.30001677
+      electron-to-chromium: 1.5.51
+      node-releases: 2.0.18
+      update-browserslist-db: 1.1.1(browserslist@4.24.2)
+
   buffer-crc32@0.2.13: {}
 
   buffer-from@1.1.2: {}
@@ -10347,6 +10376,10 @@ snapshots:
       ms: 2.1.3
     optionalDependencies:
       supports-color: 8.1.1
+
+  debug@4.3.7:
+    dependencies:
+      ms: 2.1.3
 
   decamelize-keys@1.1.1:
     dependencies:
@@ -14662,7 +14695,7 @@ snapshots:
 
   webidl-conversions@7.0.0: {}
 
-  webpack-i18n-tools@https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56(rollup@2.79.1)(webpack@5.91.0(@swc/core@1.6.5(@swc/helpers@0.5.10))):
+  webpack-i18n-tools@https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56(rollup@2.79.2)(webpack@5.91.0):
     dependencies:
       '@rollup/pluginutils': 5.1.0(rollup@2.79.2)
       gettext-extractor: 3.8.0
@@ -14701,8 +14734,8 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 3.3.0
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.10(@swc/core@1.6.5(@swc/helpers@0.5.10))(webpack@5.91.0(@swc/core@1.6.5(@swc/helpers@0.5.10)))
-      watchpack: 2.4.1
+      terser-webpack-plugin: 5.3.10(webpack@5.91.0)
+      watchpack: 2.4.2
       webpack-sources: 3.2.3
     transitivePeerDependencies:
       - '@swc/core'
