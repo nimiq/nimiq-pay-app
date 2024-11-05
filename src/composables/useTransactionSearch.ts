@@ -26,13 +26,12 @@ export function useTransactionSearch() {
       name: 'title',
       getFn: (tx: ExternalTransaction) => translateTransactionTitle(tx.title),
     }, /* untranslated title */ 'title', 'message', 'merchantName', 'merchantCategory', 'amount'],
-    sortFn: ({ item: a }: { item: ExternalTransaction }, { item: b }: { item: ExternalTransaction }) => (b.timestamp as number) - (a.timestamp as number),
     ignoreLocation: true,
   } })
 
   return {
     searchQuery,
-    filteredTransactions: computed(() => filteredTransactions.value.map(res => res.item)),
+    filteredTransactions: computed(() => filteredTransactions.value.map(res => res.item).sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))),
     allTransactions,
   }
 }
