@@ -66,17 +66,18 @@ export const recoveryWordsStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-export const pinCodeStep: StepInit = async ({ flowName }) => {
+export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
   const { FlowName: Flow } = await import('@/lib/flows/steps.types')
   const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw].includes(f)
   return {
     step: StepName.PinCode,
     get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
     get description() { return isTxFlow(flowName) ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
+    goBackBy,
     main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName), canUseBiometric: isTxFlow(flowName) })),
     beforeRender: async (state) => {
       // We only care about login/setup flows
-      if (isTxFlow(flowName))
+      if (isTxFlow(flowName) || flowName === Flow.ChangePin)
         return
 
       // If there is a pinHash, it means that the user is going backwards
@@ -101,7 +102,7 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
           debugger // eslint-disable-line no-debugger,no-restricted-syntax
         err(i18n.t('Invalid PIN code'))
       }
-      else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login) {
+      else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login && flowName !== FlowName.ChangePin) {
         if (pinHash !== hash(pinCode)) {
           err(i18n.t('Invalid PIN code'))
         }
@@ -115,58 +116,89 @@ export const pinCodeStep: StepInit = async ({ flowName }) => {
   } satisfies Step
 }
 
-export const pinCodeConfirmStep: StepInit = async () => ({
-  step: StepName.PinCodeConfirm,
-  get title() { return i18n.t('Confirm your PIN') },
-  get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
-  main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
-  beforeNext: async (state, { next, navigateTo, err }) => {
-    const { pinCode, pinCodeConfirm } = state
-    if (!pinCodeConfirm) {
-      err(i18n.t('Please confirm your PIN code'))
-      return
-    }
-    else if (pinCodeConfirm !== pinCode) {
-      err(i18n.t('PIN did not match'))
-      return
-    }
+export const pinCodeConfirmStep: StepInit = async ({ flowName }) => {
+  const { FlowName: Flow } = await import('@/lib/flows/steps.types')
+  return {
+    step: StepName.PinCodeConfirm,
+    get title() { return i18n.t('Confirm your PIN') },
+    get description() { return i18n.t('Protect your Nimiq Pay app with a pin.') },
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4 })),
+    beforeNext: async (state, { next, navigateTo, err }) => {
+      const { pinCode, pinCodeConfirm } = state
+      if (!pinCodeConfirm) {
+        err(i18n.t('Please confirm your PIN code'))
+        return
+      }
+      else if (pinCodeConfirm !== pinCode) {
+        err(i18n.t('PIN did not match'))
+        return
+      }
 
-    // Nuke everything in case there was a previous encryption db
-    const { isWeb } = (await import('@/composables/useDevice')).useDevice()
-    const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
+      // Don't nuke everything if we are changing the pin
+      if (flowName === Flow.ChangePin)
+        next()
 
-    if (!isWeb) {
-      await (await import('@/stores/conn')).useConn().deleteDatabase(false)
-      await (await import('@/stores/conn')).useConn().resetSecret()
-      // Set it to false in case it was decrypted before, we are sure there's no encrypted db since we just deleted it
-      decrypted.value = false
-    }
+      // Nuke everything in case there was a previous encryption db
+      const { isWeb } = (await import('@/composables/useDevice')).useDevice()
+      const { decrypt, decrypted } = (await import('@/composables/useDecrypt')).useDecrypt()
 
-    const decryptError = await decrypt(pinCode)
-    if (decryptError) {
-      err(decryptError)
-      return
-    }
-    if (!decrypted.value) {
-      err(i18n.t('Something went wrong decrypting the database'))
-      return
-    }
+      if (!isWeb) {
+        await (await import('@/stores/conn')).useConn().deleteDatabase(false)
+        await (await import('@/stores/conn')).useConn().resetSecret()
+        // Set it to false in case it was decrypted before, we are sure there's no encrypted db since we just deleted it
+        decrypted.value = false
+      }
 
-    const { isBiometricSupported } = (await import('@/composables/useBiometric')).useBiometric()
+      const decryptError = await decrypt(pinCode)
+      if (decryptError) {
+        err(decryptError)
+        return
+      }
+      if (!decrypted.value) {
+        err(i18n.t('Something went wrong decrypting the database'))
+        return
+      }
 
-    if (isBiometricSupported.value) {
-      next()
-    }
-    else {
+      const { isBiometricSupported } = (await import('@/composables/useBiometric')).useBiometric()
+
+      if (isBiometricSupported.value) {
+        next()
+      }
+      else {
+        // Clear pin code from memory just in case
+        // Since state is a JSON object, we take advantage of the fact that it's a reference
+        state[StepName.PinCode] = ''
+        state[StepName.PinCodeConfirm] = ''
+
+        navigateTo({ skipAheadBy: 2 })
+      }
+    },
+  } satisfies Step
+}
+
+export const pinCodeChange: StepInit = async () => {
+  return {
+    step: StepName.PinCodeChange,
+    get title() { return i18n.t('Insert PIN to confirm') },
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, canUseBiometric: false })),
+    beforeRender: async (state) => {
       // Clear pin code from memory just in case
       // Since state is a JSON object, we take advantage of the fact that it's a reference
-      state[StepName.PinCode] = ''
-      state[StepName.PinCodeConfirm] = ''
-
-      navigateTo({ skipAheadBy: 2 })
-    }
-  },
-} satisfies Step)
+      state[StepName.PinCodeChange] = ''
+    },
+    beforeNext: async ({ pinCodeChange }, { next, err }) => {
+      const { useApp } = (await import('@/stores/app'))
+      const { pinHash } = useApp()
+      if (!pinCodeChange)
+        err(i18n.t('Please enter a PIN code'))
+      else if (!PIN_CODE_REGEX.test(pinCodeChange))
+        err(i18n.t('Invalid PIN code'))
+      else if (pinHash !== hash(pinCodeChange))
+        err(i18n.t('Invalid PIN code'))
+      else next()
+    },
+  } satisfies Step
+}
 
 export const enableBiometricStep: StepInit = async ({ skipAheadBy = 1, goBackBy = 1 } = defaultStepInitOptions) => ({
   step: StepName.EnableBiometric,

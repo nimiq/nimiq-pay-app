@@ -11,6 +11,8 @@ import { LANGUAGE_LABELS, SUPPORTED_LANGUAGES, setLanguage } from '@/i18n/i18n-s
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { useBiometric } from '@/composables/useBiometric'
+import { FlowName } from '@/lib/flows/steps.types'
+import { initializeFlow } from '@/lib/flows'
 
 const logger = useLogger('SettingsModal')
 
@@ -101,6 +103,10 @@ onBeforeMount(updateBiometryInfo)
           <IonToggle :checked="isBiometricEnabled" @ion-change="handleBiometricToggle">
             {{ $t('Biometric Authentication') }}
           </IonToggle>
+        </IonItem>
+
+        <IonItem button :detail="false" @click="initializeFlow(FlowName.ChangePin)">
+          <IonLabel>{{ $t('Change PIN') }}</IonLabel>
         </IonItem>
 
         <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">

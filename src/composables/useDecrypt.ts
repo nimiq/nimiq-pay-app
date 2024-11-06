@@ -117,6 +117,17 @@ export function useDecrypt() {
     pinHash.value = ''
   }
 
+  async function changePin(pin: string, oldPin: string) {
+    try {
+      await sqlite.changeEncryptionSecret(pin, oldPin)
+      await decrypt(pin)
+    }
+    catch (e) {
+      logger.error(e)
+      return i18n.t('Something went wrong changing the PIN')
+    }
+  }
+
   function hasPin() {
     if (!isWeb)
       throw new Error('This method is not supported in mobile.') // no translation as not user-facing
@@ -128,5 +139,6 @@ export function useDecrypt() {
     decrypt,
     hasPin,
     reset,
+    changePin,
   }
 }

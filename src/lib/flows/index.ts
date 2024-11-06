@@ -298,6 +298,30 @@ const backupFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
+const changePinFlow: FlowInit = async () => {
+  const { pinCodeChange, pinCodeStep, pinCodeConfirmStep } = await import('./steps')
+  const flowName = FlowName.ChangePin
+  const stepOptions: StepInitOptions = { goBackBy: -1 }
+  const steps = (await Promise.all([
+    pinCodeChange,
+    (options: StepInitOptions) => pinCodeStep({ ...options, ...stepOptions }),
+    pinCodeConfirmStep,
+  ].map(s => s({ flowName }))))
+  const onDone: Flow['onDone'] = async (state, { err }) => {
+    console.log('changePinFlow', state)
+    // if (state[StepName.PinCode] !== state[StepName.PinCodeConfirm])
+    //   return err(i18n.t('The PINs do not match'))
+
+    // const { useDecrypt } = await import('@/composables/useDecrypt')
+    // const error = await useDecrypt().changePin(state[StepName.PinCode], state[StepName.PinCodeChange])
+    // if (error)
+    //   return err(error)
+
+    // TODO: save new pin code for biometric
+  }
+  return { flowName, steps, onDone }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -312,6 +336,7 @@ const flows = {
   [FlowName.ViewTransactions]: viewTransactionsFlow,
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
+  [FlowName.ChangePin]: changePinFlow,
 }
 
 /**

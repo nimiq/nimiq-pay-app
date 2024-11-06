@@ -15,6 +15,7 @@ export enum FlowName {
   ViewTransactions = 'viewTransactions',
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
   Backup = 'backup',
+  ChangePin = 'changePin',
 }
 
 interface FlowHookCbReturn {
@@ -50,6 +51,7 @@ export enum StepName {
   PromoCode = 'promoCode',
   PinCode = 'pinCode',
   PinCodeConfirm = 'pinCodeConfirm',
+  PinCodeChange = 'pinCodeChange',
   PhoneNumber = 'phoneNumber',
   PhoneNumberConfirm = 'phoneNumberConfirm',
   RecoveryWordsStep = 'recoveryWordsStep',
@@ -74,7 +76,7 @@ export enum StepName {
   ValidateWords = 'validateWords',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -92,6 +94,7 @@ export interface State {
   [StepName.PromoCode]: string
   [StepName.PinCode]: string
   [StepName.PinCodeConfirm]: string
+  [StepName.PinCodeChange]: string
   [StepName.PhoneNumber]: string
   [StepName.PhoneNumberConfirm]: string
   [StepName.RecoveryWordsStep]: string[]
