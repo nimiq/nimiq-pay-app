@@ -22,8 +22,8 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
 </script>
 
 <template>
-  <div class="flex flex-col h-full my-4">
-    <MnemonicInput :recovery-words="isDevImport ? loginWords : undefined" class="mt-auto" @login-words="(v) => loginWords = v" />
+  <div class="flex flex-col h-full my-4 justify-center">
+    <MnemonicInput :recovery-words="isDevImport ? loginWords : undefined" @login-words="(v) => loginWords = v" />
     <button v-if="isDev" class="mt-8 text-sm italic text-blue-300" @click="() => { loginWords = devWallet; isDevImport = true }">
       Import dev wallet
     </button>
