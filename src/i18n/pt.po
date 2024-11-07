@@ -110,6 +110,11 @@ msgstr "Cashlink reclamado com sucesso"
 msgid "Cashlink has no balance"
 msgstr "O Cashlink não tem saldo"
 
+#, fuzzy
+#| msgid "Choose a PIN"
+msgid "Change PIN"
+msgstr "Escolhe um PIN"
+
 msgid "Choose a PIN"
 msgstr "Escolhe um PIN"
 
@@ -597,6 +602,11 @@ msgstr "Número de telemóvel em falta"
 msgid "Phone number not verified"
 msgstr "Número de telemóvel não verificado"
 
+#, fuzzy
+#| msgid "Payment successful"
+msgid "PIN change successful"
+msgstr "Pagamento bem-sucedido"
+
 msgid "PIN did not match"
 msgstr "O PIN não coincide"
 
@@ -740,6 +750,11 @@ msgstr "Alguma coisa deu errado"
 msgid "Something went wrong authorizing the phone number"
 msgstr "Alguma coisa deu errado ao autorizar o número de telemóvel"
 
+#, fuzzy
+#| msgid "Something went wrong updating the tasks"
+msgid "Something went wrong changing the PIN"
+msgstr "Alguma coisa deu errado ao atualizar as tarefas"
+
 msgid "Something went wrong checking the promo code"
 msgstr "Alguma coisa deu errado ao verificar o código promocional"
 
@@ -796,6 +811,11 @@ msgstr "O backup é uma lista de 12 palavras em Inglês. Por favor garante que n
 
 msgid "The correct answer is \"{correct}\"."
 msgstr "A resposta correta é \"{correct}\"."
+
+#, fuzzy
+#| msgid "PIN did not match"
+msgid "The PINs do not match"
+msgstr "O PIN não coincide"
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "O scanner do QR ainda não está pronto. Espera por favor."
@@ -867,6 +887,11 @@ msgid "Unexpected GoCrypto error"
 msgstr "GoCrypto erro inesperado"
 
 msgid "Unknown"
+msgstr "Desconhecido"
+
+#, fuzzy
+#| msgid "Unknown"
+msgid "Unknown error"
 msgstr "Desconhecido"
 
 msgid "Unlock Nimiq Pay with your biometric data"

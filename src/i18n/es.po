@@ -111,6 +111,11 @@ msgstr "Cashlink reclamado exitosamente"
 msgid "Cashlink has no balance"
 msgstr "El Cashlink no tiene fondos"
 
+#, fuzzy
+#| msgid "Choose a PIN"
+msgid "Change PIN"
+msgstr "Elije un PIN"
+
 msgid "Choose a PIN"
 msgstr "Elije un PIN"
 
@@ -596,6 +601,11 @@ msgstr "Falta el número de teléfono"
 msgid "Phone number not verified"
 msgstr "Número de teléfono no verificado"
 
+#, fuzzy
+#| msgid "Payment successful"
+msgid "PIN change successful"
+msgstr "Pago exitoso"
+
 msgid "PIN did not match"
 msgstr "El PIN no coincide"
 
@@ -739,6 +749,11 @@ msgstr "Algo salió mal"
 msgid "Something went wrong authorizing the phone number"
 msgstr "Algo salió mal autorizando el número de teléfono"
 
+#, fuzzy
+#| msgid "Something went wrong updating the tasks"
+msgid "Something went wrong changing the PIN"
+msgstr "Algo salió mal al actualizar las tareas"
+
 msgid "Something went wrong checking the promo code"
 msgstr "Algo salió mal al verificar el código promocional"
 
@@ -795,6 +810,11 @@ msgstr "El respaldo de seguridad es una lista de 12 palabras en inglés. Asegúr
 
 msgid "The correct answer is \"{correct}\"."
 msgstr "La respuesta correcta es \"{correct}\"."
+
+#, fuzzy
+#| msgid "PIN did not match"
+msgid "The PINs do not match"
+msgstr "El PIN no coincide"
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "El escáner de códigos QR aún no está listo. Por favor, espera."
@@ -866,6 +886,11 @@ msgid "Unexpected GoCrypto error"
 msgstr "Error inesperado de GoCrypto"
 
 msgid "Unknown"
+msgstr "Desconocido"
+
+#, fuzzy
+#| msgid "Unknown"
+msgid "Unknown error"
 msgstr "Desconocido"
 
 msgid "Unlock Nimiq Pay with your biometric data"
