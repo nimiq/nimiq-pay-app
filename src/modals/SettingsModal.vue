@@ -105,9 +105,10 @@ onBeforeMount(updateBiometryInfo)
           </IonToggle>
         </IonItem>
 
-        <IonItem button :detail="false" @click="initializeFlow(FlowName.ChangePin)">
+        <!-- TODO: fix this -->
+        <!-- <IonItem button :detail="false" @click="initializeFlow(FlowName.ChangePin)">
           <IonLabel>{{ $t('Change PIN') }}</IonLabel>
-        </IonItem>
+        </IonItem> -->
 
         <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
           <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
