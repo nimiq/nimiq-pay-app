@@ -124,12 +124,6 @@ function _useBiometric() {
     }
   }
 
-  /**
-   * TODO:
-   * añadir switch en settings para habilitar biometric (siempre que esté soportado)
-   * al activar biometric primero pedir pin y luego activar biometric
-   */
-
   return {
     isBiometricEnabled,
     isBiometricSupported,

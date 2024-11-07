@@ -120,7 +120,8 @@ export function useDecrypt() {
   async function changePin(pin: string, oldPin: string) {
     try {
       await sqlite.changeEncryptionSecret(pin, oldPin)
-      await decrypt(pin)
+      pinHash.value = hash(pin)
+      await openDb()
     }
     catch (e) {
       logger.error(e)

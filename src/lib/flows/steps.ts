@@ -136,7 +136,7 @@ export const pinCodeConfirmStep: StepInit = async ({ flowName }) => {
 
       // Don't nuke everything if we are changing the pin
       if (flowName === Flow.ChangePin)
-        next()
+        return next()
 
       // Nuke everything in case there was a previous encryption db
       const { isWeb } = (await import('@/composables/useDevice')).useDevice()

@@ -313,16 +313,21 @@ const changePinFlow: FlowInit = async () => {
     pinCodeConfirmStep,
   ].map(s => s({ flowName }))))
   const onDone: Flow['onDone'] = async (state, { err }) => {
-    console.log('changePinFlow', state)
-    // if (state[StepName.PinCode] !== state[StepName.PinCodeConfirm])
-    //   return err(i18n.t('The PINs do not match'))
+    if (state[StepName.PinCode] !== state[StepName.PinCodeConfirm])
+      return err(i18n.t('The PINs do not match'))
 
-    // const { useDecrypt } = await import('@/composables/useDecrypt')
-    // const error = await useDecrypt().changePin(state[StepName.PinCode], state[StepName.PinCodeChange])
-    // if (error)
-    //   return err(error)
+    const { useDecrypt } = await import('@/composables/useDecrypt')
+    const error = await useDecrypt().changePin(state[StepName.PinCode], state[StepName.PinCodeChange])
+    if (error)
+      return err(error)
 
-    // TODO: save new pin code for biometric
+    const { useBiometric } = await import('@/composables/useBiometric')
+    const { isBiometricEnabled, setPinToSecureStorage } = useBiometric()
+    if (isBiometricEnabled)
+      await setPinToSecureStorage(state[StepName.PinCode])
+
+    const { useToast } = await import('@/composables/useToast')
+    useToast().setToast({ message: i18n.t('PIN change successful') })
   }
   return { flowName, steps, onDone }
 }
