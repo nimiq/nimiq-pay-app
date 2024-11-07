@@ -67,7 +67,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     catch (error) {
       if (error instanceof Error && error.message === 'The swap was already confirmed before.')
         swap = await getSwap(partialArgs.paymentRef!) as Swap
-
       else throw error
     }
 

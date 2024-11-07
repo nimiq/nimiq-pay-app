@@ -14,6 +14,8 @@ import { useLogger } from '@/composables/useLogger'
 const logger = useLogger('useStringParser')
 
 const CPL_URL_ID_PARAM = 'cpl_id'
+// This is for unified QR code format (Ex: bitcoin:[...]&lightning=[...])
+const LN_URL_PARAM = 'lightning'
 
 export enum QRDataFormat {
   NimiqAddress = 'nimiqAddress',
@@ -105,7 +107,7 @@ export function useStringParser() {
       return Rail.CryptoPaymentLink
     else if (searchParams.has(GOCRYPTO_ID_PARAM) || parseGoCryptoRequestLink(href))
       return Rail.GoCrypto
-    else if (protocol === 'lightning:' && __ENABLE_BTC_LN__)
+    else if ((protocol === 'lightning:' || searchParams.has(LN_URL_PARAM)) && __ENABLE_BTC_LN__)
       return Rail.BitcoinLightning
     else if (protocol === 'nimiq:')
       return Rail.NimiqWallet
@@ -171,7 +173,7 @@ export function useStringParser() {
   async function parseBitcoinLightningUrl(url: URL): Promise<Result<PaymentRequestData, string>> {
     let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
     try {
-      decoded = await parseBitcoinLightningInvoice(url.pathname)
+      decoded = await parseBitcoinLightningInvoice(url.searchParams.get('lightning') || url.pathname)
     }
     catch (e) {
       logger.error(e)

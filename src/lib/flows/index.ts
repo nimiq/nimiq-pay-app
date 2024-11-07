@@ -187,10 +187,15 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
         title: request.merchantName
           ? markAsUnknownTransactionTitle(request.merchantName)
           : 'Payment', // translated at display time
-      }).catch(error => ({ error: i18n.t(
-        'Transaction failed: {error}',
-        { error: error instanceof Error ? error.message : String(error) },
-      ) }))
+      }).catch((error) => {
+        logger.error('🤑  Transaction failed:', error)
+        return ({
+          error: i18n.t(
+            'Transaction failed: {error}',
+            { error: (error instanceof Error ? error.message : String(error)) || i18n.t('Unknown error') },
+          ),
+        })
+      })
       if (error)
         return err(error)
     }
