@@ -1,5 +1,5 @@
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
-import { isValidPhoneNumber } from 'libphonenumber-js/mobile'
+import { isValidPhoneNumber } from 'libphonenumber-js'
 import { QRDataFormat } from '../../composables/useStringParser'
 import { FlowName, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
