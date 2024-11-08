@@ -9,10 +9,10 @@ include ':aparajita-capacitor-secure-storage'
 project(':aparajita-capacitor-secure-storage').projectDir = new File('../node_modules/.pnpm/@aparajita+capacitor-secure-storage@6.0.1/node_modules/@aparajita/capacitor-secure-storage/android')
 
 include ':capacitor-mlkit-barcode-scanning'
-project(':capacitor-mlkit-barcode-scanning').projectDir = new File('../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.1.0_@capacitor+core@6.1.2/node_modules/@capacitor-mlkit/barcode-scanning/android')
+project(':capacitor-mlkit-barcode-scanning').projectDir = new File('../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.2.0_@capacitor+core@6.1.2/node_modules/@capacitor-mlkit/barcode-scanning/android')
 
 include ':capacitor-browser'
-project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@6.0.2_@capacitor+core@6.1.2/node_modules/@capacitor/browser/android')
+project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@6.0.3_@capacitor+core@6.1.2/node_modules/@capacitor/browser/android')
 
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@6.0.1_@capacitor+core@6.1.2/node_modules/@capacitor/filesystem/android')
@@ -27,7 +27,7 @@ include ':capawesome-capacitor-screen-orientation'
 project(':capawesome-capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.1.2/node_modules/@capawesome/capacitor-screen-orientation/android')
 
 include ':capacitor-community-sqlite'
-project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@6.0.1_@capacitor+core@6.1.2/node_modules/@capacitor-community/sqlite/android')
+project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.1.2/node_modules/@capacitor-community/sqlite/android')
 
 include ':capacitor-app'
 project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacitor+app@6.0.1_@capacitor+core@6.1.2/node_modules/@capacitor/app/android')
