@@ -189,10 +189,10 @@ export function useStringParser() {
     if (timestampSection.value + decoded.expiry < Date.now() / 1e3 - 20)
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
-    const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection
+    const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection | undefined
     const expectedNetwork = isDev ? 'tb' : 'bc'
-    if (coinNetworkSection.letters !== expectedNetwork)
-      return { error: `${i18n.t('Wrong network in Bitcoin Lightning invoice.')} Expected "${expectedNetwork}", got "${coinNetworkSection.letters}".`, data: undefined }
+    if (!coinNetworkSection || coinNetworkSection.letters !== expectedNetwork)
+      return { error: `${i18n.t('Wrong network in Bitcoin Lightning invoice.')} Expected "${expectedNetwork}", got "${coinNetworkSection?.letters}".`, data: undefined }
 
     const amountSection = decoded.sections.find(section => section.name === 'amount') as AmountSection
     if (!amountSection || !amountSection.value)
