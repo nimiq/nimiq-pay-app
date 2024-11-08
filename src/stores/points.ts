@@ -21,6 +21,7 @@ export const usePoints = defineStore('points', () => {
   const pointsBalance = ref(0)
   const tasks: Ref<Task[] | undefined> = ref(undefined)
   const nextRequestCapTs = ref(0)
+  const incrementalRequestCap = ref(1e3 * 30) // 30 seconds
   const isCampaignActive = ref(true)
 
   /**
@@ -35,8 +36,10 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error: error?.message || i18n.t('Something went wrong authorizing the phone number') }
     }
     else {
-      // Prevents spamming the server with requests, only one request every 10 minutes
-      nextRequestCapTs.value = Date.now() + 1e3 * 60 * 10
+      // Prevents spamming the server with requests
+      nextRequestCapTs.value = Date.now() + incrementalRequestCap.value
+      // 5 minutes max
+      incrementalRequestCap.value = Math.min(incrementalRequestCap.value * 2, 1e3 * 60 * 5)
     }
 
     phoneNumber.value = phoneNumberInput
@@ -55,6 +58,7 @@ export const usePoints = defineStore('points', () => {
       return { data: undefined, error: error?.message || i18n.t('Something went wrong verifying the phone number') }
 
     pointsToken.value = data.token
+    incrementalRequestCap.value = 1e3 * 30
 
     if (referralCode.value)
       redeemReferral()
