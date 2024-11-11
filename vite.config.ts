@@ -13,7 +13,7 @@ export default defineConfig({
     poLoader(),
     poOptimizer(),
     legacy(),
-    VitePWA({ registerType: 'autoUpdate' }),
+    VitePWA({ registerType: 'autoUpdate', workbox: { maximumFileSizeToCacheInBytes: 10000000 } }),
   ],
   resolve: {
     alias: {
