@@ -1,3 +1,4 @@
+import type * as Nimiq from '@nimiq/core-web'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {

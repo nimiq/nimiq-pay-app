@@ -37,7 +37,7 @@ export interface FormatCryptoOptions {
 export function useCurrencyFormatter() {
   const { language, selectedFiat } = storeToRefs(useApp())
 
-  const baseFormatterOptions = {
+  const baseFormatterOptions: Intl.NumberFormatOptions = {
     style: 'currency',
     currencyDisplay: 'narrowSymbol',
   }

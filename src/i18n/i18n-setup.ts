@@ -86,7 +86,7 @@ export function guessUserLanguage(): SupportedLanguage {
 }
 
 function isSupportedLanguage(lang: string): lang is SupportedLanguage {
-  return SUPPORTED_LANGUAGES.includes(lang)
+  return SUPPORTED_LANGUAGES.includes(lang as any)
 }
 
 // If the user changed the language in another window/tab then load and enable new language

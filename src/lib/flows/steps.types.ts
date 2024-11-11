@@ -83,11 +83,11 @@ export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
   const stepName = typeof step === 'string' ? step : step.step
-  return inputSteps.includes(stepName)
+  return inputSteps.includes(stepName as InputStepName)
 }
 export function isInfoStep(step: Step | StepName): step is typeof step extends Step ? InfoStep : InfoStepName {
   const stepName = typeof step === 'string' ? step : step.step
-  return infoSteps.includes(stepName)
+  return infoSteps.includes(stepName as InfoStepName)
 }
 
 export interface State {
