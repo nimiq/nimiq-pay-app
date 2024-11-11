@@ -170,12 +170,12 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:132
+#: src/types/transactions.ts:133
 msgid "Confirmed"
 msgstr ""
 
 #. We display a just mined, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:129
+#: src/types/transactions.ts:130
 msgid "Confirming"
 msgstr ""
 
@@ -232,7 +232,7 @@ msgstr ""
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr ""
 
-#: src/stores/points.ts:207
+#: src/stores/points.ts:211
 msgid "Cryptocity Points have been credited"
 msgstr ""
 
@@ -240,7 +240,7 @@ msgstr ""
 msgid "Currency"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:39
+#: src/components/TransactionDetails.vue:40
 msgid "Date"
 msgstr ""
 
@@ -327,7 +327,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:131
+#: src/types/transactions.ts:132
 msgid "Expired"
 msgstr ""
 
@@ -422,12 +422,12 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:96
+#: src/components/NimWithdraw.vue:97
 msgid "Insufficient funds"
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:130
+#: src/types/transactions.ts:131
 msgid "Invalid"
 msgstr ""
 
@@ -611,7 +611,7 @@ msgstr ""
 msgid "Network consensus lost."
 msgstr ""
 
-#: src/types/transactions.ts:127
+#: src/types/transactions.ts:128
 msgid "New"
 msgstr ""
 
@@ -725,7 +725,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:116
+#: src/types/transactions.ts:117
 msgid "Payment"
 msgstr ""
 
@@ -759,7 +759,7 @@ msgstr ""
 msgid "Payment Request"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:54
+#: src/components/TransactionDetails.vue:55
 msgid "Payment Secret"
 msgstr ""
 
@@ -775,26 +775,26 @@ msgstr ""
 msgid "Payment was refunded"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:28
+#: src/components/TransactionDetails.vue:29
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:128
+#: src/types/transactions.ts:129
 msgid "Pending"
 msgstr ""
 
-#: src/stores/points.ts:196
-#: src/stores/points.ts:213
-#: src/stores/points.ts:51
+#: src/stores/points.ts:200
+#: src/stores/points.ts:217
+#: src/stores/points.ts:54
 msgid "Phone number missing"
 msgstr ""
 
-#: src/stores/points.ts:108
-#: src/stores/points.ts:119
-#: src/stores/points.ts:151
-#: src/stores/points.ts:168
-#: src/stores/points.ts:198
-#: src/stores/points.ts:215
-#: src/stores/points.ts:226
-#: src/stores/points.ts:87
+#: src/stores/points.ts:112
+#: src/stores/points.ts:123
+#: src/stores/points.ts:155
+#: src/stores/points.ts:172
+#: src/stores/points.ts:202
+#: src/stores/points.ts:219
+#: src/stores/points.ts:230
+#: src/stores/points.ts:91
 msgid "Phone number not verified"
 msgstr ""
 
@@ -851,7 +851,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:117
+#: src/types/transactions.ts:118
 msgid "Points Payment"
 msgstr ""
 
@@ -863,11 +863,11 @@ msgstr ""
 msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgstr ""
 
-#: src/stores/points.ts:200
+#: src/stores/points.ts:204
 msgid "Promo code missing"
 msgstr ""
 
-#: src/stores/points.ts:186
+#: src/stores/points.ts:190
 msgid "Promo code not found"
 msgstr ""
 
@@ -876,7 +876,7 @@ msgstr ""
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
-#: src/stores/points.ts:248
+#: src/stores/points.ts:252
 msgid "Purchase"
 msgstr ""
 
@@ -888,7 +888,7 @@ msgstr ""
 msgid "Receive Push Notifications"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:47
+#: src/components/TransactionDetails.vue:48
 msgid "Recipient"
 msgstr ""
 
@@ -896,7 +896,7 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:31
+#: src/components/TransactionDetails.vue:32
 msgid "Refunded"
 msgstr ""
 
@@ -994,7 +994,7 @@ msgstr ""
 msgid "Something went wrong"
 msgstr ""
 
-#: src/stores/points.ts:35
+#: src/stores/points.ts:36
 msgid "Something went wrong authorizing the phone number"
 msgstr ""
 
@@ -1003,12 +1003,12 @@ msgid "Something went wrong changing the PIN"
 msgstr ""
 
 #: src/components/GenericInput.vue:29
-#: src/stores/points.ts:172
-#: src/stores/points.ts:189
+#: src/stores/points.ts:176
+#: src/stores/points.ts:193
 msgid "Something went wrong checking the promo code"
 msgstr ""
 
-#: src/stores/points.ts:219
+#: src/stores/points.ts:223
 msgid "Something went wrong claiming the cashback"
 msgstr ""
 
@@ -1018,7 +1018,7 @@ msgstr ""
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
-#: src/stores/points.ts:77
+#: src/stores/points.ts:81
 msgid "Something went wrong deleting the account"
 msgstr ""
 
@@ -1026,7 +1026,7 @@ msgstr ""
 msgid "Something went wrong getting the Points cashback data."
 msgstr ""
 
-#: src/stores/points.ts:231
+#: src/stores/points.ts:235
 msgid "Something went wrong paying with Points"
 msgstr ""
 
@@ -1043,17 +1043,17 @@ msgstr ""
 msgid "Something went wrong syncing your account"
 msgstr ""
 
-#: src/stores/points.ts:112
-#: src/stores/points.ts:124
-#: src/stores/points.ts:155
+#: src/stores/points.ts:116
+#: src/stores/points.ts:128
+#: src/stores/points.ts:159
 msgid "Something went wrong updating the tasks"
 msgstr ""
 
-#: src/stores/points.ts:91
+#: src/stores/points.ts:95
 msgid "Something went wrong updating your Points"
 msgstr ""
 
-#: src/stores/points.ts:55
+#: src/stores/points.ts:58
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
@@ -1061,7 +1061,7 @@ msgstr ""
 msgid "Standard rates may apply."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:25
+#: src/components/TransactionDetails.vue:26
 msgid "Status"
 msgstr ""
 
@@ -1125,7 +1125,7 @@ msgstr ""
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:64
+#: src/components/TransactionDetails.vue:65
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
@@ -1150,7 +1150,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:114
+#: src/types/transactions.ts:115
 msgid "Top-Up"
 msgstr ""
 
@@ -1178,7 +1178,7 @@ msgstr ""
 msgid "Trying to establish network consensus:"
 msgstr ""
 
-#: src/stores/points.ts:100
+#: src/stores/points.ts:104
 msgid "Unable to connect to the Points server"
 msgstr ""
 
@@ -1186,7 +1186,7 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/types/transactions.ts:136
+#: src/types/transactions.ts:137
 msgid "Unknown"
 msgstr ""
 
@@ -1307,7 +1307,7 @@ msgstr ""
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:115
+#: src/types/transactions.ts:116
 msgid "Withdrawal"
 msgstr ""
 
