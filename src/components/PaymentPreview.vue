@@ -51,13 +51,14 @@ const amounts = computedAsync(async () => {
   // We check for undefined because the tx might have 0 as a value, which is falsy
   const properties = ['fiatCurrency', 'fiatAmount', 'fiatFeeAmount'] as const
   const useDefaultFiat = properties.some(prop => payment.value[prop] === undefined)
+  const { fiatAmount, fiatFeeAmount, fiatCurrency } = payment.value
 
   if (!useDefaultFiat) {
     // If the tx has its own fiat values, use them
-    const { formatFiat } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
     return {
-      formattedFiat: formatFiat(payment.value.fiatAmount!, { currency: payment.value.fiatCurrency }),
-      formattedFee: formatFiat(payment.value.fiatFeeAmount!, { currency: payment.value.fiatCurrency }),
+      fiatAmount,
+      fiatFeeAmount,
+      fiatCurrency,
     }
   }
   else {
@@ -69,7 +70,7 @@ const amounts = computedAsync(async () => {
     // we want to get the fee amount from the db instead of API
     await fiatAmount.getFiatPrice()
     await fiatFeeAmount.getFiatPrice()
-    return { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
+    return { fiatAmount: fiatAmount.fiat.total, fiatFeeAmount: fiatFeeAmount.fiat.total, fiatCurrency }
   }
 })
 
@@ -208,7 +209,7 @@ function formatInvoiced({ currency, amount }: { currency: string; amount: number
 </script>
 
 <template>
-  <TransactionAmounts class="mt-8" :crypto-total="payment.amount" :fiat-formatted="amounts?.formattedFiat || ''" :payment-method="paymentMethod">
+  <TransactionAmounts class="mt-8" :crypto-total="payment.amount" :fiat-amount="amounts?.fiatAmount" :fiat-currency="amounts?.fiatCurrency" :payment-method="paymentMethod">
     <template v-if="payment.invoiced" #invoiced>
       {{ formatInvoiced(payment.invoiced) }}
     </template>

@@ -5,10 +5,12 @@ import InvoiceIcon from './icons/invoice.vue'
 import { PaymentMethod } from '@/types/transactions'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { Crypto } from '@/stores/app'
+import { FiatAmount } from '@nimiq/vue3-components'
 
 defineProps<{
   cryptoTotal: number
-  fiatFormatted: string
+  fiatAmount?: number
+  fiatCurrency?: string
   paymentMethod?: PaymentMethod
   refunded?: boolean
 }>()
@@ -29,7 +31,7 @@ const { formatCrypto } = useCurrencyFormatter()
     </div>
 
     <span class="flex items-center gap-2 text-center uppercase">
-      <span class="text-5xl" :class="{ 'line-through': refunded }">{{ fiatFormatted }}</span>
+      <FiatAmount v-if="fiatAmount && fiatCurrency" class="text-5xl" :class="{ 'line-through': refunded }" :amount="fiatAmount" :currency="fiatCurrency" />
       <slot name="amount-after" />
     </span>
 

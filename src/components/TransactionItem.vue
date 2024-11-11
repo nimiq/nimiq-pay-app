@@ -7,6 +7,8 @@ import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import { useRelativeTime } from '@/composables/useRelativeTime'
 import { type ExternalTransaction, MerchantCategory, PaymentMethod, Transfer, isPaymentTx, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import { usePrice } from '@/composables/usePrice'
+import { FormattableNumber } from '@nimiq/utils'
+import { FiatAmount } from '@nimiq/vue3-components'
 
 const props = defineProps({
   tx: {
@@ -57,14 +59,14 @@ const category = computed(() => {
       </div>
     </div>
     <div class="flex flex-col items-end ml-auto gap-y-1">
-      <span class="text-base font-bold">{{ fiat.formatted }}</span>
+      <FiatAmount class="text-base font-bold" :amount="fiat.total" :currency="fiat.currency" />
       <time v-if="paymentMethod === PaymentMethod.Points" class="flex items-center text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
         <CryptoCityLogo class="h-3 mr-1" />
-        {{ crypto.total.toLocaleString() }}
+        {{ new FormattableNumber(crypto.total).toString({ maxDecimals: 2, useGrouping: true }) }}
       </time>
       <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
         <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
-        {{ crypto.total.toLocaleString() }} {{ paymentMethod }}
+        {{ crypto.formatted }}
       </time>
     </div>
     <IonRippleEffect />

@@ -6,6 +6,7 @@ import { usePrice } from '@/composables/usePrice'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import PriceChange from '@/components/PriceChange.vue'
 import { useSync } from '@/composables/useSync'
+import { FiatAmount } from "@nimiq/vue3-components"
 
 const { remoteBalance: balance, blocksUntilHtlcActive } = storeToRefs(useRemoteSigner())
 const { nodesAreSynced } = useSync()
@@ -31,9 +32,7 @@ const showSkeleton = computed(() => balance.value < 0 || !nodesAreSynced.value |
       </div>
     </div>
     <div v-else class="flex flex-col items-center gap-y-2">
-      <h1 class="text-5xl font-normal">
-        {{ fiat.formatted }}
-      </h1>
+      <FiatAmount class="text-5xl font-normal text-space" :amount="fiat.total" :currency="fiat.currency" :hide-decimals="false" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
         <span class="whitespace-nowrap">{{ crypto.formatted }}</span>
         <PriceChange />

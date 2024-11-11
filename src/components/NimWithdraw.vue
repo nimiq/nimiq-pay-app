@@ -27,6 +27,7 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { i18n } from '@/i18n/i18n-setup'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { FiatAmount } from '@nimiq/vue3-components'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -36,7 +37,7 @@ const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean
 const emit = defineEmits(stepEmits)
 
 const state = toRef(props, 'state')
-const { withdrawalAddress, topUpAddresses, withdrawalAddressesHistory } = storeToRefs(useApp())
+const { withdrawalAddress, topUpAddresses, withdrawalAddressesHistory, selectedFiat } = storeToRefs(useApp())
 const address = computed(() => {
   const address = withdrawalAddress.value || state.value[StepName.NimAddressInput]
 
@@ -184,13 +185,13 @@ watch(errorMessage, (value) => {
 
   <div class="flex w-full mt-auto mb-4 justify-evenly">
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25">
-      {{ formatFiat(25, { short: true }) }}
+      <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
     </button>
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50">
-      {{ formatFiat(50, { short: true }) }}
+      <FiatAmount :amount="50" :currency="selectedFiat" hide-decimals />
     </button>
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
-      {{ formatFiat(100, { short: true }) }}
+      <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
     </button>
     <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
       {{ $t('All') }}

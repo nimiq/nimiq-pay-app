@@ -73,7 +73,8 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
   <div class="flex flex-col w-full h-full gap-10 py-8">
     <TransactionAmounts
       :crypto-total="crypto.totalUnits"
-      :fiat-formatted="fiat.formatted"
+      :fiat-amount="fiat.total"
+      :fiat-currency="fiat.currency"
       :payment-method="tx.paymentMethod || PaymentMethod.NIM"
       :refunded="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded"
     >

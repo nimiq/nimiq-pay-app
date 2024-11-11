@@ -2,6 +2,7 @@ import { type MaybeRef, toValue } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useApp } from '@/stores/app'
 import type { Crypto, Fiat } from '@/stores/app'
+import { FormattableNumber } from '@nimiq/utils'
 
 export interface FormatFiatOptions {
   /**
@@ -55,8 +56,7 @@ export function useCurrencyFormatter() {
       return '0 NIM'
     const currency = toValue(options?.currency)
     const amountInNim = amountInLuna / 1e5 // Convert to NIM
-    const locale = toValue(options?.locale || language)
-    return `${amountInNim.toLocaleString(locale, { maximumFractionDigits: 2 })}${currency ? ` ${currency}` : ''}`
+    return `${new FormattableNumber(amountInNim).toString({ maxDecimals: 2, useGrouping: true })}${currency ? ` ${currency}` : ''}`
   }
 
   return {
