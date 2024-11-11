@@ -1,6 +1,7 @@
 import antfu from '@antfu/eslint-config'
 
 export default antfu({
+  formatters: true,
   rules: {
     'vue/no-deprecated-slot-attribute': 'off',
     'vue/component-name-in-template-casing': ['error', 'PascalCase', {
