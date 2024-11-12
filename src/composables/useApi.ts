@@ -1,12 +1,12 @@
+import type { RemoteSigner } from '@/lib/sql-queries'
+import type { AsyncResultApi } from '@/types'
+import type { Rail } from '@/types/transactions'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
+import { isDev } from '@/lib/index'
+import { useApp } from '@/stores/app'
 import { type MaybeRef, readonly, ref, toValue as v } from 'vue'
 import { toSeconds } from './useTime'
-import { i18n } from '@/i18n/i18n-setup'
-import type { AsyncResultApi } from '@/types'
-import type { RemoteSigner } from '@/lib/sql-queries'
-import type { Rail } from '@/types/transactions'
-import { useApp } from '@/stores/app'
-import { isDev } from '@/lib/index'
-import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useApi')
 
@@ -15,7 +15,7 @@ const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https:
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 
-async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string; body?: object; delete?: boolean } = {}): AsyncResultApi<T, E> {
+async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
@@ -59,30 +59,30 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
 }
 
 export function usePointsApi() {
-  interface AuthorizeArg { publicKey: MaybeRef<string>; phoneNumber: MaybeRef<string> }
-  interface VerifyArg { phoneNumber: MaybeRef<string>; accessCode: MaybeRef<string> }
+  interface AuthorizeArg { publicKey: MaybeRef<string>, phoneNumber: MaybeRef<string> }
+  interface VerifyArg { phoneNumber: MaybeRef<string>, accessCode: MaybeRef<string> }
   interface BalanceArg { token: MaybeRef<string> }
-  interface PayWithPointsArg { token: MaybeRef<string>; rail: MaybeRef<Rail>; reference?: MaybeRef<string>; recipient: MaybeRef<string> }
-  interface VerifyPaymentArg { token: MaybeRef<string>; rail: MaybeRef<Rail>; reference: MaybeRef<string>; recipient: MaybeRef<string> }
+  interface PayWithPointsArg { token: MaybeRef<string>, rail: MaybeRef<Rail>, reference?: MaybeRef<string>, recipient: MaybeRef<string> }
+  interface VerifyPaymentArg { token: MaybeRef<string>, rail: MaybeRef<Rail>, reference: MaybeRef<string>, recipient: MaybeRef<string> }
   interface ParticipantReferralArg { token: MaybeRef<string> }
   interface ReferralIdArg { id: MaybeRef<string> }
-  interface ClaimReferralArg { id: MaybeRef<string>; token: MaybeRef<string> }
+  interface ClaimReferralArg { id: MaybeRef<string>, token: MaybeRef<string> }
   interface TaskArg { token: MaybeRef<string> }
-  interface TaskIdArg { id: MaybeRef<string>; token: MaybeRef<string> }
-  interface ClaimTaskArg { id: MaybeRef<string>; answer?: MaybeRef<string>; token: MaybeRef<string> }
-  interface ClaimCashbackArg { reference: MaybeRef<string>; tx_hash: MaybeRef<string>; token: MaybeRef<string> }
+  interface TaskIdArg { id: MaybeRef<string>, token: MaybeRef<string> }
+  interface ClaimTaskArg { id: MaybeRef<string>, answer?: MaybeRef<string>, token: MaybeRef<string> }
+  interface ClaimCashbackArg { reference: MaybeRef<string>, tx_hash: MaybeRef<string>, token: MaybeRef<string> }
   interface DeleteAccountArg { token: MaybeRef<string> }
 
   type AuthorizeRes = string
   interface VerifyRes { token: string }
-  interface VerifyPaymentRes { valid: boolean; reason: string; cashback: { percentage: number; amountInLuna: number } }
+  interface VerifyPaymentRes { valid: boolean, reason: string, cashback: { percentage: number, amountInLuna: number } }
   interface BalanceRes { balance: number }
   type PayWithPointsRes = undefined
   // TODO: Get more errors from the puntos server code
-  type ClaimCashbackRes = undefined | { statusCode: number; error: 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED'; message: string }
+  type ClaimCashbackRes = undefined | { statusCode: number, error: 'CPL_PAYMENT_REQUEST_ALREADY_PROCESSED', message: string }
 
-  interface ParticipantReferralRes { id: string; claims_remaining: number; reward: number }
-  interface ReferralIdRes { id: string; claims_remaining: number; reward: number }
+  interface ParticipantReferralRes { id: string, claims_remaining: number, reward: number }
+  interface ReferralIdRes { id: string, claims_remaining: number, reward: number }
   type ClaimReferralRes = undefined
   type TaskRes = Task[]
   type TaskIdRes = any
@@ -95,7 +95,7 @@ export function usePointsApi() {
     task_status: 'in-progress' | 'completed' | 'rejected'
     updated_at: string
   }
-  interface StatusRes { status: 'online'; campaign_running: boolean }
+  interface StatusRes { status: 'online', campaign_running: boolean }
 
   interface PointsErrorRes {
     statusCode: number
@@ -159,11 +159,11 @@ export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
   interface GetRemoteSignerArg { address: MaybeRef<Nimiq.Address> }
-  interface SendTransactionArg { address: MaybeRef<string>; tx: MaybeRef<Nimiq.Transaction> }
-  interface SendRawTransactionArg { address: MaybeRef<string>; rawTx: MaybeRef<string> }
+  interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<Nimiq.Transaction> }
+  interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
 
-  interface StatusRes { status: 'good' | 'bad'; blockHeight: number; servicePublicKey: string; network: string }
-  interface GetRemoteSignerRes { address: string; servicePublicKey: string; serviceSignatureProofSize: number; validityStart: number; validityEnd: number; balance: number }
+  interface StatusRes { status: 'good' | 'bad', blockHeight: number, servicePublicKey: string, network: string }
+  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, balance: number }
 
   interface RemoteErrorRes {
     statusCode: number
@@ -209,10 +209,10 @@ export function useRemoteSignerApi() {
 
 export function useCurrencyPriceApi() {
   interface PriceNowArg { currency: MaybeRef<string> }
-  interface PriceAtArg { currency: MaybeRef<string>; timestamp: MaybeRef<number> }
+  interface PriceAtArg { currency: MaybeRef<string>, timestamp: MaybeRef<number> }
 
-  type PriceNowRes = { currency: string; time: number; price: number; error: undefined } | { currency: string; time: number; price: undefined; error: string }
-  type PriceAtRes = { currency: string; time: number; price: number; error: undefined } | { currency: string; time: number; price: undefined; error: string }
+  type PriceNowRes = { currency: string, time: number, price: number, error: undefined } | { currency: string, time: number, price: undefined, error: string }
+  type PriceAtRes = { currency: string, time: number, price: number, error: undefined } | { currency: string, time: number, price: undefined, error: string }
   interface PriceErrorRes {
     statusCode: number
     error: string
@@ -264,7 +264,7 @@ export function useCplApi() {
         has_buyer_email: { booleanValue: boolean }
         brand_name: { stringValue: string }
         fiat_currency_code: { stringValue: string }
-        fiat_price: { doubleValue: number; integerValue: undefined } | { doubleValue: undefined; integerValue: number }
+        fiat_price: { doubleValue: number, integerValue: undefined } | { doubleValue: undefined, integerValue: number }
         item_description: { stringValue: string }
         status: { stringValue: string }
       }

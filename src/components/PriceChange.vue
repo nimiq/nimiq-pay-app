@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { computedAsync } from '@vueuse/core'
-import { Crypto } from '@/stores/app'
-import { useCurrencyPriceApi } from '@/composables/useApi'
 import PriceChangeIcon from '@/components/icons/price-change.vue'
+import { useCurrencyPriceApi } from '@/composables/useApi'
+import { Crypto } from '@/stores/app'
+import { computedAsync } from '@vueuse/core'
 
 const { getPriceAt, getPriceNow } = useCurrencyPriceApi()
 

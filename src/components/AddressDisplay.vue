@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { IonRippleEffect } from '@ionic/vue'
-import { computed } from 'vue'
-import { Clipboard } from '@capacitor/clipboard'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { Clipboard } from '@capacitor/clipboard'
+import { IonRippleEffect } from '@ionic/vue'
+import { computed } from 'vue'
 
 const props = defineProps({
   address: {

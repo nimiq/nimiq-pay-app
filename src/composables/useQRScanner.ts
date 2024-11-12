@@ -1,17 +1,18 @@
+import type { Fn } from '@vueuse/core'
 import type { scan as Scan } from 'qr-scanner-wechat'
-import { type Ref, ref } from 'vue'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName, type PaymentRequestData } from '@/lib/flows/steps.types'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useThrottleFn } from '@vueuse/core'
+import { type Ref, ref } from 'vue'
 import { isDev } from '../lib'
+import { useCameraFeed } from './useCameraFeed'
 import { useDevice } from './useDevice'
 import { QRDataFormat, useStringParser } from './useStringParser'
-import { useCameraFeed } from './useCameraFeed'
 import { useToast } from './useToast'
-import { i18n } from '@/i18n/i18n-setup'
-import { FlowName, type PaymentRequestData } from '@/lib/flows/steps.types'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { useLogger } from '@/composables/useLogger'
-import { initializeFlow } from '@/lib/flows'
 
 const logger = useLogger('useQRScanner')
 
@@ -143,8 +144,8 @@ interface StartScannerOptions {
 }
 
 function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
-  let stopScan: Function | undefined
-  let resumeScan: Function
+  let stopScan: Fn | undefined
+  let resumeScan: Fn | undefined
 
   async function scanFrame(video: HTMLVideoElement, scan: typeof Scan) {
     if (!video.videoWidth || !video.videoHeight)

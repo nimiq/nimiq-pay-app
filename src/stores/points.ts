@@ -1,16 +1,16 @@
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import type { AsyncOption } from '@/types'
+import { usePointsApi } from '@/composables/useApi'
+import { useLogger } from '@/composables/useLogger'
+import { toMs } from '@/composables/useTime'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useTransactions } from '@/stores/transactions'
+import { markAsUnknownTransactionTitle, MerchantCategory, type MerchantTransaction, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { type Ref, ref } from 'vue'
 import { useApp } from './app'
-import { MerchantCategory, type MerchantTransaction, PaymentMethod, PointsHashPrefix, Rail, Transfer, markAsUnknownTransactionTitle } from '@/types/transactions'
-import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { useToast } from '@/composables/useToast'
-import { usePointsApi } from '@/composables/useApi'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { useTransactions } from '@/stores/transactions'
-import { i18n } from '@/i18n/i18n-setup'
-import type { AsyncOption } from '@/types'
-import { toMs } from '@/composables/useTime'
-import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('usePoints')
 
@@ -150,7 +150,7 @@ export const usePoints = defineStore('points', () => {
       })
   }
 
-  async function claimTask({ id, answer }: { id: string; answer?: string }) {
+  async function claimTask({ id, answer }: { id: string, answer?: string }) {
     if (!pointsToken.value)
       return { data: undefined, error: i18n.t('Phone number not verified') }
 

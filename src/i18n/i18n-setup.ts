@@ -1,6 +1,6 @@
-import { type PluralizationRule, createI18n } from 'vue-i18n'
-import { storeToRefs } from 'pinia'
 import { useApp } from '@/stores/app'
+import { storeToRefs } from 'pinia'
+import { createI18n, type PluralizationRule } from 'vue-i18n'
 
 // import { setLanguage as setVueComponentsLanguage } from '@nimiq/vue3-components'
 
@@ -58,7 +58,7 @@ export const i18n = i18nRegistration.global
 
 if (import.meta.env.PROD)
   // trick to not show numbers instead of string before language is loaded
-  i18n.missing = (locale: string, key: string) => /^[0-9]+$/.test(key) ? '' : key
+  i18n.missing = (locale: string, key: string) => /^\d+$/.test(key) ? '' : key
 
 // load and set language
 export async function setLanguage(lang: string): Promise<SupportedLanguage> {

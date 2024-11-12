@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { type ComputedRef, type PropType, computed, nextTick, ref, watchEffect } from 'vue'
-import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
-import YouTubePlayer from 'youtube-player'
-import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import ModalTemplate from '@/components/ModalTemplate.vue'
+import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
-import ModalTemplate from '@/components/ModalTemplate.vue'
-import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import { usePoints } from '@/stores/points'
 import { i18n } from '@/i18n/i18n-setup'
-import { useLogger } from '@/composables/useLogger'
+import { usePoints } from '@/stores/points'
+import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
+import { computed, type ComputedRef, nextTick, type PropType, ref, watchEffect } from 'vue'
+import YouTubePlayer from 'youtube-player'
+import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 
 const props = defineProps({
   task: {
@@ -26,7 +26,7 @@ const { claimTask } = usePoints()
 const metadata: ComputedRef<TaskMetadata> = computed(() => props.task && props.task.metadata)
 const type: ComputedRef<TaskType> = computed(() => metadata.value.type)
 const options: ComputedRef<string[]> = computed(() => type.value === 'question' ? metadata.value.options : [])
-const videoOptions: ComputedRef<{ id: string; time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? props.task.metadata : null)
+const videoOptions: ComputedRef<{ id: string, time: number } | null> = computed(() => props.task && type.value === 'yt-video' ? props.task.metadata : null)
 const textareaField = ref()
 const radioValueChecked = ref('')
 const isVideoStarted = ref(false)
@@ -65,7 +65,8 @@ watchEffect(() => {
             if (task_status === 'completed')
               isAlreadyClaimed.value = true
           }
-          catch (e: any) {
+          catch (e) {
+            logger.error((e as Error).message)
             // TODO: error handling
             isAlreadyClaimed.value = true
           }

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { MerchantCategory } from '@/types/transactions'
 import CarsBikesIcon from '@/components/icons/categories/cars_bikes.vue'
 import CashIcon from '@/components/icons/categories/cash.vue'
 import ComputerElectronicsIcon from '@/components/icons/categories/computer_electronics.vue'
+import DepositIcon from '@/components/icons/categories/deposit.vue'
 import EntertainmentIcon from '@/components/icons/categories/entertainment.vue'
 import FoodDrinksIcon from '@/components/icons/categories/food_drinks.vue'
 import HealthBeautyIcon from '@/components/icons/categories/health_beauty.vue'
@@ -12,8 +12,8 @@ import MiscellaneousIcon from '@/components/icons/categories/miscellaneous.vue'
 import RestaurantBarIcon from '@/components/icons/categories/restaurant_bar.vue'
 import ShopIcon from '@/components/icons/categories/shop.vue'
 import SportsFitnessIcon from '@/components/icons/categories/sports_fitness.vue'
-import DepositIcon from '@/components/icons/categories/deposit.vue'
 import WithdrawIcon from '@/components/icons/categories/withdraw.vue'
+import { MerchantCategory } from '@/types/transactions'
 
 defineProps({
   category: {

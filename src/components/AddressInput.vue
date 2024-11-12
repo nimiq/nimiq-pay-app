@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
 import { ValidationUtils } from '@nimiq/utils'
+import { nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   address: {

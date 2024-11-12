@@ -1,12 +1,12 @@
-import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
-import { isValidPhoneNumber } from 'libphonenumber-js'
-import { QRDataFormat } from '../../composables/useStringParser'
-import { FlowName, StepName, defaultStepInitOptions } from '@/lib/flows/steps.types'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
-import { i18n } from '@/i18n/i18n-setup'
-import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { hash } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
+import { i18n } from '@/i18n/i18n-setup'
+import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
+import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
+import { isValidPhoneNumber } from 'libphonenumber-js'
+import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
+import { QRDataFormat } from '../../composables/useStringParser'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -99,7 +99,7 @@ export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
       }
       else if (!PIN_CODE_REGEX.test(pinCode)) {
         if (import.meta.env.DEV)
-          debugger // eslint-disable-line no-debugger,no-restricted-syntax
+          debugger // eslint-disable-line no-debugger
         err(i18n.t('Invalid PIN code'))
       }
       else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login && flowName !== FlowName.ChangePin) {

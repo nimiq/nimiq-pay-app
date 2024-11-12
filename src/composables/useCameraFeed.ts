@@ -1,5 +1,8 @@
 import { type Ref, ref } from 'vue'
 import { useDevice } from './useDevice'
+import { useLogger } from './useLogger'
+
+const logger = useLogger('useCameraFeed')
 
 export function useCameraFeed(cameraFeedContainer: Ref<HTMLElement>) {
   return (useDevice().isWeb ? useCameraFeedWeb : useCameraFeedMobile)(cameraFeedContainer)
@@ -63,6 +66,7 @@ function useCameraFeedWeb(cameraFeedContainer: Ref<HTMLElement>) {
       hasPermission.value = true
     }
     catch (e) {
+      logger.error('Error while getting camera feed:', e)
       hasPermission.value = false
       return
     }

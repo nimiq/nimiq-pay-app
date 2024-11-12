@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { Browser } from '@capacitor/browser'
-import { close } from 'ionicons/icons'
 import { useModal } from '@/composables/useModal'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { close } from 'ionicons/icons'
 
 const { closeModal } = useModal()
 </script>

@@ -1,6 +1,6 @@
-import { type MaybeRef, toValue } from 'vue'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
+import { type MaybeRef, toValue } from 'vue'
 
 export interface PriceTable {
   // The fiat currency

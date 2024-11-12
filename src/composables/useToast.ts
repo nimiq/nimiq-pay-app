@@ -1,9 +1,9 @@
-import { toastController } from '@ionic/vue'
-import { ref } from 'vue'
-import { createSharedComposable } from '@vueuse/core'
-import { Haptics, NotificationType } from '@capacitor/haptics'
-import { useLogger } from '@/composables/useLogger'
 import { toastError, toastSpinner, toastSuccess, toastWarning } from '@/components/icons'
+import { useLogger } from '@/composables/useLogger'
+import { Haptics, NotificationType } from '@capacitor/haptics'
+import { toastController } from '@ionic/vue'
+import { createSharedComposable } from '@vueuse/core'
+import { ref } from 'vue'
 
 const logger = useLogger('useToast.ts')
 

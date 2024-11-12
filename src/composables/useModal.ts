@@ -1,8 +1,8 @@
-import { defineAsyncComponent } from 'vue'
-import { createSharedComposable } from '@vueuse/core'
-import { modalController } from '@ionic/vue'
 import type { ComponentProps, ComponentRef } from '@ionic/core'
 import { useLogger } from '@/composables/useLogger'
+import { modalController } from '@ionic/vue'
+import { createSharedComposable } from '@vueuse/core'
+import { defineAsyncComponent } from 'vue'
 
 const logger = useLogger('useModal')
 
@@ -24,7 +24,7 @@ export enum Modal {
 function _useModal() {
   const allModals: HTMLIonModalElement[] = []
 
-  async function showModal(modal: Modal, options?: { isOnTop?: boolean; isFullscreen?: boolean; isSmall?: boolean; componentProps?: ComponentProps<ComponentRef>; canDismiss?: boolean }) {
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean }) {
     const { isOnTop, isFullscreen, isSmall, componentProps, canDismiss = true } = options || {}
     if (import.meta.env.MODE === 'development')
       logger.log('showModal', modal)

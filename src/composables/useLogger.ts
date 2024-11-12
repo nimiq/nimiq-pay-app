@@ -1,9 +1,9 @@
-/* eslint-disable no-console */
-import { type Ref, ref, watch } from 'vue'
-import { useDebounceFn } from '@vueuse/core'
+import { isDev } from '@/lib'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
-import { isDev } from '@/lib'
+import { useDebounceFn } from '@vueuse/core'
+/* eslint-disable no-console */
+import { type Ref, ref, watch } from 'vue'
 
 const logs: Ref<string[]> = ref([])
 let writingLock = Promise.resolve()

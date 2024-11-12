@@ -2,7 +2,7 @@
 import { IonButton } from '@ionic/vue'
 import NotificationBell from './icons/notification-bell.vue'
 
-defineEmits<{ done: []; skip: [] }>()
+defineEmits<{ done: [], skip: [] }>()
 </script>
 
 <template>

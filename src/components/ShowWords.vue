@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
+import { i18n } from '@/i18n/i18n-setup'
+import { useLocalWallet } from '@/stores/local-wallet'
 import { IonButton } from '@ionic/vue'
 import { asyncComputed } from '@vueuse/core'
-import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { i18n } from '@/i18n/i18n-setup'
 
-defineEmits<{ done: []; skip: [] }>()
+defineEmits<{ done: [], skip: [] }>()
 
 const words = asyncComputed(() => useLocalWallet().getWords().then(({ data }) => data || []), [i18n.t('Loading...')])
 </script>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { type PropType, type Ref, ref, watchEffect } from 'vue'
 import { Haptics, NotificationType } from '@capacitor/haptics'
+import { type PropType, type Ref, ref, watchEffect } from 'vue'
 
 defineProps({
   recoveryWords: {

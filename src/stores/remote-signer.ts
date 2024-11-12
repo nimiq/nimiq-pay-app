@@ -1,12 +1,12 @@
-import { defineStore, storeToRefs } from 'pinia'
+import { useRemoteSignerApi } from '@/composables/useApi'
+import { useLogger } from '@/composables/useLogger'
+import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { computedAsync, until } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useRemoteSignerApi } from '@/composables/useApi'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
-import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('remote-signer')
 

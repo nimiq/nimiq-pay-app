@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { computedAsync } from '@vueuse/core'
-import { IonButton } from '@ionic/vue'
-import { Clipboard } from '@capacitor/clipboard'
-import { Share } from '@capacitor/share'
-import { computed } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { usePoints } from '@/stores/points'
-import { useToast } from '@/composables/useToast'
-import { i18n } from '@/i18n/i18n-setup'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
-import { Crypto } from '@/stores/app'
 import { useLogger } from '@/composables/useLogger'
 import { toCoins } from '@/composables/usePrice'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
+import { Crypto } from '@/stores/app'
+import { usePoints } from '@/stores/points'
+import { Clipboard } from '@capacitor/clipboard'
+import { Share } from '@capacitor/share'
+import { IonButton } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { computed } from 'vue'
 
 const logger = useLogger('ReferralModal')
 
@@ -46,7 +46,7 @@ function handleShare() {
     // Text to share via all the apps
     text: i18n.t(
       'Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! '
-        + 'Use my code {code} to earn {amount} in Cryptocity Points at registration.',
+      + 'Use my code {code} to earn {amount} in Cryptocity Points at registration.',
       { code: referralInfo.value?.id, amount: formatCrypto(referralInfo?.value?.reward || 0, { currency: Crypto.NIM }) },
     ),
     url: 'https://nimpay.app',

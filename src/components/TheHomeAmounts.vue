@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { storeToRefs } from 'pinia'
-import { IonSkeletonText } from '@ionic/vue'
-import { computed } from 'vue'
-import { usePrice } from '@/composables/usePrice'
-import { useRemoteSigner } from '@/stores/remote-signer'
 import PriceChange from '@/components/PriceChange.vue'
+import { usePrice } from '@/composables/usePrice'
 import { useSync } from '@/composables/useSync'
-import { FiatAmount } from "@nimiq/vue3-components"
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { IonSkeletonText } from '@ionic/vue'
+import { FiatAmount } from '@nimiq/vue3-components'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 
 const { remoteBalance: balance, blocksUntilHtlcActive } = storeToRefs(useRemoteSigner())
 const { nodesAreSynced } = useSync()

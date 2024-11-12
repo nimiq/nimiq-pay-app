@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { Crypto } from '@/stores/app'
+import { PaymentMethod } from '@/types/transactions'
+import { FiatAmount } from '@nimiq/vue3-components'
 import { useSlots } from 'vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import InvoiceIcon from './icons/invoice.vue'
-import { PaymentMethod } from '@/types/transactions'
-import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
-import { Crypto } from '@/stores/app'
-import { FiatAmount } from '@nimiq/vue3-components'
 
 defineProps<{
   cryptoTotal: number

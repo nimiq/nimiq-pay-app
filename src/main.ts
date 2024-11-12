@@ -1,40 +1,40 @@
-import { devtools } from '@vue/devtools'
-import { createApp } from 'vue'
+import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
+
+import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
+import { useApp } from '@/stores/app'
 import { IonicVue } from '@ionic/vue'
+import { devtools } from '@vue/devtools'
+
+import { createApp } from 'vue'
 
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 import { createPinia, storeToRefs } from 'pinia'
 import App from './App.vue'
-import router from './router'
 
+import router from './router'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
-
 /* Basic CSS for apps built with Ionic */
 import '@ionic/vue/css/normalize.css'
 import '@ionic/vue/css/structure.css'
 import '@ionic/vue/css/typography.css'
-
 /* Optional CSS utils that can be commented out */
 import '@ionic/vue/css/padding.css'
+
 import '@ionic/vue/css/float-elements.css'
+
 import '@ionic/vue/css/text-alignment.css'
 import '@ionic/vue/css/text-transformation.css'
 import '@ionic/vue/css/flex-utils.css'
 import '@ionic/vue/css/display.css'
-
 /* Theme variables */
 import './theme/variables.css'
-
 /* Libs */
 import { useConn } from '@/stores/conn'
-import { useDecrypt } from '@/composables/useDecrypt'
-import { useDevice } from '@/composables/useDevice'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
-import { useApp } from '@/stores/app'
-import { useLogger } from '@/composables/useLogger'
 
 if (import.meta.env.DEV || false)
   // Change this based on your local IP address if you want to use vue-devtools

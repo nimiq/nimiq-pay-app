@@ -1,10 +1,10 @@
 /* eslint-disable style/indent, style/semi, style/member-delimiter-style, antfu/if-newline,
-antfu/consistent-list-newline, style/quote-props, style/brace-style, curly, arrow-parens --
+antfu/consistent-list-newline, style/quote-props, style/brace-style --
 The idea is to eventually move this into a separate lib, therefore we keep the file as close as possible to the variant
 using in the Nimiq Wallet */
 import type { CapacitorHttp } from '@capacitor/core';
-import { ValidationUtils } from '@nimiq/utils';
 import { isDev } from '@/lib/index';
+import { ValidationUtils } from '@nimiq/utils';
 
 const GO_CRYPTO_CONFIG = isDev
     // The api keys are allowed to be public. The dev key is from chapter 4 of the documentation, the production key
@@ -129,7 +129,8 @@ export function parseGoCryptoRequestLink(requestLink: string | URL): GoCryptoReq
     if (!url || !(
         /(?:^|\.)gocrypto\.com$/i.test(url.hostname)
         || /^gocrypto:$/i.test(url.protocol) // for scanning GoCrypto deep-links
-    )) return null;
+    )) { return null;
+}
 
     // Note: searchParams.get also url decodes the parameters already
     const paymentId = url.searchParams.get(GOCRYPTO_ID_PARAM);
@@ -245,7 +246,8 @@ export async function fetchGoCryptoPaymentDetails(
 
         const id: string = data.id;
         if (typeof id !== 'string' || !/\w+/.test(id)
-            || ('paymentId' in requestIdentifier && id !== requestIdentifier.paymentId)) throw new Error('Invalid id');
+          || ('paymentId' in requestIdentifier && id !== requestIdentifier.paymentId)) { throw new Error('Invalid id');
+}
 
         const status: GoCryptoPaymentStatus = data.status;
         if (typeof status !== 'number' || !(status in GoCryptoPaymentStatus)) throw new Error('Invalid status');
@@ -260,10 +262,11 @@ export async function fetchGoCryptoPaymentDetails(
 
         // Only support Nimiq
         const nimiqPaymentOptions: Record<string, any> = Array.isArray(data.payment_options)
-            && (data.payment_options as any[])
-                .find((option) => typeof option === 'object' && option.currency_name === 'NIM');
+          && (data.payment_options as any[])
+                .find(option => typeof option === 'object' && option.currency_name === 'NIM');
         if (!nimiqPaymentOptions
-            || nimiqPaymentOptions.currency !== /* Nimiq id */ 207) throw new Error('Missing Nimiq payment options');
+          || nimiqPaymentOptions.currency !== /* Nimiq id */ 207) { throw new Error('Missing Nimiq payment options');
+}
 
         const recipient: string = ValidationUtils.normalizeAddress(nimiqPaymentOptions.wallet_address);
         if (!ValidationUtils.isValidAddress(recipient)) throw new Error('Invalid recipient');
@@ -276,7 +279,8 @@ export async function fetchGoCryptoPaymentDetails(
 
         const fiatCurrency: GoCryptoFiatCurrency = data.currency;
         if (typeof fiatCurrency !== 'number'
-            || !(fiatCurrency in GoCryptoFiatCurrency)) throw new Error('Invalid fiatCurrency');
+          || !(fiatCurrency in GoCryptoFiatCurrency)) { throw new Error('Invalid fiatCurrency');
+}
 
         return {
             id,
@@ -340,9 +344,9 @@ export interface GoCryptoUserFriendlyStatusOptions<IM extends boolean> {
         : Record<GoCryptoUserFriendlyStatusTitle, string>,
 }
 export type GoCryptoUserFriendlyStatus<IM extends boolean> = { paymentStatus: 'pending' }
-    | { paymentStatus: 'accepted', title: string }
-    // eslint-disable-next-line ts/ban-types
-    | ({ paymentStatus: 'failed', title: string } & (IM extends true ? { message: string } : {}));
+  | { paymentStatus: 'accepted', title: string }
+    // eslint-disable-next-line ts/no-empty-object-type
+  | ({ paymentStatus: 'failed', title: string } & (IM extends true ? { message: string } : {}));
 
 export function goCryptoStatusToUserFriendlyStatus<IM extends boolean = true>(
     paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
@@ -374,7 +378,7 @@ export function goCryptoStatusToUserFriendlyStatus<IM extends boolean = true>(
 
     if ('errorCode' in paymentDetails) {
         const errorCode = paymentDetails.errorCode === GoCryptoPaymentApiErrorCode.PaymentNotFound
-            && 'merchantId' in paymentDetails.request
+          && 'merchantId' in paymentDetails.request
             // For not found payment request by merchantId use InvalidIdentifier messaging, because the merchant's
             // previous payment request expired, which might have been for another customer, and he did not set up a
             // new request yet for the new customer.
@@ -404,7 +408,7 @@ export function goCryptoStatusToUserFriendlyStatus<IM extends boolean = true>(
                 const userFriendlyErrorCode = errorCode
                     .replace(/^[a-z]|[A-Z]/g, (char, index) => `${index !== 0 ? ' ' : ''}${char.toUpperCase()}`);
                 const errorCodeAndMessage = userFriendlyErrorCode
-                    + (paymentDetails.errorMessage ? `: ${paymentDetails.errorMessage}` : '');
+                  + (paymentDetails.errorMessage ? `: ${paymentDetails.errorMessage}` : '');
                 return createErrorStatus(titleKey, ['UnknownError', 'AskForPaymentStatus', 'Refund'],
                     { errorCodeAndMessage });
             }
@@ -465,7 +469,7 @@ function goCryptoStatusToUserFriendlyStatus_getMessage<IM extends boolean = true
     let message = messagePartKeys.map((partKey) => {
         const untranslatedPart = USER_FRIENDLY_STATUS_MESSAGE[partKey];
         const partTemplate = options.translations?.[untranslatedPart] ?? untranslatedPart;
-        return partTemplate.replace(/{(\w+?)}/g, (match, variable) => options.interpolations?.[variable] ?? match);
+        return partTemplate.replace(/\{(\w+)\}/g, (match, variable) => options.interpolations?.[variable] ?? match);
     }).join(' ');
 
     if ('appendPaymentId' in options && options.appendPaymentId) {
@@ -475,8 +479,8 @@ function goCryptoStatusToUserFriendlyStatus_getMessage<IM extends boolean = true
 }
 
 type MonitoringOptions<IM extends boolean> = Parameters<typeof fetchGoCryptoPaymentDetails>[1]
-    & GoCryptoUserFriendlyStatusOptions<IM>
-    & {
+  & GoCryptoUserFriendlyStatusOptions<IM>
+  & {
         onUpdate: (
             paymentDetails: GoCryptoPaymentDetails | GoCryptoPaymentApiError,
             userFriendlyStatus: GoCryptoUserFriendlyStatus<IM>,
@@ -535,7 +539,7 @@ async function monitorGoCryptoRequest_updatePaymentDetails<IM extends boolean>(
     state.userFriendlyStatus = goCryptoStatusToUserFriendlyStatus(state.paymentDetails, options);
     try {
         options.onUpdate(state.paymentDetails, state.userFriendlyStatus);
-    } catch (e) {}
+    } catch {}
     if (state.userFriendlyStatus.paymentStatus === 'accepted') {
         clearInterval(state.paymentDetailsUpdateInterval);
         return false;
@@ -549,7 +553,7 @@ function monitorGoCryptoRequest_updateExpiryCountdowns<IM extends boolean>(
 ): boolean {
     const paymentDetails = state.paymentDetails && 'id' in state.paymentDetails ? state.paymentDetails : null;
     const { expiryEarly, expiryFinal } = paymentDetails
-        || { expiryEarly: -1, expiryFinal: -1 }; // paymentDetails unknown or an error
+      || { expiryEarly: -1, expiryFinal: -1 }; // paymentDetails unknown or an error
 
     const now = Date.now();
     const remainingTimeExpiryEarly = Math.max(expiryEarly - now, 0);
@@ -557,7 +561,7 @@ function monitorGoCryptoRequest_updateExpiryCountdowns<IM extends boolean>(
     if (options.onTimerTick) {
         try {
             options.onTimerTick(remainingTimeExpiryEarly, remainingTimeExpiryFinal);
-        } catch (e) {}
+        } catch {}
     }
 
     if (!remainingTimeExpiryEarly && paymentDetails && state.userFriendlyStatus?.paymentStatus !== 'failed') {
@@ -584,7 +588,7 @@ function toUrl(link: string | URL): null | URL {
 
     try {
         return new URL(link);
-    } catch (e) {
+    } catch {
         return null;
     }
 }

@@ -1,21 +1,21 @@
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, readonly, ref } from 'vue'
-import type { Swap } from '@nimiq/fastspot-api-v2'
-import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
-import { useRemoteSigner } from './remote-signer'
-import { useConn } from './conn'
-import { useLocalWallet } from './local-wallet'
-import { MerchantCategory, PaymentMethod, Rail, Transfer, isExternalTx } from '@/types/transactions'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import type { AsyncResult } from '@/types'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
+import type { Swap } from '@nimiq/fastspot-api-v2'
+import { useFastspotApiV2 } from '@/composables/useFastspotV2'
+import { useLogger } from '@/composables/useLogger'
+import { useSync } from '@/composables/useSync'
+import { useTransactionSearch } from '@/composables/useTransactionSearch'
+import { i18n } from '@/i18n/i18n-setup'
+import { type DbPagination, DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
-import { useTransactionSearch } from '@/composables/useTransactionSearch'
-import { useSync } from '@/composables/useSync'
-import { i18n } from '@/i18n/i18n-setup'
-import { useLogger } from '@/composables/useLogger'
-import { useFastspotApiV2 } from '@/composables/useFastspotV2'
+import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, onMounted, readonly, ref } from 'vue'
+import { useConn } from './conn'
+import { useLocalWallet } from './local-wallet'
+import { useRemoteSigner } from './remote-signer'
 
 const logger = useLogger('transactions.ts')
 
@@ -58,7 +58,7 @@ export const useTransactions = defineStore('transactions', () => {
 
     // Convert JSON strings to objects
     txs.forEach((tx) => {
-      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number; currency: string } : undefined
+      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
     })
 
@@ -295,7 +295,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string; status: Nimiq.Client.TransactionState; timestamp: number | undefined }) {
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: Nimiq.Client.TransactionState, timestamp: number | undefined }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
     const tx = transactions.value.find(tx => tx.hash === hash)
     if (tx) {

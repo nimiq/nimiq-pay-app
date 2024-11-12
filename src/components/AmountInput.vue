@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { useApp } from '@/stores/app'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
-import { useApp } from '@/stores/app'
 
 const props = defineProps({
   modelValue: {
@@ -50,13 +50,13 @@ const formattedValue = computed({
       return
     }
 
-    value = value.replace(/\,/, '.')
+    value = value.replace(/,/, '.')
     const regExp = new RegExp(`(\\d*)(\\.(\\d{0,${decimals}}))?`, 'g') // Backslashes are escaped
     const regExpResult = regExp.exec(value)!
     if (regExpResult[1] || regExpResult[2]) {
       liveValue.value = `${regExpResult[1] ? regExpResult[1] : '0'}${regExpResult[2] ? regExpResult[2] : ''}`
       inputValue.value = Number(
-                      `${regExpResult[1]}${(regExpResult[2] ? regExpResult[3] : '').padEnd(decimals, '0')}`,
+        `${regExpResult[1]}${(regExpResult[2] ? regExpResult[3] : '').padEnd(decimals, '0')}`,
       )
     }
     else {

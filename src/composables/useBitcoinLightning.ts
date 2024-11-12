@@ -1,13 +1,13 @@
 import type { LNServicePaymentRequest, LNServiceResponse } from '@/types'
-import { i18n } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
 
 const logger = useLogger('useBitcoinLightning')
 
 const TAG_PAY_REQUEST = 'payRequest'
 // https://github.com/dolcalmi/lnurl-pay/blob/c780358f4bd51bd69690bed135c3b78653fbd109/src/utils.ts#L11C1-L12C75
 const LNURL_REGEX
-  = /^(?:http.*[&?]lightning=|lightning:)?(lnurl[0-9]{1,}[02-9ac-hj-np-z]+)/
+  = /^(?:http.*[&?]lightning=|lightning:)?(lnurl\d+[02-9ac-hj-np-z]+)/
 
 function isLnurl(url: string) {
   if (!url)

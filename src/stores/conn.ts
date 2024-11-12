@@ -1,11 +1,11 @@
-import { defineStore } from 'pinia'
-import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
-import { computed, ref } from 'vue'
-import { computedAsync } from '@vueuse/core'
-import { useDevice } from '@/composables/useDevice'
-import { migrations } from '@/lib/sql-queries'
 import type { AsyncOption } from '@/types'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
+import { migrations } from '@/lib/sql-queries'
+import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
+import { computedAsync } from '@vueuse/core'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 const logger = useLogger('useConn')
 

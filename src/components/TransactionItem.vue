@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import { usePrice } from '@/composables/usePrice'
+import { useRelativeTime } from '@/composables/useRelativeTime'
+import { type ExternalTransaction, isPaymentTx, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import { IonRippleEffect } from '@ionic/vue'
+import { FormattableNumber } from '@nimiq/utils'
+import { FiatAmount } from '@nimiq/vue3-components'
 import { computed } from 'vue'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
-import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, MerchantCategory, PaymentMethod, Transfer, isPaymentTx, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
-import { usePrice } from '@/composables/usePrice'
-import { FormattableNumber } from '@nimiq/utils'
-import { FiatAmount } from '@nimiq/vue3-components'
 
 const props = defineProps({
   tx: {

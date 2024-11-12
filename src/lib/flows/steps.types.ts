@@ -23,7 +23,7 @@ interface FlowHookCbReturn {
   // e.g. onDone will close the modal by default.
   prevent?: boolean
 }
-export type FlowHookCb = (state: State, options: { err: (msg: string) => void; setToast: (options: Toast) => void }) => Promise<FlowHookCbReturn | void>
+export type FlowHookCb = (state: State, options: { err: (msg: string) => void, setToast: (options: Toast) => void }) => Promise<FlowHookCbReturn | void>
 
 export interface Flow {
   flowName: FlowName
@@ -246,13 +246,13 @@ export const stepEmits: EmitsOptions = {
 // Complex types for State
 
 export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
-& {
-  transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
-  feeIncludedInAmount?: boolean
-  swap?: {
-    fees: { asset: string; amount: number }[]
+  & {
+    transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
+    feeIncludedInAmount?: boolean
+    swap?: {
+      fees: { asset: string, amount: number }[]
+    }
   }
-}
 
 export interface NimWithdrawalSelection {
   amount: number

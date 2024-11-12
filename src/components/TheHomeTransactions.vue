@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import TransactionItem from '@/components/TransactionItem.vue'
+import { useSync } from '@/composables/useSync'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
+import { useTransactions } from '@/stores/transactions'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { useSync } from '@/composables/useSync'
-import { useTransactions } from '@/stores/transactions'
-import TransactionItem from '@/components/TransactionItem.vue'
-import { FlowName } from '@/lib/flows/steps.types'
-import { initializeFlow } from '@/lib/flows'
 
 const { isUpdatingTransactions } = useSync()
 const { transactions } = storeToRefs(useTransactions())

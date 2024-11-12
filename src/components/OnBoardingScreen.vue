@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useInterval, usePointer, usePointerSwipe } from '@vueuse/core'
-import { IonButton } from '@ionic/vue'
-import { useCarousel } from '@/composables/useCarousel'
-import { stepEmits } from '@/lib/flows/steps.types'
-import { i18n } from '@/i18n/i18n-setup'
-
+import CompletedTasksSvg from '@/assets/graphics/completed-tasks.svg'
 import NimPointsExchangeSvg from '@/assets/graphics/nim-points-exchange.svg'
 import PayWithPointsSvg from '@/assets/graphics/pay-with-points.svg'
-import CompletedTasksSvg from '@/assets/graphics/completed-tasks.svg'
+import { useCarousel } from '@/composables/useCarousel'
+import { i18n } from '@/i18n/i18n-setup'
+import { stepEmits } from '@/lib/flows/steps.types'
+
+import { IonButton } from '@ionic/vue'
+import { useInterval, usePointer, usePointerSwipe } from '@vueuse/core'
+import { computed, ref, watch } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

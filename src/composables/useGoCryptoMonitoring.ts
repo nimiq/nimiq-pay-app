@@ -1,26 +1,26 @@
-// This composable is not part of useGoCrypto as it includes some input options and output processing specific to Nimiq
-// Pay app, and composition api code specific to Vue, while the idea is to keep useGoCrypto generic, and to eventually
-// move it into its own library/package.
-import { type MaybeRef, getCurrentScope, onScopeDispose, ref, toValue, watch } from 'vue'
-import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
-import { useApp } from '@/stores/app'
+import { useDevice } from '@/composables/useDevice'
 import {
+  fetchGoCryptoPaymentDetails,
   GoCryptoFiatCurrency,
   type GoCryptoPaymentApiError,
   type GoCryptoPaymentDetails,
   type GoCryptoRequestIdentifier,
+  goCryptoStatusToUserFriendlyStatus,
   type GoCryptoUserFriendlyStatus,
   type GoCryptoUserFriendlyStatusOptions,
   type GoCryptoUserFriendlyStatusTitle,
-  fetchGoCryptoPaymentDetails,
-  goCryptoStatusToUserFriendlyStatus,
   monitorGoCryptoRequest,
 } from '@/composables/useGoCrypto'
 import { getServerTime } from '@/composables/useTime'
-import { useDevice } from '@/composables/useDevice'
 import { i18n } from '@/i18n/i18n-setup'
+import { useApp } from '@/stores/app'
+import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
+// This composable is not part of useGoCrypto as it includes some input options and output processing specific to Nimiq
+// Pay app, and composition api code specific to Vue, while the idea is to keep useGoCrypto generic, and to eventually
+// move it into its own library/package.
+import { getCurrentScope, type MaybeRef, onScopeDispose, ref, toValue, watch } from 'vue'
 
 export async function fetchGoCryptoPaymentRequestData(requestIdentifier: GoCryptoRequestIdentifier)
 : Promise<Result<PaymentRequestData, string>> { // eslint-disable-line style/type-annotation-spacing, style/indent
@@ -128,11 +128,13 @@ function goCryptoPaymentDetailsToPaymentRequestData<IM extends boolean>(
   userFriendlyStatus: GoCryptoUserFriendlyStatus<IM>,
 ): Result<PaymentRequestData, string> {
   if (userFriendlyStatus.paymentStatus === 'failed'
-    || userFriendlyStatus.paymentStatus === 'accepted') // Also report already paid request as error
+    || userFriendlyStatus.paymentStatus === 'accepted') { // Also report already paid request as error
     return { error: userFriendlyStatus.title, data: undefined }
-  else if ('errorCode' in paymentDetails)
+  }
+  else if ('errorCode' in paymentDetails) {
     // This case should already be entirely be covered by the case above, and is just included here as a type guard
     return { error: i18n.t('Invalid GoCrypto link.'), data: undefined }
+  }
 
   // still pending GoCrypto request
   const fiatCurrency = GoCryptoFiatCurrency[paymentDetails.fiatCurrency]

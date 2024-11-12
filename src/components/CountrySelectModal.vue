@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import { useApp } from '@/stores/app'
+import { IonButtons, IonContent, IonHeader, IonIcon, IonRadio, IonRadioGroup, IonToolbar, modalController } from '@ionic/vue'
+import { close, search } from 'ionicons/icons'
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
+import { storeToRefs } from 'pinia'
+import { computed, ref } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
-import { close, search } from 'ionicons/icons'
-import { IonButtons, IonContent, IonHeader, IonIcon, IonRadio, IonRadioGroup, IonToolbar, modalController } from '@ionic/vue'
-import { computed, ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
-import { useApp } from '@/stores/app'
 
 const { language } = storeToRefs(useApp())
 

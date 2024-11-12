@@ -55,7 +55,7 @@
     "youtube-player": "^5.6.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "1.0.0-beta.29",
+    "@antfu/eslint-config": "^3.8.0",
     "@capacitor-community/sqlite": "^6.0.2",
     "@capacitor/android": "^6.1.2",
     "@capacitor/app": "^6.0.1",

@@ -1,9 +1,9 @@
+import type { AsyncResult, Result } from '@/types'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useApp } from './app'
-import { i18n } from '@/i18n/i18n-setup'
-import type { AsyncResult, Result } from '@/types'
-import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('local-wallet')
 

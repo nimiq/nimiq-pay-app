@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { close } from 'ionicons/icons'
-import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
+import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useApp } from '@/stores/app'
-import { useRemoteSigner } from '@/stores/remote-signer'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useLogger } from '@/composables/useLogger'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { close } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 
 const logger = useLogger('LogOutModal/Confirm')
 

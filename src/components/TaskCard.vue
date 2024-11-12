@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { type PropType, ref } from 'vue'
+import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
+import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
+import { usePoints } from '@/stores/points'
 import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
 import { chevronForwardOutline } from 'ionicons/icons'
-import { Modal, useModal } from '@/composables/useModal'
-import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
-import { usePoints } from '@/stores/points'
-import { useLogger } from '@/composables/useLogger'
+import { type PropType, ref } from 'vue'
 
 const props = defineProps({
   progress: {

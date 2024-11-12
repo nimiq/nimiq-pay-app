@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { type PropType, ref, toRefs, watch } from 'vue'
-import { IonButton } from '@ionic/vue'
-import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
-import { type State, stepEmits } from '@/lib/flows/steps.types'
-import { useApp } from '@/stores/app'
 import AddressInput from '@/components/AddressInput.vue'
 import QRIcon from '@/components/icons/qr.vue'
+import { type State, stepEmits } from '@/lib/flows/steps.types'
+import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { IonButton } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
+import { type PropType, ref, toRefs, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)

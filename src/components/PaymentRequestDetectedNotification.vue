@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computedAsync } from '@vueuse/core'
-import { IonRippleEffect } from '@ionic/vue'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
-import { useStringParser } from '@/composables/useStringParser'
+import QuickButton from '@/components/QuickButton.vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
-import QuickButton from '@/components/QuickButton.vue'
+import { useStringParser } from '@/composables/useStringParser'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
+import { IonRippleEffect } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
 
 const props = defineProps({
   invoice: {

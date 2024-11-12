@@ -1,6 +1,6 @@
+import { isDev } from '@/lib/index'
 import { nativeFetch } from '../lib/nativeFetch'
 import { useDevice } from './useDevice'
-import { isDev } from '@/lib/index'
 
 let fastspot: typeof import('@nimiq/fastspot-api-v1') | undefined
 

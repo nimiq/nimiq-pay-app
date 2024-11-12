@@ -47,7 +47,7 @@ Step used to show only information to the user and the user is not required to d
    `activeStep` if the carousel slides
 2. Once, the step is activated, the `async` function `beforeRender(state)` will
    be triggered. Read more about this function [in the
-   definition](./steps.types.ts) 
+   definition](./steps.types.ts)
 3. The user can interact with the main component or the slide, and once the
    component emits the `done` event, the `beforeNext` will be triggered
 4. The `beforeNext` is a hook that it's used to define validation of the step.
@@ -101,7 +101,6 @@ By default, the steps are defined in a linked list where each step is connected
 to the next one. The first step to be active will be the first step of all.
 After executing the `beforeNext` hook, the step will go to the next one.
 
-
 ### Jumping from one step to another and creating branches of the flow
 
 ```
@@ -116,9 +115,9 @@ In the previous graph, the Step 1 might have two options. Depending on what the
 age of the user, the flow will go to the Step 2 or Step 4.
 
 To achieve this behavior you should have:
-   
+
 - Set the steps in a linked list: [Step 1, Step 2, Step 3, Step 4]. By doing this
-  we have set up the default linked list flow. One step after the other. 
+  we have set up the default linked list flow. One step after the other.
 - To define the link between step 1 to step 4 we would need to setup the
   `beforeNext` hook with the custom logic and using the callbacks.
 

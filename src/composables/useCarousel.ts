@@ -1,6 +1,6 @@
-import { useScroll } from '@vueuse/core'
-import { type MaybeRef, type Ref, computed, ref, toValue } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { useScroll } from '@vueuse/core'
+import { computed, type MaybeRef, type Ref, ref, toValue } from 'vue'
 
 const logger = useLogger('useCarousel')
 

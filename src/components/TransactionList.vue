@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { useInfiniteScroll, useVirtualList } from '@vueuse/core'
-import { ref } from 'vue'
-import { storeToRefs } from 'pinia'
-import TransactionItem from './TransactionItem.vue'
-import QuickButton from './QuickButton.vue'
-import { TransactionListState, useTransactions } from '@/stores/transactions'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { TransactionListState, useTransactions } from '@/stores/transactions'
+import { useInfiniteScroll, useVirtualList } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
+import QuickButton from './QuickButton.vue'
+import TransactionItem from './TransactionItem.vue'
 
 defineEmits(stepEmits)
 

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
-import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { Keyboard } from '@capacitor/keyboard'
-import { useConn } from '@/stores/conn'
-import { useDecrypt } from '@/composables/useDecrypt'
 import PinInput from '@/components/PinInput.vue'
+import { useDecrypt } from '@/composables/useDecrypt'
+import { useConn } from '@/stores/conn'
+import { Keyboard } from '@capacitor/keyboard'
+import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const { dbExists } = storeToRefs(useConn())
 const { decrypt, decrypted } = useDecrypt()

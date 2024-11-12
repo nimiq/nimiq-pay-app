@@ -35,7 +35,7 @@ declare module 'vue-virtual-scroller' {
       }
     }>
 
-    getScroll(): { start: number; end: number }
+    getScroll(): { start: number, end: number }
 
     scrollToItem(index: number): void
 

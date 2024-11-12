@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { type PropType, computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { until } from '@vueuse/core'
-import { Haptics, NotificationType } from '@capacitor/haptics'
-import { type State, stepEmits } from '@/lib/flows/steps.types'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useBiometric } from '@/composables/useBiometric'
+import { type State, stepEmits } from '@/lib/flows/steps.types'
+import { Haptics, NotificationType } from '@capacitor/haptics'
+import { until } from '@vueuse/core'
+import { computed, onBeforeUnmount, onMounted, type PropType, ref, watch } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

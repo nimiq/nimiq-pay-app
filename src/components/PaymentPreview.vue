@@ -1,28 +1,28 @@
 <script setup lang="ts">
-import { Browser } from '@capacitor/browser'
-import { IonButton, IonToggle } from '@ionic/vue'
-import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
-import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
-import type { PropType } from 'vue'
-import { storeToRefs } from 'pinia'
-import { computedAsync } from '@vueuse/core'
-import type { Crypto } from '../stores/app'
-import LoadingSpinner from './icons/loading-spinner.vue'
-import InfoIcon from './icons/info.vue'
-import { Rail } from '@/types/transactions'
-import { PaymentMethod, StepName, stepEmits } from '@/lib/flows/steps.types'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
-import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
+import type { PropType } from 'vue'
+import type { Crypto } from '../stores/app'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
+import { useLogger } from '@/composables/useLogger'
+import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
+import { PaymentMethod, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useLocalWallet } from '@/stores/local-wallet'
-
+import { Rail } from '@/types/transactions'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonToggle } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
+import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
+import InfoIcon from './icons/info.vue'
+import LoadingSpinner from './icons/loading-spinner.vue'
 // TODO: async import
 import { useToast } from '@/composables/useToast'
-import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -33,7 +33,10 @@ const props = defineProps({
   canSkip: { type: Boolean },
   state: { type: Object as PropType<State>, required: true },
 })
+
 const emit = defineEmits(stepEmits)
+
+const logger = useLogger('PaymentPreview')
 
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
@@ -51,7 +54,7 @@ const amounts = computedAsync(async () => {
   // We check for undefined because the tx might have 0 as a value, which is falsy
   const properties = ['fiatCurrency', 'fiatAmount', 'fiatFeeAmount'] as const
   const useDefaultFiat = properties.some(prop => payment.value[prop] === undefined)
-  
+
   if (!useDefaultFiat) {
     // If the tx has its own fiat values, use them
     const { fiatAmount, fiatFeeAmount, fiatCurrency } = payment.value
@@ -141,6 +144,7 @@ const nimAddressLimits = computedAsync(async () => {
     return limits
   }
   catch (error) {
+    logger.error('Failed to get swap limits', error)
     loadingSwapLimits.value = false
     return null
   }
@@ -199,7 +203,7 @@ function handlePay() {
   emit('done', paymentMethod.value)
 }
 
-function formatInvoiced({ currency, amount }: { currency: string; amount: number }) {
+function formatInvoiced({ currency, amount }: { currency: string, amount: number }) {
   if (currency === 'BTC')
     return `₿ ${amount}`
 

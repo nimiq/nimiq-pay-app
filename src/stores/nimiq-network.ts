@@ -1,12 +1,12 @@
-import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { until, useTimeoutFn } from '@vueuse/core'
-import type { Account, Address, Block, Client, ClientTransactionDetails } from '@nimiq/core-web'
 import type { AsyncResult } from '@/types'
+import type { Account, Address, Block, Client, ClientTransactionDetails } from '@nimiq/core-web'
+import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
-import { useLogger } from '@/composables/useLogger'
+import { until, useTimeoutFn } from '@vueuse/core'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 const logger = useLogger('useNimiqNetwork')
 

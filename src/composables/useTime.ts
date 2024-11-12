@@ -1,7 +1,7 @@
+import { useLogger } from '@/composables/useLogger'
+import { useApp } from '@/stores/app'
 import { type MaybeRef, toValue } from 'vue'
 import { useDevice } from './useDevice'
-import { useApp } from '@/stores/app'
-import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useTime')
 
@@ -64,8 +64,7 @@ async function updateServerTimeOffset() {
     const dateHeader = await (useDevice().isWeb
       ? fetch(url, { method, cache: 'no-cache' })
         .then(({ headers }) => headers.get('Date'))
-      : import('@capacitor/core').then(({ CapacitorHttp: { request } }) => request({ url, method }))
-        .then(({ headers }) => headers.Date || headers.date)
+      : import('@capacitor/core').then(({ CapacitorHttp: { request } }) => request({ url, method })).then(({ headers }) => headers.Date || headers.date)
     )
     const serverTime = Date.parse(dateHeader || '')
     if (Number.isNaN(serverTime))

@@ -1,12 +1,12 @@
-import { type MaybeRef, computed, getCurrentScope, onScopeDispose, ref, toValue, watchEffect } from 'vue'
-import { toMs } from './useTime'
 import { useApp } from '@/stores/app'
+import { computed, getCurrentScope, type MaybeRef, onScopeDispose, ref, toValue, watchEffect } from 'vue'
+import { toMs } from './useTime'
 
 // Formatter for current language.
 const timeFormatter = computed(() => new Intl.RelativeTimeFormat(useApp().language, { numeric: 'auto' }))
 
 type Unit = Intl.RelativeTimeFormatUnitSingular
-const DEFAULT_UNITS: { unit: Unit; max: number; unitMs: number }[] = [
+const DEFAULT_UNITS: { unit: Unit, max: number, unitMs: number }[] = [
   { unit: 'second', max: 60_000, unitMs: 1_000 },
   { unit: 'minute', max: 2_760_000, unitMs: 60_000 },
   { unit: 'hour', max: 72_000_000, unitMs: 3_600_000 },

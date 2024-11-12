@@ -1,12 +1,12 @@
-import { h, ref } from 'vue'
-import { modalController } from '@ionic/vue'
-import { Modal, useModal } from '@/composables/useModal'
-import { FlowName, StepName } from '@/lib/flows/steps.types'
 import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
-
 import FlowCmp from '@/components/Flow.vue'
-import { i18n } from '@/i18n/i18n-setup'
 import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
+import { i18n } from '@/i18n/i18n-setup'
+
+import { FlowName, StepName } from '@/lib/flows/steps.types'
+import { modalController } from '@ionic/vue'
+import { h, ref } from 'vue'
 
 const logger = useLogger('flows/index.ts')
 

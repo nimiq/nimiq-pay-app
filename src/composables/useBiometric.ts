@@ -1,13 +1,13 @@
-import { createSharedComposable } from '@vueuse/core'
-import { computed, ref } from 'vue'
-import { AndroidBiometryStrength, BiometricAuth, BiometryError, BiometryErrorType, BiometryType } from '@aparajita/capacitor-biometric-auth'
 import type { CheckBiometryResult } from '@aparajita/capacitor-biometric-auth'
-import { SecureStorage, StorageError } from '@aparajita/capacitor-secure-storage'
 import type { PluginListenerHandle } from '@capacitor/core'
-import { storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
+import { AndroidBiometryStrength, BiometricAuth, BiometryError, BiometryErrorType, BiometryType } from '@aparajita/capacitor-biometric-auth'
+import { SecureStorage, StorageError } from '@aparajita/capacitor-secure-storage'
+import { createSharedComposable } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, ref } from 'vue'
 
 const logger = useLogger('useBiometric')
 const pinKey = 'pin'

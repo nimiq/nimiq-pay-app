@@ -1,19 +1,19 @@
 <script setup lang="ts">
-import { type PropType, computed, onBeforeMount, ref } from 'vue'
-import { Clipboard } from '@capacitor/clipboard'
-import { computedAsync } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
-import TransactionAmounts from './TransactionAmounts.vue'
-import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
-import { useFormatTime } from '@/composables/useTime'
 import { usePrice } from '@/composables/usePrice'
+import { useSync } from '@/composables/useSync'
+import { useFormatTime } from '@/composables/useTime'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useSync } from '@/composables/useSync'
+import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
+import { Clipboard } from '@capacitor/clipboard'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, onBeforeMount, type PropType, ref } from 'vue'
+import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
+import TransactionAmounts from './TransactionAmounts.vue'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
@@ -56,7 +56,7 @@ async function handleCopy(string: string) {
   await setToast({ message: i18n.t('Copied to clipboard') })
 }
 
-function formatInvoiced({ currency, amount }: { currency: string; amount: number }) {
+function formatInvoiced({ currency, amount }: { currency: string, amount: number }) {
   if (currency === 'BTC') {
     return `₿ ${amount}`
   }

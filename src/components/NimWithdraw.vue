@@ -1,6 +1,21 @@
 <script setup lang="ts">
-import { type PropType, computed, ref, toRef, watch } from 'vue'
+import AmountInput from '@/components/AmountInput.vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import TriangleIcon from '@/components/icons/triangle.vue'
+import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
+import { type State, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { Crypto, useApp } from '@/stores/app'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useRemoteSigner } from '@/stores/remote-signer'
 import { IonButton, IonIcon } from '@ionic/vue'
+import { ValidationUtils } from '@nimiq/utils'
+import { FiatAmount } from '@nimiq/vue3-components'
+import { chevronDown, chevronForward } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
 import {
   SelectContent,
   SelectGroup,
@@ -13,28 +28,17 @@ import {
   SelectValue,
   SelectViewport,
 } from 'radix-vue'
-import { chevronDown, chevronForward } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import { ValidationUtils } from '@nimiq/utils'
-import { type State, StepName, stepEmits } from '@/lib/flows/steps.types'
-import { useRemoteSigner } from '@/stores/remote-signer'
-import { Crypto, useApp } from '@/stores/app'
-import AmountInput from '@/components/AmountInput.vue'
-import NimiqLogo from '@/components/icons/nimiq-logo.vue'
-import LoadingSpinner from '@/components/icons/loading-spinner.vue'
-import TriangleIcon from '@/components/icons/triangle.vue'
-import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
-import { i18n } from '@/i18n/i18n-setup'
-import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { FiatAmount } from '@nimiq/vue3-components'
+import { computed, type PropType, ref, toRef, watch } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
+
 const emit = defineEmits(stepEmits)
+
+const logger = useLogger('NimWithdraw')
 
 const state = toRef(props, 'state')
 const { withdrawalAddress, topUpAddresses, withdrawalAddressesHistory, selectedFiat } = storeToRefs(useApp())
@@ -45,12 +49,13 @@ const address = computed(() => {
     return Nimiq.Address.fromString(address).toUserFriendlyAddress()
   }
   catch (e) {
+    logger.error('Invalid address:', address, e)
     return ''
   }
 })
 
 const { height } = storeToRefs(useNimiqNetwork())
-const { formatFiat, formatCrypto } = useCurrencyFormatter()
+const { formatCrypto } = useCurrencyFormatter()
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
 
 const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))

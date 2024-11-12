@@ -1,15 +1,15 @@
+import type { AsyncResult } from '@/types'
 import type { ExtendedTransaction } from '@nimiq/core-web'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
-import { SwapAsset } from '@nimiq/fastspot-api-v1'
-import { useFastspotApiV1 } from '../composables/useFastspotv1'
-import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
-import type { AsyncResult } from '@/types'
 import { useRemoteSignerApi } from '@/composables/useApi'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { i18n } from '@/i18n/i18n-setup'
 import { type PartialSendTxArgs, Transfer } from '@/types/transactions'
-import { useLogger } from '@/composables/useLogger'
+import { SwapAsset } from '@nimiq/fastspot-api-v1'
+import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
+import { useFastspotApiV1 } from '../composables/useFastspotv1'
 
 const logger = useLogger('tx.ts')
 
@@ -27,7 +27,7 @@ const logger = useLogger('tx.ts')
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: ExtendedTransaction; swap?: Swap }, string> {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: ExtendedTransaction, swap?: Swap }, string> {
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
       return { error: i18n.t('Something went wrong syncing your account'), data: undefined }

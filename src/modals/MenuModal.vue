@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
-import { Browser } from '@capacitor/browser'
-import { close } from 'ionicons/icons'
-import { ref } from 'vue'
-import { onLongPress } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { Modal, useModal } from '@/composables/useModal'
 import ItemDivider from '@/components/ItemDivider.vue'
-import { useApp } from '@/stores/app'
+import { Modal, useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { useApp } from '@/stores/app'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
+import { onLongPress } from '@vueuse/core'
+import { close } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()

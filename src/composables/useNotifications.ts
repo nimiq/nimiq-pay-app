@@ -1,18 +1,18 @@
 // TODO: https://capacitorjs.com/docs/apis/background-runner
 // TODO: https://capacitorjs.com/docs/apis/local-notifications
 
-import { storeToRefs } from 'pinia'
-import { type Ref, computed, ref } from 'vue'
-import { type ActionPerformed, PushNotifications } from '@capacitor/push-notifications'
 import type { PermissionState } from '@capacitor/core'
-import { computedAsync } from '@vueuse/core'
-import { i18n } from '@/i18n/i18n-setup'
-import { Modal, useModal } from '@/composables/useModal'
 import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
+import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { useLogger } from '@/composables/useLogger'
 import { PushNotificationsStatus, useApp } from '@/stores/app'
+import { type ActionPerformed, PushNotifications } from '@capacitor/push-notifications'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, type Ref, ref } from 'vue'
 
 const logger = useLogger('useNotifications')
 

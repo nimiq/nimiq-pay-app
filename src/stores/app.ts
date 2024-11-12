@@ -1,10 +1,10 @@
+import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
+import { SQLQuery } from '@/lib/sql-queries'
+import { Preferences } from '@capacitor/preferences'
 import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { Preferences } from '@capacitor/preferences'
 import { useConn } from './conn'
-import { SQLQuery } from '@/lib/sql-queries'
-import { type SupportedLanguage, guessUserLanguage } from '@/i18n/i18n-setup'
 
 export enum Fiat {
   USD = 'USD',

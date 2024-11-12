@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { useLogger } from '@/composables/useLogger'
+import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
+import { usePoints } from '@/stores/points'
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
-import { i18n } from '@/i18n/i18n-setup'
-import { useModal } from '@/composables/useModal'
-import { usePoints } from '@/stores/points'
-import { useLogger } from '@/composables/useLogger'
-import { useToast } from '@/composables/useToast'
 
 const { closeModal } = useModal()
 const { deleteAccount } = usePoints()

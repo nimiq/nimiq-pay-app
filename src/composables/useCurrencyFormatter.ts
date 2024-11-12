@@ -1,8 +1,8 @@
-import { type MaybeRef, toValue } from 'vue'
-import { storeToRefs } from 'pinia'
-import { useApp } from '@/stores/app'
 import type { Crypto, Fiat } from '@/stores/app'
+import { useApp } from '@/stores/app'
 import { FormattableNumber } from '@nimiq/utils'
+import { storeToRefs } from 'pinia'
+import { type MaybeRef, toValue } from 'vue'
 
 export interface FormatFiatOptions {
   /**

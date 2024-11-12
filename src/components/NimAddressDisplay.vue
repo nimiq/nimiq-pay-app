@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { IonButton, IonIcon } from '@ionic/vue'
-import { Clipboard } from '@capacitor/clipboard'
-import { qrCodeOutline } from 'ionicons/icons'
-import { Browser } from '@capacitor/browser'
-import { Identicon } from '@nimiq/vue3-components'
-import { stepEmits } from '@/lib/flows/steps.types'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { walletUrl } from '@/lib/index'
+import AddressDisplay from '@/components/AddressDisplay.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import AddressDisplay from '@/components/AddressDisplay.vue'
+import { stepEmits } from '@/lib/flows/steps.types'
+import { walletUrl } from '@/lib/index'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { Browser } from '@capacitor/browser'
+import { Clipboard } from '@capacitor/clipboard'
+import { IonButton, IonIcon } from '@ionic/vue'
+import { Identicon } from '@nimiq/vue3-components'
+import { qrCodeOutline } from 'ionicons/icons'
 
 defineProps({ address: { type: String } })
 

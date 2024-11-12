@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
-import { Clipboard } from '@capacitor/clipboard'
-import { useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
-import { type Ref, onMounted, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { useTransactions } from '@/stores/transactions'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { useRemoteSigner } from '@/stores/remote-signer'
-import { Transfer } from '@/types/transactions'
-import { useConn } from '@/stores/conn'
-import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/composables/useSync'
 import { useLogger } from '@/composables/useLogger'
+import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/composables/useSync'
+import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { useTransactions } from '@/stores/transactions'
+import { Transfer } from '@/types/transactions'
+import { Clipboard } from '@capacitor/clipboard'
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
+import { onMounted, type Ref, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const logger = useLogger('DevModal')
 
@@ -25,7 +25,7 @@ const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, is
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<Nimiq.ClientTransactionDetails | undefined> = ref()
-const htlcsFromBlockchain: Ref<{ address: string; validityStart: number; value: number }[]> = ref([])
+const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({

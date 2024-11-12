@@ -1,9 +1,9 @@
-import { computed, ref } from 'vue'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
+import { type ExternalTransaction, translateTransactionTitle } from '@/types/transactions'
 import { watchOnce } from '@vueuse/core'
 import { useFuse } from '@vueuse/integrations/useFuse'
-import { useConn } from '@/stores/conn'
-import { SQLQuery } from '@/lib/sql-queries'
-import { type ExternalTransaction, translateTransactionTitle } from '@/types/transactions'
+import { computed, ref } from 'vue'
 
 export function useTransactionSearch() {
   const searchQuery = ref('')
@@ -15,7 +15,7 @@ export function useTransactionSearch() {
     const txs = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
     // Convert JSON strings to objects
     txs.forEach((tx) => {
-      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number; currency: string } : undefined
+      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
     })
     allTransactions.value = txs
