@@ -133,7 +133,7 @@ msgstr ""
 msgid "Cannot enable biometric"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:70
+#: src/composables/useQRScanner.ts:71
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -422,7 +422,7 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:97
+#: src/components/NimWithdraw.vue:102
 msgid "Insufficient funds"
 msgstr ""
 
@@ -460,7 +460,7 @@ msgstr ""
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
-#: src/composables/useGoCryptoMonitoring.ts:135
+#: src/composables/useGoCryptoMonitoring.ts:136
 #: src/composables/useStringParser.ts:168
 msgid "Invalid GoCrypto link."
 msgstr ""
@@ -527,7 +527,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:79
+#: src/composables/useQRScanner.ts:80
 msgid "Invalid QR code"
 msgstr ""
 
@@ -831,7 +831,7 @@ msgstr ""
 msgid "Please enter a verification code"
 msgstr ""
 
-#: src/modals/TaskModal.vue:91
+#: src/modals/TaskModal.vue:92
 msgid "Please enter at least ten characters"
 msgstr ""
 
@@ -839,7 +839,7 @@ msgstr ""
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
 msgstr ""
 
-#: src/modals/TaskModal.vue:105
+#: src/modals/TaskModal.vue:106
 msgid "Please watch the full video"
 msgstr ""
 
@@ -1093,7 +1093,7 @@ msgstr ""
 msgid "The PINs do not match"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:175
+#: src/composables/useQRScanner.ts:176
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
@@ -1325,7 +1325,7 @@ msgid ""
 "Keep your recovery words safe and never share them with anyone!"
 msgstr ""
 
-#: src/modals/TaskModal.vue:107
+#: src/modals/TaskModal.vue:108
 msgid "Wrong answer"
 msgstr ""
 
@@ -1373,7 +1373,7 @@ msgstr ""
 msgid "You have chosen \"{selected}\"."
 msgstr ""
 
-#: src/modals/TaskModal.vue:115
+#: src/modals/TaskModal.vue:116
 msgid "You received Cryptocity Points"
 msgstr ""
 
