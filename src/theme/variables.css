@@ -123,6 +123,15 @@
   opacity: 0;
 }
 
+.slide-down-fade-enter-active, .slide-down-fade-leave-active {
+  transition: all 0.3s ease-out;
+}
+
+.slide-down-fade-leave-to, .slide-down-fade-enter-from {
+  transform: translateY(-20px);
+  opacity: 0;
+}
+
 .slide-left-enter-active, .slide-left-leave-active {
   transition: all 0.5s cubic-bezier(0.5, 0, 0.15, 1);
 }
