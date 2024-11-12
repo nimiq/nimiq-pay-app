@@ -16,6 +16,7 @@
   },
   "gitlab": {
     "release": true,
+    "useIdsForUrls": true,
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",
       "builds/ios/NimiqPay-${version}.app.tgz",
