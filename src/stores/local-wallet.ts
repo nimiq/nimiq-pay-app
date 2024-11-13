@@ -9,9 +9,12 @@ const logger = useLogger('local-wallet')
 
 export const useLocalWallet = defineStore('local-wallet', () => {
   const { entropy } = storeToRefs(useApp())
-  const localWallet = computed(() => Nimiq.KeyPair.derive(
-    Nimiq.Entropy.fromHex(entropy.value).toExtendedPrivateKey().derivePath(`m/44'/242'/0'/0'`).privateKey,
-  ))
+  const localWallet = computed(() => {
+    Nimiq.Entropy.SIZE = 16
+    return Nimiq.KeyPair.derive(
+      Nimiq.Entropy.fromHex(entropy.value).toExtendedPrivateKey().derivePath(`m/44'/242'/0'/0'`).privateKey,
+    )
+  })
 
   const localAddress = computed(() => localWallet.value.toAddress())
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
