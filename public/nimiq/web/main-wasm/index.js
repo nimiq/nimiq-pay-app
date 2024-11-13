@@ -238,6 +238,8 @@ export const AccountType = Object.freeze({ Basic: 0, 0: 'Basic', Vesting: 1, 1: 
 
 export const TransactionFormat = Object.freeze({ Basic: 0, 0: 'Basic', Extended: 1, 1: 'Extended' })
 
+export const TransactionFormat = Object.freeze({ Basic:0,"0":"Basic",Extended:1,"1":"Extended", });
+
 const AddressFinalization = (typeof FinalizationRegistry === 'undefined')
   ? { register: () => {}, unregister: () => {} }
   : new FinalizationRegistry(ptr => wasm.__wbg_address_free(ptr >>> 0, 1))

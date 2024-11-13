@@ -1,9 +1,7 @@
 import { PrivateKey, Address } from '@nimiq/core';
 
 declare class ArrayUtils {
-    static randomElement<T>(arr: T[]): T;
     static subarray(uintarr: Uint8Array, begin?: number, end?: number): Uint8Array;
-    static k_combinations(list: any[], k: number): Generator<any[]>;
 }
 
 declare class SerialBuffer extends Uint8Array {
@@ -57,9 +55,8 @@ declare class BufferUtils {
     static HEX_ALPHABET: string;
     static _BASE64_LOOKUP: string[];
     private static _ISO_8859_15_DECODER?;
+    private static _UTF8_DECODER?;
     private static _UTF8_ENCODER?;
-    static toAscii(buffer: Uint8Array): string;
-    static fromAscii(string: string): Uint8Array;
     static _codePointTextDecoder(buffer: Uint8Array): string;
     static _tripletToBase64(num: number): string;
     static _base64encodeChunk(u8: Uint8Array, start: number, end: number): string;
@@ -72,15 +69,15 @@ declare class BufferUtils {
     static fromBase32(base32: string, alphabet?: string): Uint8Array;
     static toHex(buffer: Uint8Array): string;
     static fromHex(hex: string, length?: number): SerialBuffer;
-    static toBinary(buffer: ArrayLike<number>): string;
-    private static _strToUint8Array;
     private static _utf8TextEncoder;
     static fromUtf8(str: string): Uint8Array;
+    private static _utf8TextDecoder;
+    static toUtf8(buf: TypedArray): string;
     static fromAny(o: Uint8Array | string, length?: number): SerialBuffer;
-    static concatTypedArrays<T extends TypedArray>(a: T, b: T): T;
     static equals(a: TypedArray, b: TypedArray): boolean;
     /**
      * Returns -1 if a is smaller than b, 1 if a is larger than b, 0 if a equals b.
+     * Shorter arrays are always considered smaller than longer ones.
      */
     static compare(a: TypedArray, b: TypedArray): number;
     static xor(a: Uint8Array, b: Uint8Array): Uint8Array;
@@ -144,7 +141,7 @@ declare class ExtendedPrivateKey extends Serializable {
     /**
      * Deserializes an ExtendedPrivateKey from a byte array.
      */
-    static unserialize(buf: SerialBuffer): ExtendedPrivateKey;
+    static deserialize(buf: SerialBuffer): ExtendedPrivateKey;
     /**
      * Deserializes an ExtendedPrivateKey from a hex string.
      */
@@ -166,6 +163,10 @@ declare class ExtendedPrivateKey extends Serializable {
      */
     get privateKey(): PrivateKey;
     /**
+     * Returns the chain code of this ExtendedPrivateKey.
+     */
+    get chainCode(): Uint8Array;
+    /**
      * Returns the address related to this ExtendedPrivateKey.
      */
     toAddress(): Address;
@@ -184,6 +185,7 @@ declare abstract class Secret extends Serializable {
      * Decrypts a Secret from an encrypted byte array and its password.
      */
     static fromEncrypted(buf: SerialBuffer, key: Uint8Array): Promise<PrivateKey | Entropy>;
+    static exportEncrypted(secret: Secret | PrivateKey, key: Uint8Array): Promise<SerialBuffer>;
     /**
      * Encrypts the Secret with a password.
      */
@@ -192,13 +194,6 @@ declare abstract class Secret extends Serializable {
      * Returns the serialized size of this object when encrypted.
      */
     get encryptedSize(): number;
-    /**
-     * Returns the type of this Secret.
-     *
-     * - `1: Type.PRIVATE_KEY`
-     * - `2: Type.ENTROPY`
-     */
-    get type(): Secret.Type;
     private static _decryptV3;
 }
 declare namespace Secret {
@@ -231,7 +226,7 @@ declare class Entropy extends Secret {
     /**
      * Deserializes an Entropy object from a byte array.
      */
-    static unserialize(buf: SerialBuffer): Entropy;
+    static deserialize(buf: SerialBuffer): Entropy;
     /**
      * Deserializes an Entropy object from a hex string.
      */
@@ -306,6 +301,8 @@ declare class MnemonicUtils {
     private static _mnemonicToBits;
     private static _bitsToEntropy;
     private static _salt;
+    private static _fromBinary;
+    private static _toBinary;
 }
 declare namespace MnemonicUtils {
     enum MnemonicType {
@@ -325,17 +322,37 @@ declare class NumberUtils {
     static isUint16(val: unknown): boolean;
     static isUint32(val: unknown): boolean;
     static isUint64(val: unknown): boolean;
-    static randomUint32(): number;
-    static randomUint64(): number;
-    static fromBinary(bin: string): number;
 }
 
 declare class StringUtils {
-    static isMultibyte(str: string): boolean;
+    static isWellFormed(str: string): boolean;
     static isHex(str: string): boolean;
     static isHexBytes(str: string, length?: number): boolean;
-    static commonPrefix(str1: string, str2: string): string;
-    static lpad(str: string, padString: string, length: number): string;
+    /**
+     * Copied from:
+     * https://github.com/ljharb/es-abstract/blob/main/2024/IsStringWellFormedUnicode.js
+     */
+    private static _isWellFormedUnicode;
+    /**
+     * Copied from:
+     * https://github.com/ljharb/es-abstract/blob/main/2024/CodePointAt.js
+     */
+    private static _codePointAt;
+    /**
+     * Copied from:
+     * https://github.com/ljharb/es-abstract/blob/main/helpers/isLeadingSurrogate.js
+     */
+    private static _isLeadingSurrogate;
+    /**
+     * Copied from:
+     * https://github.com/ljharb/es-abstract/blob/main/helpers/isTrailingSurrogate.js
+     */
+    private static _isTrailingSurrogate;
+    /**
+     * Copied from:
+     * https://github.com/ljharb/es-abstract/blob/main/2024/UTF16SurrogatePairToCodePoint.js
+     */
+    private static _utf16SurrogatePairToCodePoint;
 }
 
 export { ArrayUtils, BufferUtils, Entropy, ExtendedPrivateKey, MnemonicUtils, NumberUtils, Secret, SerialBuffer, StringUtils };

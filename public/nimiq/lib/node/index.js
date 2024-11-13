@@ -894,6 +894,13 @@ var ExtendedPrivateKey = class _ExtendedPrivateKey extends Serializable {
   }
 
   /**
+   * Returns the chain code of this ExtendedPrivateKey.
+   */
+  get chainCode() {
+    return this._chainCode
+  }
+
+  /**
    * Returns the address related to this ExtendedPrivateKey.
    */
   toAddress() {
@@ -1217,6 +1224,13 @@ var Secret = class _Secret extends Serializable {
     buf.write(salt)
     buf.write(ciphertext)
     return buf
+  }
+
+  /**
+   * Encrypts the Secret with a password.
+   */
+  async exportEncrypted(key) {
+    return _Secret.exportEncrypted(this, key)
   }
 
   /**
