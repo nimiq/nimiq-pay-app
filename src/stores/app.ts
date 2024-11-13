@@ -85,7 +85,6 @@ export const useApp = defineStore('app', () => {
       entropy.value = entropyDb
     }
     else {
-      // @ts-expect-error 16 is the value we need to have to get the 12 words
       Nimiq.Entropy.SIZE = 16
       entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
       await kv().setItem('entropy', entropy.value)

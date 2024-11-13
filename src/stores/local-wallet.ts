@@ -28,8 +28,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   function importWords(words: string[]): Result<void, string> {
     try {
-      // eslint-disable-next-line ts/ban-ts-comment
-      // @ts-expect-error
       Nimiq.Entropy.SIZE = 16
       entropy.value = Nimiq.MnemonicUtils.mnemonicToEntropy(words).toHex()
       return { data: undefined, error: undefined }

@@ -1,7 +1,5 @@
-import type { Ref } from 'vue'
-import { computed, ref, watch } from 'vue'
-import { storeToRefs } from 'pinia'
-import { computedAsync, createSharedComposable, until } from '@vueuse/core'
+import type { SwapHtlc } from '@/types/swapHtlcs'
+import type { ExternalTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
 import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core/web'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { Ref } from 'vue'
@@ -16,14 +14,12 @@ import { usePoints } from '@/stores/points'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
-import type { ExternalTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
-import { useConn } from '@/stores/conn'
-import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
-import { toAccountType } from '@/lib/tx'
-import { usePoints } from '@/stores/points'
-import { useApp } from '@/stores/app'
-import { useCplApi } from '@/composables/useApi'
-import { useLogger } from '@/composables/useLogger'
+import { SwapAsset } from '@nimiq/fastspot-api-v1'
+import { computedAsync, createSharedComposable, until } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
+import { useFastspotApiV1 } from './useFastspotv1'
+import { usePrice } from './usePrice'
 
 const logger = useLogger('useSync')
 
@@ -245,7 +241,7 @@ export function _useSync() {
         status: tx.state,
         timestamp: tx.timestamp,
         title: 'Top-Up', // translated at display time
-        message: Nimiq.BufferUtils.toAscii(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+        message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
         fee: tx.fee,
         proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
       })
@@ -313,7 +309,7 @@ export function _useSync() {
         status: tx.state,
         timestamp: tx.timestamp,
         title: 'Top-Up', // translated at display time
-        message: Nimiq.BufferUtils.toAscii(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+        message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
         fee: tx.fee,
         proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
       })

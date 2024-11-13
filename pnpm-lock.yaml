@@ -136,8 +136,8 @@ importers:
         specifier: 8.2.2
         version: 8.2.2
       '@nimiq/core':
-        specifier: https://gitpkg.now.sh/nimiq/core-rs-albatross/web-client/dist?b18921de41d14c07487a0c61b8f3b1c91e3d69e2
-        version: https://gitpkg.now.sh/nimiq/core-rs-albatross/web-client/dist?b18921de41d14c07487a0c61b8f3b1c91e3d69e2
+        specifier: 2.0.0-next.rc.3
+        version: 2.0.0-next.rc.3
       '@total-typescript/ts-reset':
         specifier: ^0.5.1
         version: 0.5.1
@@ -1353,9 +1353,8 @@ packages:
     resolution: {integrity: sha512-/gKJun8NNiWGZJkGzI/Ragc53cOdcLNdzjLaIa+GEjguQs0ulsurx8WN0jijdK9yPqDvziX995sMRLyLt1uZMQ==}
     engines: {node: '>= 0.4'}
 
-  '@nimiq/core@https://gitpkg.now.sh/nimiq/core-rs-albatross/web-client/dist?b18921de41d14c07487a0c61b8f3b1c91e3d69e2':
-    resolution: {tarball: https://gitpkg.now.sh/nimiq/core-rs-albatross/web-client/dist?b18921de41d14c07487a0c61b8f3b1c91e3d69e2}
-    version: 2.0.0-next.22.3
+  '@nimiq/core@2.0.0-next.rc.3':
+    resolution: {integrity: sha512-p0dNr+8yyDXE192b8p3m06q0QizemjNbHrbIuGS77+Bfbkm6zHkk9IB3603IhvpNJVHPOmOGniKgkioGRzwNHw==}
 
   '@nimiq/fastspot-api@1.9.0':
     resolution: {integrity: sha512-Tpl16uEAXMqpFcODAnoLiFEePgoBQLJCdKOR7JUkeh0W/jkjTI2KxFyF7N09GA01d0dk3GDlyRyVWMJzsZyYow==}
@@ -6911,6 +6910,7 @@ packages:
 
   workbox-google-analytics@7.0.0:
     resolution: {integrity: sha512-MEYM1JTn/qiC3DbpvP2BVhyIH+dV/5BjHk756u9VbwuAhu0QHyKscTnisQuz21lfRpOwiS9z4XdqeVAKol0bzg==}
+    deprecated: It is not compatible with newer versions of GA starting with v4, as long as you are using GAv3 it should be ok, but the package is not longer being maintained
 
   workbox-navigation-preload@7.0.0:
     resolution: {integrity: sha512-juWCSrxo/fiMz3RsvDspeSLGmbgC0U9tKqcUPZBCf35s64wlaLXyn2KdHHXVQrb2cqF7I0Hc9siQalainmnXJA==}
@@ -8585,7 +8585,7 @@ snapshots:
     dependencies:
       call-bind: 1.0.7
 
-  '@nimiq/core@https://gitpkg.now.sh/nimiq/core-rs-albatross/web-client/dist?b18921de41d14c07487a0c61b8f3b1c91e3d69e2':
+  '@nimiq/core@2.0.0-next.rc.3':
     dependencies:
       comlink: 4.4.1
       websocket: 1.0.35
