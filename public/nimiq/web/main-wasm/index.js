@@ -1836,6 +1836,71 @@ export class HashedTimeLockedContract {
   }
 }
 
+const HashedTimeLockedContractFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_hashedtimelockedcontract_free(ptr >>> 0, 1));
+/**
+ * Utility class providing methods to parse Hashed Time Locked Contract transaction data and proofs.
+ */
+export class HashedTimeLockedContract {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        HashedTimeLockedContractFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_hashedtimelockedcontract_free(ptr, 0);
+    }
+    /**
+     * Parses the data of a Hashed Time Locked Contract creation transaction into a plain object.
+     * @param {Uint8Array} data
+     * @returns {PlainTransactionRecipientData}
+     */
+    static dataToPlain(data) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.hashedtimelockedcontract_dataToPlain(retptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Parses the proof of a Hashed Time Locked Contract settlement transaction into a plain object.
+     * @param {Uint8Array} proof
+     * @returns {PlainTransactionProof}
+     */
+    static proofToPlain(proof) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(proof, wasm.__wbindgen_malloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.hashedtimelockedcontract_proofToPlain(retptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+}
+
 const KeyPairFinalization = (typeof FinalizationRegistry === 'undefined')
   ? { register: () => {}, unregister: () => {} }
   : new FinalizationRegistry(ptr => wasm.__wbg_keypair_free(ptr >>> 0, 1))
@@ -4698,6 +4763,71 @@ export class VestingContract {
       wasm.__wbindgen_add_to_stack_pointer(16)
     }
   }
+}
+
+const VestingContractFinalization = (typeof FinalizationRegistry === 'undefined')
+    ? { register: () => {}, unregister: () => {} }
+    : new FinalizationRegistry(ptr => wasm.__wbg_vestingcontract_free(ptr >>> 0, 1));
+/**
+ * Utility class providing methods to parse Vesting Contract transaction data and proofs.
+ */
+export class VestingContract {
+
+    __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        VestingContractFinalization.unregister(this);
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_vestingcontract_free(ptr, 0);
+    }
+    /**
+     * Parses the data of a Vesting Contract creation transaction into a plain object.
+     * @param {Uint8Array} data
+     * @returns {PlainTransactionRecipientData}
+     */
+    static dataToPlain(data) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.vestingcontract_dataToPlain(retptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+     * Parses the proof of a Vesting Contract claiming transaction into a plain object.
+     * @param {Uint8Array} proof
+     * @returns {PlainTransactionProof}
+     */
+    static proofToPlain(proof) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(proof, wasm.__wbindgen_malloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.stakingcontract_proofToPlain(retptr, ptr0, len0);
+            var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+            var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+            var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
 }
 
 async function __wbg_load(module, imports) {

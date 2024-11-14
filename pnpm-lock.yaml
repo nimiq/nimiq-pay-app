@@ -136,8 +136,8 @@ importers:
         specifier: 8.2.2
         version: 8.2.2
       '@nimiq/core':
-        specifier: 2.0.0-next.rc.3
-        version: 2.0.0-next.rc.3
+        specifier: 2.0.0-next.rc.4
+        version: 2.0.0-next.rc.4
       '@total-typescript/ts-reset':
         specifier: ^0.5.1
         version: 0.5.1
@@ -1353,8 +1353,8 @@ packages:
     resolution: {integrity: sha512-/gKJun8NNiWGZJkGzI/Ragc53cOdcLNdzjLaIa+GEjguQs0ulsurx8WN0jijdK9yPqDvziX995sMRLyLt1uZMQ==}
     engines: {node: '>= 0.4'}
 
-  '@nimiq/core@2.0.0-next.rc.3':
-    resolution: {integrity: sha512-p0dNr+8yyDXE192b8p3m06q0QizemjNbHrbIuGS77+Bfbkm6zHkk9IB3603IhvpNJVHPOmOGniKgkioGRzwNHw==}
+  '@nimiq/core@2.0.0-next.rc.4':
+    resolution: {integrity: sha512-qSBy/Mg0rbqAstEnrgzGhqeQpmQdOjCZPWmBV5uFxAMAAYl9nrABaXWQXo3Jvemvx5VQE9pz5/ma3I8Z0ROy1g==}
 
   '@nimiq/fastspot-api@1.9.0':
     resolution: {integrity: sha512-Tpl16uEAXMqpFcODAnoLiFEePgoBQLJCdKOR7JUkeh0W/jkjTI2KxFyF7N09GA01d0dk3GDlyRyVWMJzsZyYow==}
@@ -8585,7 +8585,7 @@ snapshots:
     dependencies:
       call-bind: 1.0.7
 
-  '@nimiq/core@2.0.0-next.rc.3':
+  '@nimiq/core@2.0.0-next.rc.4':
     dependencies:
       comlink: 4.4.1
       websocket: 1.0.35
