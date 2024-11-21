@@ -2,7 +2,7 @@
 # Inês Marques 2024.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-07-16 14:20+0000\n"
+"PO-Revision-Date: 2024-11-19 19:21+0000\n"
 "Last-Translator: Inês Marques\n"
 "Language: pt\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -49,15 +49,11 @@ msgstr "Valor demasiado pequeno"
 msgid "An unknown error occurred while importing words"
 msgstr "Ocorreu um erro desconhecido ao importar as palavras"
 
-#, fuzzy
-#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, biometric cannot be used"
-msgstr "Ocorreu um erro desconhecido ao importar as palavras"
+msgstr "Um erro desconhecido ocorreu, biometria não pode ser usada"
 
-#, fuzzy
-#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, please manually input your PIN"
-msgstr "Ocorreu um erro desconhecido ao importar as palavras"
+msgstr "Um erro desconhecido ocorreu, por favor insere o teu PIN manualmente"
 
 msgid "Are you sure you want to log out?"
 msgstr "Tens a certeza que queres encerrar sessão?"
@@ -72,13 +68,13 @@ msgid "Backup your account before logging out"
 msgstr "Faz backup da tua conta antes de encerrares sessão"
 
 msgid "Biometric Authentication"
-msgstr ""
+msgstr "Autenticação Biométrica"
 
 msgid "Biometric authentication enabled"
-msgstr ""
+msgstr "Autenticação biométrica ativada"
 
 msgid "Biometric is not supported on this device"
-msgstr ""
+msgstr "Biometria não suportada neste dispositivo"
 
 msgid "Bitcoin Lightning invoice expired."
 msgstr "Fatura Bitcoin Lightning expirada."
@@ -102,7 +98,7 @@ msgid "Cannot create NIM/BTC_LN swap"
 msgstr "Não é possível criar troca NIM/BTC_LN"
 
 msgid "Cannot enable biometric"
-msgstr ""
+msgstr "Não foi possível activar biometria"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado com sucesso"
@@ -110,10 +106,8 @@ msgstr "Cashlink reclamado com sucesso"
 msgid "Cashlink has no balance"
 msgstr "O Cashlink não tem saldo"
 
-#, fuzzy
-#| msgid "Choose a PIN"
 msgid "Change PIN"
-msgstr "Escolhe um PIN"
+msgstr "Muda o PIN"
 
 msgid "Choose a PIN"
 msgstr "Escolhe um PIN"
@@ -136,7 +130,7 @@ msgstr "Confirma o teu PIN"
 msgid "Confirmed"
 msgstr "Confirmado"
 
-#. We display a just mined, but not yet confirmed transactions as confirming.
+#. We display just included, but not yet confirmed transactions as confirming.
 msgid "Confirming"
 msgstr "A confirmar"
 
@@ -204,24 +198,22 @@ msgid "Earn Points"
 msgstr "Ganhar Pontos"
 
 msgid "Enable Fingerprint"
-msgstr ""
+msgstr "Ativar impressão digital"
 
 msgid "Enable notifications"
 msgstr "Ativar notificações"
 
 msgid "Enable Touch ID/Face ID"
-msgstr ""
+msgstr "Ativar Touch ID/Face ID"
 
 msgid "Enter Address"
 msgstr "Inserir endereço"
 
 msgid "Enter manually"
-msgstr ""
+msgstr "Insere manualmente"
 
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Enter payment request"
-msgstr "Nenhum pedido de pagamento pendente"
+msgstr "Inserir pedido de pagamento"
 
 msgid "Enter PIN"
 msgstr "Inserir PIN"
@@ -233,7 +225,7 @@ msgid "Enter the code from the SMS sent to you."
 msgstr "Introduz o código enviado por SMS."
 
 msgid "Enter your PIN to enable biometric authentication"
-msgstr ""
+msgstr "Insere o teu PIN para ativar a autenticação biométrica"
 
 msgid "Enter your promo code"
 msgstr "Inserir o teu código promocional"
@@ -242,9 +234,21 @@ msgid "Enter your referral promo code."
 msgstr "Inserir o teu código promocional de referência."
 
 msgid "Error using BiometricAuth"
-msgstr ""
+msgstr "Erro ao usar BiometricAuth"
 
 msgid "Error using SecureStorage"
+msgstr "Erro ao usar SecureStorage"
+
+msgid "Error while creating deposit"
+msgstr ""
+
+msgid "Error while extending deposit"
+msgstr ""
+
+msgid "Error while recovering deposit"
+msgstr ""
+
+msgid "Error while topping up deposit"
 msgstr ""
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
@@ -262,10 +266,8 @@ msgstr "Falha ao apagar conta de Pontos"
 msgid "Failed to fetch LNURL service"
 msgstr "Falha ao buscar o serviço LNURL"
 
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
-msgstr "Nenhum pedido de pagamento pendente"
+msgstr "Falha ao buscar pedido de pagamento"
 
 msgid "Featured"
 msgstr "Destacado"
@@ -303,10 +305,8 @@ msgstr "O GoCrypto recusou conexão"
 msgid "Got it"
 msgstr "Percebido"
 
-#, fuzzy
-#| msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
 msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
-msgstr "Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão receber {amount} em Pontos Cryptocity."
+msgstr "Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão receber {amount} Pontos Cryptocity."
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Olá! Junta-te a mim na aplicação Nimiq Pay e ganha Pontos Cryptocity para pagar as tuas compras com cripto. Usa o meu código {code} para receberes {amount} em Pontos Cryptocity com o teu registo."
@@ -366,10 +366,8 @@ msgstr "Formato do link inválido. Apenas CPLinks e NAKA para pedidos NIM e pedi
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Formato do link inválido. Apenas pedidos de CPLinks e NAKA para NIM são suportados."
 
-#, fuzzy
-#| msgid "Invalid PIN"
 msgid "Invalid LNURL"
-msgstr "PIN inválido"
+msgstr "LNURL inválido"
 
 msgid "Invalid NIM HTLC data in swap"
 msgstr "Dados do HTLC de NIM inválidos na troca"
@@ -380,15 +378,11 @@ msgstr "Endereço Nimiq inválido"
 msgid "Invalid Nimiq Cashlink"
 msgstr "Nimiq Cashlink inválido"
 
-#, fuzzy
-#| msgid "Invalid CPLink. Missing amount or recipient."
 msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
-msgstr "CPLink inválido. Montante ou destinatário em falta."
+msgstr "Solicitação da Nimiq Wallet inválida. Montante ou destinatário em falta."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
-msgstr "Formato do link inválido. Apenas pedidos de CPLinks e NAKA para NIM são suportados."
+msgstr "Solicitação inválida da Nimiq Wallet. Só solicitações da Nimiq Wallet são suportadas."
 
 msgid "Invalid phone number"
 msgstr "Número de telemóvel inválido"
@@ -438,10 +432,8 @@ msgstr "O pedido Lightning é para um valor de pagamento variável, mas valores 
 msgid "Loading"
 msgstr "A carregar"
 
-#, fuzzy
-#| msgid "Loading..."
 msgid "Loading swap limits..."
-msgstr "A carregar..."
+msgstr "A carregar limites de troca..."
 
 msgid "Loading tasks…"
 msgstr "A carregar tarefas…"
@@ -541,7 +533,7 @@ msgid "Pay"
 msgstr "Pagar"
 
 msgid "PAY"
-msgstr ""
+msgstr "PAGAR"
 
 msgid "Pay with Bluecode"
 msgstr "Pagar com Bluecode"
@@ -576,10 +568,8 @@ msgstr "O pagamento está a ser processado"
 msgid "Payment preview"
 msgstr "Pré-visualização do pagamento"
 
-#, fuzzy
-#| msgid "Payment Secret"
 msgid "Payment Request"
-msgstr "Pagamento Secreto"
+msgstr "Pedido de Pagamento"
 
 msgid "Payment Secret"
 msgstr "Pagamento Secreto"
@@ -602,10 +592,8 @@ msgstr "Número de telemóvel em falta"
 msgid "Phone number not verified"
 msgstr "Número de telemóvel não verificado"
 
-#, fuzzy
-#| msgid "Payment successful"
 msgid "PIN change successful"
-msgstr "Pagamento bem-sucedido"
+msgstr "Mudança de PIN bem-sucedida"
 
 msgid "PIN did not match"
 msgstr "O PIN não coincide"
@@ -649,8 +637,8 @@ msgstr "Pagamento com Pontos"
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
-msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} minuto para pagar. | A processar fundos. Aguarde cerca de ~{blocks} minutos para pagar."
+msgid "Processing funds… "
+msgstr ""
 
 msgid "Promo code missing"
 msgstr "Código promocional em falta"
@@ -679,10 +667,8 @@ msgstr "Palavras de Recuperação"
 msgid "Refunded"
 msgstr "Devolvido"
 
-#, fuzzy
-#| msgid "Verify your phone number"
 msgid "Requires Phone Number"
-msgstr "Verificar o teu número de telemóvel"
+msgstr "Necessita número de telemóvel"
 
 msgid "Resend"
 msgstr "Reenviar"
@@ -750,10 +736,8 @@ msgstr "Alguma coisa deu errado"
 msgid "Something went wrong authorizing the phone number"
 msgstr "Alguma coisa deu errado ao autorizar o número de telemóvel"
 
-#, fuzzy
-#| msgid "Something went wrong updating the tasks"
 msgid "Something went wrong changing the PIN"
-msgstr "Alguma coisa deu errado ao atualizar as tarefas"
+msgstr "Alguma coisa deu errado ao mudar o PIN"
 
 msgid "Something went wrong checking the promo code"
 msgstr "Alguma coisa deu errado ao verificar o código promocional"
@@ -812,10 +796,8 @@ msgstr "O backup é uma lista de 12 palavras em Inglês. Por favor garante que n
 msgid "The correct answer is \"{correct}\"."
 msgstr "A resposta correta é \"{correct}\"."
 
-#, fuzzy
-#| msgid "PIN did not match"
 msgid "The PINs do not match"
-msgstr "O PIN não coincide"
+msgstr "Os PINs não coincidem"
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "O scanner do QR ainda não está pronto. Espera por favor."
@@ -842,13 +824,13 @@ msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Este pagamento não é eligível para receber ou pagar com pontos."
 
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
-msgstr ""
+msgstr "Esta transação pendente vai ser devolvida automaticamente se não for completada antes do tempo limite"
 
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
-msgstr ""
+msgstr "Esta transação pendente vai ser devolvida automaticamente se não for concluída até ao dia seguinte | Esta transação pendente vai ser devolvida automaticamente se não for concluída nos próximos {days}"
 
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
-msgstr ""
+msgstr "Esta transação pendente vai ser devolvida automaticamente se não for concluída até à próxima hora | Esta transação pendente vai ser devolvida automaticamente se não for concluída nas próximas {hours} horas"
 
 msgid "This promo code has been claimed too many times"
 msgstr "Este código promocional foi reclamado demasiadas vezes"
@@ -889,19 +871,17 @@ msgstr "GoCrypto erro inesperado"
 msgid "Unknown"
 msgstr "Desconhecido"
 
-#, fuzzy
-#| msgid "Unknown"
 msgid "Unknown error"
-msgstr "Desconhecido"
+msgstr "Erro desconhecido"
 
 msgid "Unlock Nimiq Pay with your biometric data"
-msgstr ""
+msgstr "Desbloqueia a Nimiq Pay com os teus dados biométricos"
 
 msgid "Unlock the app using Fingerprint instead of PIN"
-msgstr ""
+msgstr "Desbloqueia a aplicação com a tua impressão digital em vez do PIN"
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
-msgstr ""
+msgstr "Desbloqueia a aplicação ao usar o Touch ID/Face ID em vez do PIN"
 
 msgid "Use {amount}"
 msgstr "Usar {amount}"
@@ -1050,6 +1030,9 @@ msgstr "O teu número"
 
 msgid "Your wallet is ready to use"
 msgstr "A tua wallet está pronta para usar"
+
+#~ msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+#~ msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} minuto para pagar. | A processar fundos. Aguarde cerca de ~{blocks} minutos para pagar."
 
 #~ msgid "Swap pending"
 #~ msgstr "Troca pendente"

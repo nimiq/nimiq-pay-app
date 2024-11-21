@@ -135,7 +135,7 @@ msgstr "Bestätige deine PIN"
 msgid "Confirmed"
 msgstr "Bestätigt"
 
-#. We display a just mined, but not yet confirmed transactions as confirming.
+#. We display just included, but not yet confirmed transactions as confirming.
 msgid "Confirming"
 msgstr "Wird bestätigt"
 
@@ -244,6 +244,18 @@ msgid "Error using BiometricAuth"
 msgstr ""
 
 msgid "Error using SecureStorage"
+msgstr ""
+
+msgid "Error while creating deposit"
+msgstr ""
+
+msgid "Error while extending deposit"
+msgstr ""
+
+msgid "Error while recovering deposit"
+msgstr ""
+
+msgid "Error while topping up deposit"
 msgstr ""
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
@@ -642,8 +654,8 @@ msgstr "Zahlung mit Punkten"
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
 
-msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
-msgstr "Guthaben wird verarbeitet… | Guthaben wird verarbeitet. Warte ~{blocks} Minute, bis du zahlen kannst. | Guthaben wird verarbeitet. Warte ~{blocks} Minuten, bis du zahlen kannst."
+msgid "Processing funds… "
+msgstr ""
 
 msgid "Promo code missing"
 msgstr "Promo-Code fehlt"
@@ -1045,6 +1057,9 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#~ msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+#~ msgstr "Guthaben wird verarbeitet… | Guthaben wird verarbeitet. Warte ~{blocks} Minute, bis du zahlen kannst. | Guthaben wird verarbeitet. Warte ~{blocks} Minuten, bis du zahlen kannst."
 
 #~ msgid "Swap pending"
 #~ msgstr "Tausch wird ausgeführt"
