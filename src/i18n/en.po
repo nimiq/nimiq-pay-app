@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#: src/stores/local-wallet.ts:43
+#: src/stores/local-wallet.ts:44
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
 
@@ -28,13 +28,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:122
-#: src/stores/nimiq-network.ts:154
-#: src/stores/nimiq-network.ts:172
+#: src/stores/nimiq-network.ts:121
+#: src/stores/nimiq-network.ts:142
+#: src/stores/nimiq-network.ts:160
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:163
+#: src/stores/nimiq-network.ts:151
 msgid "Addresses missing"
 msgstr ""
 
@@ -54,7 +54,7 @@ msgstr ""
 msgid "Amount too small"
 msgstr ""
 
-#: src/stores/local-wallet.ts:38
+#: src/stores/local-wallet.ts:39
 msgid "An unknown error occurred while importing words"
 msgstr ""
 
@@ -137,7 +137,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:124
+#: src/stores/nimiq-network.ts:123
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -174,16 +174,16 @@ msgstr ""
 msgid "Confirmed"
 msgstr ""
 
-#. We display a just mined, but not yet confirmed transactions as confirming.
+#. We display just included, but not yet confirmed transactions as confirming.
 #: src/types/transactions.ts:130
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:193
+#: src/stores/nimiq-network.ts:181
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:191
+#: src/stores/nimiq-network.ts:179
 msgid "Consensus established."
 msgstr ""
 
@@ -321,6 +321,22 @@ msgstr ""
 #: src/composables/useBiometric.ts:118
 #: src/composables/useBiometric.ts:89
 msgid "Error using SecureStorage"
+msgstr ""
+
+#: src/stores/sync.ts:83
+msgid "Error while creating deposit"
+msgstr ""
+
+#: src/stores/sync.ts:115
+msgid "Error while extending deposit"
+msgstr ""
+
+#: src/stores/sync.ts:136
+msgid "Error while recovering deposit"
+msgstr ""
+
+#: src/stores/sync.ts:97
+msgid "Error while topping up deposit"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:68
@@ -485,7 +501,7 @@ msgstr ""
 msgid "Invalid LNURL"
 msgstr ""
 
-#: src/lib/tx.ts:107
+#: src/lib/tx.ts:110
 msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
@@ -531,15 +547,15 @@ msgstr ""
 msgid "Invalid QR code"
 msgstr ""
 
-#: src/stores/local-wallet.ts:49
+#: src/stores/local-wallet.ts:50
 msgid "Invalid recovery words"
 msgstr ""
 
-#: src/lib/tx.ts:77
+#: src/lib/tx.ts:84
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:220
+#: src/lib/tx.ts:277
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -607,7 +623,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:61
+#: src/stores/nimiq-network.ts:72
 msgid "Network consensus lost."
 msgstr ""
 
@@ -619,19 +635,19 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:157
+#: src/stores/nimiq-network.ts:145
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:146
+#: src/lib/tx.ts:181
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
-#: src/stores/local-wallet.ts:22
+#: src/stores/local-wallet.ts:25
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:166
+#: src/stores/nimiq-network.ts:154
 msgid "No accounts found"
 msgstr ""
 
@@ -639,7 +655,7 @@ msgstr ""
 msgid "No Cashlink found"
 msgstr ""
 
-#: src/lib/tx.ts:82
+#: src/lib/tx.ts:89
 msgid "No NIM HTLC found in swap"
 msgstr ""
 
@@ -647,7 +663,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:274
+#: src/composables/useApi.ts:263
 msgid "No payment details found"
 msgstr ""
 
@@ -665,7 +681,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:175
+#: src/stores/nimiq-network.ts:163
 msgid "No transactions found"
 msgstr ""
 
@@ -700,7 +716,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:136
+#: src/views/HomeView.vue:139
 msgid "Pay"
 msgstr ""
 
@@ -860,7 +876,7 @@ msgid "Privacy Policy"
 msgstr ""
 
 #: src/views/HomeView.vue:123
-msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+msgid "Processing funds… "
 msgstr ""
 
 #: src/stores/points.ts:204
@@ -1030,16 +1046,16 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:236
+#: src/lib/tx.ts:293
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:177
 #: src/composables/useApi.ts:184
-#: src/lib/tx.ts:149
-#: src/lib/tx.ts:231
-#: src/lib/tx.ts:33
-#: src/lib/tx.ts:53
+#: src/lib/tx.ts:184
+#: src/lib/tx.ts:288
+#: src/lib/tx.ts:38
+#: src/lib/tx.ts:60
 msgid "Something went wrong syncing your account"
 msgstr ""
 
@@ -1069,7 +1085,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:192
+#: src/stores/nimiq-network.ts:180
 msgid "Syncing with network."
 msgstr ""
 
@@ -1158,7 +1174,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:130
+#: src/stores/transactions.ts:133
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1166,7 +1182,7 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:146
+#: src/stores/transactions.ts:149
 msgid "Transaction invalid"
 msgstr ""
 
@@ -1174,7 +1190,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:80
+#: src/stores/nimiq-network.ts:91
 msgid "Trying to establish network consensus:"
 msgstr ""
 
@@ -1333,7 +1349,7 @@ msgstr ""
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/stores/local-wallet.ts:46
+#: src/stores/local-wallet.ts:47
 msgid "Wrong number of recovery words"
 msgstr ""
 

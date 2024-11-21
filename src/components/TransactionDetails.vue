@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { usePrice } from '@/composables/usePrice'
-import { useSync } from '@/composables/useSync'
 import { useFormatTime } from '@/composables/useTime'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useSync } from '@/stores/sync'
 import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
 import { Clipboard } from '@capacitor/clipboard'
 import { computedAsync } from '@vueuse/core'

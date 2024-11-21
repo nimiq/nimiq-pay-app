@@ -1,33 +1,23 @@
 import type { AsyncResult } from '@/types'
 import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
-import { useSync } from '@/composables/useSync'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
 import { type DbPagination, DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
-import { getSignedTx } from '@/lib/tx'
+
+import { getSignedTx, toAccountType } from '@/lib/tx'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useSync } from '@/stores/sync'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, readonly, ref } from 'vue'
 import { useConn } from './conn'
 import { useLocalWallet } from './local-wallet'
 import { useRemoteSigner } from './remote-signer'
-
-import { MerchantCategory, PaymentMethod, Rail, Transfer, isExternalTx } from '@/types/transactions'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
-import type { AsyncResult } from '@/types'
-import { getSignedTx, toAccountType } from '@/lib/tx'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { DEFAULT_LIMIT, type DbPagination, SQLQuery } from '@/lib/sql-queries'
-import { useTransactionSearch } from '@/composables/useTransactionSearch'
-import { useSync } from '@/composables/useSync'
-import { i18n } from '@/i18n/i18n-setup'
-import { useLogger } from '@/composables/useLogger'
-import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 
 const logger = useLogger('transactions.ts')
 
@@ -94,7 +84,7 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<Transaction, string> {
+  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
     logger.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
@@ -105,6 +95,7 @@ export const useTransactions = defineStore('transactions', () => {
       localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
       localBalance: useLocalWallet().localBalance,
     })
+
     const res = await getSignedTx(partialTx)
     if (res.error) {
       logger.error('Error while signing transaction', res.error)
@@ -182,12 +173,16 @@ export const useTransactions = defineStore('transactions', () => {
           active: true,
           balance: plain.value,
           publicKey: useRemoteSigner().remotePublicKey!,
-          // Adding 2 more blocks just in case the tx is not mined in the next block, it will be corrected later
-          start: plain.validityStartHeight + (tx.transfer === Transfer.LocalToRemote ? 12 : 0),
+          start: plain.timestamp || useRemoteSigner().blockHeightToTimestamp(plain.validityStartHeight),
           address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
           end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-          proofSize: tx.proofSize,
+          // proofSize: tx.proofSize,
+          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+          proofSize: useRemoteSigner().remoteProofSize,
         })
+        if (tx.transfer === Transfer.LocalToRemote) {
+          useSync().pendingHtlcCreationTransactions.push(details)
+        }
       }
       else {
         logger.error('Transaction details are undefined, cannot update remote signer', tx)
@@ -196,7 +191,7 @@ export const useTransactions = defineStore('transactions', () => {
     else if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
       // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one
       await useRemoteSigner().updateRemoteSigner(undefined)
-      useSync().pendingTransactions.value.push(details)
+      // useSync().pendingTransactions.value.push(details)
     }
     else {
       await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
@@ -257,7 +252,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function addUnknownPaymentToMerchantTransaction(
-    tx: Nimiq.PlainTransactionDetails,
+    tx: PlainTransactionDetails,
     transfer = Transfer.UserPaymentToMerchant,
     rail = Rail.Unknown,
     paymentRef = '',
@@ -279,7 +274,9 @@ export const useTransactions = defineStore('transactions', () => {
       timestamp: tx.timestamp,
       title: 'Payment', // translated at display time
       fee: tx.fee,
-      proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
+      // proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
+      // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+      proofSize: useRemoteSigner().remoteProofSize,
       isCashbackClaimed: true,
       merchantName: '',
       paymentMethod: PaymentMethod.NIM,
@@ -307,7 +304,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: Nimiq.TransactionState, timestamp: number | undefined }) {
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: TransactionState, timestamp: number | undefined }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
     const tx = transactions.value.find(tx => tx.hash === hash)
     if (tx) {

@@ -8,12 +8,12 @@ import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
-import { useSync } from '@/composables/useSync'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { useSync } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
@@ -42,7 +42,7 @@ const router = useRouter()
 const { showModal } = useModal()
 
 const { localBalance } = storeToRefs(useLocalWallet())
-const { isRemoteOk, isHtlcActive, remoteBalance, blocksUntilHtlcActive, remoteHeight } = storeToRefs(useRemoteSigner())
+const { isRemoteOk, isHtlcActive, remoteBalance, /* blocksUntilHtlcActive, */ remoteHeight } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
@@ -50,12 +50,12 @@ const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getRefer
 const { transactions } = storeToRefs(useTransactions())
 const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced, isTransactionPending, isUpdatingTransactions } = useSync()
+const { nodesAreSynced, isTransactionPending, isUpdatingTransactions, isProcessingRemote } = storeToRefs(useSync())
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
-const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value)
+const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value || isProcessingRemote.value)
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
 
@@ -345,12 +345,15 @@ App.addListener('resume', detectPaymentRequest)
           <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
             <p class="font-medium text-center text-pumpkin">
+              {{ $t('Processing funds… ') }}
+            </p>
+            <!-- <p class="font-medium text-center text-pumpkin">
               {{ $tc(
-                'Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay.',
+                'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
                 blocksUntilHtlcActive,
                 { blocks: blocksUntilHtlcActive },
               ) }}
-            </p>
+            </p> -->
           </div>
         </Transition>
         <IonButton

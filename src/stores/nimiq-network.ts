@@ -1,11 +1,12 @@
-import { until, useTimeoutFn } from '@vueuse/core'
-import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTransactionDetails } from '@nimiq/core/web'
 import type { AsyncResult } from '@/types'
+import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTransactionDetails } from '@nimiq/core/web'
+import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
+import { until, useTimeoutFn } from '@vueuse/core'
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
 
 const logger = useLogger('useNimiqNetwork')
 
@@ -25,9 +26,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Client>()
   const consensus = ref<ConsensusState>('connecting')
   const head = ref<PlainBlock>()
+  const headTimestamp = computed(() => head.value?.timestamp || -1)
   const height = computed<number>(() => head.value?.height || -1)
   const peerCount = ref(0)
   const networkName = ref('')
+  const networkId = ref(0)
 
   async function init() {
     networkName.value = isDev ? 'testalbatross' : 'albatross'
@@ -36,15 +39,25 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     const config = new Nimiq.ClientConfiguration()
     config.network(networkName.value)
+    if (networkName.value === 'testalbatross') {
+      config.seedNodes([
+        '/dns4/seed1.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed2.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed3.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
+      ])
+      // config.logLevel('debug')
+    }
     client.value = await Nimiq.Client.create(config.build())
 
     head.value = await client.value.getHeadBlock()
+    networkId.value = await useNimiqNetwork().client!.getNetworkId()
 
     const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
       useNimiqNetwork().reconnect()
     }, 2 * 60 * 1e3) // 2 minutes
 
-    client.value.addConsensusChangedListener((newConsensus) => {
+    client.value.addConsensusChangedListener(async (newConsensus) => {
       logger.log('Consensus:', newConsensus)
       if (newConsensus === 'established') {
         clearToast()
@@ -88,20 +101,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   }
 
   async function reconnect() {
-    // logger.log('Reconnecting to network')
-    // const peers = await client.value?.network.getPeers()
-    // if (peers)
-    //   await Promise.all(peers.map(peer => client.value?.network.disconnect(peer.peerAddress)))
-
-    // await client.value?.resetConsensus()
-
-    // if (peers && peers.length > 0) {
-    //   const interval = window.setInterval(() => {
-    //     peers.forEach(peer => client.value?.network.connect(peer.peerAddress))
-    //   }, 1000)
-    //   await client.value?.waitForConsensusEstablished()
-    //   window.clearInterval(interval)
-    // }
+    logger.log('Reconnecting to network')
+    await client.value?.disconnectNetwork()
+    logger.log('Disconnected from network, connecting again...')
+    await client.value?.connectNetwork()
+    logger.log('Connected to network')
   }
 
   async function claimCashlink(cashlink: string, address: Address) {
@@ -160,7 +164,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     return { data: transactions, error: undefined }
   }
 
-  async function getBalance(address: Address) {
+  async function getBalance(address: Address | string | Uint8Array) {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
     const account = await client.value?.getAccount(address)
@@ -208,6 +212,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
     head,
+    headTimestamp,
     height,
     peerCount,
     init,
@@ -218,6 +223,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAllOutgoingTransactionsFromHtlcs,
     getBalance,
     networkName,
+    networkId,
     reconnect,
   }
 })

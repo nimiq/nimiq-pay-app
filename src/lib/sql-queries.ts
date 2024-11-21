@@ -1,4 +1,4 @@
-import type { Address } from '@nimiq/core-web'
+import type { Address } from '@nimiq/core/web'
 import { Transfer } from '../types/transactions'
 
 // We store the remote Wallet.
@@ -12,12 +12,12 @@ export interface RemoteSigner {
   active: boolean
 
   /**
-   * The block of validity of the wallet has started to be valid
+   * The timestamp when the wallet has started to be valid
    */
   start: number
 
   /**
-   * The block of validity of the wallet has ended
+   * The timestamp when the wallet validity has ended
    */
   end: number
 }

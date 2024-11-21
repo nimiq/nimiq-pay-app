@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
-import { useSync } from '@/composables/useSync'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { useSync } from '@/stores/sync'
 import { IonSkeletonText } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 
-const { remoteBalance: balance, blocksUntilHtlcActive } = storeToRefs(useRemoteSigner())
-const { nodesAreSynced } = useSync()
+const { remoteBalance: balance /* blocksUntilHtlcActive */ } = storeToRefs(useRemoteSigner())
+const { nodesAreSynced, isProcessingRemote, isTransactionPending } = storeToRefs(useSync())
 const { fiat, crypto } = usePrice(balance)
 
 /**
@@ -19,7 +19,7 @@ const { fiat, crypto } = usePrice(balance)
  *  - The HTLC is being created and the tx is not mined yet (balance -1)
  *  - The balance is 0 and the HTLC is not active yet (could be because there is an extension or the HTLC was not found when previously there was an active HTLC)
  */
-const showSkeleton = computed(() => balance.value < 0 || !nodesAreSynced.value || (balance.value === 0 && blocksUntilHtlcActive.value > 0))
+const showSkeleton = computed(() => balance.value < 0 || !nodesAreSynced.value || (balance.value === 0 && isTransactionPending.value) || isProcessingRemote.value)
 </script>
 
 <template>

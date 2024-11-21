@@ -1,6 +1,6 @@
-import type { RemoteSigner } from '@/lib/sql-queries'
 import type { AsyncResultApi } from '@/types'
 import type { Rail } from '@/types/transactions'
+import type { Address, Transaction as NimiqTransaction, PlainAccountType } from '@nimiq/core'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib/index'
@@ -142,28 +142,28 @@ export interface Transaction {
   details: {
     format: string
     sender: string
-    senderType: string | number
+    senderType: PlainAccountType
     recipient: string
-    recipientType: string | number
+    recipientType: PlainAccountType
     value: number
     fee: number
     validityStartHeight: number
     flags: number | undefined
     data: string | { raw: string }
     proof: string | { raw: string }
-    network: string | number
+    network: string
   }
 }
 
 export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
-  interface GetRemoteSignerArg { address: MaybeRef<Nimiq.Address> }
-  interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<Nimiq.Transaction> }
+  interface GetRemoteSignerArg { address: MaybeRef<Address> }
+  interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<NimiqTransaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
 
   interface StatusRes { status: 'good' | 'bad', blockHeight: number, servicePublicKey: string, network: string }
-  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, balance: number }
+  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number }
 
   interface RemoteErrorRes {
     statusCode: number
@@ -178,23 +178,12 @@ export function useRemoteSignerApi() {
     return { data: data!, status, hasError, error: undefined }
   }
 
-  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<RemoteSigner, RemoteErrorRes> {
+  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
     const { data, error, status, hasError } = await api<GetRemoteSignerRes, RemoteErrorRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress().replaceAll(' ', '')}`, baseCosignerUrl))
     if (error || !data?.address || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
-    // The response from the server is verbose, and since these fields are used widely in the logic of the app
-    // we extract them here and return a simpler object.
-    const remoteSigner: RemoteSigner = {
-      address: Nimiq.Address.fromString(data.address),
-      balance: data.balance,
-      publicKey: data.servicePublicKey,
-      proofSize: data.serviceSignatureProofSize,
-      start: data.validityStart,
-      end: data.validityEnd,
-      active: true,
-    }
-    return { data: remoteSigner, error: undefined, status, hasError }
+    return { data, error: undefined, status, hasError }
   }
 
   return {

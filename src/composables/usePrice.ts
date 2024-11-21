@@ -166,8 +166,12 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
       await insertPrice({ fiat: fiatCurrency, checkpoint, price, crypto: cryptoCurrency })
   }
 
-  if (reactiveToNetwork)
-    watch(height, getFiatPrice)
+  if (reactiveToNetwork) {
+    watch(height, () => {
+      if (height.value % 60 === 0)
+        getFiatPrice()
+    })
+  }
 
   // Update if the fiat changes
   watch(selectedFiat, () => {

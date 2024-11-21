@@ -1,9 +1,10 @@
+import type { Address, PlainTransactionDetails } from '@nimiq/core'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { computedAsync, until } from '@vueuse/core'
+import { computedAsync, until, useInterval } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, ref } from 'vue'
 import { useConn } from './conn'
@@ -33,7 +34,7 @@ function useRemoteSignerDb() {
       // When we add a new wallet, we need to deactivate the previous one if the new address is different
       await run(SQLQuery.DeactivateRemoteSigners)
 
-      logger.log('✒️ Updating Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active })
+      logger.log('✒️ Updating Remote Signer in db', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active })
       await run(SQLQuery.InsertRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, active])
     },
 
@@ -50,7 +51,7 @@ function useRemoteSignerDb() {
       await run(SQLQuery.DeactivateRemoteSigners)
     },
 
-    async updateBalance(newBalance: number, address: Nimiq.Address) {
+    async updateBalance(newBalance: number, address: Address) {
       logger.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
       await run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
     },
@@ -63,15 +64,16 @@ function useRemoteSignerDb() {
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { client, getAccounts } = useNimiqNetwork()
-  const { height } = storeToRefs(useNimiqNetwork())
+  const { getAccounts, getBalance } = useNimiqNetwork()
+  const { headTimestamp, height, client } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, addInactiveRemoteSigner } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
-  const status = computedAsync(async () => height.value ? (await getStatus()).data : undefined)
+  const forceRefresh = useInterval(5000)
+  const status = computedAsync(async () => forceRefresh.value ? (await getStatus()).data : undefined)
   const remoteHeight = computed(() => status.value?.blockHeight || -1)
   const remotePublicKey = computed(() => status.value?.servicePublicKey || undefined)
   const remoteAddress = computed(() => remoteSigner.value?.address)
@@ -82,10 +84,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
-  const isHtlcActive = computed(() => remoteBalance.value > 0 && start.value < height.value && end.value > height.value)
-  const blocksUntilHtlcActive = computed(() => Math.min(Math.max(((start.value - height.value) + 1), 0), 10))
-  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < height.value)
-  const isHtlcPending = computed(() => start.value > height.value)
+  const isHtlcActive = ref(false)
+  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value)
+  const isHtlcPending = computed(() => start.value > headTimestamp.value)
 
   const isRemoteOk = computed(() => status.value?.status === 'good' || false)
 
@@ -97,14 +98,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function updateRemoteSigner(signer: RemoteSigner | undefined) {
-    logger.log('📡 Updating remote signer', signer)
+    logger.log('📡 Updating remote signer', { ...signer, address: signer?.address.toUserFriendlyAddress() })
+    console.trace('📡 Updating remote signer', { ...signer, address: signer?.address.toUserFriendlyAddress() })
     if (signer)
       await setRemoteSigner(signer)
     else
       await deactivateAllRemoteSigners()
     remoteSigner.value = signer
     // Set the balance even when it's not confirmed to avoid the user to see the skeleton for a long time
-    // TODO: check if this is causing any issues like seeing the wrong balance
     remoteBalance.value = signer?.balance || -1
   }
 
@@ -114,9 +115,43 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: remoteSigner.value.address })
     if (error || !remoteSignerApi)
       return
-    remoteSigner.value = remoteSignerApi
-    remoteBalance.value = remoteSignerApi.balance
-    await _updateActiveWallet(remoteSignerApi)
+
+    let tx: PlainTransactionDetails | undefined
+    try {
+      console.log('Getting transaction', remoteSignerApi.creatingTransactionHash)
+      tx = await client.value!.getTransaction(remoteSignerApi.creatingTransactionHash)
+    }
+    catch {}
+
+    if (!tx && remoteSigner.value !== undefined && remoteBalance.value > 0)
+      return
+
+    if (!tx)
+      logger.log('CreatingTransactionHash not found, using validityStartHeight')
+
+    const newRemoteSigner: RemoteSigner = {
+      address: Nimiq.Address.fromString(remoteSignerApi.address),
+      balance: remoteSignerApi.balance,
+      publicKey: remoteSignerApi.servicePublicKey,
+      proofSize: remoteSignerApi.serviceSignatureProofSize,
+      start: tx?.timestamp || blockHeightToTimestamp(remoteSignerApi.validityStart),
+      end: remoteSignerApi.validityEnd,
+      active: true,
+    }
+
+    const areEqual = JSON.stringify(remoteSigner.value) === JSON.stringify(newRemoteSigner)
+    if (areEqual)
+      return
+
+    const [oldRemoteBalance, newRemoteAccount] = await Promise.allSettled([getBalance(remoteSigner.value.address), client.value?.getAccount(newRemoteSigner.address)])
+    // Don't replace remote signer if old balance is higher than 0 and new balance is 0
+    if (oldRemoteBalance.status === 'fulfilled' && newRemoteAccount.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteAccount.value && newRemoteAccount.value.balance === 0)
+      return
+
+    remoteSigner.value = newRemoteSigner
+    console.log('newRemoteAccount', { remoteSigner: remoteSigner.value, newRemoteAccount })
+    remoteBalance.value = newRemoteAccount.status === 'fulfilled' && newRemoteAccount.value?.type === 'htlc' ? newRemoteAccount.value.balance : remoteSignerApi.balance
+    await _updateActiveWallet(remoteSigner.value)
   }
 
   async function updateRemoteFromApi() {
@@ -126,7 +161,40 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       remoteBalance.value = 0
       return
     }
-    await updateRemoteSigner(remoteSignerApi)
+
+    let tx: PlainTransactionDetails | undefined
+    try {
+      tx = await client.value!.getTransaction(remoteSignerApi.creatingTransactionHash)
+    }
+    catch {
+      logger.log('CreatingTransactionHash not found, using validityStartHeight')
+    }
+
+    const newRemoteSigner = {
+      address: Nimiq.Address.fromString(remoteSignerApi.address),
+      balance: remoteSignerApi.balance,
+      publicKey: remoteSignerApi.servicePublicKey,
+      proofSize: remoteSignerApi.serviceSignatureProofSize,
+      start: tx?.timestamp || blockHeightToTimestamp(remoteSignerApi.validityStart),
+      end: remoteSignerApi.validityEnd,
+      active: true,
+    }
+    console.log({
+      remoteSigner: { ...remoteSigner.value, address: remoteSigner.value?.address.toUserFriendlyAddress() },
+      newRemoteSigner: { ...newRemoteSigner, address: newRemoteSigner.address.toUserFriendlyAddress() },
+    })
+    if (remoteSigner.value) {
+      const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
+      // Don't replace remote signer if old balance is higher than 0 and new balance is 0
+      console.log({ oldRemoteBalance, newRemoteBalance })
+      if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
+        return
+    }
+
+    const areEqual = JSON.stringify(remoteSigner.value) === JSON.stringify(newRemoteSigner)
+    if (areEqual)
+      return
+    await updateRemoteSigner(newRemoteSigner)
   }
 
   /**
@@ -137,8 +205,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!remoteSigners)
       return
     // Don't check if validity end is more than 2.5 weeks in the past, because those wallets are already extended and not used anymore
-    const oneWeekAgo = height.value - 2.5 /* weeks */ * 7 /* days */ * 24 /* hours */ * 60 /* minutes */ * 1 /* blocks per minute */
-    const remoteSignersToCheck = remoteSigners.filter(remoteSigner => remoteSigner.end > (height.value - oneWeekAgo))
+    const oneWeekAgo = headTimestamp.value - 2.5 /* weeks */ * 7 /* days */ * 24 /* hours */ * 60 /* minutes */ * 60 /* seconds */ * 1e3 /* milliseconds */
+    const remoteSignersToCheck = remoteSigners.filter(remoteSigner => remoteSigner.end > (headTimestamp.value - oneWeekAgo))
 
     if (remoteSignersToCheck.length === 0)
       return
@@ -156,7 +224,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i]
       const remoteSigner = remoteSignersToCheck[i]
-      const newBalance = account.balance
+      const newBalance = account.type === 'htlc' ? account.balance : 0
       if (remoteSigner.balance !== newBalance) {
         logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
         await updateBalance(newBalance, remoteSigner.address)
@@ -169,8 +237,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
    * The updateRemoteFromApi will set the active one
    */
   async function getRemoteSignersFromBlockchain() {
-    const transactions = await client!.getTransactionsByAddress(localAddress.value)
+    await until(client).not.toBeUndefined()
     await until(remotePublicKey).not.toBeUndefined()
+    const transactions = await client.value!.getTransactionsByAddress(localAddress.value)
 
     logger.log('All Transactions from Blockchain', transactions)
     const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
@@ -181,7 +250,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         balance: 0,
         address: Nimiq.Address.fromString(tx.recipient),
         publicKey: remotePublicKey.value!,
-        start: tx.validityStartHeight,
+        start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
         end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
         proofSize: 'raw' in tx.proof ? tx.proof.raw?.length / 2 : 0,
       })
@@ -215,13 +284,21 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
 
     await updateRemoteFromApi()
+    // await updateActiveWallet()
 
-    client!.addHeadChangedListener(async () => {
+    await until(client).not.toBeUndefined()
+    client.value!.addHeadChangedListener(async () => {
       // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
       // Mainly for the case when the user recovers the wallet from the words
-      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % 10 === 0)
+      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % 10 * Nimiq.Policy.BLOCKS_PER_BATCH === 0) {
+        logger.log('📡👀 Searching for new remote wallets')
         await updateRemoteFromApi()
+      }
     })
+  }
+
+  function blockHeightToTimestamp(blockHeight: number): number {
+    return Math.floor((Date.now() - (height.value - blockHeight) * 1e3) / 1e3) * 1e3
   }
 
   return {
@@ -235,9 +312,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remotePublicKey,
     remoteProofSize,
     remoteHeight,
+    blockHeightToTimestamp,
 
     isHtlcActive,
-    blocksUntilHtlcActive,
+    // blocksUntilHtlcActive,
     hasHtlcExpired,
     isHtlcPending,
 

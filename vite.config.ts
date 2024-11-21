@@ -3,10 +3,10 @@ import legacy from '@vitejs/plugin-legacy'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import topLevelAwait from 'vite-plugin-top-level-await'
+import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
-import wasm from 'vite-plugin-wasm'
-import topLevelAwait from 'vite-plugin-top-level-await'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,7 +16,7 @@ export default defineConfig({
     vue({ script: { defineModel: true } }),
     poLoader(),
     poOptimizer(),
-    legacy(),
+    // legacy(),
     VitePWA({ registerType: 'autoUpdate', workbox: { maximumFileSizeToCacheInBytes: 10000000 } }),
   ],
   resolve: {
@@ -30,9 +30,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-  },
-  optimizeDeps: {
-    exclude: ['@nimiq/core-web'],
   },
   define: {
     __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component

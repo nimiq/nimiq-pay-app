@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { PlainTransactionDetails } from '@nimiq/core'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
-import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/composables/useSync'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
 import { Clipboard } from '@capacitor/clipboard'
@@ -24,7 +25,7 @@ const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
-const txInMemPool: Ref<Nimiq.PlainTransactionDetails | undefined> = ref()
+const txInMemPool: Ref<PlainTransactionDetails | undefined> = ref()
 const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
 
 async function writeToClipboard(string: string) {
@@ -49,7 +50,7 @@ async function handleClearTx() {
 async function getAllHtlcs() {
   const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
   logger.log('All Transactions from Blockchain', transactions?.map(tx => tx))
-  const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
+  const htlcTransactions = transactions?.filter(tx => tx.data.type === 'htlc')
   htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
     return {
       address: tx.recipient,
@@ -87,6 +88,9 @@ onMounted(async () => {
   <ModalTemplate>
     <IonButton class="w-full" @click="() => router.go(0)">
       Reload
+    </IonButton>
+    <IonButton class="w-full" @click="() => useNimiqNetwork().reconnect()">
+      Reconnect to Network
     </IonButton>
     <IonCard>
       <IonCardHeader>
