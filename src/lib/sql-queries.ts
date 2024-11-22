@@ -65,7 +65,7 @@ export enum SQLQuery {
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status) VALUES (?, ?, ?, ?, ?)',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
   GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
-  GetSwapTimeoutBlock = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
+  GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
 }
 
 export const DEFAULT_LIMIT = 30

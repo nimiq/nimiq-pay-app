@@ -251,7 +251,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         publicKey: remotePublicKey.value!,
         start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
         end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-        proofSize: 'raw' in tx.proof ? tx.proof.raw?.length / 2 : 0,
+        proofSize: useRemoteSigner().remoteProofSize,
       })
     }
   }

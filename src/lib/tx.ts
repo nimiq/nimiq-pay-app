@@ -96,21 +96,21 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* hashAlgorithm */ + 1
       /* hashRoot */ + 32
       /* hashCount */ + 1
-      /* timeout */ + 4,
+      /* timeout */ + 8,
     )
     data.write(localWallet.serialize())
     data.write(Nimiq.Address.fromUserFriendlyAddress(nimContract.redeemAddress).serialize())
     data.writeUint8(/* SHA256 */ 3)
     data.write(Nimiq.BufferUtils.fromHex(swap.hash))
     data.writeUint8(1)
-    data.writeUint32(nimHtlc.timeoutBlock)
+    data.writeUint64(nimHtlc.timeoutTime)
 
     // Verify data gainst data given in swap
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
       return { error: i18n.t('Invalid NIM HTLC data in swap'), data: undefined }
 
     // Setup HTLC creation transaction
-    let tx = new Nimiq.Transaction(
+    const tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.AccountType.HTLC,
       /* senderData */ new Uint8Array(0),
@@ -122,20 +122,6 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* flags */ 1,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
-    )
-    const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
-    tx = new Nimiq.Transaction(
-      tx.sender,
-      tx.senderType,
-      tx.senderData,
-      contractAddress,
-      tx.recipientType,
-      tx.data,
-      tx.value,
-      tx.fee,
-      tx.flags,
-      tx.validityStartHeight,
-      tx.networkId,
     )
 
     // Get it signed by cosigner

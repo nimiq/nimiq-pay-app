@@ -25,16 +25,15 @@ const { updateSingleTransaction } = useSync()
 
 const datetime = computed(() => props.tx.timestamp ? useFormatTime(props.tx.timestamp) : '')
 const isSwapPending = computed(() => props.tx.transfer === Transfer.UserPaymentToAtomicSwap && !props.tx.meta?.secret && !props.tx.meta?.refunded && !props.tx.meta?.imported)
-const swapTimeoutBlock = computedAsync(async () => {
+const swapTimeoutTime = computedAsync(async () => {
   if (isSwapPending.value) {
-    const timeoutBlock = await query<number>(SQLQuery.GetSwapTimeoutBlock, [props.tx.recipient], { single: true })
-    return timeoutBlock
+    return await query<number>(SQLQuery.GetSwapTimeoutTime, [props.tx.recipient], { single: true })
   }
 })
 const timeUntilTimeout = computed(() => {
-  if (swapTimeoutBlock.value && consensus.value === 'established' && height.value > 0) {
-    // TODO: this is only correct for Nimiq 1.0, for Nimiq 2.0 we need to use a different block time
-    const hours = Math.max(Math.ceil((swapTimeoutBlock.value - height.value) / 60), 1)
+  if (swapTimeoutTime.value && consensus.value === 'established' && height.value > 0) {
+    // Convert timestamp to hours from now
+    const hours = Math.floor((swapTimeoutTime.value - Date.now()) / 1000 / 60 / 60)
     if (hours > 48) {
       const days = Math.floor(hours / 24)
       return i18n.tc('This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days', days, { days })

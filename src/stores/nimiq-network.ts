@@ -33,7 +33,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const networkId = ref(0)
 
   async function init() {
-    networkName.value = isDev ? 'testalbatross' : 'albatross'
+    networkName.value = isDev ? 'testalbatross' : 'MainAlbatross'
 
     await Nimiq.default()
 
@@ -46,8 +46,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         '/dns4/seed3.pos.nimiq-testnet.com/tcp/8443/wss',
         '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
       ])
-      // config.logLevel('debug')
     }
+    // config.logLevel('debug')
     client.value = await Nimiq.Client.create(config.build())
 
     head.value = await client.value.getHeadBlock()

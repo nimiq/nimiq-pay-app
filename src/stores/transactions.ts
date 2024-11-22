@@ -119,8 +119,8 @@ export const useTransactions = defineStore('transactions', () => {
         SQLQuery.InsertSwapHtlc,
         [
           signedTx.recipient.toUserFriendlyAddress(),
-          signedTx.value,
-          (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutBlock,
+          Number(signedTx.value),
+          (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
           swap.id,
           swap.status,
         ],

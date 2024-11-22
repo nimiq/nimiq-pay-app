@@ -1,9 +1,11 @@
-import { isDev } from '@/lib'
+// import { isDev } from '@/lib'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
 import { useDebounceFn } from '@vueuse/core'
 /* eslint-disable no-console */
 import { type Ref, ref, watch } from 'vue'
+
+const isDev = true
 
 const logs: Ref<string[]> = ref([])
 let writingLock = Promise.resolve()
