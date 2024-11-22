@@ -99,7 +99,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   async function updateRemoteSigner(signer: RemoteSigner | undefined) {
     logger.log('📡 Updating remote signer', { ...signer, address: signer?.address.toUserFriendlyAddress() })
-    console.trace('📡 Updating remote signer', { ...signer, address: signer?.address.toUserFriendlyAddress() })
     if (signer)
       await setRemoteSigner(signer)
     else
@@ -118,7 +117,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     let tx: PlainTransactionDetails | undefined
     try {
-      console.log('Getting transaction', remoteSignerApi.creatingTransactionHash)
+      logger.log('Getting transaction', remoteSignerApi.creatingTransactionHash)
       tx = await client.value!.getTransaction(remoteSignerApi.creatingTransactionHash)
     }
     catch {}
@@ -149,7 +148,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return
 
     remoteSigner.value = newRemoteSigner
-    console.log('newRemoteAccount', { remoteSigner: remoteSigner.value, newRemoteAccount })
+    logger.log('newRemoteAccount', { remoteSigner: remoteSigner.value, newRemoteAccount })
     remoteBalance.value = newRemoteAccount.status === 'fulfilled' && newRemoteAccount.value?.type === 'htlc' ? newRemoteAccount.value.balance : remoteSignerApi.balance
     await _updateActiveWallet(remoteSigner.value)
   }
@@ -179,14 +178,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       end: remoteSignerApi.validityEnd,
       active: true,
     }
-    console.log({
+    logger.log({
       remoteSigner: { ...remoteSigner.value, address: remoteSigner.value?.address.toUserFriendlyAddress() },
       newRemoteSigner: { ...newRemoteSigner, address: newRemoteSigner.address.toUserFriendlyAddress() },
     })
     if (remoteSigner.value) {
       const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0
-      console.log({ oldRemoteBalance, newRemoteBalance })
+      logger.log({ oldRemoteBalance, newRemoteBalance })
       if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
         return
     }
