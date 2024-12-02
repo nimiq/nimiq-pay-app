@@ -36,10 +36,10 @@ import './theme/variables.css'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
-if (import.meta.env.DEV || false)
+if (import.meta.env.DEV)
   // Change this based on your local IP address if you want to use vue-devtools
   // If you don't know your IP address, open vue-devtools and check the URL
-  devtools.connect('http://192.168.10.188', 8098)
+  devtools.connect('http://192.168.2.23', 8098)
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
