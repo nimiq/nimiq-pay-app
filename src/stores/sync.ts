@@ -114,6 +114,12 @@ export const useSync = defineStore('sync', () => {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while extending deposit'), type: 'error', duration: 5000 })
         logger.error('Error while extending HTLC validity', error)
+        // Claim the funds after timeout from the remote signer
+        // TODO: This is a temp fix for Nimiq 1.0 migration
+        const { error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimError) {
+          logger.error('Error while claiming funds from Remote after extending error', claimError)
+        }
       }
     }
   }

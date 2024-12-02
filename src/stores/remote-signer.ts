@@ -80,7 +80,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = ref(-1)
-  const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 0)
+  const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 98)
 
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.

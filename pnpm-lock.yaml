@@ -136,8 +136,8 @@ importers:
         specifier: 8.4.0
         version: 8.4.0
       '@nimiq/core':
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^2.0.5
+        version: 2.0.5
       '@types/youtube-player':
         specifier: ^5.5.11
         version: 5.5.11
@@ -1350,8 +1350,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@nimiq/core@2.0.1':
-    resolution: {integrity: sha512-4YPfuxMkWgiLrEyC/ufbWnhccTe5i31s8ROwV/SV3Qd+dgaaxrHk0BWM8YmrFMfkDOj8lakenXq/4wzzqbtJ2Q==}
+  '@nimiq/core@2.0.5':
+    resolution: {integrity: sha512-fqTXjPqU3+uCa0W/3X//grMzu96eyyFdJR+aaZ5jlZrEah/Pb/ERjHuTgsC3y0TBBuYT8ohTDHktvs+p8MKPPA==}
 
   '@nimiq/fastspot-api@1.10.3':
     resolution: {integrity: sha512-CUkIAcF7R3OlN45idB+yC9Wnuz2YXTPx25xYswCdmbMGu/EGZFNnGHLIe6HkbHd8Eh+uBrwqBmLZGm8jyQ9+6A==}
@@ -8658,7 +8658,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  '@nimiq/core@2.0.1':
+  '@nimiq/core@2.0.5':
     dependencies:
       comlink: 4.4.2
       websocket: 1.0.35

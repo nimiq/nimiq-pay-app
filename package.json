@@ -73,7 +73,7 @@
     "@ionic/core": "8.4.0",
     "@ionic/vue": "8.4.0",
     "@ionic/vue-router": "8.4.0",
-    "@nimiq/core": "^2.0.1",
+    "@nimiq/core": "^2.0.5",
     "@types/youtube-player": "^5.5.11",
     "@vitejs/plugin-legacy": "^5.4.3",
     "@vitejs/plugin-vue": "^5.2.0",
