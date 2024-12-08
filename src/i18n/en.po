@@ -100,7 +100,7 @@ msgstr ""
 msgid "Biometric is not supported on this device"
 msgstr ""
 
-#: src/composables/useStringParser.ts:190
+#: src/composables/useStringParser.ts:193
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
@@ -125,7 +125,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useStringParser.ts:213
+#: src/composables/useStringParser.ts:216
 msgid "Cannot create NIM/BTC_LN swap"
 msgstr ""
 
@@ -192,7 +192,7 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:56
+#: src/components/TransactionDetails.vue:55
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -212,7 +212,7 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:217
+#: src/composables/useStringParser.ts:220
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr ""
 
@@ -331,7 +331,7 @@ msgstr ""
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync.ts:136
+#: src/stores/sync.ts:142
 msgid "Error while recovering deposit"
 msgstr ""
 
@@ -447,15 +447,15 @@ msgstr ""
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useStringParser.ts:199
+#: src/composables/useStringParser.ts:202
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr ""
 
-#: src/composables/useStringParser.ts:186
+#: src/composables/useStringParser.ts:189
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
 msgstr ""
 
-#: src/composables/useStringParser.ts:181
+#: src/composables/useStringParser.ts:184
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
@@ -463,21 +463,21 @@ msgstr ""
 msgid "Invalid callback URL"
 msgstr ""
 
-#: src/composables/useStringParser.ts:153
+#: src/composables/useStringParser.ts:156
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:138
+#: src/composables/useStringParser.ts:141
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:132
-#: src/composables/useStringParser.ts:149
+#: src/composables/useStringParser.ts:135
+#: src/composables/useStringParser.ts:152
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:136
-#: src/composables/useStringParser.ts:168
+#: src/composables/useStringParser.ts:171
 msgid "Invalid GoCrypto link."
 msgstr ""
 
@@ -485,15 +485,15 @@ msgstr ""
 msgid "Invalid GoCrypto response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:126
+#: src/composables/useStringParser.ts:129
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:93
+#: src/composables/useStringParser.ts:96
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:94
+#: src/composables/useStringParser.ts:97
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
@@ -514,11 +514,11 @@ msgstr ""
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/composables/useStringParser.ts:256
+#: src/composables/useStringParser.ts:259
 msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:250
+#: src/composables/useStringParser.ts:253
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
 msgstr ""
 
@@ -555,11 +555,11 @@ msgstr ""
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:277
+#: src/lib/tx.ts:263
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:72
+#: src/composables/useStringParser.ts:75
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -639,7 +639,7 @@ msgstr ""
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:181
+#: src/lib/tx.ts:167
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1046,14 +1046,14 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:293
+#: src/lib/tx.ts:279
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:177
 #: src/composables/useApi.ts:184
-#: src/lib/tx.ts:184
-#: src/lib/tx.ts:288
+#: src/lib/tx.ts:170
+#: src/lib/tx.ts:274
 #: src/lib/tx.ts:38
 #: src/lib/tx.ts:60
 msgid "Something went wrong syncing your account"
@@ -1145,11 +1145,11 @@ msgstr ""
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:40
+#: src/components/TransactionDetails.vue:39
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:43
+#: src/components/TransactionDetails.vue:42
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -1345,7 +1345,7 @@ msgstr ""
 msgid "Wrong answer"
 msgstr ""
 
-#: src/composables/useStringParser.ts:195
+#: src/composables/useStringParser.ts:198
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
