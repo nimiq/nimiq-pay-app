@@ -62,7 +62,10 @@ export function useStringParser() {
     // Add a protocol to Bitcoin Lightning invoices if it's missing, to pass URL parsing
     if (isLightningInvoice(content))
       content = `lightning:${content}`
-
+    // Remove wallet.nimiq.com prefix
+    if (content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)) {
+      content = content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
+    }
     let url: URL
     try {
       url = new URL(content)
