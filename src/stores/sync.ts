@@ -631,7 +631,14 @@ export const useSync = defineStore('sync', () => {
     const { data: balance, error } = (await useNimiqNetwork().getBalance(address))
     const amount = error ? 0 : balance
     if (!amount) {
-      logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress(), amount })
+      // If balance is 0, update the remote in the db
+      if (balance === 0) {
+        logger.log('Remote signer is empty, updating balance', { address: address.toUserFriendlyAddress })
+        await useConn().run(SQLQuery.UpdateRemoteBalance, [balance, address.toUserFriendlyAddress()])
+      }
+      else {
+        logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress(), amount })
+      }
       return
     }
     const transfer = end < headTimestamp.value ? Transfer.RemoteToLocalAfterTimeout : Transfer.RemoteToLocalImmediateReclaim
