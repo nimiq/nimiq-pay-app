@@ -666,7 +666,17 @@ export const useSync = defineStore('sync', () => {
     if (remoteSigners.length === 1) {
       // If there is only one remote signer with a balance greater than zero, but it is not the active one, set it as active
       const { active, balance, address, start, end, proofSize, publicKey } = remoteSigners[0]
-      if (balance > 0 && !active) {
+      const { data: newBalance, error } = await getBalance(address)
+      if (error) {
+        logger.error('Error while getting balance in ensureSingleRemoteSignerWithBalance', error)
+        return
+      }
+      if (newBalance !== balance) {
+        logger.error('Balance in db is different from balance in blockchain in ensureSingleRemoteSignerWithBalance', { balance, newBalance })
+        await useConn().run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
+        return
+      }
+      if (newBalance > 0 && !active) {
         logger.log('🫥 There is one remote signers with a balance greater than zero, but it is not the active one. Setting the one with balance as active')
         await useRemoteSigner().updateRemoteSigner({
           active: true,
