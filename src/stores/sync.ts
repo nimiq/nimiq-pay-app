@@ -263,17 +263,17 @@ export const useSync = defineStore('sync', () => {
       try {
         // We need to update balances here because the remote balance is updated manually and needed before the sync
         await updateBalances()
-        await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
+        await handleFunds()
+
+        if (localHeight.value % Nimiq.Policy.BLOCKS_PER_BATCH === 0)
+          await Promise.all([checkRemoteValidity(), extendValidity()])
 
         if (localHeight.value % 10 === 0) {
-          const [
-          /* discarded */,
-            /* discarded */,
-          ] = await Promise.all([
+          await Promise.all([
             updateTransactionsInDb(),
             // TODO: check if this need to be activate again
             // updateActiveWallet(),
-          ] as const)
+          ])
         }
       }
       catch (error) {
