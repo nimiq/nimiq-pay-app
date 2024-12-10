@@ -55,7 +55,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
       useNimiqNetwork().reconnect()
-    }, 2 * 60 * 1e3) // 2 minutes
+    }, 2 * 60 * 1e3, { immediate: false }) // 2 minutes
 
     client.value.addConsensusChangedListener(async (newConsensus) => {
       logger.log('Consensus:', newConsensus)
