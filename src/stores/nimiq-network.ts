@@ -100,12 +100,23 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     })
   }
 
+  const isReconnecting = ref(false)
   async function reconnect() {
+    if (isReconnecting.value) {
+      logger.log('Already reconnecting')
+      return
+    }
+    isReconnecting.value = true
     logger.log('Reconnecting to network')
     await client.value?.disconnectNetwork()
+
+    await until(peerCount).toBe(0, { timeout: 60 * 1e3 })
     logger.log('Disconnected from network, connecting again...')
     await client.value?.connectNetwork()
+
+    await until(consensus).toBe('established')
     logger.log('Connected to network')
+    isReconnecting.value = false
   }
 
   async function claimCashlink(cashlink: string, address: Address) {
