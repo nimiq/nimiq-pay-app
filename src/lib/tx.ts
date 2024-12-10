@@ -272,6 +272,10 @@ interface GetSignedTxByRemoteArgs {
 async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
+  if (tx.networkId !== networkId.value) {
+    logger.error('Network ID mismatch', { tx, networkId: tx.networkId, expectedNetworkId: networkId.value })
+    return { data: undefined, error: i18n.t('Network ID mismatch') }
+  }
   logger.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
   logger.log({ receipt, error })

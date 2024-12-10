@@ -149,6 +149,10 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
+    if (signedTx.networkId !== useNimiqNetwork().networkId) {
+      logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: useNimiqNetwork().networkId, signedTx })
+      return { data: undefined, error: i18n.t('Transaction invalid for PoS network') }
+    }
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
