@@ -471,6 +471,9 @@ msgstr "Einloggen"
 msgid "Network consensus lost."
 msgstr "Netzwerk-Konsens verloren."
 
+msgid "Network ID mismatch"
+msgstr ""
+
 msgid "New"
 msgstr "Neu"
 
@@ -877,6 +880,11 @@ msgid "Transaction failed: {error}"
 msgstr "Transaktion fehlgeschlagen: {error}"
 
 msgid "Transaction invalid"
+msgstr "Transaktion ungültig"
+
+#, fuzzy
+#| msgid "Transaction invalid"
+msgid "Transaction invalid for PoS network"
 msgstr "Transaktion ungültig"
 
 msgid "Try again"

@@ -458,6 +458,9 @@ msgstr "Iniciar sessão"
 msgid "Network consensus lost."
 msgstr "Consenso da rede perdido."
 
+msgid "Network ID mismatch"
+msgstr ""
+
 msgid "New"
 msgstr "Novo"
 
@@ -854,6 +857,11 @@ msgid "Transaction failed: {error}"
 msgstr "Transação falhou: {error}"
 
 msgid "Transaction invalid"
+msgstr "Transação inválida"
+
+#, fuzzy
+#| msgid "Transaction invalid"
+msgid "Transaction invalid for PoS network"
 msgstr "Transação inválida"
 
 msgid "Try again"

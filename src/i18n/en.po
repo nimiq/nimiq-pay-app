@@ -29,12 +29,12 @@ msgid "Address copied to clipboard"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:121
-#: src/stores/nimiq-network.ts:142
-#: src/stores/nimiq-network.ts:160
+#: src/stores/nimiq-network.ts:143
+#: src/stores/nimiq-network.ts:161
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:151
+#: src/stores/nimiq-network.ts:152
 msgid "Addresses missing"
 msgstr ""
 
@@ -179,11 +179,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:181
+#: src/stores/nimiq-network.ts:182
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:179
+#: src/stores/nimiq-network.ts:180
 msgid "Consensus established."
 msgstr ""
 
@@ -627,6 +627,10 @@ msgstr ""
 msgid "Network consensus lost."
 msgstr ""
 
+#: src/lib/tx.ts:277
+msgid "Network ID mismatch"
+msgstr ""
+
 #: src/types/transactions.ts:128
 msgid "New"
 msgstr ""
@@ -635,7 +639,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:145
+#: src/stores/nimiq-network.ts:146
 msgid "No account found"
 msgstr ""
 
@@ -647,7 +651,7 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:154
+#: src/stores/nimiq-network.ts:155
 msgid "No accounts found"
 msgstr ""
 
@@ -681,7 +685,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:163
+#: src/stores/nimiq-network.ts:164
 msgid "No transactions found"
 msgstr ""
 
@@ -1046,7 +1050,7 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:279
+#: src/lib/tx.ts:283
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
@@ -1085,7 +1089,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:180
+#: src/stores/nimiq-network.ts:181
 msgid "Syncing with network."
 msgstr ""
 
@@ -1184,6 +1188,10 @@ msgstr ""
 
 #: src/stores/transactions.ts:149
 msgid "Transaction invalid"
+msgstr ""
+
+#: src/stores/transactions.ts:154
+msgid "Transaction invalid for PoS network"
 msgstr ""
 
 #: src/components/ValidateWords.vue:28
