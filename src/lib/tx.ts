@@ -128,8 +128,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* networkId */ networkId.value,
     )
 
+    logger.log('Tx before resolve proof', { tx: tx.toPlain() })
     // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
+    logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof) })
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res

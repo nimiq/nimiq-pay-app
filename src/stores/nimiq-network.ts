@@ -110,6 +110,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     logger.log('Reconnecting to network')
     await client.value?.disconnectNetwork()
 
+    logger.log('Disconnecting from network, waiting for peer count to be 0', { peerCount: peerCount.value, consensus: consensus.value, height: height.value })
     await until(peerCount).toBe(0, { timeout: 60 * 1e3 })
     logger.log('Disconnected from network, connecting again...')
     await client.value?.connectNetwork()
