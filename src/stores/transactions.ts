@@ -101,6 +101,7 @@ export const useTransactions = defineStore('transactions', () => {
       logger.error('Error while signing transaction', res.error)
       return res
     }
+    logger.log('✈️ Signed transaction', res.data)
     const { signedTx, swap } = res.data!
 
     let patchedSwap: Promise<Swap> | undefined
@@ -153,6 +154,7 @@ export const useTransactions = defineStore('transactions', () => {
       logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: useNimiqNetwork().networkId, signedTx })
       return { data: undefined, error: i18n.t('Transaction invalid for PoS network') }
     }
+    logger.log('✈️ Sent transaction', details)
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
@@ -162,6 +164,8 @@ export const useTransactions = defineStore('transactions', () => {
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
       tx.paymentMethod = PaymentMethod.NIM
 
+    if (!tx.timestamp)
+      tx.timestamp = Date.now()
     logger.log(`✈️ Sent transaction`, tx)
 
     await upsertTx(tx)

@@ -78,6 +78,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     }
 
     const decoded = await parseBitcoinLightningInvoice(partialArgs.recipient)
+    logger.log({ swap, decoded })
 
     // Verify swap hash
     if (swap.hash !== decoded.payment_hash)
@@ -90,6 +91,8 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
 
     const nimHtlc = nimContract.htlc as NimHtlcDetails
 
+    logger.log({ nimHtlc })
+    logger.log('Writing Swap data')
     const data = new Nimiq.SerialBuffer(
       /* sender */ 20
       /* recipient */ + 20
@@ -106,6 +109,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     data.writeUint64(nimHtlc.timeoutTime)
 
     // Verify data gainst data given in swap
+    logger.log('Verifying Swap data')
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
       return { error: i18n.t('Invalid NIM HTLC data in swap'), data: undefined }
 
@@ -270,13 +274,14 @@ interface GetSignedTxByRemoteArgs {
 }
 
 async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
+  logger.log('Signing transaction by remote')
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
   if (tx.networkId !== networkId.value) {
     logger.error('Network ID mismatch', { tx, networkId: tx.networkId, expectedNetworkId: networkId.value })
     return { data: undefined, error: i18n.t('Network ID mismatch') }
   }
-  logger.log('Signing transaction by remote', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
+  logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
   const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
   logger.log({ receipt, error })
   if (hasError)
@@ -324,6 +329,7 @@ interface CreateResolveProofArgs {
 }
 
 export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
+  logger.log('Creating resolve proof')
   const { privateKey, publicKey } = useLocalWallet().localWallet
   const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
   const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
