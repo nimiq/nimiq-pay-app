@@ -128,10 +128,9 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* networkId */ networkId.value,
     )
 
-    logger.log('Tx before resolve proof', { tx: tx.toPlain() })
     // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
-    logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof) })
+    logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof), proofLength: tx.proof.length })
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res
@@ -331,12 +330,14 @@ interface CreateResolveProofArgs {
 }
 
 export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
-  logger.log('Creating resolve proof')
+  logger.log('Creating resolve proof', { mode, tx: tx.toPlain(), remoteProofSize: useRemoteSigner().remoteProofSize })
   const { privateKey, publicKey } = useLocalWallet().localWallet
   const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
   const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
   const isEarly = mode === 'early'
   const proofLen = 1 + sigProof.length + (isEarly ? useRemoteSigner().remoteProofSize : 0)
+  // TODO: check if sigProofLength is different from remoteProofSize
+  logger.log({ proofLen, isEarly, sigProofLength: sigProof.length })
   const proof = new Nimiq.SerialBuffer(proofLen)
   proof.writeUint8(isEarly ? /* EARLY_RESOLVE */ 1 : /* TIMEOUT_RESOLVE */ 2)
   proof.writePos += isEarly ? useRemoteSigner().remoteProofSize : 0
