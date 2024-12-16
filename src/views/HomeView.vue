@@ -50,12 +50,12 @@ const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getRefer
 const { transactions } = storeToRefs(useTransactions())
 const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced, isTransactionPending, isUpdatingTransactions, isProcessingRemote } = storeToRefs(useSync())
+const { nodesAreSynced, isTransactionPending, isUpdatingTransactions, isProcessingRemote, isSyncingWallets, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
-const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value || isProcessingRemote.value)
+const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value || isProcessingRemote.value || isTransactionPending.value)
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
 
@@ -342,18 +342,18 @@ App.addListener('resume', detectPaymentRequest)
               {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
             </p>
           </div>
-          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
+          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive && !isSyncingWallets) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
             <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
-            <p class="font-medium text-center text-pumpkin">
-              {{ $t('Processing funds… ') }}
-            </p>
             <!-- <p class="font-medium text-center text-pumpkin">
+              {{ $t('Processing funds… ') }}
+            </p> -->
+            <p class="font-medium text-center text-pumpkin">
               {{ $tc(
                 'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
-                blocksUntilHtlcActive,
-                { blocks: blocksUntilHtlcActive },
+                blocksUntilNextMacroBlock,
+                { blocks: blocksUntilNextMacroBlock },
               ) }}
-            </p> -->
+            </p>
           </div>
         </Transition>
         <IonButton

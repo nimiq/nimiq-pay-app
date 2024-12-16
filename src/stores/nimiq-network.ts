@@ -28,6 +28,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const head = ref<PlainBlock>()
   const headTimestamp = computed(() => head.value?.timestamp || -1)
   const height = computed<number>(() => head.value?.height || -1)
+  const lastMacroBlockHeight = ref(0)
   const peerCount = ref(0)
   const networkName = ref('')
   const networkId = ref(0)
@@ -81,7 +82,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
       consensus.value = newConsensus
     })
-    client.value.addHeadChangedListener(async blockHash => head.value = await client.value?.getBlock(blockHash))
+    client.value.addHeadChangedListener(async (blockHash) => {
+      head.value = await client.value?.getBlock(blockHash)
+      if (head.value?.type === 'macro')
+        lastMacroBlockHeight.value = head.value.height
+    })
 
     try {
       await until(consensus).toBe('established', { timeout: 30 * 1e3, throwOnTimeout: true })
@@ -227,6 +232,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     head,
     headTimestamp,
     height,
+    lastMacroBlockHeight,
     peerCount,
     init,
     claimCashlink,

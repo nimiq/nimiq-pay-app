@@ -34,7 +34,7 @@ export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_L
 export const useSync = defineStore('sync', () => {
   const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs, getBalance } = useNimiqNetwork()
   const { query } = useConn()
-  const { client, height: localHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
+  const { client, height: localHeight, lastMacroBlockHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
@@ -46,6 +46,12 @@ export const useSync = defineStore('sync', () => {
 
   // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
   const htlcCanBeExtended = computed(() => (end.value - (end.value - start.value) / 2) < (headTimestamp.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA))
+
+  // Since macro blocks take a while, only show if < 50 blocks left
+  const blocksUntilNextMacroBlock = computed(() => {
+    const blocksLeft = lastMacroBlockHeight.value > 0 ? lastMacroBlockHeight.value + Nimiq.Policy.BLOCKS_PER_BATCH - localHeight.value : 0
+    return blocksLeft < 50 ? blocksLeft : 0
+  })
 
   const pendingTransactions: Ref<(PlainTransactionDetails)[]> = ref([])
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
@@ -202,10 +208,12 @@ export const useSync = defineStore('sync', () => {
   /**
    * Syncs the local and the remote wallet immediately and then every time a new block is minted.
    */
+  const isSyncingWallets = ref(false)
   async function syncWallets() {
     if (!hasLocalWallet.value)
       return
 
+    isSyncingWallets.value = true
     await until(client).toBeTruthy()
     await client.value?.waitForConsensusEstablished()
 
@@ -216,6 +224,7 @@ export const useSync = defineStore('sync', () => {
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionsInDb()])
+    await checkHtlcState()
     updateTransactionHistory()
 
     let headChangePendingDrainLock = false
@@ -324,6 +333,32 @@ export const useSync = defineStore('sync', () => {
         proofSize: useRemoteSigner().remoteProofSize,
       })
     }, [localAddress.value])
+
+    isSyncingWallets.value = false
+  }
+
+  async function checkHtlcState() {
+    await until(client).not.toBeUndefined()
+    if (remoteBalance.value > 0 && start.value < headTimestamp.value && end.value > headTimestamp.value) {
+      // HTLC can only be used after the tx creation state is confirmed
+      try {
+        const txs = await Promise.all(pendingHtlcCreationTransactions.value.map(tx => client.value!.getTransaction(tx.transactionHash)))
+        logger.log('Checking pending HTLC transactions', txs)
+        if (txs.every(tx => tx && tx.state === 'confirmed'))
+          isHtlcActive.value = true
+        else
+          isHtlcActive.value = false
+        // Remove txs that are confirmed
+        pendingHtlcCreationTransactions.value = pendingHtlcCreationTransactions.value.filter(tx => txs.some(t => t && t.transactionHash === tx.transactionHash && t.state !== 'confirmed'))
+      }
+      catch (e) {
+        logger.error('Error checking pending HTLC transactions', e)
+        isHtlcActive.value = false
+      }
+    }
+    else {
+      isHtlcActive.value = false
+    }
   }
 
   async function updateSingleTransaction(hash: string) {
@@ -770,8 +805,8 @@ export const useSync = defineStore('sync', () => {
       checkExpiredSwapHtlcs()
   })
 
-  watch(remoteBalance, async (newBalance, oldBalance) => {
-    if (newBalance > 0) {
+  watch([remoteBalance, isHtlcActive], async ([newBalance], [oldBalance]) => {
+    if (newBalance > 0 && isHtlcActive.value) {
       logger.log('Remote signer has funds. Show balance instead of skeleton', { newBalance, oldBalance })
       isProcessingRemote.value = false
     }
@@ -802,33 +837,13 @@ export const useSync = defineStore('sync', () => {
       return
 
     htlcCheckLock = true
-    await until(client).not.toBeUndefined()
-    if (remoteBalance.value > 0 && start.value < headTimestamp.value && end.value > headTimestamp.value) {
-      // HTLC can only be used after the tx creation state is confirmed
-      try {
-        const txs = await Promise.all(pendingHtlcCreationTransactions.value.map(tx => client.value!.getTransaction(tx.transactionHash)))
-        logger.log('Checking pending HTLC transactions', txs)
-        if (txs.every(tx => tx && tx.state === 'confirmed'))
-          isHtlcActive.value = true
-        else
-          isHtlcActive.value = false
-        // Remove txs that are confirmed
-        pendingHtlcCreationTransactions.value = pendingHtlcCreationTransactions.value.filter(tx => txs.some(t => t && t.transactionHash === tx.transactionHash && t.state !== 'confirmed'))
-      }
-      catch (e) {
-        logger.error('Error checking pending HTLC transactions', e)
-        isHtlcActive.value = false
-      }
-    }
-    else {
-      isHtlcActive.value = false
-    }
-
+    await checkHtlcState()
     htlcCheckLock = false
   })
 
   return {
     syncWallets,
+    isSyncingWallets,
     updateBalances,
     updateSingleTransaction,
     updateTransactionHistory,
@@ -838,6 +853,8 @@ export const useSync = defineStore('sync', () => {
     isUpdatingTransactions,
     isProcessingRemote,
     pendingHtlcCreationTransactions,
+
+    blocksUntilNextMacroBlock,
 
     verifyRemoteSignersDb,
   }

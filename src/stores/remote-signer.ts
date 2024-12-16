@@ -315,7 +315,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     blockHeightToTimestamp,
 
     isHtlcActive,
-    // blocksUntilHtlcActive,
     hasHtlcExpired,
     isHtlcPending,
 
