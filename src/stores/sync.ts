@@ -39,6 +39,7 @@ export const useSync = defineStore('sync', () => {
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
+  const { isSendingTx } = storeToRefs(useTransactions())
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -71,7 +72,7 @@ export const useSync = defineStore('sync', () => {
   async function handleFunds() {
     if (localBalance.value === 0)
       return
-    if (isTransactionPending.value) {
+    if (isTransactionPending.value || isSendingTx.value) {
       logger.log('There is a pending transaction. Delaying handleFunds', pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions)
       return
     }
@@ -114,6 +115,10 @@ export const useSync = defineStore('sync', () => {
       return
     logger.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
     if (htlcCanBeExtended.value) {
+      if (isSendingTx.value) {
+        logger.log('There is a pending transaction. Delaying extendValidity')
+        return
+      }
       isProcessingRemote.value = true
       const { error } = await sendTx({ transfer: Transfer.ExtendRemote })
       if (error) {
@@ -141,6 +146,10 @@ export const useSync = defineStore('sync', () => {
       return
     logger.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
     if (hasHtlcExpired.value) {
+      if (isSendingTx.value) {
+        logger.log('There is a pending transaction. Delaying extendValidity')
+        return
+      }
       isProcessingRemote.value = true
       const { error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error) {
@@ -158,13 +167,23 @@ export const useSync = defineStore('sync', () => {
     if (localHeight.value % 10 === 0)
       usePoints().updatePointsBalance()
 
+    if (isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying updateBalances')
+      return
+    }
+
     if (localAddress.value)
       localBalance.value = (await getBalance(localAddress.value)).data || 0
     else
       logger.log('Local address not found')
     if (remoteAddress.value) {
       const oldBalance = remoteBalance.value
-      remoteBalance.value = (await getBalance(remoteAddress.value!)).data || 0
+      const { data: newBalance, error } = await getBalance(remoteAddress.value!)
+      if (error) {
+        logger.error('Error while getting remote balance', error)
+        return
+      }
+      remoteBalance.value = newBalance
       if (oldBalance !== remoteBalance.value)
         logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}, old was: ${oldBalance}`)
 
@@ -338,6 +357,11 @@ export const useSync = defineStore('sync', () => {
   }
 
   async function checkHtlcState() {
+    if (isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying checkHtlcState')
+      return
+    }
+
     await until(client).not.toBeUndefined()
     if (remoteBalance.value > 0 && start.value < headTimestamp.value && end.value > headTimestamp.value) {
       // HTLC can only be used after the tx creation state is confirmed

@@ -84,7 +84,19 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
+  const isSendingTx = ref(false)
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
+    if (isSendingTx.value) {
+      logger.error('A transaction is already in progress')
+      return { data: undefined, error: i18n.t('A transaction is already in progress') }
+    }
+    isSendingTx.value = true
+    const res = await _sendTx(partialTx)
+    isSendingTx.value = false
+    return res
+  }
+
+  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
     logger.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
@@ -353,6 +365,7 @@ export const useTransactions = defineStore('transactions', () => {
   return {
     transactions: readonly(transactions),
     sendTx,
+    isSendingTx,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
     addUnknownPaymentToMerchantTransaction,
