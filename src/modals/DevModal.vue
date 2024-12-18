@@ -2,6 +2,7 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
+import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -77,6 +78,10 @@ onMounted(async () => {
   const priceTable = await query('SELECT * FROM prices')
 
   logger.log('Price table', priceTable)
+
+  const pendingSwapQuotes = await query(SQLQuery.GetAllSwapQuotes)
+
+  logger.log('Pending Swap Quotes', pendingSwapQuotes)
 
   client.value?.addTransactionListener(async (tx) => {
     txInMemPool.value = tx

@@ -248,6 +248,8 @@ export const useTransactions = defineStore('transactions', () => {
       }
       // Delete the swap HTLC from the database
       await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
+      // Delete the swap quote from the database
+      await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
     }
 
     return { data: tx, error: undefined }

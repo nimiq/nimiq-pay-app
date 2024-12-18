@@ -817,6 +817,7 @@ export const useSync = defineStore('sync', () => {
         useTransactions().setSwapHtlcRefunded(htlc.address)
       }
     }
+    useConn().run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
   }
 
   watch(consensus, (newConsensus, oldConsensus) => {

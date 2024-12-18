@@ -1,8 +1,11 @@
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
+import type { Quote } from '@nimiq/fastspot-api-v2'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, nimiqDomainUrl } from '@/lib'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import { AssetId } from '@nimiq/fastspot-api-v2'
 import { ValidationUtils } from '@nimiq/utils'
@@ -12,6 +15,7 @@ import { useFastspotApiV2 } from './useFastspotV2'
 import { GOCRYPTO_ID_PARAM, parseGoCryptoRequestLink } from './useGoCrypto'
 
 const logger = useLogger('useStringParser')
+const { query, run } = useConn()
 
 const CPL_URL_ID_PARAM = 'cpl_id'
 // This is for unified QR code format (Ex: bitcoin:[...]&lightning=[...])
@@ -204,16 +208,36 @@ export function useStringParser() {
     // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
     const amountBtc = Number.parseInt(amountSection.value) / 1e11
 
-    let quote
-    try {
-      quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
-        { asset: AssetId.NIM },
-        { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
-      ))
+    let quote: Quote
+    const existingQuote = await query<{ ln_invoice: string, swap_id: string } | undefined>(SQLQuery.GetSwapQuote, [decoded.paymentRequest], { single: true })
+    if (existingQuote) {
+      try {
+        // TODO: I don't know what could happen if the swap was already created
+        // const quoteOrSwap = await useFastspotApiV2().then(({ getSwap }) => getSwap(existingQuote.swap_id))
+        // if('hash' in quoteOrSwap) {
+        //   return { error: i18n.t('Swap for this invoice was already created, create a new invoice'), data: undefined }
+        // } else {
+        //   quote = quoteOrSwap
+        // }
+        quote = await useFastspotApiV2().then(({ getSwap }) => getSwap(existingQuote.swap_id))
+      }
+      catch (e) {
+        logger.error('Error fetching existing NIM/BTC_LN swap:', { error: e, decoded })
+        return { error: i18n.t('Cannot fetch existing NIM/BTC_LN swap'), data: undefined }
+      }
     }
-    catch (e) {
-      logger.error('Error creating NIM/BTC_LN swap:', { error: e, amountBtc, decoded })
-      return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
+    else {
+      try {
+        quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
+          { asset: AssetId.NIM },
+          { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
+        ))
+        await run(SQLQuery.InsertSwapQuote, [decoded.paymentRequest, quote.id, Date.now() + decoded.expiry * 1e3])
+      }
+      catch (e) {
+        logger.error('Error creating NIM/BTC_LN swap:', { error: e, amountBtc, decoded })
+        return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
+      }
     }
 
     if (quote.sell.asset !== AssetId.NIM)

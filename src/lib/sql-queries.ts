@@ -66,6 +66,14 @@ export enum SQLQuery {
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
   GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
   GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
+
+  // Swap Quotes
+  CreateSwapQuotesTable = 'CREATE TABLE IF NOT EXISTS swap_quotes (ln_invoice TEXT PRIMARY KEY NOT NULL, swap_id TEXT NOT NULL, timeout INTEGER NOT NULL)',
+  InsertSwapQuote = 'INSERT OR REPLACE INTO swap_quotes (ln_invoice, swap_id, timeout) VALUES (?, ?, ?)',
+  DeleteSwapQuote = 'DELETE FROM swap_quotes WHERE swap_id = ?',
+  DeleteExpiredSwapQuotes = 'DELETE FROM swap_quotes WHERE timeout < ?',
+  GetSwapQuote = 'SELECT * FROM swap_quotes WHERE ln_invoice = ? LIMIT 1',
+  GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
 }
 
 export const DEFAULT_LIMIT = 30
@@ -101,6 +109,12 @@ export const migrations: Migration[] = [
     toVersion: 3,
     statements: [
       SQLQuery.CreateSwapHtlcTable,
+    ],
+  },
+  {
+    toVersion: 4,
+    statements: [
+      SQLQuery.CreateSwapQuotesTable,
     ],
   },
 ]
