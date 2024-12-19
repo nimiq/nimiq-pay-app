@@ -15,6 +15,11 @@ msgstr "\"{word}\" ist ein ungültiges Wiederherstellungswort"
 msgid "{count} of {total} remaining."
 msgstr "{count} von {total} verbleibend."
 
+#, fuzzy
+#| msgid "Transaction already sent"
+msgid "A transaction is already in progress"
+msgstr "Transaktion bereits geschickt"
+
 msgid "About"
 msgstr "Über die App"
 
@@ -102,6 +107,11 @@ msgstr "Konnte keinen NIM/BTC-LN-Tausch erstellen"
 
 msgid "Cannot enable biometric"
 msgstr ""
+
+#, fuzzy
+#| msgid "Cannot create NIM/BTC_LN swap"
+msgid "Cannot fetch existing NIM/BTC_LN swap"
+msgstr "Konnte keinen NIM/BTC-LN-Tausch erstellen"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink erfolgreich eingelöst"
@@ -657,8 +667,10 @@ msgstr "Zahlung mit Punkten"
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
 
-msgid "Processing funds… "
-msgstr ""
+#, fuzzy
+#| msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
+msgstr "Guthaben wird verarbeitet… | Guthaben wird verarbeitet. Warte ~{blocks} Minute, bis du zahlen kannst. | Guthaben wird verarbeitet. Warte ~{blocks} Minuten, bis du zahlen kannst."
 
 msgid "Promo code missing"
 msgstr "Promo-Code fehlt"
@@ -1065,9 +1077,6 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
-
-#~ msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
-#~ msgstr "Guthaben wird verarbeitet… | Guthaben wird verarbeitet. Warte ~{blocks} Minute, bis du zahlen kannst. | Guthaben wird verarbeitet. Warte ~{blocks} Minuten, bis du zahlen kannst."
 
 #~ msgid "Swap pending"
 #~ msgstr "Tausch wird ausgeführt"

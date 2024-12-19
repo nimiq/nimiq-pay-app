@@ -16,6 +16,11 @@ msgstr "\"{word}\" é uma palavra de recuperação inválida"
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} em falta."
 
+#, fuzzy
+#| msgid "Transaction already sent"
+msgid "A transaction is already in progress"
+msgstr "Transação já enviada"
+
 msgid "About"
 msgstr "Sobre"
 
@@ -99,6 +104,11 @@ msgstr "Não é possível criar troca NIM/BTC_LN"
 
 msgid "Cannot enable biometric"
 msgstr "Não foi possível activar biometria"
+
+#, fuzzy
+#| msgid "Cannot create NIM/BTC_LN swap"
+msgid "Cannot fetch existing NIM/BTC_LN swap"
+msgstr "Não é possível criar troca NIM/BTC_LN"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado com sucesso"
@@ -640,8 +650,10 @@ msgstr "Pagamento com Pontos"
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-msgid "Processing funds… "
-msgstr ""
+#, fuzzy
+#| msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
+msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
+msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} minuto para pagar. | A processar fundos. Aguarde cerca de ~{blocks} minutos para pagar."
 
 msgid "Promo code missing"
 msgstr "Código promocional em falta"
@@ -1038,9 +1050,6 @@ msgstr "O teu número"
 
 msgid "Your wallet is ready to use"
 msgstr "A tua wallet está pronta para usar"
-
-#~ msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
-#~ msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} minuto para pagar. | A processar fundos. Aguarde cerca de ~{blocks} minutos para pagar."
 
 #~ msgid "Swap pending"
 #~ msgstr "Troca pendente"

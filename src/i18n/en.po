@@ -10,12 +10,16 @@ msgstr ""
 msgid "{count} of {total} remaining."
 msgstr ""
 
+#: src/stores/transactions.ts:92
+msgid "A transaction is already in progress"
+msgstr ""
+
 #: src/modals/MenuModal.vue:39
 msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
-#: src/views/HomeView.vue:142
+#: src/views/HomeView.vue:144
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -28,13 +32,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:121
-#: src/stores/nimiq-network.ts:143
+#: src/stores/nimiq-network.ts:139
 #: src/stores/nimiq-network.ts:161
+#: src/stores/nimiq-network.ts:179
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:152
+#: src/stores/nimiq-network.ts:170
 msgid "Addresses missing"
 msgstr ""
 
@@ -100,7 +104,7 @@ msgstr ""
 msgid "Biometric is not supported on this device"
 msgstr ""
 
-#: src/composables/useStringParser.ts:193
+#: src/composables/useStringParser.ts:197
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
@@ -125,7 +129,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useStringParser.ts:216
+#: src/composables/useStringParser.ts:239
 msgid "Cannot create NIM/BTC_LN swap"
 msgstr ""
 
@@ -133,11 +137,15 @@ msgstr ""
 msgid "Cannot enable biometric"
 msgstr ""
 
+#: src/composables/useStringParser.ts:226
+msgid "Cannot fetch existing NIM/BTC_LN swap"
+msgstr ""
+
 #: src/composables/useQRScanner.ts:71
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:123
+#: src/stores/nimiq-network.ts:141
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -179,11 +187,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:182
+#: src/stores/nimiq-network.ts:200
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:180
+#: src/stores/nimiq-network.ts:198
 msgid "Consensus established."
 msgstr ""
 
@@ -212,7 +220,7 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:220
+#: src/composables/useStringParser.ts:244
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr ""
 
@@ -323,19 +331,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync.ts:83
+#: src/stores/sync.ts:90
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync.ts:115
+#: src/stores/sync.ts:126
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync.ts:142
+#: src/stores/sync.ts:157
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync.ts:97
+#: src/stores/sync.ts:104
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -447,15 +455,15 @@ msgstr ""
 msgid "Invalid"
 msgstr ""
 
-#: src/composables/useStringParser.ts:202
+#: src/composables/useStringParser.ts:206
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr ""
 
-#: src/composables/useStringParser.ts:189
+#: src/composables/useStringParser.ts:193
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
 msgstr ""
 
-#: src/composables/useStringParser.ts:184
+#: src/composables/useStringParser.ts:188
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
@@ -463,21 +471,21 @@ msgstr ""
 msgid "Invalid callback URL"
 msgstr ""
 
-#: src/composables/useStringParser.ts:156
+#: src/composables/useStringParser.ts:160
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:141
+#: src/composables/useStringParser.ts:145
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:135
-#: src/composables/useStringParser.ts:152
+#: src/composables/useStringParser.ts:139
+#: src/composables/useStringParser.ts:156
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:136
-#: src/composables/useStringParser.ts:171
+#: src/composables/useStringParser.ts:175
 msgid "Invalid GoCrypto link."
 msgstr ""
 
@@ -485,15 +493,15 @@ msgstr ""
 msgid "Invalid GoCrypto response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:129
+#: src/composables/useStringParser.ts:133
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:96
+#: src/composables/useStringParser.ts:100
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:97
+#: src/composables/useStringParser.ts:101
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
@@ -501,24 +509,24 @@ msgstr ""
 msgid "Invalid LNURL"
 msgstr ""
 
-#: src/lib/tx.ts:110
+#: src/lib/tx.ts:114
 msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
-#: src/composables/useStringParser.ts:29
+#: src/composables/useStringParser.ts:33
 #: src/lib/flows/steps.ts:473
 msgid "Invalid Nimiq address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:41
+#: src/composables/useStringParser.ts:45
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/composables/useStringParser.ts:259
+#: src/composables/useStringParser.ts:283
 msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:253
+#: src/composables/useStringParser.ts:277
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
 msgstr ""
 
@@ -551,15 +559,15 @@ msgstr ""
 msgid "Invalid recovery words"
 msgstr ""
 
-#: src/lib/tx.ts:84
+#: src/lib/tx.ts:85
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:263
+#: src/lib/tx.ts:268
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:75
+#: src/composables/useStringParser.ts:79
 msgid "Invalid URL: {url}"
 msgstr ""
 
@@ -623,11 +631,11 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:72
+#: src/stores/nimiq-network.ts:75
 msgid "Network consensus lost."
 msgstr ""
 
-#: src/lib/tx.ts:277
+#: src/lib/tx.ts:283
 msgid "Network ID mismatch"
 msgstr ""
 
@@ -639,11 +647,11 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:146
+#: src/stores/nimiq-network.ts:164
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:167
+#: src/lib/tx.ts:172
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -651,15 +659,15 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:155
+#: src/stores/nimiq-network.ts:173
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:113
+#: src/stores/nimiq-network.ts:131
 msgid "No Cashlink found"
 msgstr ""
 
-#: src/lib/tx.ts:89
+#: src/lib/tx.ts:90
 msgid "No NIM HTLC found in swap"
 msgstr ""
 
@@ -685,7 +693,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:164
+#: src/stores/nimiq-network.ts:182
 msgid "No transactions found"
 msgstr ""
 
@@ -879,8 +887,8 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:123
-msgid "Processing funds… "
+#: src/views/HomeView.vue:126
+msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
 #: src/stores/points.ts:204
@@ -920,7 +928,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:143
+#: src/views/HomeView.vue:145
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1050,14 +1058,14 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:283
+#: src/lib/tx.ts:289
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:177
 #: src/composables/useApi.ts:184
-#: src/lib/tx.ts:170
-#: src/lib/tx.ts:274
+#: src/lib/tx.ts:175
+#: src/lib/tx.ts:280
 #: src/lib/tx.ts:38
 #: src/lib/tx.ts:60
 msgid "Something went wrong syncing your account"
@@ -1089,7 +1097,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:181
+#: src/stores/nimiq-network.ts:199
 msgid "Syncing with network."
 msgstr ""
 
@@ -1178,7 +1186,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:133
+#: src/stores/transactions.ts:147
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1186,11 +1194,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:149
+#: src/stores/transactions.ts:163
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:154
+#: src/stores/transactions.ts:168
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
@@ -1198,7 +1206,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:91
+#: src/stores/nimiq-network.ts:98
 msgid "Trying to establish network consensus:"
 msgstr ""
 
@@ -1353,7 +1361,7 @@ msgstr ""
 msgid "Wrong answer"
 msgstr ""
 
-#: src/composables/useStringParser.ts:198
+#: src/composables/useStringParser.ts:202
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
@@ -1389,7 +1397,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:148
+#: src/views/HomeView.vue:150
 msgid "You have a reward to claim!"
 msgstr ""
 
