@@ -179,19 +179,25 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       end: remoteSignerApi.validityEnd,
       active: true,
     }
+    const remoteSignerPlain = { ...remoteSigner.value, address: remoteSigner.value?.address.toUserFriendlyAddress() }
+    const newRemoteSignerPlain = { ...newRemoteSigner, address: newRemoteSigner.address.toUserFriendlyAddress() }
     logger.log({
-      remoteSigner: { ...remoteSigner.value, address: remoteSigner.value?.address.toUserFriendlyAddress() },
-      newRemoteSigner: { ...newRemoteSigner, address: newRemoteSigner.address.toUserFriendlyAddress() },
+      remoteSigner: remoteSignerPlain,
+      newRemoteSigner: newRemoteSignerPlain,
     })
     if (remoteSigner.value) {
       const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0
       logger.log({ oldRemoteBalance, newRemoteBalance })
-      if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled' && oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
-        return
+      if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled') {
+        if (oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
+          return
+        if (oldRemoteBalance.value.data === 0 && newRemoteBalance.value.data === 0)
+          return
+      }
     }
 
-    const areEqual = JSON.stringify(remoteSigner.value) === JSON.stringify(newRemoteSigner)
+    const areEqual = JSON.stringify(remoteSignerPlain) === JSON.stringify(newRemoteSignerPlain)
     if (areEqual)
       return
     await updateRemoteSigner(newRemoteSigner)
