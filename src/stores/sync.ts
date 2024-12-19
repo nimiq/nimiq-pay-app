@@ -806,10 +806,11 @@ export const useSync = defineStore('sync', () => {
         networkId.value,
       )
       const { privateKey, publicKey } = localWallet.value
-      const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent()).serialize()
-      const proof = new Nimiq.SerialBuffer(1 + sig.length)
-      proof.writeUint8(/* TIMEOUT_RESOLVE */ 3)
-      proof.write(sig)
+      const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
+      const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
+      const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
+      proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
+      proof.write(sigProof)
       refundTx.proof = proof
       const txDetails = await client.value!.sendTransaction(refundTx)
       if (txDetails.state !== 'invalidated') {
