@@ -4,8 +4,9 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
+import { useLocks } from '@/stores/locks'
 import { until, useTimeoutFn } from '@vueuse/core'
-import { defineStore } from 'pinia'
+import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
 const logger = useLogger('useNimiqNetwork')
@@ -23,6 +24,7 @@ export const CashlinkExtraDataHex = {
 }
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
+  const { isNetworkReconnecting } = storeToRefs(useLocks())
   const client = ref<Client>()
   const consensus = ref<ConsensusState>('connecting')
   const head = ref<PlainBlock>()
@@ -105,13 +107,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     })
   }
 
-  const isReconnecting = ref(false)
   async function reconnect() {
-    if (isReconnecting.value) {
+    if (isNetworkReconnecting.value) {
       logger.log('Already reconnecting')
       return
     }
-    isReconnecting.value = true
+    isNetworkReconnecting.value = true
     logger.log('Reconnecting to network')
     await client.value?.disconnectNetwork()
 
@@ -122,7 +123,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     await until(consensus).toBe('established')
     logger.log('Connected to network')
-    isReconnecting.value = false
+    isNetworkReconnecting.value = false
   }
 
   async function claimCashlink(cashlink: string, address: Address) {

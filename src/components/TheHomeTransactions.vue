@@ -2,12 +2,12 @@
 import TransactionItem from '@/components/TransactionItem.vue'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { useSync } from '@/stores/sync'
+import { useLocks } from '@/stores/locks'
 import { useTransactions } from '@/stores/transactions'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 
-const { isUpdatingTransactions } = storeToRefs(useSync())
+const { isUpdatingTransactions } = storeToRefs(useLocks())
 const { transactions } = storeToRefs(useTransactions())
 </script>
 

@@ -10,16 +10,18 @@ import { i18n } from '@/i18n/i18n-setup'
 import { type DbPagination, DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 
 import { getSignedTx, toAccountType } from '@/lib/tx'
+import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, readonly, ref } from 'vue'
-import { useConn } from './conn'
-import { useLocalWallet } from './local-wallet'
-import { useRemoteSigner } from './remote-signer'
 
 const logger = useLogger('transactions.ts')
+const { isSendingTx } = storeToRefs(useLocks())
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -84,7 +86,6 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  const isSendingTx = ref(false)
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
     if (isSendingTx.value) {
       logger.error('A transaction is already in progress')
@@ -367,7 +368,6 @@ export const useTransactions = defineStore('transactions', () => {
   return {
     transactions: readonly(transactions),
     sendTx,
-    isSendingTx,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
     addUnknownPaymentToMerchantTransaction,

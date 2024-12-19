@@ -35,6 +35,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('HomeView')
 
@@ -50,7 +51,8 @@ const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getRefer
 const { transactions } = storeToRefs(useTransactions())
 const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced, isTransactionPending, isUpdatingTransactions, isProcessingRemote, isSyncingWallets, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { nodesAreSynced, isTransactionPending, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height

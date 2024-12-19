@@ -5,6 +5,7 @@ import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core/web'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { Ref } from 'vue'
 import { useCplApi } from '@/composables/useApi'
+import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
@@ -14,6 +15,7 @@ import { toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
@@ -23,9 +25,9 @@ import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { computedAsync, until, useTimeoutFn } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import { useFastspotApiV1 } from '../composables/useFastspotv1'
 
 const logger = useLogger('useSync')
+const { isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions, headChangePendingDrainLock, headChangeUpdatesLock, htlcCheckLock } = storeToRefs(useLocks())
 const { setToast } = useToast()
 
 const MAX_BLOCK_HEIGHT_MISMATCH = Nimiq.Policy.BLOCKS_PER_BATCH
@@ -39,7 +41,6 @@ export const useSync = defineStore('sync', () => {
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
-  const { isSendingTx } = storeToRefs(useTransactions())
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -58,7 +59,6 @@ export const useSync = defineStore('sync', () => {
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
   const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
-  const isProcessingRemote = ref(false)
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -227,7 +227,6 @@ export const useSync = defineStore('sync', () => {
   /**
    * Syncs the local and the remote wallet immediately and then every time a new block is minted.
    */
-  const isSyncingWallets = ref(false)
   async function syncWallets() {
     if (!hasLocalWallet.value)
       return
@@ -246,11 +245,10 @@ export const useSync = defineStore('sync', () => {
     await checkHtlcState()
     updateTransactionHistory()
 
-    let headChangePendingDrainLock = false
     client.value?.addHeadChangedListener(async () => {
-      if (headChangePendingDrainLock)
+      if (headChangePendingDrainLock.value)
         return
-      headChangePendingDrainLock = true
+      headChangePendingDrainLock.value = true
 
       if (pendingRemoteDrainTxs.value.length > 0) {
         try {
@@ -262,20 +260,18 @@ export const useSync = defineStore('sync', () => {
           logger.error('Error checking pending transactions', error)
         }
       }
-      headChangePendingDrainLock = false
+      headChangePendingDrainLock.value = false
     })
 
-    let headChangeUpdatesLock = false
     client.value?.addHeadChangedListener(async () => {
-      // console.log('headChangeUpdatesLock', headChangeUpdatesLock)
       if (!isTransactionPending.value && localHeight.value % 10 * Nimiq.Policy.BLOCKS_PER_BATCH === 0)
         await verifyRemoteSignersDb()
       else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
         await verifyRemoteSignersDb()
 
-      if (headChangeUpdatesLock)
+      if (headChangeUpdatesLock.value)
         return
-      headChangeUpdatesLock = true
+      headChangeUpdatesLock.value = true
 
       if (pendingTransactions.value.length > 0) {
         try {
@@ -307,7 +303,7 @@ export const useSync = defineStore('sync', () => {
       catch (error) {
         logger.error('Error in headChangeUpdates', error)
       }
-      headChangeUpdatesLock = false
+      headChangeUpdatesLock.value = false
     })
 
     client.value?.addTransactionListener(async (tx) => {
@@ -410,7 +406,6 @@ export const useSync = defineStore('sync', () => {
     }
   }
 
-  const isUpdatingTransactions = ref(false)
   /**
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
@@ -420,192 +415,197 @@ export const useSync = defineStore('sync', () => {
       return
     }
     isUpdatingTransactions.value = true
+    try {
     // No need to parse JSON fields, as those fields are not used here.
-    const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
-    const accountTxs = await getAccountTransactions(localAddress.value!)
+      const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+      const accountTxs = await getAccountTransactions(localAddress.value!)
 
-    await Promise.all(accountTxs.data.map(async (tx) => {
+      await Promise.all(accountTxs.data.map(async (tx) => {
       // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
 
-      if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
-        return
+        if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
+          return
 
-      const hash = tx.transactionHash
-      if (userReceipts.some(dbTx => dbTx.hash === hash))
-        return
+        const hash = tx.transactionHash
+        if (userReceipts.some(dbTx => dbTx.hash === hash))
+          return
 
-      logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
-      useTransactions().addReceiptTransaction({
-        transfer: Transfer.UserReceipt,
-        amount: tx.value,
-        sender: tx.sender,
-        senderType: toAccountType(tx.senderType),
-        recipient: tx.recipient,
-        recipientType: toAccountType(tx.recipientType),
-        hash,
-        status: tx.state,
-        timestamp: tx.timestamp,
-        title: 'Top-Up', // translated at display time
-        message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
-        fee: tx.fee,
-        // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
-        // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-        proofSize: useRemoteSigner().remoteProofSize,
-      })
-    }))
-
-    async function handleSwapTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      let contract: ContractWithEstimate<SwapAsset>
-      try {
-        const fastspot = await useFastspotApiV1()
-        contract = await fastspot.getContract(SwapAsset.NIM, tx.recipient)
-      }
-      catch (error: any) {
-        logger.error('Error fetching contract info from Fastspot:', error.message)
-        addUnknownPaymentToMerchantTransaction(tx)
-        return
-      }
-
-      // Check swap type
-      if (contract.from.asset !== SwapAsset.NIM) {
-        logger.error(`Found a swap from another asset than NIM (${contract.from.asset}) - This type of swap cannot yet be handled`)
-        // Fall through
-      }
-      else if (contract.to.asset === SwapAsset.BTC_LN) {
-        logger.log(`📬 BTC_LN swap found with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-        addUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
-          amount: (contract.to.amount - contract.to.fee) / 1e8,
-          currency: 'BTC',
-        }, {
-          // TODO: Find if the swap was completed (set `secret`) or refunded (set `refunded`)
-          imported: true,
+        logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
+        useTransactions().addReceiptTransaction({
+          transfer: Transfer.UserReceipt,
+          amount: tx.value,
+          sender: tx.sender,
+          senderType: toAccountType(tx.senderType),
+          recipient: tx.recipient,
+          recipientType: toAccountType(tx.recipientType),
+          hash,
+          status: tx.state,
+          timestamp: tx.timestamp,
+          title: 'Top-Up', // translated at display time
+          message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+          fee: tx.fee,
+          // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
+          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+          proofSize: useRemoteSigner().remoteProofSize,
         })
-        return
-      }
-      else {
-        logger.error(`Found a swap to another asset than BTC_LN (${contract.to.asset}) - This type of swap cannot yet be handled`)
+      }))
+
+      async function handleSwapTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+        let contract: ContractWithEstimate<SwapAsset>
+        try {
+          const fastspot = await useFastspotApiV1()
+          contract = await fastspot.getContract(SwapAsset.NIM, tx.recipient)
+        }
+        catch (error: any) {
+          logger.error('Error fetching contract info from Fastspot:', error.message)
+          addUnknownPaymentToMerchantTransaction(tx)
+          return
+        }
+
+        // Check swap type
+        if (contract.from.asset !== SwapAsset.NIM) {
+          logger.error(`Found a swap from another asset than NIM (${contract.from.asset}) - This type of swap cannot yet be handled`)
         // Fall through
-      }
-
-      addUnknownPaymentToMerchantTransaction(tx)
-    }
-
-    function handleWithdrawalTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      logger.log(`📬 New withdrawal transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-      addWithdrawalTransaction({
-        transfer: Transfer.UserPayment,
-        amount: tx.value,
-        sender: tx.sender,
-        senderType: toAccountType(tx.senderType),
-        recipient: tx.recipient,
-        recipientType: toAccountType(tx.recipientType),
-        hash: tx.transactionHash,
-        status: tx.state,
-        timestamp: tx.timestamp,
-        title: 'Withdrawal', // translated at display time
-        fee: tx.fee,
-        // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
-        // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-        proofSize: useRemoteSigner().remoteProofSize,
-      })
-    }
-
-    function handleUnknownTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
-      logger.log(`📬 New merchant transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
-      addUnknownPaymentToMerchantTransaction(tx)
-    }
-
-    const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
-    const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
-
-    function categorizeTransactions(txs: PlainTransactionDetails[]) {
-      const htlcExtensionTxs: PlainTransactionDetails[] = []
-      const htlcSwapTxs: PlainTransactionDetails[] = []
-      const withdrawalTxs: PlainTransactionDetails[] = []
-      const unknownTxs: PlainTransactionDetails[] = []
-      for (const tx of txs) {
-        if (tx.recipientType === 'htlc') {
-          // Differentiate between HTLC extensions (hashRoot is zeroes) and swap HTLCs (hashRoot is non-zeroes)
-          const data = tx.data
-          if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
-            htlcExtensionTxs.push(tx)
-          else
-            htlcSwapTxs.push(tx)
         }
-        else if (topUpAddresses.includes(tx.recipient)) {
-          withdrawalTxs.push(tx)
-        }
-        else { unknownTxs.push(tx) }
-      }
-      return {
-        htlcExtensionTxs,
-        htlcSwapTxs,
-        withdrawalTxs,
-        unknownTxs,
-      }
-    }
-
-    // Make sure all the created HTLCs are in the remote signers db
-    // This would prevent a missing HTLC when the user closes the app before the HTLC is stored in the db
-    // TODO: Get also extended HTLCs
-    const htlcTransactions = accountTxs.data.filter(tx => tx.recipientType === 'htlc')
-    const remoteSigners = await getAllRemoteSigners()
-    for (const tx of htlcTransactions) {
-      const remoteSigner = remoteSigners.find(remoteSigner => remoteSigner.address.toUserFriendlyAddress() === tx.recipient)
-      if (remoteSigner)
-        continue
-
-      logger.error('Remote signer not found in db', tx)
-      const htlcData = tx.data
-      addRemoteSigner({
-        active: false,
-        balance: (await getBalance(Nimiq.Address.fromString(tx.recipient))).data,
-        address: Nimiq.Address.fromString(tx.recipient),
-        publicKey: remotePublicKey.value!,
-        start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
-        end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-        // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
-        // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-        proofSize: useRemoteSigner().remoteProofSize,
-      })
-    }
-
-    // Check for transactions made from the remote signers
-    if (remoteSigners && remoteSigners.length) {
-      for (const remoteSigner of remoteSigners) {
-        const accountTxs = await getAccountTransactions(remoteSigner.address)
-        const txsToProcess = accountTxs.data
-          // Only transactions sent from the remote signer to other addresses
-          .filter(tx => tx.sender === remoteSigner.address.toUserFriendlyAddress() && tx.recipient !== localAddress.value.toUserFriendlyAddress())
-          // Only transactions not already in the db
-          .filter((tx) => {
-            const hash = tx.transactionHash
-            for (const dbTx of allTransactions) {
-              // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
-              if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
-                break
-              // If the tx is already known, do not process it further
-              if (dbTx.hash === hash)
-                return false
-            }
-            return true
+        else if (contract.to.asset === SwapAsset.BTC_LN) {
+          logger.log(`📬 BTC_LN swap found with ${tx.value / 1e5} from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+          addUnknownPaymentToMerchantTransaction(tx, Transfer.UserPaymentToAtomicSwap, Rail.BitcoinLightning, '', {
+            amount: (contract.to.amount - contract.to.fee) / 1e8,
+            currency: 'BTC',
+          }, {
+          // TODO: Find if the swap was completed (set `secret`) or refunded (set `refunded`)
+            imported: true,
           })
+          return
+        }
+        else {
+          logger.error(`Found a swap to another asset than BTC_LN (${contract.to.asset}) - This type of swap cannot yet be handled`)
+        // Fall through
+        }
 
-        const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
-
-        await Promise.all(htlcExtensionTxs.map(async (tx) => {
-          const txs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient))
-          const categorized = categorizeTransactions(txs)
-          htlcSwapTxs.concat(categorized.htlcSwapTxs)
-          withdrawalTxs.concat(categorized.withdrawalTxs)
-          unknownTxs.concat(categorized.unknownTxs)
-        }))
-        await Promise.all([
-          htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
-          withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
-          unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
-        ].flat())
+        addUnknownPaymentToMerchantTransaction(tx)
       }
+
+      function handleWithdrawalTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+        logger.log(`📬 New withdrawal transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+        addWithdrawalTransaction({
+          transfer: Transfer.UserPayment,
+          amount: tx.value,
+          sender: tx.sender,
+          senderType: toAccountType(tx.senderType),
+          recipient: tx.recipient,
+          recipientType: toAccountType(tx.recipientType),
+          hash: tx.transactionHash,
+          status: tx.state,
+          timestamp: tx.timestamp,
+          title: 'Withdrawal', // translated at display time
+          fee: tx.fee,
+          // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
+          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+          proofSize: useRemoteSigner().remoteProofSize,
+        })
+      }
+
+      function handleUnknownTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
+        logger.log(`📬 New merchant transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
+        addUnknownPaymentToMerchantTransaction(tx)
+      }
+
+      const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
+      const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
+
+      function categorizeTransactions(txs: PlainTransactionDetails[]) {
+        const htlcExtensionTxs: PlainTransactionDetails[] = []
+        const htlcSwapTxs: PlainTransactionDetails[] = []
+        const withdrawalTxs: PlainTransactionDetails[] = []
+        const unknownTxs: PlainTransactionDetails[] = []
+        for (const tx of txs) {
+          if (tx.recipientType === 'htlc') {
+          // Differentiate between HTLC extensions (hashRoot is zeroes) and swap HTLCs (hashRoot is non-zeroes)
+            const data = tx.data
+            if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
+              htlcExtensionTxs.push(tx)
+            else
+              htlcSwapTxs.push(tx)
+          }
+          else if (topUpAddresses.includes(tx.recipient)) {
+            withdrawalTxs.push(tx)
+          }
+          else { unknownTxs.push(tx) }
+        }
+        return {
+          htlcExtensionTxs,
+          htlcSwapTxs,
+          withdrawalTxs,
+          unknownTxs,
+        }
+      }
+
+      // Make sure all the created HTLCs are in the remote signers db
+      // This would prevent a missing HTLC when the user closes the app before the HTLC is stored in the db
+      // TODO: Get also extended HTLCs
+      const htlcTransactions = accountTxs.data.filter(tx => tx.recipientType === 'htlc')
+      const remoteSigners = await getAllRemoteSigners()
+      for (const tx of htlcTransactions) {
+        const remoteSigner = remoteSigners.find(remoteSigner => remoteSigner.address.toUserFriendlyAddress() === tx.recipient)
+        if (remoteSigner)
+          continue
+
+        logger.error('Remote signer not found in db', tx)
+        const htlcData = tx.data
+        addRemoteSigner({
+          active: false,
+          balance: (await getBalance(Nimiq.Address.fromString(tx.recipient))).data,
+          address: Nimiq.Address.fromString(tx.recipient),
+          publicKey: remotePublicKey.value!,
+          start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
+          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+          // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
+          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+          proofSize: useRemoteSigner().remoteProofSize,
+        })
+      }
+
+      // Check for transactions made from the remote signers
+      if (remoteSigners && remoteSigners.length) {
+        for (const remoteSigner of remoteSigners) {
+          const accountTxs = await getAccountTransactions(remoteSigner.address)
+          const txsToProcess = accountTxs.data
+          // Only transactions sent from the remote signer to other addresses
+            .filter(tx => tx.sender === remoteSigner.address.toUserFriendlyAddress() && tx.recipient !== localAddress.value.toUserFriendlyAddress())
+          // Only transactions not already in the db
+            .filter((tx) => {
+              const hash = tx.transactionHash
+              for (const dbTx of allTransactions) {
+              // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
+                if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
+                  break
+                // If the tx is already known, do not process it further
+                if (dbTx.hash === hash)
+                  return false
+              }
+              return true
+            })
+
+          const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
+
+          await Promise.all(htlcExtensionTxs.map(async (tx) => {
+            const txs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient))
+            const categorized = categorizeTransactions(txs)
+            htlcSwapTxs.concat(categorized.htlcSwapTxs)
+            withdrawalTxs.concat(categorized.withdrawalTxs)
+            unknownTxs.concat(categorized.unknownTxs)
+          }))
+          await Promise.all([
+            htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
+            withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
+            unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
+          ].flat())
+        }
+      }
+    }
+    catch (error) {
+      logger.error('Error while updating transaction history', error)
     }
     isUpdatingTransactions.value = false
   }
@@ -854,29 +854,25 @@ export const useSync = defineStore('sync', () => {
     }
   })
 
-  let htlcCheckLock = false
   watch(localHeight, async () => {
     if (localHeight.value % 10 !== 0)
       return
-    if (htlcCheckLock)
+    if (htlcCheckLock.value)
       return
 
-    htlcCheckLock = true
+    htlcCheckLock.value = true
     await checkHtlcState()
-    htlcCheckLock = false
+    htlcCheckLock.value = false
   })
 
   return {
     syncWallets,
-    isSyncingWallets,
     updateBalances,
     updateSingleTransaction,
     updateTransactionHistory,
     pendingTransactions,
     isTransactionPending,
     nodesAreSynced,
-    isUpdatingTransactions,
-    isProcessingRemote,
     pendingHtlcCreationTransactions,
 
     blocksUntilNextMacroBlock,

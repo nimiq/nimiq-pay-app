@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
+import { useLocks } from '@/stores/locks'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { IonSkeletonText } from '@ionic/vue'
@@ -8,8 +9,9 @@ import { FiatAmount } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
 
-const { remoteBalance: balance /* blocksUntilHtlcActive */ } = storeToRefs(useRemoteSigner())
-const { nodesAreSynced, isProcessingRemote, isTransactionPending } = storeToRefs(useSync())
+const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
+const { nodesAreSynced, isTransactionPending } = storeToRefs(useSync())
+const { isProcessingRemote } = storeToRefs(useLocks())
 const { fiat, crypto } = usePrice(balance)
 
 /**
