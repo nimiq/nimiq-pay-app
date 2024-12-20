@@ -781,41 +781,49 @@ export const useSync = defineStore('sync', () => {
     logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
 
     for (const htlc of expiredSwapHtlcs) {
-      const account = await client.value!.getAccount(htlc.address) as PlainAccount
-      if (!account.balance) {
+      try {
+        const account = await client.value!.getAccount(htlc.address) as PlainAccount
+        if (!account.balance) {
         // TODO: Check if HTLC was redeemed, and add secret to tx
 
-        logger.log('Swap HTLC is empty, deleting from db', htlc)
-        await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+          logger.log('Swap HTLC is empty, deleting from db', htlc)
+          await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
 
-        continue
+          continue
+        }
+
+        logger.log('Refunding swap HTLC', htlc, account)
+        const refundTx = new Nimiq.Transaction(
+          Nimiq.Address.fromUserFriendlyAddress(htlc.address),
+          Nimiq.AccountType.HTLC,
+          new Uint8Array(0),
+          localAddress.value,
+          Nimiq.AccountType.Basic,
+          new Uint8Array(0),
+          BigInt(account.balance),
+          0n,
+          0,
+          localHeight.value,
+          networkId.value,
+        )
+        const { privateKey, publicKey } = localWallet.value
+        const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
+        const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
+        const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
+        proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
+        proof.write(sigProof)
+        refundTx.proof = proof
+        const txDetails = await client.value!.sendTransaction(refundTx)
+        if (txDetails.state !== 'invalidated') {
+          // Mark transaction as refunded
+          useTransactions().setSwapHtlcRefunded(htlc.address)
+        }
+        else {
+          logger.error('Error while sending refund swap HTLC tx', txDetails)
+        }
       }
-
-      logger.log('Refunding swap HTLC', htlc, account)
-      const refundTx = new Nimiq.Transaction(
-        Nimiq.Address.fromUserFriendlyAddress(htlc.address),
-        Nimiq.AccountType.HTLC,
-        new Uint8Array(0),
-        localAddress.value,
-        Nimiq.AccountType.Basic,
-        new Uint8Array(0),
-        BigInt(account.balance),
-        0n,
-        0,
-        localHeight.value,
-        networkId.value,
-      )
-      const { privateKey, publicKey } = localWallet.value
-      const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
-      const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
-      const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
-      proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
-      proof.write(sigProof)
-      refundTx.proof = proof
-      const txDetails = await client.value!.sendTransaction(refundTx)
-      if (txDetails.state !== 'invalidated') {
-        // Mark transaction as refunded
-        useTransactions().setSwapHtlcRefunded(htlc.address)
+      catch (error) {
+        logger.error('Error while refunding swap HTLC', error)
       }
     }
     useConn().run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
