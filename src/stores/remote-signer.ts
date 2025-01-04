@@ -244,11 +244,20 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
    */
   async function getRemoteSignersFromBlockchain() {
     await until(client).not.toBeUndefined()
-    await until(remotePublicKey).not.toBeUndefined()
     const transactions = await client.value!.getTransactionsByAddress(localAddress.value)
 
     logger.log('All Transactions from Blockchain', transactions)
     const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
+    // If no HTLC transactions, we don't need to wait for the remote public key because there is no remote signer until the user sends funds
+    if (htlcTransactions.length) {
+      try {
+        await until(remotePublicKey).not.toBeUndefined({ timeout: 10000, throwOnTimeout: true })
+      }
+      catch {
+        logger.error('Remote Public Key not found')
+        return
+      }
+    }
     for (const tx of htlcTransactions) {
       const htlcData = tx.data
       await updateRemoteSigner({
