@@ -14,6 +14,7 @@ const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com/api/' : 'ht
 const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https://cs1.nimpay.app/')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
+const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
 
 async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
@@ -286,6 +287,22 @@ export function useCplApi() {
 
   return {
     getOrderById,
+  }
+}
+
+export interface NotificationRes {
+  id: number
+  title: string
+  subtitle: string
+  display: 0 | 1
+  action: string
+  actionExtra: string
+  createdAt: string
+}
+
+export function useNotificationsApi() {
+  return {
+    getRemoteNotifications: () => api<NotificationRes[]>(new URL('notifications/all', baseNotificationsUrl)),
   }
 }
 

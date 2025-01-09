@@ -3,18 +3,29 @@ import BackupNotification from '@/components/BackupNotification.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import MenuIcon from '@/components/icons/menu.vue'
+// TODO: lazy load
+import NotificationCard from '@/components/NotificationCard.vue'
+import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
+import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
+import { toCoins } from '@/composables/usePrice'
+import { i18n } from '@/i18n/i18n-setup'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
+
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Clipboard } from '@capacitor/clipboard'
@@ -24,18 +35,7 @@ import { computedAsync, until, useElementSize, useSwipe } from '@vueuse/core'
 import { chevronForward } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
-
 import { useRouter } from 'vue-router'
-// TODO: lazy load
-import NotificationCard from '@/components/NotificationCard.vue'
-import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
-import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
-import { toCoins } from '@/composables/usePrice'
-import { i18n } from '@/i18n/i18n-setup'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
-import { useLocalWallet } from '@/stores/local-wallet'
-import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('HomeView')
 
@@ -102,10 +102,9 @@ const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward |
 const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
 function scrollToFirstNotification() {
-  // Scroll to first notification
-  notificationList.value?.scrollTo({
-    left: notificationList.value.scrollWidth * -1,
-    behavior: 'smooth',
+  window.requestAnimationFrame(() => {
+    if (localNotifications.value.length && notificationList.value)
+      notificationList.value.firstElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
   })
 }
 
@@ -157,18 +156,19 @@ watch([referralCode, phoneNumberVerified], () => {
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
-  if (referralCode.value && phoneNumberVerified.value) {
+  if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
-  }
-  else if (!referralCode.value && !phoneNumberVerified.value) {
+  else if (!referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(verifyNumberNotification, true)
-    scrollToFirstNotification()
-  }
-  else if (referralCode.value && !phoneNumberVerified.value) {
+  else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-    scrollToFirstNotification()
-  }
 }, { immediate: true })
+
+// TODO: dont scroll if list is smaller than before (closed a notification)
+watch(() => localNotifications.value.length, (newValue, oldValue) => {
+  if (newValue > oldValue)
+    scrollToFirstNotification()
+})
 
 async function detectPaymentRequest() {
   try {
@@ -274,7 +274,7 @@ App.addListener('resume', detectPaymentRequest)
             ref="notificationList"
             class="hide-scrollbar scroll-pl-[21px] w-full overflow-auto flex gap-x-3 gap-y-8 pb-4 snap-x snap-mandatory"
           >
-            <li v-for="notification in localNotifications" :key="notification.id" class="shrink-0 snap-start first:pl-[21px] last:pr-[21px]">
+            <li v-for="notification in localNotifications" :id="notification.id" :key="notification.id" class="shrink-0 snap-start first:pl-[21px] last:pr-[21px]">
               <NotificationCard @click="notification.action" @close="() => removeLocalNotification(notification.id)">
                 {{ notification.title }}
                 <template v-if="notification.subtitle" #subtitle>

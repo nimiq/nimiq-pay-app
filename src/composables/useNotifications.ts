@@ -1,7 +1,9 @@
 // TODO: https://capacitorjs.com/docs/apis/background-runner
 // TODO: https://capacitorjs.com/docs/apis/local-notifications
 
+import type { NotificationRes } from '@/composables/useApi'
 import type { PermissionState } from '@capacitor/core'
+import { useNotificationsApi } from '@/composables/useApi'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -15,8 +17,9 @@ import { storeToRefs } from 'pinia'
 import { computed, type Ref, ref } from 'vue'
 
 const logger = useLogger('useNotifications')
+const { getRemoteNotifications } = useNotificationsApi()
 
-type Action = 'openPoints' | 'openTask'
+type Action = 'openPoints' | 'openTask' | 'initializeFlow'
 interface NotificationData {
   action?: Action
   task_id?: string
@@ -59,6 +62,30 @@ export function useNotifications() {
   const { closedNotifications, pushNotificationsStatus } = storeToRefs(useApp())
 
   async function init() {
+    getRemoteNotifications()
+      .then((res) => {
+        const { data: notifications, error } = res
+        if (error) {
+          logger.error('Error getting remote notifications', error)
+          return
+        }
+        if (!notifications)
+          return
+        notifications.forEach((notification) => {
+          if (!notification.display)
+            return
+          const action = getActionFromNotification(notification)
+          const localNotification = {
+            id: `${notification.id}-${notification.title.toLowerCase().replace(/\s/g, '-')}`,
+            title: notification.title,
+            subtitle: notification.subtitle,
+            action,
+          }
+          addLocalNotification(localNotification, true)
+        })
+      })
+      .catch(e => logger.error('Error getting remote notifications', e))
+
     if (isWeb)
       return
 
@@ -179,6 +206,21 @@ export function useNotifications() {
     }
 
     useModal().showModal(Modal.Task, { isOnTop: true, componentProps: { task } })
+  }
+
+  function getActionFromNotification(notification: NotificationRes) {
+    if (!notification.action)
+      return
+
+    const { action, actionExtra } = notification
+    if (action === 'openPoints')
+      return () => useModal().showModal(Modal.Points)
+    if (action === 'openTask' && actionExtra)
+      return () => openTask(actionExtra)
+    if (action === 'initializeFlow' && actionExtra)
+      return () => initializeFlow(actionExtra as FlowName)
+
+    return undefined
   }
 
   function addLocalNotification(notification: LocalNotification, unshift = false) {
