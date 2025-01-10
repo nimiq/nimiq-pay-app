@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Haptics, NotificationType } from '@capacitor/haptics'
-import { type PropType, type Ref, ref, watchEffect } from 'vue'
+import { Keyboard } from '@capacitor/keyboard'
+import { onMounted, onUnmounted, type PropType, type Ref, ref, watchEffect } from 'vue'
 
 defineProps({
   recoveryWords: {
@@ -50,6 +51,13 @@ function inputHandler(e: Event) {
     }, 2000)
   }
 }
+
+onMounted(() => {
+  Keyboard.setAccessoryBarVisible({ isVisible: false })
+})
+onUnmounted(() => {
+  Keyboard.setAccessoryBarVisible({ isVisible: true })
+})
 </script>
 
 <template>
@@ -64,11 +72,13 @@ function inputHandler(e: Event) {
         name="recovery-word"
         tabindex="0"
         class="lowercase"
-        type="text"
+        type="email"
         :value="word"
         :disabled="!!word"
         autocomplete="off"
         autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         @input="inputHandler"
       >
     </div>
