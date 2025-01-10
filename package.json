@@ -18,7 +18,7 @@
     "release": "pnpm i18n:sync && ionic cap build --prod",
     "release:beta": "pnpm i18n:sync && dotenv release-it",
     "preview": "vite preview",
-    "postinstall": "cp -r node_modules/@nimiq/core/{launcher,lib,web} public/nimiq/",
+    "postinstall": "cp -r ${PWD}/node_modules/@nimiq/core/{launcher,lib,web} ${PWD}/public/nimiq/",
     "typecheck": "vue-tsc --noEmit",
     "test:e2e": "cypress run",
     "test:unit": "vitest",
