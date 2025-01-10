@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
+import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import type { PropType } from 'vue'
 import type { Crypto } from '../stores/app'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -8,6 +9,8 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
+// TODO: async import
+import { useToast } from '@/composables/useToast'
 import { PaymentMethod, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -21,8 +24,6 @@ import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigge
 import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import InfoIcon from './icons/info.vue'
 import LoadingSpinner from './icons/loading-spinner.vue'
-// TODO: async import
-import { useToast } from '@/composables/useToast'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -253,7 +254,7 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
       :disabled="!isEligible"
       label-placement="end" class="mb-4"
       :checked="paymentMethod === PaymentMethod.Points"
-      @ion-change="(e) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
+      @ion-change="(e: IonToggleCustomEvent<ToggleChangeEventDetail>) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
     >
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>

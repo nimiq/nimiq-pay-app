@@ -63,7 +63,7 @@ async function updateServerTimeOffset() {
     const method = 'HEAD'
     const dateHeader = await (useDevice().isWeb
       ? fetch(url, { method, cache: 'no-cache' })
-        .then(({ headers }) => headers.get('Date'))
+          .then(({ headers }) => headers.get('Date'))
       : import('@capacitor/core').then(({ CapacitorHttp: { request } }) => request({ url, method })).then(({ headers }) => headers.Date || headers.date)
     )
     const serverTime = Date.parse(dateHeader || '')
