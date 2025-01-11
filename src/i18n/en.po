@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
-#: src/views/HomeView.vue:144
+#: src/views/HomeView.vue:142
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -675,7 +675,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:263
+#: src/composables/useApi.ts:264
 msgid "No payment details found"
 msgstr ""
 
@@ -711,7 +711,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:112
+#: src/composables/useNotifications.ts:138
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -769,7 +769,7 @@ msgstr ""
 msgid "Payment expiring soon"
 msgstr ""
 
-#: src/composables/useApi.ts:113
+#: src/composables/useApi.ts:114
 #: src/composables/useGoCryptoMonitoring.ts:113
 msgid "Payment invalid"
 msgstr ""
@@ -928,7 +928,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:145
+#: src/views/HomeView.vue:143
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -940,7 +940,7 @@ msgstr ""
 msgid "Reset search"
 msgstr ""
 
-#: src/composables/useNotifications.ts:111
+#: src/composables/useNotifications.ts:137
 msgid "Rewards Notifications"
 msgstr ""
 
@@ -1017,7 +1017,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/composables/useApi.ts:57
+#: src/composables/useApi.ts:58
 #: src/lib/flows/index.ts:262
 msgid "Something went wrong"
 msgstr ""
@@ -1062,8 +1062,8 @@ msgstr ""
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:177
-#: src/composables/useApi.ts:184
+#: src/composables/useApi.ts:178
+#: src/composables/useApi.ts:185
 #: src/lib/tx.ts:175
 #: src/lib/tx.ts:280
 #: src/lib/tx.ts:38
@@ -1262,7 +1262,7 @@ msgstr ""
 msgid "Welcome to Cryptocity Points"
 msgstr ""
 
-#: src/composables/useNotifications.ts:49
+#: src/composables/useNotifications.ts:51
 msgid "Welcome to Nimiq Pay"
 msgstr ""
 
@@ -1397,7 +1397,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:150
+#: src/views/HomeView.vue:148
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -1429,6 +1429,6 @@ msgstr ""
 msgid "Your number"
 msgstr ""
 
-#: src/composables/useNotifications.ts:50
+#: src/composables/useNotifications.ts:52
 msgid "Your wallet is ready to use"
 msgstr ""
