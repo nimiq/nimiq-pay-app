@@ -32,7 +32,6 @@ interface LocalNotification {
   action?: (() => void) | undefined
 }
 
-// TODO: get this from a server
 /**
  * @description List of local notifications to show to the user
  * @property {string} id - Unique identifier for the notification, can be used to remove it. It needs to be unique for each notification

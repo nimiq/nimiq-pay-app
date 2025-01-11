@@ -112,7 +112,6 @@ const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, 
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')
-  // TODO: add a loading variable from useSync and don't refresh if already loading
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
