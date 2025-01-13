@@ -20,7 +20,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
   const localBalance = ref(0)
 
-  async function getWords(): AsyncResult<string[], string> {
+  function getWords(): Result<string[], string> {
     if (!entropy.value) {
       const err = i18n.t('No account has been found')
       logger.error(err)

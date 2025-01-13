@@ -1,18 +1,27 @@
 <script setup lang="ts">
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
-import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { IonButton } from '@ionic/vue'
-import { asyncComputed } from '@vueuse/core'
+import { computed } from 'vue'
 
 defineEmits<{ done: [], skip: [] }>()
 
-const words = asyncComputed(() => useLocalWallet().getWords().then(({ data }) => data || []), [i18n.t('Loading...')])
+const words = computed(() => {
+  const { data, error } = useLocalWallet().getWords()
+  if (error || !data) {
+    console.error('Error getting words', error)
+    return null
+  }
+  return data
+})
 </script>
 
 <template>
   <div class="flex flex-col items-center w-full h-full">
-    <MnemonicDisplay :recovery-words="words" class="mt-[30%]" />
+    <MnemonicDisplay v-if="words" :recovery-words="words" class="mt-[30%]" />
+    <p v-else class="text-center mt-[30%]">
+      {{ $t('Loading') }}...
+    </p>
     <IonButton size="small" class="self-stretch mt-auto mb-6 text-base font-bold" @click="$emit('done')">
       {{ $t('Continue') }}
     </IonButton>
