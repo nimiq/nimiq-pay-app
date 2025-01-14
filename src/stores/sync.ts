@@ -861,7 +861,7 @@ export const useSync = defineStore('sync', () => {
       logger.log('Nodes are not synced. Starting reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPendingReconnectNetwork.value })
       startReconnectNetwork()
     }
-  })
+  }, { immediate: true })
 
   watch(localHeight, async () => {
     if (localHeight.value % 10 !== 0)
