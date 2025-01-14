@@ -1,4 +1,4 @@
-import type { AsyncResult, Result } from '@/types'
+import type { Result } from '@/types'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { defineStore, storeToRefs } from 'pinia'

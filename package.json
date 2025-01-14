@@ -32,6 +32,7 @@
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^8.0.2",
     "@aparajita/capacitor-secure-storage": "^6.0.1",
+    "@capacitor-community/privacy-screen": "^5.2.1",
     "@capacitor-mlkit/barcode-scanning": "^6.2.0",
     "@capacitor/browser": "^6.0.4",
     "@capacitor/filesystem": "^6.0.2",

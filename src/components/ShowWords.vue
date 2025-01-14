@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { PrivacyScreen } from '@capacitor-community/privacy-screen'
 import { IonButton } from '@ionic/vue'
-import { computed } from 'vue'
+import { computed, onUnmounted, watch } from 'vue'
 
-defineEmits<{ done: [], skip: [] }>()
-
+const props = defineProps({ isVisible: Boolean })
+defineEmits<{ done: [] }>()
 const words = computed(() => {
   const { data, error } = useLocalWallet().getWords()
   if (error || !data) {
@@ -14,6 +15,16 @@ const words = computed(() => {
   }
   return data
 })
+
+watch(() => props.isVisible, (isVisible) => {
+  if (isVisible) {
+    PrivacyScreen.enable()
+  }
+  else {
+    PrivacyScreen.disable()
+  }
+})
+onUnmounted(() => PrivacyScreen.disable())
 </script>
 
 <template>

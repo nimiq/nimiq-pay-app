@@ -12,6 +12,8 @@ PODS:
     - Capacitor
   - CapacitorClipboard (6.0.2):
     - Capacitor
+  - CapacitorCommunityPrivacyScreen (5.2.1):
+    - Capacitor
   - CapacitorCommunitySqlite (6.0.2):
     - Capacitor
     - SQLCipher
@@ -141,6 +143,7 @@ DEPENDENCIES:
   - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser`)"
   - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard`)"
+  - "CapacitorCommunityPrivacyScreen (from `../../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite`)"
   - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios`)"
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/filesystem`)"
@@ -190,6 +193,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser"
   CapacitorClipboard:
     :path: "../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard"
+  CapacitorCommunityPrivacyScreen:
+    :path: "../../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen"
   CapacitorCommunitySqlite:
     :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
@@ -220,6 +225,7 @@ SPEC CHECKSUMS:
   CapacitorApp: e1e6b7d05e444d593ca16fd6d76f2b7c48b5aea7
   CapacitorBrowser: 3413e46a583b6edc3f20448732a531078d6924c6
   CapacitorClipboard: 4443c3cdb7c77b1533dfe3ff0f9f7756aa8579df
+  CapacitorCommunityPrivacyScreen: 5ac93e09bbd78884ca9c8f3c0a9084ec2cc9a4fe
   CapacitorCommunitySqlite: 0299d20f4b00c2e6aa485a1d8932656753937b9b
   CapacitorCordova: b33e7f4aa4ed105dd43283acdd940964374a87d9
   CapacitorFilesystem: a6b43788d8f9489fc95fb761f3d0d37d0bceaddf
@@ -252,6 +258,6 @@ SPEC CHECKSUMS:
   SQLCipher: 30a8e81afa6128e600b17ffa77d0f92fa05ed208
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 96e07d03aa354419374a4911b0b8d48e9830da0c
+PODFILE CHECKSUM: 1ec791d3d30126f671cb0d52749cc3a135c72356
 
 COCOAPODS: 1.15.2
