@@ -103,8 +103,12 @@ const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remain
 
 function scrollToFirstNotification() {
   window.requestAnimationFrame(() => {
-    if (localNotifications.value.length && notificationList.value)
-      notificationList.value.firstElementChild?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+    if (localNotifications.value.length && notificationList.value) {
+      notificationList.value?.scrollTo({
+        left: notificationList.value.scrollWidth * -1,
+        behavior: 'smooth',
+      })
+    }
   })
 }
 
@@ -163,7 +167,6 @@ watch([referralCode, phoneNumberVerified], () => {
     addLocalNotification(claimRewardsNotification, true)
 }, { immediate: true })
 
-// TODO: dont scroll if list is smaller than before (closed a notification)
 watch(() => localNotifications.value.length, (newValue, oldValue) => {
   if (newValue > oldValue)
     scrollToFirstNotification()
