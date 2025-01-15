@@ -51,7 +51,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       ])
     }
     // config.logLevel('debug')
+    logger.log('Creating Nimiq client with config', config.build())
     client.value = await Nimiq.Client.create(config.build())
+    logger.log('Nimiq client created')
 
     head.value = await client.value.getHeadBlock()
     networkId.value = await useNimiqNetwork().client!.getNetworkId()

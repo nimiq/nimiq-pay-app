@@ -33,10 +33,16 @@ const canShare = computedAsync(async () => {
 })
 
 async function handleCopy() {
-  await Clipboard.write({
-    string: referralInfo.value?.id,
-  })
-  await setToast({ message: i18n.t('Copied to the clipboard!') })
+  try {
+    await Clipboard.write({
+      string: referralInfo.value?.id,
+    })
+    await setToast({ message: i18n.t('Copied to the clipboard!') })
+  }
+  catch (error) {
+    logger.error('Failed to copy referral code to clipboard', error)
+    await setToast({ message: i18n.t('Failed to copy to clipboard') })
+  }
 }
 
 function handleShare() {

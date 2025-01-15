@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AddressDisplay from '@/components/AddressDisplay.vue'
+import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -15,6 +16,7 @@ defineProps({ address: { type: String } })
 
 defineEmits(stepEmits)
 
+const logger = useLogger('NimAddressDisplay')
 const { setToast } = useToast()
 
 const address = useLocalWallet().localAddress.toUserFriendlyAddress()
@@ -22,11 +24,17 @@ const address = useLocalWallet().localAddress.toUserFriendlyAddress()
 async function openWallet() {
   const url = new URL(`/nimiq:${useLocalWallet().localAddress.toUserFriendlyAddress()}`, walletUrl)
 
-  await Browser.open({ url: url.toString(), toolbarColor: '#E9B213' })
-  Browser.addListener('browserFinished', () => {
-    // TODO: check if tx incoming
-    Browser.removeAllListeners()
-  })
+  try {
+    await Browser.open({ url: url.toString(), toolbarColor: '#E9B213' })
+    Browser.addListener('browserFinished', () => {
+      // TODO: check if tx incoming
+      Browser.removeAllListeners()
+    })
+  }
+  catch (error) {
+    logger.error('Failed to open browser', error)
+    await setToast({ message: i18n.t('Failed to open wallet') })
+  }
 }
 
 async function handleCopy() {

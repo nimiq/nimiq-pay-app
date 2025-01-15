@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { Keyboard } from '@capacitor/keyboard'
 import { onMounted, onUnmounted, type PropType, type Ref, ref, watchEffect } from 'vue'
@@ -14,6 +16,7 @@ const emit = defineEmits<{
   (e: 'loginWords', words: string[]): void
 }>()
 
+const logger = useLogger('MnemonicInput')
 const loginWords: Ref<string[]> = ref([])
 const wordList = Nimiq.MnemonicUtils.DEFAULT_WORDLIST
 
@@ -44,7 +47,12 @@ function inputHandler(e: Event) {
     timeout = window.setTimeout(() => {
       input.classList.add('animate-wiggle')
       parent.classList.add('!text-pumpkin')
-      Haptics.notification({ type: NotificationType.Warning })
+      try {
+        Haptics.notification({ type: NotificationType.Warning })
+      }
+      catch (error) {
+        logger.error('Failed to trigger haptic feedback', error)
+      }
       window.setTimeout(() => {
         input.classList.remove('animate-wiggle')
       }, 1000)
@@ -53,10 +61,12 @@ function inputHandler(e: Event) {
 }
 
 onMounted(() => {
-  Keyboard.setAccessoryBarVisible({ isVisible: false })
+  if (useDevice().isIOS)
+    Keyboard.setAccessoryBarVisible({ isVisible: false })
 })
 onUnmounted(() => {
-  Keyboard.setAccessoryBarVisible({ isVisible: true })
+  if (useDevice().isIOS)
+    Keyboard.setAccessoryBarVisible({ isVisible: true })
 })
 </script>
 

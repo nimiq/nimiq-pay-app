@@ -46,7 +46,12 @@ function _useBiometric() {
   }
 
   async function updateBiometryInfo() {
-    biometry.value = await BiometricAuth.checkBiometry()
+    try {
+      biometry.value = await BiometricAuth.checkBiometry()
+    }
+    catch (error) {
+      logger.error('Error checking biometry', error)
+    }
   }
 
   /**
@@ -59,7 +64,7 @@ function _useBiometric() {
     }
     catch (error) {
       if (error instanceof Error)
-        console.error(error.message)
+        logger.error('Biometric listener error', error.message)
     }
   }
 
@@ -90,7 +95,7 @@ function _useBiometric() {
       }
       else {
         logger.error(error, { biometry: biometry.value })
-        return { success: false, error: i18n.t('An unknown error ocurred, biometric cannot be used') }
+        return { success: false, error: i18n.t('An unknown error occurred, biometric cannot be used') }
       }
     }
   }

@@ -93,7 +93,6 @@ onMounted(async () => {
   if (props.shouldAutoFocus) {
     window.setTimeout(() => {
       inputRef.value?.focus()
-      // Keyboard.show()
     }, 200)
   }
 

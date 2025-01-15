@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import PinInput from '@/components/PinInput.vue'
 import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
 import { useConn } from '@/stores/conn'
 import { Keyboard } from '@capacitor/keyboard'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
@@ -8,6 +10,7 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
+const logger = useLogger('PinView')
 const { dbExists } = storeToRefs(useConn())
 const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
@@ -32,7 +35,13 @@ function shown() {
   const input = document.querySelector('input')
   window.setTimeout(() => {
     input?.focus()
-    Keyboard.show()
+    try {
+      if (useDevice().isAndroid)
+        Keyboard.show()
+    }
+    catch (error) {
+      logger.error('Failed to show keyboard', error)
+    }
   }, 200)
 }
 

@@ -137,7 +137,12 @@ function defaultErrorHandler(errorMessage: string) {
     window.setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
   else { setToast({ message: errorMessage, type: 'error', duration: 10 * 1e3 }) }
-  Haptics.notification({ type: NotificationType.Error })
+  try {
+    Haptics.notification({ type: NotificationType.Error })
+  }
+  catch (error) {
+    logger.error('Failed to trigger haptic feedback', error)
+  }
 }
 
 /**

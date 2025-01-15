@@ -32,6 +32,7 @@ const appVersion = computedAsync(async () => {
   }
 })
 function onLongPressCallback() {
+  logger.log(`Nimiq Pay v${appVersion.value}`)
   logger.sendReport()
 }
 

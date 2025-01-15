@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { URLOpenListenerEvent } from '@capacitor/app'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
@@ -14,19 +15,31 @@ import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
 import { RouterView } from 'vue-router'
-import { useDevice } from './composables/useDevice'
 
 const logger = useLogger('App.vue')
 
 onMounted(async () => {
-  if (!useDevice().isWeb)
-    await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
+  if (!useDevice().isWeb) {
+    try {
+      await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
+    }
+    catch (error) {
+      logger.error('Failed to lock screen orientation', error)
+    }
+  }
 })
 
 if (!useDevice().isWeb) {
-  StatusBar.setBackgroundColor({ color: '#F8F8F8' })
-  StatusBar.setStyle({ style: Style.Light })
-  StatusBar.setOverlaysWebView({ overlay: false })
+  try {
+    if (useDevice().isAndroid) {
+      StatusBar.setBackgroundColor({ color: '#F8F8F8' })
+      StatusBar.setOverlaysWebView({ overlay: false })
+    }
+    StatusBar.setStyle({ style: Style.Light })
+  }
+  catch (error) {
+    logger.error('Failed to set status bar style', error)
+  }
 }
 
 App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {

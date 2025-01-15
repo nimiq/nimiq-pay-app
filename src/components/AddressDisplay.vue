@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { Clipboard } from '@capacitor/clipboard'
@@ -16,6 +17,7 @@ const props = defineProps({
   },
 })
 
+const logger = useLogger('AddressDisplay')
 const { setToast } = useToast()
 
 const chunks = computed(() => {
@@ -27,10 +29,16 @@ const chunks = computed(() => {
 async function handleCopy() {
   if (!props.isCopyable)
     return
-  await Clipboard.write({
-    string: props.address,
-  })
-  await setToast({ message: i18n.t('Address copied to clipboard') })
+  try {
+    await Clipboard.write({
+      string: props.address,
+    })
+    await setToast({ message: i18n.t('Address copied to clipboard') })
+  }
+  catch (error) {
+    logger.error('Failed to copy address to clipboard', error)
+    await setToast({ message: i18n.t('Failed to copy address to clipboard') })
+  }
 }
 </script>
 

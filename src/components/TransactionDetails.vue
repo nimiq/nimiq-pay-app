@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useFormatTime } from '@/composables/useTime'
 import { useToast } from '@/composables/useToast'
@@ -17,6 +18,7 @@ import TransactionAmounts from './TransactionAmounts.vue'
 
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, tx: { type: Object as PropType<ExternalTransaction>, required: true } })
 
+const logger = useLogger('TransactionDetails')
 const { consensus, height } = storeToRefs(useNimiqNetwork())
 const { crypto, fiat } = usePrice(props.tx.amount, { timestamp: props.tx.timestamp })
 const { setToast } = useToast()
@@ -49,10 +51,16 @@ const timeUntilTimeout = computed(() => {
 const showMap = ref(false)
 
 async function handleCopy(string: string) {
-  await Clipboard.write({
-    string,
-  })
-  await setToast({ message: i18n.t('Copied to clipboard') })
+  try {
+    await Clipboard.write({
+      string,
+    })
+    await setToast({ message: i18n.t('Copied to clipboard') })
+  }
+  catch (error) {
+    logger.error('Failed to copy to clipboard', error)
+    await setToast({ message: i18n.t('Failed to copy to clipboard') })
+  }
 }
 
 function formatInvoiced({ currency, amount }: { currency: string, amount: number }) {
