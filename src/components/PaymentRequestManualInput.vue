@@ -16,6 +16,8 @@ const isFocused = ref(false)
 const paymentRequestError = ref<string | null>(null)
 
 const payment = computedAsync(async () => {
+  if (!invoice.value)
+    return undefined
   const { data, error } = await useStringParser().getPaymentRequestData(invoice.value)
   if (error) {
     logger.error(error)
