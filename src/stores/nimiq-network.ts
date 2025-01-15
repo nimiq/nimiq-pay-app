@@ -3,7 +3,7 @@ import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTr
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev } from '@/lib'
+import { isDev, promiseWithTimeout } from '@/lib'
 import { useLocks } from '@/stores/locks'
 import { until, useTimeoutFn } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -52,9 +52,14 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
     // config.logLevel('debug')
     logger.log('Creating Nimiq client with config', config.build())
-    client.value = await Nimiq.Client.create(config.build())
-    logger.log('Nimiq client created')
-
+    try {
+      client.value = await promiseWithTimeout(Nimiq.Client.create(config.build()), 30 * 1e3)
+      logger.log('Nimiq client created')
+    }
+    catch (error) {
+      logger.error('Error creating Nimiq client', error)
+      return await init()
+    }
     head.value = await client.value.getHeadBlock()
     networkId.value = await useNimiqNetwork().client!.getNetworkId()
 
