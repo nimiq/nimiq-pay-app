@@ -54,7 +54,7 @@ const address = computed(() => {
   }
 })
 
-const { height } = storeToRefs(useNimiqNetwork())
+const { height, consensus } = storeToRefs(useNimiqNetwork())
 const { formatCrypto } = useCurrencyFormatter()
 const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
 
@@ -99,8 +99,16 @@ watch(selected, (value) => {
     selected.value = address.value
 })
 
-const errorMessage = computed(() => props.errorMsg || ((!hasEnoughAmount.value && lunaAmount.value > 0) ? i18n.t('Insufficient funds') : ''))
-const disabled = computed(() => !selected.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value))
+const errorMessage = computed(() => {
+  if (props.errorMsg)
+    return props.errorMsg
+  if (consensus.value !== 'established')
+    return i18n.t('Wait for consensus before withdrawing')
+  if (!hasEnoughAmount.value && lunaAmount.value > 0)
+    return i18n.t('Insufficient funds')
+  return ''
+})
+const disabled = computed(() => !selected.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established')
 const loading = ref(false)
 
 function withdraw() {
