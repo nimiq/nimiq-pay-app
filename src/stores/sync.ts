@@ -846,10 +846,10 @@ export const useSync = defineStore('sync', () => {
     }
   })
 
-  // Reconnect the network if the nodes are not synced after 2 minutes of waiting
+  // Reconnect the network if the nodes are not synced after 30 seconds of waiting
   const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
     useNimiqNetwork().reconnect()
-  }, 2 * 60 * 1e3, { immediate: false }) // 2 minutes
+  }, 30 * 1e3, { immediate: false }) // 30 seconds
   watch(nodesAreSynced, (synced) => {
     if (consensus.value !== 'established')
       return
