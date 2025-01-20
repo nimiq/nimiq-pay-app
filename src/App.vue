@@ -67,7 +67,7 @@ App.addListener('resume', async () => {
   const { blockHeight: remoteHeight } = data
 
   logger.log('App resumed', { localHeight: localHeight.value, remoteHeight })
-  if (localHeight.value < remoteHeight - 5) {
+  if (localHeight.value < remoteHeight - Nimiq.Policy.BLOCKS_PER_BATCH) {
     logger.log('Local height is behind remote height, reconnecting...')
     useNimiqNetwork().reconnect()
   }
