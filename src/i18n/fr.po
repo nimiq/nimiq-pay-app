@@ -56,6 +56,11 @@ msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
 
 #, fuzzy
 #| msgid "An unknown error occurred while importing words"
+msgid "An unknown error occurred, biometric cannot be used"
+msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
 
@@ -276,6 +281,16 @@ msgstr "Expiré"
 msgid "Expiring Points"
 msgstr "Points en cours d'expiration"
 
+#, fuzzy
+#| msgid "Address copied to clipboard"
+msgid "Failed to copy address to clipboard"
+msgstr "Adresse copiée dans le presse-papiers"
+
+#, fuzzy
+#| msgid "Copied to the clipboard!"
+msgid "Failed to copy to clipboard"
+msgstr "Copié dans le presse-papiers !"
+
 msgid "Failed to delete Points account"
 msgstr "Échec de la suppression du compte de Points Cryptocity"
 
@@ -285,6 +300,11 @@ msgstr ""
 #, fuzzy
 #| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
+msgstr "Pas de demande de paiement en cours"
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Failed to open wallet"
 msgstr "Pas de demande de paiement en cours"
 
 msgid "Featured"
@@ -465,9 +485,6 @@ msgstr "Chargement..."
 
 msgid "Loading tasks…"
 msgstr "Chargement des tâches…"
-
-msgid "Loading..."
-msgstr "Chargement..."
 
 msgid "Loading…"
 msgstr "Chargement…"
@@ -943,6 +960,9 @@ msgstr "Vérifiez votre identité"
 msgid "Verify your phone number"
 msgstr "Vérifiez votre numéro de téléphone"
 
+msgid "Wait for consensus before withdrawing"
+msgstr ""
+
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Votre avis nous intéresse. Veuillez saisir au moins dix caractères."
 
@@ -1078,6 +1098,9 @@ msgstr "Votre numéro"
 
 msgid "Your wallet is ready to use"
 msgstr "Votre wallet est prêt à l'emploi"
+
+#~ msgid "Loading..."
+#~ msgstr "Chargement..."
 
 #~ msgid "Swap pending"
 #~ msgstr "Swap en attente"

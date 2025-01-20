@@ -54,6 +54,11 @@ msgstr "Valor demasiado pequeno"
 msgid "An unknown error occurred while importing words"
 msgstr "Ocorreu um erro desconhecido ao importar as palavras"
 
+#, fuzzy
+#| msgid "An unknown error ocurred, biometric cannot be used"
+msgid "An unknown error occurred, biometric cannot be used"
+msgstr "Um erro desconhecido ocorreu, biometria não pode ser usada"
+
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr "Um erro desconhecido ocorreu, biometria não pode ser usada"
 
@@ -270,6 +275,16 @@ msgstr "Expirado"
 msgid "Expiring Points"
 msgstr "Pontos a expirar"
 
+#, fuzzy
+#| msgid "Address copied to clipboard"
+msgid "Failed to copy address to clipboard"
+msgstr "Endereço copiado para a área de transferência"
+
+#, fuzzy
+#| msgid "Copied to the clipboard!"
+msgid "Failed to copy to clipboard"
+msgstr "Copiado para a área de transferência!"
+
 msgid "Failed to delete Points account"
 msgstr "Falha ao apagar conta de Pontos"
 
@@ -277,6 +292,11 @@ msgid "Failed to fetch LNURL service"
 msgstr "Falha ao buscar o serviço LNURL"
 
 msgid "Failed to fetch payment request"
+msgstr "Falha ao buscar pedido de pagamento"
+
+#, fuzzy
+#| msgid "Failed to fetch payment request"
+msgid "Failed to open wallet"
 msgstr "Falha ao buscar pedido de pagamento"
 
 msgid "Featured"
@@ -447,9 +467,6 @@ msgstr "A carregar limites de troca..."
 
 msgid "Loading tasks…"
 msgstr "A carregar tarefas…"
-
-msgid "Loading..."
-msgstr "A carregar..."
 
 msgid "Loading…"
 msgstr "A carregar…"
@@ -915,6 +932,9 @@ msgstr "Verificar a tua identidade"
 msgid "Verify your phone number"
 msgstr "Verificar o teu número de telemóvel"
 
+msgid "Wait for consensus before withdrawing"
+msgstr ""
+
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
 
@@ -1050,6 +1070,9 @@ msgstr "O teu número"
 
 msgid "Your wallet is ready to use"
 msgstr "A tua wallet está pronta para usar"
+
+#~ msgid "Loading..."
+#~ msgstr "A carregar..."
 
 #~ msgid "Swap pending"
 #~ msgstr "Troca pendente"

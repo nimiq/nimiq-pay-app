@@ -57,6 +57,11 @@ msgstr "Ocurrió un error desconocido al importar las palabras"
 
 #, fuzzy
 #| msgid "An unknown error occurred while importing words"
+msgid "An unknown error occurred, biometric cannot be used"
+msgstr "Ocurrió un error desconocido al importar las palabras"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr "Ocurrió un error desconocido al importar las palabras"
 
@@ -277,6 +282,16 @@ msgstr "Expirado"
 msgid "Expiring Points"
 msgstr "Puntos por vencer"
 
+#, fuzzy
+#| msgid "Address copied to clipboard"
+msgid "Failed to copy address to clipboard"
+msgstr "La dirección se ha copiado al portapapeles"
+
+#, fuzzy
+#| msgid "Copied to the clipboard!"
+msgid "Failed to copy to clipboard"
+msgstr "¡Copiado al portapapeles!"
+
 msgid "Failed to delete Points account"
 msgstr "No se pudo eliminar la cuenta de puntos"
 
@@ -286,6 +301,11 @@ msgstr ""
 #, fuzzy
 #| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
+msgstr "No es una solicitud de pago pendiente"
+
+#, fuzzy
+#| msgid "Not a pending payment request"
+msgid "Failed to open wallet"
 msgstr "No es una solicitud de pago pendiente"
 
 msgid "Featured"
@@ -466,9 +486,6 @@ msgstr "Cargando..."
 
 msgid "Loading tasks…"
 msgstr "Cargando tareas…"
-
-msgid "Loading..."
-msgstr "Cargando..."
 
 msgid "Loading…"
 msgstr "Cargando…"
@@ -944,6 +961,9 @@ msgstr "Verifica tu identificación"
 msgid "Verify your phone number"
 msgstr "Verifica tu número de teléfono"
 
+msgid "Wait for consensus before withdrawing"
+msgstr ""
+
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Valoramos tu opinión. Por favor, ingresa al menos diez caracteres."
 
@@ -1079,6 +1099,9 @@ msgstr "Tu número"
 
 msgid "Your wallet is ready to use"
 msgstr "Tu billetera está lista para usar"
+
+#~ msgid "Loading..."
+#~ msgstr "Cargando..."
 
 #~ msgid "Swap pending"
 #~ msgstr "Intercambio pendiente"

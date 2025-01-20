@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
-#: src/views/HomeView.vue:142
+#: src/views/HomeView.vue:146
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -27,18 +27,18 @@ msgstr ""
 msgid "Add NIM address"
 msgstr ""
 
-#: src/components/AddressDisplay.vue:33
-#: src/components/NimAddressDisplay.vue:36
+#: src/components/AddressDisplay.vue:36
+#: src/components/NimAddressDisplay.vue:44
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:139
-#: src/stores/nimiq-network.ts:161
-#: src/stores/nimiq-network.ts:179
+#: src/stores/nimiq-network.ts:146
+#: src/stores/nimiq-network.ts:168
+#: src/stores/nimiq-network.ts:186
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:170
+#: src/stores/nimiq-network.ts:177
 msgid "Addresses missing"
 msgstr ""
 
@@ -62,12 +62,15 @@ msgstr ""
 msgid "An unknown error occurred while importing words"
 msgstr ""
 
-#: src/composables/useBiometric.ts:93
+#: src/composables/useBiometric.ts:98
+msgid "An unknown error occurred, biometric cannot be used"
+msgstr ""
+
 #: src/modals/EnableBiometricModal.vue:43
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr ""
 
-#: src/composables/useBiometric.ts:122
+#: src/composables/useBiometric.ts:127
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
@@ -99,8 +102,8 @@ msgstr ""
 msgid "Biometric authentication enabled"
 msgstr ""
 
-#: src/composables/useBiometric.ts:101
-#: src/composables/useBiometric.ts:76
+#: src/composables/useBiometric.ts:106
+#: src/composables/useBiometric.ts:81
 msgid "Biometric is not supported on this device"
 msgstr ""
 
@@ -145,7 +148,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:141
+#: src/stores/nimiq-network.ts:148
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -187,24 +190,24 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:200
+#: src/stores/nimiq-network.ts:207
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:198
+#: src/stores/nimiq-network.ts:205
 msgid "Consensus established."
 msgstr ""
 
 #: src/components/PhoneInput.vue:67
-#: src/components/ShowWords.vue:5
+#: src/components/ShowWords.vue:8
 msgid "Continue"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:55
+#: src/components/TransactionDetails.vue:58
 msgid "Copied to clipboard"
 msgstr ""
 
-#: src/modals/ReferralModal.vue:39
+#: src/modals/ReferralModal.vue:40
 msgid "Copied to the clipboard!"
 msgstr ""
 
@@ -322,12 +325,12 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/composables/useBiometric.ts:85
+#: src/composables/useBiometric.ts:90
 msgid "Error using BiometricAuth"
 msgstr ""
 
-#: src/composables/useBiometric.ts:118
-#: src/composables/useBiometric.ts:89
+#: src/composables/useBiometric.ts:123
+#: src/composables/useBiometric.ts:94
 msgid "Error using SecureStorage"
 msgstr ""
 
@@ -359,6 +362,15 @@ msgstr ""
 msgid "Expiring Points"
 msgstr ""
 
+#: src/components/AddressDisplay.vue:40
+msgid "Failed to copy address to clipboard"
+msgstr ""
+
+#: src/components/TransactionDetails.vue:62
+#: src/modals/ReferralModal.vue:44
+msgid "Failed to copy to clipboard"
+msgstr ""
+
 #: src/modals/DeletePointsModal.vue:24
 msgid "Failed to delete Points account"
 msgstr ""
@@ -369,6 +381,10 @@ msgstr ""
 
 #: src/composables/useBitcoinLightning.ts:110
 msgid "Failed to fetch payment request"
+msgstr ""
+
+#: src/components/NimAddressDisplay.vue:36
+msgid "Failed to open wallet"
 msgstr ""
 
 #: src/modals/PointsModal.vue:45
@@ -425,7 +441,7 @@ msgstr ""
 msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
 msgstr ""
 
-#: src/modals/ReferralModal.vue:47
+#: src/modals/ReferralModal.vue:53
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
@@ -446,7 +462,7 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:102
+#: src/components/NimWithdraw.vue:108
 msgid "Insufficient funds"
 msgstr ""
 
@@ -597,6 +613,7 @@ msgstr ""
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr ""
 
+#: src/components/ShowWords.vue:5
 #: src/components/TransactionList.vue:42
 msgid "Loading"
 msgstr ""
@@ -607,10 +624,6 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:74
 msgid "Loading tasks…"
-msgstr ""
-
-#: src/components/ShowWords.vue:10
-msgid "Loading..."
 msgstr ""
 
 #: src/modals/ReferralModal.vue:14
@@ -631,7 +644,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:75
+#: src/stores/nimiq-network.ts:82
 msgid "Network consensus lost."
 msgstr ""
 
@@ -647,7 +660,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:164
+#: src/stores/nimiq-network.ts:171
 msgid "No account found"
 msgstr ""
 
@@ -659,11 +672,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:173
+#: src/stores/nimiq-network.ts:180
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:131
+#: src/stores/nimiq-network.ts:138
 msgid "No Cashlink found"
 msgstr ""
 
@@ -693,7 +706,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:182
+#: src/stores/nimiq-network.ts:189
 msgid "No transactions found"
 msgstr ""
 
@@ -928,7 +941,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:143
+#: src/views/HomeView.vue:147
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1097,7 +1110,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:199
+#: src/stores/nimiq-network.ts:206
 msgid "Syncing with network."
 msgstr ""
 
@@ -1157,11 +1170,11 @@ msgstr ""
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:39
+#: src/components/TransactionDetails.vue:41
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:42
+#: src/components/TransactionDetails.vue:44
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -1206,7 +1219,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:98
+#: src/stores/nimiq-network.ts:105
 msgid "Trying to establish network consensus:"
 msgstr ""
 
@@ -1252,6 +1265,10 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:232
 msgid "Verify your phone number"
+msgstr ""
+
+#: src/components/NimWithdraw.vue:106
+msgid "Wait for consensus before withdrawing"
 msgstr ""
 
 #: src/modals/TaskModal.vue:19
@@ -1397,7 +1414,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:148
+#: src/views/HomeView.vue:152
 msgid "You have a reward to claim!"
 msgstr ""
 

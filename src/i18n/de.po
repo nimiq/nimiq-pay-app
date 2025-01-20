@@ -55,6 +55,11 @@ msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
 
 #, fuzzy
 #| msgid "An unknown error occurred while importing words"
+msgid "An unknown error occurred, biometric cannot be used"
+msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
+
+#, fuzzy
+#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr "Unbekannter Fehler beim Importieren der Wiederherstellungswörter"
 
@@ -277,6 +282,16 @@ msgstr "Abgelaufen"
 msgid "Expiring Points"
 msgstr "Verfallende Punkte"
 
+#, fuzzy
+#| msgid "Address copied to clipboard"
+msgid "Failed to copy address to clipboard"
+msgstr "Adresse kopiert"
+
+#, fuzzy
+#| msgid "Copied to the clipboard!"
+msgid "Failed to copy to clipboard"
+msgstr "Code wurde kopiert."
+
 msgid "Failed to delete Points account"
 msgstr "Löschung des Punkte-Kontos fehlgeschlagen"
 
@@ -284,6 +299,11 @@ msgid "Failed to fetch LNURL service"
 msgstr "Verbindung zum LNURL-Service fehlgeschlagen"
 
 msgid "Failed to fetch payment request"
+msgstr "Zahlungsanfrage konnte nicht geladen werden"
+
+#, fuzzy
+#| msgid "Failed to fetch payment request"
+msgid "Failed to open wallet"
 msgstr "Zahlungsanfrage konnte nicht geladen werden"
 
 msgid "Featured"
@@ -460,9 +480,6 @@ msgstr "Lade Tausch-Limits…"
 
 msgid "Loading tasks…"
 msgstr "Aufgaben werden geladen…"
-
-msgid "Loading..."
-msgstr "Lade…"
 
 msgid "Loading…"
 msgstr "Lade…"
@@ -940,6 +957,9 @@ msgstr "Identität bestätigen"
 msgid "Verify your phone number"
 msgstr "Telefonnummer bestätigen"
 
+msgid "Wait for consensus before withdrawing"
+msgstr ""
+
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Teile uns deine Meinung mit. Bitte gib mindestens zehn Zeichen ein."
 
@@ -1077,6 +1097,9 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#~ msgid "Loading..."
+#~ msgstr "Lade…"
 
 #~ msgid "Swap pending"
 #~ msgstr "Tausch wird ausgeführt"
