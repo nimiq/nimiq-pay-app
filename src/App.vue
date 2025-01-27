@@ -14,9 +14,10 @@ import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 
 const logger = useLogger('App.vue')
+const router = useRouter()
 
 onMounted(async () => {
   if (!useDevice().isWeb) {
@@ -55,7 +56,18 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   }
 })
 
+let lastPauseTimestamp = 0
+App.addListener('pause', () => lastPauseTimestamp = Date.now())
+
 App.addListener('resume', async () => {
+  const timeInBackground = Date.now() - lastPauseTimestamp
+  logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
+  // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
+  if (lastPauseTimestamp !== 0 && timeInBackground > 2 * 60 * 1000) {
+    logger.log('Reloading app after being in background for more than 2 minutes')
+    lastPauseTimestamp = 0
+    router.go(0)
+  }
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')
   const { height: localHeight } = storeToRefs(useNimiqNetwork())
