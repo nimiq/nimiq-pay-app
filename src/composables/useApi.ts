@@ -15,6 +15,7 @@ const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https:
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
+const issuerUrl = new URL('https://issuer.example.com/')
 
 async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
@@ -333,4 +334,24 @@ export function useFetch<T, E>(fn: () => AsyncResultApi<T, E>, { immediate = tru
     fetch()
 
   return { state: readonly(state), error: readonly(error), data: readonly(data), fetch }
+}
+
+export function useAuthorizationApi() {
+  interface CardRequest {
+    address: MaybeRef<string>
+    signature: string
+  }
+  interface CardResponse {
+    id: string
+    publicKey: string
+    expiry: string
+  }
+
+  async function requestCard(request: CardRequest): AsyncResultApi<CardResponse, Error> {
+    return api<CardResponse, Error>(new URL('card', issuerUrl), { body: request })
+  }
+
+  return {
+    requestCard,
+  }
 }
