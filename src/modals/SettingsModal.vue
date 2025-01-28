@@ -8,6 +8,7 @@ import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-s
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
+import { useLocks } from '@/stores/locks'
 import { App } from '@capacitor/app'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { computedAsync, onLongPress } from '@vueuse/core'
@@ -19,6 +20,8 @@ const logger = useLogger('SettingsModal')
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified } = storeToRefs(useApp())
+const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
+
 const { unregisterNotifications, registerNotifications } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
 
@@ -32,6 +35,16 @@ const appVersion = computedAsync(async () => {
   }
 })
 function onLongPressCallback() {
+  logger.log({
+    headChangePendingDrainLock: headChangePendingDrainLock.value,
+    htlcCheckLock: htlcCheckLock.value,
+    headChangeUpdatesLock: headChangeUpdatesLock.value,
+    isNetworkReconnecting: isNetworkReconnecting.value,
+    isProcessingRemote: isProcessingRemote.value,
+    isSendingTx: isSendingTx.value,
+    isSyncingWallets: isSyncingWallets.value,
+    isUpdatingTransactions: isUpdatingTransactions.value,
+  })
   logger.log(`Nimiq Pay v${appVersion.value}`)
   logger.sendReport()
 }

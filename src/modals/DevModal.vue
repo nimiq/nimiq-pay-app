@@ -5,6 +5,7 @@ import { useLogger } from '@/composables/useLogger'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/stores/sync'
@@ -24,6 +25,7 @@ const router = useRouter()
 const { consensus, head, height, peerCount, client, networkName } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
+const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<PlainTransactionDetails | undefined> = ref()
@@ -173,6 +175,24 @@ onMounted(async () => {
           <span>State: {{ txInMemPool?.state }} </span>
           <span>Hash: {{ txInMemPool?.transactionHash }} </span>
           <span>Network: {{ txInMemPool?.network }}</span>
+        </p>
+      </IonCardContent>
+    </IonCard>
+
+    <IonCard class="w-full">
+      <IonCardHeader>
+        <IonCardTitle>Locks</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="flex flex-col">
+          <span>Head change pending drain lock: {{ headChangePendingDrainLock }}</span>
+          <span>HTLC check lock: {{ htlcCheckLock }}</span>
+          <span>Head change updates lock: {{ headChangeUpdatesLock }}</span>
+          <span>Network reconnecting: {{ isNetworkReconnecting }}</span>
+          <span>Processing remote: {{ isProcessingRemote }}</span>
+          <span>Sending tx: {{ isSendingTx }}</span>
+          <span>Syncing wallets: {{ isSyncingWallets }}</span>
+          <span>Updating transactions: {{ isUpdatingTransactions }}</span>
         </p>
       </IonCardContent>
     </IonCard>
