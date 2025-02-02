@@ -22,8 +22,9 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
 
+  let response: Response | undefined
   try {
-    const response = await fetch(url, { method, headers, body })
+    response = await fetch(url, { method, headers, body })
 
     if (!response.ok) {
       let responseBody: E | undefined
@@ -54,7 +55,7 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
     return { data, status: response.status, error: undefined, hasError: false }
   }
   catch (error) {
-    logger.error('Error fetching', error)
+    logger.error(`Error fetching ${url.toString()}`, { method, headers, body, response }, { error })
     return { data: undefined, hasError: true, error: { message: i18n.t('Something went wrong'), statusCode: 520 } as E, status: 520 }
   }
 }
