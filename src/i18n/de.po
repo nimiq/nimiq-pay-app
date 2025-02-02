@@ -26,6 +26,9 @@ msgstr "Über die App"
 msgid "Activate Cashback & Rewards"
 msgstr "Cashback & Boni aktivieren"
 
+msgid "Activating scanner"
+msgstr ""
+
 msgid "Add NIM address"
 msgstr "NIM-Adresse hinzufügen"
 
@@ -534,6 +537,9 @@ msgstr "Keine Zahlungsdetails gefunden"
 msgid "No payment request found"
 msgstr "Keine Zahlungsanfrage gefunden"
 
+msgid "No permission to use the camera"
+msgstr ""
+
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Aktuell verfallen keine Punkte | {amount} verfällt bald | {amount} verfallen bald"
 
@@ -824,6 +830,11 @@ msgstr "Etwas ist bei der Aktualisierung deiner Punkte schiefgelaufen"
 
 msgid "Something went wrong verifying the phone number"
 msgstr "Etwas ist bei der Verifizierung der Telefonnummer schiefgelaufen"
+
+#, fuzzy
+#| msgid "Something went wrong claiming the cashback"
+msgid "Something went wrong while starting the camera"
+msgstr "Etwas ist bei der Gutschrift des Cashbacks schiefgelaufen"
 
 msgid "Standard rates may apply."
 msgstr "Dein Mobilfunkanbieter könnte Kosten erheben."

@@ -27,6 +27,9 @@ msgstr "Sobre"
 msgid "Activate Cashback & Rewards"
 msgstr "Ativar Cashback e Recompensas"
 
+msgid "Activating scanner"
+msgstr ""
+
 msgid "Add NIM address"
 msgstr "Adicionar endereço NIM"
 
@@ -521,6 +524,9 @@ msgstr "Nenhum detalhe de pagamento encontrado"
 msgid "No payment request found"
 msgstr "Nenhum pedido de pagamento encontrado"
 
+msgid "No permission to use the camera"
+msgstr ""
+
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Não há pontos a expirar | {amount} está prestes a expirar | {amount} estão prestes a expirar"
 
@@ -803,6 +809,11 @@ msgstr "Alguma coisa deu errado ao atualizar os teus pontos"
 
 msgid "Something went wrong verifying the phone number"
 msgstr "Alguma coisa deu errado ao verificar o teu número de telemóvel"
+
+#, fuzzy
+#| msgid "Something went wrong claiming the cashback"
+msgid "Something went wrong while starting the camera"
+msgstr "Alguma coisa deu errado ao reclamar o cashback"
 
 msgid "Standard rates may apply."
 msgstr "Podem ser aplicadas taxas padrão."
