@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import type { QRData } from '@/composables/useQRScanner'
+import type { PropType, Ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
-import { type QRData, QRScannerState, useQRScanner } from '@/composables/useQRScanner'
+import { QRScannerState, useQRScanner } from '@/composables/useQRScanner'
 import { QRDataFormat } from '@/composables/useStringParser'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
-import { onBeforeUnmount, type PropType, type Ref, ref, watch, watchEffect } from 'vue'
+import { ready } from 'qr-scanner-wechat'
+import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },
@@ -42,7 +47,7 @@ watchEffect(() => {
 const onData = (data: QRData<typeof props.expect>) => emit('done', data)
 const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect, cameraFeedContainer, onData, onError })
 
-const { isWeb } = useDevice()
+const { isWeb, isIOS } = useDevice()
 
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
@@ -57,12 +62,26 @@ watch(() => props.isVisible, (isVisible) => {
     // Stop scanner, if the container has actually been mounted yet.
     document.body.classList.remove('native-qr-scanner-modal-open')
     stop()
+    useToast().clearToast()
   }
 }, { immediate: true })
+
+watch([state, () => props.isVisible], () => {
+  if (state.value === QRScannerState.Idle && props.isVisible) {
+    useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
+  }
+  else {
+    useToast().clearToast()
+  }
+}, { immediate: true })
+
+// Preload the scanner library
+onMounted(ready)
 
 onBeforeUnmount(() => {
   document.body.classList.remove('native-qr-scanner-modal-open')
   stop()
+  useToast().clearToast()
 })
 
 const isBtcLightningEnabled = __ENABLE_BTC_LN__
@@ -79,7 +98,7 @@ function handleManualInput() {
         Click here to use mockup data.<br>
       </button>
       <span class="mt-2 text-xs text-center opacity-70">
-        <!-- The payment reference, used to fetch the price from the CPL API, is tied to the original payment value (e.g., 100NIM). If the value is later changed (e.g., to 1NIM for testing), the fetched price will still correspond to the original value, leading to incorrect pricing. -->
+
         It is <b>expected</b> that data in preview might be wrong
       </span>
     </div>
@@ -102,11 +121,14 @@ function handleManualInput() {
     </div>
     <div v-else ref="cameraFeedContainer" class="absolute inset-0 grid place-content-center">
       <!-- On native, the camera is visible behind the webview. Put a transparent square in the center of the screen,
-      through which the camera can be seen (other parent / background elements are made transparent in useCamerFeed),
+      through which the camera can be seen (other parent / background elements are made transparent in useCameraFeed),
       with a wide white border to cover the rest. -->
-      <div class="relative w-screen" style="border: 48px solid white; border-top-width: 50vh; border-bottom-width: 50vh" :style="`top: -${cameraFeedContainerTop / 2}px`">
+      <div class="relative w-screen" style="border: 48px solid white; border-top-width: 50vh; border-bottom-width: 50vh" :style="`top: -${cameraFeedContainerTop / 4}px`">
         <div class="aspect-square">
-          <svg class="absolute -inset-0.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
+          <Transition name="fade">
+            <div v-if="state === QRScannerState.Idle" class="h-full w-full bg-space/5" />
+          </Transition>
+          <svg class="absolute -inset-0.5" :class="{ '-mr-1': isIOS }" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 232 232">
             <path stroke="#1F2348" stroke-width="2" d="M1 21V1M0 1h20M211 1h20M231 0v20M231 211v20M232 231h-20M21 230H1M1 231v-20" />
           </svg>
         </div>

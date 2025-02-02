@@ -20,12 +20,12 @@ importers:
       '@capacitor-community/privacy-screen':
         specifier: ^5.2.1
         version: 5.2.1(@capacitor/core@6.2.0)
-      '@capacitor-mlkit/barcode-scanning':
-        specifier: ^6.2.0
-        version: 6.2.0(@capacitor/core@6.2.0)
       '@capacitor/browser':
         specifier: ^6.0.4
         version: 6.0.4(@capacitor/core@6.2.0)
+      '@capacitor/camera':
+        specifier: ^6.0.2
+        version: 6.1.2(@capacitor/core@6.2.0)
       '@capacitor/filesystem':
         specifier: ^6.0.2
         version: 6.0.2(@capacitor/core@6.2.0)
@@ -38,6 +38,9 @@ importers:
       '@capawesome/capacitor-screen-orientation':
         specifier: ^6.0.1
         version: 6.0.1(@capacitor/core@6.2.0)
+      '@capgo/camera-preview':
+        specifier: ^6.5.24
+        version: 6.5.24(@capacitor/core@6.2.0)
       '@nimiq/fastspot-api-v1':
         specifier: npm:@nimiq/fastspot-api@^1.10.3
         version: '@nimiq/fastspot-api@1.10.3'
@@ -830,11 +833,6 @@ packages:
     peerDependencies:
       '@capacitor/core': ^6.0.0
 
-  '@capacitor-mlkit/barcode-scanning@6.2.0':
-    resolution: {integrity: sha512-XnnErDabpCUty9flugqB646ERejCxrtKcKOJrdoh9ZVLTQXUnyjxUDWOlqHVxrBHy+e86ZgpZX7D5zcaNvS0lQ==}
-    peerDependencies:
-      '@capacitor/core': ^6.0.0
-
   '@capacitor/android@6.2.0':
     resolution: {integrity: sha512-3YIDPylV0Q2adEQ/H568p496QdYG0jK/XGMdx7OGSqdBZen92ciAsYdyhLtyl91UVsN1lBhDi5H6j3T2KS6aJg==}
     peerDependencies:
@@ -852,6 +850,11 @@ packages:
 
   '@capacitor/browser@6.0.4':
     resolution: {integrity: sha512-uiKnDuI4BXaEgMreP6vk8Li9Reg2uOZYf/aUsoorZcaXcdlFBaMQ9nteA+aITWtm92vi59Hj9aBlSf/WGAHcuA==}
+    peerDependencies:
+      '@capacitor/core': ^6.0.0
+
+  '@capacitor/camera@6.1.2':
+    resolution: {integrity: sha512-UH5srvOHDzIM1o4yFkRZCsP7WfQQOvyn+aS7ycqHFbgofr/xBTqPQUdwN+COtwaZYCwnDunPFYIGQAwSdzq6jg==}
     peerDependencies:
       '@capacitor/core': ^6.0.0
 
@@ -915,6 +918,11 @@ packages:
 
   '@capawesome/capacitor-screen-orientation@6.0.1':
     resolution: {integrity: sha512-NP6ERUkOTf5LslD3mVx6XBZi4l1CfHohpv+rkgay8101fpccsHdxELAAiMe62F+5nloUl/thWhNYAkgmqff88A==}
+    peerDependencies:
+      '@capacitor/core': ^6.0.0
+
+  '@capgo/camera-preview@6.5.24':
+    resolution: {integrity: sha512-FMsiBU4Tm7x4zvlWcfWLtApuCzf+8uU9eZQNuIoLJ3B2HX+5c3cbLUCuGF71CIxnTEisFn0jBp+jB+K3n+d89A==}
     peerDependencies:
       '@capacitor/core': ^6.0.0
 
@@ -8263,10 +8271,6 @@ snapshots:
       '@capacitor/core': 6.2.0
       jeep-sqlite: 2.5.6
 
-  '@capacitor-mlkit/barcode-scanning@6.2.0(@capacitor/core@6.2.0)':
-    dependencies:
-      '@capacitor/core': 6.2.0
-
   '@capacitor/android@6.2.0(@capacitor/core@6.2.0)':
     dependencies:
       '@capacitor/core': 6.2.0
@@ -8298,6 +8302,10 @@ snapshots:
       - typescript
 
   '@capacitor/browser@6.0.4(@capacitor/core@6.2.0)':
+    dependencies:
+      '@capacitor/core': 6.2.0
+
+  '@capacitor/camera@6.1.2(@capacitor/core@6.2.0)':
     dependencies:
       '@capacitor/core': 6.2.0
 
@@ -8386,6 +8394,10 @@ snapshots:
       '@capacitor/core': 6.2.0
 
   '@capawesome/capacitor-screen-orientation@6.0.1(@capacitor/core@6.2.0)':
+    dependencies:
+      '@capacitor/core': 6.2.0
+
+  '@capgo/camera-preview@6.5.24(@capacitor/core@6.2.0)':
     dependencies:
       '@capacitor/core': 6.2.0
 

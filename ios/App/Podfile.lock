@@ -10,6 +10,8 @@ PODS:
     - Capacitor
   - CapacitorBrowser (6.0.4):
     - Capacitor
+  - CapacitorCamera (6.1.2):
+    - Capacitor
   - CapacitorClipboard (6.0.2):
     - Capacitor
   - CapacitorCommunityPrivacyScreen (5.2.1):
@@ -25,9 +27,6 @@ PODS:
     - Capacitor
   - CapacitorKeyboard (6.0.3):
     - Capacitor
-  - CapacitorMlkitBarcodeScanning (6.2.0):
-    - Capacitor
-    - GoogleMLKit/BarcodeScanning (= 5.0.0)
   - CapacitorPreferences (6.0.3):
     - Capacitor
   - CapacitorPushNotifications (6.0.3):
@@ -37,6 +36,8 @@ PODS:
   - CapacitorStatusBar (6.0.2):
     - Capacitor
   - CapawesomeCapacitorScreenOrientation (6.0.1):
+    - Capacitor
+  - CapgoCameraPreview (2.0.0):
     - Capacitor
   - Firebase/CoreOnly (10.21.0):
     - FirebaseCore (= 10.21.0)
@@ -67,23 +68,6 @@ PODS:
     - GoogleUtilities/Environment (~> 7.7)
     - nanopb (< 2.30910.0, >= 2.30908.0)
     - PromisesObjC (< 3.0, >= 1.2)
-  - GoogleMLKit/BarcodeScanning (5.0.0):
-    - GoogleMLKit/MLKitCore
-    - MLKitBarcodeScanning (~> 4.0.0)
-  - GoogleMLKit/MLKitCore (5.0.0):
-    - MLKitCommon (~> 10.0.0)
-  - GoogleToolboxForMac/DebugUtils (2.3.2):
-    - GoogleToolboxForMac/Defines (= 2.3.2)
-  - GoogleToolboxForMac/Defines (2.3.2)
-  - GoogleToolboxForMac/Logger (2.3.2):
-    - GoogleToolboxForMac/Defines (= 2.3.2)
-  - "GoogleToolboxForMac/NSData+zlib (2.3.2)":
-    - GoogleToolboxForMac/Defines (= 2.3.2)
-  - "GoogleToolboxForMac/NSDictionary+URLArguments (2.3.2)":
-    - GoogleToolboxForMac/DebugUtils (= 2.3.2)
-    - GoogleToolboxForMac/Defines (= 2.3.2)
-    - "GoogleToolboxForMac/NSString+URLArguments (= 2.3.2)"
-  - "GoogleToolboxForMac/NSString+URLArguments (2.3.2)"
   - GoogleUtilities/AppDelegateSwizzler (7.12.0):
     - GoogleUtilities/Environment
     - GoogleUtilities/Logger
@@ -101,28 +85,7 @@ PODS:
     - GoogleUtilities/Logger
   - GoogleUtilities/UserDefaults (7.12.0):
     - GoogleUtilities/Logger
-  - GoogleUtilitiesComponents (1.1.0):
-    - GoogleUtilities/Logger
-  - GTMSessionFetcher/Core (3.5.0)
   - KeychainSwift (21.0.0)
-  - MLImage (1.0.0-beta5)
-  - MLKitBarcodeScanning (4.0.0):
-    - MLKitCommon (~> 10.0)
-    - MLKitVision (~> 6.0)
-  - MLKitCommon (10.0.0):
-    - GoogleDataTransport (~> 9.0)
-    - GoogleToolboxForMac/Logger (~> 2.1)
-    - "GoogleToolboxForMac/NSData+zlib (~> 2.1)"
-    - "GoogleToolboxForMac/NSDictionary+URLArguments (~> 2.1)"
-    - GoogleUtilities/UserDefaults (~> 7.0)
-    - GoogleUtilitiesComponents (~> 1.0)
-    - GTMSessionFetcher/Core (< 4.0, >= 1.1)
-  - MLKitVision (6.0.0):
-    - GoogleToolboxForMac/Logger (~> 2.1)
-    - "GoogleToolboxForMac/NSData+zlib (~> 2.1)"
-    - GTMSessionFetcher/Core (< 4.0, >= 1.1)
-    - MLImage (= 1.0.0-beta5)
-    - MLKitCommon (~> 10.0)
   - nanopb (2.30909.1):
     - nanopb/decode (= 2.30909.1)
     - nanopb/encode (= 2.30909.1)
@@ -142,6 +105,7 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser`)"
+  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@6.1.2_@capacitor+core@6.2.0/node_modules/@capacitor/camera`)"
   - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard`)"
   - "CapacitorCommunityPrivacyScreen (from `../../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen`)"
   - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite`)"
@@ -149,12 +113,12 @@ DEPENDENCIES:
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/keyboard`)"
-  - "CapacitorMlkitBarcodeScanning (from `../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor-mlkit/barcode-scanning`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/preferences`)"
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/push-notifications`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/status-bar`)"
   - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation`)"
+  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview`)"
   - Firebase/Messaging
 
 SPEC REPOS:
@@ -165,16 +129,8 @@ SPEC REPOS:
     - FirebaseInstallations
     - FirebaseMessaging
     - GoogleDataTransport
-    - GoogleMLKit
-    - GoogleToolboxForMac
     - GoogleUtilities
-    - GoogleUtilitiesComponents
-    - GTMSessionFetcher
     - KeychainSwift
-    - MLImage
-    - MLKitBarcodeScanning
-    - MLKitCommon
-    - MLKitVision
     - nanopb
     - PromisesObjC
     - SQLCipher
@@ -191,6 +147,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser"
+  CapacitorCamera:
+    :path: "../../node_modules/.pnpm/@capacitor+camera@6.1.2_@capacitor+core@6.2.0/node_modules/@capacitor/camera"
   CapacitorClipboard:
     :path: "../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard"
   CapacitorCommunityPrivacyScreen:
@@ -205,8 +163,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/haptics"
   CapacitorKeyboard:
     :path: "../../node_modules/.pnpm/@capacitor+keyboard@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/keyboard"
-  CapacitorMlkitBarcodeScanning:
-    :path: "../../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor-mlkit/barcode-scanning"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
@@ -217,6 +173,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/status-bar"
   CapawesomeCapacitorScreenOrientation:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation"
+  CapgoCameraPreview:
+    :path: "../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview"
 
 SPEC CHECKSUMS:
   AparajitaCapacitorBiometricAuth: c058563fe00160e12b022341e11b3181357ea93a
@@ -224,6 +182,7 @@ SPEC CHECKSUMS:
   Capacitor: 05d35014f4425b0740fc8776481f6a369ad071bf
   CapacitorApp: e1e6b7d05e444d593ca16fd6d76f2b7c48b5aea7
   CapacitorBrowser: 3413e46a583b6edc3f20448732a531078d6924c6
+  CapacitorCamera: 9bc7b005d0e6f1d5f525b8137045b60cffffce79
   CapacitorClipboard: 4443c3cdb7c77b1533dfe3ff0f9f7756aa8579df
   CapacitorCommunityPrivacyScreen: 5ac93e09bbd78884ca9c8f3c0a9084ec2cc9a4fe
   CapacitorCommunitySqlite: 0299d20f4b00c2e6aa485a1d8932656753937b9b
@@ -231,33 +190,25 @@ SPEC CHECKSUMS:
   CapacitorFilesystem: a6b43788d8f9489fc95fb761f3d0d37d0bceaddf
   CapacitorHaptics: 4fc15afe22b123d093e6ace24d95e8e3b1f261b9
   CapacitorKeyboard: e89189ad398b815b6ff7e52271f0fb4f911a0a0a
-  CapacitorMlkitBarcodeScanning: 7652be9c7922f39203a361de735d340ae37e134e
   CapacitorPreferences: f3eadae2369ac3ab8e21743a2959145b0d1286a3
   CapacitorPushNotifications: 9b178e010634d2f7bfca97b81478503463f86b6c
   CapacitorShare: d2a742baec21c8f3b92b361a2fbd2401cdd8288e
   CapacitorStatusBar: b16799a26320ffa52f6c8b01737d5a95bbb8f3eb
   CapawesomeCapacitorScreenOrientation: df123192d85a280d308bcc4c14841b63cc307732
+  CapgoCameraPreview: c43c2eaa4f253555cfa06863915110cd0de39ddc
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
   FirebaseCoreInternal: 43c1788eaeee9d1b97caaa751af567ce11010d00
   FirebaseInstallations: 390ea1d10a4d02b20c965cbfd527ee9b3b412acb
   FirebaseMessaging: b285329399cc6edd73b5b32864c68454177bcf3f
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
-  GoogleMLKit: 90ba06e028795a50261f29500d238d6061538711
-  GoogleToolboxForMac: 8bef7c7c5cf7291c687cf5354f39f9db6399ad34
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
-  GoogleUtilitiesComponents: 679b2c881db3b615a2777504623df6122dd20afe
-  GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
-  MLImage: 1824212150da33ef225fbd3dc49f184cf611046c
-  MLKitBarcodeScanning: 9cb0ec5ec65bbb5db31de4eba0a3289626beab4e
-  MLKitCommon: afcd11b6c0735066a0dde8b4bf2331f6197cbca2
-  MLKitVision: 90922bca854014a856f8b649d1f1f04f63fd9c79
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
   SQLCipher: 30a8e81afa6128e600b17ffa77d0f92fa05ed208
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 1ec791d3d30126f671cb0d52749cc3a135c72356
+PODFILE CHECKSUM: 1f09aac843ad5e96c34d0bf67cdf86c0b8f72fcb
 
 COCOAPODS: 1.15.2

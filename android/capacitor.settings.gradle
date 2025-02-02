@@ -11,11 +11,11 @@ project(':aparajita-capacitor-secure-storage').projectDir = new File('../node_mo
 include ':capacitor-community-privacy-screen'
 project(':capacitor-community-privacy-screen').projectDir = new File('../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen/android')
 
-include ':capacitor-mlkit-barcode-scanning'
-project(':capacitor-mlkit-barcode-scanning').projectDir = new File('../node_modules/.pnpm/@capacitor-mlkit+barcode-scanning@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor-mlkit/barcode-scanning/android')
-
 include ':capacitor-browser'
 project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser/android')
+
+include ':capacitor-camera'
+project(':capacitor-camera').projectDir = new File('../node_modules/.pnpm/@capacitor+camera@6.1.2_@capacitor+core@6.2.0/node_modules/@capacitor/camera/android')
 
 include ':capacitor-filesystem'
 project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@capacitor+filesystem@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/filesystem/android')
@@ -28,6 +28,9 @@ project(':capacitor-share').projectDir = new File('../node_modules/.pnpm/@capaci
 
 include ':capawesome-capacitor-screen-orientation'
 project(':capawesome-capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation/android')
+
+include ':capgo-camera-preview'
+project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@6.5.24_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview/android')
 
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite/android')

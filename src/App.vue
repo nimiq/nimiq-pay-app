@@ -9,6 +9,7 @@ import { isDev } from '@/lib/index'
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
+import { CameraPreview } from '@capgo/camera-preview'
 import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
@@ -28,6 +29,13 @@ onMounted(async () => {
       logger.error('Failed to lock screen orientation', error)
     }
   }
+
+  // Stop scanning in case it was still active
+  document.body.classList.remove('native-qr-scanner-modal-open')
+  try {
+    await CameraPreview.stop()
+  }
+  catch {}
 })
 
 if (!useDevice().isWeb) {

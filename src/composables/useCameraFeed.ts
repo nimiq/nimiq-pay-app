@@ -1,4 +1,5 @@
-import { type Ref, ref } from 'vue'
+import type { Ref } from 'vue'
+import { ref } from 'vue'
 import { useDevice } from './useDevice'
 import { useLogger } from './useLogger'
 
@@ -21,12 +22,10 @@ function useCameraFeedMobile() {
    * To fake the modal, we create an huge white outline around the hole and make the element inside transparent.
    */
   async function setUpCameraFeed() {
-    const { BarcodeScanner } = await import('@capacitor-mlkit/barcode-scanning')
-    if (!await BarcodeScanner.isSupported())
-      throw new Error('BarcodeScanner is not supported')
+    const { Camera } = await import('@capacitor/camera')
 
-    await BarcodeScanner.requestPermissions()
-    const permission = await BarcodeScanner.checkPermissions()
+    await Camera.requestPermissions({ permissions: ['camera'] })
+    const permission = await Camera.checkPermissions()
     hasPermission.value = permission.camera === 'granted'
   }
 
