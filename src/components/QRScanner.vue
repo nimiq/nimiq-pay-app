@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
+import { watchDebounced } from '@vueuse/core'
 import { ready } from 'qr-scanner-wechat'
 import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 
@@ -49,31 +50,25 @@ const { setDummyData, start, stop, state } = useQRScanner({ expect: props.expect
 
 const { isWeb, isIOS } = useDevice()
 
-watch(() => props.isVisible, (isVisible) => {
+watchDebounced(() => props.isVisible, async (isVisible) => {
   if (isVisible) {
-    setTimeout(() => {
-      if (!props.isVisible)
-        return // not visible anymore
-      document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
-      start()
-    }, 500)
+    if (!props.isVisible)
+      return // not visible anymore
+    document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
+    useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
+    await start()
+    useToast().clearToast()
   }
-  else if (cameraFeedContainer.value) {
+}, { immediate: true, debounce: 250, maxWait: 500 })
+
+watch(() => props.isVisible, (isVisible) => {
+  if (!isVisible && cameraFeedContainer.value) {
     // Stop scanner, if the container has actually been mounted yet.
     document.body.classList.remove('native-qr-scanner-modal-open')
     stop()
     useToast().clearToast()
   }
-}, { immediate: true })
-
-watch([state, () => props.isVisible], () => {
-  if (state.value === QRScannerState.Idle && props.isVisible) {
-    useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
-  }
-  else {
-    useToast().clearToast()
-  }
-}, { immediate: true })
+})
 
 // Preload the scanner library
 onMounted(ready)

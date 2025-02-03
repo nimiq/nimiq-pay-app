@@ -98,6 +98,9 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   const state = ref(QRScannerState.Idle)
 
   async function start() {
+    if (state.value === QRScannerState.Scanning)
+      return
+
     const video = await setUpCameraFeed()
     if (!hasPermission.value) {
       state.value = QRScannerState.NoPermission
@@ -198,6 +201,8 @@ function useQRScannerWeb({ parseString, onError }: UseQRScannerDeviceOptions) {
 
 function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions) {
   let stopInterval: Fn | undefined
+  const isScanning = ref(false)
+  const isCameraStarted = ref(false)
 
   async function scanFrame(frame: string, scan: typeof Scan) {
     const image = await base64ToImageData(frame)
@@ -208,7 +213,10 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
 
   async function startScan(_options: StartScannerOptions) {
     try {
-      await CameraPreview.start({ enableHighResolution: true, toBack: true, disableAudio: true, cameraMode: true })
+      if (!isCameraStarted.value) {
+        await CameraPreview.start({ enableHighResolution: true, toBack: true, disableAudio: true, cameraMode: true })
+        isCameraStarted.value = true
+      }
     }
     catch (e) {
       if (!(e as Error).message.includes('camera already started')) {
@@ -230,20 +238,33 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
       onError?.('')
 
     const { pause } = useIntervalFn(async () => {
+      if (isScanning.value || !isCameraStarted.value)
+        return
+      isScanning.value = true
       try {
         const { value: frame } = await CameraPreview.captureSample({ quality: 100 })
         await scanFrame(frame, scan)
       }
       catch (e) {
-        logger.error(e)
+        if (e)
+          logger.error('Error capturing sample or scanning frame:', e)
       }
+      isScanning.value = false
     }, 300, { immediate: true })
     stopInterval = pause
   }
 
   async function stopScan() {
+    isScanning.value = false
     stopInterval?.()
-    await CameraPreview.stop()
+    try {
+      await CameraPreview.stop()
+    }
+    catch (e) {
+      if (!(e as Error).message.includes('camera already stopped'))
+        logger.error('Error while stopping camera preview:', e)
+    }
+    isCameraStarted.value = false
   }
 
   return {
