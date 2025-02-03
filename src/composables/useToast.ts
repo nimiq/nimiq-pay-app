@@ -9,6 +9,7 @@ const logger = useLogger('useToast.ts')
 
 function _useToast() {
   const toast = ref<HTMLIonToastElement | null>(null)
+  const toastMessage = ref('')
 
   // FIXME: animation not working
   // const enterAnimation = (baseEl: HTMLElement) => {
@@ -22,6 +23,9 @@ function _useToast() {
   // }
 
   async function setToast({ message, type = 'success', keepOpen, duration = 3 * 1e3 }: Toast) {
+    // Prevent showing the same toast multiple times
+    if (message === toastMessage.value)
+      return
     clearToast()
 
     if (type === 'error')
@@ -44,6 +48,7 @@ function _useToast() {
       // enterAnimation,
     })
     toast.value.present()
+    toastMessage.value = message
 
     const hapticType = {
       success: NotificationType.Success,
@@ -53,11 +58,14 @@ function _useToast() {
     }[type]
     if (hapticType)
       Haptics.notification({ type: hapticType })
+
+    await toast.value.onDidDismiss()
+    toast.value = null
+    toastMessage.value = ''
   }
 
   function clearToast() {
     toast.value?.dismiss()
-    toast.value = null
   }
 
   return {
