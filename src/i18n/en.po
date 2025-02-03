@@ -23,7 +23,7 @@ msgstr ""
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
-#: src/components/QRScanner.vue:71
+#: src/components/QRScanner.vue:58
 msgid "Activating scanner"
 msgstr ""
 
@@ -466,7 +466,7 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:108
+#: src/components/NimWithdraw.vue:111
 msgid "Insufficient funds"
 msgstr ""
 
@@ -700,7 +700,7 @@ msgstr ""
 msgid "No payment request found"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:104
+#: src/composables/useQRScanner.ts:107
 msgid "No permission to use the camera"
 msgstr ""
 
@@ -1106,7 +1106,7 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:216
+#: src/composables/useQRScanner.ts:224
 msgid "Something went wrong while starting the camera"
 msgstr ""
 
@@ -1146,8 +1146,8 @@ msgstr ""
 msgid "The PINs do not match"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:180
-#: src/composables/useQRScanner.ts:224
+#: src/composables/useQRScanner.ts:183
+#: src/composables/useQRScanner.ts:232
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
@@ -1280,7 +1280,7 @@ msgstr ""
 msgid "Verify your phone number"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:106
+#: src/components/NimWithdraw.vue:109
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
