@@ -73,6 +73,7 @@ App.addListener('resume', async () => {
   // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
   if (lastPauseTimestamp !== 0 && timeInBackground > 2 * 60 * 1000) {
     logger.log('Reloading app after being in background for more than 2 minutes')
+    await logger.forceSaveToFile()
     lastPauseTimestamp = 0
     router.go(0)
   }
