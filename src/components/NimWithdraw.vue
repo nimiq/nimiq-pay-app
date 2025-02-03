@@ -44,6 +44,8 @@ const state = toRef(props, 'state')
 const { withdrawalAddress, topUpAddresses, withdrawalAddressesHistory, selectedFiat } = storeToRefs(useApp())
 const address = computed(() => {
   const address = withdrawalAddress.value || state.value[StepName.NimAddressInput]
+  if (!address)
+    return ''
 
   try {
     return Nimiq.Address.fromString(address).toUserFriendlyAddress()
@@ -68,6 +70,7 @@ const price = computed(() => data.value?.price || 0)
 const fiatDecimals = 6
 
 const fiatAmount = ref(0)
+// TODO: replace comma with dot
 const fiatAmountModel = ref(0)
 watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
 watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fiatDecimals)
