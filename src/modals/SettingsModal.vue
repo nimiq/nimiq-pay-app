@@ -45,6 +45,9 @@ function onLongPressCallback() {
     isSyncingWallets: isSyncingWallets.value,
     isUpdatingTransactions: isUpdatingTransactions.value,
   })
+  // TODO: get device info after updating to Capacitor 7
+  // https://capacitorjs.com/docs/apis/device
+  // logger.log('Device Info:', )
   logger.log(`Nimiq Pay v${appVersion.value}`)
   logger.sendReport()
 }

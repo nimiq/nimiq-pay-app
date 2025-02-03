@@ -154,11 +154,16 @@ export function useLogger(name: string = '') {
     })
   }
 
+  async function forceSaveToFile() {
+    return saveLogsToFile()
+  }
+
   return {
     init,
     log,
     warn,
     error,
     sendReport,
+    forceSaveToFile,
   }
 }
