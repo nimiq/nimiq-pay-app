@@ -17,6 +17,7 @@ const GenericInput = defineAsyncComponent(() => import('@/components/GenericInpu
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue'))
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
+const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/HoldNakaCardToReader.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -72,7 +73,7 @@ export const recoveryWordsStep: StepInit = async () => ({
 
 export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
   const { FlowName: Flow } = await import('@/lib/flows/steps.types')
-  const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw].includes(f)
+  const isTxFlow = (f?: FlowName) => f && [Flow.Payment, Flow.NimWithdraw].includes(f)
   return {
     step: StepName.PinCode,
     get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
@@ -373,7 +374,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
         navigateTo({ step: StepName.PaymentPreview })
       }
     },
-    beforeNext: async (state, { next, prev, navigateTo }) => {
+    beforeNext: async (state, { prev, navigateTo }) => {
       if (options?.props?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
           navigateTo({ step: StepName.PaymentRequestManualInput })
@@ -381,7 +382,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
           navigateTo({ step: StepName.PaymentPreview })
       }
       else if (options?.props?.expect === QRDataFormat.NimCashlink) {
-        next()
+        navigateTo({ step: StepName.PaymentRequestManualInput })
       }
       else { // For Top-Up and Withdrawal, we go back to the previous step
         prev()
@@ -389,6 +390,14 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
     },
   } satisfies Step
 }
+
+export const holdNakaCardToReaderStep: StepInit = async () => ({
+  step: StepName.HoldNakaCardToReader,
+  main: markRaw(HoldNakaCardToReader),
+  beforeNext: async (_state, { navigateTo }) => {
+    navigateTo({ step: StepName.PaymentPreview })
+  },
+} satisfies Step)
 
 export const paymentRequestManualInputStep: StepInit = async () => {
   return {

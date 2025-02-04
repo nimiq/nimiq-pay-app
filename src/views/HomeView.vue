@@ -382,7 +382,7 @@ App.addListener('resume', detectPaymentRequest)
           class="w-3/4 py-2 mx-auto text-base" expand="block"
           :class="{ 'pb-0': isIOS }"
           :disabled="isPaymentDisabled"
-          @click="initializeFlow(FlowName.NimOrPointsPayment)"
+          @click="initializeFlow(FlowName.Payment)"
         >
           {{ $t('Pay') }}
         </IonButton>

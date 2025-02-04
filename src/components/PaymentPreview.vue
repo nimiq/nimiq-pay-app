@@ -128,7 +128,13 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   })
 }, { immediate: true })
 
-const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
+/**
+ * Only allow paying with Points if:
+ *   - The user has enough NIM balance
+ *   - The user is eligible for Points
+ *   - The user has scanned something with the QR code scanner in previous steps (no Naka, no bluecode...)
+ */
+const payWithPuntos = ref((!hasEnoughNimBalance.value && isEligible.value && !!props.state[StepName.QRCodeScanner]))
 
 const loadingSwapLimits = ref(false)
 const isAtomicSwap = computed(() => !!payment.value.swap)
@@ -169,7 +175,7 @@ const disabled = computed(() =>
   // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
   || (isAtomicSwap.value && !!nimAddressLimits.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
   || !(
-    (isEligible.value && paymentMethod.value === PaymentMethod.Points)
+    (isEligible.value && payWithPuntos.value)
     || (isHtlcActive.value && hasEnoughNimBalance.value && consensus.value === 'established')
   )
   || !!goCryptoError.value,
@@ -201,7 +207,7 @@ function handlePay() {
     return
 
   loading.value = true
-  emit('done', paymentMethod.value)
+  emit('done', { payWithPuntos: payWithPuntos.value })
 }
 
 function formatInvoiced({ currency, amount }: { currency: string, amount: number }) {

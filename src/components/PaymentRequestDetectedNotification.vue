@@ -60,7 +60,7 @@ const shortInvoice = computed(() => {
 async function handleContinue() {
   if (props.disabled)
     return
-  await initializeFlow(FlowName.NimOrPointsPayment, { initialState: { qrCodeScanner: props.invoice } })
+  await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: props.invoice } })
   emit('onContinue')
 }
 </script>

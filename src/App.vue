@@ -61,7 +61,7 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   // TODO: accept also nimiq: scheme?
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
-    initializeFlow(FlowName.NimOrPointsPayment, { initialState: { qrCodeScanner: url.toString() } })
+    initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: url.toString() } })
   }
 })
 

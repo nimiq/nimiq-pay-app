@@ -1,10 +1,11 @@
-import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, FlowInit, NakaPaymentData, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import FlowCmp from '@/components/Flow.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 
 import { FlowName, StepName } from '@/lib/flows/steps.types'
+import { PaymentMethod } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
 import { h, ref } from 'vue'
 
@@ -156,14 +157,26 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
-const nimOrPointsPaymentFlow: FlowInit = async () => {
+/**
+ *
+        ┌───Can go to───────┬───or go to───┐
+        │                   │              ▼
+┌────┐ ┌──┐ ┌────────┐ ┌────┴──────┐ ┌──────────────┐
+│Naka│ │QR│ │Bluecode│ │ManualInput│ │PaymentPreview┼──►beforeNext() -> PayLogic
+└─┬──┘ └──┘ └────┬───┘ └───────────┘ └──────────────┘
+  │              │                         ▲
+  └──────────────┴──────skips─to───────────┘
+ * We have in the state 4 input steps used in the beforeNext to make the payment
+ */
+const paymentFlow: FlowInit = async () => {
   const [
-    { paymentPreviewStep, qrCodeScannerStep, pinCodeStep, paymentRequestManualInputStep },
+    { holdNakaCardToReaderStep, qrCodeScannerStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
 
-  const flowName = FlowName.NimOrPointsPayment
+  const flowName = FlowName.Payment
   const steps = (await Promise.all([
+    holdNakaCardToReaderStep,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.PaymentRequest } }),
     paymentRequestManualInputStep,
     paymentPreviewStep,
@@ -171,43 +184,92 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
   ].map(s => s({ flowName }))))
 
   const onDone: Flow['onDone'] = async (state, { err }) => {
-    const { markAsUnknownTransactionTitle, PaymentMethod } = await import('@/types/transactions')
+    const { markAsUnknownTransactionTitle } = await import('@/types/transactions')
 
-    const { [StepName.PaymentPreview]: method, [StepName.QRCodeScanner]: request } = state
-    if (!request || typeof request === 'string')
-      // No translation as not user-facing. Dev error which should not occur in production.
+    const nimPaymentRequest = state[StepName.QRCodeScanner]
+    const payWithPuntos = state[StepName.PaymentPreview]?.payWithPuntos
+    const nakaPaymentRequest = state[StepName.HoldNakaCardToReader]
+    const bluecodePaymentRequest = {} // state[StepName.BluecodePayment]
+
+    // 1. Check wether the user has done the flow as expected and we don't have a surprise in the params
+
+    // No translation as not user-facing. Dev error which should not occur in production.
+    if (payWithPuntos && !nimPaymentRequest)
+      throw new Error('User can only pay with puntos if they have scanned a payment request')
+    if (!nimPaymentRequest || typeof nimPaymentRequest === 'string')
+      throw new Error(`${flowName} flow expected a parsed payment request`)
+    if (bluecodePaymentRequest)
+      throw new Error('Bluecode payments are not supported yet')
+    if (!nimPaymentRequest || typeof nimPaymentRequest === 'string')
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
-    logger.log(`🤑  Initializing payment process with ${method}`, request)
+    const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
+    const isNimPaymentRequest = objectHasData(nimPaymentRequest)
+    const isNakaPaymentRequest = objectHasData(nakaPaymentRequest)
+    const isBluecodePaymentRequest = objectHasData(bluecodePaymentRequest)
 
-    if (method === PaymentMethod.NIM) {
-      const { useTransactions } = await import('@/stores/transactions')
-      const { error } = await useTransactions().sendTx({
-        ...request,
-        title: request.merchantName
-          ? markAsUnknownTransactionTitle(request.merchantName)
-          : 'Payment', // translated at display time
-      }).catch((error) => {
-        logger.error('🤑  Transaction failed:', error)
-        return ({
-          error: i18n.t(
-            'Transaction failed: {error}',
-            { error: (error instanceof Error ? error.message : String(error)) || i18n.t('Unknown error') },
-          ),
+    // Only one of the state can be true, otherwise the flow is not as expected
+    if ([isNimPaymentRequest, isNakaPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
+      throw new Error(`Multiple payment methods are active at the same time. Expected just one of ${{ payWithPuntos, nakaPaymentRequest, bluecodePaymentRequest }}`)
+
+    // 2. Parse the payments parameters
+
+    let payment:
+      | { method: PaymentMethod.NIM | PaymentMethod.Points, request: PaymentRequestData }
+      | { method: PaymentMethod.NakaCard, request: NakaPaymentData }
+      | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
+    if (isNimPaymentRequest)
+      payment = { method: payWithPuntos ? PaymentMethod.Points : PaymentMethod.NIM, request: nimPaymentRequest }
+    else if (isNakaPaymentRequest)
+      payment = { method: PaymentMethod.NakaCard, request: nakaPaymentRequest }
+    else if (isBluecodePaymentRequest)
+      payment = { method: PaymentMethod.Bluecode, request: bluecodePaymentRequest }
+    else
+      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos, nakaPaymentRequest, bluecodePaymentRequest }}`)
+
+    // 3. Do the payment
+
+    logger.log(`🤑  Initializing payment process with ${payment.method}`, payment.request)
+    switch (payment.method) {
+      case PaymentMethod.NIM: {
+        const { useTransactions } = await import('@/stores/transactions')
+        const { error } = await useTransactions().sendTx({
+          ...payment.request,
+          title: payment.request.merchantName
+            ? markAsUnknownTransactionTitle(payment.request.merchantName)
+            : 'Payment', // translated at display time
+        }).catch((error) => {
+          logger.error('🤑  Transaction failed:', error)
+          return ({
+            error: i18n.t(
+              'Transaction failed: {error}',
+              { error: (error instanceof Error ? error.message : String(error)) || i18n.t('Unknown error') },
+            ),
+          })
         })
-      })
-      if (error)
-        return err(error)
-    }
-    else if (method === PaymentMethod.Points) {
-      if (!request.rail || !request.paymentRef)
+        if (error)
+          return err(error)
+        break
+      }
+      case PaymentMethod.Points: {
+        if (!payment.request.rail || !payment.request.paymentRef)
         // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(request)}`)
+          throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(payment.request)}`)
 
-      const { usePoints } = await import('@/stores/points')
-      const { error } = await usePoints().payWithPoints(request)
-      if (error)
-        return err(error)
+        const { usePoints } = await import('@/stores/points')
+        const { error } = await usePoints().payWithPoints(payment.request)
+        if (error)
+          return err(error)
+        break
+      }
+      case PaymentMethod.NakaCard: {
+        throw new Error('NakaCard payments are not supported yet')
+        // break
+      }
+      case PaymentMethod.Bluecode: {
+        throw new Error('Bluecode payments are not supported yet')
+        // break
+      }
     }
 
     const { useToast } = await import('@/composables/useToast')
@@ -375,7 +437,7 @@ const flows = {
   [FlowName.OnBoardingPoints]: onBoardingPointsFlow,
   [FlowName.OnBoardingCashback]: onBoardingCashbackFlow,
   [FlowName.OnBoardingBluecode]: onBoardingBluecodeFlow,
-  [FlowName.NimOrPointsPayment]: nimOrPointsPaymentFlow,
+  [FlowName.Payment]: paymentFlow,
   [FlowName.NimWithdraw]: nimWithdrawFlow,
   [FlowName.NimTopUp]: nimTopUpFlow,
   [FlowName.ViewTransactions]: viewTransactionsFlow,

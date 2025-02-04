@@ -1,5 +1,5 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
-import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
+import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
 
 export enum FlowName {
   Setup = 'setup',
@@ -9,7 +9,7 @@ export enum FlowName {
   OnBoardingPoints = 'onBoardingPoints',
   OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
-  NimOrPointsPayment = 'payment',
+  Payment = 'payment',
   NimWithdraw = 'nimWithdraw',
   NimTopUp = 'nimTopUp',
   ViewTransactions = 'viewTransactions',
@@ -67,6 +67,7 @@ export enum StepName {
   OnBoardingBluecode2 = 'onBoardingBluecode2',
   OnBoardingBluecode3 = 'onBoardingBluecode3',
   QRCodeScanner = 'qrCodeScanner',
+  HoldNakaCardToReader = 'holdNakaCardToReader',
   PaymentPreview = 'paymentPreview',
   NimWithdrawalSelection = 'nimWithdrawalSelection',
   NimAddressInput = 'nimAddressInput',
@@ -81,7 +82,7 @@ export enum StepName {
   NakaCardIsReady = 'nakaCardIsReady',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -104,8 +105,9 @@ export interface State {
   [StepName.PhoneNumberConfirm]: string
   [StepName.RecoveryWordsStep]: string[]
   [StepName.QRCodeScanner]: PaymentRequestData | string
+  [StepName.HoldNakaCardToReader]: PaymentRequestData
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
-  [StepName.PaymentPreview]: PaymentMethod
+  [StepName.PaymentPreview]: { payWithPuntos: boolean }
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string
   [StepName.TransactionList]: ExternalTransaction // User selects a transaction
@@ -259,12 +261,10 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
     }
   }
 
+// TODO Define fields
+export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
+
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
-}
-
-export enum PaymentMethod {
-  NIM = 'nim',
-  Points = 'points',
 }

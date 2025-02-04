@@ -265,4 +265,6 @@ export type PartialSendTxArgs =
 export enum PaymentMethod {
   NIM = 'nim',
   Points = 'points',
+  NakaCard = 'nakaCard',
+  Bluecode = 'bluecode',
 }
