@@ -79,6 +79,7 @@ export enum StepName {
   HoldNakaCardToReader = 'holdNakaCardToReader',
   BluecodePayment = 'bluecodePayment',
   QRCodeDisplay = 'qrCodeDisplay',
+  HoldNakaCardToReader = 'holdNakaCardToReader',
   PaymentPreview = 'paymentPreview',
   NimWithdrawalAmountSelectionStep = 'nimWithdrawalAmountSelectionStep',
   NimWithdrawalAddressSelectionStep = 'nimWithdrawalAddressSelectionStep',
@@ -125,6 +126,7 @@ export interface State {
     confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
   }
   [StepName.NimAddressDisplay]: string
+  [StepName.HoldNakaCardToReader]: PaymentRequestData
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
   [StepName.PaymentPreview]: { payWithPuntos: boolean }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
@@ -289,6 +291,9 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
       fees: { asset: string, amount: number }[]
     }
   }
+
+// TODO Define fields
+export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
 
 export interface NimWithdrawalSelection {
   amount: number

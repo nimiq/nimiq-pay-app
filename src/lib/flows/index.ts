@@ -1,4 +1,4 @@
-import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, FlowInit, NakaPaymentData, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import { modalController } from '@ionic/vue'
 import type { Slots } from 'vue'
 import type { Result } from '../../types'
@@ -10,8 +10,7 @@ import { Modal, useModal } from '@/composables/useModal'
 
 import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
-import { PaymentMethod } from '@/types/transactions'
-import { modalController } from '@ionic/vue'
+import { PaymentMethod } from '@/types/transactions'\
 import { defineAsyncComponent, h, ref } from 'vue'
 
 const logger = useLogger('flows/index.ts')

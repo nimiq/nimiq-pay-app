@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import type { PropType } from 'vue'
 import type { Crypto } from '../stores/app'
+import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonToggle } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
+import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
@@ -97,7 +103,7 @@ const swapFee = computedAsync(async () => {
 }, null)
 
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
-   = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
+  = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
 const goCryptoError = ref<string>()
 const goCryptoIsAboutToExpire = ref<boolean>()
