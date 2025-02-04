@@ -360,6 +360,8 @@ function blur() {
       </div>
     </div>
   </ul>
+
+  <slot name="default" v-bind="{ activeStep }" v-on="{ navigateTo }" />
 </template>
 
 <style scoped>

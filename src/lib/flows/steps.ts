@@ -23,6 +23,7 @@ const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/nak
 const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const QRCodeDisplay = defineAsyncComponent(() => import('@/components/QRCodeDisplay.vue'))
 const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
+const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -419,6 +420,14 @@ export const bluecodeNotAvailableStep: StepInit = async ({ allowGoBack }) => ({
   step: StepName.BluecodePayment,
   main: markRaw(BluecodeNotSupported),
   allowGoBack,
+  beforeNext: async (_state, { navigateTo }) => {
+    navigateTo({ step: StepName.PaymentPreview })
+  },
+} satisfies Step)
+
+export const bluecodeNotAvailbleStep: StepInit = async () => ({
+  step: StepName.BluecodePayment,
+  main: markRaw(BluecodeNotSupported),
   beforeNext: async (_state, { navigateTo }) => {
     navigateTo({ step: StepName.PaymentPreview })
   },

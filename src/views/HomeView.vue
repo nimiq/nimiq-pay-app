@@ -358,6 +358,10 @@ App.addListener('resume', detectPaymentRequest)
         </QuickButton>
       </motion.div>
 
+      <QuickButton show-chevron center @click="initializeFlow(FlowName.Payment)">
+        Pay nowwwwwwwwwwwwwww
+      </QuickButton>
+
       <!-- Transaction List -->
       <motion.div
         :initial="{ opacity: 0, y: 30 }"

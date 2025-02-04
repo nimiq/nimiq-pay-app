@@ -586,7 +586,7 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
     // via componentProps, to make the props reactive. Passing the props to componentProps as reactive() did not work.
     // isClosing could also be passed as ref, but having a ref as a prop instead of the actual value is not the typical
     // vue way of doing things.
-    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }),
+    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }, slots),
     cssClass: `nimiq-modal-${height}`,
     handle: false,
 
