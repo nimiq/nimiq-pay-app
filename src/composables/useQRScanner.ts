@@ -58,7 +58,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           // Some users might scan an address QR code wanting to withdraw, if this is the case, redirect to the withdraw flow
           const { data: nimAddress } = getNimAddress(raw)
           if (nimAddress) {
-            initializeFlow(FlowName.NimWithdraw, { nimAddressInput: nimAddress })
+            initializeFlow(FlowName.NimWithdraw, { initialState: { nimAddressInput: nimAddress } })
             return
           }
 

@@ -22,6 +22,7 @@ import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
+import { useNakaCardWithWeirdNameSoIsEasyToReplace } from '@/stores/naka-ui-maxi'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -56,6 +57,7 @@ const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { nodesAreSynced, isTransactionPending, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
+const { hasNakaCardLongName } = storeToRefs(useNakaCardWithWeirdNameSoIsEasyToReplace())
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
@@ -140,7 +142,14 @@ if (import.meta.env.DEV) {
   })
 }
 
-watch([referralCode, phoneNumberVerified], () => {
+watch([referralCode, phoneNumberVerified, hasNakaCardLongName], () => {
+  const nakaCardActivationNotification = {
+    id: 'activate-naka-card',
+    get title() { return i18n.t('Start paying at XXX locations with Naka') },
+    get subtitle() { return i18n.t('Activate your Naka Card') },
+    action: () => initializeFlow(FlowName.NakaOnboarding),
+  }
+
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
@@ -160,12 +169,19 @@ watch([referralCode, phoneNumberVerified], () => {
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
+  // Remove notification if user has just verified their phone number
+  if (hasNakaCardLongName.value) {
+    removeLocalNotification(nakaCardActivationNotification.id, false)
+  }
+
   if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
   else if (!referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
+  if (!hasNakaCardLongName.value)
+    addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
 watch(() => localNotifications.value.length, (newValue, oldValue) => {

@@ -351,3 +351,10 @@ function blur() {
     </li>
   </ul>
 </template>
+
+<style scoped>
+/* When we call initializeFlow we setup some css classes */
+:global(ion-modal.nimiq-modal-h-max) {
+  --height: auto;
+}
+</style>

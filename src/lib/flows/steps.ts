@@ -29,6 +29,9 @@ const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
 const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
 const PaymentRequestManualInput = defineAsyncComponent(() => import('@/components/PaymentRequestManualInput.vue'))
+const NakaOnboardingWhatIsNaka = defineAsyncComponent(() => import('@/components/NakaOnboardingWhatIsNaka.vue'))
+const NakaOnboardingVerifyId = defineAsyncComponent(() => import('@/components/NakaOnboardingVerifyId.vue'))
+const NakaCardIsReady = defineAsyncComponent(() => import('@/components/NakaCardIsReady.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -543,4 +546,29 @@ export const validateWordsStep: StepInit = async () => ({
   get title() { return i18n.t('Test your backup') },
   main: markRaw(ValidateWords),
   goBackBy: 1,
+} satisfies Step)
+
+export const whatIsNakaStep: StepInit = async () => ({
+  step: StepName.WhatIsNaka,
+  get title() { return i18n.t('What is Naka?') },
+  get description() { return i18n.t('NAKA is a European payment service supporting NIM. It offers a digital card to make purchases everywhere NAKA is accepted. Works like any other digital card.') },
+  main: markRaw(NakaOnboardingWhatIsNaka),
+} satisfies Step)
+
+export const verifyYourIdNakaStep: StepInit = async () => ({
+  step: StepName.WhatIsNaka,
+  // get title() { return i18n.t('Verify your ID') },
+  title: 'Fake verification ID', // Hola. I know someone is reading this!!!!
+  get description() { return i18n.t('To use NAKA card payments, please verify yourself with IDnow.') },
+  main: markRaw(NakaOnboardingVerifyId),
+  beforeNext: async (_state, { finalizeFlow }) => {
+    // eslint-disable-next-line no-console
+    console.log('Naka: Here your sdk should be called')
+    setTimeout(finalizeFlow, 2000)
+  },
+} satisfies Step)
+
+export const nakaCardIsReadyStep: StepInit = async () => ({
+  step: StepName.NakaCardIsReady,
+  main: markRaw(NakaCardIsReady),
 } satisfies Step)

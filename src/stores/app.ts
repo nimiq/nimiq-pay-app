@@ -28,7 +28,7 @@ export enum PushNotificationsStatus {
   PROMPT = 'prompt',
 }
 
-function kv(): StorageLikeAsync {
+export function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
     setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
@@ -42,7 +42,7 @@ function kv(): StorageLikeAsync {
  * Uses UserDefaults on iOS and SharedPreferences on Android.
  * Stored data is cleared if the app is uninstalled.
  */
-function kvPreferences(): StorageLikeAsync {
+export function kvPreferences(): StorageLikeAsync {
   return {
     getItem: async key => Preferences.get({ key }).then(x => x.value),
     setItem: async (key, value) => Preferences.set({ key, value }),

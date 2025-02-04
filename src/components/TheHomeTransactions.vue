@@ -14,7 +14,7 @@ const { transactions } = storeToRefs(useTransactions())
 <template>
   <ol v-if="transactions.length">
     <li v-for="tx in transactions.slice(0, 3)" :key="tx.hash" :data-hash="tx.hash">
-      <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />
+      <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })" />
     </li>
   </ol>
   <ol v-else-if="isUpdatingTransactions" class="mt-8">
