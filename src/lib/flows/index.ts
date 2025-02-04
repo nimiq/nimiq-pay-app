@@ -195,20 +195,20 @@ const paymentFlow: FlowInit = async () => {
 
     // 1. Check wether the user has done the flow as expected and we don't have a surprise in the params
 
-    // No translation as not user-facing. Dev error which should not occur in production.
-    if (payWithPuntos && !nimPaymentRequest)
-      throw new Error('User can only pay with puntos if they have scanned a payment request')
-    if (!nimPaymentRequest || typeof nimPaymentRequest === 'string')
-      throw new Error(`${flowName} flow expected a parsed payment request`)
-    if (bluecodePaymentRequest)
-      throw new Error('Bluecode payments are not supported yet')
+    const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
+
     if (!nimPaymentRequest || typeof nimPaymentRequest === 'string')
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
-    const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
     const isNakaPaymentRequest = objectHasData(nakaPaymentRequest)
     const isBluecodePaymentRequest = objectHasData(bluecodePaymentRequest)
+
+    // No translation as not user-facing. Dev error which should not occur in production.
+    if (payWithPuntos && isNimPaymentRequest)
+      throw new Error('User can only pay with puntos if they have scanned a payment request')
+    if (isBluecodePaymentRequest)
+      throw new Error('Bluecode payments are not supported yet')
 
     // Only one of the state can be true, otherwise the flow is not as expected
     if ([isNimPaymentRequest, isNakaPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
