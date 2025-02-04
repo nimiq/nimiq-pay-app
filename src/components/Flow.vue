@@ -345,11 +345,13 @@ function blur() {
         <component
           :is="main"
           v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur }"
+          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur, navigateTo }"
         />
       </div>
     </li>
   </ul>
+
+  <slot name="default" v-bind="{ activeStep }" v-on="{ navigateTo }" />
 </template>
 
 <style scoped>

@@ -18,6 +18,7 @@ const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoard
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue'))
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
 const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
+const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -395,6 +396,14 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ pr
 export const holdNakaCardToReaderStep: StepInit = async () => ({
   step: StepName.HoldNakaCardToReader,
   main: markRaw(HoldNakaCardToReader),
+  beforeNext: async (_state, { navigateTo }) => {
+    navigateTo({ step: StepName.PaymentPreview })
+  },
+} satisfies Step)
+
+export const bluecodeNotAvailbleStep: StepInit = async () => ({
+  step: StepName.BluecodePayment,
+  main: markRaw(BluecodeNotSupported),
   beforeNext: async (_state, { navigateTo }) => {
     navigateTo({ step: StepName.PaymentPreview })
   },

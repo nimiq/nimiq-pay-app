@@ -2,7 +2,11 @@
 import NakaCard from '@/components/icons/naka-card.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 
-defineEmits(stepEmits)
+const emit = defineEmits(stepEmits)
+
+function setPaymentRequest() {
+  emit('done', undefined)
+}
 </script>
 
 <template>
@@ -10,5 +14,8 @@ defineEmits(stepEmits)
     <div class="flex flex-1 items-center justify-center">
       <NakaCard class="translate-y-[-50%]" />
     </div>
+    <button class="mt-8 text-sm font-bold mb-16 italic text-blue-300" @click="setPaymentRequest">
+      Fake read
+    </button>
   </div>
 </template>

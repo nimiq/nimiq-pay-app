@@ -7,7 +7,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { PaymentMethod } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
-import { h, ref } from 'vue'
+import { defineAsyncComponent, h, ref } from 'vue'
 
 const logger = useLogger('flows/index.ts')
 
@@ -170,15 +170,16 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
  */
 const paymentFlow: FlowInit = async () => {
   const [
-    { holdNakaCardToReaderStep, qrCodeScannerStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
+    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailbleStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
-    { useNakaCardWithWeirdNameSoIsEasyToReplace },
+    // { useNakaCardWithWeirdNameSoIsEasyToReplace },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka-ui-maxi')])
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
     (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }),
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
+    (options: StepInitOptions) => bluecodeNotAvailbleStep({ ...options, allowGoBack: false }),
     paymentRequestManualInputStep,
     paymentPreviewStep,
     pinCodeStep,
@@ -280,11 +281,13 @@ const paymentFlow: FlowInit = async () => {
     logger.log('🤑  Cancelling payment process')
   }
 
-  const hasNakaCardActivated = useNakaCardWithWeirdNameSoIsEasyToReplace().hasNakaCardLongName
-  const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
-  console.log({ hasNakaCardActivated, initialStep })
+  // const hasNakaCardActivated = useNakaCardWithWeirdNameSoIsEasyToReplace().hasNakaCardLongName
+  // const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
+  const initialStep = StepName.HoldNakaCardToReader
 
-  return { flowName, steps, onDone, onCancel, initialStep } satisfies Flow
+  const slotComponent = defineAsyncComponent(() => import('@/components/PillSelector.vue'))
+
+  return { flowName, steps, onDone, onCancel, initialStep, slotComponent } satisfies Flow
 }
 
 const nimWithdrawFlow: FlowInit = async () => {
@@ -480,12 +483,14 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
 
   const isClosing = ref(false)
 
+  const slots = flow.slotComponent ? { default: () => h(flow.slotComponent!) } : {}
+
   const modal = await modalController.create({
     // Pass a render function that includes props for FlowCmp, instead of FlowCmp as component and the component's props
     // via componentProps, to make the props reactive. Passing the props to componentProps as reactive() did not work.
     // isClosing could also be passed as ref, but having a ref as a prop instead of the actual value is not the typical
     // vue way of doing things.
-    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }),
+    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }, slots),
     cssClass: `nimiq-modal-${height}`,
     handle: false,
 

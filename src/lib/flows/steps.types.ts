@@ -42,6 +42,9 @@ export interface Flow {
 
   // In which step the flow will start
   initialStep?: StepName
+
+  // The component that will be filled in the defeault slot of Flow.vue
+  slotComponent?: Component
 }
 
 export interface FlowInitOptions {
@@ -71,6 +74,7 @@ export enum StepName {
   OnBoardingBluecode3 = 'onBoardingBluecode3',
   QRCodeScanner = 'qrCodeScanner',
   HoldNakaCardToReader = 'holdNakaCardToReader',
+  BluecodePayment = 'bluecodePayment',
   PaymentPreview = 'paymentPreview',
   NimWithdrawalSelection = 'nimWithdrawalSelection',
   NimAddressInput = 'nimAddressInput',
@@ -87,7 +91,7 @@ export enum StepName {
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.NimAddressDisplay, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.BluecodePayment] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -258,6 +262,7 @@ export const stepEmits: EmitsOptions = {
   skip: () => undefined,
   back: () => undefined,
   focus: () => undefined,
+  navigateTo: (_: NavigateToOptions) => undefined,
 }
 
 // Complex types for State
