@@ -427,6 +427,41 @@ const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
     { whatIsNakaStep, verifyYourIdNakaStep },
+    useNakaCardWithWeirdNameSoIsEasyToReplace,
+  ] = await Promise.all([
+    import('@/lib/flows/steps.types'),
+    import('./steps'),
+    import('@/stores/naka-ui-maxi'),
+  ])
+
+  const flowName = Flow.NakaOnboarding
+  const steps = await Promise.all([
+    whatIsNakaStep({ flowName }),
+    verifyYourIdNakaStep({ flowName }),
+  ])
+
+  const { setNakaCard } = useNakaCardWithWeirdNameSoIsEasyToReplace.useNakaCardWithWeirdNameSoIsEasyToReplace()
+
+  const onDone: Flow['onDone'] = async () => {
+    setNakaCard()
+    const { useToast } = await import('@/composables/useToast')
+    useToast().setToast({ message: i18n.t('ID verified!') })
+    setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)
+  }
+  return { flowName, steps, onDone }
+}
+
+const nakaCardIsReadyFlow: FlowInit = async () => {
+  const { nakaCardIsReadyStep } = await import('./steps')
+  const flowName = FlowName.NakaCardIsReady
+  const steps = await Promise.all([nakaCardIsReadyStep].map(s => s({ flowName })))
+  return { flowName, steps }
+}
+
+const nakaOnboardFlow: FlowInit = async () => {
+  const [
+    { FlowName: Flow },
+    { whatIsNakaStep, verifyYourIdNakaStep },
   ] = await Promise.all([
     import('@/lib/flows/steps.types'),
     import('./steps'),
@@ -500,6 +535,7 @@ interface InitializeFlowOptiosn {
    * @default 'h-full'
    */
   height?: 'h-full' | 'h-max'
+  preventSwipe?: boolean
 }
 
 /**
@@ -507,7 +543,7 @@ interface InitializeFlowOptiosn {
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, options: InitializeFlowOptiosn = {}) {
-  const { initialState, height = 'h-full' } = options
+  const { initialState, height = 'h-full', preventSwipe = false } = options
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   await useModal().closeModal()
 
@@ -551,7 +587,7 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
     // via componentProps, to make the props reactive. Passing the props to componentProps as reactive() did not work.
     // isClosing could also be passed as ref, but having a ref as a prop instead of the actual value is not the typical
     // vue way of doing things.
-    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }, slots),
+    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }),
     cssClass: `nimiq-modal-${height}`,
     handle: false,
 
