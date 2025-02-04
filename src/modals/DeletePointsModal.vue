@@ -48,7 +48,7 @@ async function handleDeletePointsAccount() {
       {{ $t('Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold.') }}
     </p>
 
-    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="handleDeletePointsAccount">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base red-button" @click="handleDeletePointsAccount">
       <span>
         {{ $t('Delete Points Account') }}
       </span>
@@ -57,7 +57,7 @@ async function handleDeletePointsAccount() {
 </template>
 
 <style scoped>
-ion-button {
+.red-button {
   --background: radial-gradient(100% 100% at 100% 100%, #CC3047 0%, #D94432 100%);
 }
 </style>
