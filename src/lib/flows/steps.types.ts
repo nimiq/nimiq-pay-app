@@ -39,6 +39,9 @@ export interface Flow {
   // Function that will be called when the flow is cancelled. Also, the flow
   // will be closed automatically when the last step is done.
   onCancel?: FlowHookCb
+
+  // In which step the flow will start
+  initialStep?: StepName
 }
 
 export interface FlowInitOptions {
@@ -230,12 +233,19 @@ export type InfoStep = BaseStep & {
   autofocus?: undefined
 }
 
-export type Step = InputStep | InfoStep
+export type Step = (InputStep | InfoStep) & {
+  /**
+   * Whether or not the user can go back to the previous step.
+   * Setting it to false will hide the back button.
+   * @default true
+   */
+  allowGoBack?: boolean
+}
 
 export type StepInitOptions<Props = undefined> = {
   flowName?: FlowName
   props?: Props
-} & NavigationControl
+} & NavigationControl & Pick<Step, 'allowGoBack'>
 
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }

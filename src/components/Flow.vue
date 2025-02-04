@@ -29,9 +29,9 @@ const props = defineProps({
 
 const logger = useLogger('Flow.vue')
 
-const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName } = props.flow!
-const historyStack = ref([stepsInFlow[0]])
-const activeIndex = ref(0)
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName, initialStep } = props.flow!
+const activeIndex = ref(stepsInFlow.findIndex(s => s.step === initialStep) ?? 0)
+const historyStack = ref(stepsInFlow.slice(0, activeIndex.value + 1))
 
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
 const state = ref({ ...emptyState, ...props.initialState })
@@ -117,7 +117,7 @@ const activeStep = computed(() => historyStack.value[activeIndex.value])
 // Get the element in screen knowing the active step using the li key
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 
-const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1)
+const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1 && activeStep.value.allowGoBack !== false)
 
 type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)

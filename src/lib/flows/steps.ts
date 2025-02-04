@@ -17,7 +17,7 @@ const GenericInput = defineAsyncComponent(() => import('@/components/GenericInpu
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue'))
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
-const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/HoldNakaCardToReader.vue'))
+const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -30,9 +30,9 @@ const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
 const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
 const PaymentRequestManualInput = defineAsyncComponent(() => import('@/components/PaymentRequestManualInput.vue'))
-const NakaOnboardingWhatIsNaka = defineAsyncComponent(() => import('@/components/NakaOnboardingWhatIsNaka.vue'))
-const NakaOnboardingVerifyId = defineAsyncComponent(() => import('@/components/NakaOnboardingVerifyId.vue'))
-const NakaCardIsReady = defineAsyncComponent(() => import('@/components/NakaCardIsReady.vue'))
+const NakaOnboardingWhatIsNaka = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingWhatIsNaka.vue'))
+const NakaOnboardingVerifyId = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingVerifyId.vue'))
+const NakaCardIsReady = defineAsyncComponent(() => import('@/components/naka/NakaCardIsReady.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -353,11 +353,12 @@ export const onBoardingBluecode3: StepInit = async () => ({
   main: markRaw(OnBoardingScreen),
 } satisfies Step)
 
-export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
+export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ props: defaultProps, allowGoBack }) => {
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
-    main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
+    allowGoBack,
+    main: markRaw(props => h(QRScanner, { ...props, ...defaultProps })),
     async beforeRender(state, { navigateTo }) {
       const { qrCodeScanner } = state
       // If it's a string, assume that it's a payment request
@@ -375,13 +376,13 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
       }
     },
     beforeNext: async (state, { prev, navigateTo }) => {
-      if (options?.props?.expect === QRDataFormat.PaymentRequest) {
+      if (defaultProps?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
           navigateTo({ step: StepName.PaymentRequestManualInput })
         else
           navigateTo({ step: StepName.PaymentPreview })
       }
-      else if (options?.props?.expect === QRDataFormat.NimCashlink) {
+      else if (defaultProps?.expect === QRDataFormat.NimCashlink) {
         navigateTo({ step: StepName.PaymentRequestManualInput })
       }
       else { // For Top-Up and Withdrawal, we go back to the previous step
@@ -399,11 +400,12 @@ export const holdNakaCardToReaderStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-export const paymentRequestManualInputStep: StepInit = async () => {
+export const paymentRequestManualInputStep: StepInit = async ({ allowGoBack }) => {
   return {
     step: StepName.PaymentRequestManualInput,
     get title() { return i18n.t('Enter payment request') },
     main: markRaw(PaymentRequestManualInput),
+    allowGoBack,
     beforeNext: async (state, { next }) => {
       state.qrCodeScanner = state.paymentRequestManualInput
       next()

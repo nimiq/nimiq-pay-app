@@ -172,12 +172,13 @@ const paymentFlow: FlowInit = async () => {
   const [
     { holdNakaCardToReaderStep, qrCodeScannerStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
+    { useNakaCardWithWeirdNameSoIsEasyToReplace },
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka-ui-maxi')])
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    holdNakaCardToReaderStep,
-    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.PaymentRequest } }),
+    (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }),
+    (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
     paymentRequestManualInputStep,
     paymentPreviewStep,
     pinCodeStep,
@@ -278,7 +279,12 @@ const paymentFlow: FlowInit = async () => {
   const onCancel: Flow['onCancel'] = async () => {
     logger.log('🤑  Cancelling payment process')
   }
-  return { flowName, steps, onDone, onCancel }
+
+  const hasNakaCardActivated = useNakaCardWithWeirdNameSoIsEasyToReplace().hasNakaCardLongName
+  const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
+  console.log({ hasNakaCardActivated, initialStep })
+
+  return { flowName, steps, onDone, onCancel, initialStep } satisfies Flow
 }
 
 const nimWithdrawFlow: FlowInit = async () => {
