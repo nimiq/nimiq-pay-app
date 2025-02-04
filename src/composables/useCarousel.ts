@@ -30,14 +30,12 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, options
   }
 
   // If activeIndex is set to a value above zero initially, scroll to that slide.
-  onMounted(async () => {
+  onMounted(() => {
     if (elRef.value && activeIndex.value >= 0 && activeIndex.value < elRef.value.children.length) {
       const item = elRef.value.children[activeIndex.value]
       window.requestAnimationFrame(() =>
         item.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' }),
       )
-      // For some reason, sometimes the scroll do not happen
-      setTimeout(() => item.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' }), 50)
     }
   })
 
