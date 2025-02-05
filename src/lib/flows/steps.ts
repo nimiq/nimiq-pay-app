@@ -425,9 +425,10 @@ export const bluecodeNotAvailableStep: StepInit = async ({ allowGoBack }) => ({
   },
 } satisfies Step)
 
-export const bluecodeNotAvailbleStep: StepInit = async () => ({
+export const bluecodeNotAvailbleStep: StepInit = async ({ allowGoBack }) => ({
   step: StepName.BluecodePayment,
   main: markRaw(BluecodeNotSupported),
+  allowGoBack,
   beforeNext: async (_state, { navigateTo }) => {
     navigateTo({ step: StepName.PaymentPreview })
   },

@@ -10,7 +10,7 @@ import { Modal, useModal } from '@/composables/useModal'
 
 import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
-import { PaymentMethod } from '@/types/transactions'\
+import { PaymentMethod } from '@/types/transactions'
 import { defineAsyncComponent, h, ref } from 'vue'
 
 const logger = useLogger('flows/index.ts')

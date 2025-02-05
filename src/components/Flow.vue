@@ -361,7 +361,7 @@ function blur() {
     </div>
   </ul>
 
-  <slot name="default" v-bind="{ activeStep }" v-on="{ navigateTo }" />
+  <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
 </template>
 
 <style scoped>
