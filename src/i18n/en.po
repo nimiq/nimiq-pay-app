@@ -338,19 +338,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync.ts:90
+#: src/stores/sync.ts:91
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync.ts:126
+#: src/stores/sync.ts:127
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync.ts:157
+#: src/stores/sync.ts:158
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync.ts:104
+#: src/stores/sync.ts:105
 msgid "Error while topping up deposit"
 msgstr ""
 
