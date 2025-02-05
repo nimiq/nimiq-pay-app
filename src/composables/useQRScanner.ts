@@ -10,7 +10,7 @@ import { base64ToImageData } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { CameraPreview } from '@capgo/camera-preview'
-import { useIntervalFn, useThrottleFn } from '@vueuse/core'
+import { until, useIntervalFn, useThrottleFn } from '@vueuse/core'
 import { ready, scan } from 'qr-scanner-wechat'
 import { ref } from 'vue'
 import { isDev } from '../lib'
@@ -258,6 +258,7 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
     isScanning.value = false
     stopInterval?.()
     try {
+      await until(isCameraStarted).toBeTruthy()
       await CameraPreview.stop()
     }
     catch (e) {
