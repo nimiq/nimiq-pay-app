@@ -76,7 +76,8 @@ onMounted(ready)
 onBeforeUnmount(() => {
   document.body.classList.remove('native-qr-scanner-modal-open')
   stop()
-  useToast().clearToast()
+  if (props.isVisible)
+    useToast().clearToast()
 })
 
 const isBtcLightningEnabled = __ENABLE_BTC_LN__
