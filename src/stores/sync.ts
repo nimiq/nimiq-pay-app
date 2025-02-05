@@ -56,6 +56,7 @@ export const useSync = defineStore('sync', () => {
   })
 
   const pendingTransactions: Ref<(PlainTransactionDetails)[]> = ref([])
+  const pendingPaymentTransactions: Ref<(PlainTransactionDetails)[]> = ref([])
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
   const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
@@ -874,12 +875,28 @@ export const useSync = defineStore('sync', () => {
     htlcCheckLock.value = false
   })
 
+  let remoteAddressListener: number | undefined
+  watch(remoteAddress, async () => {
+    if (remoteAddressListener) {
+      await client.value?.removeListener(remoteAddressListener)
+      remoteAddressListener = undefined
+    }
+    if (!remoteAddress.value)
+      return
+
+    remoteAddressListener = await client.value?.addTransactionListener((tx) => {
+      logger.log(`📬 New transaction from remote received`, tx)
+      pendingPaymentTransactions.value.push(tx)
+    }, [remoteAddress.value])
+  }, { immediate: true })
+
   return {
     syncWallets,
     updateBalances,
     updateSingleTransaction,
     updateTransactionHistory,
     pendingTransactions,
+    pendingPaymentTransactions,
     isTransactionPending,
     nodesAreSynced,
     pendingHtlcCreationTransactions,

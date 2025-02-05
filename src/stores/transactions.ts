@@ -147,7 +147,7 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
 
-    const details = await client.value!.sendTransaction(signedTx)
+    const details = useSync().pendingPaymentTransactions.find(tx => tx.transactionHash === signedTx.hash()) || await client.value!.sendTransaction(signedTx)
     if (details.state === 'invalidated') {
       // Transaction was rejected by the mempool
       logger.error('Transaction invalid', details)
