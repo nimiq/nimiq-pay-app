@@ -5,5 +5,7 @@ defineEmits(stepEmits)
 </script>
 
 <template>
-  Not availble
+  <div>
+    Not availble
+  </div>
 </template>

@@ -18,11 +18,9 @@ const options = [
 
 const activeOption = computed(() => options.find(o => o.value === props.activeStep?.step))
 
-// Element refs
 const clipContainer = ref<HTMLElement>()
 const activeButton = ref<HTMLElement>()
 
-// Track container dimensions
 const { width: containerWidth } = useElementSize(clipContainer)
 
 // Update clip-path when active button or container resizes
@@ -42,25 +40,28 @@ function updateClipPath() {
   const rightPercent = Number((100 - (clipRight / containerWidth.value) * 100).toFixed())
   const leftPercent = Number(((offsetLeft / containerWidth.value) * 100).toFixed())
 
-  clipContainer.value!.style.clipPath = `inset(0 ${rightPercent}% 0 ${leftPercent}% round 17px)`
+  clipContainer.value!.style.clipPath = `inset(0 ${rightPercent}% 0 ${leftPercent}% round 20px)`
 }
 
-// Watchers
 watch(containerWidth, updateClipPath)
 watch(
   () => activeOption.value,
   updateClipPath,
   { flush: 'post', immediate: true },
 )
+
+function navigateTo(step: StepName) {
+  emit('navigateTo', { step })
+}
 </script>
 
 <template>
   <div class="w-[300vw] bg-white h-[72px]">
-    <div class="fixed inline-block w-screen bottom-bar">
+    <div class="fixed inline-block w-screen h-full bottom-bar">
       <!-- Base buttons -->
-      <ul class="relative flex space-x-2 p-2">
+      <ul class="relative flex justify-center gap-x-2 p-2">
         <li v-for="option in options" :key="option.label">
-          <button class="label" :class="activeOption?.value === option.value ? 'text-white' : 'bg-white text-/6'" @click="emit('navigateTo', { step: option.value })">
+          <button class="label" :class="activeOption?.value === option.value ? 'text-white' : 'bg-white text-space/50'" @click="navigateTo(option.value)">
             {{ option.label }}
           </button>
         </li>
@@ -70,9 +71,9 @@ watch(
       <div
         ref="clipContainer"
         aria-hidden="true"
-        class="absolute inset-0 overflow-hidden transition-[clip-path] duration-250 ease"
+        class="absolute inset-0 overflow-hidden transition-[clip-path] duration-250 ease-out"
       >
-        <ul class="relative flex space-x-2 p-2">
+        <ul class="relative flex justify-center gap-x-2 p-2">
           <li v-for="option in options" :key="option.label">
             <button
               :ref="option.value === activeOption?.value ? setActiveButton : null"
@@ -99,6 +100,6 @@ watch(
 }
 
 .label {
-  @apply py-2 px-4 rounded-full text-white focus:outline-none uppercase tracking-wider font-bold;
+  @apply py-2 px-4 rounded-full  focus:outline-none uppercase tracking-wider font-bold;
 }
 </style>

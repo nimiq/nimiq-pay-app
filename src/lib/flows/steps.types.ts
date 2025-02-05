@@ -185,7 +185,7 @@ type BaseStep = {
   beforeNext?: (state: State, callbacks: StepCallbacks) => Promise<void>
 } & NavigationControl
 
-export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>
+export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy' | 'skipAheadBy'>
 
 export interface StepCallbacks {
   /**
@@ -262,7 +262,7 @@ export const stepEmits: EmitsOptions = {
   skip: () => undefined,
   back: () => undefined,
   focus: () => undefined,
-  navigateTo: (_: NavigateToOptions) => undefined,
+  navigateTo: (_: NavigateToOptions) => true,
 }
 
 // Complex types for State

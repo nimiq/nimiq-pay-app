@@ -1,9 +1,10 @@
 import type { Flow, FlowHookCb, FlowInit, NakaPaymentData, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Slots } from 'vue'
 import FlowCmp from '@/components/Flow.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
-import { i18n } from '@/i18n/i18n-setup'
 
+import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { PaymentMethod } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
@@ -483,7 +484,34 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
 
   const isClosing = ref(false)
 
-  const slots = flow.slotComponent ? { default: () => h(flow.slotComponent!) } : {}
+  // This function goes through the slot props and looks for any keys that start with "on:".
+  // For each such key, we create a new key in camelCase (e.g. "on:navigateTo" becomes "onNavigateTo").
+  // This is needed so that when we pass the props to Flow.vue, the events are received correctly.
+  function processEventProps(props: any) {
+    const newProps = { ...props }
+    // Loop through keys that start with "on:" and create a new key for each event.
+    for (const key in props) {
+      if (key.startsWith('on:')) {
+        const eventName = key.slice(3)
+        newProps[`on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`] = props[key]
+      }
+    }
+    return newProps
+  }
+
+  // Here we check if the flow has a slot component.
+  // If it does, we need to pass the slotProps to it.
+  // We use the processEventProps function to transform the events properly.
+  // Without this, the events coming from Flow.vue might not work as expected.
+  const slots = flow.slotComponent !== undefined
+    ? {
+      default: (slotProps) => {
+        // Transform the event keys in slotProps so that events like "on:navigateTo" become "onNavigateTo"
+        const newSlotProps = processEventProps(slotProps)
+        return [h(flow.slotComponent!, newSlotProps)]
+      },
+    } satisfies Slots
+    : {}
 
   const modal = await modalController.create({
     // Pass a render function that includes props for FlowCmp, instead of FlowCmp as component and the component's props
