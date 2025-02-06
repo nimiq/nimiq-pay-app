@@ -269,10 +269,10 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
         <p v-if="(!isHtlcActive || !isRemoteOk) && isEligible" class="text-pumpkin">
           {{ $t('Your NIM balance is not available yet. You can only pay with Points.') }}
         </p>
-        <p v-else-if="!hasEnoughNimBalance && isEligible" class="text-pumpkin">
+        <p v-else-if="!hasEnoughNimBalance && isEligible && !loading" class="text-pumpkin">
           {{ $t('You don\'t have enough NIM for this purchase. You can only pay with Points.') }}
         </p>
-        <p v-else-if="!hasEnoughNimBalance && !isEligible" class="text-pumpkin">
+        <p v-else-if="!hasEnoughNimBalance && !isEligible && !loading" class="text-pumpkin">
           {{ $t('You don\'t have enough NIM for this purchase.') }}
         </p>
         <p v-else-if="isAtomicSwap && loadingSwapLimits" class="flex opacity-60 gap-x-2">
