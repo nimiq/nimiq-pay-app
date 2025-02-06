@@ -7,7 +7,7 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { IonRippleEffect } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   invoice: {
@@ -24,6 +24,8 @@ const emit = defineEmits(['onContinue'])
 
 const logger = useLogger('LightningInvoiceDetectedModal')
 
+const amounts = ref<{ formattedFiat: string, formattedFee: string } | null>(null)
+
 const payment = computedAsync(async () => {
   const { data, error } = await useStringParser().getPaymentRequestData(props.invoice)
   if (error) {
@@ -33,7 +35,8 @@ const payment = computedAsync(async () => {
   return data
 })
 
-const amounts = computedAsync(async () => {
+// Using watch instead of computedAsync because updating the fiat values triggered a recomputation
+watch(payment, async () => {
   if (!payment.value)
     return null
   // Otherwise, use the API to get the fiat values
@@ -43,8 +46,8 @@ const amounts = computedAsync(async () => {
   // we want to get the fee amount from the db instead of API
   await fiatAmount.getFiatPrice()
   await fiatFeeAmount.getFiatPrice()
-  return { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
-})
+  amounts.value = { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
+}, { immediate: true })
 
 const shortInvoice = computed(() => {
   const { invoice } = props
