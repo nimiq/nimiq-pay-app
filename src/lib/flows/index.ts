@@ -426,11 +426,11 @@ const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
     { whatIsNakaStep, verifyYourIdNakaStep },
-    useNakaCardWithWeirdNameSoIsEasyToReplace,
+    { useNaka },
   ] = await Promise.all([
     import('@/lib/flows/steps.types'),
     import('./steps'),
-    import('@/stores/naka-ui-maxi'),
+    import('@/stores/naka'),
   ])
 
   const flowName = Flow.NakaOnboarding
@@ -439,10 +439,10 @@ const nakaOnboardFlow: FlowInit = async () => {
     verifyYourIdNakaStep({ flowName }),
   ])
 
-  const { setNakaCard } = useNakaCardWithWeirdNameSoIsEasyToReplace.useNakaCardWithWeirdNameSoIsEasyToReplace()
+  const { setDummyCard } = useNaka()
 
   const onDone: Flow['onDone'] = async () => {
-    setNakaCard()
+    setDummyCard()
     const { useToast } = await import('@/composables/useToast')
     useToast().setToast({ message: i18n.t('ID verified!') })
     setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)
