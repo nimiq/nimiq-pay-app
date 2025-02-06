@@ -140,9 +140,14 @@ export const useNaka = defineStore('naka', () => {
     })
   }
 
-  function deleteNakaCard() {
-    logger.log('deleteNakaCard')
+  function reset() {
+    if (!confirm('Really delete all NAKA data?')) // eslint-disable-line no-alert
+      return false
+    logger.log('reset')
+    registration.value = undefined
+    // TODO: Delete card(s) in DB
     card.value = undefined
+    return true
   }
 
   const hasCard = computed(() => Boolean(card.value?.sourceId))
@@ -155,6 +160,7 @@ export const useNaka = defineStore('naka', () => {
     card,
     setCard,
     setDummyCard,
+    reset,
     hasCard,
     hasActiveCard,
   }
