@@ -49,6 +49,9 @@ export function useStringParser() {
 
   function isPaymentRequest(content: string): boolean {
     try {
+      if (content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)) {
+        content = content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
+      }
       return isLightningInvoice(content) || getRailFromUrl(new URL(content)) !== undefined
     }
     catch {

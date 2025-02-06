@@ -7,6 +7,7 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { IonRippleEffect } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
+import { computed } from 'vue'
 
 const props = defineProps({
   invoice: {
@@ -41,6 +42,14 @@ const amounts = computedAsync(async () => {
   return { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
 })
 
+const shortInvoice = computed(() => {
+  const { invoice } = props
+  if (invoice.toLowerCase().startsWith('http')) {
+    return (new URL(invoice)).hostname
+  }
+  return `${invoice.slice(0, 6)} . . . ${invoice.slice(-6)}`
+})
+
 async function handleContinue() {
   await initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: props.invoice })
   emit('onContinue')
@@ -60,7 +69,7 @@ async function handleContinue() {
         </p>
       </Transition>
       <p class="font-normal uppercase text-white/70 text-nowrap">
-        {{ `${props.invoice.slice(0, 6)} . . . ${props.invoice.slice(-6)}` }}
+        {{ shortInvoice }}
       </p>
     </div>
     <div>
