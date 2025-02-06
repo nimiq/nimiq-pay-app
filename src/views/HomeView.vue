@@ -185,12 +185,13 @@ async function detectPaymentRequest() {
         const { error } = await getPaymentRequestData(pr)
         if (!error) {
           detectedPaymentRequest.value = pr
-          displayedPaymentRequests.value.push(pr)
-          await until(isPaymentDisabled).toBe(false)
           // Wait for the animation to start before vibrating
           // It feels weird if the vibration happens before the notification is even shown
           await sleep(100)
           Haptics.impact({ style: ImpactStyle.Light })
+          // If no consensus user might close the app before even opening the notification and wants to see it again
+          await until(consensus).toBe('established')
+          displayedPaymentRequests.value.push(pr)
         }
       }
     }
@@ -326,13 +327,13 @@ App.addListener('resume', detectPaymentRequest)
 
     <Transition name="slide-left" style="--slide-left-distance: 100vw">
       <div
-        v-if="detectedPaymentRequest && !isPaymentDisabled"
+        v-if="detectedPaymentRequest"
         ref="prNotificationRef"
         class="absolute left-0 w-full px-2 py-3"
         :class="{ 'transition-all': !isSwiping }"
         :style="{ bottom: `${footerHeight}px` }"
       >
-        <PaymentRequestDetectedNotification :invoice="detectedPaymentRequest" @on-continue="detectedPaymentRequest = null" />
+        <PaymentRequestDetectedNotification :invoice="detectedPaymentRequest" :disabled="isPaymentDisabled" @on-continue="detectedPaymentRequest = null" />
       </div>
     </Transition>
 

@@ -14,6 +14,10 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['onContinue'])
@@ -51,32 +55,37 @@ const shortInvoice = computed(() => {
 })
 
 async function handleContinue() {
+  if (props.disabled)
+    return
   await initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: props.invoice })
   emit('onContinue')
 }
 </script>
 
 <template>
-  <div
-    class="relative flex items-center justify-between p-3 pr-6 overflow-hidden rounded-md ion-activatable ripple-parent"
-    style="background: var(--radial-gradient-light-blue);"
-    @click="handleContinue"
-  >
-    <div>
-      <Transition name="slide-fade">
-        <p v-if="payment && amounts" class="font-bold text-white">
-          {{ payment.merchantName || payment.message || $t('Payment Request') }} - {{ amounts.formattedFiat }}
+  <div class="bg-white">
+    <div
+      class="relative flex items-center justify-between p-3 pr-6 overflow-hidden rounded-md ion-activatable ripple-parent"
+      :class="{ 'opacity-50': props.disabled }"
+      style="background: var(--radial-gradient-light-blue);"
+      @click="handleContinue"
+    >
+      <div>
+        <Transition name="slide-fade">
+          <p v-if="payment && amounts" class="font-bold text-white">
+            {{ payment.merchantName || payment.message || $t('Payment Request') }} - {{ amounts.formattedFiat }}
+          </p>
+        </Transition>
+        <p class="font-normal uppercase text-white/70 text-nowrap">
+          {{ shortInvoice }}
         </p>
-      </Transition>
-      <p class="font-normal uppercase text-white/70 text-nowrap">
-        {{ shortInvoice }}
-      </p>
+      </div>
+      <div>
+        <QuickButton show-chevron center chevron-color="white" class="text-sm text-white">
+          {{ $t('PAY') }}
+        </QuickButton>
+      </div>
+      <IonRippleEffect v-if="!props.disabled" />
     </div>
-    <div>
-      <QuickButton show-chevron center chevron-color="white" class="text-sm text-white">
-        {{ $t('PAY') }}
-      </QuickButton>
-    </div>
-    <IonRippleEffect />
   </div>
 </template>
