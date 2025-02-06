@@ -104,7 +104,7 @@ App.addListener('resume', async () => {
   <IonApp>
     <RouterView />
     <!-- DEV -->
-    <IonFab v-if="false" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
+    <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
       <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>

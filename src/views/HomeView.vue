@@ -169,7 +169,7 @@ watch([referralCode, phoneNumberVerified, hasNakaCardLongName], () => {
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
-  // Remove notification if user has just verified their phone number
+  // Remove notification if user has just created their Naka card
   if (hasNakaCardLongName.value) {
     removeLocalNotification(nakaCardActivationNotification.id, false)
   }
@@ -279,9 +279,9 @@ App.addListener('resume', detectPaymentRequest)
         {{ $t('Top Up') }}
       </QuickButton>
 
-      <QuickButton show-chevron center @click="initializeFlow(FlowName.Payment)">
+      <!-- <QuickButton show-chevron center @click="initializeFlow(FlowName.Payment)">
         Pay nowwwwwwwwwwwwwww
-      </QuickButton>
+      </QuickButton> -->
 
       <!-- Transaction List -->
       <TheHomeTransactions class="mt-8" />
