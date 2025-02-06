@@ -173,8 +173,8 @@ const paymentFlow: FlowInit = async () => {
   const [
     { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailbleStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
-    // { useNakaCardWithWeirdNameSoIsEasyToReplace },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka-ui-maxi')])
+    { useNaka },
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka')])
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
@@ -282,9 +282,8 @@ const paymentFlow: FlowInit = async () => {
     logger.log('🤑  Cancelling payment process')
   }
 
-  // const hasNakaCardActivated = useNakaCardWithWeirdNameSoIsEasyToReplace().hasNakaCardLongName
-  // const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
-  const initialStep = StepName.HoldNakaCardToReader
+  const hasNakaCardActivated = useNaka().hasActiveCard
+  const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
 
   const slotComponent = defineAsyncComponent(() => import('@/components/PillSelector.vue'))
 
@@ -408,11 +407,11 @@ const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
     { whatIsNakaStep, verifyYourIdNakaStep },
-    useNakaCardWithWeirdNameSoIsEasyToReplace,
+    { useNaka },
   ] = await Promise.all([
     import('@/lib/flows/steps.types'),
     import('./steps'),
-    import('@/stores/naka-ui-maxi'),
+    import('@/stores/naka'),
   ])
 
   const flowName = Flow.NakaOnboarding
@@ -421,10 +420,10 @@ const nakaOnboardFlow: FlowInit = async () => {
     verifyYourIdNakaStep({ flowName }),
   ])
 
-  const { setNakaCard } = useNakaCardWithWeirdNameSoIsEasyToReplace.useNakaCardWithWeirdNameSoIsEasyToReplace()
+  const { setDummyCard } = useNaka()
 
   const onDone: Flow['onDone'] = async () => {
-    setNakaCard()
+    setDummyCard()
     const { useToast } = await import('@/composables/useToast')
     useToast().setToast({ message: i18n.t('ID verified!') })
     setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)

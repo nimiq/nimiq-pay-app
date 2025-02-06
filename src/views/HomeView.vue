@@ -22,7 +22,7 @@ import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
-import { useNakaCardWithWeirdNameSoIsEasyToReplace } from '@/stores/naka-ui-maxi'
+import { useNaka } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -57,7 +57,7 @@ const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { nodesAreSynced, isTransactionPending, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
-const { hasNakaCardLongName } = storeToRefs(useNakaCardWithWeirdNameSoIsEasyToReplace())
+const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
@@ -142,7 +142,7 @@ if (import.meta.env.DEV) {
   })
 }
 
-watch([referralCode, phoneNumberVerified, hasNakaCardLongName], () => {
+watch([referralCode, phoneNumberVerified, hasNakaCard], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
     get title() { return i18n.t('Start paying at XXX locations with Naka') },
@@ -170,7 +170,7 @@ watch([referralCode, phoneNumberVerified, hasNakaCardLongName], () => {
   }
 
   // Remove notification if user has just created their Naka card
-  if (hasNakaCardLongName.value) {
+  if (hasNakaCard.value) {
     removeLocalNotification(nakaCardActivationNotification.id, false)
   }
 
@@ -180,7 +180,7 @@ watch([referralCode, phoneNumberVerified, hasNakaCardLongName], () => {
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCardLongName.value)
+  if (!hasNakaCard.value)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
