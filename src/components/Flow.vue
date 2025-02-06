@@ -31,7 +31,7 @@ const props = defineProps({
 const logger = useLogger('Flow.vue')
 
 const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName, initialStep } = props.flow!
-const activeIndex = ref(stepsInFlow.findIndex(s => s.step === initialStep) ?? 0)
+const activeIndex = ref(Math.max(stepsInFlow.findIndex(s => s.step === initialStep), 0))
 const historyStack: Ref<Step[]> = ref(stepsInFlow.slice(0, activeIndex.value + 1))
 
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
