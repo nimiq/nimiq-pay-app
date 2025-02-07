@@ -279,9 +279,9 @@ App.addListener('resume', detectPaymentRequest)
         {{ $t('Top Up') }}
       </QuickButton>
 
-      <!-- <QuickButton show-chevron center @click="initializeFlow(FlowName.Payment)">
-        Pay nowwwwwwwwwwwwwww
-      </QuickButton> -->
+      <QuickButton show-chevron center @click="initializeFlow(FlowName.NakaCardManagement)">
+        managmente
+      </QuickButton>
 
       <!-- Transaction List -->
       <TheHomeTransactions class="mt-8" />

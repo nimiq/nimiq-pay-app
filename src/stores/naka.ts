@@ -243,6 +243,8 @@ export const useNaka = defineStore('naka', () => {
     }
   }
 
+  const isFrozen = ref(false)
+
   return {
     registration,
     setRegistration,
@@ -253,5 +255,6 @@ export const useNaka = defineStore('naka', () => {
     hasCard,
     hasActiveCard,
     init,
+    isFrozen,
   }
 })

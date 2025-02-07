@@ -127,6 +127,10 @@ onBeforeMount(updateBiometryInfo)
           <IonLabel>{{ $t('Change PIN') }}</IonLabel>
         </IonItem>
 
+        <IonItem button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
+          <IonLabel>{{ $t('Naka Card') }}</IonLabel>
+        </IonItem>
+
         <IonItem v-if="phoneNumberVerified" button :detail="false" class="text-cherry" @click="showModal(Modal.DeletePoints, { isOnTop: true, isSmall: true })">
           <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
         </IonItem>

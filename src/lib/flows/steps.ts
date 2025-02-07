@@ -34,6 +34,9 @@ const PaymentRequestManualInput = defineAsyncComponent(() => import('@/component
 const NakaOnboardingWhatIsNaka = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingWhatIsNaka.vue'))
 const NakaOnboardingVerifyId = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingVerifyId.vue'))
 const NakaCardIsReady = defineAsyncComponent(() => import('@/components/naka/NakaCardIsReady.vue'))
+const NakaCardManagement = defineAsyncComponent(() => import('@/components/naka/NakaCardManagement.vue'))
+const NakaCardToggleFreeze = defineAsyncComponent(() => import('@/components/naka/NakaCardToggleFreeze.vue'))
+const NakaCardDelete = defineAsyncComponent(() => import('@/components/naka/NakaCardDelete.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -593,3 +596,31 @@ export const nakaCardIsReadyStep: StepInit = async () => ({
   step: StepName.NakaCardIsReady,
   main: markRaw(NakaCardIsReady),
 } satisfies Step)
+
+export const nakaCardManagementStep: StepInit = async () => ({
+  step: StepName.NakaCardManagement,
+  main: markRaw(NakaCardManagement),
+} satisfies Step)
+
+export const nakaCardToggleFreezeStep: StepInit = async () => {
+  const { useNaka } = await import('@/stores/naka')
+  return {
+    step: StepName.NakaCardToggleFreeze,
+    get title() { return i18n.t('Block card') },
+    get description() {
+      return useNaka().isFrozen
+        ? i18n.t('Unfreezing your card will instantly reactivate it and allow you to pay with it again. ')
+        : i18n.t('Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one.')
+    },
+    main: markRaw(NakaCardToggleFreeze),
+  } satisfies Step
+}
+
+export const nakaCardDeleteStep: StepInit = async () => {
+  return {
+    step: StepName.NakaCardDelete,
+    get title() { return i18n.t('Block card') },
+    get description() { return i18n.t('Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one.') },
+    main: markRaw(NakaCardDelete),
+  } satisfies Step
+}

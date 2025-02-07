@@ -438,6 +438,26 @@ const nakaCardIsReadyFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
+const nakaCardManagementFlow: FlowInit = async () => {
+  const [
+    { nakaCardManagementStep, nakaCardDeleteStep, nakaCardToggleFreezeStep },
+    { useNaka },
+  ] = await Promise.all([
+    import('./steps'),
+    import('@/stores/naka'),
+  ] as const)
+  // if (!useNaka().hasActiveCard)
+  //   throw new Error('Naka card is not activated')
+
+  const flowName = FlowName.NakaCardManagement
+  const steps = await Promise.all([
+    nakaCardManagementStep,
+    nakaCardToggleFreezeStep,
+    nakaCardDeleteStep,
+  ].map(s => s({ flowName })))
+  return { flowName, steps }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -455,6 +475,7 @@ const flows = {
   [FlowName.ChangePin]: changePinFlow,
   [FlowName.NakaOnboarding]: nakaOnboardFlow,
   [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
+  [FlowName.NakaCardManagement]: nakaCardManagementFlow,
 }
 
 interface InitializeFlowOptiosn {
