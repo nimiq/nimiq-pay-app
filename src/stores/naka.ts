@@ -245,6 +245,20 @@ export const useNaka = defineStore('naka', () => {
 
   const isFrozen = ref(false)
 
+  function updateFrozenStatus() {
+    isFrozen.value = card.value?.statusId !== NakaCardStatus.Active
+  }
+
+  const dailyLimit = ref(0)
+  function setDailyLimit(limit: number) {
+    dailyLimit.value = limit
+  }
+
+  const paymentLimit = ref(0)
+  function setPaymentLimit(limit: number) {
+    paymentLimit.value = limit
+  }
+
   return {
     registration,
     setRegistration,
@@ -255,6 +269,14 @@ export const useNaka = defineStore('naka', () => {
     hasCard,
     hasActiveCard,
     init,
+
     isFrozen,
+    updateFrozenStatus,
+
+    dailyLimit,
+    setDailyLimit,
+
+    paymentLimit,
+    setPaymentLimit,
   }
 })
