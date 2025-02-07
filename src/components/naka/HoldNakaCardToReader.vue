@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import NakaCard from '@/components/icons/naka-card.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { useIssuerWebSocket } from '../../lib/issuer-websocket'
 import { NakaCardStatus, useNaka } from '../../stores/naka'
-import { onMounted, onUnmounted } from 'vue'
-
-const { card } = useNaka()
 
 const emit = defineEmits(stepEmits)
 
-onMounted(() => {
-  // TODO: Start websocket connection to issuer server
-})
+const { card } = useNaka()
 
-onUnmounted(() => {
-  // TODO: Close websocket connection to issuer server
-})
+const { isReady } = useIssuerWebSocket()
 
-function setPaymentRequest() {
+function setPaymentRequest() { // eslint-disable-line unused-imports/no-unused-vars
   emit('done', 'potato')
 }
 </script>
@@ -25,7 +19,10 @@ function setPaymentRequest() {
   <div class="flex flex-col items-center w-full h-full">
     <template v-if="card">
       <NakaCard class="w-full h-auto" />
-      <div v-if="card.statusId === NakaCardStatus.Active" class="mt-6 text-[#0075E1] opacity-60">
+      <div v-if="!isReady" class="mt-6 text-orange-400 font-semibold">
+        {{ $t('Connecting to issuer server...') }}
+      </div>
+      <div v-else-if="card.statusId === NakaCardStatus.Active" class="mt-6 text-[#0075E1] opacity-60">
         {{ $t('Hold near the terminal to pay') }}
       </div>
     </template>
