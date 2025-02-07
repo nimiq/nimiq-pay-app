@@ -401,7 +401,7 @@ export const holdNakaCardToReaderStep: StepInit = async () => ({
   },
 } satisfies Step)
 
-export const bluecodeNotAvailbleStep: StepInit = async ({ allowGoBack }) => ({
+export const bluecodeNotAvailableStep: StepInit = async ({ allowGoBack }) => ({
   step: StepName.BluecodePayment,
   main: markRaw(BluecodeNotSupported),
   allowGoBack,

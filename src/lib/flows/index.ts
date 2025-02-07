@@ -171,7 +171,7 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
  */
 const paymentFlow: FlowInit = async () => {
   const [
-    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailbleStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
+    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
     { useNaka },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka')])
@@ -180,7 +180,7 @@ const paymentFlow: FlowInit = async () => {
   const steps = (await Promise.all([
     (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }),
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
-    (options: StepInitOptions) => bluecodeNotAvailbleStep({ ...options, allowGoBack: false }),
+    (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }),
     paymentRequestManualInputStep,
     paymentPreviewStep,
     pinCodeStep,

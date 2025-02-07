@@ -6,6 +6,6 @@ defineEmits(stepEmits)
 
 <template>
   <div>
-    Not availble
+    Not available yet
   </div>
 </template>
