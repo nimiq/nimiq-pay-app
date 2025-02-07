@@ -35,6 +35,7 @@ import '@ionic/vue/css/flex-utils.css'
 import '@ionic/vue/css/display.css'
 /* Theme variables */
 import './theme/variables.css'
+import { useNaka } from './stores/naka'
 
 if (import.meta.env.DEV)
   // Change this based on your local IP address if you want to use vue-devtools
@@ -64,6 +65,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await useConn().init()
   useNimiqNetwork().init()
   useLogger().init()
+  useNaka().init()
 
   const { isWeb } = useDevice()
 

@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '../composables/useLogger'
+import { useConn } from './conn'
+import { SQLQuery } from '../lib/sql-queries'
 
 const logger = useLogger('useNaka')
 
@@ -70,8 +72,12 @@ export interface NakaRegistration {
   }[]
 }
 
-enum NakaCardStatus {
+export enum NakaCardStatus {
+  // Undocumented
   Active = 'Active',
+  Expired = 'Expired',
+
+  // Documented
   ClientRequestedLock = 'ClientRequestedLock',
   LostCard = 'LostCard',
   StolenCard = 'StolenCard',
@@ -98,7 +104,7 @@ interface NakaCard {
   /**
    * Format: `YYYY-MM`
    */
-  expiryDate?: string
+  expiryDate: string
   productCode?: string
   qrCode?: string
 
@@ -108,7 +114,54 @@ interface NakaCard {
   publicKey?: string
 }
 
+export function useNakaDb() {
+  const { run, query } = useConn()
+  return {
+      async insertNakaCard({ sourceId, statusId, expiryDate, ...meta }: NakaCard) {
+      // Validate expiryDate
+      const expiryDateRegex = /^\d{4}-\d{2}$/;
+      if (!expiryDate.match(expiryDateRegex)) {
+          throw new Error('Invalid expiry date format');
+      }
+
+      // Validate meta
+      if (typeof meta !== 'object' || meta === null) {
+          throw new Error('Invalid meta, must be an object');
+      }
+      let metaJson: string
+      try {
+          metaJson = JSON.stringify(meta);
+      } catch (e) {
+          throw new Error('Invalid meta, must be a JSON-serializable object');
+      }
+
+      // Insert the card into the database
+      logger.log('✒️ Adding Naka card to DB', { sourceId, statusId, expiryDate, meta })
+      await run(SQLQuery.InsertNakaCard, [sourceId, statusId, expiryDate, metaJson])
+    },
+    async getAllNakaCards() {
+      const rows = await query<{
+        sourceId: string
+        statusId: string
+        expiryDate: string
+        meta: string
+      }[]>(SQLQuery.GetAllNakaCards)
+
+      return rows.map(({ sourceId, statusId, expiryDate, meta }) => {
+        const extraFields = JSON.parse(meta) as Omit<NakaCard, 'sourceId' | 'statusId' | 'expiryDate'>
+        return { sourceId, statusId, expiryDate, ...extraFields } as NakaCard
+      })
+    },
+    async purgeNakaCards() {
+      logger.log('🗑️ Purging Naka cards from DB')
+      await run(SQLQuery.PurgeNakaCards)
+    },
+  }
+}
+
 export const useNaka = defineStore('naka', () => {
+  const { getAllNakaCards, insertNakaCard, purgeNakaCards } = useNakaDb()
+
   const registration = ref<NakaRegistration>()
 
   function setRegistration(newRegistration: NakaRegistration) {
@@ -116,12 +169,11 @@ export const useNaka = defineStore('naka', () => {
     registration.value = newRegistration
   }
 
-  // TODO: Initialize card from DB
   const card = ref<NakaCard>()
 
   function setCard(newCard: NakaCard) {
     logger.log('setCard', newCard)
-    // TODO: Set card in DB
+    insertNakaCard(newCard)
     card.value = newCard
   }
 
@@ -140,12 +192,12 @@ export const useNaka = defineStore('naka', () => {
     })
   }
 
-  function reset() {
+  async function reset() {
     if (!confirm('Really delete all NAKA data?')) // eslint-disable-line no-alert
       return false
     logger.log('reset')
     registration.value = undefined
-    // TODO: Delete card(s) in DB
+    await purgeNakaCards()
     card.value = undefined
     return true
   }
@@ -153,6 +205,40 @@ export const useNaka = defineStore('naka', () => {
   const hasCard = computed(() => Boolean(card.value?.sourceId))
 
   const hasActiveCard = computed(() => card.value?.statusId === NakaCardStatus.Active)
+
+  async function init() {
+    const dbCards = await getAllNakaCards()
+    if (dbCards.length === 0) return
+
+    if (dbCards.length === 1) {
+      card.value = dbCards[0]
+    } else {
+      dbCards.sort((a, b) => {
+        const aExpiry = parseInt(a.expiryDate.replace('-', ''), 10)
+        const bExpiry = parseInt(b.expiryDate.replace('-', ''), 10)
+        // Sort decending (latest expiry first)
+        return bExpiry - aExpiry
+      })
+      // Use the newest card
+      card.value = dbCards[0]
+    }
+
+    logger.log('init', card.value)
+
+    // TODO: Check card status against issuer API
+
+    if (card.value.statusId === NakaCardStatus.Active) {
+      // Check expiry
+      const today = parseInt(`${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString(10).padStart(2, '0')}`.replace('-', ''), 10)
+      const expiry = parseInt(card.value.expiryDate.replace('-', ''), 10)
+
+      if (today > expiry) {
+        logger.log('Card expired', { today, expiry })
+        card.value.statusId = NakaCardStatus.Expired
+        await insertNakaCard(card.value)
+      }
+    }
+  }
 
   return {
     registration,
@@ -163,5 +249,6 @@ export const useNaka = defineStore('naka', () => {
     reset,
     hasCard,
     hasActiveCard,
+    init,
   }
 })

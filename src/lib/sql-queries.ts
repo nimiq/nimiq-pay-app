@@ -77,10 +77,10 @@ export enum SQLQuery {
 
   // NAKA
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
-  InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, ?)',
-  GetNakaCard = 'SELECT * FROM naka_cards WHERE sourceId = ? LIMIT 1',
-  GetActiveNakaCard = 'SELECT * FROM naka_cards WHERE statusId = "Active" LIMIT 1',
-  GetAllNakaCards = 'SELECT * FROM naka_cards',
+  InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, JSON(?))',
+  // GetNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE sourceId = ? LIMIT 1',
+  // GetActiveNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE statusId = "Active" LIMIT 1',
+  GetAllNakaCards = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards',
   DeleteNakaCard = 'DELETE FROM naka_cards WHERE sourceId = ?',
   PurgeNakaCards = 'DELETE FROM naka_cards',
 }
