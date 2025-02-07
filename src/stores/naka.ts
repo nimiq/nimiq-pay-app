@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '../composables/useLogger'
-import { useConn } from './conn'
 import { SQLQuery } from '../lib/sql-queries'
+import { useConn } from './conn'
 
 const logger = useLogger('useNaka')
 
@@ -117,22 +117,23 @@ interface NakaCard {
 export function useNakaDb() {
   const { run, query } = useConn()
   return {
-      async insertNakaCard({ sourceId, statusId, expiryDate, ...meta }: NakaCard) {
+    async insertNakaCard({ sourceId, statusId, expiryDate, ...meta }: NakaCard) {
       // Validate expiryDate
-      const expiryDateRegex = /^\d{4}-\d{2}$/;
+      const expiryDateRegex = /^\d{4}-\d{2}$/
       if (!expiryDate.match(expiryDateRegex)) {
-          throw new Error('Invalid expiry date format');
+        throw new Error('Invalid expiry date format')
       }
 
       // Validate meta
       if (typeof meta !== 'object' || meta === null) {
-          throw new Error('Invalid meta, must be an object');
+        throw new Error('Invalid meta, must be an object')
       }
       let metaJson: string
       try {
-          metaJson = JSON.stringify(meta);
-      } catch (e) {
-          throw new Error('Invalid meta, must be a JSON-serializable object');
+        metaJson = JSON.stringify(meta)
+      }
+      catch (e) { // eslint-disable-line unused-imports/no-unused-vars
+        throw new Error('Invalid meta, must be a JSON-serializable object')
       }
 
       // Insert the card into the database
@@ -208,14 +209,16 @@ export const useNaka = defineStore('naka', () => {
 
   async function init() {
     const dbCards = await getAllNakaCards()
-    if (dbCards.length === 0) return
+    if (dbCards.length === 0)
+      return
 
     if (dbCards.length === 1) {
       card.value = dbCards[0]
-    } else {
+    }
+    else {
       dbCards.sort((a, b) => {
-        const aExpiry = parseInt(a.expiryDate.replace('-', ''), 10)
-        const bExpiry = parseInt(b.expiryDate.replace('-', ''), 10)
+        const aExpiry = Number.parseInt(a.expiryDate.replace('-', ''), 10)
+        const bExpiry = Number.parseInt(b.expiryDate.replace('-', ''), 10)
         // Sort decending (latest expiry first)
         return bExpiry - aExpiry
       })
@@ -229,8 +232,8 @@ export const useNaka = defineStore('naka', () => {
 
     if (card.value.statusId === NakaCardStatus.Active) {
       // Check expiry
-      const today = parseInt(`${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString(10).padStart(2, '0')}`.replace('-', ''), 10)
-      const expiry = parseInt(card.value.expiryDate.replace('-', ''), 10)
+      const today = Number.parseInt(`${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString(10).padStart(2, '0')}`.replace('-', ''), 10)
+      const expiry = Number.parseInt(card.value.expiryDate.replace('-', ''), 10)
 
       if (today > expiry) {
         logger.log('Card expired', { today, expiry })

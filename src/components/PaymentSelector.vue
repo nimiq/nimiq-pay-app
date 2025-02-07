@@ -2,7 +2,7 @@
 import { i18n } from '@/i18n/i18n-setup'
 import { type Step, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useElementSize } from '@vueuse/core'
-import { computed, useTemplateRef, watch, watchEffect } from 'vue'
+import { computed, useTemplateRef, watchEffect } from 'vue'
 
 const { activeStep } = defineProps<{ activeStep?: Step }>()
 
