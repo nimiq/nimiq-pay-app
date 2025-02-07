@@ -128,13 +128,28 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   })
 }, { immediate: true })
 
+const objectHasData = (obj?: unknown) => typeof obj === 'object' && Object.keys(obj as Record<string, unknown>).length > 0
+// Only show the toggle if he scanned QR code
+const canPayWithPuntos = computed(() => objectHasData(props.state[StepName.QRCodeScanner]))
 /**
  * Only allow paying with Points if:
  *   - The user has enough NIM balance
  *   - The user is eligible for Points
  *   - The user has scanned something with the QR code scanner in previous steps (no Naka, no bluecode...)
  */
-const payWithPuntos = ref((!hasEnoughNimBalance.value && isEligible.value && !!props.state[StepName.QRCodeScanner]))
+const payWithPuntos = ref((!hasEnoughNimBalance.value && isEligible.value && canPayWithPuntos.value))
+
+const paymentMethod = computed(() => {
+  if (payWithPuntos.value)
+    return PaymentMethod.Points
+  else if (props.state[StepName.HoldNakaCardToReader])
+    return PaymentMethod.NakaCard
+  else if (props.state[StepName.QRCodeScanner])
+    return PaymentMethod.NIM
+  // else if (props.state[StepName.BluecodePayment])
+  //   return PaymentMethod.Bluecode
+  throw new Error('Unexpected payment method')
+})
 
 const loadingSwapLimits = ref(false)
 const isAtomicSwap = computed(() => !!payment.value.swap)
@@ -254,7 +269,7 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
       {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
     </template>
   </TransactionAmounts>
-  <div class="flex flex-col items-center w-full pb-6 mt-auto">
+  <div v-if="canPayWithPuntos" class="flex flex-col items-center w-full pb-6 mt-auto">
     <IonToggle
       v-if="pointsState !== PointsState.NotRegistered && payment.rail !== Rail.BitcoinLightning"
       :disabled="!isEligible"

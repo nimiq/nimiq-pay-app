@@ -354,9 +354,12 @@ function blur() {
         />
       </div>
     </li>
+    <div class="absolute inset-x-0 bottom-0">
+      <div class="z-[10000] relative">
+        <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
+      </div>
+    </div>
   </ul>
-
-  <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
 </template>
 
 <style scoped>

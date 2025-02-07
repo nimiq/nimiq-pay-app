@@ -17,7 +17,7 @@ onUnmounted(() => {
 })
 
 function setPaymentRequest() {
-  emit('done', undefined)
+  emit('done', 'potato')
 }
 </script>
 

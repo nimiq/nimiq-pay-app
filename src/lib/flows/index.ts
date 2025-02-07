@@ -285,7 +285,7 @@ const paymentFlow: FlowInit = async () => {
   const hasNakaCardActivated = useNaka().hasActiveCard
   const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
 
-  const slotComponent = defineAsyncComponent(() => import('@/components/PillSelector.vue'))
+  const slotComponent = defineAsyncComponent(() => import('@/components/PaymentSelector.vue'))
 
   return { flowName, steps, onDone, onCancel, initialStep, slotComponent } satisfies Flow
 }
