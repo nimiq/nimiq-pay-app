@@ -96,10 +96,11 @@ export enum StepName {
   VerifyYourIdNaka = 'verifyYourIdNaka',
   NakaCardIsReady = 'nakaCardIsReady',
   NakaCardManagement = 'nakaCardManagement',
+  NakaCardToggleFreeze = 'nakaCardToggleFreeze',
   NakaCardDelete = 'nakaDeleteCard',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader, StepName.NakaCardManagement, StepName.NakaCardToggleFreeze, StepName.NakaCardDelete] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment] as const
 export type InfoStepName = typeof infoSteps[number]

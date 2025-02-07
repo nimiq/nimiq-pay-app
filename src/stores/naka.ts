@@ -163,6 +163,8 @@ export const useNaka = defineStore('naka', () => {
     }
   }
 
+  const isFrozen = ref(false)
+
   const dailyLimit = ref<number>()
   function setDailyLimit(limit: number) {
     dailyLimit.value = limit
@@ -184,6 +186,7 @@ export const useNaka = defineStore('naka', () => {
     isCardLocked,
     isCardBlocked,
     init,
+    isFrozen,
 
     dailyLimit,
     setDailyLimit,

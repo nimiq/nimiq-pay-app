@@ -426,41 +426,6 @@ const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
     { whatIsNakaStep, verifyYourIdNakaStep },
-    { useNaka },
-  ] = await Promise.all([
-    import('@/lib/flows/steps.types'),
-    import('./steps'),
-    import('@/stores/naka'),
-  ])
-
-  const flowName = Flow.NakaOnboarding
-  const steps = await Promise.all([
-    whatIsNakaStep({ flowName }),
-    verifyYourIdNakaStep({ flowName }),
-  ])
-
-  const { setDummyCard } = useNaka()
-
-  const onDone: Flow['onDone'] = async () => {
-    setDummyCard()
-    const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('ID verified!') })
-    setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)
-  }
-  return { flowName, steps, onDone }
-}
-
-const nakaCardIsReadyFlow: FlowInit = async () => {
-  const { nakaCardIsReadyStep } = await import('./steps')
-  const flowName = FlowName.NakaCardIsReady
-  const steps = await Promise.all([nakaCardIsReadyStep].map(s => s({ flowName })))
-  return { flowName, steps }
-}
-
-const nakaOnboardFlow: FlowInit = async () => {
-  const [
-    { FlowName: Flow },
-    { whatIsNakaStep, verifyYourIdNakaStep },
   ] = await Promise.all([
     import('@/lib/flows/steps.types'),
     import('./steps'),
