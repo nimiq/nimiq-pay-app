@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { i18n } from '@/i18n/i18n-setup'
 import { type Step, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { useNaka } from '@/stores/naka'
 import { useElementSize } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { computed, useTemplateRef, watchEffect } from 'vue'
 
 const { activeStep } = defineProps<{ activeStep?: Step }>()
 
 const emit = defineEmits(stepEmits)
 
-const shouldBeDisplayed = computed(() => activeStep && [StepName.HoldNakaCardToReader, StepName.QRCodeScanner, StepName.BluecodePayment].includes(activeStep.step))
+const { hasActiveCard } = storeToRefs(useNaka())
 
 const options = [
   { label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader },
-  { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
-  { label: i18n.t('Bluecode'), value: StepName.BluecodePayment },
-]
+  hasActiveCard.value && { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
+].filter(Boolean) as { label: string, value: StepName }[]
+const stepNames = options.map(o => o.value)
+
+const shouldBeDisplayed = computed(() => options.length > 1 && activeStep && stepNames.includes(activeStep.step))
 
 const activeOptionIndex = computed(() => options.findIndex(o => o.value === activeStep?.step) || 0)
 
