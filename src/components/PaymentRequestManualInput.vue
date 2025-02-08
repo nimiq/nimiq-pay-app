@@ -54,6 +54,7 @@ function handleContinue() {
       :placeholder="$t('Paste or type the invoice here')"
       @focus="isFocused = true"
       @blur="isFocused = false"
+      @keypress.enter="textarea?.blur"
     />
     <Transition name="slide-fade">
       <p v-if="payment && amounts" class="text-lg font-semibold text-space/60">
