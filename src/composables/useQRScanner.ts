@@ -246,8 +246,12 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
         await scanFrame(frame, scan)
       }
       catch (e) {
-        if (e)
+        if (e) {
           logger.error('Error capturing sample or scanning frame:', e)
+          if ((e as Error).message.includes('captureSessionIsMissing')) {
+            stopScan()
+          }
+        }
       }
       isScanning.value = false
     }, 300, { immediate: true })
@@ -258,7 +262,6 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
     isScanning.value = false
     stopInterval?.()
     try {
-      await until(isCameraStarted).toBeTruthy()
       await CameraPreview.stop()
     }
     catch (e) {

@@ -118,7 +118,7 @@ DEPENDENCIES:
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/status-bar`)"
   - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation`)"
-  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview`)"
+  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_patch_hash=8f79b6ebb567ac4a88247c2167ffd0b22db16bcbdb383a4_eebefd140be4e36edba2742555b305d8/node_modules/@capgo/camera-preview`)"
   - Firebase/Messaging
 
 SPEC REPOS:
@@ -174,7 +174,7 @@ EXTERNAL SOURCES:
   CapawesomeCapacitorScreenOrientation:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
-    :path: "../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview"
+    :path: "../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_patch_hash=8f79b6ebb567ac4a88247c2167ffd0b22db16bcbdb383a4_eebefd140be4e36edba2742555b305d8/node_modules/@capgo/camera-preview"
 
 SPEC CHECKSUMS:
   AparajitaCapacitorBiometricAuth: c058563fe00160e12b022341e11b3181357ea93a
@@ -209,6 +209,6 @@ SPEC CHECKSUMS:
   SQLCipher: 30a8e81afa6128e600b17ffa77d0f92fa05ed208
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 1f09aac843ad5e96c34d0bf67cdf86c0b8f72fcb
+PODFILE CHECKSUM: 4376a4357f33aba5b639c62b7dc6bc814d5a5337
 
 COCOAPODS: 1.15.2

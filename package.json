@@ -111,6 +111,9 @@
   "pnpm": {
     "overrides": {
       "jeep-sqlite": "2.5.6"
+    },
+    "patchedDependencies": {
+      "@capgo/camera-preview@6.5.24": "patches/@capgo__camera-preview@6.5.24.patch"
     }
   }
 }

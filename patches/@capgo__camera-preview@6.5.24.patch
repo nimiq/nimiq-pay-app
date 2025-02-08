@@ -1,0 +1,15 @@
+diff --git a/ios/Plugin/Plugin.swift b/ios/Plugin/Plugin.swift
+index 62c5d05305f07f92eacb95796ffe6fa9467c0d74..59a560fad6a09fd1ee35e4a098830b67246ea299 100644
+--- a/ios/Plugin/Plugin.swift
++++ b/ios/Plugin/Plugin.swift
+@@ -244,7 +244,9 @@ public class CameraPreview: CAPPlugin {
+         DispatchQueue.main.async {
+             if self.cameraController.captureSession?.isRunning ?? false {
+                 self.cameraController.captureSession?.stopRunning()
+-                self.previewView.removeFromSuperview()
++                if let preview = self.previewView {
++                    preview.removeFromSuperview()
++                }
+                 self.webView?.isOpaque = true
+                 call.resolve()
+             } else {
