@@ -1,5 +1,5 @@
-<script setup lang="ts">
-const model = defineModel<string>()
+<script setup lang="ts" generic="T">
+const model = defineModel<T>()
 </script>
 
 <template>
@@ -26,13 +26,13 @@ const model = defineModel<string>()
   transition:
     colors 0.2s var(--nq-ease),
     box-shadow 0.1s var(--nq-ease);
-  outline: 0;
+  border: 0;
 
   --ring-color: rgba(var(--nq-neutral-500));
   --color: rgb(var(--nq-neutral));
   --placeholder-color: rgb(var(--nq-neutral-700));
 
-  box-shadow: 0 0 0 1.5px var(--ring-color);
+  outline: 1.5px solid var(--ring-color);
   color: var(--color);
 
   &::placeholder {
@@ -69,7 +69,7 @@ const model = defineModel<string>()
   }
 
   &:where(:hover, :focus-visible, :focus-within) {
-    outline: 1.5px solid rgba(var(--ring-color));
+    --ring-color: rgba(var(--nq-blue));
   }
 
   &:where(textarea, :has(textarea)) {

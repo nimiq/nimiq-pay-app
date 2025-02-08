@@ -12,17 +12,17 @@ defineEmits(stepEmits)
 
 const { dailyLimit, paymentLimit } = storeToRefs(useNaka())
 const { card, setDailyLimit, setPaymentLimit } = useNaka()
-const newDailyLimit = ref(dailyLimit.value)
-const newPaymentLimit = ref(paymentLimit.value)
+const newDailyLimit = ref<number | undefined>(dailyLimit.value)
+const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
 
 const showCardDetails = ref(false)
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full items-center">
     <NakaCard class="w-[calc(100vw-128px)] h-max" />
 
-    <div class="mt-8 flex items-center gap-6">
+    <div class="mt-8 flex items-center gap-6 mb-12">
       <button class="secondary" @click="showCardDetails = !showCardDetails">
         {{ showCardDetails ? $t('Hide details') : $t('Show details') }}
       </button>
@@ -31,35 +31,30 @@ const showCardDetails = ref(false)
       </button>
     </div>
 
-    <Transition
-      enter-from-class="h-0" enter-active-class="transition-all duration-500 ease-out" enter-to-class="h-[133px]"
-      leave-from-class="h-[133px]" leave-active-class="transition-all duration-500 ease-out" leave-to-class="h-0"
-    >
-      <CardDetails v-if="showCardDetails" class="of-clip mt-12" :card-number="card?.cardNumber" :cvv="card?.cvv" :expiry-date="card?.expiryDate" />
-    </Transition>
+    <CardDetails :show="showCardDetails" :card-number="card?.cardNumber" :cvv="card?.cvv" :expiry-date="card?.expiryDate" />
 
-    <h2 class="mt-12 text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none">
+    <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none self-start">
       {{ $t('Payment limits') }}
     </h2>
 
-    <h3 class="text-space/40 text-sm mt-4">
+    <h3 class="text-space/40 text-sm mt-4 self-start">
       {{ $t('Daily limit') }}
     </h3>
 
     <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setDailyLimit(newDailyLimit)">
-      <InputText v-model="newDailyLimit" class="w-1/2" placeholder="0,00" type="number" />
-      <button class="secondary" :disabled="!newDailyLimit.value || newDailyLimit.value === dailyLimit.value">
+      <InputText v-model="newDailyLimit" min="0" class="w-1/2" placeholder="0,00" type="number" />
+      <button class="secondary" :disabled="!newDailyLimit?.value || newDailyLimit?.value === dailyLimit.value">
         {{ $t('save') }}
       </button>
     </form>
 
-    <h3 class="text-space/40 text-sm mt-4">
+    <h3 class="text-space/40 text-sm mt-4 self-start">
       {{ $t('Payment limit') }}
     </h3>
 
     <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setPaymentLimit(newPaymentLimit)">
-      <InputText v-model="newPaymentLimit" class="w-1/2" type="number" placeholder="0,00" />
-      <button class="secondary" :disabled="!newPaymentLimit.value || newPaymentLimit.value === paymentLimit.value">
+      <InputText v-model="newPaymentLimit" min="0" class="w-1/2" type="number" placeholder="0,00" />
+      <button class="secondary" :disabled="!newPaymentLimit?.value || newPaymentLimit?.value === paymentLimit.value">
         {{ $t('save') }}
       </button>
     </form>

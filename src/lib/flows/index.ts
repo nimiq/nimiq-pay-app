@@ -441,10 +441,10 @@ const nakaCardIsReadyFlow: FlowInit = async () => {
 const nakaCardManagementFlow: FlowInit = async () => {
   const [
     { nakaCardManagementStep, nakaCardDeleteStep, nakaCardToggleFreezeStep },
-    { useNaka },
+    // { useNaka },
   ] = await Promise.all([
     import('./steps'),
-    import('@/stores/naka'),
+    // import('@/stores/naka'),
   ] as const)
   // if (!useNaka().hasActiveCard)
   //   throw new Error('Naka card is not activated')
