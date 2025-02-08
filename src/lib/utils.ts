@@ -52,3 +52,5 @@ export function base64ToImageData(base64Str: string): Promise<ImageData> {
     img.src = dataURL
   })
 }
+
+export const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))

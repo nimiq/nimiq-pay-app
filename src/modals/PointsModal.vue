@@ -8,6 +8,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { toCoins, usePrice } from '@/composables/usePrice'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
 import { IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
@@ -34,8 +35,6 @@ const referralInfo = computedAsync(async () => {
 })
 const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward || 0, Crypto.NIM))
 // const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
-
-const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
   await Promise.all([

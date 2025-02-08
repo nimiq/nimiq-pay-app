@@ -52,8 +52,6 @@ const { isWeb, isIOS } = useDevice()
 
 watchDebounced(() => props.isVisible, async (isVisible) => {
   if (isVisible) {
-    if (!props.isVisible)
-      return // not visible anymore
     document.body.classList.toggle('native-qr-scanner-modal-open', !isWeb)
     useToast().setToast({ message: i18n.t('Activating scanner'), type: 'spinner', keepOpen: true })
     await start()

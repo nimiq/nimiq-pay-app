@@ -16,6 +16,7 @@ import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -111,8 +112,6 @@ function scrollToFirstNotification() {
     }
   })
 }
-
-const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')

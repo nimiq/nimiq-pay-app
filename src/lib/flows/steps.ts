@@ -1,12 +1,13 @@
 import type { Step, StepInit } from '@/lib/flows/steps.types'
 import { hash } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
+import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
+import { sleep } from '@/lib/utils'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
-import { QRDataFormat } from '../../composables/useStringParser'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -363,6 +364,9 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
           // We don't throw an error here, as we don't want to stop the flow. Let the user scan the QR code again.
           return console.error('Error parsing QR code/invoice when opening from appUrlOpen/detected invoice:', error)
         state[StepName.QRCodeScanner] = data
+        // TODO: idk why, but iOS needs to have the modal half open before scrolling works
+        if (useDevice().isIOS)
+          await sleep(100)
         navigateTo({ step: StepName.PaymentPreview })
       }
     },
