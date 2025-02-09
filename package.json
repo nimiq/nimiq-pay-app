@@ -39,7 +39,7 @@
     "@capacitor/preferences": "^6.0.3",
     "@capacitor/share": "^6.0.3",
     "@capawesome/capacitor-screen-orientation": "^6.0.1",
-    "@capgo/camera-preview": "^6.5.24",
+    "@capgo/camera-preview": "^6.5.28",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.10.3",
     "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.0",
     "@nimiq/utils": "^0.12.0",
@@ -111,10 +111,6 @@
   "pnpm": {
     "overrides": {
       "jeep-sqlite": "2.5.6"
-    },
-    "patchedDependencies": {
-      "@capgo/camera-preview@6.5.24": "patches/@capgo__camera-preview@6.5.24.patch"
-    },
-    "allowNonAppliedPatches": true
+    }
   }
 }

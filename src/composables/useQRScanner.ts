@@ -10,7 +10,7 @@ import { base64ToImageData } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { CameraPreview } from '@capgo/camera-preview'
-import { useIntervalFn, useThrottleFn } from '@vueuse/core'
+import { until, useIntervalFn, useThrottleFn } from '@vueuse/core'
 import { ready, scan } from 'qr-scanner-wechat'
 import { ref } from 'vue'
 import { isDev } from '../lib'
@@ -219,8 +219,8 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
       }
     }
     catch (e) {
-      if (!(e as Error).message.includes('camera already started')) {
-        logger.error('Error while starting camera preview:', (e as Error).message)
+      const ignoreErrors = ['camera already started', 'camera initialization in progress']
+      if (!ignoreErrors.some(error => (e as Error).message.includes(error))) {
         onError?.(i18n.t('Something went wrong while starting the camera'))
         return
       }
@@ -262,10 +262,12 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
     isScanning.value = false
     stopInterval?.()
     try {
+      await until(isCameraStarted).toBe(true, { timeout: 5000 })
       await CameraPreview.stop()
     }
     catch (e) {
-      if (!(e as Error).message.includes('camera already stopped'))
+      const ignoreErrors = ['camera already stopped', 'cannot stop camera while initialization is in progress', 'camera not initialized']
+      if (!ignoreErrors.some(error => (e as Error).message.includes(error)))
         logger.error('Error while stopping camera preview:', e)
     }
     isCameraStarted.value = false

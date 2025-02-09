@@ -20,7 +20,7 @@ def capacitor_pods
   pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/preferences'
   pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share'
   pod 'CapawesomeCapacitorScreenOrientation', :path => '../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation'
-  pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@6.5.24_patch_hash=8f79b6ebb567ac4a88247c2167ffd0b22db16bcbdb383a4_eebefd140be4e36edba2742555b305d8/node_modules/@capgo/camera-preview'
+  pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview'
   pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app'
   pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard'
