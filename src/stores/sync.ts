@@ -265,7 +265,7 @@ export const useSync = defineStore('sync', () => {
     })
 
     client.value?.addHeadChangedListener(async () => {
-      if (!isTransactionPending.value && localHeight.value % 10 * Nimiq.Policy.BLOCKS_PER_BATCH === 0)
+      if (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
         await verifyRemoteSignersDb()
       else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
         await verifyRemoteSignersDb()
