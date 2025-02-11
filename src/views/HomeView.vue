@@ -9,6 +9,7 @@ import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetec
 import QuickButton from '@/components/QuickButton.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
@@ -43,6 +44,7 @@ const logger = useLogger('HomeView')
 const router = useRouter()
 const { showModal } = useModal()
 
+const { isIOS } = useDevice()
 const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance, /* blocksUntilHtlcActive, */ remoteHeight } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests } = storeToRefs(useApp())
@@ -362,6 +364,7 @@ App.addListener('resume', detectPaymentRequest)
         </Transition>
         <IonButton
           class="w-3/4 py-2 mx-auto text-base" expand="block"
+          :class="{ 'pb-0': isIOS }"
           :disabled="isPaymentDisabled"
           @click="initializeFlow(FlowName.NimOrPointsPayment)"
         >

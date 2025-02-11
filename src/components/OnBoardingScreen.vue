@@ -110,7 +110,7 @@ watch(pressure, (value) => {
       </div>
     </div>
   </Transition>
-  <ul ref="scroller" class="flex w-[calc(100%+64px)] h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2">
+  <ul ref="scroller" class="flex w-[calc(100%+64px)] -ml-8 h-full overflow-x-hidden bg-white hide-scrollbar snap-x snap-mandatory gap-x-2">
     <li v-for="{ title, description, svg, isSvgFullWidth }, i in steps" :key="title + i" class="flex flex-col items-center w-full h-full py-6 shrink-0 snap-always [&>*]:px-8">
       <h2 class="flex items-center justify-center max-w-sm text-2xl font-bold text-center text-balance gap-x-3">
         {{ title }}

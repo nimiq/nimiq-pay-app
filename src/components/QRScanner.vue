@@ -117,7 +117,7 @@ function handleManualInput() {
       <!-- On native, the camera is visible behind the webview. Put a transparent square in the center of the screen,
       through which the camera can be seen (other parent / background elements are made transparent in useCameraFeed),
       with a wide white border to cover the rest. -->
-      <div class="relative w-screen" style="border: 48px solid white; border-top-width: 50vh; border-bottom-width: 50vh" :style="`top: -${cameraFeedContainerTop / 4}px`">
+      <div class="relative m-auto box-border shadow-[0_0_0_100vh_white] w-[calc(100%-6rem)]" :style="`top: -${cameraFeedContainerTop / 4}px`">
         <div class="aspect-square">
           <Transition name="fade">
             <div v-if="state === QRScannerState.Idle" class="h-full w-full bg-space/5" />

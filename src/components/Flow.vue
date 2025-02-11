@@ -333,7 +333,7 @@ function blur() {
   </IonHeader>
 
   <ul ref="scroller" class="hide-scrollbar mb-auto h-full overflow-x-hidden flex snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="max-w-[100vw] w-full h-full overflow-y-hidden relative flex flex-col shrink-0 items-center px-8 pt-2 snap-center snap-always">
+    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="max-w-[100vw] w-full h-full flex flex-col relative shrink-0 snap-center snap-always px-8 overflow-y-auto">
       <h2 v-if="title" class="z-10 flex justify-center items-center gap-x-3 mt-3 text-2xl font-bold text-balance text-center small:mt-0">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
@@ -341,11 +341,13 @@ function blur() {
       <p v-if="description" class="z-10 mt-4 text-pretty text-center opacity-60">
         {{ description }}
       </p>
-      <component
-        :is="main"
-        v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-        v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur }"
-      />
+      <div class="flex flex-col flex-1">
+        <component
+          :is="main"
+          v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
+          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur }"
+        />
+      </div>
     </li>
   </ul>
 </template>

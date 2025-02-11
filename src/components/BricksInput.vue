@@ -22,7 +22,7 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
 </script>
 
 <template>
-  <div class="flex flex-col h-full my-4 justify-center">
+  <div class="flex flex-col h-max pt-4 my-auto justify-center">
     <MnemonicInput :recovery-words="isDevImport ? loginWords : undefined" @login-words="(v) => loginWords = v" />
     <button v-if="isDev" class="mt-8 text-sm italic text-blue-300" @click="() => { loginWords = devWallet; isDevImport = true }">
       Import dev wallet
@@ -37,7 +37,7 @@ const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adul
       {{ errorMsg }}
     </p>
   </div>
-  <IonButton expand="block" class="w-full mb-4 font-bold min-h-14" :disabled="!isValidMnemonic" @click="$emit('done', loginWords)">
+  <IonButton expand="block" class="w-full font-bold mb-[max(env(safe-area-inset-bottom),1rem)] min-h-14" :disabled="!isValidMnemonic" @click="$emit('done', loginWords)">
     {{ $t('Confirm') }}
   </IonButton>
 </template>

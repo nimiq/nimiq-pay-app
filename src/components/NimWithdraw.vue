@@ -140,7 +140,7 @@ watch(errorMessage, (value) => {
   <!-- Address Selector -->
   <SelectRoot v-model="selected" @update:open="(x: boolean) => isSelectOpen = x">
     <SelectTrigger
-      class="flex gap-x-3 items-center w-11/12 min-w-80 mx-2 p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400"
+      class="flex gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400"
       :class="{ 'rounded-b-none': isSelectOpen }"
       :aria-label="$t('Select withdrawal address')"
     >

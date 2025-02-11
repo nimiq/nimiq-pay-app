@@ -137,7 +137,7 @@ async function openModal() {
         {{ errorMessage }}
       </p>
     </Transition>
-    <div class="mt-auto w-full flex flex-col justify-center pb-2">
+    <div class="mt-auto w-full flex flex-col justify-center">
       <p class="text-space/50 mb-5 text-sm font-semibold text-center">
         {{ $t('By tapping “verify”, you agree to our data management practices.') }}
         <!-- Disable dismiss modal to allow the user to scroll through the text without closing the modal -->
@@ -148,7 +148,7 @@ async function openModal() {
           {{ $t('Learn more') }}
         </a>
       </p>
-      <IonButton size="small" class="text-base font-bold" :disabled="phoneNumberInput.length < 4 || nextRequestCapTs > timestamp" @click="showAlert">
+      <IonButton size="small" class="text-base font-bold mb-[max(env(safe-area-inset-bottom),1rem)]" :disabled="phoneNumberInput.length < 4 || nextRequestCapTs > timestamp" @click="showAlert">
         {{ $t('Verify') }}
       </IonButton>
       <IonButton v-if="canSkip" fill="clear" class="text-base font-bold normal-case" style="--padding-top: 8px; --padding-bottom: 8px;" @click="$emit('skip')">

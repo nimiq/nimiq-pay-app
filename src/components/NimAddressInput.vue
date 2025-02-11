@@ -52,9 +52,8 @@ function handleSave() {
         {{ errorMsg }}
       </template>
     </p>
-
-    <IonButton :disabled="!address || !validAddress" size="small" class="w-full mt-auto text-base font-bold" @click="handleSave">
-      {{ $t('Save') }}
-    </IonButton>
   </div>
+  <IonButton :disabled="!address || !validAddress" class="w-full mt-auto text-base font-bold mb-[max(env(safe-area-inset-bottom),1rem)]" @click="handleSave">
+    {{ $t('Save') }}
+  </IonButton>
 </template>
