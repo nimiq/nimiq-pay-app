@@ -1,18 +1,55 @@
 <script setup lang="ts">
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import NakaCard from '@/components/icons/naka-card.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { watch } from 'vue'
+import { useToast } from '../../composables/useToast'
 import { useIssuerWebSocket } from '../../lib/issuer-websocket'
 import { NakaCardStatus, useNaka } from '../../stores/naka'
+import { Rail, Transfer } from '../../types/transactions'
 
 const emit = defineEmits(stepEmits)
 
 const { card } = useNaka()
 
-const { isReady } = useIssuerWebSocket()
+const { isReady, paymentRequest, confirmPayment: _0, rejectPayment: _1, paymentRejection, triggerPayment } = useIssuerWebSocket()
 
-function setPaymentRequest() { // eslint-disable-line unused-imports/no-unused-vars
-  emit('done', 'potato')
-}
+watch(paymentRequest, (request) => {
+  if (!request)
+    return
+
+  // TODO: Instead of emitting to go to the payment preview, check payment conditions and confirm or reject payment here directly
+  const invoiced = request.additionalAmounts?.[0]
+  const data: PaymentRequestData = {
+    recipient: request.recipient,
+    amount: Number(request.amount),
+    merchantName: request.merchant?.name,
+    // merchantCategory: MerchantCategory.Shop,
+    rail: Rail.NakaCard,
+    paymentRef: request.id,
+    fee: 0,
+    invoiced: invoiced
+      ? {
+          amount: invoiced.amount / 10 ** invoiced.decimals,
+          currency: invoiced.currency,
+        }
+      : undefined,
+    // meta: {},
+    transfer: Transfer.UserPaymentToMerchant,
+    feeIncludedInAmount: true,
+  }
+  emit('done', data)
+})
+
+watch(paymentRejection, (rejection) => {
+  if (!rejection)
+    return
+  useToast().setToast({
+    type: 'error',
+    // TODO: Map rejection reasons to user-friendly messages
+    message: rejection,
+  })
+})
 </script>
 
 <template>
@@ -29,11 +66,12 @@ function setPaymentRequest() { // eslint-disable-line unused-imports/no-unused-v
     <div v-else>
       No NAKA card found
     </div>
-    <!-- <button v-if="card && card.statusId === NakaCardStatus.Active"
-      class="mt-auto text-sm font-bold mb-16 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
-      @click="setPaymentRequest"
+    <button
+      v-if="card && card.statusId === NakaCardStatus.Active"
+      class="mt-auto text-sm font-bold mb-24 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
+      @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(100e5))"
     >
       Simulate NFC tap-to-pay
-    </button> -->
+    </button>
   </div>
 </template>

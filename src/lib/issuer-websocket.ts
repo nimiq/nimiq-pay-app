@@ -8,6 +8,7 @@ import type {
   PaymentRejectMessageSchema,
   PaymentRequestMessage,
   PaymentSuccessMessage,
+  PaymentTriggerMessageScheme,
 } from './issuer-websocket.schema'
 import { useWebSocket } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -26,6 +27,7 @@ type AuthenticateStartMessage = v.InferInput<typeof AuthenticateStartMessageSche
 type PaymentAcceptMessage = v.InferInput<typeof PaymentAcceptMessageSchema>
 type PaymentConfirmMessage = v.InferInput<typeof PaymentConfirmMessageSchema>
 type PaymentRejectMessage = v.InferInput<typeof PaymentRejectMessageSchema>
+type PaymentTriggerMessage = v.InferInput<typeof PaymentTriggerMessageScheme>
 
 const wsLogger = useLogger('NakaSocket')
 
@@ -227,11 +229,22 @@ export function useIssuerWebSocket() {
     send(JSON.stringify(msg))
   }
 
+  async function triggerPayment(recipient: string, amount: bigint) {
+    const message: PaymentTriggerMessage = {
+      type: 'payment:trigger',
+      rail: 'naka-card',
+      recipient,
+      amount: amount.toString(10),
+    }
+    send(JSON.stringify(message))
+  }
+
   return {
     isReady,
     paymentRequest,
     paymentRejection,
     confirmPayment,
     rejectPayment,
+    triggerPayment,
   }
 }

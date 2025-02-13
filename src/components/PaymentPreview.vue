@@ -44,9 +44,12 @@ const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
 const { localAddress } = storeToRefs(useLocalWallet())
 
-const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
-  ? props.state[StepName.QRCodeScanner]
-  : { amount: 0, fee: 0, recipient: '' },
+const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() =>
+  typeof props.state[StepName.QRCodeScanner] === 'object'
+    ? props.state[StepName.QRCodeScanner]
+    : typeof props.state[StepName.HoldNakaCardToReader] === 'object'
+      ? props.state[StepName.HoldNakaCardToReader]
+      : { amount: 0, fee: 0, recipient: '' },
 )
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 

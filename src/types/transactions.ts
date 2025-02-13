@@ -56,6 +56,7 @@ export enum Transfer {
 export enum Rail {
   CryptoPaymentLink = 'CPL',
   GoCrypto = 'GoCrypto',
+  NakaCard = 'NakaCard',
   Bluecode = 'bluecode',
   BitcoinLightning = 'bitcoin-lightning',
   NimiqWallet = 'nimiq-wallet',
@@ -189,6 +190,9 @@ export type MerchantTransaction = BaseTransaction & {
   railMerchantId: string
 } | {
   rail: Rail.NimiqWallet
+  railMerchantId?: undefined
+} | {
+  rail: Rail.NakaCard
   railMerchantId?: undefined
 } | {
   rail: Rail.Unknown

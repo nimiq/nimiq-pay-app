@@ -280,9 +280,6 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
     }
   }
 
-// TODO Define fields
-export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
-
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string

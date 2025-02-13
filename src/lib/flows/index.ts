@@ -1,4 +1,4 @@
-import type { Flow, FlowHookCb, FlowInit, NakaPaymentData, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import type { Slots } from 'vue'
 import FlowCmp from '@/components/Flow.vue'
 import { useLogger } from '@/composables/useLogger'
@@ -219,7 +219,7 @@ const paymentFlow: FlowInit = async () => {
 
     let payment:
       | { method: PaymentMethod.NIM | PaymentMethod.Points, request: PaymentRequestData }
-      | { method: PaymentMethod.NakaCard, request: NakaPaymentData }
+      | { method: PaymentMethod.NakaCard, request: PaymentRequestData }
       | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
     if (isNimPaymentRequest)
       payment = { method: payWithPuntos ? PaymentMethod.Points : PaymentMethod.NIM, request: nimPaymentRequest }
