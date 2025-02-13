@@ -57,16 +57,13 @@ watchDebounced(() => props.isVisible, async (isVisible) => {
     await start()
     useToast().clearToast()
   }
-}, { immediate: true, debounce: 250, maxWait: 500 })
-
-watch(() => props.isVisible, (isVisible) => {
-  if (!isVisible && cameraFeedContainer.value) {
+  else if (cameraFeedContainer.value) {
     // Stop scanner, if the container has actually been mounted yet.
     document.body.classList.remove('native-qr-scanner-modal-open')
     stop()
     useToast().clearToast()
   }
-})
+}, { immediate: true, debounce: 250, maxWait: 500 })
 
 // Preload the scanner library
 onMounted(ready)
@@ -117,7 +114,7 @@ function handleManualInput() {
       <!-- On native, the camera is visible behind the webview. Put a transparent square in the center of the screen,
       through which the camera can be seen (other parent / background elements are made transparent in useCameraFeed),
       with a wide white border to cover the rest. -->
-      <div class="relative m-auto box-border shadow-[0_0_0_100vh_white] w-[calc(100%-6rem)]" :style="`top: -${cameraFeedContainerTop / 4}px`">
+      <div class="relative m-auto box-border shadow-[0_0_0_100vh_white] w-[calc(100vw-6rem)]" :style="`top: -${cameraFeedContainerTop / 4}px`">
         <div class="aspect-square">
           <Transition name="fade">
             <div v-if="state === QRScannerState.Idle" class="h-full w-full bg-space/5" />
