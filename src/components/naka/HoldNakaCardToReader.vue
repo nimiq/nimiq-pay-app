@@ -2,28 +2,54 @@
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import NakaCard from '@/components/icons/naka-card.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
 import { useToast } from '../../composables/useToast'
 import { useIssuerWebSocket } from '../../lib/issuer-websocket'
 import { NakaCardStatus, useNaka } from '../../stores/naka'
+import { useRemoteSigner } from '../../stores/remote-signer'
 import { Rail, Transfer } from '../../types/transactions'
 
 const emit = defineEmits(stepEmits)
 
 const { card } = useNaka()
 
-const { isReady, paymentRequest, confirmPayment: _0, rejectPayment: _1, paymentRejection, triggerPayment } = useIssuerWebSocket()
+const { remoteBalance } = storeToRefs(useRemoteSigner())
+
+const { isReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection, triggerPayment } = useIssuerWebSocket()
 
 watch(paymentRequest, (request) => {
   if (!request)
     return
 
-  // TODO: Instead of emitting to go to the payment preview, check payment conditions and confirm or reject payment here directly
-  const invoiced = request.additionalAmounts?.[0]
+  // Verify card signature
+  const cardSignature = request.signatures?.nakaCard
+  if (!cardSignature) {
+    rejectPayment(request.id, request.rail, 'INVALID_REQUEST', 'Card signature is missing')
+    return
+  }
+  // TODO: Parse signature (it's a 0x-prefixed hex string) and verify it against the card's public key (maybe the Monet+ SDK can do that)
+
+  // TODO: Compare request.amount with the user's per-tx limit
+
+  // TODO: Compare request.amount with the user's daily limit, which requires listing the user's naka-card txs for the current day
+
+  // Compare request.amount with the available balance
+  if (request.amount > remoteBalance.value) {
+    rejectPayment(request.id, request.rail, 'INSUFFICIENT_BALANCE')
+    useToast().setToast({
+      type: 'error',
+      message: 'Insufficient balance',
+    })
+    return
+  }
+
+  // Find first non-USDT additional amount (USDT is the gateway currency, not the merchant currency)
+  const invoiced = request.additionalAmounts?.find(({ currency }) => currency !== 'USDT')
   const data: PaymentRequestData = {
     recipient: request.recipient,
     amount: Number(request.amount),
-    merchantName: request.merchant?.name,
+    merchantName: request.store?.name,
     // merchantCategory: MerchantCategory.Shop,
     rail: Rail.NakaCard,
     paymentRef: request.id,
@@ -34,11 +60,31 @@ watch(paymentRequest, (request) => {
           currency: invoiced.currency,
         }
       : undefined,
-    // meta: {},
     transfer: Transfer.UserPaymentToMerchant,
     feeIncludedInAmount: true,
   }
-  emit('done', data)
+
+  if (!request.skipUserConfirmation) {
+    // Show payment confirmation dialog
+    data.meta = {
+      requireUserConfirmation: true,
+    }
+    emit('done', {
+      request: data,
+      confirmPayment: (serializedTx: string) => confirmPayment(request.id, request.rail, serializedTx),
+    })
+    return
+  }
+
+  // TODO: Sanity check applied exchange rate(s) (must compare rate from USDT to NIM) (can try to compare rates from merchant's currency to USDT)
+
+  data.meta = {
+    requireUserConfirmation: false,
+  }
+  emit('done', {
+    request: data,
+    confirmPayment: (serializedTx: string) => confirmPayment(request.id, request.rail, serializedTx),
+  })
 })
 
 watch(paymentRejection, (rejection) => {
@@ -66,12 +112,22 @@ watch(paymentRejection, (rejection) => {
     <div v-else>
       No NAKA card found
     </div>
-    <button
-      v-if="card && card.statusId === NakaCardStatus.Active"
-      class="mt-auto text-sm font-bold mb-24 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
-      @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(100e5))"
-    >
-      Simulate NFC tap-to-pay
-    </button>
+
+    <div class="mt-auto mb-24 text-center">
+      <button
+        v-if="card && card.statusId === NakaCardStatus.Active"
+        class="text-sm font-bold text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
+        @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(100e5))"
+      >
+        Simulate NFC tap-to-pay (100 NIM)
+      </button>
+      <button
+        v-if="card && card.statusId === NakaCardStatus.Active"
+        class="text-sm font-bold mt-4 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
+        @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(remoteBalance + 1000e5))"
+      >
+        Simulate NFC tap-to-pay ({{ Math.floor(remoteBalance / 1e5 + 1000) }} NIM)
+      </button>
+    </div>
   </div>
 </template>

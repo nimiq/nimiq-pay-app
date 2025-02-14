@@ -14,6 +14,7 @@ import { useWebSocket } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { parse } from 'valibot'
 import { computed, ref, watch } from 'vue'
+import { isDev } from '.'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import { useRemoteSigner } from '../stores/remote-signer'
@@ -34,7 +35,9 @@ const wsLogger = useLogger('NakaSocket')
 export function useIssuerWebSocket() {
   const { status, data, send } = useWebSocket<string>('ws://127.0.0.1:8081', {
     autoReconnect: true,
-    heartbeat: true,
+    heartbeat: {
+      interval: isDev ? 10e3 : 1e3,
+    },
     onConnected(ws) {
       wsLogger.log('Connected:', ws.url)
     },

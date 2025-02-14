@@ -1,5 +1,7 @@
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import type { Slots } from 'vue'
+import type { Result } from '../../types'
+import type { PaymentSuccessMessage } from '../issuer-websocket.schema'
 import FlowCmp from '@/components/Flow.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -198,7 +200,7 @@ const paymentFlow: FlowInit = async () => {
 
     const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
 
-    if (!nimPaymentRequest || typeof nimPaymentRequest === 'string')
+    if (typeof nimPaymentRequest === 'string' || (!nimPaymentRequest && !nakaPaymentRequest))
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
@@ -219,12 +221,12 @@ const paymentFlow: FlowInit = async () => {
 
     let payment:
       | { method: PaymentMethod.NIM | PaymentMethod.Points, request: PaymentRequestData }
-      | { method: PaymentMethod.NakaCard, request: PaymentRequestData }
+      | { method: PaymentMethod.NakaCard, request: PaymentRequestData, confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage> }
       | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
     if (isNimPaymentRequest)
       payment = { method: payWithPuntos ? PaymentMethod.Points : PaymentMethod.NIM, request: nimPaymentRequest }
     else if (isNakaPaymentRequest)
-      payment = { method: PaymentMethod.NakaCard, request: nakaPaymentRequest }
+      payment = { method: PaymentMethod.NakaCard, ...nakaPaymentRequest }
     else if (isBluecodePaymentRequest)
       payment = { method: PaymentMethod.Bluecode, request: bluecodePaymentRequest }
     else
@@ -234,9 +236,10 @@ const paymentFlow: FlowInit = async () => {
 
     logger.log(`🤑  Initializing payment process with ${payment.method}`, payment.request)
     switch (payment.method) {
-      case PaymentMethod.NIM: {
+      case PaymentMethod.NIM:
+      case PaymentMethod.NakaCard: {
         const { useTransactions } = await import('@/stores/transactions')
-        const { error } = await useTransactions().sendTx({
+        const { error, data } = await useTransactions().sendTx({
           ...payment.request,
           title: payment.request.merchantName
             ? markAsUnknownTransactionTitle(payment.request.merchantName)
@@ -253,6 +256,9 @@ const paymentFlow: FlowInit = async () => {
         })
         if (error)
           return err(error)
+        if (payment.method === PaymentMethod.NakaCard && data) {
+          await payment.confirmPayment(data.serialized)
+        }
         break
       }
       case PaymentMethod.Points: {
@@ -265,10 +271,6 @@ const paymentFlow: FlowInit = async () => {
         if (error)
           return err(error)
         break
-      }
-      case PaymentMethod.NakaCard: {
-        throw new Error('NakaCard payments are not supported yet')
-        // break
       }
       case PaymentMethod.Bluecode: {
         throw new Error('Bluecode payments are not supported yet')

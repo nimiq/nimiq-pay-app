@@ -399,8 +399,14 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ pr
 export const holdNakaCardToReaderStep: StepInit = async () => ({
   step: StepName.HoldNakaCardToReader,
   main: markRaw(HoldNakaCardToReader),
-  beforeNext: async (_state, { navigateTo }) => {
-    navigateTo({ step: StepName.PaymentPreview })
+  beforeNext: async ({ holdNakaCardToReader: data }, { navigateTo, finalizeFlow }) => {
+    const { request } = data
+    if (request.meta?.requireUserConfirmation) {
+      navigateTo({ step: StepName.PaymentPreview })
+    }
+    else {
+      finalizeFlow()
+    }
   },
 } satisfies Step)
 

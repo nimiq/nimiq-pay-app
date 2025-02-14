@@ -1,5 +1,6 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
+import type { PaymentSuccessMessage } from '../issuer-websocket.schema'
 
 export enum FlowName {
   Setup = 'setup',
@@ -116,7 +117,10 @@ export interface State {
   [StepName.PhoneNumberConfirm]: string
   [StepName.RecoveryWordsStep]: string[]
   [StepName.QRCodeScanner]: PaymentRequestData | string
-  [StepName.HoldNakaCardToReader]: PaymentRequestData
+  [StepName.HoldNakaCardToReader]: {
+    request: PaymentRequestData
+    confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
+  }
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
   [StepName.PaymentPreview]: { payWithPuntos: boolean }
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
