@@ -86,7 +86,7 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
+  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
     if (isSendingTx.value) {
       logger.error('A transaction is already in progress')
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
@@ -97,7 +97,7 @@ export const useTransactions = defineStore('transactions', () => {
     return res
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
+  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
     logger.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
@@ -125,7 +125,7 @@ export const useTransactions = defineStore('transactions', () => {
       patchedSwap = provideFundingProof(
         partialTx.paymentRef!,
         swap!.contracts.NIM!.id,
-        Nimiq.BufferUtils.toHex(signedTx.serialize()),
+        signedTx.toHex(),
       )
 
       // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later
@@ -252,7 +252,7 @@ export const useTransactions = defineStore('transactions', () => {
       await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
     }
 
-    return { data: tx, error: undefined }
+    return { data: { tx, serialized: signedTx.toHex() }, error: undefined }
   }
 
   const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch()

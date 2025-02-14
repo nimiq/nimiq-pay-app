@@ -48,7 +48,7 @@ const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() =>
   typeof props.state[StepName.QRCodeScanner] === 'object'
     ? props.state[StepName.QRCodeScanner]
     : typeof props.state[StepName.HoldNakaCardToReader] === 'object'
-      ? props.state[StepName.HoldNakaCardToReader]
+      ? props.state[StepName.HoldNakaCardToReader].request
       : { amount: 0, fee: 0, recipient: '' },
 )
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)

@@ -708,7 +708,7 @@ export const useSync = defineStore('sync', () => {
       return
     }
     if (tx)
-      pendingRemoteDrainTxs.value.push(tx)
+      pendingRemoteDrainTxs.value.push(tx.tx)
 
     logger.log('Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
   }
