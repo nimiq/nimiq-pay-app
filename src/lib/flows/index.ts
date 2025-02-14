@@ -243,12 +243,13 @@ const paymentFlow: FlowInit = async () => {
             : 'Payment', // translated at display time
         }).catch((error) => {
           logger.error('🤑  Transaction failed:', error)
-          return ({
+          return {
+            data: undefined,
             error: i18n.t(
               'Transaction failed: {error}',
               { error: (error instanceof Error ? error.message : String(error)) || i18n.t('Unknown error') },
             ),
-          })
+          } satisfies Result<never, string>
         })
         if (error)
           return err(error)

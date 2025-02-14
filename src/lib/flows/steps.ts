@@ -443,17 +443,17 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
       merchantCategory.value = qrCodeScanner.merchantCategory
     },
-    beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
+    beforeNext: async ({ qrCodeScanner: request }, { navigateTo, finalizeFlow }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
-      if (_request instanceof String)
+      if (request instanceof String)
         // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`Request is a string: ${_request}`)
+        throw new Error(`Request is a string: ${request}`)
 
       // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
       if ((await import('@/stores/app')).useApp().shouldAskPin())
-        next()
+        navigateTo({ step: StepName.PinCode })
       else
-        navigateTo({ skipAheadBy: 2 })
+        finalizeFlow()
     },
   } satisfies Step
 }
