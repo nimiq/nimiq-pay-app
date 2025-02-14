@@ -128,7 +128,10 @@ export interface State {
     confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
   }
   [StepName.NimAddressDisplay]: string
-  [StepName.HoldNakaCardToReader]: PaymentRequestData
+  [StepName.HoldNakaCardToReader]: {
+    request: PaymentRequestData
+    confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
+  }
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
   [StepName.PaymentPreview]: { payWithPuntos: boolean }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
