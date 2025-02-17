@@ -133,8 +133,8 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2(@capacitor/core@6.2.0)
       '@iconify-json/nimiq':
-        specifier: https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@24e0317
-        version: nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@24e0317(bufferutil@4.0.8)(utf-8-validate@5.0.10)
+        specifier: https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae
+        version: nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae(bufferutil@4.0.8)(utf-8-validate@5.0.10)
       '@ionic/cli':
         specifier: ^7.2.0
         version: 7.2.0
@@ -5514,8 +5514,8 @@ packages:
   next-tick@1.1.0:
     resolution: {integrity: sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ==}
 
-  nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@24e0317:
-    resolution: {tarball: https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@24e0317}
+  nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae:
+    resolution: {tarball: https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae}
     version: 1.0.0
 
   node-abi@3.62.0:
@@ -13962,7 +13962,7 @@ snapshots:
 
   next-tick@1.1.0: {}
 
-  nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@24e0317(bufferutil@4.0.8)(utf-8-validate@5.0.10):
+  nimiq-icons@https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae(bufferutil@4.0.8)(utf-8-validate@5.0.10):
     dependencies:
       '@iconify/tools': 4.1.1
       '@iconify/utils': 2.3.0
