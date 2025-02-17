@@ -48,4 +48,4 @@ builds/ios/bundle/*
 google-service-account.json
 src/lib/issuer-websocket.schema.ts
 
-components.d.ts
+./components.d.ts

@@ -443,7 +443,7 @@ const nakaCardIsReadyFlow: FlowInit = async () => {
 
 const nakaCardManagementFlow: FlowInit = async () => {
   const [
-    { nakaCardManagementStep, nakaCardDeleteStep, nakaCardToggleFreezeStep },
+    { nakaCardManagementStep, nakaCardDeleteStep },
     // { useNaka },
   ] = await Promise.all([
     import('./steps'),
@@ -455,7 +455,6 @@ const nakaCardManagementFlow: FlowInit = async () => {
   const flowName = FlowName.NakaCardManagement
   const steps = await Promise.all([
     nakaCardManagementStep,
-    nakaCardToggleFreezeStep,
     nakaCardDeleteStep,
   ].map(s => s({ flowName })))
   return { flowName, steps }

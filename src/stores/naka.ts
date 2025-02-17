@@ -243,6 +243,8 @@ export const useNaka = defineStore('naka', () => {
     }
   }
 
+  // We need to update the following components: NakaCardDelete.vue and NakaCardManagement.vue with the code for deleting/adding new card
+
   const isFrozen = ref(false)
 
   function updateFrozenStatus() {
@@ -271,6 +273,7 @@ export const useNaka = defineStore('naka', () => {
     init,
 
     isFrozen,
+    isBlocked: computed(() => isFrozen.value),
     updateFrozenStatus,
 
     dailyLimit,

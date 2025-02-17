@@ -4,37 +4,39 @@ import NakaCard from '@/components/icons/naka-card.vue'
 import InputText from '@/components/InputText.vue'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useNaka } from '@/stores/naka'
-import { IonButton, IonItem, IonList, IonSelect, IonSelectOption } from '@ionic/vue'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonItem, IonList } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 
 defineEmits(stepEmits)
 
 const { dailyLimit, paymentLimit, isBlocked } = storeToRefs(useNaka())
-const { card, setDailyLimit, setPaymentLimit } = useNaka()
+const { card, setDailyLimit, setPaymentLimit, updateFrozenStatus } = useNaka()
 const newDailyLimit = ref<number | undefined>(dailyLimit.value)
 const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
 
 const showCardDetails = ref(false)
+
+function createNewCard() {
+  updateFrozenStatus()
+}
 </script>
 
 <template>
   <div class="flex flex-col h-full items-center w-max mx-auto">
     <NakaCard class="w-full h-max" />
 
-    <div class="mt-8 flex items-center gap-6 mb-12">
-      <template v-if="!isBlocked">
-        <button class="secondary" @click="showCardDetails = !showCardDetails">
-          {{ showCardDetails ? $t('Hide details') : $t('Show details') }}
-        </button>
-        <button class="secondary" @click="$emit('navigateTo', { step: StepName.NakaCardToggleFreeze })">
-          {{ $t('Freeze card') }}
-        </button>
-      </template>
-      <button v-else class="secondary">
+    <div class="mt-8 flex items-center gap-6">
+      <button v-if="!isBlocked" class="secondary" @click="showCardDetails = !showCardDetails">
+        {{ showCardDetails ? $t('Hide details') : $t('Show details') }}
+      </button>
+      <button v-else class="secondary" @click="createNewCard">
         {{ $t('Add new card') }}
       </button>
     </div>
+
+    <div v-if="!isBlocked" class="h-12" />
 
     <CardDetails
       v-if="!isBlocked"
@@ -70,17 +72,21 @@ const showCardDetails = ref(false)
       </form>
     </template>
 
-    <IonList lines="none" class="mt-10 w-full">
-      <!-- <IonItem>
-        <a @click="Browser.open({ url: JSON.stringify(__NAKA_SUPPORT_URL__), toolbarColor: '#0582CA' })">
+    <IonList lines="none" class="mt-10 w-full mb-16">
+      <IonItem style="--padding-start:0">
+        <a class="flex items-center gap-2 text-space font-semibold w-full" @click="Browser.open({ url: 'https://nimiq.com', toolbarColor: '#0582CA' })">
+          <i-nimiq-help />
           {{ $t('Support') }}
+          <i-nimiq-chevron-right class="ml-auto text-xs " />
         </a>
       </IonItem>
-      <IonItem>
-        <a @click="Browser.open({ url: JSON.stringify(__NAKA_TERM_AND_CONDITIONS_URL__), toolbarColor: '#0582CA' })">
+      <IonItem style="--padding-start:0">
+        <a class="flex items-center gap-2 w-full text-space font-semibold" @click="Browser.open({ url: 'https://nimiq.com', toolbarColor: '#0582CA' })">
+          <i-nimiq-file-text class="text-[18px]" />
           {{ $t('Terms and conditions') }}
+          <i-nimiq-chevron-right class="ml-auto text-xs " />
         </a>
-      </IonItem> -->
+      </IonItem>
     </IonList>
 
     <IonButton v-if="!isBlocked" class="mt-auto mb-4 block-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">

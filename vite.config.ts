@@ -23,20 +23,20 @@ export default defineConfig({
     poOptimizer(),
     // legacy(),
     VitePWA({ registerType: 'autoUpdate', workbox: { maximumFileSizeToCacheInBytes: 10000000 } }),
-    {
-      name: 'copy-issuer-schema:serve',
-      apply: () => true, // apply for both 'serve' (dev server) and 'build'
-      buildStart() {
-        try {
-          copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-ws-api/src/schema.valibot.ts', 'src/lib/issuer-websocket.schema.ts')
-          console.log('📋 Copied issuer websocket schema')
-        }
-        catch (err) {
-          console.error('🚫 ERROR: Failed to copy issuer websocket schema, make sure you have the "nimiq-pay-issuer-server" repo cloned next to this "nimiq-pay-app" repo!')
-          throw err
-        }
-      },
-    },
+    // {
+    //   name: 'copy-issuer-schema:serve',
+    //   apply: () => true, // apply for both 'serve' (dev server) and 'build'
+    //   buildStart() {
+    //     try {
+    //       copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-ws-api/src/schema.valibot.ts', 'src/lib/issuer-websocket.schema.ts')
+    //       console.log('📋 Copied issuer websocket schema')
+    //     }
+    //     catch (err) {
+    //       console.error('🚫 ERROR: Failed to copy issuer websocket schema, make sure you have the "nimiq-pay-issuer-server" repo cloned next to this "nimiq-pay-app" repo!')
+    //       throw err
+    //     }
+    //   },
+    // },
     Components({
       dirs: [], // We don't auto-import at the moment, just icons
       resolvers: [
