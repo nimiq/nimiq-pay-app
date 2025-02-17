@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import NakaCard from '@/components/icons/naka-card.vue'
+import NakaCard from '@/components/naka/NakaCard.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'

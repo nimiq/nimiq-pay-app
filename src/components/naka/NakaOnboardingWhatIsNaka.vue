@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import NakaCard from '@/components/icons/naka-card.vue'
+import NakaCard from '@/components/naka/NakaCard.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import CardDetails from '@/components/CardDetails.vue'
-import NakaCard from '@/components/icons/naka-card.vue'
+import NakaCard from '@/components/naka/NakaCard.vue'
 import InputText from '@/components/InputText.vue'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useNaka } from '@/stores/naka'
