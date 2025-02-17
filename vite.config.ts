@@ -12,7 +12,6 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
-import { copyFileSync } from 'node:fs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
