@@ -47,3 +47,5 @@ builds/ios/bundle/*
 *.tgz
 google-service-account.json
 src/lib/issuer-websocket.schema.ts
+
+components.d.ts

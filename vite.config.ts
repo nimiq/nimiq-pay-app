@@ -1,13 +1,17 @@
+import { copyFileSync } from 'node:fs'
 import path from 'node:path'
 import legacy from '@vitejs/plugin-legacy'
 import vue from '@vitejs/plugin-vue'
+import { ExternalPackageIconLoader } from 'unplugin-icons/loaders'
+import IconResolver from 'unplugin-icons/resolver'
+import Icons from 'unplugin-icons/vite'
+import Components from 'unplugin-vue-components/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
-import { copyFileSync } from 'node:fs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,12 +30,22 @@ export default defineConfig({
         try {
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-ws-api/src/schema.valibot.ts', 'src/lib/issuer-websocket.schema.ts')
           console.log('📋 Copied issuer websocket schema')
-        } catch (err) {
+        }
+        catch (err) {
           console.error('🚫 ERROR: Failed to copy issuer websocket schema, make sure you have the "nimiq-pay-issuer-server" repo cloned next to this "nimiq-pay-app" repo!')
           throw err
         }
       },
     },
+    Components({
+      dirs: [], // We don't auto-import at the moment, just icons
+      resolvers: [
+        IconResolver({ customCollections: ['nimiq'] }),
+      ],
+    }),
+    Icons({
+      customCollections: ExternalPackageIconLoader('@iconify-json/nimiq'),
+    }),
   ],
   resolve: {
     alias: {
