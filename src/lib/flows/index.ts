@@ -323,7 +323,7 @@ const changePinFlow: FlowInit = async () => {
 
     const { useBiometric } = await import('@/composables/useBiometric')
     const { isBiometricEnabled, setPinToSecureStorage } = useBiometric()
-    if (isBiometricEnabled)
+    if (isBiometricEnabled.value)
       await setPinToSecureStorage(state[StepName.PinCode])
 
     const { useToast } = await import('@/composables/useToast')
