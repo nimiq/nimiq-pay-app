@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
-#: src/views/HomeView.vue:145
+#: src/views/HomeView.vue:147
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -36,13 +36,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:147
-#: src/stores/nimiq-network.ts:169
-#: src/stores/nimiq-network.ts:187
+#: src/stores/nimiq-network.ts:150
+#: src/stores/nimiq-network.ts:172
+#: src/stores/nimiq-network.ts:190
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:178
+#: src/stores/nimiq-network.ts:181
 msgid "Addresses missing"
 msgstr ""
 
@@ -152,7 +152,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:149
+#: src/stores/nimiq-network.ts:152
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -194,11 +194,11 @@ msgstr ""
 msgid "Confirming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:208
+#: src/stores/nimiq-network.ts:211
 msgid "Connecting to network."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:206
+#: src/stores/nimiq-network.ts:209
 msgid "Consensus established."
 msgstr ""
 
@@ -648,7 +648,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:83
+#: src/stores/nimiq-network.ts:86
 msgid "Network consensus lost."
 msgstr ""
 
@@ -664,7 +664,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:172
+#: src/stores/nimiq-network.ts:175
 msgid "No account found"
 msgstr ""
 
@@ -676,11 +676,11 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:181
+#: src/stores/nimiq-network.ts:184
 msgid "No accounts found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:139
+#: src/stores/nimiq-network.ts:142
 msgid "No Cashlink found"
 msgstr ""
 
@@ -714,7 +714,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:190
+#: src/stores/nimiq-network.ts:193
 msgid "No transactions found"
 msgstr ""
 
@@ -749,7 +749,7 @@ msgid "Open Wallet"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:139
+#: src/views/HomeView.vue:140
 msgid "Pay"
 msgstr ""
 
@@ -949,7 +949,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:146
+#: src/views/HomeView.vue:148
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1122,7 +1122,7 @@ msgstr ""
 msgid "Submit"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:207
+#: src/stores/nimiq-network.ts:210
 msgid "Syncing with network."
 msgstr ""
 
@@ -1232,7 +1232,7 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:106
+#: src/stores/nimiq-network.ts:109
 msgid "Trying to establish network consensus:"
 msgstr ""
 
@@ -1427,7 +1427,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:151
+#: src/views/HomeView.vue:153
 msgid "You have a reward to claim!"
 msgstr ""
 
