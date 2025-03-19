@@ -25,7 +25,7 @@ export const CashlinkExtraDataHex = {
 }
 
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
-  const { isNetworkReconnecting } = storeToRefs(useLocks())
+  const { isNetworkReconnecting, isAppStarting } = storeToRefs(useLocks())
   const client = ref<Client>()
   const consensus = ref<ConsensusState>('connecting')
   const head = ref<PlainBlock>()
@@ -51,6 +51,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
       ])
     }
+    config.syncMode('pico')
+
     // config.logLevel('debug')
     logger.log('Creating Nimiq client with config', config.build())
     try {
@@ -71,6 +73,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     client.value.addConsensusChangedListener(async (newConsensus) => {
       logger.log('Consensus:', newConsensus)
       if (newConsensus === 'established') {
+        isAppStarting.value = false
         clearToast()
         if (isPendingReconnectNetwork.value) {
           logger.log('Consensus established, stopping reconnect')

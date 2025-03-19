@@ -6,6 +6,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
+import { useLocks } from '@/stores/locks'
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
@@ -80,6 +81,10 @@ App.addListener('resume', async () => {
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')
   const { height: localHeight } = storeToRefs(useNimiqNetwork())
+  const { isAppStarting } = storeToRefs(useLocks())
+
+  if (isAppStarting.value)
+    return
 
   const { getStatus } = useRemoteSignerApi()
   const { data, hasError } = await getStatus()

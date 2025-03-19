@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 export const useLocks = defineStore('locks', () => {
   const isNetworkReconnecting = ref(false)
+  const isAppStarting = ref(true)
   const isProcessingRemote = ref(false)
   const isSendingTx = ref(false)
   const isSyncingWallets = ref(false)
@@ -13,6 +14,7 @@ export const useLocks = defineStore('locks', () => {
 
   return {
     isNetworkReconnecting,
+    isAppStarting,
     isProcessingRemote,
     isSendingTx,
     isSyncingWallets,
