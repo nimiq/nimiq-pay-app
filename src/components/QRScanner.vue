@@ -60,7 +60,8 @@ watchDebounced(() => props.isVisible, async (isVisible) => {
   else if (cameraFeedContainer.value) {
     // Stop scanner, if the container has actually been mounted yet.
     document.body.classList.remove('native-qr-scanner-modal-open')
-    stop()
+    if (state.value === QRScannerState.Scanning)
+      stop()
     useToast().clearToast()
   }
 }, { immediate: true, debounce: 250, maxWait: 500 })
