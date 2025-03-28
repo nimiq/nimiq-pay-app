@@ -3,7 +3,14 @@ import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.v
 import { stepEmits } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 
-defineEmits(stepEmits)
+const emit = defineEmits(stepEmits)
+
+async function register() {
+  // eslint-disable-next-line no-console
+  console.log('Naka: Here your SDK should be called')
+
+  emit('done')
+}
 </script>
 
 <template>
@@ -11,7 +18,7 @@ defineEmits(stepEmits)
     <div class="flex flex-1 items-center justify-center">
       <NakaVerificationCheckIcon class="translate-y-[-10%]" />
     </div>
-    <IonButton size="small" class="self-stretch my-6 text-base font-bold mt-auto" @click="$emit('done')">
+    <IonButton size="small" class="self-stretch my-6 text-base font-bold mt-auto" @click="register">
       {{ $t('Verify my ID') }}
     </IonButton>
   </div>

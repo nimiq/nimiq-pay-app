@@ -169,7 +169,7 @@ watch([referralCode, phoneNumberVerified, hasNakaCard], () => {
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
-  // Remove notification if user has just created their Naka card
+  // Remove notification if user already has a Naka card
   if (hasNakaCard.value) {
     removeLocalNotification(nakaCardActivationNotification.id, false)
   }

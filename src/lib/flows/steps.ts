@@ -8,6 +8,8 @@ import { sleep } from '@/lib/utils'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
+import { useIssuerRestApi } from '../issuer-rest-api'
+import { useNaka } from '../../stores/naka'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -590,11 +592,6 @@ export const verifyYourIdNakaStep: StepInit = async () => ({
   title: 'Fake verification ID', // Hola. I know someone is reading this!!!!
   get description() { return i18n.t('To use NAKA card payments, please verify yourself with IDnow.') },
   main: markRaw(NakaOnboardingVerifyId),
-  beforeNext: async (_state, { finalizeFlow }) => {
-    // eslint-disable-next-line no-console
-    console.log('Naka: Here your sdk should be called')
-    setTimeout(finalizeFlow, 2000)
-  },
 } satisfies Step)
 
 export const nakaCardIsReadyStep: StepInit = async () => ({

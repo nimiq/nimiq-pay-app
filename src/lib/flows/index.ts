@@ -1,7 +1,7 @@
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import type { Slots } from 'vue'
 import type { Result } from '../../types'
-import type { PaymentSuccessMessage } from '../issuer-websocket.schema'
+import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import FlowCmp from '@/components/Flow.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -410,11 +410,9 @@ const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
     { whatIsNakaStep, verifyYourIdNakaStep },
-    { useNaka },
   ] = await Promise.all([
     import('@/lib/flows/steps.types'),
     import('./steps'),
-    import('@/stores/naka'),
   ])
 
   const flowName = Flow.NakaOnboarding
@@ -423,10 +421,7 @@ const nakaOnboardFlow: FlowInit = async () => {
     verifyYourIdNakaStep({ flowName }),
   ])
 
-  const { setDummyCard } = useNaka()
-
   const onDone: Flow['onDone'] = async () => {
-    setDummyCard()
     const { useToast } = await import('@/composables/useToast')
     useToast().setToast({ message: i18n.t('ID verified!') })
     setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)
