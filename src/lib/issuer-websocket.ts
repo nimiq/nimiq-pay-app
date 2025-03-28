@@ -1,3 +1,11 @@
+import { useWebSocket } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { parse } from 'valibot'
+import { computed, ref, watch } from 'vue'
+import { isDev } from '.'
+import { useLogger } from '../composables/useLogger'
+import { useLocalWallet } from '../stores/local-wallet'
+import { useRemoteSigner } from '../stores/remote-signer'
 import {
   type AuthenticateConfirmMessage,
   type AuthenticateStartMessage,
@@ -11,14 +19,6 @@ import {
   type ServerMessage,
   ServerMessageSchema,
 } from './issuer-schemas/ws.schema'
-import { useWebSocket } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { parse } from 'valibot'
-import { computed, ref, watch } from 'vue'
-import { isDev } from '.'
-import { useLogger } from '../composables/useLogger'
-import { useLocalWallet } from '../stores/local-wallet'
-import { useRemoteSigner } from '../stores/remote-signer'
 
 const wsLogger = useLogger('NakaSocket')
 
