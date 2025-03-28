@@ -19,6 +19,7 @@ import {
   type ServerMessage,
   ServerMessageSchema,
 } from './issuer-schemas/ws.schema'
+import { signMessage } from './issuer-utils'
 
 const logger = useLogger('NakaSocket')
 
@@ -79,9 +80,7 @@ export function useIssuerWebSocket() {
         logger.log('Received challenge:', msg.challenge)
         // Sign challenge and respond with signature
         const { localWallet } = useLocalWallet()
-        const payload = `\x16Nimiq Signed Message:\n${msg.challenge.length}${msg.challenge}`
-        crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload)).then((hash) => {
-          const signature = localWallet.sign(new Uint8Array(hash))
+        signMessage(localWallet, msg.challenge).then((signature) => {
           const response: AuthenticateConfirmMessage = {
             type: 'authenticate:confirm',
             signature: signature.toHex(),
