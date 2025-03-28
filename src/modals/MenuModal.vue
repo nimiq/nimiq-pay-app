@@ -23,8 +23,8 @@ function onLongPressCallback() {
 
 const { hasCard } = storeToRefs(useNaka())
 
-function resetNaka() {
-  if (!useNaka().reset())
+async function resetNaka() {
+  if (!(await useNaka().reset()))
     return
   useToast().setToast({ message: 'NAKA data reset' })
 }
