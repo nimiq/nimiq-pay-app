@@ -20,7 +20,7 @@ import {
   ServerMessageSchema,
 } from './issuer-schemas/ws.schema'
 
-const wsLogger = useLogger('NakaSocket')
+const logger = useLogger('NakaSocket')
 
 export function useIssuerWebSocket() {
   const { status, data, send } = useWebSocket<string>('ws://127.0.0.1:8081', {
@@ -29,18 +29,18 @@ export function useIssuerWebSocket() {
       interval: isDev ? 10e3 : 1e3,
     },
     onConnected(ws) {
-      wsLogger.log('Connected:', ws.url)
+      logger.log('Connected:', ws.url)
     },
     onDisconnected(ws, event) {
-      wsLogger.log('Disconnected:', ws.url, event)
+      logger.log('Disconnected:', ws.url, event)
     },
     onError(ws, event) {
-      wsLogger.error('Error:', ws.url, event)
+      logger.error('Error:', ws.url, event)
     },
   })
 
   watch(status, (newStatus) => {
-    wsLogger.log('Status:', newStatus)
+    logger.log('Status:', newStatus)
     if (newStatus === 'OPEN') {
       // Kick off the authentication handshake
       const msg: AuthenticateStartMessage = {
@@ -76,7 +76,7 @@ export function useIssuerWebSocket() {
   function handleIssuerMessage(msg: ServerMessage): boolean {
     switch (msg.type) {
       case 'authenticate:challenge': {
-        wsLogger.log('Received challenge:', msg.challenge)
+        logger.log('Received challenge:', msg.challenge)
         // Sign challenge and respond with signature
         const { localWallet } = useLocalWallet()
         const payload = `\x16Nimiq Signed Message:\n${msg.challenge.length}${msg.challenge}`
@@ -92,7 +92,7 @@ export function useIssuerWebSocket() {
         return true
       }
       case 'authenticate:success': {
-        wsLogger.log('Challenge OK')
+        logger.log('Challenge OK')
         const { remoteAddress, remoteBalance } = storeToRefs(useRemoteSigner())
         if (remoteAddress.value) {
           const response: PaymentAcceptMessage = {
@@ -106,15 +106,15 @@ export function useIssuerWebSocket() {
         return true
       }
       case 'authenticate:error':
-        wsLogger.error('Challenge failed:', msg.message)
+        logger.error('Challenge failed:', msg.message)
         return true
       case 'payment:ready':
-        wsLogger.log('Payments ready')
+        logger.log('Payments ready')
         // TODO: Verify returned rails, address and balance?
         paymentReady.value = true
         return true
       case 'payment:abort': {
-        wsLogger.error('Payments aborted:', msg.message)
+        logger.error('Payments aborted:', msg.message)
         paymentReady.value = false
         cancelPendingPayments(msg.message)
         // Try to restart payment session
@@ -131,35 +131,35 @@ export function useIssuerWebSocket() {
         return true
       }
       case 'payment:request':
-        wsLogger.log('Received payment request:', msg)
+        logger.log('Received payment request:', msg)
         paymentRequest.value = msg
         return true
       case 'payment:success': {
         const pending = pendingPayments.get(msg.id)
         if (pending) {
-          wsLogger.log('Payment success:', msg)
+          logger.log('Payment success:', msg)
           pending.resolve(msg)
           pendingPayments.delete(msg.id)
         }
         else {
-          wsLogger.warn('Unexpected payment success, no pending payment:', msg)
+          logger.warn('Unexpected payment success, no pending payment:', msg)
         }
         return true
       }
       case 'payment:rejected': {
         // Payment request from NAKA rejected server-side, not even forwarded to app
         // If this happens, we want to show this to the user, because she's waiting for feedback from the NFC scan
-        wsLogger.error('Payment rejected:', msg)
+        logger.error('Payment rejected:', msg)
         paymentRejection.value = msg.code
         return true
       }
       case 'error':
         switch (msg.level) {
           case 'warning':
-            wsLogger.warn('Server warning:', msg.message)
+            logger.warn('Server warning:', msg.message)
             break
           case 'fatal':
-            wsLogger.error('Server fatal error:', msg.message)
+            logger.error('Server fatal error:', msg.message)
             paymentReady.value = false
             cancelPendingPayments(msg.message)
             break
@@ -179,7 +179,7 @@ export function useIssuerWebSocket() {
       msg = parse(ServerMessageSchema, JSON.parse(newData))
     }
     catch (e) {
-      wsLogger.error('Failed to parse message:', e)
+      logger.error('Failed to parse message:', e)
       return
     }
 
