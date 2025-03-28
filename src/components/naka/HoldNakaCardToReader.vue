@@ -16,7 +16,7 @@ const { card } = useNaka()
 
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 
-const { isReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/*, triggerPayment*/ } = useIssuerWebSocket()
+const { isReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/* , triggerPayment */ } = useIssuerWebSocket()
 
 watch(paymentRequest, (request) => {
   if (!request)
@@ -35,7 +35,7 @@ watch(paymentRequest, (request) => {
   // TODO: Compare request.amount with the user's daily limit, which requires listing the user's naka-card txs for the current day
 
   // Compare request.amount with the available balance
-  if (parseInt(request.amount, 10) > remoteBalance.value) {
+  if (Number.parseInt(request.amount, 10) > remoteBalance.value) {
     rejectPayment(request.id, request.rail, 'INSUFFICIENT_BALANCE')
     useToast().setToast({
       type: 'error',
@@ -113,7 +113,7 @@ watch(paymentRejection, (rejection) => {
       No NAKA card found
     </div>
 
-    <!--div class="mt-auto mb-24 text-center">
+    <!-- div class="mt-auto mb-24 text-center">
       <button
         v-if="card && card.statusId === NakaCardStatus.Active"
         class="text-sm font-bold text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
@@ -128,6 +128,6 @@ watch(paymentRejection, (rejection) => {
       >
         Simulate NFC tap-to-pay ({{ Math.floor(remoteBalance / 1e5 + 1000) }} NIM)
       </button>
-    </div>-->
+    </div> -->
   </div>
 </template>
