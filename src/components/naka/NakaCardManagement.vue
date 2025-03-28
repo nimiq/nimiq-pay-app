@@ -12,6 +12,7 @@ import { Browser } from '@capacitor/browser'
 import { IonButton, IonItem, IonList } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import { useIssuerRestApi } from '../../lib/issuer-rest-api'
 
 defineEmits(stepEmits)
 
@@ -52,6 +53,9 @@ async function resetNaka() {
   useToast().setToast({ message: 'NAKA data reset' })
   useModal().closeModal()
 }
+
+const { getUserStatus } = useIssuerRestApi() // eslint-disable-line no-empty-pattern
+getUserStatus().then(console.log)
 </script>
 
 <template>

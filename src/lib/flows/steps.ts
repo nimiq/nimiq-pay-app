@@ -10,6 +10,8 @@ import { i18n } from '@/i18n/i18n-setup'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
+import { useIssuerRestApi } from '../issuer-rest-api'
+import { useNaka } from '../../stores/naka'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -645,11 +647,6 @@ export const verifyYourIdNakaStep: StepInit = async () => ({
   title: 'Fake verification ID', // Hola. I know someone is reading this!!!!
   get description() { return i18n.t('To use NAKA card payments, please verify yourself with IDnow.') },
   main: markRaw(NakaOnboardingVerifyId),
-  beforeNext: async (_state, { finalizeFlow }) => {
-    // eslint-disable-next-line no-console
-    console.log('Naka: Here your sdk should be called')
-    setTimeout(finalizeFlow, 2000)
-  },
 } satisfies Step)
 
 export const nakaCardIsReadyStep: StepInit = async () => ({
