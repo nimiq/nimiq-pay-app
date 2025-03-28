@@ -1,15 +1,16 @@
-import type * as v from 'valibot'
-import type {
-  AuthenticateConfirmMessageSchema,
-  AuthenticateStartMessageSchema,
-  PaymentAcceptMessageSchema,
-  PaymentConfirmMessageSchema,
-  PaymentRejectedMessage,
-  PaymentRejectMessageSchema,
-  PaymentRequestMessage,
-  PaymentSuccessMessage,
-  PaymentTriggerMessageScheme,
-} from './issuer-websocket.schema'
+import {
+  type AuthenticateConfirmMessage,
+  type AuthenticateStartMessage,
+  type PaymentAcceptMessage,
+  type PaymentConfirmMessage,
+  type PaymentRejectedMessage,
+  type PaymentRejectMessage,
+  type PaymentRequestMessage,
+  type PaymentSuccessMessage,
+  // type PaymentTriggerMessage,
+  type ServerMessage,
+  ServerMessageSchema,
+} from './issuer-schemas/ws.schema'
 import { useWebSocket } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { parse } from 'valibot'
@@ -18,17 +19,6 @@ import { isDev } from '.'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import { useRemoteSigner } from '../stores/remote-signer'
-import { ServerMessageSchema } from './issuer-websocket.schema'
-
-type IncomingServerMessage = v.InferOutput<typeof ServerMessageSchema>
-
-// Ensure that we are constructing the correct _input_ types for outgoing messages
-type AuthenticateConfirmMessage = v.InferInput<typeof AuthenticateConfirmMessageSchema>
-type AuthenticateStartMessage = v.InferInput<typeof AuthenticateStartMessageSchema>
-type PaymentAcceptMessage = v.InferInput<typeof PaymentAcceptMessageSchema>
-type PaymentConfirmMessage = v.InferInput<typeof PaymentConfirmMessageSchema>
-type PaymentRejectMessage = v.InferInput<typeof PaymentRejectMessageSchema>
-type PaymentTriggerMessage = v.InferInput<typeof PaymentTriggerMessageScheme>
 
 const wsLogger = useLogger('NakaSocket')
 
@@ -83,7 +73,7 @@ export function useIssuerWebSocket() {
    * The return value `boolean` is used to typecheck that all message types are handled.
    * The return type can therefore not be `undefined`.
    */
-  function handleIssuerMessage(msg: IncomingServerMessage): boolean {
+  function handleIssuerMessage(msg: ServerMessage): boolean {
     switch (msg.type) {
       case 'authenticate:challenge': {
         wsLogger.log('Received challenge:', msg.challenge)
@@ -182,7 +172,7 @@ export function useIssuerWebSocket() {
     if (!newData)
       return
 
-    let msg: IncomingServerMessage
+    let msg: ServerMessage
     try {
       if (newData === 'pong')
         return
@@ -232,15 +222,15 @@ export function useIssuerWebSocket() {
     send(JSON.stringify(msg))
   }
 
-  async function triggerPayment(recipient: string, amount: bigint) {
-    const message: PaymentTriggerMessage = {
-      type: 'payment:trigger',
-      rail: 'naka-card',
-      recipient,
-      amount: amount.toString(10),
-    }
-    send(JSON.stringify(message))
-  }
+  // async function triggerPayment(recipient: string, amount: bigint) {
+  //   const message: PaymentTriggerMessage = {
+  //     type: 'payment:trigger',
+  //     rail: 'naka-card',
+  //     recipient,
+  //     amount: amount.toString(10),
+  //   }
+  //   send(JSON.stringify(message))
+  // }
 
   return {
     isReady,
@@ -248,6 +238,6 @@ export function useIssuerWebSocket() {
     paymentRejection,
     confirmPayment,
     rejectPayment,
-    triggerPayment,
+    // triggerPayment,
   }
 }
