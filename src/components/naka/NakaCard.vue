@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
 
-const { color = 'gold' } = defineProps<{ color: NakaCardColor }>()
+const { color = 'blue' } = defineProps<{ color?: NakaCardColor }>()
 const colors: Record<NakaCardColor, string[]> = {
   blue: ['#1473AA', '#265DD7', '#0582CA'],
   gold: ['', '#ec991c', '#E9B213'],
