@@ -116,7 +116,21 @@ export function useIssuerRestApi() {
     return parse(UserStatusResponseSchema, await userStatusResponse.json())
   }
 
+  async function getNakaIdentificationToken(): Promise<string> {
+    const nakaIdentificationTokenResponse = await fetch('http://127.0.0.1:8083/naka/identification/token', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${await getToken()}`,
+      },
+    })
+    if (!nakaIdentificationTokenResponse.ok) {
+      throw new Error(`Error getting NAKA identification token: ${await nakaIdentificationTokenResponse.text()}`)
+    }
+    return nakaIdentificationTokenResponse.text()
+  }
+
   return {
     getUserStatus,
+    getNakaIdentificationToken,
   }
 }
