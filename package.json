@@ -75,7 +75,7 @@
     "@ionic/core": "8.4.1",
     "@ionic/vue": "8.4.1",
     "@ionic/vue-router": "8.4.1",
-    "@nimiq/core": "link:../core-rs-albatross/web-client/dist",
+    "@nimiq/core": "^2.0.9",
     "@types/youtube-player": "^5.5.11",
     "@vitejs/plugin-legacy": "^6.0.0",
     "@vitejs/plugin-vue": "^5.2.1",
