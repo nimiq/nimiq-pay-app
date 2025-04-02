@@ -1,17 +1,25 @@
-import { parse } from 'valibot'
+import type { PublicKey, Signature } from '@nimiq/core'
+import type { BaseIssue, BaseSchema, InferOutput } from 'valibot'
+import { parse, string } from 'valibot'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import {
   type AuthCompleteRequest,
+  type AuthCompleteResponse,
   AuthCompleteResponseSchema,
   type AuthStartRequest,
+  type AuthStartResponse,
   AuthStartResponseSchema,
-  UserStatusResponse,
+  type UserIdentification,
+  UserIdentificationSchema,
+  type UserStatusResponse,
   UserStatusResponseSchema,
 } from './issuer-schemas/rest.schema'
 import { signMessage } from './issuer-utils'
 
 const logger = useLogger('NakaRestApi')
+
+const ISSUER_SERVER_ORIGIN = 'http://127.0.0.1:8083'
 
 interface Token {
   /**
@@ -46,39 +54,44 @@ async function getToken() {
 
   const { localAddress, localWallet } = useLocalWallet()
 
-  try {
-    // Request a challenge from the issuer
-    const authStartRequest: AuthStartRequest = {
-      address: localAddress.toUserFriendlyAddress(),
-    }
-    const authStartResponse = await fetch('http://127.0.0.1:8083/auth/start', {
+  async function authApi<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, body: object, responseSchema: T): Promise<InferOutput<T>> {
+    const res = await fetch(`${ISSUER_SERVER_ORIGIN}/auth${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(authStartRequest),
+      body: JSON.stringify(body),
     })
-    const { challenge } = parse(AuthStartResponseSchema, await authStartResponse.json())
+    return parse(responseSchema, await res.json())
+  }
+
+  async function startAuth(address: string): Promise<AuthStartResponse> {
+    const authStartRequest: AuthStartRequest = {
+      address,
+    }
+    return authApi('/start', authStartRequest, AuthStartResponseSchema)
+  }
+
+  async function completeAuth(challenge: string, signature: Signature, publicKey: PublicKey): Promise<AuthCompleteResponse> {
+    const authCompleteRequest: AuthCompleteRequest = {
+      challenge,
+      signature: signature.toHex(),
+      publicKey: publicKey.toHex(),
+    }
+    return authApi('/complete', authCompleteRequest, AuthCompleteResponseSchema)
+  }
+
+  try {
+    // Request a challenge from the issuer
+    const { challenge } = await startAuth(localAddress.toUserFriendlyAddress())
 
     // Sign the challenge with the local wallet
     const signature = await signMessage(localWallet, challenge)
 
     // Send the signed challenge back to the issuer to get a token
-    const authCompleteRequest: AuthCompleteRequest = {
-      challenge,
-      signature: signature.toHex(),
-      publicKey: localWallet.publicKey.toHex(),
-    }
-    const authCompleteResponse = await fetch('http://127.0.0.1:8083/auth/complete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(authCompleteRequest),
-    })
-    const { token } = parse(AuthCompleteResponseSchema, await authCompleteResponse.json())
+    const { token } = await completeAuth(challenge, signature, localWallet.publicKey)
 
-    // Decode the token to get the expiration timestamp
+    // Decode the token to get the issued-at and expiration timestamps
     const payload = token.split('.')[1]
     const { iat, exp } = JSON.parse(Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromBase64Url(payload))) as ApiTokenPayload
 
@@ -92,45 +105,46 @@ async function getToken() {
     }
 
     return token
-  } catch (error) {
+  }
+  catch (error) {
     logger.error('Error getting token:', error)
     throw error
   }
 }
 
 export function useIssuerRestApi() {
-  async function getUserStatus(): Promise<UserStatusResponse | null> {
-    const userStatusResponse = await fetch('http://127.0.0.1:8083/user/status', {
-      method: 'GET',
+  async function api<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, method: 'GET' | 'POST', body: string, responseSchema: T): Promise<InferOutput<T>> {
+    const res = await fetch(`${ISSUER_SERVER_ORIGIN}${path}`, {
+      method,
       headers: {
-        'Authorization': `Bearer ${await getToken()}`,
+        Authorization: `Bearer ${await getToken()}`,
       },
+      body,
     })
-    if (!userStatusResponse.ok) {
-      if (userStatusResponse.status === 403) {
-        // User not yet registered
-        return null
-      }
-      throw new Error(`Error getting user status: ${await userStatusResponse.text()}`)
+    if (!res.ok) {
+      throw new Error(`Issuer REST API error: ${await res.text()}`)
     }
-    return parse(UserStatusResponseSchema, await userStatusResponse.json())
+    if (responseSchema.expects === 'string') {
+      return parse(responseSchema, await res.text())
+    }
+    return parse(responseSchema, await res.json())
+  }
+
+  async function getUserStatus(): Promise<UserStatusResponse> {
+    return api('/user/status', 'GET', '', UserStatusResponseSchema)
   }
 
   async function getNakaIdentificationToken(): Promise<string> {
-    const nakaIdentificationTokenResponse = await fetch('http://127.0.0.1:8083/naka/identification/token', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${await getToken()}`,
-      },
-    })
-    if (!nakaIdentificationTokenResponse.ok) {
-      throw new Error(`Error getting NAKA identification token: ${await nakaIdentificationTokenResponse.text()}`)
-    }
-    return nakaIdentificationTokenResponse.text()
+    return api('/naka/identification/token', 'GET', '', string())
+  }
+
+  async function getNakaIdentificationById(id: string): Promise<UserIdentification> {
+    return api(`/naka/identification/${id}`, 'GET', '', UserIdentificationSchema)
   }
 
   return {
     getUserStatus,
     getNakaIdentificationToken,
+    getNakaIdentificationById,
   }
 }
