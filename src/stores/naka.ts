@@ -1,14 +1,14 @@
+import type { NakaCard as ApiNakaCard, UserIdentification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '../composables/useLogger'
 import { SQLQuery } from '../lib/sql-queries'
 import { useConn } from './conn'
-import { NakaCard as ApiNakaCard, UserIdentification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 
 const logger = useLogger('useNaka')
 
 // TODO: Derive from or directly use rest.schema's NakaCard type
-export type NakaCard = {
+export interface NakaCard {
   sourceId: string
   statusId: string
   expiryDate: string
@@ -78,9 +78,9 @@ export function useNakaDb() {
   }
 }
 
-export type NakaRegistration = {
-  state: UserStatusResponse['state'],
-  identifications: UserIdentification[],
+export interface NakaRegistration {
+  state: UserStatusResponse['state']
+  identifications: UserIdentification[]
   // nakaIdentification?: UserIdentification,
   // nakaCards: NakaCard[],
 }

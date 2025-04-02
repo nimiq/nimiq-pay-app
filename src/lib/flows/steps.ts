@@ -8,8 +8,6 @@ import { sleep } from '@/lib/utils'
 import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
-import { useIssuerRestApi } from '../issuer-rest-api'
-import { useNaka } from '../../stores/naka'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
