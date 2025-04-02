@@ -4,7 +4,6 @@ import { computed, ref } from 'vue'
 import { useLogger } from '../composables/useLogger'
 import { SQLQuery } from '../lib/sql-queries'
 import { useConn } from './conn'
-import { NakaCard as ApiNakaCard, UserIdentification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 
 const logger = useLogger('useNaka')
 

@@ -54,8 +54,8 @@ async function resetNaka() {
   useModal().closeModal()
 }
 
-const { getUserStatus } = useIssuerRestApi() // eslint-disable-line no-empty-pattern
-getUserStatus().then(console.log)
+const { getUserStatus } = useIssuerRestApi()
+getUserStatus().then(console.log) // eslint-disable-line no-console
 </script>
 
 <template>

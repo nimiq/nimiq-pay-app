@@ -10,8 +10,6 @@ import { i18n } from '@/i18n/i18n-setup'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
-import { useIssuerRestApi } from '../issuer-rest-api'
-import { useNaka } from '../../stores/naka'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
