@@ -842,6 +842,9 @@ msgstr "Dein Mobilfunkanbieter könnte Kosten erheben."
 msgid "Status"
 msgstr "Status"
 
+msgid "Store screenshot safely"
+msgstr ""
+
 msgid "Submit"
 msgstr "Abschicken"
 
@@ -1108,6 +1111,11 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#, fuzzy
+#~| msgid "Consensus established."
+#~ msgid "Consensus not established."
+#~ msgstr "Konsens erreicht."
 
 #~ msgid "Loading..."
 #~ msgstr "Lade…"

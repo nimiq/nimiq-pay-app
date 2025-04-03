@@ -1118,6 +1118,10 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
+#: src/components/ShowWords.vue:32
+msgid "Store screenshot safely"
+msgstr ""
+
 #: src/modals/TaskModal.vue:47
 msgid "Submit"
 msgstr ""
