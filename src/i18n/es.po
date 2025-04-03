@@ -846,6 +846,9 @@ msgstr "Se pueden aplicar tarifas estándar."
 msgid "Status"
 msgstr "Estado"
 
+msgid "Store screenshot safely"
+msgstr ""
+
 msgid "Submit"
 msgstr "Enviar"
 
@@ -1110,6 +1113,11 @@ msgstr "Tu número"
 
 msgid "Your wallet is ready to use"
 msgstr "Tu billetera está lista para usar"
+
+#, fuzzy
+#~| msgid "Consensus established."
+#~ msgid "Consensus not established."
+#~ msgstr "Consenso establecido."
 
 #~ msgid "Loading..."
 #~ msgstr "Cargando..."
