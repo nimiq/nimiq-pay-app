@@ -3,6 +3,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { Keyboard } from '@capacitor/keyboard'
+import { useIntervalFn } from '@vueuse/core'
 import { onMounted, onUnmounted, type PropType, type Ref, ref, watchEffect } from 'vue'
 
 defineProps({
@@ -56,17 +57,57 @@ function inputHandler(e: Event) {
       window.setTimeout(() => {
         input.classList.remove('animate-wiggle')
       }, 1000)
+      // Clear value
+      loginWords.value[index] = ''
     }, 2000)
   }
 }
 
+// Check if already inputted words are correct since the inputHandler only checks the current word
+// This is needed in case the user is writing too fast and skipping the check on a previous word
+const { pause, resume } = useIntervalFn(() => {
+  for (let i = 0; i < loginWords.value.length; i++) {
+    const word = loginWords.value[i]
+    if (!wordList.includes(word)) {
+      const input = document.getElementById((i + 1).toString().padStart(2, '0')) as HTMLInputElement
+      // If input has focus, do nothing
+      if (document.activeElement === input)
+        return
+      // Check if input is empty, if not it means the word is not valid
+      const inputValue = input.value.toLowerCase().trim()
+      if (inputValue === '')
+        continue
+
+      const parent = input.parentElement as HTMLElement
+
+      // If it already has the text-pumpkin class, do nothing
+      if (parent.classList.contains('!text-pumpkin'))
+        continue
+
+      input.classList.add('animate-wiggle')
+      parent.classList.add('!text-pumpkin')
+      try {
+        Haptics.notification({ type: NotificationType.Warning })
+      }
+      catch (error) {
+        logger.error('Failed to trigger haptic feedback', error)
+      }
+      window.setTimeout(() => {
+        input.classList.remove('animate-wiggle')
+      }, 1000)
+    }
+  }
+}, 1000, { immediate: true })
+
 onMounted(() => {
+  resume()
   if (useDevice().isIOS)
     Keyboard.setAccessoryBarVisible({ isVisible: false })
 })
 onUnmounted(() => {
   if (useDevice().isIOS)
     Keyboard.setAccessoryBarVisible({ isVisible: true })
+  pause()
 })
 </script>
 
