@@ -16,7 +16,8 @@ defineEmits(stepEmits)
 
 const loginWords: Ref<string[]> = ref([])
 const isDevImport = ref(false)
-const isValidMnemonic = computed(() => loginWords.value.length === 12 && loginWords.value.every(word => Nimiq.MnemonicUtils.DEFAULT_WORDLIST.includes(word)))
+// Check for undefined before use every since every skips undefined values
+const isValidMnemonic = computed(() => loginWords.value.length === 12 && !loginWords.value.includes(undefined as any) && loginWords.value.every(word => Nimiq.MnemonicUtils.DEFAULT_WORDLIST.includes(word)))
 
 const devWallet = ['tube', 'siege', 'funny', 'crouch', 'notable', 'setup', 'adult', 'cost', 'country', 'mask', 'night', 'giraffe']
 </script>
