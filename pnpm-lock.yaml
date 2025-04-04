@@ -53,6 +53,9 @@ importers:
       '@nimiq/vue3-components':
         specifier: github:nimiq/vue3-components#build/full
         version: https://codeload.github.com/nimiq/vue3-components/tar.gz/e63c554e934aa562926393c9689341c4ee3157bf
+      '@rdlabo/capacitor-screenshot-event':
+        specifier: ^6.0.0
+        version: 6.0.0(@capacitor/core@6.2.0)
       '@vueuse/core':
         specifier: ^12.3.0
         version: 12.3.0(typescript@5.7.3)
@@ -1763,6 +1766,11 @@ packages:
 
   '@prettier/plugin-xml@2.2.0':
     resolution: {integrity: sha512-UWRmygBsyj4bVXvDiqSccwT1kmsorcwQwaIy30yVh8T+Gspx4OlC0shX1y+ZuwXZvgnafmpRYKks0bAu9urJew==}
+
+  '@rdlabo/capacitor-screenshot-event@6.0.0':
+    resolution: {integrity: sha512-szSvZSHnL/KcK2UAi5dtehvMqK0PyZN6HiRiNbgJNsIx2fpQs3CNk3zJAAQObQHCr1yTOlahjHj/cNIL4rBaQQ==}
+    peerDependencies:
+      '@capacitor/core': ^6.0.0
 
   '@rollup/plugin-babel@5.3.1':
     resolution: {integrity: sha512-WFfdLWU/xVWKeRQnKmIAQULUI7Il0gZnBIH/ZFO069wYIfPu+8zrfp/KMW0atmELoRDq8FbiP3VCss9MhCut7Q==}
@@ -9610,6 +9618,10 @@ snapshots:
     dependencies:
       '@xml-tools/parser': 1.0.11
       prettier: 2.8.8
+
+  '@rdlabo/capacitor-screenshot-event@6.0.0(@capacitor/core@6.2.0)':
+    dependencies:
+      '@capacitor/core': 6.2.0
 
   '@rollup/plugin-babel@5.3.1(@babel/core@7.26.0)(rollup@2.79.2)':
     dependencies:
