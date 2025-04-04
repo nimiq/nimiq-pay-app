@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { PrivacyScreen } from '@capacitor-community/privacy-screen'
 import { IonButton } from '@ionic/vue'
+import { ScreenshotEvent } from '@rdlabo/capacitor-screenshot-event'
 import { computed, onUnmounted, watch } from 'vue'
 
 const props = defineProps({ isVisible: Boolean })
@@ -13,6 +15,7 @@ const props = defineProps({ isVisible: Boolean })
 defineEmits<{ done: [] }>()
 
 const logger = useLogger('ShowWords')
+const { isAndroid } = useDevice()
 
 const words = computed(() => {
   const { data, error } = useLocalWallet().getWords()
@@ -23,26 +26,30 @@ const words = computed(() => {
   return data
 })
 
+ScreenshotEvent.addListener('userDidTakeScreenshot', () => {
+  logger.log('Screenshot taken')
+  useToast().setToast({
+    message: i18n.t('Store screenshot safely'),
+    type: 'warning',
+    duration: 10000,
+  })
+})
+
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
-    PrivacyScreen.enable()
-    PrivacyScreen.addListener('screenshotTaken', () => {
-      logger.log('Screenshot taken')
-      useToast().setToast({
-        message: i18n.t('Store screenshot safely'),
-        type: 'warning',
-        duration: 10000,
-      })
-    })
+    // TODO: there is no way (yet) to enable privacy screen without restricting screenshots in Android
+    if (!isAndroid)
+      PrivacyScreen.enable()
+    ScreenshotEvent.startWatchEvent()
   }
   else {
     PrivacyScreen.disable()
-    PrivacyScreen.removeAllListeners()
+    ScreenshotEvent.removeWatchEvent()
   }
 })
 onUnmounted(() => {
   PrivacyScreen.disable()
-  PrivacyScreen.removeAllListeners()
+  ScreenshotEvent.removeWatchEvent()
 })
 </script>
 

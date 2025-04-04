@@ -44,6 +44,7 @@
     "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.0",
     "@nimiq/utils": "^0.12.0",
     "@nimiq/vue3-components": "github:nimiq/vue3-components#build/full",
+    "@rdlabo/capacitor-screenshot-event": "^6.0.0",
     "@vueuse/core": "^12.3.0",
     "@vueuse/integrations": "^12.3.0",
     "bech32": "^2.0.0",

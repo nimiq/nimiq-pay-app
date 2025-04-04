@@ -92,6 +92,8 @@ PODS:
   - nanopb/decode (2.30909.1)
   - nanopb/encode (2.30909.1)
   - PromisesObjC (2.3.1)
+  - RdlaboCapacitorScreenshotEvent (6.0.0):
+    - Capacitor
   - SQLCipher (4.6.0):
     - SQLCipher/standard (= 4.6.0)
   - SQLCipher/common (4.6.0)
@@ -120,6 +122,7 @@ DEPENDENCIES:
   - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview`)"
   - Firebase/Messaging
+  - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@6.0.0_@capacitor+core@6.2.0/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
 SPEC REPOS:
   trunk:
@@ -175,6 +178,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
     :path: "../../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview"
+  RdlaboCapacitorScreenshotEvent:
+    :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@6.0.0_@capacitor+core@6.2.0/node_modules/@rdlabo/capacitor-screenshot-event"
 
 SPEC CHECKSUMS:
   AparajitaCapacitorBiometricAuth: c058563fe00160e12b022341e11b3181357ea93a
@@ -206,9 +211,10 @@ SPEC CHECKSUMS:
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
+  RdlaboCapacitorScreenshotEvent: eb8f3666df199a4aebabbb6afc9e0e9ff18f6b0a
   SQLCipher: 30a8e81afa6128e600b17ffa77d0f92fa05ed208
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 72cb5e4a8780a1726b4d71cdbf4deabc507eb567
+PODFILE CHECKSUM: 3818a72e2450c7adcd95d304d10a1fc4fbaa727a
 
 COCOAPODS: 1.15.2
