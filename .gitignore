@@ -46,6 +46,5 @@ builds/ios/bundle/*
 *.app
 *.tgz
 google-service-account.json
-src/lib/issuer-schemas/*.ts
 
 ./components.d.ts

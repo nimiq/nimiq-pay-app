@@ -48,8 +48,8 @@ importers:
         specifier: npm:@nimiq/fastspot-api@2.0.0-beta.0
         version: '@nimiq/fastspot-api@2.0.0-beta.0'
       '@nimiq/utils':
-        specifier: ^0.12.0
-        version: 0.12.0
+        specifier: ^0.12.3
+        version: 0.12.3
       '@nimiq/vue3-components':
         specifier: github:nimiq/vue3-components#build/full
         version: https://codeload.github.com/nimiq/vue3-components/tar.gz/e63c554e934aa562926393c9689341c4ee3157bf
@@ -1649,8 +1649,8 @@ packages:
   '@nimiq/style@0.8.5':
     resolution: {integrity: sha512-il2+hrodQ7iL4ARPwfGmGvrEYgtMHAoQSbcyapxEQEG7vDYj5r+ssuhKB+oYmdRUxA1/HvyGDnWG3XenKvQyIA==}
 
-  '@nimiq/utils@0.12.0':
-    resolution: {integrity: sha512-mTpVYzCepUMgH8ryr+93xQx91gl1P1z3Yn6BjGbduEgX75s1WdZETusXyi9CwRr2vNXkGpoy7c/Rt2A6Pn8sAw==}
+  '@nimiq/utils@0.12.3':
+    resolution: {integrity: sha512-5zyUpHAiTGOixgd2VDwgWM5mzq/i1zKV4THlPi29//V8sFc2VWcmYMFfIirD71ypzKkkPQQheTnNEg7y/vVy0g==}
 
   '@nimiq/utils@0.9.3':
     resolution: {integrity: sha512-g/9FpoNcJmU737TRQsNdU5/OGoXnc1UwunJBF/TGw4bx4cQ/pbYO7k0nsZ4RGUFn0jiy9xlxYH+yH1mvSY7+nQ==}
@@ -9472,7 +9472,7 @@ snapshots:
 
   '@nimiq/style@0.8.5': {}
 
-  '@nimiq/utils@0.12.0':
+  '@nimiq/utils@0.12.3':
     dependencies:
       big-integer: 1.6.52
 

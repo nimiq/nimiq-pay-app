@@ -35,7 +35,6 @@ export default defineConfig({
         }
         catch (err) {
           console.error('🚫 ERROR: Failed to copy issuer server schemas, make sure you have the "nimiq-pay-issuer-server" repo cloned next to this "nimiq-pay-app" repo!')
-          throw err
         }
       },
     },

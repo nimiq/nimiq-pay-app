@@ -1,7 +1,6 @@
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
-import type { TransactionState } from '@nimiq/core'
-import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core/web'
+import type { PlainAccount, PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { Ref } from 'vue'
 import { useCplApi } from '@/composables/useApi'

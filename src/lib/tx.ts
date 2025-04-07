@@ -1,6 +1,5 @@
 import type { AsyncResult } from '@/types'
-import type { AccountType, Address, PlainAccountType } from '@nimiq/core'
-import type { Transaction } from '@nimiq/core/web'
+import type { AccountType, Address, PlainAccountType, Transaction } from '@nimiq/core'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
