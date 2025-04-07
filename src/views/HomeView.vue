@@ -358,10 +358,6 @@ App.addListener('resume', detectPaymentRequest)
         </QuickButton>
       </motion.div>
 
-      <QuickButton show-chevron center @click="initializeFlow(FlowName.NakaCardManagement)">
-        managmente
-      </QuickButton>
-
       <!-- Transaction List -->
       <motion.div
         :initial="{ opacity: 0, y: 30 }"
