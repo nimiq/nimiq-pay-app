@@ -43,7 +43,7 @@ let _token: Token | null = null
 async function getToken() {
   if (_token) {
     // If token is valid for at least 1 more minute, use it
-    if (_token.expires < Date.now() - 60e3) {
+    if (_token.expires > Date.now() - 60e3) {
       return _token.token
     }
     // Otherwise reset it
