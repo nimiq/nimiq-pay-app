@@ -145,8 +145,8 @@ if (import.meta.env.DEV) {
 watch([referralCode, phoneNumberVerified, hasNakaCard], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
-    get title() { return i18n.t('Start paying at XXX locations with Naka') },
-    get subtitle() { return i18n.t('Activate your Naka Card') },
+    get title() { return i18n.t('Tap to pay with your NAKA card!') },
+    get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
     action: () => initializeFlow(FlowName.NakaOnboarding),
   }
 

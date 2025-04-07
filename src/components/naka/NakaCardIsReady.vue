@@ -6,10 +6,10 @@ import NakaCard from '@/components/naka/NakaCard.vue'
   <div class="flex flex-col items-center pb-8">
     <NakaCard />
     <h2 class="z-10 mt-4 flex justify-center items-center gap-x-3 text-2xl font-bold text-balance text-center small:mt-0">
-      {{ $t('NAKA Card is Ready!') }}
+      {{ $t('Your NAKA Card is ready!') }}
     </h2>
     <p class="z-10 mt-2 text-pretty text-center opacity-60">
-      {{ $t('Tap on the PAY button and  pay in a few steps, in many locations.') }}
+      {{ $t('Your ID has been successfully verified. Tap ‘Pay’ on the start screen and chose NAKA to pay.') }}
     </p>
   </div>
 </template>

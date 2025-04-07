@@ -18,8 +18,11 @@ async function register() {
     <div class="flex flex-1 items-center justify-center">
       <NakaVerificationCheckIcon class="translate-y-[-10%]" />
     </div>
+    <p class="text-center mb-4 text-opacity-60">
+      {{ $t('By proceeding, you are agreeing to NAKA\'s Terms & Conditions and Privacy Policy') }}
+    </p>
     <IonButton size="small" class="self-stretch my-6 text-base font-bold mt-auto" @click="register">
-      {{ $t('Verify my ID') }}
+      {{ $t('Verify ID') }}
     </IonButton>
   </div>
 </template>
