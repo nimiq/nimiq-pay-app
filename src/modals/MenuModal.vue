@@ -10,7 +10,6 @@ import { onLongPress } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
-import { useToast } from '../composables/useToast'
 import { useNaka } from '../stores/naka'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
@@ -22,12 +21,6 @@ function onLongPressCallback() {
 }
 
 const { hasCard } = storeToRefs(useNaka())
-
-async function resetNaka() {
-  if (!(await useNaka().reset()))
-    return
-  useToast().setToast({ message: 'NAKA data reset' })
-}
 
 onLongPress(
   htmlRefHook,
@@ -65,8 +58,8 @@ onLongPress(
       {{ $t('Activate Cashback & Rewards') }}
     </IonItem>
 
-    <IonItem v-if="hasCard" button :detail="false" @click="resetNaka()">
-      {{ $t('Reset NAKA') }}
+    <IonItem v-if="hasCard" button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
+      {{ $t('NAKA Card') }}
     </IonItem>
 
     <ItemDivider />

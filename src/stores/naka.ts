@@ -7,11 +7,16 @@ import { useConn } from './conn'
 
 const logger = useLogger('useNaka')
 
+export interface CardExpiry {
+  year: number
+  month: number
+}
+
 // TODO: Derive from or directly use rest.schema's NakaCard type
 export interface NakaCard {
   sourceId: string
   statusId: string
-  expiryDate: string
+  expiry: CardExpiry
 }
 
 export enum NakaCardStatus {
@@ -23,26 +28,29 @@ export enum NakaCardStatus {
 export function nakaCardFromApi(apiCard: ApiNakaCard): NakaCard {
   const sourceId = apiCard.maskedPan
   const statusId = NakaCardStatus.Active
-  const expiry = new Date(apiCard.expiry)
-  const expiryDate = `${expiry.getFullYear() + 4}-${expiry.getMonth().toString(10).padStart(2, '0')}`
+  const expiryDate = new Date(apiCard.expiry)
+  const expiry = { year: expiryDate.getUTCFullYear(), month: expiryDate.getUTCMonth() + 1 }
 
   return {
     sourceId,
     statusId,
-    expiryDate,
+    expiry,
   }
+}
+
+function expiryToDb(expiry: CardExpiry): string {
+  return `${expiry.year}-${expiry.month.toString(10).padStart(2, '0')}`
+}
+
+function expiryFromDb(expiry: string): CardExpiry {
+  const [year, month] = expiry.split('-').map(Number)
+  return { year, month }
 }
 
 export function useNakaDb() {
   const { run, query } = useConn()
   return {
-    async insertNakaCard({ sourceId, statusId, expiryDate, ...meta }: NakaCard) {
-      // Validate expiryDate
-      const expiryDateRegex = /^\d{4}-\d{2}$/
-      if (!expiryDate.match(expiryDateRegex)) {
-        throw new Error('Invalid expiry date format')
-      }
-
+    async insertNakaCard({ sourceId, statusId, expiry, ...meta }: NakaCard) {
       // Validate meta
       if (typeof meta !== 'object' || meta === null) {
         throw new Error('Invalid meta, must be an object')
@@ -56,8 +64,8 @@ export function useNakaDb() {
       }
 
       // Insert the card into the database
-      logger.log('✒️ Adding Naka card to DB', { sourceId, statusId, expiryDate, meta })
-      await run(SQLQuery.InsertNakaCard, [sourceId, statusId, expiryDate, metaJson])
+      logger.log('✒️ Adding Naka card to DB', { sourceId, statusId, expiry, meta })
+      await run(SQLQuery.InsertNakaCard, [sourceId, statusId, expiryToDb(expiry), metaJson])
     },
     async getAllNakaCards() {
       const rows = await query<{
@@ -68,8 +76,8 @@ export function useNakaDb() {
       }[]>(SQLQuery.GetAllNakaCards)
 
       return rows.map(({ sourceId, statusId, expiryDate, meta }) => {
-        const extraFields = JSON.parse(meta) as Omit<NakaCard, 'sourceId' | 'statusId' | 'expiryDate'>
-        return { sourceId, statusId, expiryDate, ...extraFields } satisfies NakaCard
+        const extraFields = JSON.parse(meta) as Omit<NakaCard, 'sourceId' | 'statusId' | 'expiry'>
+        return { sourceId, statusId, expiry: expiryFromDb(expiryDate), ...extraFields } satisfies NakaCard
       })
     },
     async purgeNakaCards() {
@@ -127,10 +135,8 @@ export const useNaka = defineStore('naka', () => {
     }
     else {
       dbCards.sort((a, b) => {
-        const aExpiry = Number.parseInt(a.expiryDate.replace('-', ''), 10)
-        const bExpiry = Number.parseInt(b.expiryDate.replace('-', ''), 10)
         // Sort decending (latest expiry first)
-        return bExpiry - aExpiry
+        return (b.expiry.year - a.expiry.year) || (b.expiry.month - a.expiry.month)
       })
       // Use the newest card
       card.value = dbCards[0]
@@ -142,11 +148,14 @@ export const useNaka = defineStore('naka', () => {
 
     if (card.value.statusId === NakaCardStatus.Active) {
       // Check expiry
-      const today = Number.parseInt(`${new Date().getFullYear()}-${(new Date().getMonth() + 1).toString(10).padStart(2, '0')}`.replace('-', ''), 10)
-      const expiry = Number.parseInt(card.value.expiryDate.replace('-', ''), 10)
-
-      if (today > expiry) {
-        logger.log('Card expired', { today, expiry })
+      if (
+        card.value.expiry.year < new Date().getUTCFullYear()
+        || (
+          card.value.expiry.year === new Date().getUTCFullYear()
+          && card.value.expiry.month < new Date().getUTCMonth() + 1
+        )
+      ) {
+        logger.log('Card expired', card.value.expiry)
         card.value.statusId = NakaCardStatus.Expired
         await insertNakaCard(card.value)
       }

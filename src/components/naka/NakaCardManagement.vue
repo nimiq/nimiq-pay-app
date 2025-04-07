@@ -2,13 +2,16 @@
 import CardDetails from '@/components/CardDetails.vue'
 import InputText from '@/components/InputText.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
+import QuickButton from '@/components/QuickButton.vue'
+import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { useNaka } from '@/stores/naka'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonItem, IonList } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
-import { useIssuerRestApi } from '../../lib/issuer-rest-api'
 
 defineEmits(stepEmits)
 
@@ -25,6 +28,13 @@ function createNewCard() {
 
 const { getUserStatus } = useIssuerRestApi()
 getUserStatus().then(console.log) // eslint-disable-line no-console
+
+async function resetNaka() {
+  if (!(await useNaka().reset()))
+    return
+  useToast().setToast({ message: 'NAKA data reset' })
+  useModal().closeModal()
+}
 </script>
 
 <template>
@@ -44,8 +54,8 @@ getUserStatus().then(console.log) // eslint-disable-line no-console
 
     <CardDetails
       v-if="!isBlocked"
-      :show="showCardDetails" :card-number="card?.cardNumber" :cvv="card?.cvv"
-      :expiry-date="card?.expiryDate"
+      :show="showCardDetails" :card-number="card?.cardNumber" :cvc="card?.cvc"
+      :expiry="card?.expiry"
     />
 
     <template v-if="!isBlocked">
@@ -92,6 +102,10 @@ getUserStatus().then(console.log) // eslint-disable-line no-console
         </a>
       </IonItem>
     </IonList>
+
+    <QuickButton show-chevron center @click="resetNaka">
+      dev: Reset NAKA
+    </QuickButton>
 
     <IonButton v-if="!isBlocked" class="mt-auto mb-4 block-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
       {{ $t('Block card') }}

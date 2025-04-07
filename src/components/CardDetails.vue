@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { show = false } = defineProps<{ show: boolean, cardNumber?: string, cvv?: string, expiryDate?: string }>()
+const { show = false } = defineProps<{ show: boolean, cardNumber?: string, cvc?: string, expiry?: { year: number, month: number } }>()
 </script>
 
 <template>
@@ -24,16 +24,16 @@ const { show = false } = defineProps<{ show: boolean, cardNumber?: string, cvv?:
           {{ cardNumber || '**** **** **** ****' }}
         </p>
         <h3 class="text-[15px]/none text-space/60">
-          {{ $t('CVV') }}
+          {{ $t('Expiry') }}
         </h3>
         <p class="text-lg/none text-space font-semibold text-right">
-          {{ cvv || '***' }}
+          {{ expiry ? `${expiry.month.toString(10).padStart(2, '0')} / ${expiry.year.toString(10).slice(-2)}` : '** / **' }}
         </p>
         <h3 class="text-[15px]/none text-space/60">
-          {{ $t('Expiry date') }}
+          {{ $t('CVC') }}
         </h3>
         <p class="text-lg/none text-space font-semibold text-right">
-          {{ expiryDate || '** / **' }}
+          {{ cvc || '***' }}
         </p>
       </div>
     </div>
