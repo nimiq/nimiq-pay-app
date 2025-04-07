@@ -1,15 +1,48 @@
 <script setup lang="ts">
 import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.vue'
+import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { IonButton } from '@ionic/vue'
 
 const emit = defineEmits(stepEmits)
 
 async function register() {
-  // eslint-disable-next-line no-console
-  console.log('Naka: Here your SDK should be called')
+  // TODO: Loading state
 
-  emit('done')
+  try {
+    const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification } = useIssuerRestApi()
+
+    // Do KYC
+    const _kycToken = await getNakaIdentificationToken()
+
+    // TODO: Start KYC flow with the token
+    await createFakeIdentification()
+
+    const user = await getUserStatus()
+    if (!user.identifications.find(identification => identification.status === 'VERIFIED'))
+      throw new Error('User doesn not have a VERIFIED identification')
+
+    const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
+
+    const { setRegistration, setCard } = useNaka()
+    setRegistration({
+      state: user.state,
+      nakaIdentification: user.identifications.find(i => i.id === registration.identification),
+      nakaCards: registration.cards.map(nakaCardFromApi),
+    })
+
+    await setCard(nakaCardFromApi(registration.cards[0]))
+
+    emit('done') // Triggers NakaCardIsReady modal
+  }
+  catch (error) {
+    useToast().setToast({
+      type: 'error',
+      message: (error as Error).message,
+    })
+  }
 }
 </script>
 

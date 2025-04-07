@@ -1,6 +1,6 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
-import type { PaymentSuccessMessage } from '../issuer-websocket.schema'
+import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 
 export enum FlowName {
   Setup = 'setup',

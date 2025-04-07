@@ -585,7 +585,7 @@ export const whatIsNakaStep: StepInit = async () => ({
 } satisfies Step)
 
 export const verifyYourIdNakaStep: StepInit = async () => ({
-  step: StepName.WhatIsNaka,
+  step: StepName.VerifyYourIdNaka,
   get title() { return i18n.t('Verify your ID') },
   get description() { return i18n.t('Please verify yourself with SumSub to activate your NAKA card.') },
   main: markRaw(NakaOnboardingVerifyId),

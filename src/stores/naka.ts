@@ -1,4 +1,4 @@
-import type { NakaCard as ApiNakaCard, UserIdentification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
+import type { NakaCard as ApiNakaCard, Identification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '../composables/useLogger'
@@ -20,10 +20,11 @@ export enum NakaCardStatus {
   Expired = 'Expired',
 }
 
-export function nakaCardApiToDb(apiCard: ApiNakaCard): NakaCard {
-  const sourceId = apiCard.panToken
+export function nakaCardFromApi(apiCard: ApiNakaCard): NakaCard {
+  const sourceId = apiCard.maskedPan
   const statusId = NakaCardStatus.Active
-  const expiryDate = `${new Date().getFullYear() + 4}-${new Date().getMonth().toString(10).padStart(2, '0')}`
+  const expiry = new Date(apiCard.expiry)
+  const expiryDate = `${expiry.getFullYear() + 4}-${expiry.getMonth().toString(10).padStart(2, '0')}`
 
   return {
     sourceId,
@@ -80,9 +81,8 @@ export function useNakaDb() {
 
 export interface NakaRegistration {
   state: UserStatusResponse['state']
-  identifications: UserIdentification[]
-  // nakaIdentification?: UserIdentification,
-  // nakaCards: NakaCard[],
+  nakaIdentification?: Identification
+  nakaCards: NakaCard[]
 }
 
 export const useNaka = defineStore('naka', () => {

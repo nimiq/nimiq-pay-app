@@ -422,9 +422,7 @@ const nakaOnboardFlow: FlowInit = async () => {
   ])
 
   const onDone: Flow['onDone'] = async () => {
-    const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('ID verified!') })
-    setTimeout(() => initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' }), 2000)
+    initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
   }
   return { flowName, steps, onDone }
 }

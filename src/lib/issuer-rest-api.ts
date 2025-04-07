@@ -10,8 +10,10 @@ import {
   type AuthStartRequest,
   type AuthStartResponse,
   AuthStartResponseSchema,
-  type UserIdentification,
-  UserIdentificationSchema,
+  type Identification,
+  IdentificationSchema,
+  type NakaRegistrationResponse,
+  NakaRegistrationResponseSchema,
   type UserStatusResponse,
   UserStatusResponseSchema,
 } from './issuer-schemas/rest.schema'
@@ -112,6 +114,12 @@ async function getToken() {
   }
 }
 
+interface ErrorResponse {
+  message: string
+  error: string
+  statusCode: number
+}
+
 export function useIssuerRestApi() {
   async function api<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, method: 'GET' | 'POST', body: string, responseSchema: T): Promise<InferOutput<T>> {
     const res = await fetch(`${ISSUER_SERVER_ORIGIN}${path}`, {
@@ -119,10 +127,24 @@ export function useIssuerRestApi() {
       headers: {
         Authorization: `Bearer ${await getToken()}`,
       },
-      body,
+      body: method === 'GET' ? undefined : body,
     })
     if (!res.ok) {
-      throw new Error(`Issuer REST API error: ${await res.text()}`)
+      const body = await res.text()
+      let message: string | undefined
+      try {
+        const json = JSON.parse(body) as ErrorResponse
+        if (json.message) {
+          message = json.message
+        }
+      }
+      catch {
+        // Ignore JSON parse error
+      }
+      if (message) {
+        throw new Error(`Issuer API error: ${message}`)
+      }
+      throw new Error(`Issuer API error: ${await res.text()}`)
     }
     if (responseSchema.expects === 'string') {
       return parse(responseSchema, await res.text())
@@ -138,13 +160,23 @@ export function useIssuerRestApi() {
     return api('/naka/identification/token', 'GET', '', string())
   }
 
-  async function getNakaIdentificationById(id: string): Promise<UserIdentification> {
-    return api(`/naka/identification/${id}`, 'GET', '', UserIdentificationSchema)
+  async function getNakaIdentificationById(id: string): Promise<Identification> {
+    return api(`/naka/identification/${id}`, 'GET', '', IdentificationSchema)
+  }
+
+  async function createFakeIdentification(): Promise<Identification> {
+    return api('/naka/identification/fake', 'POST', '', IdentificationSchema)
+  }
+
+  async function registerForNaka(): Promise<NakaRegistrationResponse> {
+    return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
   return {
     getUserStatus,
     getNakaIdentificationToken,
     getNakaIdentificationById,
+    registerForNaka,
+    createFakeIdentification,
   }
 }
