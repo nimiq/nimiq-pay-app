@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import NakaCard from '@/components/naka/NakaCard.vue'
+import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
+import { useIssuerWebSocket } from '@/lib/issuer-websocket'
+import { NakaCardStatus, useNaka } from '@/stores/naka'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { Rail, Transfer } from '@/types/transactions'
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
-import { useToast } from '../../composables/useToast'
-import { useIssuerWebSocket } from '../../lib/issuer-websocket'
-import { NakaCardStatus, useNaka } from '../../stores/naka'
-import { useRemoteSigner } from '../../stores/remote-signer'
-import { Rail, Transfer } from '../../types/transactions'
 
 const emit = defineEmits(stepEmits)
 
