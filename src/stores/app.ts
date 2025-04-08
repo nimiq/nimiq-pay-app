@@ -10,6 +10,7 @@ export enum Fiat {
   USD = 'USD',
   EUR = 'EUR',
   CRC = 'CRC',
+  GMD = 'GMD',
 }
 
 export enum Crypto {
