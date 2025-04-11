@@ -10,11 +10,11 @@ const { activeStep } = defineProps<{ activeStep?: Step }>()
 
 const emit = defineEmits(stepEmits)
 
-const { hasActiveCard } = storeToRefs(useNaka())
+const { isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const options = [
-  { label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader },
-  hasActiveCard.value && { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
+  ...(isCardActive.value && !isCardLocked.value ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
+  { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
 ].filter(Boolean) as { label: string, value: StepName }[]
 const stepNames = options.map(o => o.value)
 

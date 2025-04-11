@@ -7,7 +7,7 @@ import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { useNaka } from '@/stores/naka'
+import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonItem, IonList } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
@@ -15,19 +15,36 @@ import { ref } from 'vue'
 
 defineEmits(stepEmits)
 
-const { dailyLimit, paymentLimit, isBlocked } = storeToRefs(useNaka())
-const { card, setDailyLimit, setPaymentLimit, updateFrozenStatus } = useNaka()
+const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRefs(useNaka())
+const { setDailyLimit, setPaymentLimit } = useNaka()
 const newDailyLimit = ref<number | undefined>(dailyLimit.value)
 const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
 
 const showCardDetails = ref(false)
 
-function createNewCard() {
-  updateFrozenStatus()
+async function lockCard() {
+  if (!card.value)
+    return
+  const { lockNakaCard } = useIssuerRestApi()
+  // TODO: Button loading state
+  const apiCard = await lockNakaCard(card.value.sourceId)
+  card.value = nakaCardFromApi(apiCard)
+  useToast().setToast({
+    message: 'Card locked',
+  })
 }
 
-const { getUserStatus } = useIssuerRestApi()
-getUserStatus().then(console.log) // eslint-disable-line no-console
+async function unlockCard() {
+  if (!card.value)
+    return
+  const { unlockNakaCard } = useIssuerRestApi()
+  // TODO: Button loading state
+  const apiCard = await unlockNakaCard(card.value.sourceId)
+  card.value = nakaCardFromApi(apiCard)
+  useToast().setToast({
+    message: 'Card unlocked',
+  })
+}
 
 async function resetNaka() {
   if (!(await useNaka().reset()))
@@ -42,23 +59,23 @@ async function resetNaka() {
     <NakaCard class="w-full h-max" />
 
     <div class="mt-8 flex items-center gap-6">
-      <button v-if="!isBlocked" class="secondary" @click="showCardDetails = !showCardDetails">
+      <button v-if="isCardActive" class="secondary" @click="showCardDetails = !showCardDetails">
         {{ showCardDetails ? $t('Hide details') : $t('Show details') }}
       </button>
-      <button v-else class="secondary" @click="createNewCard">
+      <!-- <button v-else class="secondary" @click="createNewCard">
         {{ $t('Add new card') }}
-      </button>
+      </button> -->
     </div>
 
-    <div v-if="!isBlocked" class="h-12" />
+    <div v-if="isCardActive" class="h-12" />
 
     <CardDetails
-      v-if="!isBlocked"
+      v-if="isCardActive"
       :show="showCardDetails" :card-number="card?.cardNumber" :cvc="card?.cvc"
       :expiry="card?.expiry"
     />
 
-    <template v-if="!isBlocked">
+    <template v-if="isCardActive">
       <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none self-start">
         {{ $t('Payment limits') }}
       </h2>
@@ -107,7 +124,14 @@ async function resetNaka() {
       dev: Reset NAKA
     </QuickButton>
 
-    <IonButton v-if="!isBlocked" class="mt-auto mb-4 block-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
+    <IonButton v-if="isCardActive && !isCardLocked" class="mt-auto mb-4 w-full" @click="lockCard">
+      {{ $t('Lock card') }}
+    </IonButton>
+    <IonButton v-else-if="isCardActive && isCardLocked" class="mt-auto mb-4 w-full" @click="unlockCard">
+      {{ $t('Unlock card') }}
+    </IonButton>
+
+    <IonButton v-if="isCardActive" class="mt-auto mb-4 delete-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
       {{ $t('Block card') }}
     </IonButton>
   </div>
@@ -123,7 +147,7 @@ button.secondary {
   }
 }
 
-.block-btn {
+.delete-btn {
   --background: var(--radial-gradient-orange);
 }
 </style>

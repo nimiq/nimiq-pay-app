@@ -285,8 +285,8 @@ const paymentFlow: FlowInit = async () => {
     logger.log('🤑  Cancelling payment process')
   }
 
-  const hasNakaCardActivated = useNaka().hasActiveCard
-  const initialStep = hasNakaCardActivated ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
+  const hasActiveNakaCard = useNaka().isCardActive && !useNaka().isCardLocked
+  const initialStep = hasActiveNakaCard ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
 
   const slotComponent = defineAsyncComponent(() => import('@/components/PaymentSelector.vue'))
 
@@ -442,7 +442,7 @@ const nakaCardManagementFlow: FlowInit = async () => {
     import('./steps'),
     // import('@/stores/naka'),
   ] as const)
-  // if (!useNaka().hasActiveCard)
+  // if (!useNaka().isCardActive)
   //   throw new Error('Naka card is not activated')
 
   const flowName = FlowName.NakaCardManagement

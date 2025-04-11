@@ -15,26 +15,24 @@ export interface CardExpiry {
 // TODO: Derive from or directly use rest.schema's NakaCard type
 export interface NakaCard {
   sourceId: string
-  statusId: string
+  maskedPan: string
+  statusId: ApiNakaCard['status'] | 'EXPIRED'
   expiry: CardExpiry
-}
-
-export enum NakaCardStatus {
-  // Undocumented
-  Active = 'Active',
-  Expired = 'Expired',
+  lockLevel: ApiNakaCard['lockLevel']
+  type: ApiNakaCard['type']
 }
 
 export function nakaCardFromApi(apiCard: ApiNakaCard): NakaCard {
-  const sourceId = apiCard.maskedPan
-  const statusId = NakaCardStatus.Active
   const expiryDate = new Date(apiCard.expiry)
   const expiry = { year: expiryDate.getUTCFullYear(), month: expiryDate.getUTCMonth() + 1 }
 
   return {
-    sourceId,
-    statusId,
+    sourceId: apiCard.id,
+    maskedPan: apiCard.maskedPan,
+    statusId: apiCard.status,
     expiry,
+    lockLevel: apiCard.lockLevel,
+    type: apiCard.type,
   }
 }
 
@@ -77,7 +75,7 @@ export function useNakaDb() {
 
       return rows.map(({ sourceId, statusId, expiryDate, meta }) => {
         const extraFields = JSON.parse(meta) as Omit<NakaCard, 'sourceId' | 'statusId' | 'expiry'>
-        return { sourceId, statusId, expiry: expiryFromDb(expiryDate), ...extraFields } satisfies NakaCard
+        return { sourceId, statusId: statusId as NakaCard['statusId'], expiry: expiryFromDb(expiryDate), ...extraFields } satisfies NakaCard
       })
     },
     async purgeNakaCards() {
@@ -122,8 +120,9 @@ export const useNaka = defineStore('naka', () => {
   }
 
   const hasCard = computed(() => Boolean(card.value?.sourceId))
-
-  const hasActiveCard = computed(() => card.value?.statusId === NakaCardStatus.Active)
+  const isCardActive = computed(() => card.value?.statusId === 'ACTIVE')
+  const isCardLocked = computed(() => card.value?.lockLevel !== null)
+  const isCardBlocked = computed(() => card.value?.statusId === 'BLOCKED')
 
   async function init() {
     const dbCards = await getAllNakaCards()
@@ -144,9 +143,9 @@ export const useNaka = defineStore('naka', () => {
 
     logger.log('init', card.value)
 
-    // TODO: Check card status against issuer API
+    // TODO: Check card status against issuer API?
 
-    if (card.value.statusId === NakaCardStatus.Active) {
+    if (card.value.statusId === 'ACTIVE') {
       // Check expiry
       if (
         card.value.expiry.year < new Date().getUTCFullYear()
@@ -156,18 +155,10 @@ export const useNaka = defineStore('naka', () => {
         )
       ) {
         logger.log('Card expired', card.value.expiry)
-        card.value.statusId = NakaCardStatus.Expired
+        card.value.statusId = 'EXPIRED'
         await insertNakaCard(card.value)
       }
     }
-  }
-
-  // We need to update the following components: NakaCardDelete.vue and NakaCardManagement.vue with the code for deleting/adding new card
-
-  const isFrozen = ref(false)
-
-  function updateFrozenStatus() {
-    isFrozen.value = card.value?.statusId !== NakaCardStatus.Active
   }
 
   const dailyLimit = ref<number>()
@@ -187,12 +178,10 @@ export const useNaka = defineStore('naka', () => {
     setCard,
     reset,
     hasCard,
-    hasActiveCard,
+    isCardActive,
+    isCardLocked,
+    isCardBlocked,
     init,
-
-    isFrozen,
-    isBlocked: computed(() => isFrozen.value),
-    updateFrozenStatus,
 
     dailyLimit,
     setDailyLimit,

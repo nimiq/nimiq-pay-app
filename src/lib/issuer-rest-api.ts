@@ -12,6 +12,8 @@ import {
   AuthStartResponseSchema,
   type Identification,
   IdentificationSchema,
+  type NakaCard,
+  NakaCardSchema,
   type NakaRegistrationResponse,
   NakaRegistrationResponseSchema,
   type UserStatusResponse,
@@ -172,11 +174,26 @@ export function useIssuerRestApi() {
     return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
+  async function lockNakaCard(cardId: string): Promise<NakaCard> {
+    return api(`/naka/card/${cardId}/lock`, 'POST', '', NakaCardSchema)
+  }
+
+  async function unlockNakaCard(cardId: string): Promise<NakaCard> {
+    return api(`/naka/card/${cardId}/unlock`, 'POST', '', NakaCardSchema)
+  }
+
+  async function blockNakaCard(cardId: string): Promise<NakaCard> {
+    return api(`/naka/card/${cardId}/block`, 'POST', '', NakaCardSchema)
+  }
+
   return {
     getUserStatus,
     getNakaIdentificationToken,
     getNakaIdentificationById,
     registerForNaka,
     createFakeIdentification,
+    lockNakaCard,
+    unlockNakaCard,
+    blockNakaCard,
   }
 }

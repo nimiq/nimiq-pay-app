@@ -71,13 +71,28 @@ export type Identification = v.InferOutput<typeof IdentificationSchema>
 
 export const NakaCardSchema = v.pipe(
   v.object({
+    id: v.string(),
     maskedPan: v.string(),
+    status: v.union([
+      v.literal('ACTIVE'),
+      v.literal('BLOCKED'),
+      v.literal('TEMPORARY_BLOCKED'),
+      v.literal('REPLACED'),
+      v.literal('DELETED'),
+      v.literal('ACCOUNT_BLOCKED'),
+      v.literal('IN_CREATION'),
+    ]),
+    lockLevel: v.nullable(v.union([
+      v.literal('CLIENT'),
+      v.literal('ADMIN'),
+    ])),
     expiry: v.string(),
     type: v.union([
       v.literal('PHYSICAL'),
       v.literal('VIRTUAL'),
     ]),
     createdAt: v.string(),
+    updatedAt: v.string(),
   }),
 )
 

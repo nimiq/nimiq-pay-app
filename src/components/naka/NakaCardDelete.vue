@@ -1,30 +1,34 @@
 <script setup lang="ts">
+import LongPressButton from '@/components/LongPressButton.vue'
+import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
-import { useNaka } from '@/stores/naka'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { IonButton } from '@ionic/vue'
-import LongPressButton from '../LongPressButton.vue'
+import { storeToRefs } from 'pinia'
 
 defineProps<{ prop1: string }>()
 
 const emit = defineEmits(stepEmits)
 
-const isDev = import.meta.env.DEV
+const { card } = storeToRefs(useNaka())
 
-const { updateFrozenStatus } = useNaka()
-
-function deleteCard() {
-  updateFrozenStatus()
+async function blockCard() {
+  if (!card.value)
+    return
+  const { blockNakaCard } = useIssuerRestApi()
+  const apiCard = await blockNakaCard(card.value.sourceId)
+  card.value = nakaCardFromApi(apiCard)
+  useToast().setToast({
+    message: 'Card blocked',
+  })
   emit('navigateTo', { step: StepName.NakaCardManagement })
 }
 </script>
 
 <template>
   <div class="flex flex-col items-center h-full">
-    <button v-if="isDev" class="absolute bottom-24 text-sky font-bold" @click="deleteCard">
-      <!-- I am using firefox and the long press on phone does not work :upsidedown_smile: -->
-      > Block fast (skips long press)
-    </button>
-    <LongPressButton :component="IonButton" class="mt-auto mb-4 block-btn w-full" @long-press="deleteCard">
+    <LongPressButton :component="IonButton" class="mt-auto mb-4 block-btn w-full" @long-press="blockCard">
       {{ $t('Block') }}
     </LongPressButton>
   </div>
