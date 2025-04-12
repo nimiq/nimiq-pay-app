@@ -14,6 +14,10 @@ import {
   IdentificationSchema,
   type NakaCard,
   NakaCardSchema,
+  type NakaPinChangeResponse,
+  NakaPinChangeResponseSchema,
+  type NakaPinChangeTokenResponse,
+  NakaPinChangeTokenResponseSchema,
   type NakaRegistrationResponse,
   NakaRegistrationResponseSchema,
   type UserStatusResponse,
@@ -127,6 +131,7 @@ export function useIssuerRestApi() {
     const res = await fetch(`${ISSUER_SERVER_ORIGIN}${path}`, {
       method,
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${await getToken()}`,
       },
       body: method === 'GET' ? undefined : body,
@@ -186,6 +191,18 @@ export function useIssuerRestApi() {
     return api(`/naka/card/${cardId}/block`, 'POST', '', NakaCardSchema)
   }
 
+  async function getNakaCardPinChangeToken(cardId: string): Promise<NakaPinChangeTokenResponse> {
+    return api(`/naka/card/${cardId}/pin/token`, 'GET', '', NakaPinChangeTokenResponseSchema)
+  }
+
+  async function changeNakaCardPin(cardId: string, publicKey: string, cypher: string): Promise<NakaPinChangeResponse> {
+    const body = JSON.stringify({
+      publicKey,
+      cypher,
+    })
+    return api(`/naka/card/${cardId}/pin`, 'POST', body, NakaPinChangeResponseSchema)
+  }
+
   return {
     getUserStatus,
     getNakaIdentificationToken,
@@ -195,5 +212,7 @@ export function useIssuerRestApi() {
     lockNakaCard,
     unlockNakaCard,
     blockNakaCard,
+    getNakaCardPinChangeToken,
+    changeNakaCardPin,
   }
 }

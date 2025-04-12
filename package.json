@@ -48,6 +48,7 @@
     "@vueuse/integrations": "^12.3.0",
     "bech32": "^2.0.0",
     "fuse.js": "^7.0.0",
+    "jsencrypt": "^3.3.2",
     "jssha": "^3.3.1",
     "libphonenumber-js": "^1.11.17",
     "light-bolt11-decoder": "^3.1.1",

@@ -12,7 +12,7 @@ async function register() {
   // TODO: Loading state
 
   try {
-    const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification } = useIssuerRestApi()
+    const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
 
     // Do KYC
     const _kycToken = await getNakaIdentificationToken()
@@ -25,6 +25,16 @@ async function register() {
       throw new Error('User doesn not have a VERIFIED identification')
 
     const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
+
+    // Set card PIN
+    const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(registration.cards[0].id)
+    const { JSEncrypt } = await import('jsencrypt/lib/index.js')
+    const encrypter = new JSEncrypt()
+    encrypter.setKey(publicKey)
+    const cypher = encrypter.encrypt('4242') // TODO: Use user's app PIN
+    if (!cypher)
+      throw new Error('Failed to encrypt PIN')
+    await changeNakaCardPin(registration.cards[0].id, publicKey, cypher)
 
     const { setRegistration, setCard } = useNaka()
     setRegistration({

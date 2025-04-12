@@ -128,3 +128,27 @@ export const NakaRegistrationResponseSchema = v.pipe(
 )
 
 export type NakaRegistrationResponse = v.InferOutput<typeof NakaRegistrationResponseSchema>
+
+export const NakaPinChangeTokenResponseSchema = v.pipe(
+  v.object({
+    publicKey: v.string(),
+    expiry: v.string(),
+  }),
+)
+
+export type NakaPinChangeTokenResponse = v.InferOutput<typeof NakaPinChangeTokenResponseSchema>
+
+export const NakaPinChangeRequestSchema = v.pipe(
+  v.object({
+    publicKey: v.string(),
+    cypher: v.string(),
+  }),
+)
+export type NakaPinChangeRequest = v.InferOutput<typeof NakaPinChangeRequestSchema>
+
+export const NakaPinChangeResponseSchema = v.pipe(
+  v.string(),
+  v.description('OK'),
+)
+
+export type NakaPinChangeResponse = v.InferOutput<typeof NakaPinChangeResponseSchema>
