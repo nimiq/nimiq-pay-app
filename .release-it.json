@@ -4,6 +4,9 @@
       "pnpm build:ios",
       "pnpm build:android"
     ],
+    "after:gitlab:release": [
+      "node scripts/browserstack-upload.js"
+    ],
     "after:release": [
       "rm builds/android/NimiqPay-*.aab",
       "rm builds/android/NimiqPay-*.apk",
