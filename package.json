@@ -17,6 +17,8 @@
     "build:android": "dotenv bundle exec fastlane android beta",
     "release": "pnpm i18n:sync && ionic cap build --prod",
     "release:beta": "pnpm i18n:sync && dotenv release-it",
+    "release:browserstack": "dotenv node scripts/browserstack-upload.js",
+    "release:bs": "pnpm release:browserstack",
     "preview": "vite preview",
     "postinstall": "/bin/bash -c 'cp -r ${PWD}/node_modules/@nimiq/core/{launcher,lib,web} ${PWD}/public/nimiq/'",
     "typecheck": "vue-tsc --noEmit",
