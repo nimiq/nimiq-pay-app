@@ -27,7 +27,7 @@ import { signMessage } from './issuer-utils'
 
 const logger = useLogger('NakaRestApi')
 
-const ISSUER_SERVER_ORIGIN = 'http://127.0.0.1:8083'
+const ISSUER_SERVER_REST_ORIGIN = 'https://pay-test-issuer.nim.sh'
 
 interface Token {
   /**
@@ -63,7 +63,7 @@ async function getToken() {
   const { localAddress, localWallet } = useLocalWallet()
 
   async function authApi<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, body: object, responseSchema: T): Promise<InferOutput<T>> {
-    const res = await fetch(`${ISSUER_SERVER_ORIGIN}/auth${path}`, {
+    const res = await fetch(`${ISSUER_SERVER_REST_ORIGIN}/auth${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ interface ErrorResponse {
 
 export function useIssuerRestApi() {
   async function api<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, method: 'GET' | 'POST', body: string, responseSchema: T): Promise<InferOutput<T>> {
-    const res = await fetch(`${ISSUER_SERVER_ORIGIN}${path}`, {
+    const res = await fetch(`${ISSUER_SERVER_REST_ORIGIN}${path}`, {
       method,
       headers: {
         'Content-Type': 'application/json',

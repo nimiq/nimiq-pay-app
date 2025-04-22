@@ -21,10 +21,12 @@ import {
 } from './issuer-schemas/ws.schema'
 import { signMessage } from './issuer-utils'
 
+const ISSUER_SERVER_WS_ORIGIN = 'https://pay-test-issuer.nim.sh'
+
 const logger = useLogger('NakaSocket')
 
 export function useIssuerWebSocket() {
-  const { status, data, send } = useWebSocket<string>('ws://127.0.0.1:8081', {
+  const { status, data, send } = useWebSocket<string>(`${ISSUER_SERVER_WS_ORIGIN}/ws`, {
     autoReconnect: true,
     heartbeat: {
       interval: isDev ? 10e3 : 1e3,
