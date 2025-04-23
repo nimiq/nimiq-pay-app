@@ -28,6 +28,7 @@ export default defineConfig({
       apply: () => true, // apply for both 'serve' (dev server) and 'build'
       buildStart() {
         try {
+          copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/bluecode-issuer.schema.ts', 'src/lib/issuer-schemas/bluecode-issuer.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/common.schema.ts', 'src/lib/issuer-schemas/common.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/rest.schema.ts', 'src/lib/issuer-schemas/rest.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/ws.schema.ts', 'src/lib/issuer-schemas/ws.schema.ts')

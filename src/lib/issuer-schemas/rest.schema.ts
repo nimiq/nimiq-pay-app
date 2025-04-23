@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { ContractStateSchema } from './bluecode-issuer.schema'
 import { HexStringSchema, NimiqAddressSchema } from './common.schema'
 
 /** AUTH */
@@ -152,3 +153,30 @@ export const NakaPinChangeResponseSchema = v.pipe(
 )
 
 export type NakaPinChangeResponse = v.InferOutput<typeof NakaPinChangeResponseSchema>
+
+/** Bluecode */
+
+export const BluecodeUpdateContractRequestSchema = v.object({
+  state: v.optional(
+    ContractStateSchema,
+  ),
+})
+
+export type BluecodeUpdateContractRequest = v.InferOutput<typeof BluecodeUpdateContractRequestSchema>
+
+export const BluecodeCreateSessionRequestSchema = v.object({
+  cardRequestToken: v.string(),
+  expires: v.pipe(
+    v.number(),
+    v.minValue(86400),
+    v.maxValue(604800),
+  ),
+})
+
+export type BluecodeCreateSessionRequest = v.InferOutput<typeof BluecodeCreateSessionRequestSchema>
+
+export const BluecodeCreateCardRequestSchema = v.object({
+  cardRequestToken: v.string(),
+})
+
+export type BluecodeCreateCardRequest = v.InferOutput<typeof BluecodeCreateCardRequestSchema>
