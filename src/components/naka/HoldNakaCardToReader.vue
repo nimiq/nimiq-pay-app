@@ -4,7 +4,7 @@ import NakaCard from '@/components/naka/NakaCard.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerWebSocket } from '@/lib/issuer-websocket'
-import { NakaCardStatus, useNaka } from '@/stores/naka'
+import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
 import { storeToRefs } from 'pinia'
@@ -105,7 +105,7 @@ watch(paymentRejection, (rejection) => {
       <div v-if="!isReady" class="mt-6 text-orange-400 font-semibold">
         {{ $t('Connecting to issuer server...') }}
       </div>
-      <div v-else-if="card.statusId === NakaCardStatus.Active" class="mt-6 text-[#0075E1] opacity-60">
+      <div v-else-if="card.statusId === 'ACTIVE'" class="mt-6 text-[#0075E1] opacity-60">
         {{ $t('Hold near the terminal to pay') }}
       </div>
     </template>
@@ -115,14 +115,14 @@ watch(paymentRejection, (rejection) => {
 
     <!-- div class="mt-auto mb-24 text-center">
       <button
-        v-if="card && card.statusId === NakaCardStatus.Active"
+        v-if="card && card.statusId === 'ACTIVE'"
         class="text-sm font-bold text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
         @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(100e5))"
       >
         Simulate NFC tap-to-pay (100 NIM)
       </button>
       <button
-        v-if="card && card.statusId === NakaCardStatus.Active"
+        v-if="card && card.statusId === 'ACTIVE'"
         class="text-sm font-bold mt-4 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
         @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(remoteBalance + 1000e5))"
       >
