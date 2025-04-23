@@ -132,7 +132,7 @@ export function useIssuerRestApi() {
       method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${await getToken()}`,
+        'Authorization': `Bearer ${await getToken()}`,
       },
       body: method === 'GET' ? undefined : body,
     })
