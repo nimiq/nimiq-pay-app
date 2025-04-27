@@ -164,8 +164,8 @@ export const PaymentRequestMessageSchema = v.pipe(
     store: v.optional(StoreSchema),
     signatures: v.optional(v.pipe(
       v.object({
-        nakaSystem: v.optional(ZeroXHexStringSchema),
-        nakaCard: v.optional(ZeroXHexStringSchema),
+        card: v.optional(ZeroXHexStringSchema),
+        system: v.optional(ZeroXHexStringSchema),
       }),
       v.description('Additional transaction signatures'),
     )),

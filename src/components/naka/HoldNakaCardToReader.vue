@@ -23,7 +23,7 @@ watch(paymentRequest, (request) => {
     return
 
   // Verify card signature
-  const cardSignature = request.signatures?.nakaCard
+  const cardSignature = request.signatures?.card
   if (!cardSignature) {
     rejectPayment(request.id, request.rail, 'INVALID_REQUEST', 'Card signature is missing')
     return
