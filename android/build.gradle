@@ -21,6 +21,14 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven { url "https://maven.sumsub.com/repository/maven-public/" }
+        maven {
+            url = uri("https://nexus3-public.monetplus.cz/repository/ahead-android-release/")
+            credentials {
+                username = project.findProperty("repoUsername") ?: ""
+                password = project.findProperty("repoPassword") ?: ""
+            }
+        }
     }
 }
 

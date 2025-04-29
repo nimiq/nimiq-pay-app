@@ -32,6 +32,9 @@ project(':capawesome-capacitor-screen-orientation').projectDir = new File('../no
 include ':capgo-camera-preview'
 project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview/android')
 
+include ':capacitor-sumsub-mobile-sdk'
+project(':capacitor-sumsub-mobile-sdk').projectDir = new File('../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.1_@capacitor+core@6.2.0/node_modules/capacitor-sumsub-mobile-sdk/android')
+
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite/android')
 

@@ -144,6 +144,14 @@ export function useIssuerRestApi() {
         if (json.message) {
           message = json.message
         }
+
+        // If code is 401, the token is invalid
+        if (json.statusCode === 401) {
+          // Reset the token to force a new authentication
+          _token = null
+          // Retry the request
+          return api(path, method, _body, responseSchema)
+        }
       }
       catch {
         // Ignore JSON parse error

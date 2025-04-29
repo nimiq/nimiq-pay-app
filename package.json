@@ -47,6 +47,7 @@
     "@vueuse/core": "^12.3.0",
     "@vueuse/integrations": "^12.3.0",
     "bech32": "^2.0.0",
+    "capacitor-sumsub-mobile-sdk": "^0.0.1",
     "fuse.js": "^7.0.0",
     "jsencrypt": "^3.3.2",
     "jssha": "^3.3.1",

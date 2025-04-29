@@ -3,26 +3,38 @@ import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.v
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { useKyc } from '@/stores/kyc'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { IonButton } from '@ionic/vue'
+import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
+import { storeToRefs } from 'pinia'
+import { onMounted } from 'vue'
 
 const emit = defineEmits(stepEmits)
 
+const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+const { initializeSdk, openKycFlow, waitForStatusApproved } = useKyc()
+const { sdkStatus } = storeToRefs(useKyc())
+
 async function register() {
   // TODO: Loading state
-
   try {
-    const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+    await initializeSdk()
+    if (sdkStatus.value !== SumsubSdkStatus.READY) {
+      throw new Error('KYC SDK is not ready')
+    }
+    await openKycFlow()
 
-    // Do KYC
-    const _kycToken = await getNakaIdentificationToken()
+    // TODO: move this out or create a listener to prevent doing this twice
+    // await waitForStatusApproved()
 
-    // TODO: Start KYC flow with the token
-    await createFakeIdentification()
+    // await createFakeIdentification()
 
     const user = await getUserStatus()
     if (!user.identifications.find(identification => identification.status === 'VERIFIED'))
-      throw new Error('User doesn not have a VERIFIED identification')
+      throw new Error('User does not have a VERIFIED identification')
+
+    console.log('User:', user)
 
     const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
 

@@ -62,6 +62,9 @@ importers:
       bech32:
         specifier: ^2.0.0
         version: 2.0.0
+      capacitor-sumsub-mobile-sdk:
+        specifier: ^0.0.1
+        version: 0.0.1(@capacitor/core@6.2.0)
       fuse.js:
         specifier: ^7.0.0
         version: 7.0.0
@@ -2920,6 +2923,11 @@ packages:
 
   caniuse-lite@1.0.30001677:
     resolution: {integrity: sha512-fmfjsOlJUpMWu+mAAtZZZHz7UEwsUxIIvu1TJfO1HqFQvB/B+ii0xr9B5HpbZY/mC4XZ8SvjHJqtAY6pDPQEog==}
+
+  capacitor-sumsub-mobile-sdk@0.0.1:
+    resolution: {integrity: sha512-tRDDypFwMcAfdsbHpr5VGbveQ121dwdiVTAe0YgVkS9wDNcdn72zc4UqIu6v7Q/pGucBldZ/vK3opINDakX0Tg==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
@@ -10881,6 +10889,10 @@ snapshots:
   camelcase@8.0.0: {}
 
   caniuse-lite@1.0.30001677: {}
+
+  capacitor-sumsub-mobile-sdk@0.0.1(@capacitor/core@6.2.0):
+    dependencies:
+      '@capacitor/core': 6.2.0
 
   caseless@0.12.0: {}
 
