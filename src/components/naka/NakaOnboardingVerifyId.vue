@@ -12,6 +12,10 @@ import { storeToRefs } from 'pinia'
 
 const emit = defineEmits(stepEmits)
 
+const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+const { initializeSdk, openKycFlow, waitForStatusApproved } = useKyc()
+const { sdkStatus } = storeToRefs(useKyc())
+
 const { registerForNaka, getUserStatus } = useIssuerRestApi()
 const { initializeSdk, openKycFlow } = useKyc()
 const { sdkStatus, onKycApproved } = storeToRefs(useKyc())

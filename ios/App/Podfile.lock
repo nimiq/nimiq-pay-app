@@ -91,6 +91,11 @@ PODS:
     - GoogleUtilities/Logger
   - GoogleUtilities/UserDefaults (7.12.0):
     - GoogleUtilities/Logger
+  - IdensicMobileSDK (1.34.1):
+    - IdensicMobileSDK/Default (= 1.34.1)
+  - IdensicMobileSDK/Core (1.34.1)
+  - IdensicMobileSDK/Default (1.34.1):
+    - IdensicMobileSDK/Core
   - IONFilesystemLib (1.0.1)
   - IdensicMobileSDK (1.34.1):
     - IdensicMobileSDK/Default (= 1.34.1)
@@ -231,6 +236,7 @@ SPEC CHECKSUMS:
   FirebaseMessaging: b285329399cc6edd73b5b32864c68454177bcf3f
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
+  IdensicMobileSDK: 1c37c8a37df3fedf4f60937f66abc13885c21fe5
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   IdensicMobileSDK: 1c37c8a37df3fedf4f60937f66abc13885c21fe5
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
@@ -240,6 +246,6 @@ SPEC CHECKSUMS:
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: e0b4345150840b9bba0d9c202386036c24f399b2
+PODFILE CHECKSUM: 2dd81162b7417094d9bf1a7678849ed419ccc98b
 
 COCOAPODS: 1.15.2
