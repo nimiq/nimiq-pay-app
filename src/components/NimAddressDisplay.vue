@@ -6,11 +6,15 @@ import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { walletUrl } from '@/lib/index'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { Browser } from '@capacitor/browser'
 import { Clipboard } from '@capacitor/clipboard'
 import { IonButton, IonIcon } from '@ionic/vue'
 import { Identicon } from '@nimiq/vue3-components'
 import { qrCodeOutline } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { onUnmounted } from 'vue'
 
 defineProps({ address: { type: String } })
 
@@ -18,6 +22,8 @@ defineEmits(stepEmits)
 
 const logger = useLogger('NimAddressDisplay')
 const { setToast } = useToast()
+const { consensus } = storeToRefs(useNimiqNetwork())
+const { isConsensusNeeded } = storeToRefs(useLocks())
 
 const address = useLocalWallet().localAddress.toUserFriendlyAddress()
 
@@ -43,6 +49,11 @@ async function handleCopy() {
   })
   await setToast({ message: i18n.t('Address copied to clipboard') })
 }
+
+onUnmounted(() => {
+  if (consensus.value !== 'established')
+    isConsensusNeeded.value = true
+})
 </script>
 
 <template>

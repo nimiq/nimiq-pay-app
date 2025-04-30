@@ -31,7 +31,7 @@ const { networkId } = storeToRefs(useNimiqNetwork())
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: Transaction, swap?: Swap }, string> {
+export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
   logger.log(partialArgs.transfer)
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
@@ -53,7 +53,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res
-    return { data: { signedTx: res.data! }, error: undefined }
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.UserPaymentToAtomicSwap) {
     if (!useRemoteSigner().remoteAddress)
@@ -134,7 +134,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res
-    return { data: { signedTx: res.data!, swap }, error: undefined }
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent, swap }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     let tx = new Nimiq.Transaction(
@@ -191,7 +191,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res
-    return { data: { signedTx: res.data! }, error: undefined }
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
     const tx = new Nimiq.Transaction(
@@ -211,7 +211,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     const res = await getSignedTxByRemote(tx, { address: partialArgs.sender })
     if (res.error)
       return res
-    return { data: { signedTx: res.data! }, error: undefined }
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
     const tx = new Nimiq.Transaction(
@@ -262,7 +262,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     const res = await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
     if (res.error)
       return res
-    return { data: { signedTx: res.data! }, error: undefined }
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
   }
   else {
     return { data: undefined, error: i18n.t('Invalid transfer type') }
@@ -303,7 +303,7 @@ async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner(
   )
   newTx.proof = Nimiq.BufferUtils.fromHex(typeof receipt.details.proof === 'string' ? receipt.details.proof : receipt.details.proof.raw)
   return {
-    data: newTx,
+    data: { newTx, txSent: receipt.txSent },
     error: undefined,
   }
 }

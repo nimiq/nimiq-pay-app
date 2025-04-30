@@ -13,7 +13,6 @@ import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 import { useToast } from '@/composables/useToast'
 import { PaymentMethod, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail } from '@/types/transactions'
 import { Browser } from '@capacitor/browser'
@@ -39,7 +38,6 @@ const emit = defineEmits(stepEmits)
 
 const logger = useLogger('PaymentPreview')
 
-const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
 const { localAddress } = storeToRefs(useLocalWallet())
@@ -170,7 +168,7 @@ const disabled = computed(() =>
   || (isAtomicSwap.value && !!nimAddressLimits.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
   || !(
     (isEligible.value && paymentMethod.value === PaymentMethod.Points)
-    || (isHtlcActive.value && hasEnoughNimBalance.value && consensus.value === 'established')
+    || (isHtlcActive.value && hasEnoughNimBalance.value)
   )
   || !!goCryptoError.value,
 )

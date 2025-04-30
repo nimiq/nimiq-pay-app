@@ -155,6 +155,21 @@ export interface Transaction {
     proof: string | { raw: string }
     network: string
   }
+  txSent: boolean
+}
+
+export enum RemoteSignerTransactionState {
+  New = 'new',
+  Included = 'included',
+  Confirmed = 'confirmed',
+  Unknown = 'unknown',
+}
+
+export enum RemoteStatus {
+  Good = 'good',
+  Pending = 'pending',
+  Error = 'error',
+  Unknown = 'unknown',
 }
 
 export function useRemoteSignerApi() {
@@ -163,9 +178,11 @@ export function useRemoteSignerApi() {
   interface GetRemoteSignerArg { address: MaybeRef<Address> }
   interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<NimiqTransaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
+  interface GetTransactionStateArg { hash: MaybeRef<string> }
 
-  interface StatusRes { status: 'good' | 'bad', blockHeight: number, servicePublicKey: string, network: string }
+  interface StatusRes { status: RemoteStatus, blockHeight: number, servicePublicKey: string, network: string }
   interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number }
+  interface GetTransactionStateRes { hash: string, state: RemoteSignerTransactionState, timestamp: number, value: number }
 
   interface RemoteErrorRes {
     statusCode: number
@@ -192,6 +209,7 @@ export function useRemoteSignerApi() {
     getStatus,
     getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction, RemoteErrorRes>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
     getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[], RemoteErrorRes>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
+    getTransactionState: ({ hash }: GetTransactionStateArg) => api<GetTransactionStateRes, RemoteErrorRes>(new URL(`/tx/state/${v(hash)}`, baseCosignerUrl)),
     getRemoteSigner,
     sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
     sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import BackupNotification from '@/components/BackupNotification.vue'
+import AlertIcon from '@/components/icons/alert.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import MenuIcon from '@/components/icons/menu.vue'
+import WorldIcon from '@/components/icons/WorldIcon.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
 import QuickButton from '@/components/QuickButton.vue'
+import StatusMessage from '@/components/StatusMessage.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 import { useDevice } from '@/composables/useDevice'
@@ -15,6 +18,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
+import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
@@ -33,10 +37,10 @@ import { Browser } from '@capacitor/browser'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, until, useElementSize, useSwipe } from '@vueuse/core'
+import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
 import { chevronForward } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 
 const logger = useLogger('HomeView')
@@ -46,23 +50,73 @@ const { showModal } = useModal()
 
 const { isIOS } = useDevice()
 const { localBalance } = storeToRefs(useLocalWallet())
-const { isRemoteOk, isHtlcActive, remoteBalance, /* blocksUntilHtlcActive, */ remoteHeight } = storeToRefs(useRemoteSigner())
+const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
-const { consensus, height: localHeight } = storeToRefs(useNimiqNetwork())
+const { consensus } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
-const { nodesAreSynced, isTransactionPending, blocksUntilNextMacroBlock } = storeToRefs(useSync())
-const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
+const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
+
+const isFirstRender = ref(true)
 
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
-const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established' || remoteBalance.value === 0)) || !nodesAreSynced.value || isProcessingRemote.value || isTransactionPending.value)
+const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value)
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
+
+// Status Message
+const isConsensusMessageShown = computed(() => consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value))
+const statusMessageText = ref('')
+const statusMessageBgColor = ref('bg-pumpkin/15')
+const statusMessageTextColor = ref('text-pumpkin')
+const statusMessageIconColor = ref('text-pumpkin/60')
+const statusMessageIcon = ref(markRaw(InfoIcon))
+const isStatusMessageShown = ref(false)
+watchEffect(async () => {
+  if (isFirstRender.value)
+    return
+
+  if (!isRemoteOk.value) {
+    // Give it some time to really check if the server is down or if it's just fetching the status
+    await until(isRemoteOk).toBe(true, { timeout: 5000 })
+    if (!isRemoteOk.value) {
+      statusMessageText.value = i18n.t('Server not available')
+      statusMessageBgColor.value = 'bg-pumpkin/15'
+      statusMessageTextColor.value = 'text-pumpkin'
+      statusMessageIconColor.value = 'text-pumpkin/60'
+      statusMessageIcon.value = markRaw(AlertIcon)
+      isStatusMessageShown.value = true
+    }
+  }
+  else if (((remoteBalance.value > 0 || localBalance.value > 0) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
+    statusMessageText.value = i18n.tc(
+      'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
+      blocksUntilNextMacroBlock.value,
+      { blocks: blocksUntilNextMacroBlock.value },
+    )
+    statusMessageBgColor.value = 'bg-pumpkin/15'
+    statusMessageTextColor.value = 'text-pumpkin'
+    statusMessageIconColor.value = 'text-pumpkin/60'
+    statusMessageIcon.value = markRaw(InfoIcon)
+    isStatusMessageShown.value = true
+  }
+  else {
+    return isStatusMessageShown.value = false
+  }
+})
+
+const statusMessageBgColorDebounced = refDebounced(statusMessageBgColor, debounceDelay, { maxWait: debounceMaxWait })
+const statusMessageTextColorDebounced = refDebounced(statusMessageTextColor, debounceDelay, { maxWait: debounceMaxWait })
+const statusMessageIconColorDebounced = refDebounced(statusMessageIconColor, debounceDelay, { maxWait: debounceMaxWait })
+const statusMessageIconDebounced = refDebounced(statusMessageIcon, debounceDelay, { maxWait: debounceMaxWait })
+const isStatusMessageShownDebounced = refDebounced(isStatusMessageShown, debounceDelay, { maxWait: debounceMaxWait })
+const isConsensusMessageShownDebounced = refDebounced(isConsensusMessageShown, debounceDelay, { maxWait: debounceMaxWait })
 
 // Payment Request Notification
 const prNotificationRef = ref<HTMLDivElement | null>(null)
@@ -173,6 +227,23 @@ watch(() => localNotifications.value.length, (newValue, oldValue) => {
     scrollToFirstNotification()
 })
 
+watch(consensus, (value) => {
+  if (value === 'established')
+    isConsensusNeeded.value = false
+})
+
+watch([hasHtlcExpired, isRemoteOk], ([expired, remoteOk]) => {
+  if (expired) {
+    isConsensusNeeded.value = true
+    if (remoteOk)
+      showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false })
+  }
+  // Reset after htlc recreated and consensus established
+  else if (consensus.value === 'established') {
+    isConsensusNeeded.value = false
+  }
+}, { immediate: true })
+
 async function detectPaymentRequest() {
   try {
     const { type, value: pr } = await Clipboard.read()
@@ -224,6 +295,7 @@ onMounted(async () => {
   useNotifications().init()
   useSync().syncWallets()
   detectPaymentRequest()
+  isFirstRender.value = false
 })
 
 App.addListener('resume', detectPaymentRequest)
@@ -342,25 +414,14 @@ App.addListener('resume', detectPaymentRequest)
     <IonFooter ref="footerRef">
       <IonToolbar>
         <Transition name="slide-fade">
-          <div v-if="consensus === 'established' && remoteHeight > 0 && localHeight > 0 && !nodesAreSynced" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
-            <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
-            <p class="font-medium text-center text-pumpkin">
-              {{ $t('Nodes are not synced.\nRemote: {remoteHeight}, Local: {localHeight}', { remoteHeight, localHeight }) }}
-            </p>
-          </div>
-          <div v-else-if="((remoteBalance > 0 || localBalance > 0) && !isHtlcActive && !isSyncingWallets) || isTransactionPending" class="flex items-center justify-center gap-2 p-2 bg-pumpkin/15">
-            <InfoIcon class="stroke-[1.5] text-pumpkin/60 size-3 shrink-0" />
-            <!-- <p class="font-medium text-center text-pumpkin">
-              {{ $t('Processing funds… ') }}
-            </p> -->
-            <p class="font-medium text-center text-pumpkin">
-              {{ $tc(
-                'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
-                blocksUntilNextMacroBlock,
-                { blocks: blocksUntilNextMacroBlock },
-              ) }}
-            </p>
-          </div>
+          <StatusMessage
+            v-if="isStatusMessageShownDebounced"
+            :message="statusMessageText"
+            :text-color="statusMessageTextColorDebounced"
+            :bg-color="statusMessageBgColorDebounced"
+            :icon-color="statusMessageIconColorDebounced"
+            :icon="statusMessageIconDebounced"
+          />
         </Transition>
         <IonButton
           class="w-3/4 py-2 mx-auto text-base" expand="block"
@@ -370,6 +431,15 @@ App.addListener('resume', detectPaymentRequest)
         >
           {{ $t('Pay') }}
         </IonButton>
+        <Transition name="slide-fade">
+          <div v-if="isConsensusMessageShownDebounced" class="flex justify-center items-center font-semibold gap-2" :class="isIOS ? 'pb-0' : 'pb-4'">
+            <!-- Using rem breaks the svg in iOS -->
+            <WorldIcon class="size-[16px]" />
+            <span class="text-space/50">
+              {{ `${$t('Establishing consensus')}...` }}
+            </span>
+          </div>
+        </Transition>
       </IonToolbar>
     </IonFooter>
   </IonPage>
