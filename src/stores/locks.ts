@@ -11,6 +11,7 @@ export const useLocks = defineStore('locks', () => {
   const headChangePendingDrainLock = ref(false)
   const headChangeUpdatesLock = ref(false)
   const htlcCheckLock = ref(false)
+  const isConsensusNeeded = ref(false)
 
   return {
     isNetworkReconnecting,
@@ -22,5 +23,6 @@ export const useLocks = defineStore('locks', () => {
     headChangePendingDrainLock,
     headChangeUpdatesLock,
     htlcCheckLock,
+    isConsensusNeeded,
   }
 })

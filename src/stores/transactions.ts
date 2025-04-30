@@ -108,6 +108,9 @@ export const useTransactions = defineStore('transactions', () => {
       localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
       localBalance: useLocalWallet().localBalance,
     })
+    // Require consensus for all transactions that involve the local wallet
+    if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim)
+      client.value!.waitForConsensusEstablished()
 
     const res = await getSignedTx(partialTx)
     if (res.error) {
@@ -147,27 +150,60 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
 
-    const details = useSync().pendingPaymentTransactions.find(tx => tx.transactionHash === signedTx.hash()) || await client.value!.sendTransaction(signedTx)
-    if (details.state === 'invalidated') {
-      // Transaction was rejected by the mempool
-      logger.error('Transaction invalid', details)
+    if (!res.data!.txSent) {
+      logger.error('Transaction not sent by the cosigner, sending again', signedTx)
+      await client.value!.waitForConsensusEstablished()
+      const details = await client.value!.sendTransaction(signedTx)
+      if (details.state === 'invalidated') {
+        // Transaction was rejected by the mempool
+        logger.error('Transaction invalid', details)
 
-      if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-        const serverSwap = await patchedSwap?.catch(() => undefined)
-        if (!serverSwap || !serverSwap.preimage) {
-          // Delete the swap HTLC from the database
-          await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
+        if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+          const serverSwap = await patchedSwap?.catch(() => undefined)
+          if (!serverSwap || !serverSwap.preimage) {
+            // Delete the swap HTLC from the database
+            await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
+          }
+        }
+
+        return { data: undefined, error: i18n.t('Transaction invalid') }
+      }
+    }
+
+    if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
+      await client.value!.waitForConsensusEstablished()
+      const details = useSync().pendingPaymentTransactions.find(tx => tx.transactionHash === signedTx.hash()) || await client.value!.sendTransaction(signedTx)
+
+      if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote) {
+        if (details) {
+          const plain = details
+          const htlcData = details.data
+          await useRemoteSigner().updateRemoteSigner({
+            active: true,
+            balance: plain.value,
+            publicKey: useRemoteSigner().remotePublicKey!,
+            start: plain.timestamp || await useRemoteSigner().blockHeightToTimestamp(plain.validityStartHeight),
+            address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
+            end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+            // proofSize: tx.proofSize,
+            // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+            proofSize: useRemoteSigner().remoteProofSize,
+          })
+          if (partialTx.transfer === Transfer.LocalToRemote) {
+            useSync().pendingHtlcCreationTransactions.push(details)
+          }
+        }
+        else {
+          logger.error('Transaction details are undefined, cannot update remote signer', partialTx)
         }
       }
-
-      return { data: undefined, error: i18n.t('Transaction invalid') }
     }
 
     if (signedTx.networkId !== useNimiqNetwork().networkId) {
       logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: useNimiqNetwork().networkId, signedTx })
       return { data: undefined, error: i18n.t('Transaction invalid for PoS network') }
     }
-    logger.log('✈️ Sent transaction', details)
+    logger.log('✈️ Sent transaction', signedTx.toPlain())
     const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
     const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
@@ -186,30 +222,7 @@ export const useTransactions = defineStore('transactions', () => {
     if (isExternalTx(tx))
       transactions.value.unshift(tx)
 
-    if (tx.transfer === Transfer.LocalToRemote || tx.transfer === Transfer.ExtendRemote) {
-      if (details) {
-        const plain = details
-        const htlcData = details.data
-        await useRemoteSigner().updateRemoteSigner({
-          active: true,
-          balance: plain.value,
-          publicKey: useRemoteSigner().remotePublicKey!,
-          start: plain.timestamp || useRemoteSigner().blockHeightToTimestamp(plain.validityStartHeight),
-          address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
-          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-          // proofSize: tx.proofSize,
-          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-          proofSize: useRemoteSigner().remoteProofSize,
-        })
-        if (tx.transfer === Transfer.LocalToRemote) {
-          useSync().pendingHtlcCreationTransactions.push(details)
-        }
-      }
-      else {
-        logger.error('Transaction details are undefined, cannot update remote signer', tx)
-      }
-    }
-    else if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
+    if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
       // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one
       await useRemoteSigner().updateRemoteSigner(undefined)
     }

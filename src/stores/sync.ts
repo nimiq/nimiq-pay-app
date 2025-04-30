@@ -1,10 +1,11 @@
+import type { RemoteSignerTransactionState } from '@/composables/useApi'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import type { TransactionState } from '@nimiq/core'
 import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core/web'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { Ref } from 'vue'
-import { useCplApi } from '@/composables/useApi'
+import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
@@ -38,7 +39,7 @@ export const useSync = defineStore('sync', () => {
   const { query } = useConn()
   const { client, height: localHeight, lastMacroBlockHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey } = storeToRefs(useRemoteSigner())
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey, remoteSigner } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
@@ -47,7 +48,11 @@ export const useSync = defineStore('sync', () => {
   const nodesAreSynced = computedAsync(() => remoteHeight.value > (localHeight.value - MAX_BLOCK_HEIGHT_MISMATCH) && remoteHeight.value < (localHeight.value + MAX_BLOCK_HEIGHT_MISMATCH), false)
 
   // Checks if the sum of current block and CONSTANT is greater than the middle block of the HTLC validity.
-  const htlcCanBeExtended = computed(() => (end.value - (end.value - start.value) / 2) < (headTimestamp.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA))
+  const htlcCanBeExtended = computed(() => {
+    if (end.value > 0 && start.value > 0)
+      return (end.value - (end.value - start.value) / 2) < (headTimestamp.value + MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA)
+    return false
+  })
 
   // Since macro blocks take a while, only show if < 50 blocks left
   const blocksUntilNextMacroBlock = computed(() => {
@@ -99,11 +104,18 @@ export const useSync = defineStore('sync', () => {
 
     if (isHtlcActive.value && isRemoteOk.value) {
       isProcessingRemote.value = true
-      const { error } = await sendTx({ transfer: Transfer.RemoteToLocal })
+      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
         logger.error('Error while liquidating HTLC', error)
+        return
+      }
+      if (tx) {
+        pendingRemoteDrainTxs.value.push(tx)
+      }
+      else {
+        logger.error('No transaction returned from sendTx when liquidating HTLC')
       }
       return
     }
@@ -128,9 +140,9 @@ export const useSync = defineStore('sync', () => {
         logger.error('Error while extending HTLC validity', error)
         // Claim the funds after timeout from the remote signer
         // TODO: This is a temp fix for Nimiq 1.0 migration
-        const { error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
-        if (claimError) {
-          logger.error('Error while claiming funds from Remote after extending error', claimError)
+        const { data: tx, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimError || !tx) {
+          logger.error('Error while claiming funds from Remote after extending error', { claimError, tx })
         }
       }
     }
@@ -152,11 +164,19 @@ export const useSync = defineStore('sync', () => {
         return
       }
       isProcessingRemote.value = true
-      const { error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
         logger.error('Error while recovering funds from Remote', error)
+      }
+      else {
+        if (tx) {
+          pendingRemoteDrainTxs.value.push(tx)
+        }
+        else {
+          logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
+        }
       }
     }
   }
@@ -179,11 +199,18 @@ export const useSync = defineStore('sync', () => {
       logger.log('Local address not found')
     if (remoteAddress.value) {
       const oldBalance = remoteBalance.value
-      const { data: newBalance, error } = await getBalance(remoteAddress.value!)
-      if (error) {
-        logger.error('Error while getting remote balance', error)
-        return
+      let newBalance = 0
+      if (consensus.value === 'established') {
+        const { data, error } = await getBalance(remoteAddress.value!)
+        if (error)
+          logger.error('Error while getting remote balance', error)
+        else
+          newBalance = data
       }
+      else {
+        newBalance = remoteSigner.value?.balance || 0
+      }
+
       remoteBalance.value = newBalance
       if (oldBalance !== remoteBalance.value)
         logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}, old was: ${oldBalance}`)
@@ -207,7 +234,7 @@ export const useSync = defineStore('sync', () => {
               balance: account.balance,
               address: Nimiq.Address.fromString(tx.recipient),
               publicKey: remotePublicKey.value!,
-              start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
+              start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
               end: 'timeout' in account ? account.timeout : Number.MAX_VALUE,
               // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof. raw.length / 2) : 0,
               // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
@@ -233,17 +260,17 @@ export const useSync = defineStore('sync', () => {
       return
 
     isSyncingWallets.value = true
-    await until(client).toBeTruthy()
-    await client.value?.waitForConsensusEstablished()
-
     await useRemoteSigner().init()
-
     await updateBalances()
+    await Promise.all([checkHtlcState(), updateTransactionsInDb()])
+
+    await until(client).toBeTruthy()
+    await client.value!.waitForConsensusEstablished()
+
     await verifyRemoteSignersDb()
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
-    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity(), updateTransactionsInDb()])
-    await checkHtlcState()
+    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
     updateTransactionHistory()
 
     client.value?.addHeadChangedListener(async () => {
@@ -359,8 +386,14 @@ export const useSync = defineStore('sync', () => {
       return
     }
 
-    await until(client).not.toBeUndefined()
     if (remoteBalance.value > 0 && start.value < headTimestamp.value && end.value > headTimestamp.value) {
+      if (pendingHtlcCreationTransactions.value.length === 0) {
+        logger.log('No pending HTLC transactions')
+        isHtlcActive.value = true
+        return
+      }
+      await until(client).not.toBeUndefined()
+      await client.value!.waitForConsensusEstablished()
       // HTLC can only be used after the tx creation state is confirmed
       try {
         const txs = await Promise.all(pendingHtlcCreationTransactions.value.map(tx => client.value!.getTransaction(tx.transactionHash)))
@@ -386,31 +419,43 @@ export const useSync = defineStore('sync', () => {
     if (!hasLocalWallet.value)
       return
 
-    await until(client).toBeTruthy()
-    await client.value?.waitForConsensusEstablished()
-
-    try {
-      const tx = await client.value!.getTransaction(hash)
-      if (tx.state !== 'pending'
-        && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === tx.transactionHash)
-          || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === tx.transactionHash)
-        )) {
-        logger.log(`Removing transaction ${tx.transactionHash} from pending transactions`)
-        pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== tx.transactionHash)
-        pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== tx.transactionHash)
+    let state: TransactionState | RemoteSignerTransactionState, timestamp: number | undefined
+    if (!client.value || consensus.value !== 'established') {
+      const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash })
+      if (error || !tx || tx.state === 'unknown') {
+        logger.error('[updateSingleTransaction] Error while getting transaction state', error)
+        return
       }
-
-      updateTransactionStatus({ hash: tx.transactionHash, status: tx.state, timestamp: tx.timestamp })
+      state = tx.state
+      timestamp = tx.timestamp
     }
-    catch (error) {
-      logger.error(`Error while getting transaction: ${hash}`, error)
+    else {
+      try {
+        const tx = await client.value!.getTransaction(hash)
+        state = tx.state
+        timestamp = tx.timestamp
+        if (tx.state !== 'pending'
+          && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === tx.transactionHash)
+            || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === tx.transactionHash)
+          )) {
+          logger.log(`Removing transaction ${tx.transactionHash} from pending transactions`)
+          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== tx.transactionHash)
+          pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== tx.transactionHash)
+        }
+      }
+      catch (error) {
+        logger.error(`[updateSingleTransaction] Error while getting transaction: ${hash}`, error)
+        return
+      }
     }
+    updateTransactionStatus({ hash, status: state, timestamp })
   }
 
   /**
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
+    await until(isTransactionPending).toBe(false)
     if (isUpdatingTransactions.value) {
       logger.log('📬 Transactions are already being updated')
       return
@@ -559,7 +604,7 @@ export const useSync = defineStore('sync', () => {
           balance: (await getBalance(Nimiq.Address.fromString(tx.recipient))).data,
           address: Nimiq.Address.fromString(tx.recipient),
           publicKey: remotePublicKey.value!,
-          start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
+          start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
           end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
           // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
           // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
@@ -578,8 +623,8 @@ export const useSync = defineStore('sync', () => {
             .filter((tx) => {
               const hash = tx.transactionHash
               for (const dbTx of allTransactions) {
-              // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
-                if ((dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
+                // Make use of the timestamp ordering of allTransactions and bail when the db transactions are older than the tx we are looking for
+                if (dbTx.status !== 'pending' && (dbTx.timestamp || Number.MAX_SAFE_INTEGER) < (tx.timestamp || Number.MAX_SAFE_INTEGER))
                   break
                 // If the tx is already known, do not process it further
                 if (dbTx.hash === hash)
@@ -668,13 +713,27 @@ export const useSync = defineStore('sync', () => {
       }
       else {
         try {
-          await until(client).toBeTruthy()
-          const tx = await client.value!.getTransaction(dbTx.hash)
-
+          let state: TransactionState | RemoteSignerTransactionState, timestamp: number, amount: number
+          if (!client.value || consensus.value !== 'established') {
+            const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash: dbTx.hash })
+            if (error || !tx || tx.state === 'unknown') {
+              logger.error('[updateTransactionsInDb] Error while getting transaction state', error)
+              return
+            }
+            state = tx.state
+            timestamp = tx.timestamp || 0
+            amount = tx.value
+          }
+          else {
+            const tx = await client.value!.getTransaction(dbTx.hash)
+            state = tx.state
+            timestamp = tx.timestamp || 0
+            amount = tx.value
+          }
           // Check if status in db is different from status in blockchain or timestamp in db is different from timestamp in blockchain
-          if ((dbTx.status !== tx.state) || (dbTx.timestamp !== tx.timestamp)) {
-            logger.log(`📬 Updating transaction ${tx.transactionHash} ${tx.state} with ${usePrice(tx.value).crypto.formatted}`)
-            updateTransactionStatus({ hash: tx.transactionHash, status: tx.state, timestamp: tx.timestamp })
+          if ((dbTx.status !== state) || (dbTx.timestamp !== timestamp)) {
+            logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${usePrice(amount).crypto.formatted}`)
+            updateTransactionStatus({ hash: dbTx.hash, status: state, timestamp })
           }
         }
         catch (error) {
@@ -709,6 +768,8 @@ export const useSync = defineStore('sync', () => {
     }
     if (tx)
       pendingRemoteDrainTxs.value.push(tx)
+    else
+      logger.error('Error while draining remote signer. No transaction returned', { address: address.toUserFriendlyAddress(), amount })
 
     logger.log('Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
   }
@@ -865,6 +926,8 @@ export const useSync = defineStore('sync', () => {
   }, { immediate: true })
 
   watch(localHeight, async () => {
+    if (consensus.value !== 'established')
+      return
     if (localHeight.value % 10 !== 0)
       return
     if (htlcCheckLock.value)
@@ -900,6 +963,7 @@ export const useSync = defineStore('sync', () => {
     isTransactionPending,
     nodesAreSynced,
     pendingHtlcCreationTransactions,
+    htlcCanBeExtended,
 
     blocksUntilNextMacroBlock,
 

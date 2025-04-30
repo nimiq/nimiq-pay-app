@@ -22,7 +22,7 @@ const logger = useLogger('DevModal')
 // Note: no translations in this file as it's for dev purposes only.
 
 const router = useRouter()
-const { consensus, head, height, peerCount, client, networkName } = storeToRefs(useNimiqNetwork())
+const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
@@ -110,6 +110,7 @@ onMounted(async () => {
           Head <strong>{{ height }}</strong>:
           <code>{{ head?.hash }}</code>
         </p>
+        <p>Head timestamp: <strong>{{ headTimestamp }}</strong></p>
         <p>Network: <strong>{{ networkName }}</strong></p>
       </IonCardContent>
     </IonCard>

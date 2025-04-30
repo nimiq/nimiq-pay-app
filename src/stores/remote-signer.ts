@@ -1,13 +1,14 @@
 import type { Address, PlainTransactionDetails } from '@nimiq/core'
-import { useRemoteSignerApi } from '@/composables/useApi'
+import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { computedAsync, until, useInterval } from '@vueuse/core'
+import { until, useIntervalFn } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, readonly, ref } from 'vue'
-import { useConn } from './conn'
+import { computed, readonly, ref, watch } from 'vue'
 
 const logger = useLogger('remote-signer')
 
@@ -65,17 +66,17 @@ function useRemoteSignerDb() {
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
   const { getAccounts, getBalance } = useNimiqNetwork()
-  const { headTimestamp, height, client } = storeToRefs(useNimiqNetwork())
+  const { headTimestamp, height, client, consensus } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { isProcessingRemote } = storeToRefs(useLocks())
   const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, addInactiveRemoteSigner } = useRemoteSignerDb()
 
   const remoteSigner = ref<RemoteSigner>()
 
-  const forceRefresh = useInterval(5000)
-  const status = computedAsync(async () => forceRefresh.value ? (await getStatus()).data : undefined)
-  const remoteHeight = computed(() => status.value?.blockHeight || -1)
-  const remotePublicKey = computed(() => status.value?.servicePublicKey || undefined)
+  const status = ref<RemoteStatus>(RemoteStatus.Unknown)
+  const remoteHeight = ref(-1)
+  const remotePublicKey = ref<string | undefined>()
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
@@ -88,8 +89,27 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const isHtlcActive = ref(false)
   const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value)
   const isHtlcPending = computed(() => start.value > headTimestamp.value)
+  const isHtlcRecreating = ref(false)
+  watch([hasHtlcExpired, isHtlcPending, isProcessingRemote], ([expired, pending, processing]) => {
+    if (expired)
+      isHtlcRecreating.value = true
+    else if (!pending && !processing)
+      isHtlcRecreating.value = false
+  })
 
-  const isRemoteOk = computed(() => status.value?.status === 'good' || false)
+  const isRemoteOk = computed(() => status.value === RemoteStatus.Good || false)
+
+  useIntervalFn(async () => {
+    const { data, error } = await getStatus()
+    if (error || !data) {
+      logger.error('Error getting cosigner status', error)
+      status.value = RemoteStatus.Unknown
+      return
+    }
+    status.value = data.status
+    remoteHeight.value = data.blockHeight || -1
+    remotePublicKey.value = data.servicePublicKey || undefined
+  }, 5000, { immediate: true, immediateCallback: true })
 
   async function addRemoteSigner(signer: RemoteSigner) {
     if (!remoteSigner.value)
@@ -106,7 +126,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       await deactivateAllRemoteSigners()
     remoteSigner.value = signer
     // Set the balance even when it's not confirmed to avoid the user to see the skeleton for a long time
-    remoteBalance.value = signer?.balance || -1
+    remoteBalance.value = signer?.balance ?? -1
   }
 
   async function updateActiveWallet() {
@@ -134,7 +154,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       balance: remoteSignerApi.balance,
       publicKey: remoteSignerApi.servicePublicKey,
       proofSize: remoteSignerApi.serviceSignatureProofSize,
-      start: tx?.timestamp || blockHeightToTimestamp(remoteSignerApi.validityStart),
+      start: tx?.timestamp || await blockHeightToTimestamp(remoteSignerApi.validityStart),
       end: remoteSignerApi.validityEnd,
       active: true,
     }
@@ -155,6 +175,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function updateRemoteFromApi() {
+    // Check newer remote signer in db first, in case the cosigner server doesn't have it in the db
+    const remoteSigners = (await getAllRemoteSigners()).sort((a, b) => b.start - a.start)
+    // Get the last stored remote signer and check if it's the same as the one active
+    const newerRemoteSigner = remoteSigners.length > 0 ? remoteSigners[0] : undefined
+    if (newerRemoteSigner && newerRemoteSigner.address !== remoteSigner.value?.address) {
+      logger.log('📡 Found a newer remote signer that is not the active one')
+      // Tell the cosigner the new address, in case it's not known for whatever reason
+      await getRemoteSigner({ address: newerRemoteSigner.address })
+    }
+
     const { data: remoteSignerApi, error } = await getRemoteSigner({ address: localAddress })
     if (error || !remoteSignerApi) {
       logger.log('📡 No remote signer found in the API. Waiting for funds to be sent')
@@ -178,7 +208,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       balance: remoteSignerApi.balance,
       publicKey: remoteSignerApi.servicePublicKey,
       proofSize: remoteSignerApi.serviceSignatureProofSize,
-      start: tx?.timestamp || blockHeightToTimestamp(remoteSignerApi.validityStart),
+      start: tx?.timestamp || await blockHeightToTimestamp(remoteSignerApi.validityStart),
       end: remoteSignerApi.validityEnd,
       active: true,
     }
@@ -193,10 +223,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0
       logger.log({ oldRemoteBalance, newRemoteBalance })
       if (oldRemoteBalance.status === 'fulfilled' && newRemoteBalance.status === 'fulfilled') {
-        if (oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
-          return
-        if (oldRemoteBalance.value.data === 0 && newRemoteBalance.value.data === 0)
-          return
+        if (!oldRemoteBalance.value.error && !newRemoteBalance.value.error) {
+          if (oldRemoteBalance.value.data > 0 && newRemoteBalance.value.data === 0)
+            return
+          if (oldRemoteBalance.value.data === 0 && newRemoteBalance.value.data === 0)
+            return
+        }
       }
     }
 
@@ -247,6 +279,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
    */
   async function getRemoteSignersFromBlockchain() {
     await until(client).not.toBeUndefined()
+    await client.value!.waitForConsensusEstablished()
     const transactions = await client.value!.getTransactionsByAddress(localAddress.value)
 
     logger.log('All Transactions from Blockchain', transactions)
@@ -268,11 +301,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         balance: 0,
         address: Nimiq.Address.fromString(tx.recipient),
         publicKey: remotePublicKey.value!,
-        start: tx.timestamp || blockHeightToTimestamp(tx.validityStartHeight),
+        start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
         end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
         proofSize: useRemoteSigner().remoteProofSize,
       })
     }
+    await updateRemoteFromApi()
   }
 
   async function updateActiveRemoteBalance(newBalance: number) {
@@ -298,25 +332,31 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     if (!remoteSigner.value) {
       logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
-      await getRemoteSignersFromBlockchain()
+      getRemoteSignersFromBlockchain()
     }
 
-    await updateRemoteFromApi()
-    // await updateActiveWallet()
-
+    updateRemoteFromApi()
     await until(client).not.toBeUndefined()
     client.value!.addHeadChangedListener(async () => {
       // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
       // Mainly for the case when the user recovers the wallet from the words
-      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % 10 * Nimiq.Policy.BLOCKS_PER_BATCH === 0) {
+      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % (10 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0) {
         logger.log('📡👀 Searching for new remote wallets')
         await updateRemoteFromApi()
       }
     })
   }
 
-  function blockHeightToTimestamp(blockHeight: number): number {
-    return Math.floor((Date.now() - (height.value - blockHeight) * 1e3) / 1e3) * 1e3
+  async function blockHeightToTimestamp(blockHeight: number): Promise<number> {
+    let currentHeight = 0
+    if (consensus.value === 'established') {
+      currentHeight = height.value
+    }
+    else {
+      await until(remoteHeight).not.toBe(-1)
+      currentHeight = remoteHeight.value
+    }
+    return Math.floor((Date.now() - (currentHeight - blockHeight) * 1e3) / 1e3) * 1e3
   }
 
   return {
@@ -335,6 +375,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     isHtlcActive,
     hasHtlcExpired,
     isHtlcPending,
+    isHtlcRecreating,
 
     addRemoteSigner,
     updateActiveRemoteBalance,
