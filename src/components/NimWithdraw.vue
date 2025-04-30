@@ -58,7 +58,7 @@ const address = computed(() => {
 
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 const { formatCrypto } = useCurrencyFormatter()
-const { isRemoteOk, isHtlcActive, remoteBalance } = storeToRefs(useRemoteSigner())
+const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 
 const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))
 watch(height, fetch)
@@ -93,7 +93,6 @@ watch(selected, (value) => {
   if (value === 'nim')
     emit('done', '')
   else if (value === 'cc')
-  // TODO: add credit card withdrawal
     emit('done', '')
 
   if (ValidationUtils.isValidAddress(value))
@@ -105,13 +104,16 @@ watch(selected, (value) => {
 const errorMessage = computed(() => {
   if (props.errorMsg)
     return props.errorMsg
-  if (consensus.value !== 'established')
+  // If the HTLC has expired, we need to wait for consensus before withdrawing because the server cannot access to the funds anymore, only the user.
+  if (hasHtlcExpired.value && consensus.value !== 'established')
     return i18n.t('Wait for consensus before withdrawing')
+  if (!isRemoteOk.value && !hasHtlcExpired.value)
+    return i18n.t('Server not available')
   if (!hasEnoughAmount.value && lunaAmount.value > 0)
     return i18n.t('Insufficient funds')
   return ''
 })
-const disabled = computed(() => !selected.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || !(isRemoteOk.value && isHtlcActive.value) || consensus.value !== 'established')
+const disabled = computed(() => !selected.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || (!isRemoteOk.value && !isHtlcActive.value) || (hasHtlcExpired.value && consensus.value !== 'established'))
 const loading = ref(false)
 
 function withdraw() {
@@ -126,6 +128,7 @@ function withdraw() {
 watch(errorMessage, (value) => {
   if (value)
     loading.value = false
+  logger.error('Error message when trying to withdraw:', value)
 })
 </script>
 

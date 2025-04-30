@@ -1,3 +1,6 @@
+import type { ConsensusState } from '@nimiq/core'
+import { i18n } from '@/i18n/i18n-setup'
+
 /**
  * Execute a promise or throw an error if it takes longer than the specified timeout.
  */
@@ -51,6 +54,18 @@ export function base64ToImageData(base64Str: string): Promise<ImageData> {
 
     img.src = dataURL
   })
+}
+
+export function translateConsensus(consensusState: ConsensusState) {
+  // Define translations as record such that ts warns us if a translation for a consensus state is missing
+  const consensusStateTranslations: Record<ConsensusState, string> = {
+    established: i18n.t('Consensus established.'),
+    syncing: i18n.t('Syncing with network.'),
+    connecting: i18n.t('Connecting to network.'),
+  }
+  return Object.keys(consensusStateTranslations).includes(consensusState)
+    ? consensusStateTranslations[consensusState]
+    : consensusStateTranslations.syncing
 }
 
 export const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))

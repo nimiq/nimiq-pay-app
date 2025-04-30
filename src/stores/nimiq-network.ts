@@ -4,14 +4,15 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
-import { promiseWithTimeout } from '@/lib/utils'
+import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
-import { until, useTimeoutFn } from '@vueuse/core'
+import { until, useTimeoutFn, useTimestamp } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
 const logger = useLogger('useNimiqNetwork')
 
+const timestamp = useTimestamp({ interval: 1e3 })
 const { setToast, clearToast } = useToast()
 
 export const CashlinkExtraData = {
@@ -29,7 +30,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const client = ref<Client>()
   const consensus = ref<ConsensusState>('connecting')
   const head = ref<PlainBlock>()
-  const headTimestamp = computed(() => head.value?.timestamp || -1)
+  const headTimestamp = computed(() => consensus.value === 'established' && head.value ? head.value.timestamp : timestamp.value)
   const height = computed<number>(() => head.value?.height || -1)
   const lastMacroBlockHeight = ref(0)
   const peerCount = ref(0)
@@ -101,17 +102,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         lastMacroBlockHeight.value = head.value.height
     })
 
-    try {
-      await until(consensus).toBe('established', { timeout: 30 * 1e3, throwOnTimeout: true })
-    }
-    catch {
-      setToast({
-        message: `${i18n.t('Trying to establish network consensus:')} ${translateConsensus(consensus.value)}`,
-        type: 'spinner',
-        keepOpen: true,
-      })
-    }
-
     client.value.addPeerChangedListener(async (_peerId, _reason, newPeerCount) => {
       peerCount.value = newPeerCount
       logger.log('Peer count changed', peerCount.value)
@@ -170,49 +160,61 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   async function getAccount(address: Address | undefined): AsyncResult<PlainAccount, string> {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
-    const account = await client.value?.getAccount(address)
-    if (!account)
-      return { data: undefined, error: i18n.t('No account found') }
-    return { data: account, error: undefined }
+    try {
+      const account = await client.value?.getAccount(address)
+      if (!account)
+        return { data: undefined, error: i18n.t('No account found') }
+      return { data: account, error: undefined }
+    }
+    catch (error) {
+      logger.error('Error getting account', error)
+      return { data: undefined, error: i18n.t('Error getting account') }
+    }
   }
 
   async function getAccounts(addressArray: Address[]): AsyncResult<PlainAccount[], string> {
     if (addressArray.length === 0)
       return { data: undefined, error: i18n.t('Addresses missing') }
-    const accounts = await client.value?.getAccounts(addressArray)
-    if (!accounts || accounts.length === 0)
-      return { data: undefined, error: i18n.t('No accounts found') }
-    return { data: accounts, error: undefined }
+    try {
+      const accounts = await client.value?.getAccounts(addressArray)
+      if (!accounts || accounts.length === 0)
+        return { data: undefined, error: i18n.t('No accounts found') }
+      return { data: accounts, error: undefined }
+    }
+    catch (error) {
+      logger.error('Error getting accounts', error)
+      return { data: undefined, error: i18n.t('Error getting accounts') }
+    }
   }
 
   async function getAccountTransactions(address: Address | undefined, limit?: number) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
-    const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, undefined, limit)
-    if (!transactions)
-      return { data: [], error: i18n.t('No transactions found') }
-    return { data: transactions, error: undefined }
+    try {
+      const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, undefined, limit)
+      if (!transactions)
+        return { data: [], error: i18n.t('No transactions found') }
+      return { data: transactions, error: undefined }
+    }
+    catch (error) {
+      logger.error('Error getting account transactions', error)
+      return { data: [], error: i18n.t('Error getting account transactions') }
+    }
   }
 
   async function getBalance(address: Address | string | Uint8Array) {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
-    const account = await client.value?.getAccount(address)
-    if (!account)
-      return { data: 0, error: 'No account found' } // No user facing
-    return { data: account.balance, error: undefined }
-  }
-
-  function translateConsensus(consensusState: ConsensusState) {
-    // Define translations as record such that ts warns us if a translation for a consensus state is missing
-    const consensusStateTranslations: Record<ConsensusState, string> = {
-      established: i18n.t('Consensus established.'),
-      syncing: i18n.t('Syncing with network.'),
-      connecting: i18n.t('Connecting to network.'),
+    try {
+      const account = await client.value?.getAccount(address)
+      if (!account)
+        return { data: 0, error: 'No account found' } // No user facing
+      return { data: account.balance, error: undefined }
     }
-    return Object.keys(consensusStateTranslations).includes(consensusState)
-      ? consensusStateTranslations[consensusState]
-      : consensusStateTranslations.syncing
+    catch (error) {
+      logger.error('Error getting balance', error)
+      return { data: 0, error: 'Error getting balance' } // No user facing
+    }
   }
 
   /**
