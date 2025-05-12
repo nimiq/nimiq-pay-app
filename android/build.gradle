@@ -1,3 +1,8 @@
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+def repositoryUsername = properties.getProperty('REPOSITORY_USERNAME') ?: "null"
+def repositoryPassword = properties.getProperty('REPOSITORY_PASSWORD') ?: "null"
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
@@ -7,8 +12,8 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.2.1'
-        classpath 'com.google.gms:google-services:4.4.0'
+        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'com.google.gms:google-services:4.4.2'
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
@@ -23,10 +28,17 @@ allprojects {
         mavenCentral()
         maven { url "https://maven.sumsub.com/repository/maven-public/" }
         maven {
+            url = uri("https://nexus3-public.monetplus.cz/repository/mobile-android/")
+            credentials {
+                username = repositoryUsername
+                password = repositoryPassword
+            }
+        }
+        maven {
             url = uri("https://nexus3-public.monetplus.cz/repository/ahead-android-release/")
             credentials {
-                username = project.findProperty("repoUsername") ?: ""
-                password = project.findProperty("repoPassword") ?: ""
+                username = repositoryUsername
+                password = repositoryPassword
             }
         }
     }
