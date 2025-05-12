@@ -38,6 +38,7 @@ export enum SumsubErrorType {
 
 export const useKyc = defineStore('kyc', () => {
   const sdkStatus = ref<SumsubSdkStatus>(SumsubSdkStatus.NOT_INITIALIZED)
+  const onKycApproved = ref<() => Promise<void>>()
 
   async function initializeSdk() {
     let accessToken
@@ -81,6 +82,9 @@ export const useKyc = defineStore('kyc', () => {
 
     SumsubMobileSdk.addListener('onApprovedStatusChanged', ({ isApproved }) => {
       logger.log('Approval changed event:', isApproved)
+      if (isApproved && onKycApproved.value) {
+        onKycApproved.value()
+      }
     })
 
     SumsubMobileSdk.addListener('onEvent', (event) => {
@@ -96,6 +100,7 @@ export const useKyc = defineStore('kyc', () => {
     sdkStatus,
     initializeSdk,
     openKycFlow,
+    onKycApproved,
     waitForStatusApproved: async () => await until(sdkStatus).toBe(SumsubSdkStatus.APPROVED),
   }
 })
