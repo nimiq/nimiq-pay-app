@@ -19,6 +19,7 @@ const EnableNotifications = defineAsyncComponent(() => import('@/components/Enab
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
 const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
 const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
+const QRCodeDisplay = defineAsyncComponent(() => import('@/components/QRCodeDisplay.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -519,6 +520,25 @@ export const nimAddressDisplay: StepInit = async () => ({
   get title() { return i18n.t('Send NIM to top up') },
   get description() { return i18n.t('Send a transaction to the address below. Top up as much as you like.') },
   main: markRaw(NimAddressDisplay),
+  beforeNext: async ({ nimAddressDisplay }, { next, navigateTo }) => {
+    const { ValidationUtils } = (await import('@nimiq/utils'))
+    if (nimAddressDisplay && ValidationUtils.isValidAddress(nimAddressDisplay)) {
+      navigateTo({ step: StepName.QRCodeDisplay })
+    }
+    else if (nimAddressDisplay === undefined) {
+      navigateTo({ step: StepName.QRCodeScanner })
+    }
+    else {
+      next()
+    }
+  },
+} satisfies Step)
+
+export const qrCodeDisplayStep: StepInit<{ stringToQr: string }> = async options => ({
+  step: StepName.QRCodeDisplay,
+  get title() { return i18n.t('Scan QR code') },
+  get description() { return i18n.t('Scan the QR code to send NIM to this address') },
+  main: markRaw(props => h(QRCodeDisplay, { ...props, ...options?.props })),
 } satisfies Step)
 
 export const transactionList: StepInit = async () => ({

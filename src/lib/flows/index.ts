@@ -342,11 +342,15 @@ selectionStep ◄────┘
 
 const nimTopUpFlow: FlowInit = async () => {
   const [
-    { nimAddressDisplay, qrCodeScannerStep },
+    { nimAddressDisplay, qrCodeDisplayStep, qrCodeScannerStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimTopUp
-  const steps = (await Promise.all([nimAddressDisplay, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } })].map(s => s({ flowName }))))
+  const steps = (await Promise.all([
+    nimAddressDisplay,
+    qrCodeDisplayStep,
+    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } }),
+  ].map(s => s({ flowName }))))
   return { flowName, steps }
 }
 
