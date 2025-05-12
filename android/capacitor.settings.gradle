@@ -44,6 +44,9 @@ project(':capacitor-sumsub-mobile-sdk').projectDir = new File('../node_modules/.
 include ':rdlabo-capacitor-screenshot-event'
 project(':rdlabo-capacitor-screenshot-event').projectDir = new File('../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event/android')
 
+include ':capacitor-monetplus-hce'
+project(':capacitor-monetplus-hce').projectDir = new File('../../capacitor-monetplus-hce/android')
+
 include ':capacitor-sumsub-mobile-sdk'
 project(':capacitor-sumsub-mobile-sdk').projectDir = new File('../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.1_@capacitor+core@6.2.0/node_modules/capacitor-sumsub-mobile-sdk/android')
 
