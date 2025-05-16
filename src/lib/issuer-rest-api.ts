@@ -150,7 +150,7 @@ export function useIssuerRestApi() {
           // Reset the token to force a new authentication
           _token = null
           // Retry the request
-          return api(path, method, _body, responseSchema)
+          return api(path, method, body, responseSchema)
         }
       }
       catch {
