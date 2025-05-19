@@ -43,6 +43,9 @@ msgstr "Dirección no encontrada"
 msgid "Addresses missing"
 msgstr "Direcciones no encontradas"
 
+msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
+msgstr ""
+
 msgid "All"
 msgstr "Todo"
 
@@ -258,6 +261,15 @@ msgstr "Ingresa tu código promocional"
 msgid "Enter your referral promo code."
 msgstr "Ingresa tu código promocional de referencia."
 
+msgid "Error getting account"
+msgstr ""
+
+msgid "Error getting account transactions"
+msgstr ""
+
+msgid "Error getting accounts"
+msgstr ""
+
 msgid "Error using BiometricAuth"
 msgstr ""
 
@@ -275,6 +287,11 @@ msgstr ""
 
 msgid "Error while topping up deposit"
 msgstr ""
+
+#, fuzzy
+#| msgid "Trying to establish network consensus:"
+msgid "Establishing consensus"
+msgstr "Intentando establecer consenso de red:"
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
@@ -304,11 +321,6 @@ msgstr ""
 #, fuzzy
 #| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
-msgstr "No es una solicitud de pago pendiente"
-
-#, fuzzy
-#| msgid "Not a pending payment request"
-msgid "Failed to open wallet"
 msgstr "No es una solicitud de pago pendiente"
 
 msgid "Featured"
@@ -562,11 +574,6 @@ msgstr "No se encontraron transacciones"
 msgid "No transactions found for \"{searchQuery}\""
 msgstr "No se encontraron transacciones para \"{searchQuery}\""
 
-msgid ""
-"Nodes are not synced.\n"
-"Remote: {remoteHeight}, Local: {localHeight}"
-msgstr ""
-
 msgid "Not a pending payment request"
 msgstr "No es una solicitud de pago pendiente"
 
@@ -578,9 +585,6 @@ msgstr "No se pueden habilitar las notificaciones, se omitirá este paso."
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Solo {count} de {total} restantes."
-
-msgid "Open Wallet"
-msgstr "Abrir Billetera"
 
 msgid "Pay"
 msgstr "Pagar"
@@ -723,6 +727,9 @@ msgstr "Destinatario"
 msgid "Recovery Words"
 msgstr "Palabras de recuperación"
 
+msgid "Refreshing connection"
+msgstr ""
+
 msgid "Refunded"
 msgstr "Reembolsado"
 
@@ -755,6 +762,11 @@ msgstr "Escanear Cashlink"
 msgid "Scan QR code"
 msgstr "Escanear código QR"
 
+#, fuzzy
+#| msgid "Send NIM to this address"
+msgid "Scan the QR code to send NIM to this address"
+msgstr "Envíar NIM a esta dirección"
+
 msgid "Search"
 msgstr "Buscar"
 
@@ -784,6 +796,9 @@ msgstr "Envíar NIM a esta dirección"
 
 msgid "Send NIM to top up"
 msgstr "Envía NIM para recargar saldo"
+
+msgid "Server not available"
+msgstr ""
 
 msgid "Settings"
 msgstr "Ajustes"
@@ -937,9 +952,6 @@ msgstr "Transacción inválida"
 msgid "Try again"
 msgstr "Intenta de nuevo"
 
-msgid "Trying to establish network consensus:"
-msgstr "Intentando establecer consenso de red:"
-
 msgid "Unable to connect to the Points server"
 msgstr "No se puede conectar al servidor de Puntos"
 
@@ -961,6 +973,9 @@ msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr ""
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
+
+msgid "Updating connection"
 msgstr ""
 
 msgid "Use {amount}"
@@ -1113,6 +1128,14 @@ msgstr "Tu número"
 
 msgid "Your wallet is ready to use"
 msgstr "Tu billetera está lista para usar"
+
+#, fuzzy
+#~| msgid "Not a pending payment request"
+#~ msgid "Failed to open wallet"
+#~ msgstr "No es una solicitud de pago pendiente"
+
+#~ msgid "Open Wallet"
+#~ msgstr "Abrir Billetera"
 
 #, fuzzy
 #~| msgid "Consensus established."

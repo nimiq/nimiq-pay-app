@@ -41,6 +41,9 @@ msgstr "Adresse fehlt"
 msgid "Addresses missing"
 msgstr "Adressen fehlen"
 
+msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
+msgstr ""
+
 msgid "All"
 msgstr "Alles"
 
@@ -258,6 +261,15 @@ msgstr "Promo-Code eingeben"
 msgid "Enter your referral promo code."
 msgstr "Gib deinen Empfehlungscode ein."
 
+msgid "Error getting account"
+msgstr ""
+
+msgid "Error getting account transactions"
+msgstr ""
+
+msgid "Error getting accounts"
+msgstr ""
+
 msgid "Error using BiometricAuth"
 msgstr ""
 
@@ -275,6 +287,11 @@ msgstr ""
 
 msgid "Error while topping up deposit"
 msgstr ""
+
+#, fuzzy
+#| msgid "Trying to establish network consensus:"
+msgid "Establishing consensus"
+msgstr "Versuche Netzwerk-Konsens zu erreichen:"
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr "30-Tage-Tausch-Limit überschritten. Dein verbleibendes Limit für BTC LN ist {remainingFiatLimits}"
@@ -302,11 +319,6 @@ msgid "Failed to fetch LNURL service"
 msgstr "Verbindung zum LNURL-Service fehlgeschlagen"
 
 msgid "Failed to fetch payment request"
-msgstr "Zahlungsanfrage konnte nicht geladen werden"
-
-#, fuzzy
-#| msgid "Failed to fetch payment request"
-msgid "Failed to open wallet"
 msgstr "Zahlungsanfrage konnte nicht geladen werden"
 
 msgid "Featured"
@@ -556,13 +568,6 @@ msgstr "Keine Transaktionen gefunden"
 msgid "No transactions found for \"{searchQuery}\""
 msgstr "Keine Transaktionen gefunden für \"{searchQuery}\""
 
-msgid ""
-"Nodes are not synced.\n"
-"Remote: {remoteHeight}, Local: {localHeight}"
-msgstr ""
-"Abweichende Blockchain-Länge zwischen Backend-Server und App.\n"
-"Server: {remoteHeight}, App: {localHeight}"
-
 msgid "Not a pending payment request"
 msgstr "Keine ausstehende Zahlungsanfrage"
 
@@ -574,9 +579,6 @@ msgstr "Benachrichtigungen können nicht aktiviert werden, überspringe."
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Nur {count} von {total} übrig."
-
-msgid "Open Wallet"
-msgstr "Wallet öffnen"
 
 msgid "Pay"
 msgstr "Bezahlen"
@@ -719,6 +721,9 @@ msgstr "Empfänger"
 msgid "Recovery Words"
 msgstr "Wiederherstellungswörter"
 
+msgid "Refreshing connection"
+msgstr ""
+
 msgid "Refunded"
 msgstr "Zurückgezahlt"
 
@@ -751,6 +756,11 @@ msgstr "Cashlink scannen"
 msgid "Scan QR code"
 msgstr "QR-Code scannen"
 
+#, fuzzy
+#| msgid "Send NIM to this address"
+msgid "Scan the QR code to send NIM to this address"
+msgstr "Schicke NIM an diese Adresse"
+
 msgid "Search"
 msgstr "Suchen"
 
@@ -780,6 +790,9 @@ msgstr "Schicke NIM an diese Adresse"
 
 msgid "Send NIM to top up"
 msgstr "Schicke NIM zum Aufladen"
+
+msgid "Server not available"
+msgstr ""
 
 msgid "Settings"
 msgstr "Einstellungen"
@@ -933,9 +946,6 @@ msgstr "Transaktion ungültig"
 msgid "Try again"
 msgstr "Nochmals versuchen"
 
-msgid "Trying to establish network consensus:"
-msgstr "Versuche Netzwerk-Konsens zu erreichen:"
-
 msgid "Unable to connect to the Points server"
 msgstr "Verbindung zum Punkte-Server fehlgeschlagen"
 
@@ -957,6 +967,9 @@ msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr ""
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
+
+msgid "Updating connection"
 msgstr ""
 
 msgid "Use {amount}"
@@ -1111,6 +1124,21 @@ msgstr "Deine Telefonnummer"
 
 msgid "Your wallet is ready to use"
 msgstr "Deine Wallet ist bereit zur Benutzung"
+
+#, fuzzy
+#~| msgid "Failed to fetch payment request"
+#~ msgid "Failed to open wallet"
+#~ msgstr "Zahlungsanfrage konnte nicht geladen werden"
+
+#~ msgid "Open Wallet"
+#~ msgstr "Wallet öffnen"
+
+#~ msgid ""
+#~ "Nodes are not synced.\n"
+#~ "Remote: {remoteHeight}, Local: {localHeight}"
+#~ msgstr ""
+#~ "Abweichende Blockchain-Länge zwischen Backend-Server und App.\n"
+#~ "Server: {remoteHeight}, App: {localHeight}"
 
 #, fuzzy
 #~| msgid "Consensus established."
