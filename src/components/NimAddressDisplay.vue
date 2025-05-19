@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AddressDisplay from '@/components/AddressDisplay.vue'
-import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
