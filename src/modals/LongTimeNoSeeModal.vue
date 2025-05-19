@@ -48,10 +48,10 @@ watch(progress, (progress) => {
   </IonHeader>
   <div class="flex flex-col items-center h-full p-8 pt-0 gap-4">
     <h1 class="text-2xl font-bold text-center">
-      {{ $t('It\'s been a while') }}
+      {{ $t('Updating connection') }}
     </h1>
     <h2 class="text-lg font-normal text-space/60 text-pretty text-center">
-      {{ $t('After not having had a connection for a while, the Pay app needs to connect, this can take a while') }}
+      {{ $t('After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec.') }}
     </h2>
     <div class="py-8 flex flex-col items-center gap-3">
       <CircularProgress v-if="consensus === 'established'" :value="progress" :max="maxProgress" class="size-16" />
