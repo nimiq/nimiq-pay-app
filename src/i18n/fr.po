@@ -42,6 +42,9 @@ msgstr "Adresse manquante"
 msgid "Addresses missing"
 msgstr "Adresses manquantes"
 
+msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
+msgstr ""
+
 msgid "All"
 msgstr "Tout"
 
@@ -257,6 +260,15 @@ msgstr "Entrez votre code promo"
 msgid "Enter your referral promo code."
 msgstr "Saisissez votre code promo de parrainage."
 
+msgid "Error getting account"
+msgstr ""
+
+msgid "Error getting account transactions"
+msgstr ""
+
+msgid "Error getting accounts"
+msgstr ""
+
 msgid "Error using BiometricAuth"
 msgstr ""
 
@@ -274,6 +286,11 @@ msgstr ""
 
 msgid "Error while topping up deposit"
 msgstr ""
+
+#, fuzzy
+#| msgid "Trying to establish network consensus:"
+msgid "Establishing consensus"
+msgstr "Tentative d'établissement d'un consensus au sein du réseau :"
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
@@ -303,11 +320,6 @@ msgstr ""
 #, fuzzy
 #| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
-msgstr "Pas de demande de paiement en cours"
-
-#, fuzzy
-#| msgid "Not a pending payment request"
-msgid "Failed to open wallet"
 msgstr "Pas de demande de paiement en cours"
 
 msgid "Featured"
@@ -561,11 +573,6 @@ msgstr "Aucune transaction trouvée"
 msgid "No transactions found for \"{searchQuery}\""
 msgstr "Aucune transaction trouvée pour \"{searchQuery}\""
 
-msgid ""
-"Nodes are not synced.\n"
-"Remote: {remoteHeight}, Local: {localHeight}"
-msgstr ""
-
 msgid "Not a pending payment request"
 msgstr "Pas de demande de paiement en cours"
 
@@ -577,9 +584,6 @@ msgstr "Les notifications ne peuvent pas être activées, nous passons donc cett
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Il ne reste que {count} sur {total}."
-
-msgid "Open Wallet"
-msgstr "Ouvrir le Wallet"
 
 msgid "Pay"
 msgstr "Payer"
@@ -722,6 +726,9 @@ msgstr "Bénéficiaire"
 msgid "Recovery Words"
 msgstr "Mots de récupération"
 
+msgid "Refreshing connection"
+msgstr ""
+
 msgid "Refunded"
 msgstr "Remboursé"
 
@@ -754,6 +761,11 @@ msgstr "Scanner un Cashlink"
 msgid "Scan QR code"
 msgstr "Scanner un QR Code"
 
+#, fuzzy
+#| msgid "Send NIM to this address"
+msgid "Scan the QR code to send NIM to this address"
+msgstr "Envoyer les NIM à cette adresse"
+
 msgid "Search"
 msgstr "Rechercher"
 
@@ -783,6 +795,9 @@ msgstr "Envoyer les NIM à cette adresse"
 
 msgid "Send NIM to top up"
 msgstr "Envoyez des NIM pour recharger"
+
+msgid "Server not available"
+msgstr ""
 
 msgid "Settings"
 msgstr "Paramètres"
@@ -936,9 +951,6 @@ msgstr "Transaction invalide"
 msgid "Try again"
 msgstr "Réessayer"
 
-msgid "Trying to establish network consensus:"
-msgstr "Tentative d'établissement d'un consensus au sein du réseau :"
-
 msgid "Unable to connect to the Points server"
 msgstr "Impossible de se connecter au serveur de points Cryptocity"
 
@@ -960,6 +972,9 @@ msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr ""
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
+
+msgid "Updating connection"
 msgstr ""
 
 msgid "Use {amount}"
@@ -1112,6 +1127,14 @@ msgstr "Votre numéro"
 
 msgid "Your wallet is ready to use"
 msgstr "Votre wallet est prêt à l'emploi"
+
+#, fuzzy
+#~| msgid "Not a pending payment request"
+#~ msgid "Failed to open wallet"
+#~ msgstr "Pas de demande de paiement en cours"
+
+#~ msgid "Open Wallet"
+#~ msgstr "Ouvrir le Wallet"
 
 #, fuzzy
 #~| msgid "Consensus established."
