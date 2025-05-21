@@ -232,10 +232,10 @@ watch(consensus, (value) => {
     isConsensusNeeded.value = false
 })
 
-watch([hasHtlcExpired, isRemoteOk], ([expired, remoteOk]) => {
+watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], ([expired, remoteOk, updatingDb]) => {
   if (expired) {
     isConsensusNeeded.value = true
-    if (remoteOk)
+    if (remoteOk && !updatingDb)
       showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false })
   }
   // Reset after htlc recreated and consensus established
