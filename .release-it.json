@@ -11,7 +11,8 @@
       "rm builds/android/NimiqPay-*.aab",
       "rm builds/android/NimiqPay-*.apk",
       "rm builds/ios/NimiqPay-*.ipa",
-      "rm builds/ios/NimiqPay-*.zip"
+      "rm builds/ios/NimiqPay-*.zip",
+      "rm builds/ios/NimiqPay-*.app.tgz"
     ]
   },
   "git": {
