@@ -1,3 +1,4 @@
+import type { FormType } from '@/nq-feedback.types'
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
 
@@ -16,6 +17,7 @@ export enum FlowName {
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
   Backup = 'backup',
   ChangePin = 'changePin',
+  NimiqFeedback = 'nimiqFeedback',
 }
 
 interface FlowHookCbReturn {
@@ -75,9 +77,10 @@ export enum StepName {
   BackupIntroduction = 'backupIntroduction',
   ShowWords = 'showWords',
   ValidateWords = 'validateWords',
+  NimiqFeedback = 'nimiqFeedback',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalSelection, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.NimiqFeedback] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -106,6 +109,7 @@ export interface State {
   [StepName.NimWithdrawalSelection]: NimWithdrawalSelection
   [StepName.NimAddressInput]: string
   [StepName.TransactionList]: ExternalTransaction // User selects a transaction
+  [StepName.NimiqFeedback]: { formType: FormType, data: any /* api response data */ }
 }
 
 export interface NavigationControl {

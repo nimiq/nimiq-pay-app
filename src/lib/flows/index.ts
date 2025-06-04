@@ -170,7 +170,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
     pinCodeStep,
   ].map(s => s({ flowName }))))
 
-  const onDone: Flow['onDone'] = async (state, { err }) => {
+  const onDone: Flow['onDone'] = async (state, { err, setToast }) => {
     const { markAsUnknownTransactionTitle, PaymentMethod } = await import('@/types/transactions')
 
     const { [StepName.PaymentPreview]: method, [StepName.QRCodeScanner]: request } = state
@@ -210,8 +210,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
         return err(error)
     }
 
-    const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('Payment successful') })
+    setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
     logger.log('🤑  Cancelling payment process')
@@ -298,11 +297,10 @@ const backupFlow: FlowInit = async () => {
   const { backupIntroductionStep, showWordsStep, validateWordsStep } = await import('./steps')
   const flowName = FlowName.Backup
   const steps = (await Promise.all([backupIntroductionStep, showWordsStep, validateWordsStep].map(s => s({ flowName }))))
-  const onDone: Flow['onDone'] = async () => {
+  const onDone: Flow['onDone'] = async (_, { setToast }) => {
     const { useApp } = await import('@/stores/app')
     useApp().hasDoneBackup = true
-    const { useToast } = await import('@/composables/useToast')
-    setTimeout(() => useToast().setToast({ message: i18n.t('Backup successful') }), 400) // Delay to allow the last step to animate out
+    setTimeout(() => setToast({ message: i18n.t('Backup successful') }), 400) // Delay to allow the last step to animate out
   }
   return { flowName, steps, onDone }
 }
@@ -316,7 +314,7 @@ const changePinFlow: FlowInit = async () => {
     (options: StepInitOptions) => pinCodeStep({ ...options, ...stepOptions }),
     pinCodeConfirmStep,
   ].map(s => s({ flowName }))))
-  const onDone: Flow['onDone'] = async (state, { err }) => {
+  const onDone: Flow['onDone'] = async (state, { err, setToast }) => {
     if (state[StepName.PinCode] !== state[StepName.PinCodeConfirm])
       return err(i18n.t('The PINs do not match'))
 
@@ -330,8 +328,22 @@ const changePinFlow: FlowInit = async () => {
     if (isBiometricEnabled.value)
       await setPinToSecureStorage(state[StepName.PinCode])
 
-    const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('PIN change successful') })
+    setToast({ message: i18n.t('PIN change successful') })
+  }
+  return { flowName, steps, onDone }
+}
+
+const nimiqFeedbackFlow: FlowInit = async () => {
+  const { nimiqFeedbackStep } = await import('./steps')
+  const flowName = FlowName.NimiqFeedback
+  const steps = [await nimiqFeedbackStep({ flowName })]
+  const onDone: Flow['onDone'] = async ({ nimiqFeedback }, { setToast }) => {
+    logger.log(`🌊 Nimiq feedback form submitted: ${JSON.stringify({ nimiqFeedback })}`)
+    switch (nimiqFeedback.formType) {
+      case 'bug': { setToast({ message: i18n.t('Thank you for your bug report!') }); break }
+      case 'idea': { setToast({ message: i18n.t('Thank you for your idea!') }); break }
+      case 'feedback': { setToast({ message: i18n.t('Thank you for your feedback!') }); break }
+    }
   }
   return { flowName, steps, onDone }
 }
@@ -351,6 +363,7 @@ const flows = {
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
   [FlowName.ChangePin]: changePinFlow,
+  [FlowName.NimiqFeedback]: nimiqFeedbackFlow,
 }
 
 /**

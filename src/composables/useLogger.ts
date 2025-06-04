@@ -19,6 +19,10 @@ const directory = Directory.Cache
 const debouncedSaveLogs = useDebounceFn(saveLogsToFile, 15 * 1e3, { maxWait: 60 * 1e3 })
 watch(logs, debouncedSaveLogs, { deep: true })
 
+export function logsAsString() {
+  return logs.value.join('\n')
+}
+
 async function saveLogsToFile() {
   if (logs.value.length === 0)
     return
@@ -32,7 +36,7 @@ async function saveLogsToFile() {
   try {
     await Filesystem.appendFile({
       path: logFileName,
-      data: logs.value.join('\n'),
+      data: logsAsString(),
       directory,
       encoding: Encoding.UTF8,
     })

@@ -30,6 +30,7 @@ const ShowWords = defineAsyncComponent(() => import('@/components/ShowWords.vue'
 const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWords.vue'))
 const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
 const PaymentRequestManualInput = defineAsyncComponent(() => import('@/components/PaymentRequestManualInput.vue'))
+const NimiqFeedback = defineAsyncComponent(() => import('@/components/NimiqFeedback.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -563,4 +564,9 @@ export const validateWordsStep: StepInit = async () => ({
   get title() { return i18n.t('Test your backup') },
   main: markRaw(ValidateWords),
   goBackBy: 1,
+} satisfies Step)
+
+export const nimiqFeedbackStep: StepInit = async () => ({
+  step: StepName.NimiqFeedback,
+  main: markRaw(NimiqFeedback),
 } satisfies Step)

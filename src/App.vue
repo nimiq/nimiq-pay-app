@@ -15,11 +15,14 @@ import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
 import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import { computed, onMounted } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
+const route = useRoute()
+
+const showNqFeedback = computed(() => route.name === 'Home' && __ENVIRONMENT__ !== 'prod')
 
 onMounted(async () => {
   if (!useDevice().isWeb) {
@@ -104,9 +107,19 @@ App.addListener('resume', async () => {
   <IonApp>
     <RouterView />
     <!-- DEV -->
-    <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
+    <IonFab slot="fixed" horizontal="end" vertical="bottom" class="z-[9999] flex flex-col gap-4 right-4" :class="{ 'bottom-[104px]': showNqFeedback }">
+      <IonFabButton v-if="isDev" @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
+      </IonFabButton>
+
+      <IonFabButton v-if="showNqFeedback" class="text-white drop-shadow-sm" @click="initializeFlow(FlowName.NimiqFeedback)">
+        <!--
+        TODO Replace this once we merge naka since we have a nice icon setup there with the nimiq icons.
+        Name of the icon: `i-nimiq:thumb-up-thumb-down`
+        -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 12 12">
+          <path fill="currentColor" d="M6 3c0-.275-.225-.5-.5-.5H2.907L3.24.913a.56.56 0 00-.153-.515L2.69 0 .22 2.47A.75.75 0 000 3v3.25c0 .415.335.75.75.75h3.375c.31 0 .577-.187.69-.457l1.132-2.645A.8.8 0 006 3.625zm5.25 2H7.875a.75.75 0 00-.69.457L6.053 8.102A.8.8 0 006 8.375V9c0 .275.225.5.5.5h2.592l-.332 1.588a.56.56 0 00.153.515L9.31 12l2.47-2.47A.75.75 0 0012 9V5.75a.75.75 0 00-.75-.75" />
+        </svg>
       </IonFabButton>
     </IonFab>
     <!-- !DEV -->
