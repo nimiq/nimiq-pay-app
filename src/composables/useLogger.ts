@@ -19,8 +19,20 @@ const directory = Directory.Cache
 const debouncedSaveLogs = useDebounceFn(saveLogsToFile, 15 * 1e3, { maxWait: 60 * 1e3 })
 watch(logs, debouncedSaveLogs, { deep: true })
 
-export function logsAsString() {
-  return logs.value.join('\n')
+export async function logsAsString() {
+  try {
+    const result = await Filesystem.readFile({
+      path: logFileName,
+      directory,
+      encoding: Encoding.UTF8,
+    })
+    return result.data as string
+  }
+  catch (e) {
+    console.warn('Could not read log file:', e)
+    // Fallback to in-memory logs if file doesn't exist or can't be read
+    return logs.value.join('\n')
+  }
 }
 
 async function saveLogsToFile() {
@@ -36,7 +48,7 @@ async function saveLogsToFile() {
   try {
     await Filesystem.appendFile({
       path: logFileName,
-      data: logsAsString(),
+      data: logs.value.join('\n'),
       directory,
       encoding: Encoding.UTF8,
     })
