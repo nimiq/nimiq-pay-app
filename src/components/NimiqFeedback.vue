@@ -57,9 +57,9 @@ useScriptTag(nqFeedbackUrlJs, () => {
 
 <template>
   <div class="h-full pb-6 px-8">
-    <svg xmlns="http://www.w3.org/2000/svg" class="absolute -top-4 cursor-pointer" width="32" height="32" viewBox="0 0 12 12" @click="widget?.goBack()">
+    <svg v-show="formType" xmlns="http://www.w3.org/2000/svg" class="absolute -top-11 z-10 text-space text-opacity-40 cursor-pointer" width="18" height="18" viewBox="0 0 12 12" @click="widget?.goBack()">
       <path
-        fill="none" stroke="neutral" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
         d="M4.666 10 1 6l3.667-4M2.619 6H11"
       />
     </svg>
@@ -71,6 +71,17 @@ useScriptTag(nqFeedbackUrlJs, () => {
     </div>
   </div>
 </template>
+
+<style>
+ul.hide-scrollbar {
+  overflow: inherit;
+
+  > li {
+    padding: 0;
+    overflow: inherit;
+  }
+}
+</style>
 
 <style scoped>
 /* To avoid CLS we delay showing the loading spinner since it is usually fast */
