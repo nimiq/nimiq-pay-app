@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import type { FormType, WidgetInstance, WidgetProps } from '@/nq-feedback.types'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import { logsAsString } from '@/composables/useLogger'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
-import { IonBackButton } from '@ionic/vue'
 import { useScriptTag } from '@vueuse/core'
 import { onMounted, onUnmounted, ref } from 'vue'
-import { logsAsString, useLogger } from '@/composables/useLogger'
 
 const emit = defineEmits(stepEmits)
 
@@ -48,19 +47,21 @@ useScriptTag(nqFeedbackUrlJs, () => {
   widget.communication?.on('go-back', () => formType.value = undefined)
   widget.communication?.on('form-submitted', data => emit('done', { formType: formType.value, data }))
 
-  widget.communication?.on('before-submit', ({ formData, type }) => {
-    if (type !== 'bug' && formData.get('shareDebugInfo') !== 'on') return
-    formData.append('logs', logsAsString())
+  widget.communication?.on('before-submit', async ({ formData, type }) => {
+    if (type !== 'bug' && formData.get('shareDebugInfo') !== 'on')
+      return
+    formData.append('logs', await logsAsString())
   })
-
 })
 </script>
 
 <template>
   <div class="h-full pb-6 px-8">
     <svg xmlns="http://www.w3.org/2000/svg" class="absolute -top-4 cursor-pointer" width="32" height="32" viewBox="0 0 12 12" @click="widget?.goBack()">
-      <path fill="none" stroke="neutral" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M4.666 10 1 6l3.667-4M2.619 6H11" />
+      <path
+        fill="none" stroke="neutral" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M4.666 10 1 6l3.667-4M2.619 6H11"
+      />
     </svg>
     <div id="feedback-widget" class="h-full">
       <div class="flex items-center gap-2 font-semibold opacity-0 loading">
