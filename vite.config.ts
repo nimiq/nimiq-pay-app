@@ -38,7 +38,7 @@ export default defineConfig({
     // __ENABLE_BTC_LN__: process.env.ENABLE_BTC_LN ? true : false,
     __ENABLE_BTC_LN__: true, // Enable BTC LN by default, remove this once Apple is not complaining
 
-    __NQ_FEEDBACK_URL__: JSON.stringify(process.env.NQ_FEEDBACK_URL || 'https://nq-feedback.maximogarciamtnez.workers.dev/'),
+    __NQ_FEEDBACK_URL__: JSON.stringify(process.env.NQ_FEEDBACK_URL || 'https://nimiq-feedback.je-cf9.workers.dev'),
     __ENVIRONMENT__: JSON.stringify(process.env.DEV_ENV || process.env.NODE_ENV.includes('dev') ? 'local' : 'prod'),
   },
 })
