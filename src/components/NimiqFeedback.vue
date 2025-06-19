@@ -56,7 +56,7 @@ useScriptTag(nqFeedbackUrlJs, () => {
 </script>
 
 <template>
-  <div class="h-full pb-6 px-8" style="color-scheme: light;">
+  <div class="h-full pb-6 px-8 overflow-y-auto feedback-container">
     <svg v-show="formType" xmlns="http://www.w3.org/2000/svg" class="absolute -top-11 z-10 text-space text-opacity-40 cursor-pointer" width="18" height="18" viewBox="0 0 12 12" @click="widget?.goBack()">
       <path
         fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -84,6 +84,10 @@ ul.hide-scrollbar {
 </style>
 
 <style scoped>
+div:has(> .feedback-container) {
+  height: 100%;
+}
+
 /* To avoid CLS we delay showing the loading spinner since it is usually fast */
 .loading {
   animation: showLoading 200ms ease-in-out;
