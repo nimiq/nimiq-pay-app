@@ -34,7 +34,7 @@ const showSkeleton = computed(() => balance.value < 0 || (balance.value === 0 &&
       </div>
     </div>
     <div v-else class="flex flex-col items-center gap-y-2">
-      <FiatAmount class="text-5xl font-normal text-space" :amount="fiat.total" :currency="fiat.currency" :hide-decimals="false" />
+      <FiatAmount class="text-5xl font-normal text-space" :amount="fiat.total" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
         <span class="whitespace-nowrap">{{ crypto.formatted }}</span>
         <PriceChange />
