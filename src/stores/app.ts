@@ -2,6 +2,7 @@ import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
 import { Preferences } from '@capacitor/preferences'
 import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
+import { useReducedMotion } from 'motion-v'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useConn } from './conn'
@@ -68,6 +69,7 @@ export const useApp = defineStore('app', () => {
   const isBiometricEnabled = useStorageAsync('isBiometricEnabled', false, kvPreferences())
   // TODO: maybe clean this from time to time?
   const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
+  const showAnimations = useStorageAsync('showAnimations', !useReducedMotion().value, kvPreferences(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -153,5 +155,6 @@ export const useApp = defineStore('app', () => {
     closedNotifications,
     isBiometricEnabled,
     displayedPaymentRequests,
+    showAnimations,
   }
 })

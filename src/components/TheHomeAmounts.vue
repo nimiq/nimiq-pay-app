@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
+import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { IonSkeletonText } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
+import { animate, motion, useMotionValue } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
 const { isTransactionPending } = storeToRefs(useSync())
+const { showAnimations } = storeToRefs(useApp())
 const { isProcessingRemote } = storeToRefs(useLocks())
 const { fiat, crypto } = usePrice(balance)
 
@@ -22,6 +25,36 @@ const { fiat, crypto } = usePrice(balance)
  *  - The balance is 0 and the HTLC is not active yet (could be because there is an extension or the HTLC was not found when previously there was an active HTLC)
  */
 const showSkeleton = computed(() => balance.value < 0 || (balance.value === 0 && isTransactionPending.value) || isProcessingRemote.value)
+
+const animatedAmount = ref(0)
+const countMotionValue = useMotionValue(0)
+
+countMotionValue.on('change', (value) => {
+  animatedAmount.value = Math.max(0, value)
+})
+
+watch(() => fiat.total, (newTotal) => {
+  if (!showSkeleton.value && newTotal !== undefined) {
+    if (!showAnimations.value) {
+      animatedAmount.value = newTotal
+      countMotionValue.set(newTotal)
+    }
+    else {
+      animate(countMotionValue, newTotal, {
+        duration: 1,
+        ease: 'easeOut',
+      })
+    }
+  }
+}, { immediate: true })
+
+// Reset animation when showing skeleton
+watch(showSkeleton, (isShowing) => {
+  if (isShowing) {
+    countMotionValue.set(0)
+    animatedAmount.value = 0
+  }
+})
 </script>
 
 <template>
@@ -34,7 +67,7 @@ const showSkeleton = computed(() => balance.value < 0 || (balance.value === 0 &&
       </div>
     </div>
     <div v-else class="flex flex-col items-center gap-y-2">
-      <FiatAmount class="text-5xl font-normal text-space" :amount="fiat.total" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
+      <FiatAmount class="text-5xl font-normal text-space" :amount="animatedAmount" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
         <span class="whitespace-nowrap">{{ crypto.formatted }}</span>
         <PriceChange />

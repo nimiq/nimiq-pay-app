@@ -39,6 +39,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
 import { chevronForward } from 'ionicons/icons'
+import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, markRaw, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -51,7 +52,7 @@ const { showModal } = useModal()
 const { isIOS } = useDevice()
 const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests } = storeToRefs(useApp())
+const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests, showAnimations } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
@@ -329,49 +330,79 @@ App.addListener('resume', detectPaymentRequest)
         <IonRefresherContent />
       </IonRefresher>
 
-      <TheHomeAmounts class="mt-[72px] mb-4" />
+      <motion.div
+        :initial="{ opacity: 0, y: 50 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ duration: showAnimations ? 0.4 : 0, ease: 'easeOut' }"
+      >
+        <TheHomeAmounts class="mt-[72px] mb-4" />
 
-      <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
-        {{ $t('Top Up') }}
-      </QuickButton>
+        <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
+          {{ $t('Top Up') }}
+        </QuickButton>
+      </motion.div>
 
       <!-- Transaction List -->
-      <TheHomeTransactions class="mt-8" />
+      <motion.div
+        :initial="{ opacity: 0, y: 30 }"
+        :animate="{ opacity: 1, y: 0 }"
+        :transition="{ duration: showAnimations ? 0.4 : 0 }"
+      >
+        <TheHomeTransactions class="mt-8" />
 
-      <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
-        {{ $t('See all') }}
-      </QuickButton>
+        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
+          {{ $t('See all') }}
+        </QuickButton>
+      </motion.div>
 
       <!-- TODO: replace with an html grid -->
       <IonGrid class="flex flex-col mt-10 gap-y-2">
         <!-- Notification Horizontal Scroll -->
         <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
-          <ul
+          <motion.ul
             ref="notificationList"
+            :initial="{ opacity: 0, y: 50 }"
+            :while-in-view="{ opacity: 1, y: 0 }"
+            :transition="{ duration: showAnimations ? 0.4 : 0, ease: 'easeOut' }"
             class="hide-scrollbar scroll-pl-[21px] w-full overflow-auto flex gap-x-3 gap-y-8 pb-4 snap-x snap-mandatory"
           >
-            <li v-for="notification in localNotifications" :id="notification.id" :key="notification.id" class="shrink-0 snap-start first:pl-[21px] last:pr-[21px]">
+            <motion.li
+              v-for="(notification, index) in localNotifications"
+              :id="notification.id"
+              :key="notification.id"
+              :initial="{ opacity: 0, y: 20 }"
+              :while-in-view="{ opacity: 1, y: 0 }"
+              :transition="{ duration: showAnimations ? 0.3 : 0, delay: showAnimations ? index * 0.05 : 0 }"
+              class="shrink-0 snap-start first:pl-[21px] last:pr-[21px]"
+            >
               <NotificationCard @click="notification.action" @close="() => removeLocalNotification(notification.id)">
                 {{ notification.title }}
                 <template v-if="notification.subtitle" #subtitle>
                   {{ notification.subtitle }}
                 </template>
               </NotificationCard>
-            </li>
-          </ul>
+            </motion.li>
+          </motion.ul>
         </IonRow>
 
         <!-- Referral -->
         <IonRow v-if="isReferralCardShown && referralClaimsRemaining > 0" class="mb-8">
-          <NotificationCard
+          <motion.div
+            :initial="{ opacity: 0, y: 50, scale: 0.9, rotate: -2 }"
+            :while-in-view="{ opacity: 1, y: 0, scale: 1, rotate: 0 }"
+            :transition="{ duration: showAnimations ? 0.4 : 0, ease: 'backOut' }"
             class="w-full"
-            @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
-            @close="isReferralCardShown = false"
           >
-            <span class="text-lg text-pumpkin">
-              {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
-            </span>
-          </NotificationCard>
+            <NotificationCard
+              class="w-full"
+              @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
+              @close="isReferralCardShown = false"
+            >
+              <span class="text-lg text-pumpkin">
+                {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
+              </span>
+            </NotificationCard>
+          </motion.div>
         </IonRow>
 
         <!-- Map -->
@@ -413,33 +444,39 @@ App.addListener('resume', detectPaymentRequest)
     <!-- Footer -->
     <IonFooter ref="footerRef">
       <IonToolbar>
-        <Transition name="slide-fade">
-          <StatusMessage
-            v-if="isStatusMessageShownDebounced"
-            :message="statusMessageText"
-            :text-color="statusMessageTextColorDebounced"
-            :bg-color="statusMessageBgColorDebounced"
-            :icon-color="statusMessageIconColorDebounced"
-            :icon="statusMessageIconDebounced"
-          />
-        </Transition>
-        <IonButton
-          class="w-3/4 py-2 mx-auto text-base" expand="block"
-          :class="{ 'pb-0': isIOS }"
-          :disabled="isPaymentDisabled"
-          @click="initializeFlow(FlowName.NimOrPointsPayment)"
+        <motion.div
+          :initial="{ opacity: 0, y: 50 }"
+          :animate="{ opacity: 1, y: 0 }"
+          :transition="{ duration: showAnimations ? 0.4 : 0, ease: 'easeOut' }"
         >
-          {{ $t('Pay') }}
-        </IonButton>
-        <Transition name="slide-fade">
-          <div v-if="isConsensusMessageShownDebounced" class="flex justify-center items-center font-semibold gap-2" :class="isIOS ? 'pb-0' : 'pb-4'">
-            <!-- Using rem breaks the svg in iOS -->
-            <WorldIcon class="size-[16px]" />
-            <span class="text-space/50">
-              {{ `${$t('Establishing consensus')}...` }}
-            </span>
-          </div>
-        </Transition>
+          <Transition name="slide-fade">
+            <StatusMessage
+              v-if="isStatusMessageShownDebounced"
+              :message="statusMessageText"
+              :text-color="statusMessageTextColorDebounced"
+              :bg-color="statusMessageBgColorDebounced"
+              :icon-color="statusMessageIconColorDebounced"
+              :icon="statusMessageIconDebounced"
+            />
+          </Transition>
+          <IonButton
+            class="w-3/4 py-2 mx-auto text-base" expand="block"
+            :class="{ 'pb-0': isIOS }"
+            :disabled="isPaymentDisabled"
+            @click="initializeFlow(FlowName.NimOrPointsPayment)"
+          >
+            {{ $t('Pay') }}
+          </IonButton>
+          <Transition name="slide-fade">
+            <div v-if="isConsensusMessageShownDebounced" class="flex justify-center items-center font-semibold gap-2" :class="isIOS ? 'pb-0' : 'pb-4'">
+              <!-- Using rem breaks the svg in iOS -->
+              <WorldIcon class="size-[16px]" />
+              <span class="text-space/50">
+                {{ `${$t('Establishing consensus')}...` }}
+              </span>
+            </div>
+          </Transition>
+        </motion.div>
       </IonToolbar>
     </IonFooter>
   </IonPage>
