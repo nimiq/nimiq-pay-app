@@ -7,7 +7,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { IonSkeletonText } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
-import { animate, motion, useMotionValue } from 'motion-v'
+import { animate, useMotionValue } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
