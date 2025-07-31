@@ -357,7 +357,7 @@ const flows = {
  * It initializes the flow given the name opening a new modal with the flow component
  * which handles the carousel of steps.
  */
-export async function initializeFlow(name: FlowName, initialState?: Partial<State>) {
+export async function initializeFlow(name: FlowName, initialState?: Partial<State>, preventSwipe = false) {
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   await useModal().closeModal()
 
@@ -385,6 +385,9 @@ export async function initializeFlow(name: FlowName, initialState?: Partial<Stat
      * all the triggers will return true, closing the modal.
      */
     canDismiss: async (data?: any, role?) => {
+      if (preventSwipe && role === 'gesture')
+        return false // Prevent swipe to close if preventSwipe is true
+
       logger.log('🌊 Dismissing flow', flow)
       isClosing.value = true
       if (role === 'gesture') {

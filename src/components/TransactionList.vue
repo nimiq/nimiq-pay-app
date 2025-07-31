@@ -1,27 +1,24 @@
 <script setup lang="ts">
 import { stepEmits } from '@/lib/flows/steps.types'
 import { TransactionListState, useTransactions } from '@/stores/transactions'
-import { useInfiniteScroll, useVirtualList } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
 import QuickButton from './QuickButton.vue'
 import TransactionItem from './TransactionItem.vue'
+import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 
 defineEmits(stepEmits)
 
 const { loadMoreTxs, canLoadMore } = useTransactions()
 const { searchQuery, transactionsToShow: transactions, status } = storeToRefs(useTransactions())
 
-const itemHeight = 37 /* Height */ + 24 /* padding-y */
+const itemHeight = 42 /* Height */ + 24 /* padding-y */
 
-const { list, containerProps, wrapperProps } = useVirtualList(transactions, { itemHeight })
-
-const wrapperEl = ref<HTMLOListElement>()
-const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: itemHeight * 5, canLoadMore })
+// const wrapperEl = ref<HTMLOListElement>()
+// const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: itemHeight * 5, canLoadMore })
 </script>
 
 <template>
-  <div class="flex flex-col w-full h-full">
+  <div class="flex flex-col w-full h-[calc(100vh-72px)]">
     <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60">
       {{ $t('All transactions') }}
     </h2>
@@ -40,28 +37,20 @@ const { isLoading } = useInfiniteScroll(wrapperEl, loadMoreTxs, { distance: item
       </QuickButton>
     </div>
 
-    <div
-      v-else
-      v-bind="containerProps"
-      class="relative flex-1 pb-10" :style="{
-        '--gap-right': '6px', // The gap between screen border and the scrollbar
-        '--padding-right': '32px', // This is the default padding-x for the modal
-        '--gap-content-and-scrollbar': 'calc(var(--padding-right) - var(--gap-right))',
-        'margin-right': 'calc(var(--gap-content-and-scrollbar) * -1)',
-        'padding-right': 'var(--gap-content-and-scrollbar)',
-        'width': 'calc(100% + var(--gap-content-and-scrollbar))',
-      }"
+    <div class="sticky inset-x-0 h-10 pointer-events-none -top-0.5 bg-gradient-to-b from-white to-transparent via-white/80" />
+    <RecycleScroller
+      v-slot="{ item }"
+      class="h-full pb-10"
+      :items="transactions"
+      :item-size="itemHeight"
+      key-field="hash"
+      @scroll-end="() => canLoadMore && loadMoreTxs()"
     >
-      <div class="sticky inset-x-0 h-10 pointer-events-none -top-0.5 bg-gradient-to-b from-white to-transparent via-white/80" />
-      <ol v-bind="wrapperProps" ref="wrapperEl">
-        <li v-for="({ data: transaction }) in list" :key="transaction.hash" :data-hash="transaction.hash">
-          <TransactionItem :tx="transaction" @click="$emit('select', transaction)" />
-        </li>
-      </ol>
-    </div>
+      <TransactionItem :tx="item" @click="$emit('select', item)" />
+    </RecycleScroller>
 
-    <div v-if="isLoading" class="flex justify-center mt-4">
+    <!-- <div v-if="isLoading" class="flex justify-center mt-4">
       {{ $t('Loading') }}
-    </div>
+    </div> -->
   </div>
 </template>

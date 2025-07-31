@@ -14,8 +14,9 @@ import { devtools } from '@vue/devtools'
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 import { createPinia, storeToRefs } from 'pinia'
-
 import { createApp } from 'vue'
+import VueVirtualScroller from 'vue-virtual-scroller'
+
 import App from './App.vue'
 import router from './router'
 /* Core CSS required for Ionic components to work properly */
@@ -49,6 +50,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   app.use(IonicVue)
   app.use(createPinia())
   app.use(i18nRegistration)
+  app.use(VueVirtualScroller)
 
   // load and set the initial language
   const { language } = storeToRefs(useApp())
