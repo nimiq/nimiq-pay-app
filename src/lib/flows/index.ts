@@ -549,6 +549,9 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
      * all the triggers will return true, closing the modal.
      */
     canDismiss: async (data?: any, role?) => {
+      if (preventSwipe && role === 'gesture')
+        return false // Prevent swipe to close if preventSwipe is true
+
       logger.log('🌊 Dismissing flow', flow)
       isClosing.value = true
       if (role === 'gesture') {

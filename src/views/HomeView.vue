@@ -366,7 +366,7 @@ App.addListener('resume', detectPaymentRequest)
       >
         <TheHomeTransactions class="mt-8" />
 
-        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions)">
+        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions, undefined, true)">
           {{ $t('See all') }}
         </QuickButton>
       </motion.div>
