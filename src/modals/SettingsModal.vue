@@ -123,8 +123,8 @@ onBeforeMount(updateBiometryInfo)
         </IonItem>
 
         <IonItem>
-          <IonToggle :checked="!showAnimations" :helper-text="$t('Turn off some visual effects and motion animations')" @ion-change="showAnimations = !$event.detail.checked">
-            {{ $t('Reduce Motion') }}
+          <IonToggle :checked="!showAnimations" @ion-change="showAnimations = !$event.detail.checked">
+            {{ $t('Reduce Animations') }}
           </IonToggle>
         </IonItem>
 
