@@ -30,6 +30,8 @@ msgstr "Ativar Cashback e Recompensas"
 msgid "Activating scanner"
 msgstr ""
 
+#, fuzzy
+#| msgid "Add NIM address"
 msgid "Add NIM address"
 msgstr "Adicionar endereço NIM"
 
@@ -110,6 +112,8 @@ msgstr "Ao clicares em \"verificar\", concordas com as nossas práticas de gest�
 msgid "Cancel"
 msgstr "Cancelar"
 
+#, fuzzy
+#| msgid "Cannot create NIM/BTC_LN swap"
 msgid "Cannot create NIM/BTC_LN swap"
 msgstr "Não é possível criar troca NIM/BTC_LN"
 
@@ -179,6 +183,8 @@ msgstr "Copiar código"
 msgid "Copy or scan the address"
 msgstr "Copiar ou digitalizar o endereço"
 
+#, fuzzy
+#| msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr "Não foi possível obter o valor de NIM para a troca de Bitcoin Lightning."
 
@@ -405,9 +411,13 @@ msgstr "Resposta GoCrypto inválida"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Formato do link inválido. CPLinks só são suportados para NIM."
 
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr "Formato do link inválido. Apenas CPLinks e NAKA para pedidos NIM e pedidos Bitcoin Lightning são suportados."
 
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Formato do link inválido. Apenas pedidos de CPLinks e NAKA para NIM são suportados."
 
@@ -636,6 +646,8 @@ msgstr "Mudança de PIN bem-sucedida"
 msgid "PIN did not match"
 msgstr "O PIN não coincide"
 
+#, fuzzy
+#| msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgstr "Por favor permite a Nimiq Pay a acessar à tua câmara e tentar novamente digitalizar os códigos QR."
 
@@ -704,6 +716,9 @@ msgstr "Destinatário"
 msgid "Recovery Words"
 msgstr "Palavras de Recuperação"
 
+msgid "Reduce Animations"
+msgstr ""
+
 msgid "Refreshing connection"
 msgstr ""
 
@@ -725,9 +740,13 @@ msgstr "Notificações de Recompensas"
 msgid "Save"
 msgstr "Guardar"
 
+#, fuzzy
+#| msgid "Scan any Nimiq or NAKA QR code to pay."
 msgid "Scan any Nimiq or NAKA QR code to pay."
 msgstr "Digitaliza qualquer código QR Nimiq ou NAKA para pagar."
 
+#, fuzzy
+#| msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgstr "Digitaliza qualquer código QR Nimiq, Bitcoin Lightning ou NAKA para pagar."
 
@@ -769,6 +788,8 @@ msgstr "Enviar uma transação para o endereço em baixo. Recarregar saldo o qua
 msgid "Send NIM to this address"
 msgstr "Enviar NIM para este endereço"
 
+#, fuzzy
+#| msgid "Send NIM to top up"
 msgid "Send NIM to top up"
 msgstr "Enviar NIM para recarregar saldo"
 
@@ -968,6 +989,8 @@ msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
 msgid "Welcome to Cryptocity Points"
 msgstr "Bem-vindo aos Pontos Cryptocity"
 
+#, fuzzy
+#| msgid "Welcome to Nimiq Pay"
 msgid "Welcome to Nimiq Pay"
 msgstr "Bem-vindo à Nimiq Pay"
 
@@ -1016,6 +1039,8 @@ msgstr "Qual é a 8ª palavra?"
 msgid "What's the 9th word?"
 msgstr "Qual é a 9ª palavra?"
 
+#, fuzzy
+#| msgid "When paying with BTC Lightning, NIM are swapped to BTC."
 msgid "When paying with BTC Lightning, NIM are swapped to BTC."
 msgstr "Ao pagar com BTC Lightning, NIM é trocado por BTC."
 
@@ -1056,12 +1081,18 @@ msgstr "Não podes usar este endereço"
 msgid "You can try again in {remainingTime}"
 msgstr "Podes tentar novamente em {remainingTime}"
 
+#, fuzzy
+#| msgid "You don't have enough NIM for this purchase."
 msgid "You don't have enough NIM for this purchase."
 msgstr "Não tens NIM suficiente para esta compra."
 
+#, fuzzy
+#| msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr "Não tens NIM suficiente para esta compra. Só podes pagar com pontos."
 
+#, fuzzy
+#| msgid "You don't have enough NIM. Your current balance is {balance}."
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr "Não tens NIM suficiente. O teu saldo atual é de {balance}."
 
@@ -1089,6 +1120,8 @@ msgstr "Vais receber uma mensagem com um código de verificação"
 msgid "Your account, funds and data will be lost if you log out without a backup."
 msgstr "A tua conta, fundos e dados vai ser perdida se encerrares sessão sem um backup."
 
+#, fuzzy
+#| msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgstr "O teu saldo NIM ainda não está disponível. Só podes pagar com pontos."
 
@@ -1100,8 +1133,23 @@ msgstr "A tua wallet está pronta para usar"
 
 #, fuzzy
 #~| msgid "Failed to fetch payment request"
-#~ msgid "Failed to open wallet"
+#~ msgid "Failed to create swap"
 #~ msgstr "Falha ao buscar pedido de pagamento"
+
+#, fuzzy
+#~| msgid "Invalid transfer type"
+#~ msgid "Invalid transaction type"
+#~ msgstr "Tipo de transferência inválido"
+
+#, fuzzy
+#~| msgid "Invalid Nimiq address"
+#~ msgid "Invalid USDT address"
+#~ msgstr "Endereço Nimiq inválido"
+
+#, fuzzy
+#~| msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
+#~ msgid "Pay with Cryptocity Points instead of USDT wherever they're accepted."
+#~ msgstr "Pagar com Pontos Cryptocity em vez de NIM sempre que for aceite."
 
 #~ msgid "Open Wallet"
 #~ msgstr "Abrir Wallet"
