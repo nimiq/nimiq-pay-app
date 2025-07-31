@@ -29,6 +29,8 @@ msgstr "Cashback & Boni aktivieren"
 msgid "Activating scanner"
 msgstr ""
 
+#, fuzzy
+#| msgid "Add NIM address"
 msgid "Add NIM address"
 msgstr "NIM-Adresse hinzufügen"
 
@@ -113,6 +115,8 @@ msgstr "Durch Antippen von \"Verifizieren\", stimmst du unserer Datenschutzerkl�
 msgid "Cancel"
 msgstr "Abbrechen"
 
+#, fuzzy
+#| msgid "Cannot create NIM/BTC_LN swap"
 msgid "Cannot create NIM/BTC_LN swap"
 msgstr "Konnte keinen NIM/BTC-LN-Tausch erstellen"
 
@@ -184,6 +188,8 @@ msgstr "Code kopieren"
 msgid "Copy or scan the address"
 msgstr "Die Adresse kopieren oder scannen"
 
+#, fuzzy
+#| msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgstr "Konnte keinen NIM-Betrag für Bitcoin-Lightning-Tausch anfragen."
 
@@ -414,9 +420,13 @@ msgstr "Ungültige GoCrypto API-Antwort"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Ungültiges Link-Format. CPLinks werden nur für NIM unterstützt."
 
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr "Ungültiges Link-Format. Nur CPLinks, NIM-NAKA- und Bitcoin-Lightning-Zahlungsanfragen werden unterstützt."
 
+#, fuzzy
+#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Ungültiges Link-Format. Nur CPLinks und NAKA-Zahlungsanfragen für NIM werden unterstützt."
 
@@ -653,6 +663,8 @@ msgstr "Zahlung erfolgt"
 msgid "PIN did not match"
 msgstr "PIN stimmt nicht überein"
 
+#, fuzzy
+#| msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgstr "Bitte erlaube Nimiq Pay den Zugriff auf deine Kamera und versuche erneut QR-Codes zu lesen."
 
@@ -721,6 +733,9 @@ msgstr "Empfänger"
 msgid "Recovery Words"
 msgstr "Wiederherstellungswörter"
 
+msgid "Reduce Animations"
+msgstr ""
+
 msgid "Refreshing connection"
 msgstr ""
 
@@ -744,9 +759,13 @@ msgstr "Boni-Benachrichtigungen"
 msgid "Save"
 msgstr "Speichern"
 
+#, fuzzy
+#| msgid "Scan any Nimiq or NAKA QR code to pay."
 msgid "Scan any Nimiq or NAKA QR code to pay."
 msgstr "Scanne einen Nimiq- oder Naka-QR-Code um zu zahlen."
 
+#, fuzzy
+#| msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgstr "Scanne einen Nimiq-, Bitcoin-Lightning- oder Naka-QR-Code um zu zahlen."
 
@@ -788,6 +807,8 @@ msgstr "Schicke einen beliebigen Betrag an untenstehende Adresse, um dein Konto 
 msgid "Send NIM to this address"
 msgstr "Schicke NIM an diese Adresse"
 
+#, fuzzy
+#| msgid "Send NIM to top up"
 msgid "Send NIM to top up"
 msgstr "Schicke NIM zum Aufladen"
 
@@ -995,6 +1016,8 @@ msgstr ""
 "Willkommen.\n"
 "Zeit zu punkten."
 
+#, fuzzy
+#| msgid "Welcome to Nimiq Pay"
 msgid "Welcome to Nimiq Pay"
 msgstr "Willkommen bei Nimiq Pay"
 
@@ -1043,6 +1066,8 @@ msgstr "Was ist das achte Wort?"
 msgid "What's the 9th word?"
 msgstr "Was ist das neunte Wort?"
 
+#, fuzzy
+#| msgid "When paying with BTC Lightning, NIM are swapped to BTC."
 msgid "When paying with BTC Lightning, NIM are swapped to BTC."
 msgstr "Für die Zahlung mit BTC-Lightning wird automatisch der entsprechende Betrag NIM in BTC getauscht."
 
@@ -1083,12 +1108,18 @@ msgstr "Du kannst diese Adresse nicht verwenden"
 msgid "You can try again in {remainingTime}"
 msgstr "Versuche es erneut in {remainingTime}"
 
+#, fuzzy
+#| msgid "You don't have enough NIM for this purchase."
 msgid "You don't have enough NIM for this purchase."
 msgstr "Du hast nicht genug NIM für diesen Einkauf."
 
+#, fuzzy
+#| msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr "Du hast nicht genug NIM für diesen Einkauf. Du kannst nur mit Punkten bezahlen."
 
+#, fuzzy
+#| msgid "You don't have enough NIM. Your current balance is {balance}."
 msgid "You don't have enough NIM. Your current balance is {balance}."
 msgstr "Du hast nicht genug NIM. Dein aktuelles Guthaben beträgt {balance}."
 
@@ -1116,6 +1147,8 @@ msgstr "Du bekommst eine SMS mit einem Verifizierungscode"
 msgid "Your account, funds and data will be lost if you log out without a backup."
 msgstr "Dein Konto, dein Guthaben und deine Daten gehen verloren, wenn du dich ohne ein Backup ausloggst."
 
+#, fuzzy
+#| msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgstr "Dein NIM-Guthaben ist noch nicht verfügbar. Du kannst nur mit Punkten bezahlen."
 
@@ -1127,8 +1160,28 @@ msgstr "Deine Wallet ist bereit zur Benutzung"
 
 #, fuzzy
 #~| msgid "Failed to fetch payment request"
-#~ msgid "Failed to open wallet"
+#~ msgid "Failed to create swap"
 #~ msgstr "Zahlungsanfrage konnte nicht geladen werden"
+
+#, fuzzy
+#~| msgid "Invalid transfer type"
+#~ msgid "Invalid transaction type"
+#~ msgstr "Ungültige Transferart"
+
+#, fuzzy
+#~| msgid "Invalid Nimiq address"
+#~ msgid "Invalid USDT address"
+#~ msgstr "Ungültige Nimiq-Adresse"
+
+#, fuzzy
+#~| msgid "No order found"
+#~ msgid "No local wallet found"
+#~ msgstr "Keine Zahlungsdetails gefunden"
+
+#, fuzzy
+#~| msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
+#~ msgid "Pay with Cryptocity Points instead of USDT wherever they're accepted."
+#~ msgstr "Bezahle mit Kryptostadt-Punkten statt mit NIM - überall, wo sie akzeptiert werden."
 
 #~ msgid "Open Wallet"
 #~ msgstr "Wallet öffnen"
@@ -1279,9 +1332,6 @@ msgstr "Deine Wallet ist bereit zur Benutzung"
 
 #~ msgid "No Nimiq Wallet address found"
 #~ msgstr "Keine Nimiq-Wallet-Adresse gefunden"
-
-#~ msgid "No order found"
-#~ msgstr "Keine Zahlungsdetails gefunden"
 
 #~ msgid "No phone number set"
 #~ msgstr "Keine Telefonnummer ausgewählt"

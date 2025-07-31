@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:27
-#: src/views/HomeView.vue:201
+#: src/views/HomeView.vue:202
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -160,7 +160,7 @@ msgstr ""
 msgid "Cashlink has no balance"
 msgstr ""
 
-#: src/modals/SettingsModal.vue:49
+#: src/modals/SettingsModal.vue:55
 msgid "Change PIN"
 msgstr ""
 
@@ -263,7 +263,7 @@ msgstr ""
 msgid "Date"
 msgstr ""
 
-#: src/modals/SettingsModal.vue:53
+#: src/modals/SettingsModal.vue:59
 msgid "Delete Cryptocity Points account"
 msgstr ""
 
@@ -371,7 +371,7 @@ msgid "Error while topping up deposit"
 msgstr ""
 
 #: src/modals/LongTimeNoSeeModal.vue:21
-#: src/views/HomeView.vue:136
+#: src/views/HomeView.vue:171
 msgid "Establishing consensus"
 msgstr ""
 
@@ -416,7 +416,7 @@ msgstr ""
 msgid "Fees may apply {fee}"
 msgstr ""
 
-#: src/views/HomeView.vue:77
+#: src/views/HomeView.vue:107
 msgid "Find places that accept crypto!"
 msgstr ""
 
@@ -446,7 +446,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/views/HomeView.vue:91
+#: src/views/HomeView.vue:121
 msgid "Go to Crypto Map"
 msgstr ""
 
@@ -614,7 +614,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:52
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:69
+#: src/views/HomeView.vue:98
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -635,7 +635,6 @@ msgid "Lightning request is for a variable payment amount, but variable amounts 
 msgstr ""
 
 #: src/components/ShowWords.vue:5
-#: src/components/TransactionList.vue:42
 msgid "Loading"
 msgstr ""
 
@@ -756,7 +755,7 @@ msgid "Only {count} out of {total} remaining."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:129
+#: src/views/HomeView.vue:164
 msgid "Pay"
 msgstr ""
 
@@ -915,7 +914,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:98
+#: src/views/HomeView.vue:99
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -952,6 +951,10 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
+#: src/modals/SettingsModal.vue:49
+msgid "Reduce Animations"
+msgstr ""
+
 #: src/modals/LongTimeNoSeeModal.vue:21
 msgid "Refreshing connection"
 msgstr ""
@@ -960,7 +963,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:202
+#: src/views/HomeView.vue:203
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1011,7 +1014,7 @@ msgstr ""
 msgid "Search for a country"
 msgstr ""
 
-#: src/views/HomeView.vue:39
+#: src/views/HomeView.vue:50
 msgid "See all"
 msgstr ""
 
@@ -1044,7 +1047,7 @@ msgid "Send NIM to top up"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:111
-#: src/views/HomeView.vue:89
+#: src/views/HomeView.vue:90
 msgid "Server not available"
 msgstr ""
 
@@ -1225,7 +1228,7 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr ""
 
 #: src/modals/MenuModal.vue:14
-#: src/views/HomeView.vue:32
+#: src/views/HomeView.vue:37
 msgid "Top Up"
 msgstr ""
 
@@ -1452,7 +1455,7 @@ msgstr ""
 msgid "You earn {amount}"
 msgstr ""
 
-#: src/views/HomeView.vue:207
+#: src/views/HomeView.vue:208
 msgid "You have a reward to claim!"
 msgstr ""
 
