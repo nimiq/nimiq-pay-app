@@ -19,7 +19,7 @@ const logger = useLogger('SettingsModal')
 
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
-const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified } = storeToRefs(useApp())
+const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations } = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const { unregisterNotifications, registerNotifications } = useNotifications()
@@ -119,6 +119,12 @@ onBeforeMount(updateBiometryInfo)
         <IonItem v-if="isBiometricSupported">
           <IonToggle :checked="isBiometricEnabled" @ion-change="handleBiometricToggle">
             {{ $t('Biometric Authentication') }}
+          </IonToggle>
+        </IonItem>
+
+        <IonItem>
+          <IonToggle :checked="!showAnimations" :helper-text="$t('Turn off some visual effects and motion animations')" @ion-change="showAnimations = !$event.detail.checked">
+            {{ $t('Reduce Motion') }}
           </IonToggle>
         </IonItem>
 
