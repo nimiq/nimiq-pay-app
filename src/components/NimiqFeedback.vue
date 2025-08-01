@@ -73,7 +73,7 @@ useScriptTag(nqFeedbackUrlJs, () => {
 </template>
 
 <style>
-ul.hide-scrollbar {
+ul.hide-scrollbar:has(#feedback-widget) {
   overflow: inherit;
 
   >li {
