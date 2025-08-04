@@ -4,6 +4,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
+import { usePoints } from '@/stores/points'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
@@ -15,6 +16,7 @@ import { useNaka } from '../stores/naka'
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
 const { phoneNumberVerified } = storeToRefs(useApp())
+const { isCampaignActive } = storeToRefs(usePoints())
 
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
@@ -49,12 +51,12 @@ onLongPress(
     </IonItem>
 
     <!-- TODO: remove if when BlueCode is added -->
-    <ItemDivider v-if="!phoneNumberVerified" />
+    <ItemDivider v-if="!phoneNumberVerified && isCampaignActive" />
 
     <!--
     <IonItem button :detail="false">{{ $t('Activate Bluecode payments') }}</IonItem>
     -->
-    <IonItem v-if="!phoneNumberVerified" button :detail="false" @click="initializeFlow(FlowName.VerifyPhone)">
+    <IonItem v-if="!phoneNumberVerified && isCampaignActive" button :detail="false" @click="initializeFlow(FlowName.VerifyPhone)">
       {{ $t('Activate Cashback & Rewards') }}
     </IonItem>
 

@@ -410,6 +410,13 @@ const changePinFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
+const comingSoonFlow: FlowInit = async () => {
+  const { comingSoonStep } = await import('./steps')
+  const flowName = FlowName.ComingSoon
+  const steps = (await Promise.all([comingSoonStep].map(s => s({ flowName }))))
+  return { flowName, steps }
+}
+
 const nakaOnboardFlow: FlowInit = async () => {
   const [
     { FlowName: Flow },
@@ -472,6 +479,7 @@ const flows = {
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
   [FlowName.ChangePin]: changePinFlow,
+  [FlowName.ComingSoon]: comingSoonFlow,
   [FlowName.NakaOnboarding]: nakaOnboardFlow,
   [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,

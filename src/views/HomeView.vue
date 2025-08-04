@@ -55,7 +55,7 @@ const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests, showAnimations } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
-const { pointsBalance } = storeToRefs(usePoints())
+const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
@@ -197,7 +197,7 @@ if (import.meta.env.DEV) {
   })
 }
 
-watch([referralCode, phoneNumberVerified, hasNakaCard], () => {
+watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
     get title() { return i18n.t('Tap to pay with your NAKA card!') },
@@ -231,7 +231,7 @@ watch([referralCode, phoneNumberVerified, hasNakaCard], () => {
 
   if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
-  else if (!referralCode.value && !phoneNumberVerified.value)
+  else if (!referralCode.value && !phoneNumberVerified.value && isCampaignActive.value)
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
@@ -302,9 +302,9 @@ onMounted(async () => {
     return
   }
 
+  await updateStatus()
   if (phoneNumberVerified.value) {
     updatePointsBalance()
-    await updateStatus()
     updateTasks()
   }
 
@@ -333,7 +333,7 @@ App.addListener('resume', detectPaymentRequest)
             class="text-base normal-case"
             aria-label="Earn Points"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)"
+            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') })"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{ phoneNumberVerified ? (pointsBalance / 1e5).toLocaleString() : $t('Earn Points') }}
