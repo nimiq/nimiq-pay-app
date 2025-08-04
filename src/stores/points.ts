@@ -22,7 +22,7 @@ export const usePoints = defineStore('points', () => {
   const tasks: Ref<Task[] | undefined> = ref(undefined)
   const nextRequestCapTs = ref(0)
   const incrementalRequestCap = ref(1e3 * 30) // 30 seconds
-  const isCampaignActive = ref(true)
+  const isCampaignActive = ref(false)
 
   /**
    * Send wallet public key and phone number to get access code

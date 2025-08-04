@@ -97,7 +97,7 @@ export function usePointsApi() {
     task_status: 'in-progress' | 'completed' | 'rejected'
     updated_at: string
   }
-  interface StatusRes { status: 'online', campaign_running: boolean }
+  interface StatusRes { status: 'online', campaign_running: boolean, campaign_countries: string[] }
 
   interface PointsErrorRes {
     statusCode: number

@@ -336,6 +336,13 @@ const changePinFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
+const comingSoonFlow: FlowInit = async () => {
+  const { comingSoonStep } = await import('./steps')
+  const flowName = FlowName.ComingSoon
+  const steps = (await Promise.all([comingSoonStep].map(s => s({ flowName }))))
+  return { flowName, steps }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -351,6 +358,7 @@ const flows = {
   [FlowName.ViewTransactionDetail]: viewTransactionDetailFlow,
   [FlowName.Backup]: backupFlow,
   [FlowName.ChangePin]: changePinFlow,
+  [FlowName.ComingSoon]: comingSoonFlow,
 }
 
 /**
