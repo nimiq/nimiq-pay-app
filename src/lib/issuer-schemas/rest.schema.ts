@@ -83,6 +83,7 @@ export const NakaCardSchema = v.pipe(
       v.literal('ACCOUNT_BLOCKED'),
       v.literal('IN_CREATION'),
     ]),
+    activationCode: v.nullable(v.string()),
     lockLevel: v.nullable(v.union([
       v.literal('CLIENT'),
       v.literal('ADMIN'),

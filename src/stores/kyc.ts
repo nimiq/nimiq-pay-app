@@ -47,6 +47,9 @@ export const useKyc = defineStore('kyc', () => {
       console.log('Naka identification token:', accessToken)
     }
     catch (error) {
+      if (error instanceof Error && error.message.includes('User already has an identification')) {
+        return logger.log('User already has an identification, skipping token retrieval')
+      }
       logger.error('Error getting Naka identification token:', error)
       // TODO: display error
       throw error

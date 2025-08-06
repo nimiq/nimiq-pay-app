@@ -187,6 +187,10 @@ export function useIssuerRestApi() {
     return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
+  async function activateNakaCard(cardId: string) {
+    return api(`/naka/card/${cardId}/activate`, 'POST', '', NakaCardSchema)
+  }
+
   async function lockNakaCard(cardId: string): Promise<NakaCard> {
     return api(`/naka/card/${cardId}/lock`, 'POST', '', NakaCardSchema)
   }
@@ -216,6 +220,7 @@ export function useIssuerRestApi() {
     getNakaIdentificationToken,
     getNakaIdentificationById,
     registerForNaka,
+    activateNakaCard,
     createFakeIdentification,
     lockNakaCard,
     unlockNakaCard,

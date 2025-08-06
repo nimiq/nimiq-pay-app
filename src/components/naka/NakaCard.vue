@@ -1,4 +1,10 @@
 <script lang="ts" setup>
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { nakaCardFromApi, useNaka } from '@/stores/naka'
+import { HCESdk } from 'capacitor-monetplus-hce'
+import { storeToRefs } from 'pinia'
+import { onMounted } from 'vue'
+
 type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
 
 const { color = 'blue' } = defineProps<{ color?: NakaCardColor }>()
@@ -8,6 +14,49 @@ const colors: Record<NakaCardColor, string[]> = {
   green: ['#F8F8F8', '#41A38E', '#21BCA5'],
   // purple: TODO - The SVG is not the same :/
 }
+
+const { activateNakaCard, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+const { card } = storeToRefs(useNaka())
+const { setCard } = useNaka()
+
+onMounted(async () => {
+  await HCESdk.initialize({ storageName: 'naka-card' })
+  if (!card.value) {
+    // If card is not set, we can assume the user has not registered for a Naka card yet
+    console.warn('Naka card is not set, user has not registered for a Naka card yet')
+    return
+  }
+
+  if (!card.value.activationCode) {
+    console.error('Card activation code is not set', card.value)
+    return
+  }
+
+  const { success } = await HCESdk.activateCard({
+    tenant: 'naka',
+    activationCode: card.value.activationCode,
+    proof: card.value.maskedPan.slice(-6), // Last 6 digits of the card
+  })
+
+  if (!success) {
+    return console.error('Failed to activate Naka card', card.value)
+  }
+
+  console.log('Naka card activated successfully')
+  const activatedCard = await activateNakaCard(card.value.sourceId)
+  console.log('Activated card:', activatedCard)
+  setCard(nakaCardFromApi(activatedCard))
+
+  // Set card PIN
+  const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(card.value.sourceId)
+  const { JSEncrypt } = await import('jsencrypt/lib/index.js')
+  const encrypter = new JSEncrypt()
+  encrypter.setKey(publicKey)
+  const cypher = encrypter.encrypt('4242') // TODO: Use user's app PIN
+  if (!cypher)
+    throw new Error('Failed to encrypt PIN')
+  await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
+})
 </script>
 
 <template>

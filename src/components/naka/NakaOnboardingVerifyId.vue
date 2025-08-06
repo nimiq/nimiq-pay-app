@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { UserStatusResponse } from '@/lib/issuer-schemas/rest.schema'
 import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -8,16 +9,36 @@ import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { IonButton } from '@ionic/vue'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
 
 const emit = defineEmits(stepEmits)
 
-const { registerForNaka, getUserStatus, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+const { registerForNaka, getUserStatus } = useIssuerRestApi()
 const { initializeSdk, openKycFlow } = useKyc()
 const { sdkStatus, onKycApproved } = storeToRefs(useKyc())
 
+async function setupCard(user: UserStatusResponse) {
+  const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
+  const { setRegistration, setCard } = useNaka()
+  setRegistration({
+    state: user.state,
+    nakaIdentification: user.identifications.find(i => i.id === registration.identification),
+    nakaCards: registration.cards.map(nakaCardFromApi),
+  })
+
+  if (registration.cards.length > 0)
+    await setCard(nakaCardFromApi(registration.cards[0]))
+
+  emit('done') // Triggers NakaCardIsReady modal
+}
+
 async function register() {
   // TODO: Loading state
+
+  // If user already has a VERIFIED identification, skip KYC and setup card directly
+  const user = await getUserStatus()
+  if (user.identifications.find(identification => identification.status === 'VERIFIED'))
+    return setupCard(user)
+
   try {
     await initializeSdk()
     if (sdkStatus.value !== SumsubSdkStatus.READY) {
@@ -38,28 +59,7 @@ onKycApproved.value = async () => {
   if (!user.identifications.find(identification => identification.status === 'VERIFIED'))
     throw new Error('User does not have a VERIFIED identification')
 
-  const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
-
-  // Set card PIN
-  const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(registration.cards[0].id)
-  const { JSEncrypt } = await import('jsencrypt/lib/index.js')
-  const encrypter = new JSEncrypt()
-  encrypter.setKey(publicKey)
-  const cypher = encrypter.encrypt('4242') // TODO: Use user's app PIN
-  if (!cypher)
-    throw new Error('Failed to encrypt PIN')
-  await changeNakaCardPin(registration.cards[0].id, publicKey, cypher)
-
-  const { setRegistration, setCard } = useNaka()
-  setRegistration({
-    state: user.state,
-    nakaIdentification: user.identifications.find(i => i.id === registration.identification),
-    nakaCards: registration.cards.map(nakaCardFromApi),
-  })
-
-  await setCard(nakaCardFromApi(registration.cards[0]))
-
-  emit('done') // Triggers NakaCardIsReady modal
+  await setupCard(user)
 }
 </script>
 

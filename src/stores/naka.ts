@@ -16,6 +16,7 @@ export interface CardExpiry {
 export interface NakaCard {
   sourceId: string
   maskedPan: string
+  activationCode?: string | null
   statusId: ApiNakaCard['status'] | 'EXPIRED'
   expiry: CardExpiry
   lockLevel: ApiNakaCard['lockLevel']
@@ -30,6 +31,7 @@ export function nakaCardFromApi(apiCard: ApiNakaCard): NakaCard {
     sourceId: apiCard.id,
     maskedPan: apiCard.maskedPan,
     statusId: apiCard.status,
+    activationCode: apiCard.activationCode,
     expiry,
     lockLevel: apiCard.lockLevel,
     type: apiCard.type,
