@@ -3,6 +3,7 @@ import AmountInput from '@/components/AmountInput.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
+import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
@@ -13,7 +14,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { IonButton, IonIcon } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
-import { FiatAmount } from '@nimiq/vue3-components'
+import { FiatAmount, Identicon } from '@nimiq/vue3-components'
 import { chevronDown, chevronForward } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import {
@@ -133,7 +134,7 @@ watch(errorMessage, (value) => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full px-2 mt-6 mb-8 gap-y-2">
+  <div class="flex flex-col items-center justify-center w-full mt-6 mb-8 gap-y-2">
     <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
       {{ formatCrypto(lunaAmount, { currency: Crypto.NIM }) }}
@@ -143,12 +144,15 @@ watch(errorMessage, (value) => {
   <!-- Address Selector -->
   <SelectRoot v-model="selected" @update:open="(x: boolean) => isSelectOpen = x">
     <SelectTrigger
-      class="flex gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold uppercase border-[1.5px] border-solid rounded border-space-space-400"
+      class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
       :class="{ 'rounded-b-none': isSelectOpen }"
       :aria-label="$t('Select withdrawal address')"
     >
-      <NimiqLogo class="w-6 h-6" />
-      <SelectValue :placeholder="address || $t('Select an address…')" class="w-full overflow-hidden text-ellipsis whitespace-nowrap" :class="address ? 'address' : 'normal-case text-left'" />
+      <Identicon v-if="selected" :address="selected" class="w-8" />
+      <NimiqLogo v-else class="size-6" />
+      <SelectValue :placeholder="$t('Select an address…')" class="w-[inherit] min-w-full text-left overflow-hidden text-ellipsis whitespace-nowrap">
+        <MiddleEllipsis :text="selected" class="text-lg uppercase address" />
+      </SelectValue>
       <TriangleIcon class="h-[10px] ml-auto will-change-[transform] transition-transform text-space/30" :class="{ 'rotate-90': isSelectOpen }" />
     </SelectTrigger>
 
@@ -170,13 +174,12 @@ watch(errorMessage, (value) => {
               <!-- We need to have this as hidden, not rendering it causes the Select to break -->
               <SelectItem
                 v-if="option"
-                class="text-white px-4 py-3 leading-4 select-none data-[disabled]:text-space/20 data-[disabled]:pointer-events-none"
+                class="text-white px-4 py-3 leading-4 select-none data-[disabled]:text-space/20 data-[disabled]:pointer-events-none flex items-center gap-x-2"
                 :class="{ hidden: option === selected }"
                 :value="option"
               >
-                <SelectItemText class="block overflow-hidden text-lg uppercase text-ellipsis whitespace-nowrap address">
-                  {{ option }}
-                </SelectItemText>
+                <Identicon :address="option" class="w-6" />
+                <MiddleEllipsis :text="option" class="text-lg uppercase address !font-normal" />
               </SelectItem>
             </template>
 
