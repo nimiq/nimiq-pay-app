@@ -282,8 +282,8 @@ export function useStringParser() {
     const rawAmount = searchParams.get('amount') || '0'
     const nimAmount = Number.parseFloat(rawAmount)
 
-    if (!nimAmount || !recipient)
-      return { error: i18n.t('Invalid Nimiq Wallet request. Missing amount or recipient.'), data: undefined }
+    if (!recipient)
+      return { error: i18n.t('Invalid Nimiq Wallet request. Missing recipient.'), data: undefined }
 
     const data: PaymentRequestData = {
       recipient,

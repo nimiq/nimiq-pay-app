@@ -65,6 +65,13 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           const { data, error } = await getPaymentRequestData(raw)
           if (error || !data)
             throw new Error(error)
+
+          // Redirect to withdraw if amount is 0
+          if (data.amount === 0) {
+            initializeFlow(FlowName.NimWithdraw, { nimAddressInput: data.recipient })
+            return
+          }
+
           onData(data)
         }
         else if (expect === QRDataFormat.NimCashlink) {
