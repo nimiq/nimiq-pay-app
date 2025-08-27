@@ -21,6 +21,7 @@ import {
   AuthStartResponseSchema,
   IdentificationSchema,
   NakaCardSchema,
+  NakaEncryptedCardDataResponseSchema,
   NakaPinChangeResponseSchema,
   NakaPinChangeTokenResponseSchema,
   NakaRegistrationResponseSchema,

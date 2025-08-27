@@ -29,6 +29,21 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="lightning" />
             </intent-filter>
+        </activity>
+        <provider android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true" android:name="androidx.core.content.FileProvider">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+        <!-- <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui" /> -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_name" />
+
+        <!-- Registering the activity that should handle the payment  -->
+        <activity
+            android:name="com.nimiq.plugins.monetplushce.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
             <!-- NFC intents -->
             <intent-filter>
