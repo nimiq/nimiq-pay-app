@@ -4,7 +4,7 @@
     android:requireDeviceUnlock="true">
     <aid-group android:category="payment">
         <aid-filter android:name="325041592E5359532E4444463031" /> <!--2PAY.SYS.DDF01-->
-        <aid-filter android:name="A0000009070006" /> <!-- your custom AID -->
+        <aid-filter android:name="A0000009070004" /> <!-- your custom AID -->
         <!-- 
         **NAKA CUSTODIAL CARDS (plastic):**
         - TEST: A0000009070000

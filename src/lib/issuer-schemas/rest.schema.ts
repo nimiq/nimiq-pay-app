@@ -155,6 +155,21 @@ export const NakaPinChangeResponseSchema = v.pipe(
 
 export type NakaPinChangeResponse = v.InferOutput<typeof NakaPinChangeResponseSchema>
 
+export const NakaEncryptedCardDataRequestSchema = v.pipe(
+  v.object({
+    publicKey: v.string(),
+  }),
+)
+export type NakaEncryptedCardDataRequest = v.InferOutput<typeof NakaEncryptedCardDataRequestSchema>
+
+export const NakaEncryptedCardDataResponseSchema = v.pipe(
+  v.object({
+    cypher: v.string(),
+  }),
+)
+
+export type NakaEncryptedCardDataResponse = v.InferOutput<typeof NakaEncryptedCardDataResponseSchema>
+
 /** Bluecode */
 
 export const BluecodeUpdateContractRequestSchema = v.object({

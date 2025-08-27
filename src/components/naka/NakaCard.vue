@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
@@ -15,12 +16,15 @@ const colors: Record<NakaCardColor, string[]> = {
   // purple: TODO - The SVG is not the same :/
 }
 
-const { activateNakaCard, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
+const { getNakaCardPinChangeToken, changeNakaCardPin, getSecretData } = useIssuerRestApi()
 const { card } = storeToRefs(useNaka())
 const { setCard } = useNaka()
 
 onMounted(async () => {
   await HCESdk.initialize({ storageName: 'naka-card' })
+  const { cards } = await HCESdk.getAllSucceededCards()
+  console.log('Cards: in SDK storage', cards)
+
   if (!card.value) {
     // If card is not set, we can assume the user has not registered for a Naka card yet
     console.warn('Naka card is not set, user has not registered for a Naka card yet')
@@ -32,10 +36,29 @@ onMounted(async () => {
     return
   }
 
+  // Get encrypted data card from issuer
+  const { publicKey: rsaPublicKey, privateKey: rsaPrivateKey } = await generateRsaKey()
+  const { cypher: cardCypher } = await getSecretData(card.value.sourceId, rsaPublicKey)
+  if (!cardCypher) {
+    console.error('Failed to get secret data for Naka card', card.value)
+    return
+  }
+  const decryptedCardPlain = await decryptRsa(cardCypher, rsaPrivateKey)
+  if (!decryptedCardPlain) {
+    console.error('Failed to decrypt Naka card data', card.value)
+    return
+  }
+
+  const decryptedCard = JSON.parse(decryptedCardPlain) as {
+    Pan: string
+    ExpiryDate: string
+    Cvc2: string
+  }
+
   const { success } = await HCESdk.activateCard({
     tenant: 'naka',
     activationCode: card.value.activationCode,
-    proof: card.value.maskedPan.slice(-6), // Last 6 digits of the card
+    proof: decryptedCard.Pan.slice(-6), // Last 6 digits of the card
   })
 
   if (!success) {
@@ -43,9 +66,7 @@ onMounted(async () => {
   }
 
   console.log('Naka card activated successfully')
-  const activatedCard = await activateNakaCard(card.value.sourceId)
-  console.log('Activated card:', activatedCard)
-  setCard(nakaCardFromApi(activatedCard))
+  setCard(card.value)
 
   // Set card PIN
   const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(card.value.sourceId)

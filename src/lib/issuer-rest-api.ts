@@ -1,26 +1,30 @@
 import type { PublicKey, Signature } from '@nimiq/core'
 import type { BaseIssue, BaseSchema, InferOutput } from 'valibot'
+import type {
+  AuthCompleteRequest,
+  AuthCompleteResponse,
+  AuthStartRequest,
+  AuthStartResponse,
+  Identification,
+  NakaCard,
+  NakaEncryptedCardDataResponse,
+  NakaPinChangeResponse,
+  NakaPinChangeTokenResponse,
+  NakaRegistrationResponse,
+  UserStatusResponse,
+} from './issuer-schemas/rest.schema'
 import { parse, string } from 'valibot'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import {
-  type AuthCompleteRequest,
-  type AuthCompleteResponse,
   AuthCompleteResponseSchema,
-  type AuthStartRequest,
-  type AuthStartResponse,
   AuthStartResponseSchema,
-  type Identification,
   IdentificationSchema,
-  type NakaCard,
   NakaCardSchema,
-  type NakaPinChangeResponse,
+  NakaEncryptedCardDataResponseSchema,
   NakaPinChangeResponseSchema,
-  type NakaPinChangeTokenResponse,
   NakaPinChangeTokenResponseSchema,
-  type NakaRegistrationResponse,
   NakaRegistrationResponseSchema,
-  type UserStatusResponse,
   UserStatusResponseSchema,
 } from './issuer-schemas/rest.schema'
 import { signMessage } from './issuer-utils'
@@ -187,8 +191,12 @@ export function useIssuerRestApi() {
     return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
-  async function activateNakaCard(cardId: string) {
-    return api(`/naka/card/${cardId}/activate`, 'POST', '', NakaCardSchema)
+  // TODO: change this for correct schema
+  async function getSecretData(cardId: string, publicKey: string): Promise<NakaEncryptedCardDataResponse> {
+    const body = JSON.stringify({
+      publicKey,
+    })
+    return api(`/naka/card/${cardId}/secret-data`, 'POST', body, NakaEncryptedCardDataResponseSchema)
   }
 
   async function lockNakaCard(cardId: string): Promise<NakaCard> {
@@ -220,7 +228,7 @@ export function useIssuerRestApi() {
     getNakaIdentificationToken,
     getNakaIdentificationById,
     registerForNaka,
-    activateNakaCard,
+    getSecretData,
     createFakeIdentification,
     lockNakaCard,
     unlockNakaCard,

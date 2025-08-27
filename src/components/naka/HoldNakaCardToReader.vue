@@ -7,8 +7,9 @@ import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
+import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
-import { watch } from 'vue'
+import { onMounted, watch } from 'vue'
 
 const emit = defineEmits(stepEmits)
 
@@ -95,6 +96,10 @@ watch(paymentRejection, (rejection) => {
     // TODO: Map rejection reasons to user-friendly messages
     message: rejection,
   })
+})
+
+onMounted(() => {
+  HCESdk.setAsPreferredService()
 })
 </script>
 
