@@ -35,6 +35,9 @@ importers:
       '@capacitor/share':
         specifier: ^6.0.3
         version: 6.0.3(@capacitor/core@6.2.0)
+      '@capawesome/capacitor-android-edge-to-edge-support':
+        specifier: ^7.2.3
+        version: 7.2.3(@capacitor/core@6.2.0)
       '@capawesome/capacitor-screen-orientation':
         specifier: ^6.0.1
         version: 6.0.1(@capacitor/core@6.2.0)
@@ -938,6 +941,11 @@ packages:
     resolution: {integrity: sha512-AmRIX6QvFemItlY7/69ARkIAqitRQqJ2qwgZmD1KqgFb78pH+XFXm1guvS/a8CuOOm/IqZ4ddDbl20yxtBqzGA==}
     peerDependencies:
       '@capacitor/core': ^6.0.0
+
+  '@capawesome/capacitor-android-edge-to-edge-support@7.2.3':
+    resolution: {integrity: sha512-WtwXeU5Clg13t3SO6JvtIfJlpO+E48tHC+vNmC519zcS6GV9URl705UOvwOOvEyh6GFxAi2dHi8lj8iqIOYCdA==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   '@capawesome/capacitor-screen-orientation@6.0.1':
     resolution: {integrity: sha512-NP6ERUkOTf5LslD3mVx6XBZi4l1CfHohpv+rkgay8101fpccsHdxELAAiMe62F+5nloUl/thWhNYAkgmqff88A==}
@@ -8670,6 +8678,10 @@ snapshots:
       '@capacitor/core': 6.2.0
 
   '@capacitor/status-bar@6.0.2(@capacitor/core@6.2.0)':
+    dependencies:
+      '@capacitor/core': 6.2.0
+
+  '@capawesome/capacitor-android-edge-to-edge-support@7.2.3(@capacitor/core@6.2.0)':
     dependencies:
       '@capacitor/core': 6.2.0
 
