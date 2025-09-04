@@ -199,6 +199,11 @@ msgstr "Créez un code-barres Bluecode et montrez-le au caissier pour payer."
 msgid "Cryptocity Points"
 msgstr "Points Cryptocity"
 
+#, fuzzy
+#| msgid "Cryptocity Points have been credited"
+msgid "Cryptocity Points are coming soon. Stay tuned!"
+msgstr "Les points Cryptocity ont été crédités"
+
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr "Les Points Cryptocity sont des points de fidélité que vous pouvez gagner et payer. Ils ont la même valeur que les NIM ( Point Cryptocity : 1 NIM)."
 
@@ -445,7 +450,7 @@ msgstr "Cashlink Nimiq invalide"
 
 #, fuzzy
 #| msgid "Invalid CPLink. Missing amount or recipient."
-msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+msgid "Invalid Nimiq Wallet request. Missing recipient."
 msgstr "CPLink non valide. Montant ou bénéficiaire manquant."
 
 #, fuzzy
@@ -1013,6 +1018,9 @@ msgstr ""
 
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Votre avis nous intéresse. Veuillez saisir au moins dix caractères."
+
+msgid "We're working on something special"
+msgstr ""
 
 msgid "Welcome to Cryptocity Points"
 msgstr "Découvrez les Points Cryptocity"
