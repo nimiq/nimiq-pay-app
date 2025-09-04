@@ -9,6 +9,7 @@ import { isDev } from '@/lib/index'
 import { useLocks } from '@/stores/locks'
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { CameraPreview } from '@capgo/camera-preview'
 import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
@@ -37,20 +38,21 @@ onMounted(async () => {
     await CameraPreview.stop()
   }
   catch {}
-})
 
-if (!useDevice().isWeb) {
-  try {
-    if (useDevice().isAndroid) {
-      StatusBar.setBackgroundColor({ color: '#F8F8F8' })
-      StatusBar.setOverlaysWebView({ overlay: false })
+  if (!useDevice().isWeb) {
+    try {
+      if (useDevice().isAndroid) {
+        await EdgeToEdge.setBackgroundColor({ color: '#F8F8F8' })
+        await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
+        await StatusBar.setOverlaysWebView({ overlay: false })
+      }
+      await StatusBar.setStyle({ style: Style.Light })
     }
-    StatusBar.setStyle({ style: Style.Light })
+    catch (error) {
+      logger.error('Failed to set status bar style', error)
+    }
   }
-  catch (error) {
-    logger.error('Failed to set status bar style', error)
-  }
-}
+})
 
 App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   // Wait until the pin code is entered to show the payment request modal

@@ -33,6 +33,12 @@ const config: CapacitorConfig = {
       enable: false,
       preventScreenshots: false,
     },
+    Keyboard: {
+      resizeOnFullScreen: false,
+    },
+    EdgeToEdge: {
+      backgroundColor: '#F8F8F8',
+    },
   },
 }
 

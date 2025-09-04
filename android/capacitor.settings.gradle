@@ -26,6 +26,9 @@ project(':capacitor-preferences').projectDir = new File('../node_modules/.pnpm/@
 include ':capacitor-share'
 project(':capacitor-share').projectDir = new File('../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share/android')
 
+include ':capawesome-capacitor-android-edge-to-edge-support'
+project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-android-edge-to-edge-support@7.2.3_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
+
 include ':capawesome-capacitor-screen-orientation'
 project(':capawesome-capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation/android')
 
