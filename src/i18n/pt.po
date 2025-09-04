@@ -1,8 +1,8 @@
 # Daniel 2024.
-# Inês Marques 2024.
+# Inês Marques 2024, 2025.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-11-19 19:21+0000\n"
+"PO-Revision-Date: 2025-08-09 10:37+0000\n"
 "Last-Translator: Inês Marques\n"
 "Language: pt\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -16,10 +16,8 @@ msgstr "\"{word}\" é uma palavra de recuperação inválida"
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} em falta."
 
-#, fuzzy
-#| msgid "Transaction already sent"
 msgid "A transaction is already in progress"
-msgstr "Transação já enviada"
+msgstr "Uma transação já está em curso"
 
 msgid "About"
 msgstr "Sobre"
@@ -28,7 +26,7 @@ msgid "Activate Cashback & Rewards"
 msgstr "Ativar Cashback e Recompensas"
 
 msgid "Activating scanner"
-msgstr ""
+msgstr "A activar o scanner"
 
 #, fuzzy
 #| msgid "Add NIM address"
@@ -45,7 +43,7 @@ msgid "Addresses missing"
 msgstr "Endereços em falta"
 
 msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
-msgstr ""
+msgstr "Após um período de desconexão, a ligação de rede precisa de ser reativada. Isto pode demorar até 60 segundos."
 
 msgid "All"
 msgstr "Tudo"
@@ -120,10 +118,8 @@ msgstr "Não é possível criar troca NIM/BTC_LN"
 msgid "Cannot enable biometric"
 msgstr "Não foi possível activar biometria"
 
-#, fuzzy
-#| msgid "Cannot create NIM/BTC_LN swap"
 msgid "Cannot fetch existing NIM/BTC_LN swap"
-msgstr "Não é possível criar troca NIM/BTC_LN"
+msgstr "Não é possível encontrar troca NIM/BTC_LN"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado com sucesso"
@@ -197,6 +193,11 @@ msgstr "Cria um código de barras Bluecode e mostra-o no caixa para pagar."
 msgid "Cryptocity Points"
 msgstr "Pontos Cryptocity"
 
+#, fuzzy
+#| msgid "Cryptocity Points have been credited"
+msgid "Cryptocity Points are coming soon. Stay tuned!"
+msgstr "Pontos Cryptocity foram creditados"
+
 msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 msgstr "Os Pontos Cryptocity são pontos de recompensa de fidelidade que podes ganhar e usar como pagamento. Eles têm o mesmo valor que NIM (1 ponto Cryptocity: 1 NIM)."
 
@@ -261,13 +262,13 @@ msgid "Enter your referral promo code."
 msgstr "Inserir o teu código promocional de referência."
 
 msgid "Error getting account"
-msgstr ""
+msgstr "Erro ao procurar conta"
 
 msgid "Error getting account transactions"
-msgstr ""
+msgstr "Erro ao procurar transações de conta"
 
 msgid "Error getting accounts"
-msgstr ""
+msgstr "Error ao procurar contas"
 
 msgid "Error using BiometricAuth"
 msgstr "Erro ao usar BiometricAuth"
@@ -276,21 +277,19 @@ msgid "Error using SecureStorage"
 msgstr "Erro ao usar SecureStorage"
 
 msgid "Error while creating deposit"
-msgstr ""
+msgstr "Erro ao criar depósito"
 
 msgid "Error while extending deposit"
-msgstr ""
+msgstr "Error ao extender depósito"
 
 msgid "Error while recovering deposit"
-msgstr ""
+msgstr "Erro ao recuperar depósito"
 
 msgid "Error while topping up deposit"
-msgstr ""
+msgstr "Erro ao carregar depósito"
 
-#, fuzzy
-#| msgid "Trying to establish network consensus:"
 msgid "Establishing consensus"
-msgstr "A tentar estabelecer consenso com a rede:"
+msgstr "A estabelecer consenso"
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr "Perto de exceder o limite de troca de 30 dias. O teu limite de pagamento para BTC LN é {remainingFiatLimits}"
@@ -301,15 +300,11 @@ msgstr "Expirado"
 msgid "Expiring Points"
 msgstr "Pontos a expirar"
 
-#, fuzzy
-#| msgid "Address copied to clipboard"
 msgid "Failed to copy address to clipboard"
-msgstr "Endereço copiado para a área de transferência"
+msgstr "Erro ao copiar endereço para a área de transferência"
 
-#, fuzzy
-#| msgid "Copied to the clipboard!"
 msgid "Failed to copy to clipboard"
-msgstr "Copiado para a área de transferência!"
+msgstr "Falha ao copiar para a área de transferência"
 
 msgid "Failed to delete Points account"
 msgstr "Falha ao apagar conta de Pontos"
@@ -433,7 +428,9 @@ msgstr "Endereço Nimiq inválido"
 msgid "Invalid Nimiq Cashlink"
 msgstr "Nimiq Cashlink inválido"
 
-msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+#, fuzzy
+#| msgid "Invalid Nimiq Wallet request. Missing amount or recipient."
+msgid "Invalid Nimiq Wallet request. Missing recipient."
 msgstr "Solicitação da Nimiq Wallet inválida. Montante ou destinatário em falta."
 
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
@@ -511,7 +508,7 @@ msgid "Network consensus lost."
 msgstr "Consenso da rede perdido."
 
 msgid "Network ID mismatch"
-msgstr ""
+msgstr "Incompatibilidade de ID da rede"
 
 msgid "New"
 msgstr "Novo"
@@ -547,7 +544,7 @@ msgid "No payment request found"
 msgstr "Nenhum pedido de pagamento encontrado"
 
 msgid "No permission to use the camera"
-msgstr ""
+msgstr "Sem permissão para usar a camara"
 
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Não há pontos a expirar | {amount} está prestes a expirar | {amount} estão prestes a expirar"
@@ -687,10 +684,8 @@ msgstr "Pagamento com Pontos"
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-#, fuzzy
-#| msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
-msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} minuto para pagar. | A processar fundos. Aguarde cerca de ~{blocks} minutos para pagar."
+msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} segundos para pagar. | A processar fundos. Aguarde cerca de ~{blocks} segundos para pagar."
 
 msgid "Promo code missing"
 msgstr "Código promocional em falta"
@@ -717,10 +712,10 @@ msgid "Recovery Words"
 msgstr "Palavras de Recuperação"
 
 msgid "Reduce Animations"
-msgstr ""
+msgstr "Reduzir animações"
 
 msgid "Refreshing connection"
-msgstr ""
+msgstr "A recarregar conexão"
 
 msgid "Refunded"
 msgstr "Devolvido"
@@ -756,10 +751,8 @@ msgstr "Digitalizar Cashlink"
 msgid "Scan QR code"
 msgstr "Digitalizar código QR"
 
-#, fuzzy
-#| msgid "Send NIM to this address"
 msgid "Scan the QR code to send NIM to this address"
-msgstr "Enviar NIM para este endereço"
+msgstr "Digitalize o código QR para enviar NIM para este endereço"
 
 msgid "Search"
 msgstr "Pesquisar"
@@ -794,7 +787,7 @@ msgid "Send NIM to top up"
 msgstr "Enviar NIM para recarregar saldo"
 
 msgid "Server not available"
-msgstr ""
+msgstr "Servidor não disponível"
 
 msgid "Settings"
 msgstr "Definições"
@@ -844,10 +837,8 @@ msgstr "Alguma coisa deu errado ao atualizar os teus pontos"
 msgid "Something went wrong verifying the phone number"
 msgstr "Alguma coisa deu errado ao verificar o teu número de telemóvel"
 
-#, fuzzy
-#| msgid "Something went wrong claiming the cashback"
 msgid "Something went wrong while starting the camera"
-msgstr "Alguma coisa deu errado ao reclamar o cashback"
+msgstr "Alguma coisa deu errado ao começar a camara"
 
 msgid "Standard rates may apply."
 msgstr "Podem ser aplicadas taxas padrão."
@@ -856,7 +847,7 @@ msgid "Status"
 msgstr "Estado"
 
 msgid "Store screenshot safely"
-msgstr ""
+msgstr "Armazene a captura de ecrã com segurança"
 
 msgid "Submit"
 msgstr "Submeter"
@@ -936,10 +927,8 @@ msgstr "Transação falhou: {error}"
 msgid "Transaction invalid"
 msgstr "Transação inválida"
 
-#, fuzzy
-#| msgid "Transaction invalid"
 msgid "Transaction invalid for PoS network"
-msgstr "Transação inválida"
+msgstr "Transação inválida para a rede PoS"
 
 msgid "Try again"
 msgstr "Tenta novamente"
@@ -966,7 +955,7 @@ msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr "Desbloqueia a aplicação ao usar o Touch ID/Face ID em vez do PIN"
 
 msgid "Updating connection"
-msgstr ""
+msgstr "A atualizar conexão"
 
 msgid "Use {amount}"
 msgstr "Usar {amount}"
@@ -981,10 +970,13 @@ msgid "Verify your phone number"
 msgstr "Verificar o teu número de telemóvel"
 
 msgid "Wait for consensus before withdrawing"
-msgstr ""
+msgstr "Esperar por consenso antes de retirar"
 
 msgid "We value your opinion. Please enter at least ten characters."
 msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
+
+msgid "We're working on something special"
+msgstr ""
 
 msgid "Welcome to Cryptocity Points"
 msgstr "Bem-vindo aos Pontos Cryptocity"
