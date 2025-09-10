@@ -5,11 +5,10 @@ import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
 import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
-import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { type State, stepEmits, StepName } from '@/lib/flows/steps.types'
-import { Crypto, useApp } from '@/stores/app'
+import { Crypto, DECIMALS, useApp } from '@/stores/app'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { IonButton, IonIcon } from '@ionic/vue'
@@ -30,6 +29,7 @@ import {
   SelectViewport,
 } from 'radix-vue'
 import { computed, type PropType, ref, toRef, watch } from 'vue'
+import CryptoAmount from './CryptoAmount.vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -58,7 +58,6 @@ const address = computed(() => {
 })
 
 const { height, consensus } = storeToRefs(useNimiqNetwork())
-const { formatCrypto } = useCurrencyFormatter()
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 
 const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))
@@ -137,7 +136,7 @@ watch(errorMessage, (value) => {
   <div class="flex flex-col items-center justify-center w-full mt-6 mb-8 gap-y-2">
     <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
-      {{ formatCrypto(lunaAmount, { currency: Crypto.NIM }) }}
+      <CryptoAmount :amount="lunaAmount" :currency="Crypto.NIM" :min-decimals="DECIMALS.NIM" />
     </p>
   </div>
 

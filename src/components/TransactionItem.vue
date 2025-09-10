@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import CryptoAmount from '@/components/CryptoAmount.vue'
 import { usePrice } from '@/composables/usePrice'
 import { useRelativeTime } from '@/composables/useRelativeTime'
 import { type ExternalTransaction, isPaymentTx, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
@@ -66,7 +67,7 @@ const category = computed(() => {
       </time>
       <time v-else class="text-sm font-semibold leading-none uppercase text-space/50 tabular-nums text-nowrap">
         <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
-        {{ crypto.formatted }}
+        <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" />
       </time>
     </div>
     <IonRippleEffect />
