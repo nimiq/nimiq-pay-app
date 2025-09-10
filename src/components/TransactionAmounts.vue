@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CryptoAmount from '@/components/CryptoAmount.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { Crypto } from '@/stores/app'
 import { PaymentMethod } from '@/types/transactions'
@@ -59,7 +60,7 @@ const { formatCrypto } = useCurrencyFormatter()
         </span>
         <span v-else>
           <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
-          {{ formatCrypto(cryptoTotal, { currency: Crypto.NIM }) }}
+          <CryptoAmount :amount="cryptoTotal" :currency="Crypto.NIM" />
         </span>
       </div>
     </div>

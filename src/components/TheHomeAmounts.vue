@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CryptoAmount from '@/components/CryptoAmount.vue'
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
 import { useApp } from '@/stores/app'
@@ -69,7 +70,7 @@ watch(showSkeleton, (isShowing) => {
     <div v-else class="flex flex-col items-center gap-y-2">
       <FiatAmount class="text-5xl font-normal text-space" :amount="animatedAmount" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
-        <span class="whitespace-nowrap">{{ crypto.formatted }}</span>
+        <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" />
         <PriceChange />
       </div>
     </div>

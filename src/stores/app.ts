@@ -70,6 +70,7 @@ export const useApp = defineStore('app', () => {
   // TODO: maybe clean this from time to time?
   const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
   const showAnimations = useStorageAsync('showAnimations', !useReducedMotion().value, kvPreferences(), sharedOptions)
+  const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -156,5 +157,6 @@ export const useApp = defineStore('app', () => {
     isBiometricEnabled,
     displayedPaymentRequests,
     showAnimations,
+    decimalsAmount,
   }
 })
