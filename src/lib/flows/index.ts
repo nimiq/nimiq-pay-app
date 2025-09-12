@@ -1,12 +1,12 @@
 import type { Flow, FlowHookCb, FlowInit, State, StepInitOptions } from '@/lib/flows/steps.types'
-import FlowCmp from '@/components/Flow.vue'
-import { useLogger } from '@/composables/useLogger'
-import { Modal, useModal } from '@/composables/useModal'
-import { i18n } from '@/i18n/i18n-setup'
-
-import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { modalController } from '@ionic/vue'
 import { h, ref } from 'vue'
+import FlowCmp from '@/components/Flow.vue'
+import { useLogger } from '@/composables/useLogger'
+
+import { Modal, useModal } from '@/composables/useModal'
+import { i18n } from '@/i18n/i18n-setup'
+import { FlowName, StepName } from '@/lib/flows/steps.types'
 
 const logger = useLogger('flows/index.ts')
 
@@ -214,6 +214,8 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
     useToast().setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
+    // Remove transparency before closing to prevent the camera view to be visible behind the modal
+    document.body.classList.remove('native-qr-scanner-modal-open')
     logger.log('🤑  Cancelling payment process')
   }
   return { flowName, steps, onDone, onCancel }
