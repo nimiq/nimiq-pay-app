@@ -2,7 +2,6 @@
 import type { State, StepName } from '@/lib/flows/steps.types'
 import type { PropType } from 'vue'
 import Gamepad from '@/components/icons/gamepad.vue'
-import { defineProps } from 'vue'
 
 const props = defineProps({ state: { type: Object as PropType<State>, required: true } })
 </script>

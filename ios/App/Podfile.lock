@@ -1,48 +1,49 @@
 PODS:
-  - AparajitaCapacitorBiometricAuth (8.0.2):
+  - AparajitaCapacitorBiometricAuth (9.0.0):
     - Capacitor
-  - AparajitaCapacitorSecureStorage (6.0.1):
+  - AparajitaCapacitorSecureStorage (7.1.3):
     - Capacitor
     - KeychainSwift (~> 21.0)
-  - Capacitor (6.2.0):
+  - Capacitor (7.4.3):
     - CapacitorCordova
-  - CapacitorApp (6.0.2):
+  - CapacitorApp (7.1.0):
     - Capacitor
-  - CapacitorBrowser (6.0.4):
+  - CapacitorBrowser (7.0.2):
     - Capacitor
-  - CapacitorCamera (6.1.2):
+  - CapacitorCamera (7.0.2):
     - Capacitor
-  - CapacitorClipboard (6.0.2):
+  - CapacitorClipboard (7.0.2):
     - Capacitor
-  - CapacitorCommunityPrivacyScreen (5.2.1):
+  - CapacitorCommunityPrivacyScreen (6.0.0):
     - Capacitor
-  - CapacitorCommunitySqlite (6.0.2):
+  - CapacitorCommunitySqlite (7.0.1):
     - Capacitor
     - SQLCipher
     - ZIPFoundation
-  - CapacitorCordova (6.2.0)
-  - CapacitorFilesystem (6.0.2):
+  - CapacitorCordova (7.4.3)
+  - CapacitorFilesystem (7.1.4):
     - Capacitor
-  - CapacitorHaptics (6.0.2):
+    - IONFilesystemLib (~> 1.0.1)
+  - CapacitorHaptics (7.0.2):
     - Capacitor
-  - CapacitorKeyboard (6.0.3):
+  - CapacitorKeyboard (7.0.3):
     - Capacitor
   - CapacitorMonetplusHce (0.0.1):
     - Capacitor
-  - CapacitorPreferences (6.0.3):
+  - CapacitorPreferences (7.0.2):
     - Capacitor
-  - CapacitorPushNotifications (6.0.3):
+  - CapacitorPushNotifications (7.0.3):
     - Capacitor
-  - CapacitorShare (6.0.3):
+  - CapacitorShare (7.0.2):
     - Capacitor
-  - CapacitorStatusBar (6.0.2):
+  - CapacitorStatusBar (7.0.3):
     - Capacitor
   - CapacitorSumsubMobileSdk (0.0.1):
     - Capacitor
     - IdensicMobileSDK
-  - CapawesomeCapacitorScreenOrientation (6.0.1):
+  - CapawesomeCapacitorScreenOrientation (7.0.2):
     - Capacitor
-  - CapgoCameraPreview (2.0.0):
+  - CapgoCameraPreview (7.14.6):
     - Capacitor
   - Firebase/CoreOnly (10.21.0):
     - FirebaseCore (= 10.21.0)
@@ -90,6 +91,7 @@ PODS:
     - GoogleUtilities/Logger
   - GoogleUtilities/UserDefaults (7.12.0):
     - GoogleUtilities/Logger
+  - IONFilesystemLib (1.0.1)
   - IdensicMobileSDK (1.34.1):
     - IdensicMobileSDK/Default (= 1.34.1)
   - IdensicMobileSDK/Core (1.34.1)
@@ -102,39 +104,39 @@ PODS:
   - nanopb/decode (2.30909.1)
   - nanopb/encode (2.30909.1)
   - PromisesObjC (2.3.1)
-  - RdlaboCapacitorScreenshotEvent (6.0.0):
+  - RdlaboCapacitorScreenshotEvent (7.0.0):
     - Capacitor
-  - SQLCipher (4.6.0):
-    - SQLCipher/standard (= 4.6.0)
-  - SQLCipher/common (4.6.0)
-  - SQLCipher/standard (4.6.0):
+  - SQLCipher (4.6.1):
+    - SQLCipher/standard (= 4.6.1)
+  - SQLCipher/common (4.6.1)
+  - SQLCipher/standard (4.6.1):
     - SQLCipher/common
   - ZIPFoundation (0.9.19)
 
 DEPENDENCIES:
-  - "AparajitaCapacitorBiometricAuth (from `../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@8.0.2/node_modules/@aparajita/capacitor-biometric-auth`)"
-  - "AparajitaCapacitorSecureStorage (from `../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@6.0.1/node_modules/@aparajita/capacitor-secure-storage`)"
-  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios`)"
-  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app`)"
-  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser`)"
-  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@6.1.2_@capacitor+core@6.2.0/node_modules/@capacitor/camera`)"
-  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard`)"
-  - "CapacitorCommunityPrivacyScreen (from `../../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen`)"
-  - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite`)"
-  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios`)"
-  - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/filesystem`)"
-  - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/haptics`)"
-  - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/keyboard`)"
+  - "AparajitaCapacitorBiometricAuth (from `../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@9.0.0_@capacitor+core@7.4.3/node_modules/@aparajita/capacitor-biometric-auth`)"
+  - "AparajitaCapacitorSecureStorage (from `../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@7.1.3/node_modules/@aparajita/capacitor-secure-storage`)"
+  - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios`)"
+  - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.3/node_modules/@capacitor/app`)"
+  - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/browser`)"
+  - "CapacitorCamera (from `../../node_modules/.pnpm/@capacitor+camera@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/camera`)"
+  - "CapacitorClipboard (from `../../node_modules/.pnpm/@capacitor+clipboard@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/clipboard`)"
+  - "CapacitorCommunityPrivacyScreen (from `../../node_modules/.pnpm/@capacitor-community+privacy-screen@6.0.0_@capacitor+core@7.4.3/node_modules/@capacitor-community/privacy-screen`)"
+  - "CapacitorCommunitySqlite (from `../../node_modules/.pnpm/@capacitor-community+sqlite@7.0.1_@capacitor+core@7.4.3/node_modules/@capacitor-community/sqlite`)"
+  - "CapacitorCordova (from `../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios`)"
+  - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@7.1.4_@capacitor+core@7.4.3/node_modules/@capacitor/filesystem`)"
+  - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/haptics`)"
+  - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/keyboard`)"
   - CapacitorMonetplusHce (from `../../../capacitor-monetplus-hce`)
-  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/preferences`)"
-  - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/push-notifications`)"
-  - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share`)"
-  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/status-bar`)"
+  - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences`)"
+  - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications`)"
+  - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share`)"
+  - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/status-bar`)"
   - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.1_@capacitor+core@6.2.0/node_modules/capacitor-sumsub-mobile-sdk`)"
-  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation`)"
-  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview`)"
+  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation`)"
+  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.14.6_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
   - Firebase/Messaging
-  - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@6.0.0_@capacitor+core@6.2.0/node_modules/@rdlabo/capacitor-screenshot-event`)"
+  - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
 SPEC REPOS:
   https://github.com/SumSubstance/Specs.git:
@@ -147,6 +149,7 @@ SPEC REPOS:
     - FirebaseMessaging
     - GoogleDataTransport
     - GoogleUtilities
+    - IONFilesystemLib
     - KeychainSwift
     - nanopb
     - PromisesObjC
@@ -155,72 +158,72 @@ SPEC REPOS:
 
 EXTERNAL SOURCES:
   AparajitaCapacitorBiometricAuth:
-    :path: "../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@8.0.2/node_modules/@aparajita/capacitor-biometric-auth"
+    :path: "../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@9.0.0_@capacitor+core@7.4.3/node_modules/@aparajita/capacitor-biometric-auth"
   AparajitaCapacitorSecureStorage:
-    :path: "../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@6.0.1/node_modules/@aparajita/capacitor-secure-storage"
+    :path: "../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@7.1.3/node_modules/@aparajita/capacitor-secure-storage"
   Capacitor:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios"
   CapacitorApp:
-    :path: "../../node_modules/.pnpm/@capacitor+app@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/app"
+    :path: "../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.3/node_modules/@capacitor/app"
   CapacitorBrowser:
-    :path: "../../node_modules/.pnpm/@capacitor+browser@6.0.4_@capacitor+core@6.2.0/node_modules/@capacitor/browser"
+    :path: "../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/browser"
   CapacitorCamera:
-    :path: "../../node_modules/.pnpm/@capacitor+camera@6.1.2_@capacitor+core@6.2.0/node_modules/@capacitor/camera"
+    :path: "../../node_modules/.pnpm/@capacitor+camera@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/camera"
   CapacitorClipboard:
-    :path: "../../node_modules/.pnpm/@capacitor+clipboard@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/clipboard"
+    :path: "../../node_modules/.pnpm/@capacitor+clipboard@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/clipboard"
   CapacitorCommunityPrivacyScreen:
-    :path: "../../node_modules/.pnpm/@capacitor-community+privacy-screen@5.2.1_@capacitor+core@6.2.0/node_modules/@capacitor-community/privacy-screen"
+    :path: "../../node_modules/.pnpm/@capacitor-community+privacy-screen@6.0.0_@capacitor+core@7.4.3/node_modules/@capacitor-community/privacy-screen"
   CapacitorCommunitySqlite:
-    :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor-community/sqlite"
+    :path: "../../node_modules/.pnpm/@capacitor-community+sqlite@7.0.1_@capacitor+core@7.4.3/node_modules/@capacitor-community/sqlite"
   CapacitorCordova:
-    :path: "../../node_modules/.pnpm/@capacitor+ios@6.2.0_@capacitor+core@6.2.0/node_modules/@capacitor/ios"
+    :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios"
   CapacitorFilesystem:
-    :path: "../../node_modules/.pnpm/@capacitor+filesystem@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/filesystem"
+    :path: "../../node_modules/.pnpm/@capacitor+filesystem@7.1.4_@capacitor+core@7.4.3/node_modules/@capacitor/filesystem"
   CapacitorHaptics:
-    :path: "../../node_modules/.pnpm/@capacitor+haptics@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/haptics"
+    :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/haptics"
   CapacitorKeyboard:
-    :path: "../../node_modules/.pnpm/@capacitor+keyboard@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/keyboard"
+    :path: "../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/keyboard"
   CapacitorMonetplusHce:
     :path: "../../../capacitor-monetplus-hce"
   CapacitorPreferences:
-    :path: "../../node_modules/.pnpm/@capacitor+preferences@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/preferences"
+    :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
-    :path: "../../node_modules/.pnpm/@capacitor+push-notifications@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/push-notifications"
+    :path: "../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications"
   CapacitorShare:
-    :path: "../../node_modules/.pnpm/@capacitor+share@6.0.3_@capacitor+core@6.2.0/node_modules/@capacitor/share"
+    :path: "../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share"
   CapacitorStatusBar:
-    :path: "../../node_modules/.pnpm/@capacitor+status-bar@6.0.2_@capacitor+core@6.2.0/node_modules/@capacitor/status-bar"
+    :path: "../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/status-bar"
   CapacitorSumsubMobileSdk:
     :path: "../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.1_@capacitor+core@6.2.0/node_modules/capacitor-sumsub-mobile-sdk"
   CapawesomeCapacitorScreenOrientation:
-    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@6.0.1_@capacitor+core@6.2.0/node_modules/@capawesome/capacitor-screen-orientation"
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
-    :path: "../../node_modules/.pnpm/@capgo+camera-preview@6.5.28_@capacitor+core@6.2.0/node_modules/@capgo/camera-preview"
+    :path: "../../node_modules/.pnpm/@capgo+camera-preview@7.14.6_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview"
   RdlaboCapacitorScreenshotEvent:
-    :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@6.0.0_@capacitor+core@6.2.0/node_modules/@rdlabo/capacitor-screenshot-event"
+    :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event"
 
 SPEC CHECKSUMS:
-  AparajitaCapacitorBiometricAuth: c058563fe00160e12b022341e11b3181357ea93a
-  AparajitaCapacitorSecureStorage: 18190f233b0531422af8c1caa51804686d940ee0
-  Capacitor: 05d35014f4425b0740fc8776481f6a369ad071bf
-  CapacitorApp: e1e6b7d05e444d593ca16fd6d76f2b7c48b5aea7
-  CapacitorBrowser: 3413e46a583b6edc3f20448732a531078d6924c6
-  CapacitorCamera: 9bc7b005d0e6f1d5f525b8137045b60cffffce79
-  CapacitorClipboard: 4443c3cdb7c77b1533dfe3ff0f9f7756aa8579df
-  CapacitorCommunityPrivacyScreen: 5ac93e09bbd78884ca9c8f3c0a9084ec2cc9a4fe
-  CapacitorCommunitySqlite: 0299d20f4b00c2e6aa485a1d8932656753937b9b
-  CapacitorCordova: b33e7f4aa4ed105dd43283acdd940964374a87d9
-  CapacitorFilesystem: a6b43788d8f9489fc95fb761f3d0d37d0bceaddf
-  CapacitorHaptics: 4fc15afe22b123d093e6ace24d95e8e3b1f261b9
-  CapacitorKeyboard: e89189ad398b815b6ff7e52271f0fb4f911a0a0a
+  AparajitaCapacitorBiometricAuth: 77be369942778adf29e20893caa5c0a75e5936fa
+  AparajitaCapacitorSecureStorage: 0ee936f927c536e48dada7452c6223fd569f7414
+  Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
+  CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
+  CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
+  CapacitorCamera: f9e54db0a18bb218a8dc360907d63aaefe9209ff
+  CapacitorClipboard: 7e227702976d4435a5a40df54f65e154d0dfc1f3
+  CapacitorCommunityPrivacyScreen: 682470c41cce325d7a85b95907887919d4694066
+  CapacitorCommunitySqlite: 8b2c6bab33e3519280811d481f8bd0fa90343e1b
+  CapacitorCordova: 435121e81a2df4d0034f0fb11fcefab5104cfdb5
+  CapacitorFilesystem: f9bd850c41e048180e5dc0cbb90f2033ede9d2cc
+  CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
+  CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
   CapacitorMonetplusHce: c630f5d12601f291f94f514ea5cad0e778f254c8
-  CapacitorPreferences: f3eadae2369ac3ab8e21743a2959145b0d1286a3
-  CapacitorPushNotifications: 9b178e010634d2f7bfca97b81478503463f86b6c
-  CapacitorShare: d2a742baec21c8f3b92b361a2fbd2401cdd8288e
-  CapacitorStatusBar: b16799a26320ffa52f6c8b01737d5a95bbb8f3eb
+  CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
+  CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
+  CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
+  CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   CapacitorSumsubMobileSdk: bfebd6f7bc7218729822bdf3ac88369fc20fa673
-  CapawesomeCapacitorScreenOrientation: df123192d85a280d308bcc4c14841b63cc307732
-  CapgoCameraPreview: c43c2eaa4f253555cfa06863915110cd0de39ddc
+  CapawesomeCapacitorScreenOrientation: 1c6874ef6768c35c6eb9e9c31e98c08816b993f8
+  CapgoCameraPreview: c5151a03e3b82ff5198f9a58d2cbcfac152c16ac
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
   FirebaseCoreInternal: 43c1788eaeee9d1b97caaa751af567ce11010d00
@@ -228,14 +231,15 @@ SPEC CHECKSUMS:
   FirebaseMessaging: b285329399cc6edd73b5b32864c68454177bcf3f
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
+  IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   IdensicMobileSDK: 1c37c8a37df3fedf4f60937f66abc13885c21fe5
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
-  RdlaboCapacitorScreenshotEvent: eb8f3666df199a4aebabbb6afc9e0e9ff18f6b0a
-  SQLCipher: 30a8e81afa6128e600b17ffa77d0f92fa05ed208
+  RdlaboCapacitorScreenshotEvent: e6fb3216833c508a76734c377554e289cdbd79ad
+  SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 92a627c7be46620c9d325217c7407cd4d2d28083
+PODFILE CHECKSUM: b3675805d91a35780039efa26e52ff9e7e6da920
 
 COCOAPODS: 1.15.2
