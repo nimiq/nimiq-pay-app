@@ -41,11 +41,9 @@ onMounted(async () => {
 
   if (!useDevice().isWeb) {
     try {
-      if (useDevice().isAndroid) {
-        await EdgeToEdge.setBackgroundColor({ color: '#F8F8F8' })
-        await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
-        await StatusBar.setOverlaysWebView({ overlay: false })
-      }
+      await EdgeToEdge.setBackgroundColor({ color: '#F8F8F8' })
+      await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
+      await StatusBar.setOverlaysWebView({ overlay: false })
       await StatusBar.setStyle({ style: Style.Light })
     }
     catch (error) {

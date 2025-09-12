@@ -1,7 +1,11 @@
-import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Fn } from '@vueuse/core'
 import type { scan as Scan } from 'qr-scanner-wechat'
 import type { Ref } from 'vue'
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { CameraPreview } from '@capgo/camera-preview'
+import { until, useIntervalFn, useThrottleFn } from '@vueuse/core'
+import { ready, scan } from 'qr-scanner-wechat'
+import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
@@ -9,10 +13,6 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { base64ToImageData } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { CameraPreview } from '@capgo/camera-preview'
-import { until, useIntervalFn, useThrottleFn } from '@vueuse/core'
-import { ready, scan } from 'qr-scanner-wechat'
-import { ref } from 'vue'
 import { isDev } from '../lib'
 import { useCameraFeed } from './useCameraFeed'
 import { useDevice } from './useDevice'
@@ -221,7 +221,7 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
   async function startScan(_options: StartScannerOptions) {
     try {
       if (!isCameraStarted.value) {
-        await CameraPreview.start({ enableHighResolution: true, toBack: true, disableAudio: true, cameraMode: true })
+        await CameraPreview.start({ toBack: true, disableAudio: true })
         isCameraStarted.value = true
       }
     }
@@ -253,6 +253,7 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
         await scanFrame(frame, scan)
       }
       catch (e) {
+        console.error('Error capturing sample or scanning frame', e)
         if (e) {
           logger.error('Error capturing sample or scanning frame:', e)
           if ((e as Error).message.includes('captureSessionIsMissing')) {
