@@ -221,7 +221,17 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
   async function startScan(_options: StartScannerOptions) {
     try {
       if (!isCameraStarted.value) {
-        await CameraPreview.start({ toBack: true, disableAudio: true })
+        await CameraPreview.start({
+          toBack: true,
+          disableAudio: true,
+          width: window.screen.width,
+          height: window.screen.height - 56, // leave space for the header
+          x: 0,
+          y: 56, // leave space for the header
+          lockAndroidOrientation: true,
+          // enableHighResolution: true,
+          rotateWhenOrientationChanged: false,
+        })
         isCameraStarted.value = true
       }
     }

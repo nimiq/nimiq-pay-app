@@ -43,7 +43,7 @@ PODS:
     - IdensicMobileSDK
   - CapawesomeCapacitorScreenOrientation (7.0.2):
     - Capacitor
-  - CapgoCameraPreview (7.14.6):
+  - CapgoCameraPreview (7.14.8):
     - Capacitor
   - Firebase/CoreOnly (10.21.0):
     - FirebaseCore (= 10.21.0)
@@ -134,7 +134,7 @@ DEPENDENCIES:
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/status-bar`)"
   - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.1_@capacitor+core@6.2.0/node_modules/capacitor-sumsub-mobile-sdk`)"
   - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation`)"
-  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.14.6_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
+  - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.14.8_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
   - Firebase/Messaging
   - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
@@ -198,7 +198,7 @@ EXTERNAL SOURCES:
   CapawesomeCapacitorScreenOrientation:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
-    :path: "../../node_modules/.pnpm/@capgo+camera-preview@7.14.6_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview"
+    :path: "../../node_modules/.pnpm/@capgo+camera-preview@7.14.8_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview"
   RdlaboCapacitorScreenshotEvent:
     :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event"
 
@@ -223,7 +223,7 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   CapacitorSumsubMobileSdk: bfebd6f7bc7218729822bdf3ac88369fc20fa673
   CapawesomeCapacitorScreenOrientation: 1c6874ef6768c35c6eb9e9c31e98c08816b993f8
-  CapgoCameraPreview: c5151a03e3b82ff5198f9a58d2cbcfac152c16ac
+  CapgoCameraPreview: 023095a3f327f75ea6c418ae00df44ae85142a58
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
   FirebaseCoreInternal: 43c1788eaeee9d1b97caaa751af567ce11010d00
@@ -240,6 +240,6 @@ SPEC CHECKSUMS:
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: b3675805d91a35780039efa26e52ff9e7e6da920
+PODFILE CHECKSUM: 55d1bf384daebad66f4f44857e86a553844a30c0
 
 COCOAPODS: 1.15.2

@@ -42,7 +42,7 @@
     "@capacitor/share": "^7.0.2",
     "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
     "@capawesome/capacitor-screen-orientation": "^7.0.2",
-    "@capgo/camera-preview": "^7.14.6",
+    "@capgo/camera-preview": "^7.14.8",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.10.3",
     "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.0",
     "@nimiq/utils": "^0.12.4",

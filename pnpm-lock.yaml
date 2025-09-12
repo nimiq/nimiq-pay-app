@@ -42,7 +42,7 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.3)
       '@capgo/camera-preview':
-        specifier: ^7.14.6
+        specifier: ^7.14.8
         version: 7.20.0(@capacitor/core@7.4.3)
       '@nimiq/fastspot-api-v1':
         specifier: npm:@nimiq/fastspot-api@^1.10.3
