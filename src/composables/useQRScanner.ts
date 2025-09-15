@@ -229,7 +229,6 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
           x: 0,
           y: 56, // leave space for the header
           lockAndroidOrientation: true,
-          // enableHighResolution: true,
           rotateWhenOrientationChanged: false,
         })
         isCameraStarted.value = true
