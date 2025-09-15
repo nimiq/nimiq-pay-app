@@ -178,7 +178,7 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
       // No translation as not user-facing. Dev error which should not occur in production.
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
-    logger.log(`🤑  Initializing payment process with ${method}`, request)
+    logger.log(`🤑  Initializing payment process with ${method}`, { method, request })
 
     if (method === PaymentMethod.NIM) {
       const { useTransactions } = await import('@/stores/transactions')
@@ -208,6 +208,10 @@ const nimOrPointsPaymentFlow: FlowInit = async () => {
       const { error } = await usePoints().payWithPoints(request)
       if (error)
         return err(error)
+    }
+    else {
+      // No translation as not user-facing
+      throw new Error(`${flowName} flow received unsupported payment method ${method}`)
     }
 
     const { useToast } = await import('@/composables/useToast')
