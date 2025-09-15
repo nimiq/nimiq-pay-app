@@ -236,7 +236,7 @@ const paymentFlow: FlowInit = async () => {
 
     // 3. Do the payment
 
-    logger.log(`🤑  Initializing payment process with ${payment.method}`, payment.request)
+    logger.log(`🤑  Initializing payment process with ${payment.method}`, payment)
     switch (payment.method) {
       case PaymentMethod.NIM:
       case PaymentMethod.NakaCard: {
@@ -278,6 +278,8 @@ const paymentFlow: FlowInit = async () => {
         throw new Error('Bluecode payments are not supported yet')
         // break
       }
+      default:
+        throw new Error(`${flowName} flow received unsupported payment method ${payment.method}`)
     }
 
     const { useToast } = await import('@/composables/useToast')
