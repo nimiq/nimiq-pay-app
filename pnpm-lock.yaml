@@ -42,8 +42,8 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2(@capacitor/core@7.4.3)
       '@capgo/camera-preview':
-        specifier: ^7.14.8
-        version: 7.14.8(@capacitor/core@7.4.3)
+        specifier: ^7.15.0
+        version: 7.15.0(@capacitor/core@7.4.3)
       '@nimiq/fastspot-api-v1':
         specifier: npm:@nimiq/fastspot-api@^1.10.3
         version: '@nimiq/fastspot-api@1.10.3'
@@ -932,8 +932,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
-  '@capgo/camera-preview@7.14.8':
-    resolution: {integrity: sha512-DCm3n6PQOzSq8KxH82C/TmPuS3P5qDy8j8E9CYKTuox+HSnGZ/+cugwE/9f10oARIAEljfslpNN2ROL6RqGmJg==}
+  '@capgo/camera-preview@7.15.0':
+    resolution: {integrity: sha512-chnoMXqWDOvkZL70NsAxqLMh9YHmjWGW8qmFnkJkKwVIN0X6Ap4ERrk0sUfkbArr2p5oA91WMphRB7M597gSYw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -8427,7 +8427,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.3
 
-  '@capgo/camera-preview@7.14.8(@capacitor/core@7.4.3)':
+  '@capgo/camera-preview@7.15.0(@capacitor/core@7.4.3)':
     dependencies:
       '@capacitor/core': 7.4.3
 
