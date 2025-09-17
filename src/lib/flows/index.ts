@@ -325,12 +325,12 @@ selectionStep ◄────┘
         └────► pinCodeStep
    */
   const [
-    { nimWithdrawalSelectionStep, nimAddressInputStep, qrCodeScannerStep, pinCodeStep },
+    { nimWithdrawalAmountSelectionStep, nimWithdrawalAddressSelectionStep, nimAddressInputStep, qrCodeScannerStep, pinCodeStep },
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.NimWithdraw
-  const steps = (await Promise.all([nimWithdrawalSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } }), pinCodeStep].map(s => s({ flowName }))))
-  const onDone: Flow['onDone'] = async ({ nimWithdrawalSelection: { amount, recipient } }, { err, setToast }) => {
+  const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, nimWithdrawalAddressSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } }), pinCodeStep].map(s => s({ flowName }))))
+  const onDone: Flow['onDone'] = async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { err, setToast }) => {
     const [{ Transfer }, { sendTx }] = await Promise.all([
       import('@/types/transactions'),
       import('@/stores/transactions').then(t => t.useTransactions()),

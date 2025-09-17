@@ -1,13 +1,15 @@
+import type { Component } from 'vue'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
+import type { ExternalTransaction } from '@/types/transactions'
+import { isValidPhoneNumber } from 'libphonenumber-js'
+import { computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
 import { hash } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
-import { type ExternalTransaction, MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
-import { isValidPhoneNumber } from 'libphonenumber-js'
-import { type Component, computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
+import { MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
 const PinInput = defineAsyncComponent(() => import('@/components/PinInput.vue'))
@@ -24,6 +26,7 @@ const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPr
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
+const WithdrawalAddressList = defineAsyncComponent(() => import('@/components/WithdrawalAddressList.vue'))
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
 const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue'))
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue'))
@@ -452,7 +455,7 @@ export const paymentPreviewStep: StepInit = async () => {
     },
     beforeNext: async ({ qrCodeScanner: request }, { navigateTo, finalizeFlow }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
-      if (request instanceof String)
+      if (typeof request === 'string')
         // No translation as not user-facing. Dev error which should not occur in production.
         throw new Error(`Request is a string: ${request}`)
 
@@ -465,11 +468,11 @@ export const paymentPreviewStep: StepInit = async () => {
   } satisfies Step
 }
 
-export const nimWithdrawalSelectionStep: StepInit = async () => ({
-  step: StepName.NimWithdrawalSelection,
+export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
+  step: StepName.NimWithdrawalAmountSelectionStep,
   get title() { return i18n.t('Withdraw') },
   main: markRaw(NimWithdraw),
-  beforeNext: async ({ nimWithdrawalSelection: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
+  beforeNext: async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
     const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
     const { Crypto } = (await import('@/stores/app'))
@@ -482,7 +485,7 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
     }
 
     if (!amount || !recipient) {
-      // User clicked "Add NIM address", let him go, by calling next()
+      // User clicked Address Selection
       return next()
     }
 
@@ -494,11 +497,25 @@ export const nimWithdrawalSelectionStep: StepInit = async () => ({
   },
 } satisfies Step)
 
+export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
+  step: StepName.NimWithdrawalAddressSelectionStep,
+  main: markRaw(WithdrawalAddressList),
+  autofocus: false, // Don't autofocus on the search bar
+  beforeNext: async ({ nimWithdrawalAddressSelectionStep }, { next, prev }) => {
+    if (!nimWithdrawalAddressSelectionStep) {
+      // User clicked "Add NIM address"
+      return next()
+    }
+    prev()
+  },
+} satisfies Step)
+
 export const nimAddressInputStep: StepInit = async () => ({
   step: StepName.NimAddressInput,
   get title() { return i18n.t('Send NIM to this address') },
   get description() { return i18n.t('Copy or scan the address') },
   main: markRaw(NimAddressInput),
+  autofocus: false, // Usually the user will scan the QR code
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
     // The NIM Address Step is a special step:
     //   - if the address is ok, then we would go to the previous slide

@@ -1,20 +1,11 @@
 <script setup lang="ts">
-import AmountInput from '@/components/AmountInput.vue'
-import LoadingSpinner from '@/components/icons/loading-spinner.vue'
-import NimiqLogo from '@/components/icons/nimiq-logo.vue'
-import TriangleIcon from '@/components/icons/triangle.vue'
-import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
-import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
-import { useLogger } from '@/composables/useLogger'
-import { i18n } from '@/i18n/i18n-setup'
-import { type State, stepEmits, StepName } from '@/lib/flows/steps.types'
-import { Crypto, DECIMALS, useApp } from '@/stores/app'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useRemoteSigner } from '@/stores/remote-signer'
-import { IonButton, IonIcon } from '@ionic/vue'
+import type { PropType } from 'vue'
+import type { State } from '@/lib/flows/steps.types'
+import { alertController, IonButton, IonIcon } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
 import { FiatAmount, Identicon } from '@nimiq/vue3-components'
 import { chevronDown, chevronForward } from 'ionicons/icons'
+import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import {
   SelectContent,
@@ -28,8 +19,21 @@ import {
   SelectValue,
   SelectViewport,
 } from 'radix-vue'
-import { computed, type PropType, ref, toRef, watch } from 'vue'
-import CryptoAmount from './CryptoAmount.vue'
+import { computed, ref, toRef, watch } from 'vue'
+import AmountInput from '@/components/AmountInput.vue'
+import CryptoAmount from '@/components/CryptoAmount.vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import RemoveIcon from '@/components/icons/remove.vue'
+import TriangleIcon from '@/components/icons/triangle.vue'
+import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
+import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
+import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
+import { stepEmits, StepName } from '@/lib/flows/steps.types'
+import { Crypto, DECIMALS, useApp } from '@/stores/app'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { useRemoteSigner } from '@/stores/remote-signer'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -140,8 +144,19 @@ watch(errorMessage, (value) => {
     </p>
   </div>
 
+  <div
+    class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
+    :aria-label="$t('Select withdrawal address')"
+    @click="emit('done', '')"
+  >
+    <Identicon v-if="selected" :address="selected" class="w-8" />
+    <NimiqLogo v-else class="size-6" />
+    <MiddleEllipsis :text="selected" class="text-lg uppercase address" />
+    <TriangleIcon class="h-[10px] ml-auto text-space/30" />
+  </div>
+
   <!-- Address Selector -->
-  <SelectRoot v-model="selected" @update:open="(x: boolean) => isSelectOpen = x">
+  <!-- <SelectRoot v-model="selected" @update:open="(x: boolean) => isSelectOpen = x">
     <SelectTrigger
       class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
       :class="{ 'rounded-b-none': isSelectOpen }"
@@ -162,22 +177,49 @@ watch(errorMessage, (value) => {
         :side-offset="-4"
         :align-offset="-16"
         style="width: calc(var(--radix-popper-anchor-width) + 32px);"
-      >
-        <!-- <SelectScrollUpButton class="flex items-center justify-center h-[25px] cursor-default">
+      > -->
+  <!-- <SelectScrollUpButton class="flex items-center justify-center h-[25px] cursor-default">
           <IonIcon :icon="chevronUp" />
         </SelectScrollUpButton> -->
 
-        <SelectViewport>
+  <!-- <SelectViewport>
           <SelectGroup class="p-1 rounded-md shadow-sm" style="background: radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%);">
-            <template v-for="option in options" :key="option">
-              <!-- We need to have this as hidden, not rendering it causes the Select to break -->
-              <SelectItem
+            <template v-for="option in options" :key="option"> -->
+  <!-- We need to have this as hidden, not rendering it causes the Select to break -->
+  <!-- <SelectItem
                 v-if="option"
-                class="text-white px-4 py-3 leading-4 select-none data-[disabled]:text-space/20 data-[disabled]:pointer-events-none flex items-center gap-x-2"
+                class="text-white px-4 py-3 leading-4 select-none data-[disabled]:pointer-events-none flex items-center gap-x-2"
                 :class="{ hidden: option === selected }"
                 :value="option"
+                :disabled="isRemoveMode"
               >
-                <Identicon :address="option" class="w-6" />
+                <div class="relative size-6">
+                  <AnimatePresence :initial="false">
+                    <motion.div
+                      v-if="isRemoveMode"
+                      key="remove"
+                      class="absolute"
+                      :initial="{ opacity: 0, rotate: -90, scale: 0.85 }"
+                      :animate="{ opacity: 1, rotate: 0, scale: 1 }"
+                      :exit="{ opacity: 0, rotate: 90, scale: 0.85 }"
+                      :transition="{ duration: 0.2, ease: 'easeOut' }"
+                    >
+                      <RemoveIcon class="size-6 pointer-events-auto" @click="() => removeOption(option)" />
+                    </motion.div>
+
+                    <motion.div
+                      v-else
+                      key="identicon"
+                      class="absolute"
+                      :initial="{ opacity: 0, rotate: 90, scale: 0.85 }"
+                      :animate="{ opacity: 1, rotate: 0, scale: 1 }"
+                      :exit="{ opacity: 0, rotate: -90, scale: 0.85 }"
+                      :transition="{ duration: 0.2, ease: 'easeOut' }"
+                    >
+                      <Identicon :address="option" class="size-6" />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
                 <MiddleEllipsis :text="option" class="text-lg uppercase address !font-normal" />
               </SelectItem>
             </template>
@@ -200,7 +242,7 @@ watch(errorMessage, (value) => {
         </SelectScrollDownButton>
       </SelectContent>
     </SelectPortal>
-  </SelectRoot>
+  </SelectRoot> -->
 
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
@@ -237,5 +279,12 @@ watch(errorMessage, (value) => {
   font-family: 'Fira Mono', monospace;
   font-weight: 500;
   line-height: 20px;
+}
+</style>
+
+<style>
+.address-removal-alert .alert-message {
+  text-wrap: pretty;
+  text-align: justify;
 }
 </style>
