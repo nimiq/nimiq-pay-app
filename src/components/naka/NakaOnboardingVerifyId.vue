@@ -57,7 +57,7 @@ async function register() {
 onKycApproved.value = async () => {
   const user = await getUserStatus()
   if (!user.identifications.find(identification => identification.status === 'VERIFIED'))
-    throw new Error('User does not have a VERIFIED identification')
+    console.error('User does not have a VERIFIED identification')
 
   await setupCard(user)
 }
