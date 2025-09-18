@@ -187,6 +187,14 @@ export const PaymentConfirmMessageSchema = v.pipe(
       HexStringSchema,
       v.description('The signed transaction to confirm the request. This transaction must be co-signed by the Nimiq Pay cosigner and the user\'s local wallet key (as identified during transaction setup), coming from the address indicated in the payment:ready and carrying the recipient and amount as indicated in the payment:request.'),
     ),
+    timings: v.optional(v.pipe(
+      v.object({
+        // All timestamps in milliseconds since UNIX epoch
+        timeStart: v.number(), // When the payment:request was received by the client
+        timeEnd: v.number(), // When the payment:confirm or payment:reject was sent by the client
+      }),
+      v.description('Optional performance timings collected by the client'),
+    )),
   }),
   v.description('Sent from client to server when a transaction received via payment:request was confirmed (either by user or automatically) and signed.'),
 )
@@ -205,6 +213,14 @@ export const PaymentRejectMessageSchema = v.pipe(
     code: v.optional(v.pipe(
       IssuerRejectionCodeSchema,
       v.description('Reason to send for the rejection'),
+    )),
+    timings: v.optional(v.pipe(
+      v.object({
+        // All timestamps in milliseconds since UNIX epoch
+        timeStart: v.number(), // When the payment:request was received by the client
+        timeEnd: v.number(), // When the payment:confirm or payment:reject was sent by the client
+      }),
+      v.description('Optional performance timings collected by the client'),
     )),
   }),
   v.description('Sent from client to server when a transaction received via payment:request was rejected (either by user or automatically).'),

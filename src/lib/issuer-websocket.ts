@@ -25,6 +25,8 @@ const ISSUER_SERVER_WS = 'https://pay-test-issuer.nim.sh/ws/'
 
 const logger = useLogger('NakaSocket')
 
+let paymentAuthorizationStartTime: number | undefined
+
 export function useIssuerWebSocket() {
   const { status, data, send } = useWebSocket<string>(ISSUER_SERVER_WS, {
     autoReconnect: true,
@@ -132,6 +134,7 @@ export function useIssuerWebSocket() {
         return true
       }
       case 'payment:request':
+        paymentAuthorizationStartTime = Date.now()
         logger.log('Received payment request:', msg)
         paymentRequest.value = msg
         return true
@@ -203,6 +206,12 @@ export function useIssuerWebSocket() {
     const promise = new Promise<PaymentSuccessMessage>((resolve, reject) => {
       pendingPayments.set(id, { resolve, reject })
     })
+    if (paymentAuthorizationStartTime) {
+      message.timings = {
+        timeStart: paymentAuthorizationStartTime,
+        timeEnd: Date.now(),
+      }
+    }
     send(JSON.stringify(message))
     return promise
   }
@@ -219,6 +228,12 @@ export function useIssuerWebSocket() {
       rail,
       code,
       message,
+    }
+    if (paymentAuthorizationStartTime) {
+      msg.timings = {
+        timeStart: paymentAuthorizationStartTime,
+        timeEnd: Date.now(),
+      }
     }
     send(JSON.stringify(msg))
   }
