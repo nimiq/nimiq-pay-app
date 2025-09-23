@@ -49,7 +49,6 @@ const maxTransactions = computed(() => showSingleTxSkeletonDebounced.value ? MAX
       :initial="{ opacity: 0, x: -20 }"
       :animate="{ opacity: 1, x: 0 }"
       :transition="{ duration: showAnimations ? 0.3 : 0, delay: showAnimations ? index * 0.1 : 0 }"
-      :while-hover="{ x: 5, scale: 1.01 }"
     >
       <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })" />
     </motion.li>
