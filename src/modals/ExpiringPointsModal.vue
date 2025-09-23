@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import ModalTemplate from '@/components/ModalTemplate.vue'
 import { IonGrid } from '@ionic/vue'
+import ModalTemplate from '@/components/ModalTemplate.vue'
 </script>
 
 <template>

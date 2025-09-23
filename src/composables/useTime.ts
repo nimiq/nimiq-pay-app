@@ -1,6 +1,7 @@
+import type { MaybeRef } from 'vue'
+import { toValue } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useApp } from '@/stores/app'
-import { type MaybeRef, toValue } from 'vue'
 import { useDevice } from './useDevice'
 
 const logger = useLogger('useTime')

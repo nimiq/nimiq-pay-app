@@ -22,8 +22,6 @@ const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'
 const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
 const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const QRCodeDisplay = defineAsyncComponent(() => import('@/components/QRCodeDisplay.vue'))
-const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
-const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
@@ -386,6 +384,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ pr
       }
     },
     beforeNext: async (state, { prev, navigateTo }) => {
+      document.body.classList.remove('native-qr-scanner-modal-open')
       if (defaultProps?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
           navigateTo({ step: StepName.PaymentRequestManualInput })

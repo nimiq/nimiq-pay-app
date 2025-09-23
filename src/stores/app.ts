@@ -1,10 +1,12 @@
-import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
-import { SQLQuery } from '@/lib/sql-queries'
+import type { StorageLikeAsync } from '@vueuse/core'
+import type { SupportedLanguage } from '@/i18n/i18n-setup'
 import { Preferences } from '@capacitor/preferences'
-import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
+import { useStorageAsync } from '@vueuse/core'
 import { useReducedMotion } from 'motion-v'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { guessUserLanguage } from '@/i18n/i18n-setup'
+import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from './conn'
 
 export enum Fiat {

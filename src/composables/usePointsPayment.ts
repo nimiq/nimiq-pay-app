@@ -1,8 +1,9 @@
+import type { MaybeRef } from 'vue'
+import { computed, ref, toValue } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
 import { Rail } from '@/types/transactions'
-import { computed, type MaybeRef, ref, toValue } from 'vue'
 import { usePointsApi } from './useApi'
 
 export enum PointsState {

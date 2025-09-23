@@ -1,14 +1,17 @@
-import type { AsyncResult } from '@/types'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import type { PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
+import type { DbPagination } from '@/lib/sql-queries'
+import type { AsyncResult } from '@/types'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, onMounted, readonly, ref } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
+
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { type DbPagination, DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
-
+import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -17,8 +20,6 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, readonly, ref } from 'vue'
 
 const logger = useLogger('transactions.ts')
 const { isSendingTx } = storeToRefs(useLocks())

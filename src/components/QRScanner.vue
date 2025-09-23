@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import type { QRData } from '@/composables/useQRScanner'
 import type { PropType, Ref } from 'vue'
+import type { QRData } from '@/composables/useQRScanner'
+import { watchDebounced } from '@vueuse/core'
+import { ready } from 'qr-scanner-wechat'
+import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { QRScannerState, useQRScanner } from '@/composables/useQRScanner'
 import { QRDataFormat } from '@/composables/useStringParser'
@@ -8,9 +11,6 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
-import { watchDebounced } from '@vueuse/core'
-import { ready } from 'qr-scanner-wechat'
-import { onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },

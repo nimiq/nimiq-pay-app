@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { onBeforeMount, onBeforeUnmount } from 'vue'
 import FaceId from '@/components/icons/face-id.vue'
 import Fingerprint from '@/components/icons/fingerprint.vue'
 import { useBiometric } from '@/composables/useBiometric'
 import { useDevice } from '@/composables/useDevice'
-import { IonButton } from '@ionic/vue'
-import { onBeforeMount, onBeforeUnmount } from 'vue'
 
 defineProps({ errorMsg: { type: String } })
 defineEmits<{ done: [], skip: [] }>()

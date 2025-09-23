@@ -1,5 +1,11 @@
 <script setup lang="ts">
 import type { PlainTransactionDetails } from '@nimiq/core'
+import type { Ref } from 'vue'
+import { Clipboard } from '@capacitor/clipboard'
+import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -11,11 +17,6 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
-import { Clipboard } from '@capacitor/clipboard'
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
-import { storeToRefs } from 'pinia'
-import { onMounted, type Ref, ref } from 'vue'
-import { useRouter } from 'vue-router'
 
 const logger = useLogger('DevModal')
 

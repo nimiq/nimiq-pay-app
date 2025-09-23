@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
-import { IonButton } from '@ionic/vue'
 
 defineEmits(stepEmits)
 </script>

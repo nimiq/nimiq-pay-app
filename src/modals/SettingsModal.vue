@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { App } from '@capacitor/app'
+import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
+import { computedAsync, onLongPress } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { onBeforeMount, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useBiometric } from '@/composables/useBiometric'
 import { useLogger } from '@/composables/useLogger'
@@ -9,11 +14,6 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
-import { App } from '@capacitor/app'
-import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
-import { computedAsync, onLongPress } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { onBeforeMount, ref } from 'vue'
 
 const logger = useLogger('SettingsModal')
 

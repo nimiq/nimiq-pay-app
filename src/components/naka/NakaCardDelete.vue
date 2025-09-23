@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
 import LongPressButton from '@/components/LongPressButton.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
-import { IonButton } from '@ionic/vue'
-import { storeToRefs } from 'pinia'
 
 defineProps<{ prop1: string }>()
 

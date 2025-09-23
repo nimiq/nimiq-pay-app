@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { computedAsync, useTextareaAutosize } from '@vueuse/core'
+import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useStringParser } from '@/composables/useStringParser'
 import { stepEmits } from '@/lib/flows/steps.types'
-import { IonButton } from '@ionic/vue'
-import { computedAsync, useTextareaAutosize } from '@vueuse/core'
-import { ref } from 'vue'
 
 const emit = defineEmits(stepEmits)
 

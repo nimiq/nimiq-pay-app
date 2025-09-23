@@ -1,26 +1,24 @@
+import type { MaybeRef } from 'vue'
+import type { GoCryptoPaymentApiError, GoCryptoPaymentDetails, GoCryptoRequestIdentifier, GoCryptoUserFriendlyStatus, GoCryptoUserFriendlyStatusOptions, GoCryptoUserFriendlyStatusTitle } from '@/composables/useGoCrypto'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
+// This composable is not part of useGoCrypto as it includes some input options and output processing specific to Nimiq
+// Pay app, and composition api code specific to Vue, while the idea is to keep useGoCrypto generic, and to eventually
+// move it into its own library/package.
+import { getCurrentScope, onScopeDispose, ref, toValue, watch } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import {
   fetchGoCryptoPaymentDetails,
   GoCryptoFiatCurrency,
-  type GoCryptoPaymentApiError,
-  type GoCryptoPaymentDetails,
-  type GoCryptoRequestIdentifier,
+
   goCryptoStatusToUserFriendlyStatus,
-  type GoCryptoUserFriendlyStatus,
-  type GoCryptoUserFriendlyStatusOptions,
-  type GoCryptoUserFriendlyStatusTitle,
+
   monitorGoCryptoRequest,
 } from '@/composables/useGoCrypto'
 import { getServerTime } from '@/composables/useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
-// This composable is not part of useGoCrypto as it includes some input options and output processing specific to Nimiq
-// Pay app, and composition api code specific to Vue, while the idea is to keep useGoCrypto generic, and to eventually
-// move it into its own library/package.
-import { getCurrentScope, type MaybeRef, onScopeDispose, ref, toValue, watch } from 'vue'
 
 export async function fetchGoCryptoPaymentRequestData(requestIdentifier: GoCryptoRequestIdentifier)
 : Promise<Result<PaymentRequestData, string>> { // eslint-disable-line style/type-annotation-spacing, style/indent

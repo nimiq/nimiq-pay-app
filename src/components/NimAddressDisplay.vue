@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { Clipboard } from '@capacitor/clipboard'
+import { IonButton, IonIcon } from '@ionic/vue'
+import { Identicon } from '@nimiq/vue3-components'
+import { qrCodeOutline } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { onUnmounted } from 'vue'
 import AddressDisplay from '@/components/AddressDisplay.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -6,12 +12,6 @@ import { stepEmits } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { Clipboard } from '@capacitor/clipboard'
-import { IonButton, IonIcon } from '@ionic/vue'
-import { Identicon } from '@nimiq/vue3-components'
-import { qrCodeOutline } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import { onUnmounted } from 'vue'
 
 defineProps({ address: { type: String } })
 

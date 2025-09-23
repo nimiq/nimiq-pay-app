@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { computed, onMounted, ref } from 'vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { IonButton } from '@ionic/vue'
-import { computed, onMounted, ref } from 'vue'
 
 const emit = defineEmits<{ done: [], back: [] }>()
 

@@ -1,30 +1,16 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
 import type { State } from '@/lib/flows/steps.types'
-import { alertController, IonButton, IonIcon } from '@ionic/vue'
+import { IonButton } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
 import { FiatAmount, Identicon } from '@nimiq/vue3-components'
-import { chevronDown, chevronForward } from 'ionicons/icons'
-import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import {
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectItemText,
-  SelectPortal,
-  SelectRoot,
-  SelectScrollDownButton,
-  SelectTrigger,
-  SelectValue,
-  SelectViewport,
-} from 'radix-vue'
+
 import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
-import RemoveIcon from '@/components/icons/remove.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
 import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'

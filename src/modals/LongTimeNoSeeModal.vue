@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { watchDebounced } from '@vueuse/core'
+import { close } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
 import CircularProgress from '@/components/icons/CircularProgress.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
 import { useModal } from '@/composables/useModal'
@@ -6,11 +11,6 @@ import { debounceDelay, debounceMaxWait } from '@/lib'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { watchDebounced } from '@vueuse/core'
-import { close } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
 
 const { closeModal } = useModal()
 const { consensus } = storeToRefs(useNimiqNetwork())

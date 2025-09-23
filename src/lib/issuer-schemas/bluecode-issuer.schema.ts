@@ -120,7 +120,7 @@ export const ClearingPreAuthRequestSchema = v.omit(
     ...ClearingPaymentRequestSchema.entries,
     valid_until: StringToNumberTransformer,
   }),
-  ['prev_bc_txevent_id', 'prev_issuer_txevent_ref', 'issuer_tx_ref']
+  ['prev_bc_txevent_id', 'prev_issuer_txevent_ref', 'issuer_tx_ref'],
 )
 
 export const ClearingExtendPreAuthRequestSchema = v.object({
@@ -130,7 +130,7 @@ export const ClearingExtendPreAuthRequestSchema = v.object({
 
 export const ClearingReleasePreAuthRequestSchema = v.omit(
   ClearingPaymentRequestSchema,
-  ['amount', 'currency', 'purpose', 'merchant_tx_ref']
+  ['amount', 'currency', 'purpose', 'merchant_tx_ref'],
 )
 
 export const ClearingRefundRequestSchema = v.object({
@@ -152,7 +152,7 @@ export const ClearingCreditRequestSchema = v.omit(
       v.literal('keyentry'),
     ]),
   }),
-  ['prev_issuer_txevent_ref', 'issuer_tx_ref', 'merchant_tx_ref']
+  ['prev_issuer_txevent_ref', 'issuer_tx_ref', 'merchant_tx_ref'],
 )
 
 export type ClearingPaymentRequest = v.InferInput<typeof ClearingPaymentRequestSchema>

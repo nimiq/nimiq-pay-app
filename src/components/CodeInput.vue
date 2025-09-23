@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { stepEmits } from '@/lib/flows/steps.types'
-import { useApp } from '@/stores/app'
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import { stepEmits } from '@/lib/flows/steps.types'
+import { useApp } from '@/stores/app'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

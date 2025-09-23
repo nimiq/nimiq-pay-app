@@ -1,17 +1,17 @@
-import type { Flow, FlowHookCb, FlowInit, NakaPaymentData, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
-import { modalController } from '@ionic/vue'
 import type { Slots } from 'vue'
 import type { Result } from '../../types'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
+import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import { modalController } from '@ionic/vue'
+import { defineAsyncComponent, h, ref } from 'vue'
 import FlowCmp from '@/components/Flow.vue'
+
 import { useLogger } from '@/composables/useLogger'
 
 import { Modal, useModal } from '@/composables/useModal'
-
 import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { PaymentMethod } from '@/types/transactions'
-import { defineAsyncComponent, h, ref } from 'vue'
 
 const logger = useLogger('flows/index.ts')
 
@@ -277,15 +277,15 @@ const paymentFlow: FlowInit = async () => {
         throw new Error('Bluecode payments are not supported yet')
         // break
       }
-      default:
-        throw new Error(`${flowName} flow received unsupported payment method ${payment.method}`)
+      default: {
+        throw new Error(`Unknown payment method`, payment)
+      }
     }
 
     const { useToast } = await import('@/composables/useToast')
     useToast().setToast({ message: i18n.t('Payment successful') })
   }
   const onCancel: Flow['onCancel'] = async () => {
-    // Remove transparency before closing to prevent the camera view to be visible behind the modal
     document.body.classList.remove('native-qr-scanner-modal-open')
     logger.log('🤑  Cancelling payment process')
   }

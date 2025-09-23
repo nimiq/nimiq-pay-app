@@ -1,12 +1,12 @@
 import type { Option } from '@/types'
+import jsSHA from 'jssha'
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
-import jsSHA from 'jssha'
-import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
 
 const logger = useLogger('useDecrypt')
 
@@ -62,11 +62,11 @@ export function useDecrypt() {
 
     const error = (await sqlite.isSecretStored()).result
       ? await sqlite.checkEncryptionSecret(pin)
-        .then(({ result }) => !result ? i18n.t('Invalid PIN') : undefined)
-        .catch(() => i18n.t('Something went wrong decrypting the database'))
+          .then(({ result }) => !result ? i18n.t('Invalid PIN') : undefined)
+          .catch(() => i18n.t('Something went wrong decrypting the database'))
       : await sqlite.setEncryptionSecret(pin)
-        .then(() => undefined)
-        .catch(() => i18n.t('Something went wrong decrypting the database'))
+          .then(() => undefined)
+          .catch(() => i18n.t('Something went wrong decrypting the database'))
 
     if (error) {
       logger.error(error)

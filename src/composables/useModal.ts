@@ -1,8 +1,8 @@
 import type { ComponentProps, ComponentRef } from '@ionic/core'
-import { useLogger } from '@/composables/useLogger'
 import { modalController } from '@ionic/vue'
 import { createSharedComposable } from '@vueuse/core'
 import { defineAsyncComponent } from 'vue'
+import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useModal')
 

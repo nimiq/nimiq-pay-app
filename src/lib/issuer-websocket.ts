@@ -1,3 +1,4 @@
+import type { AuthenticateConfirmMessage, AuthenticateStartMessage, PaymentAcceptMessage, PaymentConfirmMessage, PaymentRejectedMessage, PaymentRejectMessage, PaymentRequestMessage, PaymentSuccessMessage, ServerMessage } from './issuer-schemas/ws.schema'
 import { useWebSocket } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { parse } from 'valibot'
@@ -7,16 +8,9 @@ import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import { useRemoteSigner } from '../stores/remote-signer'
 import {
-  type AuthenticateConfirmMessage,
-  type AuthenticateStartMessage,
-  type PaymentAcceptMessage,
-  type PaymentConfirmMessage,
-  type PaymentRejectedMessage,
-  type PaymentRejectMessage,
-  type PaymentRequestMessage,
-  type PaymentSuccessMessage,
+
   // type PaymentTriggerMessage,
-  type ServerMessage,
+
   ServerMessageSchema,
 } from './issuer-schemas/ws.schema'
 import { signMessage } from './issuer-utils'

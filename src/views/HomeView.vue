@@ -1,4 +1,16 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
+import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
+import { Clipboard } from '@capacitor/clipboard'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
+import { chevronForward } from 'ionicons/icons'
+import { motion } from 'motion-v'
+import { storeToRefs } from 'pinia'
+import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 import BackupNotification from '@/components/BackupNotification.vue'
 import AlertIcon from '@/components/icons/alert.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -21,6 +33,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -32,18 +45,6 @@ import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
-
-import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
-import { Clipboard } from '@capacitor/clipboard'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
-import { chevronForward } from 'ionicons/icons'
-import { motion } from 'motion-v'
-import { storeToRefs } from 'pinia'
-import { computed, markRaw, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
-import { useRouter } from 'vue-router'
 
 const logger = useLogger('HomeView')
 
@@ -333,7 +334,7 @@ App.addListener('resume', detectPaymentRequest)
             class="text-base normal-case"
             aria-label="Earn Points"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') })"
+            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { initialState: { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') } })"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{ phoneNumberVerified ? (pointsBalance / 1e5).toLocaleString() : $t('Earn Points') }}
@@ -366,7 +367,7 @@ App.addListener('resume', detectPaymentRequest)
       >
         <TheHomeTransactions class="mt-8" />
 
-        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions, undefined, true)">
+        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions, { preventSwipe: true })">
           {{ $t('See all') }}
         </QuickButton>
       </motion.div>
@@ -479,7 +480,7 @@ App.addListener('resume', detectPaymentRequest)
             class="w-3/4 py-2 mx-auto text-base" expand="block"
             :class="{ 'pb-0': isIOS }"
             :disabled="isPaymentDisabled"
-            @click="initializeFlow(FlowName.NimOrPointsPayment)"
+            @click="initializeFlow(FlowName.Payment)"
           >
             {{ $t('Pay') }}
           </IonButton>

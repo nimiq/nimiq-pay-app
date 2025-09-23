@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { storeToRefs } from 'pinia'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import WorldCheckIcon from './WorldCheckIcon.vue'
 
 const { consensus } = storeToRefs(useNimiqNetwork())

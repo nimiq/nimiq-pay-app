@@ -1,10 +1,10 @@
 <script lang="ts" setup>
-import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
-import { nakaCardFromApi, useNaka } from '@/stores/naka'
 import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
+import { useNaka } from '@/stores/naka'
 
 type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
 

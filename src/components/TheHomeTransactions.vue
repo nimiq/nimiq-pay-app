@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { IonSkeletonText } from '@ionic/vue'
+import { refDebounced } from '@vueuse/core'
+import { motion } from 'motion-v'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import TransactionItem from '@/components/TransactionItem.vue'
 import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
@@ -7,11 +12,6 @@ import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useTransactions } from '@/stores/transactions'
-import { IonSkeletonText } from '@ionic/vue'
-import { refDebounced } from '@vueuse/core'
-import { motion } from 'motion-v'
-import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
 
 const { isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
 const { showAnimations } = storeToRefs(useApp())
@@ -51,7 +51,7 @@ const maxTransactions = computed(() => showSingleTxSkeletonDebounced.value ? MAX
       :transition="{ duration: showAnimations ? 0.3 : 0, delay: showAnimations ? index * 0.1 : 0 }"
       :while-hover="{ x: 5, scale: 1.01 }"
     >
-      <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { transactionList: tx })" />
+      <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })" />
     </motion.li>
   </motion.ol>
 

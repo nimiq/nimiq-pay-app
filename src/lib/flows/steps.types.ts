@@ -79,8 +79,6 @@ export enum StepName {
   HoldNakaCardToReader = 'holdNakaCardToReader',
   BluecodePayment = 'bluecodePayment',
   QRCodeDisplay = 'qrCodeDisplay',
-  HoldNakaCardToReader = 'holdNakaCardToReader',
-  BluecodePayment = 'bluecodePayment',
   PaymentPreview = 'paymentPreview',
   NimWithdrawalAmountSelectionStep = 'nimWithdrawalAmountSelectionStep',
   NimWithdrawalAddressSelectionStep = 'nimWithdrawalAddressSelectionStep',

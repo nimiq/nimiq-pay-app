@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import InfoIcon from '@/components/icons/info.vue'
 import { IonButton } from '@ionic/vue'
+import InfoIcon from '@/components/icons/info.vue'
 
 defineEmits<{ done: [] }>()
 </script>

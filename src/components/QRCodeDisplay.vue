@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import { type State, StepName } from '@/lib/flows/steps.types'
+import type { State } from '@/lib/flows/steps.types'
 import { QrCode } from '@nimiq/vue3-components'
 import { useWindowSize } from '@vueuse/core'
 import { computed, toRef } from 'vue'
+import { StepName } from '@/lib/flows/steps.types'
 
 const props = defineProps({
   state: { type: Object as PropType<State>, required: true },

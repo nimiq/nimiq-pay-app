@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
+import { IonButton } from '@ionic/vue'
+import { computed, ref } from 'vue'
 import InfoIcon from '@/components/icons/info.vue'
 import MnemonicInput from '@/components/MnemonicInput.vue'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
-import { IonButton } from '@ionic/vue'
-import { type Ref, ref } from 'vue'
-import { computed } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

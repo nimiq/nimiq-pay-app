@@ -1,12 +1,5 @@
 <script setup lang="ts">
 import type { URLOpenListenerEvent } from '@capacitor/app'
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
-import { Modal, useModal } from '@/composables/useModal'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
-import { isDev } from '@/lib/index'
-import { useLocks } from '@/stores/locks'
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
@@ -18,6 +11,13 @@ import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
+import { isDev } from '@/lib/index'
+import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()

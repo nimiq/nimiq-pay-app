@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import type { PropType } from 'vue'
+import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
+import { chevronForwardOutline } from 'ionicons/icons'
+import { ref } from 'vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { usePoints } from '@/stores/points'
-import { IonIcon, IonRippleEffect, IonSpinner } from '@ionic/vue'
-import { chevronForwardOutline } from 'ionicons/icons'
-import { type PropType, ref } from 'vue'
 
 const props = defineProps({
   progress: {

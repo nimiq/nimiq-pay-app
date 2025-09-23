@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
+import type { PropType, Ref } from 'vue'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { Keyboard } from '@capacitor/keyboard'
 import { useIntervalFn } from '@vueuse/core'
-import { onMounted, onUnmounted, type PropType, type Ref, ref, watchEffect } from 'vue'
+import { onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
 
 defineProps({
   recoveryWords: {

@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { HCESdk } from 'capacitor-monetplus-hce'
+import { storeToRefs } from 'pinia'
+import { onMounted, watch } from 'vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -7,9 +10,6 @@ import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
-import { HCESdk } from 'capacitor-monetplus-hce'
-import { storeToRefs } from 'pinia'
-import { onMounted, watch } from 'vue'
 
 const emit = defineEmits(stepEmits)
 

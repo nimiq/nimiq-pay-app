@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import type { PropType, Ref } from 'vue'
-import { useCarousel } from '@/composables/useCarousel'
-import { useLogger } from '@/composables/useLogger'
-import { useModal } from '@/composables/useModal'
-import { useToast } from '@/composables/useToast'
-import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-
 import { computed, nextTick, onMounted, reactive, ref, watch, watchEffect } from 'vue'
+import { useCarousel } from '@/composables/useCarousel'
+import { useLogger } from '@/composables/useLogger'
+import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
+
+import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 
 const props = defineProps({
   flow: {

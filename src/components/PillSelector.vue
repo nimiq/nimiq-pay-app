@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { i18n } from '@/i18n/i18n-setup'
-import { type Step, stepEmits, StepName } from '@/lib/flows/steps.types'
+import type { Step } from '@/lib/flows/steps.types'
 import { useElementSize, useResizeObserver } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
+import { i18n } from '@/i18n/i18n-setup'
+import { stepEmits, StepName } from '@/lib/flows/steps.types'
 
 const props = defineProps<{
   activeStep?: Step

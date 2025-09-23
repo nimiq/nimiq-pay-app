@@ -3,8 +3,8 @@ antfu/consistent-list-newline, style/quote-props, style/brace-style --
 The idea is to eventually move this into a separate lib, therefore we keep the file as close as possible to the variant
 using in the Nimiq Wallet */
 import type { CapacitorHttp } from '@capacitor/core';
-import { isDev } from '@/lib/index';
 import { ValidationUtils } from '@nimiq/utils';
+import { isDev } from '@/lib/index';
 
 const GO_CRYPTO_CONFIG = isDev
     // The api keys are allowed to be public. The dev key is from chapter 4 of the documentation, the production key

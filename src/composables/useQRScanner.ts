@@ -68,7 +68,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
 
           // Redirect to withdraw if amount is 0
           if (data.amount === 0) {
-            initializeFlow(FlowName.NimWithdraw, { nimAddressInput: data.recipient })
+            initializeFlow(FlowName.NimWithdraw, { initialState: { nimAddressInput: data.recipient } })
             return
           }
 

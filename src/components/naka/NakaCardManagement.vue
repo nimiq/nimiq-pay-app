@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonItem, IonList } from '@ionic/vue'
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
 import CardDetails from '@/components/CardDetails.vue'
 import InputText from '@/components/InputText.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
@@ -8,10 +12,6 @@ import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
-import { Browser } from '@capacitor/browser'
-import { IonButton, IonItem, IonList } from '@ionic/vue'
-import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
 
 defineEmits(stepEmits)
 
@@ -45,16 +45,6 @@ async function unlockCard() {
     message: 'Card unlocked',
   })
 }
-
-async function resetNaka() {
-  if (!(await useNaka().reset()))
-    return
-  useToast().setToast({ message: 'NAKA data reset' })
-  useModal().closeModal()
-}
-
-const { getUserStatus } = useIssuerRestApi()
-getUserStatus().then(console.log) // eslint-disable-line no-console
 
 async function resetNaka() {
   if (!(await useNaka().reset()))

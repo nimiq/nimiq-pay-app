@@ -1,11 +1,11 @@
-import { useLogger } from '@/composables/useLogger'
-import { isDev } from '@/lib'
-import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { useApp } from '@/stores/app'
 import { until } from '@vueuse/core'
 import { SumsubMobileSdk, SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import { useLogger } from '@/composables/useLogger'
+import { isDev } from '@/lib'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { useApp } from '@/stores/app'
 
 const logger = useLogger('useKyc')
 const { language } = storeToRefs(useApp())

@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import type { UserStatusResponse } from '@/lib/issuer-schemas/rest.schema'
+import { IonButton } from '@ionic/vue'
+import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
+import { storeToRefs } from 'pinia'
 import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { useKyc } from '@/stores/kyc'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
-import { IonButton } from '@ionic/vue'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
-import { storeToRefs } from 'pinia'
 
 const emit = defineEmits(stepEmits)
-
-const { registerForNaka, getUserStatus, getNakaIdentificationToken, createFakeIdentification, getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
-const { initializeSdk, openKycFlow, waitForStatusApproved } = useKyc()
-const { sdkStatus } = storeToRefs(useKyc())
 
 const { registerForNaka, getUserStatus } = useIssuerRestApi()
 const { initializeSdk, openKycFlow } = useKyc()

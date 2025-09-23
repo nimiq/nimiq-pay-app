@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { TransactionListState, useTransactions } from '@/stores/transactions'
-import { storeToRefs } from 'pinia'
 import QuickButton from './QuickButton.vue'
 import TransactionItem from './TransactionItem.vue'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'

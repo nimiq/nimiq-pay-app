@@ -1,14 +1,14 @@
-import type { AsyncResult } from '@/types'
 import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTransactionDetails } from '@nimiq/core'
+import type { AsyncResult } from '@/types'
+import { until, useTimeoutFn, useTimestamp } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib'
 import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
-import { until, useTimeoutFn, useTimestamp } from '@vueuse/core'
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
 
 const logger = useLogger('useNimiqNetwork')
 

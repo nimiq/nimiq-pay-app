@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { show = false } = defineProps<{ show: boolean, cardNumber?: string, cvc?: string, expiry?: { year: number, month: number } }>()
+const { show = false } = defineProps<{ show?: boolean, cardNumber?: string, cvc?: string, expiry?: { year: number, month: number } }>()
 </script>
 
 <template>
