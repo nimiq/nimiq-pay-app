@@ -11,8 +11,8 @@ import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
 
+const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
-
 const { card } = useNaka()
 
 const { remoteBalance } = storeToRefs(useRemoteSigner())
@@ -98,9 +98,12 @@ watch(paymentRejection, (rejection) => {
   })
 })
 
-onMounted(() => {
-  HCESdk.setAsPreferredService()
-})
+watch(() => props.isVisible, async (isVisible) => {
+  if (isVisible && card && card.statusId === 'ACTIVE') {
+    // TODO: show error message if this fails
+    await HCESdk.setAsPreferredService()
+  }
+}, { immediate: true })
 </script>
 
 <template>
