@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { HCESdk } from 'capacitor-monetplus-hce'
+import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
+import { useLogger } from '@/composables/useLogger'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
 import { useNaka } from '@/stores/naka'
@@ -16,6 +17,7 @@ const colors: Record<NakaCardColor, string[]> = {
   // purple: TODO - The SVG is not the same :/
 }
 
+const logger = useLogger('NakaCard')
 const { getNakaCardPinChangeToken, changeNakaCardPin, getSecretData } = useIssuerRestApi()
 const { card } = storeToRefs(useNaka())
 const { setCard } = useNaka()
@@ -23,16 +25,21 @@ const { setCard } = useNaka()
 onMounted(async () => {
   await HCESdk.initialize({ storageName: 'naka-card' })
   const { cards } = await HCESdk.getAllSucceededCards()
-  console.log('Cards: in SDK storage', cards)
+  logger.log('Cards: in SDK storage', cards)
 
   if (!card.value) {
     // If card is not set, we can assume the user has not registered for a Naka card yet
-    console.warn('Naka card is not set, user has not registered for a Naka card yet')
+    logger.warn('Naka card is not set, user has not registered for a Naka card yet')
     return
   }
 
   if (!card.value.activationCode) {
-    console.error('Card activation code is not set', card.value)
+    logger.error('Card activation code is not set', card.value)
+    return
+  }
+
+  if (cards.find(c => c.id === card.value?.hceId)) {
+    logger.log('Naka card is already activated in the SDK', { card })
     return
   }
 
@@ -55,18 +62,25 @@ onMounted(async () => {
     Cvc2: string
   }
 
-  const { success } = await HCESdk.activateCard({
+  const { success, cardId, error } = await HCESdk.activateCard({
     tenant: 'naka',
     activationCode: card.value.activationCode,
     proof: decryptedCard.Pan.slice(-6), // Last 6 digits of the card
   })
 
   if (!success) {
-    return console.error('Failed to activate Naka card', card.value)
+    if (error.errorType === ErrorType.CARD_ALREADY_ACTIVATED) {
+      const id = error.message?.match(/card with id: (.+)$/)?.[1]
+      console.warn('Naka card is already activated in the SDK, setting card in store', { card, error, cardId: id })
+      if (id)
+        setCard({ ...card.value, hceId: id })
+      return
+    }
+    return console.error('Failed to activate Naka card', { card, error })
   }
 
-  console.log('Naka card activated successfully')
-  setCard(card.value)
+  logger.log('Naka card activated successfully')
+  setCard({ ...card.value, hceId: cardId })
 
   // Set card PIN
   const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(card.value.sourceId)
