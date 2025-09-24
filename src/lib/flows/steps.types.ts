@@ -201,6 +201,13 @@ type BaseStep = {
    * programme the behaviour you want.
    */
   beforeNext?: (state: State, callbacks: StepCallbacks) => Promise<void>
+  /**
+   * Hook that will be triggered when the back button has been pressed. If this
+   * function is not set, the default behaviour of the flow will be to go to the
+   * previous step. If you need custom logic, you should declare that logic
+   * inside this hook. Use the `callbacks` to programme the behaviour you want.
+   */
+  beforePrev?: (state: State, callbacks: StepCallbacks) => Promise<void>
 } & NavigationControl
 
 export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy' | 'skipAheadBy'>

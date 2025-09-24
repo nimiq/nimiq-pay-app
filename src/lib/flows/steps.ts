@@ -398,6 +398,9 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ pr
         prev()
       }
     },
+    beforePrev: async () => {
+      document.body.classList.remove('native-qr-scanner-modal-open')
+    },
   } satisfies Step
 }
 

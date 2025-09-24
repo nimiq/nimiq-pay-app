@@ -71,7 +71,9 @@ onMounted(ready)
 
 onBeforeUnmount(() => {
   document.body.classList.remove('native-qr-scanner-modal-open')
-  stop()
+  if (state.value === QRScannerState.Scanning)
+    stop()
+
   if (props.isVisible)
     useToast().clearToast()
 })

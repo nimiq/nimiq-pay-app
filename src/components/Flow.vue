@@ -150,9 +150,7 @@ async function navigateTo(options: NavigateToOptions = 1) {
   if (props.isClosing)
     return
 
-  const currentIndex = stepsInFlow.findIndex(
-    s => s.step === activeStep.value?.step,
-  )
+  const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
   let newIndex: number = currentIndex + 1
 
   if (typeof options === 'number') {
@@ -182,9 +180,11 @@ async function navigateTo(options: NavigateToOptions = 1) {
   if (!newActiveStep)
     return
 
-  await newActiveStep.beforeRender?.(state.value, stepCallbacks.value)
-
   const isGoingForward = newIndex > activeIndex.value
+  if (!isGoingForward && activeStep.value.beforePrev)
+    await activeStep.value.beforePrev(state.value, stepCallbacks.value)
+
+  await newActiveStep.beforeRender?.(state.value, stepCallbacks.value)
 
   if (isGoingForward) {
     historyStack.value.push(newActiveStep)
