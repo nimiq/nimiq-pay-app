@@ -27,6 +27,7 @@ async function handleConfirm() {
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
     if (hasCard.value) {
+      await HCESdk.initialize({ storageName: 'naka-card' })
       const { cards } = await HCESdk.getAllSucceededCards()
       console.log('Cards: in SDK storage', cards)
       for (const card of cards) {
