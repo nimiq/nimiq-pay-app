@@ -6,6 +6,7 @@ import type {
   AuthStartRequest,
   AuthStartResponse,
   Identification,
+  IdentificationTokenResponse,
   NakaCard,
   NakaEncryptedCardDataResponse,
   NakaPinChangeResponse,
@@ -20,6 +21,7 @@ import {
   AuthCompleteResponseSchema,
   AuthStartResponseSchema,
   IdentificationSchema,
+  IdentificationTokenResponseSchema,
   NakaCardSchema,
   NakaEncryptedCardDataResponseSchema,
   NakaPinChangeResponseSchema,
@@ -175,8 +177,8 @@ export function useIssuerRestApi() {
     return api('/user/status', 'GET', '', UserStatusResponseSchema)
   }
 
-  async function getNakaIdentificationToken(): Promise<string> {
-    return api('/naka/identification/token', 'GET', '', string())
+  async function getNakaIdentificationToken(): Promise<IdentificationTokenResponse> {
+    return api('/naka/identification/token', 'GET', '', IdentificationTokenResponseSchema)
   }
 
   async function getNakaIdentificationById(id: string): Promise<Identification> {

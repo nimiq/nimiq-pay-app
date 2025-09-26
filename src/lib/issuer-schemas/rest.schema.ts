@@ -70,6 +70,15 @@ export const IdentificationSchema = v.pipe(
 
 export type Identification = v.InferOutput<typeof IdentificationSchema>
 
+export const IdentificationTokenResponseSchema = v.pipe(
+  v.object({
+    token: v.string(),
+    tokenExpiresAt: v.string(), // ISO date string
+  }),
+)
+
+export type IdentificationTokenResponse = v.InferOutput<typeof IdentificationTokenResponseSchema>
+
 export const NakaCardSchema = v.pipe(
   v.object({
     id: v.string(),

@@ -1,11 +1,12 @@
-import { until } from '@vueuse/core'
+import type { IdentificationTokenResponse } from '@/lib/issuer-schemas/rest.schema'
+import { until, useStorageAsync } from '@vueuse/core'
 import { SumsubMobileSdk, SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { useApp } from '@/stores/app'
+import { kv, useApp } from '@/stores/app'
 
 const logger = useLogger('useKyc')
 const { language } = storeToRefs(useApp())
@@ -39,26 +40,37 @@ export enum SumsubErrorType {
 export const useKyc = defineStore('kyc', () => {
   const sdkStatus = ref<SumsubSdkStatus>(SumsubSdkStatus.NOT_INITIALIZED)
   const onKycApproved = ref<() => Promise<void>>()
+  const accessToken = useStorageAsync<IdentificationTokenResponse>('sumsubAccessToken', { token: '', tokenExpiresAt: '' }, kv(), { writeDefaults: false })
 
   async function initializeSdk() {
-    let accessToken
     try {
-      accessToken = await getNakaIdentificationToken()
-      console.log('Naka identification token:', accessToken)
+      // TODO: improve this logic, a bit ugly
+      const tokenExpiry = new Date(accessToken.value.tokenExpiresAt || 0)
+      if (tokenExpiry > new Date()) {
+        logger.log('Using stored Sumsub access token, expires at', tokenExpiry.toISOString())
+      }
+      else {
+        logger.log('Stored Sumsub access token expired at', tokenExpiry.toISOString())
+        await updateNakaIdentificationToken()
+      }
     }
     catch (error) {
-      if (error instanceof Error && error.message.includes('User already has an identification')) {
-        return logger.log('User already has an identification, skipping token retrieval')
+      if (error instanceof Error && error.message.includes('User already has a verified identification')) {
+        return logger.log('User already has a verified identification, skipping token retrieval')
       }
       logger.error('Error getting Naka identification token:', error)
       // TODO: display error
       throw error
     }
 
+    if (!accessToken.value.token) {
+      throw new Error('No access token available for Sumsub SDK initialization')
+    }
+
     registerListeners()
 
     const { status } = await SumsubMobileSdk.initialize({
-      accessToken,
+      accessToken: accessToken.value.token,
       debug: isDev,
       locale: language.value,
       isAnalyticsEnabled: false,
@@ -75,7 +87,7 @@ export const useKyc = defineStore('kyc', () => {
   function registerListeners() {
     SumsubMobileSdk.addListener('onTokenExpired', async () => {
       logger.log('Token expired event')
-      SumsubMobileSdk.setAccessToken({ token: await getNakaIdentificationToken() })
+      await updateNakaIdentificationToken()
     })
 
     SumsubMobileSdk.addListener('onVerificationStatusChanged', (status) => {
@@ -97,6 +109,23 @@ export const useKyc = defineStore('kyc', () => {
     SumsubMobileSdk.addListener('onLog', (event) => {
       logger.log('Log received:', event)
     })
+  }
+
+  async function updateNakaIdentificationToken() {
+    logger.log('Updating Naka identification token')
+    accessToken.value = { token: '', tokenExpiresAt: '' }
+    try {
+      accessToken.value = await getNakaIdentificationToken()
+      await SumsubMobileSdk.setAccessToken({ token: accessToken.value.token })
+    }
+    catch (error) {
+      if (error instanceof Error && error.message.includes('User already has an identification')) {
+        return logger.log('User already has an identification, skipping token retrieval')
+      }
+      logger.error('Error getting Naka identification token:', error)
+      // TODO: display error
+      throw error
+    }
   }
 
   return {
