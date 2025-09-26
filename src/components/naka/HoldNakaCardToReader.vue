@@ -10,6 +10,7 @@ import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
+import NfcPos from '@/components/icons/nfc-pos.vue'
 
 const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
@@ -110,15 +111,34 @@ watch(() => props.isVisible, async (isVisible) => {
   <div class="flex flex-col items-center w-full h-full">
     <template v-if="card">
       <NakaCard class="w-full h-auto" />
-      <div v-if="!isReady" class="mt-6 text-orange-400 font-semibold">
-        {{ $t('Connecting to issuer server...') }}
-      </div>
-      <div v-else-if="card.statusId === 'ACTIVE'" class="mt-6 text-[#0075E1] opacity-60">
-        {{ $t('Hold near the terminal to pay') }}
+      <div class="mt-20 font-bold text-lg">
+        <div class="w-16 h-16 mx-auto mb-3 relative">
+          <svg
+            class="w-16 h-16 absolute animate-spin text-sky transition-opacity"
+            viewBox="0 0 64 64"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+            :class="{ 'opacity-0': isReady }"
+          >
+            <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128"></circle>
+          </svg>
+          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{'opacity-0': !isReady || card.statusId !== 'ACTIVE'}" />
+        </div>
+        <template v-if="isReady">
+          <span v-if="card.statusId === 'ACTIVE'" class="text-sky">
+            {{ $t('Hold your phone near the terminal') }}
+          </span>
+          <span v-else class="text-tomato">
+            {{ $t('No active card') }}
+          </span>
+        </template>
       </div>
     </template>
     <div v-else>
-      No NAKA card found
+      <span class="text-neutral-500">
+        {{ $t('No NAKA card found') }}
+      </span>
     </div>
 
     <!-- div class="mt-auto mb-24 text-center">
