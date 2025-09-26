@@ -1,12 +1,17 @@
 import type { NakaCard as ApiNakaCard, Identification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
+import { until } from '@vueuse/core'
 import { HCESdk } from 'capacitor-monetplus-hce'
-import { defineStore } from 'pinia'
+import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
-import { useLogger } from '../composables/useLogger'
-import { SQLQuery } from '../lib/sql-queries'
-import { useConn } from './conn'
+import { useLogger } from '@/composables/useLogger'
+import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
+import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('useNaka')
+
+const { registerForNaka, getUserStatus } = useIssuerRestApi()
 
 export interface CardExpiry {
   year: number
@@ -97,6 +102,7 @@ export interface NakaRegistration {
 }
 
 export const useNaka = defineStore('naka', () => {
+  const { isAppStarting } = storeToRefs(useLocks())
   const { getAllNakaCards, insertNakaCard, purgeNakaCards } = useNakaDb()
 
   const registration = ref<NakaRegistration>()
@@ -108,6 +114,9 @@ export const useNaka = defineStore('naka', () => {
 
   const card = ref<NakaCard>()
 
+  /**
+   * Saves the given card in the store and in the database.
+   */
   async function setCard(newCard: NakaCard) {
     logger.log('setCard', newCard)
     await insertNakaCard(newCard)
@@ -135,25 +144,36 @@ export const useNaka = defineStore('naka', () => {
 
   async function init() {
     const dbCards = await getAllNakaCards()
-    if (dbCards.length === 0)
-      return
+    if (dbCards.length === 0) {
+      // Get the cards from the API (used when login)
+      logger.log('No card found in DB, getting it from the server')
+      await until(isAppStarting).toBe(false)
+      const user = await getUserStatus()
+      if (user.identifications.find(identification => identification.status === 'VERIFIED'))
+        await setupCard(user)
+      else
+        return
+    }
 
     if (dbCards.length === 1) {
       card.value = dbCards[0]
     }
     else {
       dbCards.sort((a, b) => {
-        // Sort decending (latest expiry first)
+        // Sort descending (latest expiry first)
         return (b.expiry.year - a.expiry.year) || (b.expiry.month - a.expiry.month)
       })
-      // Use the newest card
-      card.value = dbCards[0]
+      if (dbCards[0]?.statusId === 'ACTIVE') {
+        // Use the newest card
+        card.value = dbCards[0]
+      }
     }
 
     logger.log('init', card.value)
+    if (!card.value)
+      return
 
     // TODO: Check card status against issuer API?
-
     if (card.value.statusId === 'ACTIVE') {
       // Check expiry
       if (
@@ -180,11 +200,35 @@ export const useNaka = defineStore('naka', () => {
     paymentLimit.value = limit
   }
 
+  /**
+   * Registers the user in the issuer server and if the user has any cards, saves the active card in the store and db.
+   */
+  async function setupCard(user: UserStatusResponse) {
+    // TODO: get new card if current one blocked?
+    const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
+    const { setRegistration, setCard } = useNaka()
+    setRegistration({
+      state: user.state,
+      nakaIdentification: user.identifications.find(i => i.id === registration.identification),
+      nakaCards: registration.cards.map(nakaCardFromApi),
+    })
+
+    if (registration.cards.length > 0) {
+      const cards = registration.cards.map(nakaCardFromApi).filter(x => x.statusId === 'ACTIVE').sort((a, b) => {
+        // Sort descending (latest expiry first)
+        return (b.expiry.year - a.expiry.year) || (b.expiry.month - a.expiry.month)
+      })
+      logger.log('User has NAKA cards, using the latest one', { cards })
+      await setCard(cards[0])
+    }
+  }
+
   return {
     registration,
     setRegistration,
     card,
     setCard,
+    setupCard,
     reset,
     hasCard,
     isCardActive,
