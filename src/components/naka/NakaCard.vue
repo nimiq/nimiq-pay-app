@@ -87,7 +87,9 @@ onMounted(async () => {
   const { JSEncrypt } = await import('jsencrypt/lib/index.js')
   const encrypter = new JSEncrypt()
   encrypter.setKey(publicKey)
-  const cypher = encrypter.encrypt('4242') // TODO: Use user's app PIN
+  // Set a random PIN (and let user change it later)
+  const PIN = (Math.floor(Math.random() * 9000) + 1000).toString(10)
+  const cypher = encrypter.encrypt(PIN)
   if (!cypher)
     throw new Error('Failed to encrypt PIN')
   await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
