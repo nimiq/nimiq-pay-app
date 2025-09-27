@@ -283,7 +283,9 @@ const paymentFlow: FlowInit = async () => {
     }
 
     const { useToast } = await import('@/composables/useToast')
-    useToast().setToast({ message: i18n.t('Payment successful') })
+    setTimeout(() => {
+      useToast().setToast({ message: i18n.t('Payment successful') })
+    }, 1000) // Allow the paymentPreview step to animate out before presenting the toast
   }
   const onCancel: Flow['onCancel'] = async () => {
     document.body.classList.remove('native-qr-scanner-modal-open')

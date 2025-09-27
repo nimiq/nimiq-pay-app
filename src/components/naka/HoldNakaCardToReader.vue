@@ -2,7 +2,7 @@
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
-import { onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -11,6 +11,7 @@ import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
 import NfcPos from '@/components/icons/nfc-pos.vue'
+import Check from '../icons/check.vue'
 
 const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
@@ -73,7 +74,13 @@ watch(paymentRequest, (request) => {
     }
     emit('done', {
       request: data,
-      confirmPayment: (serializedTx: string) => confirmPayment(request.id, request.rail, serializedTx),
+      confirmPayment: async (serializedTx: string) => {
+        await confirmPayment(request.id, request.rail, serializedTx)
+        // Trigger payment success animation
+        paymentSuccessful.value = true
+        // Delay closing to let payment animation finish and have an impact
+        await new Promise(resolve => setTimeout(resolve, 1500))
+      },
     })
     return
   }
@@ -85,7 +92,13 @@ watch(paymentRequest, (request) => {
   }
   emit('done', {
     request: data,
-    confirmPayment: (serializedTx: string) => confirmPayment(request.id, request.rail, serializedTx),
+    confirmPayment: async (serializedTx: string) => {
+      await confirmPayment(request.id, request.rail, serializedTx)
+      // Trigger payment success animation
+      paymentSuccessful.value = true
+      // Delay closing to let payment animation finish and have an impact
+      await new Promise(resolve => setTimeout(resolve, 1500))
+    },
   })
 })
 
@@ -100,18 +113,31 @@ watch(paymentRejection, (rejection) => {
 })
 
 watch(() => props.isVisible, async (isVisible) => {
-  if (isVisible && card && card.statusId === 'ACTIVE') {
+  if (isVisible && card?.statusId === 'ACTIVE') {
     // TODO: show error message if this fails
     await HCESdk.setAsPreferredService()
   }
 }, { immediate: true })
+
+const paymentSuccessful = ref(false)
 </script>
 
 <template>
-  <div class="flex flex-col items-center w-full h-full">
+  <div class="flex flex-col items-center w-full h-full relative">
     <template v-if="card">
-      <NakaCard class="w-full h-auto" />
-      <div class="mt-20 font-bold text-lg">
+      <NakaCard
+        class="w-full h-auto will-change-transform transition-transform ease-in-out duration-150 z-10"
+        :class="{'translate-y-32': paymentSuccessful}"
+      />
+      <div class="w-full absolute left-0 top-2">
+        <div
+          class="w-[74px] h-[74px] mx-auto rounded-full bg-algae p-5 shadow-md will-change-transform transition-transform ease-[cubic-bezier(0.34,1.56,0.64,1)] duration-200 delay-200"
+          :class="{'scale-0': !paymentSuccessful}"
+        >
+          <Check class="text-white" />
+        </div>
+      </div>
+      <div class="mt-20 font-bold text-lg transition-opacity duration-200" :class="{'opacity-0': paymentSuccessful}">
         <div class="w-16 h-16 mx-auto mb-3 relative">
           <svg
             class="w-16 h-16 absolute animate-spin text-sky transition-opacity"
@@ -135,10 +161,8 @@ watch(() => props.isVisible, async (isVisible) => {
         </template>
       </div>
     </template>
-    <div v-else>
-      <span class="text-neutral-500">
-        {{ $t('No NAKA card found') }}
-      </span>
+    <div v-else class="mt-20 font-bold text-lg text-neutral-500">
+      {{ $t('No NAKA card found') }}
     </div>
 
     <!-- div class="mt-auto mb-24 text-center">
