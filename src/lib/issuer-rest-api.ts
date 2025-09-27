@@ -14,7 +14,7 @@ import type {
   NakaRegistrationResponse,
   UserStatusResponse,
 } from './issuer-schemas/rest.schema'
-import { parse, string } from 'valibot'
+import { parse } from 'valibot'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import {

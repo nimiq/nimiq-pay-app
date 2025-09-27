@@ -2,7 +2,8 @@
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
+import NfcPos from '@/components/icons/nfc-pos.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -10,7 +11,6 @@ import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
-import NfcPos from '@/components/icons/nfc-pos.vue'
 import Check from '../icons/check.vue'
 
 const props = defineProps({ isVisible: Boolean })
@@ -20,6 +20,8 @@ const { card } = useNaka()
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 
 const { isReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/* , triggerPayment */ } = useIssuerWebSocket()
+
+const paymentSuccessful = ref(false)
 
 watch(paymentRequest, (request) => {
   if (!request)
@@ -118,8 +120,6 @@ watch(() => props.isVisible, async (isVisible) => {
     await HCESdk.setAsPreferredService()
   }
 }, { immediate: true })
-
-const paymentSuccessful = ref(false)
 </script>
 
 <template>
@@ -127,17 +127,17 @@ const paymentSuccessful = ref(false)
     <template v-if="card">
       <NakaCard
         class="w-full h-auto will-change-transform transition-transform ease-in-out duration-150 z-10"
-        :class="{'translate-y-32': paymentSuccessful}"
+        :class="{ 'translate-y-32': paymentSuccessful }"
       />
       <div class="w-full absolute left-0 top-2">
         <div
           class="w-[74px] h-[74px] mx-auto rounded-full bg-algae p-5 shadow-md will-change-transform transition-transform ease-[cubic-bezier(0.34,1.56,0.64,1)] duration-200 delay-200"
-          :class="{'scale-0': !paymentSuccessful}"
+          :class="{ 'scale-0': !paymentSuccessful }"
         >
           <Check class="text-white" />
         </div>
       </div>
-      <div class="mt-20 font-bold text-lg transition-opacity duration-200" :class="{'opacity-0': paymentSuccessful}">
+      <div class="mt-20 font-bold text-lg transition-opacity duration-200" :class="{ 'opacity-0': paymentSuccessful }">
         <div class="w-16 h-16 mx-auto mb-3 relative">
           <svg
             class="w-16 h-16 absolute animate-spin text-sky transition-opacity"
@@ -147,9 +147,9 @@ const paymentSuccessful = ref(false)
             aria-hidden="true"
             :class="{ 'opacity-0': isReady }"
           >
-            <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128"></circle>
+            <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128" />
           </svg>
-          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{'opacity-0': !isReady || card.statusId !== 'ACTIVE'}" />
+          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || card.statusId !== 'ACTIVE' }" />
         </div>
         <template v-if="isReady">
           <span v-if="card.statusId === 'ACTIVE'" class="text-sky">

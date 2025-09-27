@@ -101,31 +101,31 @@ onMounted(async () => {
     <g clip-path="url(#a)">
       <!-- <rect width="310" height="195.9" :fill="colors[color][0]" rx="13.6"/> -->
       <g clip-path="url(#b)">
-        <path fill="url(#c)" d="M-82 0h392v196H-82z"/>
-        <path fill="url(#d)" d="m11.3 123.3 58.8 105.1c4.3 7.6 12 12.2 20.4 12.2h117.7c8.3 0 16.1-4.6 20.3-12.2l58.8-105.1a25 25 0 0 0 0-24.3L228.5-6.2a23.3 23.3 0 0 0-20.3-12.1H90.5c-8.4 0-16.1 4.6-20.3 12.1L11.4 99a24.9 24.9 0 0 0 0 24.3Z"/>
-        <path fill="url(#e)" d="m-204 161.7 83.5 148.2c6 10.6 17 17.1 29 17.1h167c11.8 0 22.9-6.5 28.8-17l83.5-148.3a35 35 0 0 0 0-34.2L104.3-20.8c-6-10.6-17-17.1-28.9-17.1h-167c-11.9 0-22.9 6.5-28.8 17.1L-204 127.5c-6 10.6-6 23.6 0 34.2Z"/>
+        <path fill="url(#c)" d="M-82 0h392v196H-82z" />
+        <path fill="url(#d)" d="m11.3 123.3 58.8 105.1c4.3 7.6 12 12.2 20.4 12.2h117.7c8.3 0 16.1-4.6 20.3-12.2l58.8-105.1a25 25 0 0 0 0-24.3L228.5-6.2a23.3 23.3 0 0 0-20.3-12.1H90.5c-8.4 0-16.1 4.6-20.3 12.1L11.4 99a24.9 24.9 0 0 0 0 24.3Z" />
+        <path fill="url(#e)" d="m-204 161.7 83.5 148.2c6 10.6 17 17.1 29 17.1h167c11.8 0 22.9-6.5 28.8-17l83.5-148.3a35 35 0 0 0 0-34.2L104.3-20.8c-6-10.6-17-17.1-28.9-17.1h-167c-11.9 0-22.9 6.5-28.8 17.1L-204 127.5c-6 10.6-6 23.6 0 34.2Z" />
       </g>
-      <path stroke="#000" stroke-width=".1" d="M-82 0h391.9v195.9H-82z"/>
-      <path fill="#F8F8F8" d="M278 20.4h-8.9V41h4.5V21.2l7 19.7h9V20.4H285v19.8l-7-19.8Z"/>
+      <path stroke="#000" stroke-width=".1" d="M-82 0h391.9v195.9H-82z" />
+      <path fill="#F8F8F8" d="M278 20.4h-8.9V41h4.5V21.2l7 19.7h9V20.4H285v19.8l-7-19.8Z" />
     </g>
     <defs>
       <radialGradient id="c" cx="0" cy="0" r="1" gradientTransform="matrix(-392 0 0 -196 310 196)" gradientUnits="userSpaceOnUse">
-        <stop :stop-color="colors[color][1]"/>
-        <stop offset="1" :stop-color="colors[color][2]"/>
+        <stop :stop-color="colors[color][1]" />
+        <stop offset="1" :stop-color="colors[color][2]" />
       </radialGradient>
       <radialGradient id="d" cx="0" cy="0" r="1" gradientTransform="matrix(282 0 0 259 8.2 -18.3)" gradientUnits="userSpaceOnUse">
-        <stop :stop-color="colors[color][1]"/>
-        <stop offset="1" :stop-color="colors[color][2]"/>
+        <stop :stop-color="colors[color][1]" />
+        <stop offset="1" :stop-color="colors[color][2]" />
       </radialGradient>
       <radialGradient id="e" cx="0" cy="0" r="1" gradientTransform="matrix(401 0 0 365 -208.4 -37.9)" gradientUnits="userSpaceOnUse">
-        <stop :stop-color="colors[color][1]"/>
-        <stop offset="1" :stop-color="colors[color][2]"/>
+        <stop :stop-color="colors[color][1]" />
+        <stop offset="1" :stop-color="colors[color][2]" />
       </radialGradient>
       <clipPath id="a">
-        <rect width="310" height="195.9" fill="#fff" rx="13.6"/>
+        <rect width="310" height="195.9" fill="#fff" rx="13.6" />
       </clipPath>
       <clipPath id="b">
-        <path fill="#fff" d="M-82 0h392v196H-82z"/>
+        <path fill="#fff" d="M-82 0h392v196H-82z" />
       </clipPath>
     </defs>
   </svg>
