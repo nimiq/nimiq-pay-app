@@ -3,7 +3,6 @@ import { Browser } from '@capacitor/browser'
 import { IonButton, IonItem, IonList } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
-import CardDetails from '@/components/CardDetails.vue'
 import InputText from '@/components/InputText.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
@@ -19,8 +18,6 @@ const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRe
 const { setDailyLimit, setPaymentLimit } = useNaka()
 const newDailyLimit = ref<number | undefined>(dailyLimit.value)
 const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
-
-const showCardDetails = ref(false)
 
 async function lockCard() {
   if (!card.value)
@@ -56,24 +53,15 @@ async function resetNaka() {
 
 <template>
   <div class="flex flex-col h-full items-center w-max mx-auto">
-    <NakaCard class="w-full h-max" />
+    <NakaCard class="w-full h-max" :cardData="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}`} : undefined" />
 
     <div class="mt-8 flex items-center gap-6">
-      <button v-if="isCardActive" class="secondary" @click="showCardDetails = !showCardDetails">
-        {{ showCardDetails ? $t('Hide details') : $t('Show details') }}
-      </button>
-      <!-- <button v-else class="secondary" @click="createNewCard">
+      <!-- <button v-if="!isCardActive" class="secondary" @click="createNewCard">
         {{ $t('Add new card') }}
       </button> -->
     </div>
 
     <div v-if="isCardActive" class="h-12" />
-
-    <CardDetails
-      v-if="isCardActive"
-      :show="showCardDetails" :card-number="card?.cardNumber" :cvc="card?.cvc"
-      :expiry="card?.expiry"
-    />
 
     <template v-if="isCardActive">
       <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none self-start">
@@ -121,7 +109,7 @@ async function resetNaka() {
     </IonList>
 
     <QuickButton show-chevron center @click="resetNaka">
-      dev: Reset NAKA
+      DEV: Reset NAKA
     </QuickButton>
 
     <IonButton v-if="isCardActive && !isCardLocked" class="mt-auto mb-4 w-full" @click="lockCard">
@@ -131,7 +119,7 @@ async function resetNaka() {
       {{ $t('Unlock card') }}
     </IonButton>
 
-    <IonButton v-if="isCardActive" class="mt-auto mb-4 delete-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
+    <IonButton v-if="isCardActive" class="mb-4 delete-btn w-full" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
       {{ $t('Block card') }}
     </IonButton>
   </div>
