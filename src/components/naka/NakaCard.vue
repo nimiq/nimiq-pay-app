@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
@@ -13,10 +13,10 @@ const {
   color = 'blue',
   cardData,
 } = defineProps<{
-  color?: NakaCardColor,
+  color?: NakaCardColor
   cardData?: {
-    maskedPan: string,
-    expiry: string,
+    maskedPan: string
+    expiry: string
   } | {
     pan: string
     expiry: string
@@ -152,7 +152,9 @@ function formatPan(pan: string) {
       </defs>
     </svg>
     <div v-if="cardData" class="card-data absolute left-4 bottom-4 grid grid-cols-2 grid-rows-2 text-white text-lg tracking-widest">
-      <div class="col-span-2">{{ formatPan('pan' in cardData ? cardData.pan : cardData.maskedPan) }}</div>
+      <div class="col-span-2">
+        {{ formatPan('pan' in cardData ? cardData.pan : cardData.maskedPan) }}
+      </div>
       <div class="">
         <span class="text-xs font-sans tracking-normal block">Expires</span>
         {{ cardData.expiry }}

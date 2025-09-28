@@ -1,9 +1,6 @@
 <script setup lang="ts">
-import { Browser } from '@capacitor/browser'
-import { IonButton, IonItem, IonList } from '@ionic/vue'
+import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
-import InputText from '@/components/InputText.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
@@ -14,10 +11,10 @@ import { nakaCardFromApi, useNaka } from '@/stores/naka'
 
 defineEmits(stepEmits)
 
-const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRefs(useNaka())
-const { setDailyLimit, setPaymentLimit } = useNaka()
-const newDailyLimit = ref<number | undefined>(dailyLimit.value)
-const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
+const { card, /* dailyLimit, paymentLimit, */ isCardActive, isCardLocked } = storeToRefs(useNaka())
+// const { setDailyLimit, setPaymentLimit } = useNaka()
+// const newDailyLimit = ref<number | undefined>(dailyLimit.value)
+// const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
 
 async function lockCard() {
   if (!card.value)
@@ -53,7 +50,7 @@ async function resetNaka() {
 
 <template>
   <div class="flex flex-col h-full items-center w-max mx-auto">
-    <NakaCard class="w-full h-max" :cardData="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}`} : undefined" />
+    <NakaCard class="w-full h-max" :card-data="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}` } : undefined" />
 
     <!-- <div class="mt-8 flex items-center gap-6">
       <button v-if="!isCardActive" class="secondary" @click="createNewCard">
