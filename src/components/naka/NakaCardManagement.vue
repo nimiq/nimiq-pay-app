@@ -55,15 +55,15 @@ async function resetNaka() {
   <div class="flex flex-col h-full items-center w-max mx-auto">
     <NakaCard class="w-full h-max" :cardData="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}`} : undefined" />
 
-    <div class="mt-8 flex items-center gap-6">
-      <!-- <button v-if="!isCardActive" class="secondary" @click="createNewCard">
+    <!-- <div class="mt-8 flex items-center gap-6">
+      <button v-if="!isCardActive" class="secondary" @click="createNewCard">
         {{ $t('Add new card') }}
-      </button> -->
-    </div>
+      </button>
+    </div> -->
 
     <div v-if="isCardActive" class="h-12" />
 
-    <template v-if="isCardActive">
+    <!-- <template v-if="isCardActive">
       <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none self-start">
         {{ $t('Payment limits') }}
       </h2>
@@ -89,9 +89,9 @@ async function resetNaka() {
           {{ $t('save') }}
         </button>
       </form>
-    </template>
+    </template> -->
 
-    <IonList lines="none" class="mt-10 w-full mb-16">
+    <!-- <IonList lines="none" class="mt-10 w-full mb-16">
       <IonItem style="--padding-start:0">
         <a class="flex items-center gap-2 text-space font-semibold w-full" @click="Browser.open({ url: 'https://nimiq.com', toolbarColor: '#0582CA' })">
           <i-nimiq-help />
@@ -106,7 +106,7 @@ async function resetNaka() {
           <i-nimiq-chevron-right class="ml-auto text-xs " />
         </a>
       </IonItem>
-    </IonList>
+    </IonList> -->
 
     <QuickButton show-chevron center @click="resetNaka">
       DEV: Reset NAKA
