@@ -110,8 +110,8 @@ onMounted(async () => {
 
 function formatPan(pan: string) {
   if (pan.includes('*')) {
-    // Also mask the first 6 digits
-    pan = `******${pan.substring(6)}`
+    // Mask everything except the last 4 digits
+    pan = `************${pan.slice(-4)}`
   }
   return pan.match(/.{1,4}/g)?.join(' ') ?? ''
 }

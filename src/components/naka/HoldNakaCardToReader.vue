@@ -128,6 +128,7 @@ watch(() => props.isVisible, async (isVisible) => {
       <NakaCard
         class="w-full h-auto will-change-transform transition-transform ease-in-out duration-150 z-10"
         :class="{ 'translate-y-32': paymentSuccessful }"
+        :card-data="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}` } : undefined"
       />
       <div class="w-full absolute left-0 top-2">
         <div
