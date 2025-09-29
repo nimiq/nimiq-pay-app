@@ -12,6 +12,7 @@ type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
 const {
   color = 'blue',
   cardData,
+  reducedLayout = false,
 } = defineProps<{
   color?: NakaCardColor
   cardData?: {
@@ -22,6 +23,7 @@ const {
     expiry: string
     cvc: string
   }
+  reducedLayout?: boolean
 }>()
 const colors: Record<NakaCardColor, string[]> = {
   blue: ['#1473AA', '#265DD7', '#0582CA'],
@@ -113,6 +115,10 @@ function formatPan(pan: string) {
     // Mask everything except the last 4 digits
     pan = `************${pan.slice(-4)}`
   }
+  if (reducedLayout) {
+    // In reduced layout, only show the last 8 characters (e.g. '**** 1234')
+    pan = pan.slice(-8)
+  }
   return pan.match(/.{1,4}/g)?.join(' ') ?? ''
 }
 </script>
@@ -151,15 +157,21 @@ function formatPan(pan: string) {
         </clipPath>
       </defs>
     </svg>
-    <div v-if="cardData" class="card-data absolute left-4 bottom-4 grid grid-cols-2 grid-rows-2 text-white text-lg tracking-widest">
+    <div v-if="cardData"
+      class="card-data absolute left-4 bottom-4 grid grid-cols-2 text-white tracking-widest"
+      :class="{
+        'grid-rows-2 text-lg': !reducedLayout,
+        'grid-rows-1 font-medium': reducedLayout,
+      }"
+    >
       <div class="col-span-2">
         {{ formatPan('pan' in cardData ? cardData.pan : cardData.maskedPan) }}
       </div>
-      <div class="">
+      <div v-if="!reducedLayout" class="">
         <span class="text-xs font-sans tracking-normal block">Expires</span>
         {{ cardData.expiry }}
       </div>
-      <div class="">
+      <div v-if="!reducedLayout" class="">
         <span class="text-xs font-sans tracking-normal block">CVC</span>
         {{ 'cvc' in cardData ? cardData.cvc : '***' }}
       </div>
