@@ -1,17 +1,33 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
+import { shallowRef } from 'vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
 
 defineEmits(stepEmits)
 
 const { card, /* dailyLimit, paymentLimit, */ isCardActive, isCardLocked } = storeToRefs(useNaka())
+
+const showSecretData = shallowRef(false)
+const evaluatingCardData = shallowRef(false)
+const cardData = computedAsync(async () => {
+  if (!card.value)
+    return undefined
+  if (showSecretData.value) {
+    return await getDecryptedNakaCardData(card.value.sourceId)
+  }
+  else {
+    return { maskedPan: card.value.maskedPan, expiry: `${card.value.expiry.month}/${card.value.expiry.year.toString(10).substring(2, 4)}` }
+  }
+}, undefined, evaluatingCardData)
 // const { setDailyLimit, setPaymentLimit } = useNaka()
 // const newDailyLimit = ref<number | undefined>(dailyLimit.value)
 // const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
@@ -50,7 +66,7 @@ async function resetNaka() {
 
 <template>
   <div class="flex flex-col h-full items-center w-max mx-auto">
-    <NakaCard class="w-full h-max" :card-data="card ? { maskedPan: card.maskedPan, expiry: `${card.expiry.month}/${card.expiry.year.toString(10).substring(2, 4)}` } : undefined" />
+    <NakaCard class="w-full h-max" :card-data="cardData" :loading-animation="evaluatingCardData" @show-secret-data-change="showSecretData = !showSecretData" />
 
     <!-- <div class="mt-8 flex items-center gap-6">
       <button v-if="!isCardActive" class="secondary" @click="createNewCard">

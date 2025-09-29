@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
+import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
+import EyeCrossedIcon from '@/components/icons/eye-crossed.vue'
+import EyeIcon from '@/components/icons/eye.vue'
+import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useLogger } from '@/composables/useLogger'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { decryptRsa, generateRsaKey } from '@/lib/issuer-utils'
+import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { useNaka } from '@/stores/naka'
 
 type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
@@ -13,6 +17,7 @@ const {
   color = 'blue',
   cardData,
   reducedLayout = false,
+  loadingAnimation = false,
 } = defineProps<{
   color?: NakaCardColor
   cardData?: {
@@ -24,7 +29,11 @@ const {
     cvc: string
   }
   reducedLayout?: boolean
+  loadingAnimation?: boolean
 }>()
+
+const emit = defineEmits(['showSecretDataChange'])
+
 const colors: Record<NakaCardColor, string[]> = {
   blue: ['#1473AA', '#265DD7', '#0582CA'],
   gold: ['', '#EC991C', '#E9B213'],
@@ -33,7 +42,7 @@ const colors: Record<NakaCardColor, string[]> = {
 }
 
 const logger = useLogger('NakaCard')
-const { getNakaCardPinChangeToken, changeNakaCardPin, getSecretData } = useIssuerRestApi()
+const { getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
 const { card } = storeToRefs(useNaka())
 const { setCard } = useNaka()
 
@@ -59,28 +68,17 @@ onMounted(async () => {
   }
 
   // Get encrypted data card from issuer
-  const { publicKey: rsaPublicKey, privateKey: rsaPrivateKey } = await generateRsaKey()
-  const { cypher: cardCypher } = await getSecretData(card.value.sourceId, rsaPublicKey)
-  if (!cardCypher) {
-    console.error('Failed to get secret data for Naka card', card.value)
+  const decryptedCard = await getDecryptedNakaCardData(card.value.sourceId)
+  if (!decryptedCard) {
+    // TODO: Show error to user
+    logger.error('Failed to get decrypted Naka card data', { card })
     return
-  }
-  const decryptedCardPlain = await decryptRsa(cardCypher, rsaPrivateKey)
-  if (!decryptedCardPlain) {
-    console.error('Failed to decrypt Naka card data', card.value)
-    return
-  }
-
-  const decryptedCard = JSON.parse(decryptedCardPlain) as {
-    Pan: string
-    ExpiryDate: string
-    Cvc2: string
   }
 
   const { success, cardId, error } = await HCESdk.activateCard({
     tenant: 'naka',
     activationCode: card.value.activationCode,
-    proof: decryptedCard.Pan.slice(-6), // Last 6 digits of the card
+    proof: decryptedCard.pan.slice(-6), // Last 6 digits of the card
   })
 
   if (!success) {
@@ -121,6 +119,13 @@ function formatPan(pan: string) {
   }
   return pan.match(/.{1,4}/g)?.join(' ') ?? ''
 }
+
+function formatExpiry(expiry: string) {
+  // Format expiry from MMYY to MM/YY
+  if (expiry.length !== 4)
+    return expiry
+  return `${expiry.slice(0, 2)}/${expiry.slice(2)}`
+}
 </script>
 
 <template>
@@ -157,25 +162,37 @@ function formatPan(pan: string) {
         </clipPath>
       </defs>
     </svg>
-    <div v-if="cardData"
-      class="card-data absolute left-4 bottom-4 grid grid-cols-2 text-white tracking-widest"
-      :class="{
-        'grid-rows-2 text-lg': !reducedLayout,
-        'grid-rows-1 font-medium': reducedLayout,
-      }"
+    <div
+      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 pointer-events-none flex justify-center items-center"
+      :class="loadingAnimation ? 'opacity-100' : 'opacity-0'"
     >
-      <div class="col-span-2">
+      <LoadingSpinner v-if="loadingAnimation" class="size-10 text-white" />
+    </div>
+    <motion.div
+      v-if="cardData"
+      :animate="loadingAnimation ? { opacity: 0, y: 8 } : { opacity: 1, y: 0 }"
+      :transition="{ duration: 0.3 }"
+      class="card-data absolute px-6 bottom-4 grid grid-cols-[2fr_2fr_1fr] text-white w-full"
+      :class="reducedLayout ? 'grid-rows-1 font-medium' : 'grid-rows-2 text-lg'"
+    >
+      <div class="col-span-3">
         {{ formatPan('pan' in cardData ? cardData.pan : cardData.maskedPan) }}
       </div>
       <div v-if="!reducedLayout" class="">
         <span class="text-xs font-sans tracking-normal block">Expires</span>
-        {{ cardData.expiry }}
+        {{ formatExpiry(cardData.expiry) }}
       </div>
       <div v-if="!reducedLayout" class="">
         <span class="text-xs font-sans tracking-normal block">CVC</span>
         {{ 'cvc' in cardData ? cardData.cvc : '***' }}
       </div>
-    </div>
+      <div class="justify-self-end my-auto">
+        <button class="text-white" @click="() => emit('showSecretDataChange')">
+          <EyeCrossedIcon v-if="'cvc' in cardData" class="w-6" />
+          <EyeIcon v-else class="w-6" />
+        </button>
+      </div>
+    </motion.div>
   </div>
 </template>
 
