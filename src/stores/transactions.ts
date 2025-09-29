@@ -11,6 +11,7 @@ import { useLogger } from '@/composables/useLogger'
 
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
+import { nakaBufferAddresses } from '@/lib'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { useConn } from '@/stores/conn'
@@ -367,6 +368,17 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
+  async function setNakaTxRefunded(amount: number) {
+    const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
+    if (tx) {
+      tx.meta = {
+        ...tx.meta,
+        refunded: true,
+      }
+      await upsertTx(tx)
+    }
+  }
+
   const status = computed(() => {
     if (transactions.value.length === 0)
       return TransactionListState.Empty
@@ -388,6 +400,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
+    setNakaTxRefunded,
     clearTxHistory,
 
     // Search for transactions

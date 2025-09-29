@@ -85,7 +85,7 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
       :fiat-amount="fiat.total"
       :fiat-currency="fiat.currency"
       :payment-method="tx.paymentMethod || PaymentMethod.NIM"
-      :refunded="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded"
+      :refunded="tx.meta?.refunded"
     >
       <template v-if="tx.invoiced" #invoiced>
         {{ formatInvoiced(tx.invoiced) }}
@@ -108,7 +108,7 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
         <template v-if="isSwapPending">
           {{ $t('Pending') }}
         </template>
-        <template v-else-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
+        <template v-else-if="tx.meta?.refunded">
           {{ $t('Refunded') }}
         </template>
         <template v-else>

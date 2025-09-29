@@ -6,6 +6,7 @@ import { useReducedMotion } from 'motion-v'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { guessUserLanguage } from '@/i18n/i18n-setup'
+import { nakaBufferAddresses } from '@/lib'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from './conn'
 
@@ -117,6 +118,10 @@ export const useApp = defineStore('app', () => {
   }
 
   function addNewTopUpAddress(address: string) {
+    // Prevent adding NAKA buffer address, just in case
+    if (nakaBufferAddresses.includes(address))
+      return
+
     const addresses = topUpAddresses.value
     addresses.push(address)
     topUpAddresses.value = addresses

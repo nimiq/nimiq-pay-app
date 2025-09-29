@@ -15,6 +15,7 @@ import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { nakaBufferAddresses } from '@/lib'
 import { SQLQuery } from '@/lib/sql-queries'
 import { toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
@@ -354,6 +355,13 @@ export const useSync = defineStore('sync', () => {
 
       logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
 
+      // Don't store tx if it's a NAKA reversal, instead mark the tx that matches as reversed
+      if (nakaBufferAddresses.includes(tx.sender)) {
+        logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
+        // We have no data, so we just match by value
+        return useTransactions().setNakaTxRefunded(tx.value)
+      }
+
       // Only add non cashlink address to the withdrawal list
       if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING)
         useApp().addNewTopUpAddress(tx.sender)
@@ -467,10 +475,16 @@ export const useSync = defineStore('sync', () => {
       const accountTxs = await getAccountTransactions(localAddress.value!)
 
       await Promise.all(accountTxs.data.map(async (tx) => {
-      // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
-
+        // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
         if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
           return
+
+        // Don't store tx if it's a NAKA reversal, instead mark the tx that matches as reversed
+        if (nakaBufferAddresses.includes(tx.sender)) {
+          logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
+          // We have no data, so we just match by value
+          return useTransactions().setNakaTxRefunded(tx.value)
+        }
 
         const hash = tx.transactionHash
         if (userReceipts.some(dbTx => dbTx.hash === hash))
