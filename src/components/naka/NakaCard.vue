@@ -186,7 +186,7 @@ function formatExpiry(expiry: string) {
         <span class="text-xs font-sans tracking-normal block">CVC</span>
         {{ 'cvc' in cardData ? cardData.cvc : '***' }}
       </div>
-      <div class="justify-self-end my-auto">
+      <div v-if="!reducedLayout" class="justify-self-end my-auto">
         <button class="text-white" @click="() => emit('showSecretDataChange')">
           <EyeCrossedIcon v-if="'cvc' in cardData" class="w-6" />
           <EyeIcon v-else class="w-6" />
