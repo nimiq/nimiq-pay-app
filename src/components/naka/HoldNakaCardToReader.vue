@@ -15,7 +15,7 @@ import Check from '../icons/check.vue'
 
 const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
-const { card } = useNaka()
+const { card, isCardActive, isCardActiveOnDevice } = storeToRefs(useNaka())
 
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 
@@ -115,7 +115,7 @@ watch(paymentRejection, (rejection) => {
 })
 
 watch(() => props.isVisible, async (isVisible) => {
-  if (isVisible && card?.statusId === 'ACTIVE') {
+  if (isVisible && isCardActive.value && isCardActiveOnDevice.value) {
     // TODO: show error message if this fails
     await HCESdk.setAsPreferredService()
   }
@@ -154,7 +154,7 @@ watch(() => props.isVisible, async (isVisible) => {
           <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || card.statusId !== 'ACTIVE' }" />
         </div>
         <template v-if="isReady">
-          <span v-if="card.statusId === 'ACTIVE'" class="text-sky">
+          <span v-if="isCardActive && isCardActiveOnDevice" class="text-sky">
             {{ $t('Hold your phone near the terminal') }}
           </span>
           <span v-else class="text-tomato">

@@ -141,6 +141,7 @@ export const useNaka = defineStore('naka', () => {
   const isCardActive = computed(() => card.value?.statusId === 'ACTIVE')
   const isCardLocked = computed(() => card.value?.lockLevel !== null)
   const isCardBlocked = computed(() => card.value?.statusId === 'BLOCKED')
+  const isCardActiveOnDevice = computed(() => card.value?.hceId !== undefined)
 
   async function init() {
     const dbCards = await getAllNakaCards()
@@ -234,6 +235,7 @@ export const useNaka = defineStore('naka', () => {
     isCardActive,
     isCardLocked,
     isCardBlocked,
+    isCardActiveOnDevice,
     init,
 
     dailyLimit,

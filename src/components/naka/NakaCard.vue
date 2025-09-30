@@ -7,6 +7,7 @@ import EyeCrossedIcon from '@/components/icons/eye-crossed.vue'
 import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useLogger } from '@/composables/useLogger'
+import { useToast } from '@/composables/useToast'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { useNaka } from '@/stores/naka'
@@ -42,6 +43,8 @@ const colors: Record<NakaCardColor, string[]> = {
 }
 
 const logger = useLogger('NakaCard')
+const { setToast } = useToast()
+
 const { getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
 const { card } = storeToRefs(useNaka())
 const { setCard } = useNaka()
@@ -84,12 +87,16 @@ onMounted(async () => {
   if (!success) {
     if (error.errorType === ErrorType.CARD_ALREADY_ACTIVATED) {
       const id = error.message?.match(/card with id: (.+)$/)?.[1]
-      console.warn('Naka card is already activated in the SDK, setting card in store', { card, error, cardId: id })
+      logger.warn('Naka card is already activated in the SDK, setting card in store', { card, error, cardId: id })
       if (id)
         setCard({ ...card.value, hceId: id })
       return
     }
-    return console.error('Failed to activate Naka card', { card, error })
+    logger.error('Failed to activate Naka card', { card, error })
+    return setToast({
+      type: 'error',
+      message: 'Failed to activate NAKA card',
+    })
   }
 
   logger.log('Naka card activated successfully')
