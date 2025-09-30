@@ -267,7 +267,7 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
       {{ $t('Incl. fees') }}
     </template>
     <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
-      {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
+      {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${formatFiat(amounts?.fiatFeeAmount || 0)})` : '' }) }}
     </template>
   </TransactionAmounts>
   <div v-if="canPayWithPuntos" class="flex flex-col items-center w-full pb-6 mt-auto">
