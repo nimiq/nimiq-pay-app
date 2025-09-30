@@ -1,4 +1,4 @@
-import type { AccountType, Address, PlainAccountType, Transaction } from '@nimiq/core'
+import type { AccountType, Address, Transaction } from '@nimiq/core'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
 import type { AsyncResult } from '@/types'
 import type { PartialSendTxArgs } from '@/types/transactions'
@@ -290,10 +290,10 @@ async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner(
 
   const newTx = new Nimiq.Transaction(
     Nimiq.Address.fromString(receipt.details.sender),
-    typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType as PlainAccountType),
+    typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType),
     new Uint8Array(0),
     Nimiq.Address.fromString(receipt.details.recipient),
-    typeof receipt.details.recipientType === 'number' ? receipt.details.recipientType : toAccountType(receipt.details.recipientType as PlainAccountType),
+    typeof receipt.details.recipientType === 'number' ? receipt.details.recipientType : toAccountType(receipt.details.recipientType),
     Nimiq.BufferUtils.fromHex(typeof receipt.details.data === 'string' ? receipt.details.data : receipt.details.data.raw),
     BigInt(receipt.details.value),
     BigInt(receipt.details.fee),
@@ -354,7 +354,7 @@ function getValidityStartHeight() {
   return useRemoteSigner().remoteHeight + 1
 }
 
-export function toAccountType(type: PlainAccountType): AccountType {
+export function toAccountType(type: 'basic' | 'vesting' | 'htlc' | 'staking'): AccountType {
   switch (type) {
     case 'basic': return Nimiq.AccountType.Basic
     case 'vesting': return Nimiq.AccountType.Vesting

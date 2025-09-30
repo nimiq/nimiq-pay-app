@@ -1,4 +1,4 @@
-import type { Address, Transaction as NimiqTransaction, PlainAccountType } from '@nimiq/core'
+import type { Address, Transaction as NimiqTransaction } from '@nimiq/core'
 import type { MaybeRef } from 'vue'
 import type { AsyncResultApi } from '@/types'
 import type { Rail } from '@/types/transactions'
@@ -145,9 +145,9 @@ export interface Transaction {
   details: {
     format: string
     sender: string
-    senderType: PlainAccountType
+    senderType: 'basic' | 'vesting' | 'htlc' | 'staking'
     recipient: string
-    recipientType: PlainAccountType
+    recipientType: 'basic' | 'vesting' | 'htlc' | 'staking'
     value: number
     fee: number
     validityStartHeight: number
