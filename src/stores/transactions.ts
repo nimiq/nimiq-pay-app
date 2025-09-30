@@ -153,7 +153,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     if (!res.data!.txSent) {
-      logger.error('Transaction not sent by the cosigner, sending again', signedTx)
+      logger.error('Transaction not sent by the cosigner, sending again', signedTx.toPlain())
       await client.value!.waitForConsensusEstablished()
       const details = await client.value!.sendTransaction(signedTx)
       if (details.state === 'invalidated') {

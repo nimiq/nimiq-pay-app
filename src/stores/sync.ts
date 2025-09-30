@@ -105,15 +105,15 @@ export const useSync = defineStore('sync', () => {
 
     if (isHtlcActive.value && isRemoteOk.value) {
       isProcessingRemote.value = true
-      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
         logger.error('Error while liquidating HTLC', error)
         return
       }
-      if (tx) {
-        pendingRemoteDrainTxs.value.push(tx.tx)
+      if (data) {
+        pendingRemoteDrainTxs.value.push(data.tx)
       }
       else {
         logger.error('No transaction returned from sendTx when liquidating HTLC')
@@ -141,9 +141,9 @@ export const useSync = defineStore('sync', () => {
         logger.error('Error while extending HTLC validity', error)
         // Claim the funds after timeout from the remote signer
         // TODO: This is a temp fix for Nimiq 1.0 migration
-        const { data: tx, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
-        if (claimError || !tx) {
-          logger.error('Error while claiming funds from Remote after extending error', { claimError, tx })
+        const { data, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimError || !data) {
+          logger.error('Error while claiming funds from Remote after extending error', { claimError, data })
         }
       }
     }
@@ -165,15 +165,15 @@ export const useSync = defineStore('sync', () => {
         return
       }
       isProcessingRemote.value = true
-      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
         logger.error('Error while recovering funds from Remote', error)
       }
       else {
-        if (tx) {
-          pendingRemoteDrainTxs.value.push(tx.tx)
+        if (data) {
+          pendingRemoteDrainTxs.value.push(data.tx)
         }
         else {
           logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
@@ -775,13 +775,13 @@ export const useSync = defineStore('sync', () => {
       return
     }
     const transfer = end < headTimestamp.value ? Transfer.RemoteToLocalAfterTimeout : Transfer.RemoteToLocalImmediateReclaim
-    const { data: tx, error: errorTx } = await sendTx({ transfer, amount, sender: address })
+    const { data, error: errorTx } = await sendTx({ transfer, amount, sender: address })
     if (errorTx) {
       logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress(), amount })
       return
     }
-    if (tx)
-      pendingRemoteDrainTxs.value.push(tx.tx)
+    if (data)
+      pendingRemoteDrainTxs.value.push(data.tx)
     else
       logger.error('Error while draining remote signer. No transaction returned', { address: address.toUserFriendlyAddress(), amount })
 
