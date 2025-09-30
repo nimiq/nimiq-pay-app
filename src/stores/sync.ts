@@ -113,7 +113,7 @@ export const useSync = defineStore('sync', () => {
         return
       }
       if (tx) {
-        pendingRemoteDrainTxs.value.push(tx)
+        pendingRemoteDrainTxs.value.push(tx.tx)
       }
       else {
         logger.error('No transaction returned from sendTx when liquidating HTLC')
@@ -173,7 +173,7 @@ export const useSync = defineStore('sync', () => {
       }
       else {
         if (tx) {
-          pendingRemoteDrainTxs.value.push(tx)
+          pendingRemoteDrainTxs.value.push(tx.tx)
         }
         else {
           logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
