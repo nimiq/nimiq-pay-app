@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { IonButton } from '@ionic/vue'
+import { until, useIntervalFn } from '@vueuse/core'
 import { HCESdk } from 'capacitor-monetplus-hce'
 import { storeToRefs } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import NfcPos from '@/components/icons/nfc-pos.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
+import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerWebSocket } from '@/lib/issuer-websocket'
+import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Rail, Transfer } from '@/types/transactions'
@@ -15,12 +19,18 @@ import Check from '../icons/check.vue'
 
 const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
+
+const logger = useLogger('HoldNakaCardToReader')
+
 const { card, isCardActive, isCardActiveOnDevice } = storeToRefs(useNaka())
-
 const { remoteBalance } = storeToRefs(useRemoteSigner())
+const { isAppInBackground } = storeToRefs(useLocks())
 
-const { isReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/* , triggerPayment */ } = useIssuerWebSocket()
+const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/* , triggerPayment */ } = useIssuerWebSocket()
 
+const isNfcSupported = ref<boolean | null>(null)
+const isNfcEnabled = ref<boolean | null>(null)
+const isReady = computed(() => isServerReady.value && isNfcSupported.value !== null && isNfcEnabled.value !== null)
 const paymentSuccessful = ref(false)
 
 watch(paymentRequest, (request) => {
@@ -114,8 +124,28 @@ watch(paymentRejection, (rejection) => {
   })
 })
 
-watch(() => props.isVisible, async (isVisible) => {
-  if (isVisible && isCardActive.value && isCardActiveOnDevice.value) {
+const { pause: stopNfcCheck } = useIntervalFn(async () => {
+  // No need to check NFC status if we already know it's not supported
+  if (!isNfcSupported.value) {
+    const { isSupported } = await HCESdk.isNfcSupported()
+    logger.log('NFC supported:', isSupported)
+    isNfcSupported.value = isSupported
+    if (!isSupported) {
+      isNfcEnabled.value = false
+      stopNfcCheck()
+      return
+    }
+  }
+  const { isEnabled } = await HCESdk.isNfcEnabled()
+  logger.log('NFC enabled:', isEnabled)
+  isNfcEnabled.value = isEnabled
+}, 1000, { immediate: true })
+
+watch([() => props.isVisible, isNfcEnabled], async ([isVisible, isNfcEnabled]) => {
+  if (isVisible && isCardActive.value && isCardActiveOnDevice.value && isNfcEnabled) {
+    // Need to wait until app is in foreground (not in background) or it will crash the app
+    await until(isAppInBackground).toBe(false)
+    logger.log('Setting app as preferred NFC service')
     // TODO: show error message if this fails
     await HCESdk.setAsPreferredService()
   }
@@ -154,9 +184,24 @@ watch(() => props.isVisible, async (isVisible) => {
           <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || card.statusId !== 'ACTIVE' }" />
         </div>
         <template v-if="isReady">
-          <span v-if="isCardActive && isCardActiveOnDevice" class="text-sky">
+          <span v-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky">
             {{ $t('Hold your phone near the terminal') }}
           </span>
+          <span v-else-if="!isNfcSupported" class="text-tomato">
+            {{ $t('NFC is not supported on this device') }}
+          </span>
+          <div v-else-if="!isNfcEnabled" class="flex flex-col items-center">
+            <span class="text-tomato">
+              {{ $t('NFC is disabled, please enable it') }}
+            </span>
+            <!-- TODO: ask for a design for this -->
+            <IonButton
+              class="mt-4"
+              @click="() => HCESdk.openNfcSettings()"
+            >
+              {{ $t('Open NFC settings') }}
+            </IonButton>
+          </div>
           <span v-else class="text-tomato">
             {{ $t('No active card') }}
           </span>

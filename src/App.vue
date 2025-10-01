@@ -66,7 +66,11 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
 })
 
 let lastPauseTimestamp = 0
-App.addListener('pause', () => lastPauseTimestamp = Date.now())
+App.addListener('pause', () => {
+  const { isAppInBackground } = storeToRefs(useLocks())
+  lastPauseTimestamp = Date.now()
+  isAppInBackground.value = true
+})
 
 App.addListener('resume', async () => {
   const timeInBackground = Date.now() - lastPauseTimestamp
@@ -81,7 +85,8 @@ App.addListener('resume', async () => {
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')
   const { height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { isAppStarting } = storeToRefs(useLocks())
+  const { isAppStarting, isAppInBackground } = storeToRefs(useLocks())
+  isAppInBackground.value = false
 
   if (isAppStarting.value)
     return
