@@ -40,7 +40,7 @@ watch(paymentRequest, (request) => {
   // Verify card signature
   const cardSignature = request.signatures?.card
   if (!cardSignature) {
-    rejectPayment(request.id, request.rail, 'INVALID_REQUEST', 'Card signature is missing')
+    rejectPayment(request.id, request.rail, 'INVALID_SIGNATURE', 'Card signature is missing')
     return
   }
   // TODO: Parse signature (it's a 0x-prefixed hex string) and verify it against the card's public key (maybe the Monet+ SDK can do that)
@@ -51,7 +51,7 @@ watch(paymentRequest, (request) => {
 
   // Compare request.amount with the available balance
   if (Number.parseInt(request.amount, 10) > remoteBalance.value) {
-    rejectPayment(request.id, request.rail, 'INSUFFICIENT_BALANCE')
+    rejectPayment(request.id, request.rail, 'INSUFFICIENT_BALANCE', 'Not enough balance')
     useToast().setToast({
       type: 'error',
       message: 'Insufficient balance',

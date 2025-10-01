@@ -21,9 +21,6 @@ export const HexStringSchema = v.pipe(v.string(), v.hexadecimal(), v.regex(/^([0
 export const ZeroXHexStringSchema = v.pipe(v.string(), v.regex(/^0x[0-9a-fA-F]+$/))
 export const PaymentRailSchema = v.string()
 
-export const IssuerRejectionCodeSchema = v.picklist(['INSUFFICIENT_BALANCE', 'INVALID_REQUEST', 'LIMIT_REACHED', 'UNFAIR_EXCHANGE_RATE', 'MISSING_KYC'])
-export type IssuerRejectionCode = v.InferOutput<typeof IssuerRejectionCodeSchema>
-
 export const StoreSchema = v.object({
   name: v.optional(v.string()),
   address: v.optional(v.string()),

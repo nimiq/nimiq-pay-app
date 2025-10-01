@@ -31,6 +31,7 @@ export default defineConfig({
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/bluecode-issuer.schema.ts', 'src/lib/issuer-schemas/bluecode-issuer.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/common.schema.ts', 'src/lib/issuer-schemas/common.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/rest.schema.ts', 'src/lib/issuer-schemas/rest.schema.ts')
+          copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/naka-issuer.schema.ts', 'src/lib/issuer-schemas/naka-issuer.schema.ts')
           copyFileSync('../nimiq-pay-issuer-server/nimiq-pay-issuer-common/src/ws.schema.ts', 'src/lib/issuer-schemas/ws.schema.ts')
           console.log('📋 Copied issuer server schemas')
         }

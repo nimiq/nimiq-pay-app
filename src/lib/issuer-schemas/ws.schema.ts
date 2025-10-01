@@ -1,5 +1,6 @@
 import * as v from 'valibot'
-import { HexStringSchema, IssuerRejectionCodeSchema, NimiqAddressSchema, NimiqAmountSchema, PaymentRailSchema, StoreSchema, ZeroXHexStringSchema } from './common.schema'
+import { HexStringSchema, NimiqAddressSchema, NimiqAmountSchema, PaymentRailSchema, StoreSchema, ZeroXHexStringSchema } from './common.schema'
+import { AuthorizationErrorCodeSchema as NakaAuthorizationErrorCodeSchema } from './naka-issuer.schema'
 
 export const ErrorMessageSchema = v.pipe(
   v.object({
@@ -211,7 +212,7 @@ export const PaymentRejectMessageSchema = v.pipe(
     ),
     message: v.optional(v.string()),
     code: v.optional(v.pipe(
-      IssuerRejectionCodeSchema,
+      NakaAuthorizationErrorCodeSchema,
       v.description('Reason to send for the rejection'),
     )),
     timings: v.optional(v.pipe(
@@ -257,7 +258,7 @@ export const PaymentRejectedMessageSchema = v.pipe(
     type: v.literal('payment:rejected'),
     rail: PaymentRailSchema,
     code: v.pipe(
-      IssuerRejectionCodeSchema,
+      NakaAuthorizationErrorCodeSchema,
       v.description('Reason sent for rejection'),
     ),
   }),
