@@ -127,10 +127,19 @@ watch(paymentRejection, (rejection) => {
 const { pause: stopNfcCheck } = useIntervalFn(async () => {
   // No need to check NFC status if we already know it's not supported
   if (!isNfcSupported.value) {
-    const { isSupported } = await HCESdk.isNfcSupported()
-    logger.log('NFC supported:', isSupported)
-    isNfcSupported.value = isSupported
-    if (!isSupported) {
+    try {
+      const { isSupported } = await HCESdk.isNfcSupported()
+      logger.log('NFC supported:', isSupported)
+      isNfcSupported.value = isSupported
+      if (!isSupported) {
+        isNfcEnabled.value = false
+        stopNfcCheck()
+        return
+      }
+    }
+    catch (error) {
+      logger.warn('Failed to check for NFC support:', error)
+      isNfcSupported.value = false
       isNfcEnabled.value = false
       stopNfcCheck()
       return
