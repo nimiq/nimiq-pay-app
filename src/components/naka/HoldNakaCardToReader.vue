@@ -15,7 +15,7 @@ import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Rail, Transfer } from '@/types/transactions'
+import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import Check from '../icons/check.vue'
 
 const props = defineProps({ isVisible: Boolean })
@@ -66,7 +66,7 @@ watch(paymentRequest, (request) => {
     recipient: request.recipient,
     amount: Number(request.amount),
     merchantName: request.store?.name,
-    // merchantCategory: MerchantCategory.Shop,
+    merchantCategory: MerchantCategory.Shop,
     rail: Rail.NakaCard,
     paymentRef: request.id,
     fee: 0,
