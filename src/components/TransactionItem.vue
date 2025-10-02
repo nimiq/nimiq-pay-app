@@ -33,7 +33,7 @@ const paymentMethod = computed(() => {
 const category = computed(() => {
   const { tx } = props
   if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-    return tx.merchantCategory
+    return tx.merchantCategory || MerchantCategory.Shop
   if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.AccountType.HTLC && tx.recipientType === Nimiq.AccountType.Basic)
     return 'withdraw'
   if (tx.transfer === Transfer.UserReceipt)
