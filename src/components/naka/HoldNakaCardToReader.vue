@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import NfcPos from '@/components/icons/nfc-pos.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -125,6 +126,12 @@ watch(paymentRejection, (rejection) => {
 })
 
 const { pause: stopNfcCheck } = useIntervalFn(async () => {
+  if (useDevice().isWeb) {
+    isNfcSupported.value = false
+    isNfcEnabled.value = false
+    stopNfcCheck()
+    return
+  }
   // No need to check NFC status if we already know it's not supported
   if (!isNfcSupported.value) {
     try {
