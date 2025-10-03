@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { Crypto } from '@/stores/app'
-import { calculateDisplayedDecimals } from '@/lib/utils'
-import { DECIMALS } from '@/stores/app'
 import { Amount } from '@nimiq/vue3-components'
 import { computed } from 'vue'
+import { calculateDisplayedDecimals } from '@/lib/utils'
+import { DECIMALS } from '@/stores/app'
 
 const { amount, currency, minDecimals } = defineProps({
   amount: {
@@ -31,7 +31,7 @@ const decimals = computed(() => {
 <template>
   <Amount
     :decimals="decimals"
-    :amount="amount"
+    :amount="amount || 0"
     :currency="currency"
     :currency-decimals="DECIMALS[currency]"
   />

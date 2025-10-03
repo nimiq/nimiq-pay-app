@@ -1,35 +1,25 @@
 <script setup lang="ts">
+import type { PropType } from 'vue'
+import type { State } from '@/lib/flows/steps.types'
+import { IonButton } from '@ionic/vue'
+import { ValidationUtils } from '@nimiq/utils'
+import { FiatAmount, Identicon } from '@nimiq/vue3-components'
+import { storeToRefs } from 'pinia'
+import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
+import CryptoAmount from '@/components/CryptoAmount.vue'
+import IconHorizontalEllipsis from '@/components/icons/horizontal-ellipsis.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
-import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { type State, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { IonButton, IonIcon } from '@ionic/vue'
-import { ValidationUtils } from '@nimiq/utils'
-import { FiatAmount, Identicon } from '@nimiq/vue3-components'
-import { chevronDown, chevronForward } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import {
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectItemText,
-  SelectPortal,
-  SelectRoot,
-  SelectScrollDownButton,
-  SelectTrigger,
-  SelectValue,
-  SelectViewport,
-} from 'radix-vue'
-import { computed, type PropType, ref, toRef, watch } from 'vue'
-import CryptoAmount from './CryptoAmount.vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -133,74 +123,30 @@ watch(errorMessage, (value) => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full mt-6 mb-8 gap-y-2">
+  <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
     <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
     <p class="max-w-full text-base font-semibold text-space/60">
       <CryptoAmount :amount="lunaAmount" :currency="Crypto.NIM" :min-decimals="DECIMALS.NIM" />
     </p>
   </div>
 
-  <!-- Address Selector -->
-  <SelectRoot v-model="selected" @update:open="(x: boolean) => isSelectOpen = x">
-    <SelectTrigger
-      class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
-      :class="{ 'rounded-b-none': isSelectOpen }"
-      :aria-label="$t('Select withdrawal address')"
-    >
-      <Identicon v-if="selected" :address="selected" class="w-8" />
-      <NimiqLogo v-else class="size-6" />
-      <SelectValue :placeholder="$t('Select an address…')" class="w-[inherit] min-w-full text-left overflow-hidden text-ellipsis whitespace-nowrap">
-        <MiddleEllipsis :text="selected" class="text-lg uppercase address" />
-      </SelectValue>
-      <TriangleIcon class="h-[10px] ml-auto will-change-[transform] transition-transform text-space/30" :class="{ 'rotate-90': isSelectOpen }" />
-    </SelectTrigger>
-
-    <SelectPortal>
-      <SelectContent
-        class="rounded will-change-[opacity,transform] data-[side=bottom]:animate-slideDownAndFade"
-        position="popper"
-        :side-offset="-4"
-        :align-offset="-16"
-        style="width: calc(var(--radix-popper-anchor-width) + 32px);"
-      >
-        <!-- <SelectScrollUpButton class="flex items-center justify-center h-[25px] cursor-default">
-          <IonIcon :icon="chevronUp" />
-        </SelectScrollUpButton> -->
-
-        <SelectViewport>
-          <SelectGroup class="p-1 rounded-md shadow-sm" style="background: radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%);">
-            <template v-for="option in options" :key="option">
-              <!-- We need to have this as hidden, not rendering it causes the Select to break -->
-              <SelectItem
-                v-if="option"
-                class="text-white px-4 py-3 leading-4 select-none data-[disabled]:text-space/20 data-[disabled]:pointer-events-none flex items-center gap-x-2"
-                :class="{ hidden: option === selected }"
-                :value="option"
-              >
-                <Identicon :address="option" class="w-6" />
-                <MiddleEllipsis :text="option" class="text-lg uppercase address !font-normal" />
-              </SelectItem>
-            </template>
-
-            <SelectItem
-              class="text-white pl-4 pr-2 py-3 leading-4 select-none flex items-center justify-between data-[disabled]:text-space/20 data-[disabled]:pointer-events-none"
-              value="nim"
-              @click.stop="() => $emit('done', '')"
-            >
-              <SelectItemText class="block overflow-hidden text-lg text-ellipsis whitespace-nowrap">
-                {{ $t('Add NIM address') }}
-              </SelectItemText>
-              <IonIcon :icon="chevronForward" class="w-6 h-6" />
-            </SelectItem>
-          </SelectGroup>
-        </SelectViewport>
-
-        <SelectScrollDownButton class="flex items-center justify-center h-[25px] bg-white text-violet11 cursor-default">
-          <IonIcon :icon="chevronDown" />
-        </SelectScrollDownButton>
-      </SelectContent>
-    </SelectPortal>
-  </SelectRoot>
+  <div
+    class="grid grid-cols-[auto_1fr_auto] gap-x-4 items-center w-max mx-auto p-3 pl-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
+    :aria-label="$t('Select withdrawal address')"
+    @click="initializeFlow(FlowName.AddressSelection, undefined, false, true)"
+  >
+    <Identicon v-if="selected" :address="selected" class="w-8" />
+    <NimiqLogo v-else class="size-6" />
+    <div class="text-lg uppercase address flex items-center gap-x-2">
+      <!-- First 4 characters -->
+      <span>{{ selected.slice(0, 4) }}</span>
+      <!-- Ellipsis -->
+      <IconHorizontalEllipsis class="w-6 text-space/30" />
+      <!-- Last 4 characters -->
+      <span>{{ selected.slice(-4) }}</span>
+    </div>
+    <TriangleIcon class="h-[10px] ml-auto text-space/30" />
+  </div>
 
   <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
@@ -237,5 +183,6 @@ watch(errorMessage, (value) => {
   font-family: 'Fira Mono', monospace;
   font-weight: 500;
   line-height: 20px;
+  letter-spacing: .2px;
 }
 </style>
