@@ -22,6 +22,7 @@ function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
 
+const isNakaEnabled = __ENABLE_NAKA__
 const { hasCard } = storeToRefs(useNaka())
 
 onLongPress(
@@ -60,7 +61,7 @@ onLongPress(
       {{ $t('Activate Cashback & Rewards') }}
     </IonItem>
 
-    <IonItem v-if="hasCard" button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
+    <IonItem v-if="hasCard && isNakaEnabled" button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
       {{ $t('NAKA Card') }}
     </IonItem>
 

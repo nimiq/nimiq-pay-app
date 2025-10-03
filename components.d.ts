@@ -7,9 +7,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    INimiqChevronRight: typeof import('~icons/nimiq/chevron-right')['default']
-    INimiqFileText: typeof import('~icons/nimiq/file-text')['default']
-    INimiqHelp: typeof import('~icons/nimiq/help')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
   }

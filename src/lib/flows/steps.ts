@@ -406,7 +406,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ pr
 
 export const holdNakaCardToReaderStep: StepInit = async () => ({
   step: StepName.HoldNakaCardToReader,
-  main: markRaw(HoldNakaCardToReader),
+  main: markRaw(__ENABLE_NAKA__ ? HoldNakaCardToReader : ComingSoon),
   beforeNext: async ({ holdNakaCardToReader: data }, { navigateTo, finalizeFlow }) => {
     const { request } = data
     if (request.meta?.requireUserConfirmation) {
@@ -638,24 +638,24 @@ export const whatIsNakaStep: StepInit = async () => ({
   step: StepName.WhatIsNaka,
   get title() { return i18n.t('Pay with NAKA Card') },
   get description() { return i18n.t('NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted.') },
-  main: markRaw(NakaOnboardingWhatIsNaka),
+  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingWhatIsNaka : ComingSoon),
 } satisfies Step)
 
 export const verifyYourIdNakaStep: StepInit = async () => ({
   step: StepName.VerifyYourIdNaka,
   get title() { return i18n.t('Verify your ID') },
   get description() { return i18n.t('Please verify yourself with SumSub to activate your NAKA card.') },
-  main: markRaw(NakaOnboardingVerifyId),
+  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingVerifyId : ComingSoon),
 } satisfies Step)
 
 export const nakaCardIsReadyStep: StepInit = async () => ({
   step: StepName.NakaCardIsReady,
-  main: markRaw(NakaCardIsReady),
+  main: markRaw(__ENABLE_NAKA__ ? NakaCardIsReady : ComingSoon),
 } satisfies Step)
 
 export const nakaCardManagementStep: StepInit = async () => ({
   step: StepName.NakaCardManagement,
-  main: markRaw(NakaCardManagement),
+  main: markRaw(__ENABLE_NAKA__ ? NakaCardManagement : ComingSoon),
 } satisfies Step)
 
 export const nakaCardDeleteStep: StepInit = async () => {
@@ -663,6 +663,6 @@ export const nakaCardDeleteStep: StepInit = async () => {
     step: StepName.NakaCardDelete,
     get title() { return i18n.t('Block card') },
     get description() { return i18n.t('Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one.') },
-    main: markRaw(NakaCardDelete),
+    main: markRaw(__ENABLE_NAKA__ ? NakaCardDelete : ComingSoon),
   } satisfies Step
 }

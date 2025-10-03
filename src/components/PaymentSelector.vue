@@ -14,7 +14,7 @@ const emit = defineEmits(stepEmits)
 const { isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const options = [
-  ...(isCardActive.value && !isCardLocked.value ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
+  ...(isCardActive.value && !isCardLocked.value && __ENABLE_NAKA__ ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
   { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
 ].filter(Boolean) as { label: string, value: StepName }[]
 const stepNames = options.map(o => o.value)

@@ -236,7 +236,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard], () => 
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value)
+  if (!hasNakaCard.value && __ENABLE_NAKA__)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 

@@ -144,6 +144,9 @@ export const useNaka = defineStore('naka', () => {
   const isCardActiveOnDevice = computed(() => card.value?.hceId !== undefined)
 
   async function init() {
+    if (!__ENABLE_NAKA__)
+      return logger.log('NAKA support not enabled, skipping naka store init')
+
     const dbCards = await getAllNakaCards()
     if (dbCards.length === 0) {
       // Get the cards from the API (used when login)

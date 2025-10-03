@@ -176,18 +176,21 @@ const paymentFlow: FlowInit = async () => {
   const [
     { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
-    { useNaka },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/naka')])
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
+
+  const { useNaka } = __ENABLE_NAKA__
+    ? await import('@/stores/naka')
+    : { useNaka: () => ({ isCardActive: false, isCardLocked: false }) }
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }),
+    __ENABLE_NAKA__ ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
-    (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }),
+    __ENABLE_BLUECODE__ ? (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }) : undefined,
     paymentRequestManualInputStep,
     paymentPreviewStep,
     pinCodeStep,
-  ].map(s => s({ flowName }))))
+  ].filter(s => s !== undefined).map(s => s({ flowName }))))
 
   const onDone: Flow['onDone'] = async (state, { err }) => {
     const { markAsUnknownTransactionTitle } = await import('@/types/transactions')
@@ -213,6 +216,8 @@ const paymentFlow: FlowInit = async () => {
       throw new Error('User can only pay with puntos if they have scanned a payment request')
     if (isBluecodePaymentRequest)
       throw new Error('Bluecode payments are not supported yet')
+    if (isNakaPaymentRequest && !__ENABLE_NAKA__)
+      throw new Error('Naka payments are not supported yet')
 
     // Only one of the state can be true, otherwise the flow is not as expected
     if ([isNimPaymentRequest, isNakaPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
