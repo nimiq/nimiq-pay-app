@@ -496,9 +496,10 @@ const flows = {
   [FlowName.NakaOnboarding]: nakaOnboardFlow,
   [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,
+
 }
 
-interface InitializeFlowOptiosn {
+interface InitializeFlowOptions {
   initialState?: Partial<State>
 
   /**
@@ -514,7 +515,7 @@ interface InitializeFlowOptiosn {
  * It initializes the flow given the name opening a new modal with the flow component
  * which handles the carousel of steps.
  */
-export async function initializeFlow(name: FlowName, options: InitializeFlowOptiosn = {}) {
+export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
   const { initialState, height = 'h-full', preventSwipe = false } = options
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   await useModal().closeModal()
