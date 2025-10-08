@@ -54,7 +54,7 @@
     "capacitor-monetplus-hce": "link:../capacitor-monetplus-hce",
     "capacitor-sumsub-mobile-sdk": "^0.0.1",
     "fuse.js": "^7.1.0",
-    "jsencrypt": "^3.3.2",
+    "jsencrypt": "3.3.2",
     "jssha": "^3.3.1",
     "libphonenumber-js": "^1.12.15",
     "light-bolt11-decoder": "^3.2.0",

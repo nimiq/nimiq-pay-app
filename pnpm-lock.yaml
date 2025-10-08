@@ -78,8 +78,8 @@ importers:
         specifier: ^7.1.0
         version: 7.1.0
       jsencrypt:
-        specifier: ^3.3.2
-        version: 3.5.4
+        specifier: 3.3.2
+        version: 3.3.2
       jssha:
         specifier: ^3.3.1
         version: 3.3.1
@@ -5017,8 +5017,8 @@ packages:
       canvas:
         optional: true
 
-  jsencrypt@3.5.4:
-    resolution: {integrity: sha512-kNjfYEMNASxrDGsmcSQh/rUTmcoRfSUkxnAz+MMywM8jtGu+fFEZ3nJjHM58zscVnwR0fYmG9sGkTDjqUdpiwA==}
+  jsencrypt@3.3.2:
+    resolution: {integrity: sha512-arQR1R1ESGdAxY7ZheWr12wCaF2yF47v5qpB76TtV64H1pyGudk9Hvw8Y9tb/FiTIaaTRUyaSnm5T/Y53Ghm/A==}
 
   jsesc@3.0.2:
     resolution: {integrity: sha512-xKqzzWXDttJuOcawBt4KnKHHIf5oQ/Cxax+0PWFG+DFDgHNAdi+TXECADI+RYiFUMmx8792xsMbbgXj4CwnP4g==}
@@ -13463,7 +13463,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  jsencrypt@3.5.4: {}
+  jsencrypt@3.3.2: {}
 
   jsesc@3.0.2: {}
 
