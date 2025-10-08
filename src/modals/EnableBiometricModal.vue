@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import PinInput from '@/components/PinInput.vue'
 import { useBiometric } from '@/composables/useBiometric'
@@ -7,8 +9,6 @@ import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
-import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
 
 const { isBiometricEnabled, setPinToSecureStorage } = useBiometric()
 const { closeModal } = useModal()

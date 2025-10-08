@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
+import { ref, watch } from 'vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { usePoints } from '@/stores/points'
-import { IonButton } from '@ionic/vue'
-import { ref, watch } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

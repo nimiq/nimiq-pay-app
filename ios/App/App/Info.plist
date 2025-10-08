@@ -57,5 +57,11 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>To be able to conduct KYC</string>
+	<key>NFCReaderUsageDescription</key>
+  <string>To be able to use pay with NFC</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+  <string>To be able to access location services while using the app</string>
 </dict>
 </plist>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { close } from 'ionicons/icons'
 import InfoIcon from '@/components/icons/info.vue'
 import { useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { close } from 'ionicons/icons'
 
 const { closeAllModals } = useModal()
 </script>

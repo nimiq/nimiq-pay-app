@@ -1,17 +1,22 @@
-import type { RemoteSignerTransactionState } from '@/composables/useApi'
-import type { SwapHtlc } from '@/types/swapHtlcs'
-import type { ExternalTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
-import type { TransactionState } from '@nimiq/core'
-import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core/web'
+import type { PlainAccount, PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { Ref } from 'vue'
+import type { RemoteSignerTransactionState } from '@/composables/useApi'
+import type { RemoteSigner } from '@/lib/sql-queries'
+import type { SwapHtlc } from '@/types/swapHtlcs'
+import type { ExternalTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
+import { SwapAsset } from '@nimiq/fastspot-api-v1'
+import { computedAsync, until, useTimeoutFn } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { nakaBufferAddresses } from '@/lib'
+import { SQLQuery } from '@/lib/sql-queries'
 import { toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -22,10 +27,6 @@ import { usePoints } from '@/stores/points'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
-import { SwapAsset } from '@nimiq/fastspot-api-v1'
-import { computedAsync, until, useTimeoutFn } from '@vueuse/core'
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
 
 const logger = useLogger('useSync')
 const { isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions, headChangePendingDrainLock, headChangeUpdatesLock, htlcCheckLock } = storeToRefs(useLocks())
@@ -104,15 +105,15 @@ export const useSync = defineStore('sync', () => {
 
     if (isHtlcActive.value && isRemoteOk.value) {
       isProcessingRemote.value = true
-      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
         logger.error('Error while liquidating HTLC', error)
         return
       }
-      if (tx) {
-        pendingRemoteDrainTxs.value.push(tx)
+      if (data) {
+        pendingRemoteDrainTxs.value.push(data.tx)
       }
       else {
         logger.error('No transaction returned from sendTx when liquidating HTLC')
@@ -140,9 +141,9 @@ export const useSync = defineStore('sync', () => {
         logger.error('Error while extending HTLC validity', error)
         // Claim the funds after timeout from the remote signer
         // TODO: This is a temp fix for Nimiq 1.0 migration
-        const { data: tx, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
-        if (claimError || !tx) {
-          logger.error('Error while claiming funds from Remote after extending error', { claimError, tx })
+        const { data, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimError || !data) {
+          logger.error('Error while claiming funds from Remote after extending error', { claimError, data })
         }
       }
     }
@@ -164,15 +165,15 @@ export const useSync = defineStore('sync', () => {
         return
       }
       isProcessingRemote.value = true
-      const { data: tx, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
         logger.error('Error while recovering funds from Remote', error)
       }
       else {
-        if (tx) {
-          pendingRemoteDrainTxs.value.push(tx)
+        if (data) {
+          pendingRemoteDrainTxs.value.push(data.tx)
         }
         else {
           logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
@@ -354,6 +355,13 @@ export const useSync = defineStore('sync', () => {
 
       logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
 
+      // Don't store tx if it's a NAKA reversal, instead mark the tx that matches as reversed
+      if (nakaBufferAddresses.includes(tx.sender)) {
+        logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
+        // We have no data, so we just match by value
+        return useTransactions().setNakaTxRefunded(tx.value)
+      }
+
       // Only add non cashlink address to the withdrawal list
       if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING)
         useApp().addNewTopUpAddress(tx.sender)
@@ -467,10 +475,16 @@ export const useSync = defineStore('sync', () => {
       const accountTxs = await getAccountTransactions(localAddress.value!)
 
       await Promise.all(accountTxs.data.map(async (tx) => {
-      // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
-
+        // TODO: Handle old remote signer setup transactions (recipientType === Nimiq.Account.Type.HTLC)
         if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
           return
+
+        // Don't store tx if it's a NAKA reversal, instead mark the tx that matches as reversed
+        if (nakaBufferAddresses.includes(tx.sender)) {
+          logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
+          // We have no data, so we just match by value
+          return useTransactions().setNakaTxRefunded(tx.value)
+        }
 
         const hash = tx.transactionHash
         if (userReceipts.some(dbTx => dbTx.hash === hash))
@@ -761,13 +775,13 @@ export const useSync = defineStore('sync', () => {
       return
     }
     const transfer = end < headTimestamp.value ? Transfer.RemoteToLocalAfterTimeout : Transfer.RemoteToLocalImmediateReclaim
-    const { data: tx, error: errorTx } = await sendTx({ transfer, amount, sender: address })
+    const { data, error: errorTx } = await sendTx({ transfer, amount, sender: address })
     if (errorTx) {
       logger.error(`Error while draining remote signer. ${error}`, { address: address.toUserFriendlyAddress(), amount })
       return
     }
-    if (tx)
-      pendingRemoteDrainTxs.value.push(tx)
+    if (data)
+      pendingRemoteDrainTxs.value.push(data.tx)
     else
       logger.error('Error while draining remote signer. No transaction returned', { address: address.toUserFriendlyAddress(), amount })
 

@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { FiatAmount } from '@nimiq/vue3-components'
+import { useSlots } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { Crypto } from '@/stores/app'
 import { PaymentMethod } from '@/types/transactions'
-import { FiatAmount } from '@nimiq/vue3-components'
-import { useSlots } from 'vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 import InvoiceIcon from './icons/invoice.vue'
 

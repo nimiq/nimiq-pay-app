@@ -1,14 +1,18 @@
-import type { AsyncResult } from '@/types'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import type { PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
+import type { DbPagination } from '@/lib/sql-queries'
+import type { AsyncResult } from '@/types'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, onMounted, readonly, ref } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
+
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { type DbPagination, DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
-
+import { nakaBufferAddresses } from '@/lib'
+import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -17,8 +21,6 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, readonly, ref } from 'vue'
 
 const logger = useLogger('transactions.ts')
 const { isSendingTx } = storeToRefs(useLocks())
@@ -86,7 +88,7 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.ClearTxHistory)
   }
 
-  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
+  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
     if (isSendingTx.value) {
       logger.error('A transaction is already in progress')
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
@@ -97,7 +99,7 @@ export const useTransactions = defineStore('transactions', () => {
     return res
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<TransactionSentByUser, string> {
+  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
     logger.log('✈️  Preparing new transaction', {
       partialTx,
       remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
@@ -128,7 +130,7 @@ export const useTransactions = defineStore('transactions', () => {
       patchedSwap = provideFundingProof(
         partialTx.paymentRef!,
         swap!.contracts.NIM!.id,
-        Nimiq.BufferUtils.toHex(signedTx.serialize()),
+        signedTx.toHex(),
       )
 
       // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later
@@ -151,7 +153,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     if (!res.data!.txSent) {
-      logger.error('Transaction not sent by the cosigner, sending again', signedTx)
+      logger.error('Transaction not sent by the cosigner, sending again', signedTx.toPlain())
       await client.value!.waitForConsensusEstablished()
       const details = await client.value!.sendTransaction(signedTx)
       if (details.state === 'invalidated') {
@@ -265,7 +267,7 @@ export const useTransactions = defineStore('transactions', () => {
       await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
     }
 
-    return { data: tx, error: undefined }
+    return { data: { tx, serialized: signedTx.toHex() }, error: undefined }
   }
 
   const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch()
@@ -366,6 +368,17 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
+  async function setNakaTxRefunded(amount: number) {
+    const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
+    if (tx) {
+      tx.meta = {
+        ...tx.meta,
+        refunded: true,
+      }
+      await upsertTx(tx)
+    }
+  }
+
   const status = computed(() => {
     if (transactions.value.length === 0)
       return TransactionListState.Empty
@@ -387,6 +400,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
+    setNakaTxRefunded,
     clearTxHistory,
 
     // Search for transactions

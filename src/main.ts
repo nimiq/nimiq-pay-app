@@ -1,32 +1,33 @@
-import { useDecrypt } from '@/composables/useDecrypt'
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
+import { IonicVue } from '@ionic/vue'
+import { devtools } from '@vue/devtools'
+// import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
+import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
 
+import { createPinia, storeToRefs } from 'pinia'
+import { createApp } from 'vue'
+import VueVirtualScroller from 'vue-virtual-scroller'
+import { useDecrypt } from '@/composables/useDecrypt'
+
+import { useDevice } from '@/composables/useDevice'
+
+import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { useApp } from '@/stores/app'
 /* Libs */
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
-import { IonicVue } from '@ionic/vue'
-
-import { devtools } from '@vue/devtools'
-// import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
-import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
-import { createPinia, storeToRefs } from 'pinia'
-import { createApp } from 'vue'
-import VueVirtualScroller from 'vue-virtual-scroller'
-
 import App from './App.vue'
 import router from './router'
+import { useNaka } from './stores/naka'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
 /* Basic CSS for apps built with Ionic */
 import '@ionic/vue/css/normalize.css'
+
 import '@ionic/vue/css/structure.css'
 
 import '@ionic/vue/css/typography.css'
-
 /* Optional CSS utils that can be commented out */
 import '@ionic/vue/css/padding.css'
 import '@ionic/vue/css/float-elements.css'
@@ -40,7 +41,7 @@ import './theme/variables.css'
 if (import.meta.env.DEV)
   // Change this based on your local IP address if you want to use vue-devtools
   // If you don't know your IP address, open vue-devtools and check the URL
-  devtools.connect('http://192.168.2.23', 8098)
+  devtools.connect('http://192.168.1.147', 8098)
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
@@ -66,6 +67,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await useConn().init()
   useNimiqNetwork().init()
   useLogger().init()
+  useNaka().init()
 
   const { isWeb } = useDevice()
 

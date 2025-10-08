@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import PinInput from '@/components/PinInput.vue'
-import { useDecrypt } from '@/composables/useDecrypt'
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
-import { useConn } from '@/stores/conn'
 import { Keyboard } from '@capacitor/keyboard'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import PinInput from '@/components/PinInput.vue'
+import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
+import { useConn } from '@/stores/conn'
 
 const logger = useLogger('PinView')
 const { dbExists } = storeToRefs(useConn())

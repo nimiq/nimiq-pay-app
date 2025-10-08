@@ -45,7 +45,7 @@ Step used to show only information to the user and the user is not required to d
 1. The flow will activate the first step when it is open for the first time or
    the [`useCarousel`](../../composables/useCarousel.ts) will update the
    `activeStep` if the carousel slides
-2. Once, the step is activated, the `async` function `beforeRender(state)` will
+2. Once the step is activated, the `async` function `beforeRender(state)` will
    be triggered. Read more about this function [in the
    definition](./steps.types.ts)
 3. The user can interact with the main component or the slide, and once the

@@ -1,12 +1,14 @@
+import type { MaybeRef } from 'vue'
+import type { FormatCryptoOptions, FormatFiatOptions } from '@/composables/useCurrencyFormatter'
+import { storeToRefs } from 'pinia'
+import { computed, reactive, ref, toRef, toValue, watch } from 'vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
-import { type FormatCryptoOptions, type FormatFiatOptions, useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { usePriceDb } from '@/composables/usePriceDb'
 import { toMs } from '@/composables/useTime'
 import { Crypto, DECIMALS, Fiat, useApp } from '@/stores/app'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { storeToRefs } from 'pinia'
-import { computed, type MaybeRef, reactive, ref, toRef, toValue, watch } from 'vue'
 
 const logger = useLogger('usePrice')
 

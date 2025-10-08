@@ -1,6 +1,7 @@
-import { useLogger } from '@/composables/useLogger'
+import type { MaybeRef, Ref } from 'vue'
 import { useScroll } from '@vueuse/core'
-import { computed, type MaybeRef, type Ref, ref, toValue } from 'vue'
+import { computed, onMounted, ref, toValue } from 'vue'
+import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useCarousel')
 
@@ -23,9 +24,23 @@ export function useCarousel(scroller: MaybeRef<HTMLElement | undefined>, options
 
     activeIndex.value = index
 
-    const item = elRef.value?.children[index]
-    window.requestAnimationFrame(() => item.scrollIntoView({ behavior: scrollBehavior, inline: 'center', block: 'nearest' }))
+    const item = elRef.value.children[index]
+    window.requestAnimationFrame(() =>
+      item.scrollIntoView({ behavior: scrollBehavior, inline: 'center', block: 'nearest' }),
+    )
   }
+
+  // If activeIndex is set to a value above zero initially, scroll to that slide.
+  onMounted(async () => {
+    if (elRef.value && activeIndex.value >= 0 && activeIndex.value < elRef.value.children.length) {
+      const item = elRef.value.children[activeIndex.value]
+      window.requestAnimationFrame(() =>
+        item.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' }),
+      )
+      // For some reason, sometimes the scroll do not happen
+      setTimeout(() => item.scrollIntoView({ behavior: 'instant', inline: 'center', block: 'nearest' }), 50)
+    }
+  })
 
   return {
     activeIndex,

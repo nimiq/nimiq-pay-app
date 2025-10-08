@@ -74,6 +74,15 @@ export enum SQLQuery {
   DeleteExpiredSwapQuotes = 'DELETE FROM swap_quotes WHERE timeout < ?',
   GetSwapQuote = 'SELECT * FROM swap_quotes WHERE ln_invoice = ? LIMIT 1',
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
+
+  // NAKA
+  CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
+  InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, JSON(?))',
+  // GetNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE sourceId = ? LIMIT 1',
+  // GetActiveNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE statusId = "Active" LIMIT 1',
+  GetAllNakaCards = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards',
+  DeleteNakaCard = 'DELETE FROM naka_cards WHERE sourceId = ?',
+  PurgeNakaCards = 'DELETE FROM naka_cards',
 }
 
 export const DEFAULT_LIMIT = 30
@@ -115,6 +124,12 @@ export const migrations: Migration[] = [
     toVersion: 4,
     statements: [
       SQLQuery.CreateSwapQuotesTable,
+    ],
+  },
+  {
+    toVersion: 5,
+    statements: [
+      SQLQuery.CreateNakaCardsTable,
     ],
   },
 ]

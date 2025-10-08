@@ -1,12 +1,5 @@
 <script setup lang="ts">
 import type { URLOpenListenerEvent } from '@capacitor/app'
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
-import { Modal, useModal } from '@/composables/useModal'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
-import { isDev } from '@/lib/index'
-import { useLocks } from '@/stores/locks'
 import { App } from '@capacitor/app'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
@@ -18,6 +11,13 @@ import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
+import { useDevice } from '@/composables/useDevice'
+import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
+import { isDev } from '@/lib/index'
+import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
@@ -61,12 +61,16 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   // TODO: accept also nimiq: scheme?
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
-    initializeFlow(FlowName.NimOrPointsPayment, { qrCodeScanner: url.toString() })
+    initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: url.toString() } })
   }
 })
 
 let lastPauseTimestamp = 0
-App.addListener('pause', () => lastPauseTimestamp = Date.now())
+App.addListener('pause', () => {
+  const { isAppInBackground } = storeToRefs(useLocks())
+  lastPauseTimestamp = Date.now()
+  isAppInBackground.value = true
+})
 
 App.addListener('resume', async () => {
   const timeInBackground = Date.now() - lastPauseTimestamp
@@ -81,7 +85,8 @@ App.addListener('resume', async () => {
   const { useRemoteSignerApi } = await import('@/composables/useApi')
   const { useNimiqNetwork } = await import('@/stores/nimiq-network')
   const { height: localHeight } = storeToRefs(useNimiqNetwork())
-  const { isAppStarting } = storeToRefs(useLocks())
+  const { isAppStarting, isAppInBackground } = storeToRefs(useLocks())
+  isAppInBackground.value = false
 
   if (isAppStarting.value)
     return

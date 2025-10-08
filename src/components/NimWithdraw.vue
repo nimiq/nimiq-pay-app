@@ -5,6 +5,7 @@ import { IonButton } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
 import { FiatAmount, Identicon } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
+
 import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
@@ -12,6 +13,7 @@ import IconHorizontalEllipsis from '@/components/icons/horizontal-ellipsis.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
+import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
@@ -131,9 +133,20 @@ watch(errorMessage, (value) => {
   </div>
 
   <div
+    class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
+    :aria-label="$t('Select withdrawal address')"
+    @click="emit('done', '')"
+  >
+    <Identicon v-if="selected" :address="selected" class="w-8" />
+    <NimiqLogo v-else class="size-6" />
+    <MiddleEllipsis :text="selected" class="text-lg uppercase address" />
+    <TriangleIcon class="h-[10px] ml-auto text-space/30" />
+  </div>
+
+  <div
     class="grid grid-cols-[auto_1fr_auto] gap-x-4 items-center w-max mx-auto p-3 pl-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
     :aria-label="$t('Select withdrawal address')"
-    @click="initializeFlow(FlowName.AddressSelection, undefined, false, true)"
+    @click="initializeFlow(FlowName.AddressSelection, { height: 'h-max' })"
   >
     <Identicon v-if="selected" :address="selected" class="w-8" />
     <NimiqLogo v-else class="size-6" />
@@ -186,3 +199,4 @@ watch(errorMessage, (value) => {
   letter-spacing: .2px;
 }
 </style>
+

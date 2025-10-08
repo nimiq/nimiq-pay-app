@@ -1,4 +1,16 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
+import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
+import { Clipboard } from '@capacitor/clipboard'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
+import { chevronForward } from 'ionicons/icons'
+import { motion } from 'motion-v'
+import { storeToRefs } from 'pinia'
+import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 import BackupNotification from '@/components/BackupNotification.vue'
 import AlertIcon from '@/components/icons/alert.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -21,28 +33,18 @@ import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
+import { useNaka } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 import { useTransactions } from '@/stores/transactions'
-
-import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
-import { Clipboard } from '@capacitor/clipboard'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
-import { chevronForward } from 'ionicons/icons'
-import { motion } from 'motion-v'
-import { storeToRefs } from 'pinia'
-import { computed, markRaw, onMounted, type Ref, ref, watch, watchEffect } from 'vue'
-import { useRouter } from 'vue-router'
 
 const logger = useLogger('HomeView')
 
@@ -61,6 +63,7 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
+const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 
 const isFirstRender = ref(true)
 
@@ -195,7 +198,14 @@ if (import.meta.env.DEV) {
   })
 }
 
-watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
+watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard], () => {
+  const nakaCardActivationNotification = {
+    id: 'activate-naka-card',
+    get title() { return i18n.t('Tap to pay with your NAKA card!') },
+    get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
+    action: () => initializeFlow(FlowName.NakaOnboarding),
+  }
+
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
@@ -215,12 +225,19 @@ watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
+  // Remove notification if user already has a Naka card
+  if (hasNakaCard.value) {
+    removeLocalNotification(nakaCardActivationNotification.id, false)
+  }
+
   if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
   else if (!referralCode.value && !phoneNumberVerified.value && isCampaignActive.value)
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
+  if (!hasNakaCard.value && __ENABLE_NAKA__)
+    addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
 watch(() => localNotifications.value.length, (newValue, oldValue) => {
@@ -317,7 +334,7 @@ App.addListener('resume', detectPaymentRequest)
             class="text-base normal-case"
             aria-label="Earn Points"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') })"
+            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { initialState: { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') } })"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
             {{ phoneNumberVerified ? (pointsBalance / 1e5).toLocaleString() : $t('Earn Points') }}
@@ -350,7 +367,7 @@ App.addListener('resume', detectPaymentRequest)
       >
         <TheHomeTransactions class="mt-8" />
 
-        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions, undefined, true)">
+        <QuickButton v-if="transactions.length > 3" show-chevron center @click="initializeFlow(FlowName.ViewTransactions, { preventSwipe: true })">
           {{ $t('See all') }}
         </QuickButton>
       </motion.div>
@@ -463,7 +480,7 @@ App.addListener('resume', detectPaymentRequest)
             class="w-3/4 py-2 mx-auto text-base" expand="block"
             :class="{ 'pb-0': isIOS }"
             :disabled="isPaymentDisabled"
-            @click="initializeFlow(FlowName.NimOrPointsPayment)"
+            @click="initializeFlow(FlowName.Payment)"
           >
             {{ $t('Pay') }}
           </IonButton>

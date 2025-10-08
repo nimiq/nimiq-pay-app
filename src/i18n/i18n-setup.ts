@@ -1,6 +1,7 @@
-import { useApp } from '@/stores/app'
+import type { PluralizationRule } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
-import { createI18n, type PluralizationRule } from 'vue-i18n'
+import { createI18n } from 'vue-i18n'
+import { useApp } from '@/stores/app'
 
 // import { setLanguage as setVueComponentsLanguage } from '@nimiq/vue3-components'
 

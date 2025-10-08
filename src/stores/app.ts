@@ -1,10 +1,13 @@
-import { guessUserLanguage, type SupportedLanguage } from '@/i18n/i18n-setup'
-import { SQLQuery } from '@/lib/sql-queries'
+import type { StorageLikeAsync } from '@vueuse/core'
+import type { SupportedLanguage } from '@/i18n/i18n-setup'
 import { Preferences } from '@capacitor/preferences'
-import { type StorageLikeAsync, useStorageAsync } from '@vueuse/core'
+import { useStorageAsync } from '@vueuse/core'
 import { useReducedMotion } from 'motion-v'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { guessUserLanguage } from '@/i18n/i18n-setup'
+import { nakaBufferAddresses } from '@/lib'
+import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from './conn'
 
 export enum Fiat {
@@ -30,7 +33,7 @@ export enum PushNotificationsStatus {
   PROMPT = 'prompt',
 }
 
-function kv(): StorageLikeAsync {
+export function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
     setItem: async (key, value) => useConn().run(SQLQuery.UpsertKv, [key, value]),
@@ -44,7 +47,7 @@ function kv(): StorageLikeAsync {
  * Uses UserDefaults on iOS and SharedPreferences on Android.
  * Stored data is cleared if the app is uninstalled.
  */
-function kvPreferences(): StorageLikeAsync {
+export function kvPreferences(): StorageLikeAsync {
   return {
     getItem: async key => Preferences.get({ key }).then(x => x.value),
     setItem: async (key, value) => Preferences.set({ key, value }),
@@ -115,6 +118,10 @@ export const useApp = defineStore('app', () => {
   }
 
   function addNewTopUpAddress(address: string) {
+    // Prevent adding NAKA buffer address, just in case
+    if (nakaBufferAddresses.includes(address))
+      return
+
     const addresses = topUpAddresses.value
     addresses.push(address)
     topUpAddresses.value = addresses

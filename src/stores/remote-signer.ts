@@ -1,14 +1,15 @@
 import type { Address, PlainTransactionDetails } from '@nimiq/core'
+import type { RemoteSigner } from '@/lib/sql-queries'
+import { until, useIntervalFn } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
+import { computed, readonly, ref, watch } from 'vue'
 import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
-import { type RemoteSigner, SQLQuery } from '@/lib/sql-queries'
+import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { until, useIntervalFn } from '@vueuse/core'
-import { defineStore, storeToRefs } from 'pinia'
-import { computed, readonly, ref, watch } from 'vue'
 
 const logger = useLogger('remote-signer')
 

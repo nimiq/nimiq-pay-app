@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import type { ComputedRef, PropType } from 'vue'
+import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
+import { computed, nextTick, ref, watchEffect } from 'vue'
+import YouTubePlayer from 'youtube-player'
+import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
@@ -6,10 +11,6 @@ import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { usePoints } from '@/stores/points'
-import { IonButton, IonRadio, IonRadioGroup } from '@ionic/vue'
-import { computed, type ComputedRef, nextTick, type PropType, ref, watchEffect } from 'vue'
-import YouTubePlayer from 'youtube-player'
-import PlayerStates from 'youtube-player/dist/constants/PlayerStates'
 
 const props = defineProps({
   task: {
@@ -138,7 +139,7 @@ async function handleSubmit() {
         class="w-full h-full small:h-1/2 tall:h-3/5 p-4 placeholder:text-space/60 border-[1.5px] border-solid rounded-md border-space-space-400"
         :placeholder="$t('We value your opinion. Please enter at least ten characters.')"
         @focus="errorMsg = ''"
-      ></textarea>
+      />
       <!-- Radio Input -->
       <IonRadioGroup
         v-else-if="type === 'question'"

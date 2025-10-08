@@ -34,6 +34,9 @@ npm-debug.log*
 /www
 
 .env
+.env.local
+.env.*.local
+.env.production
 
 android/.idea
 AndroidManifest.xml.orig
@@ -46,3 +49,6 @@ builds/ios/bundle/*
 *.app
 *.tgz
 google-service-account.json
+src/lib/issuer-websocket.schema.ts
+
+./components.d.ts

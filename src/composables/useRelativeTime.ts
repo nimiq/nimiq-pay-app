@@ -1,5 +1,6 @@
+import type { MaybeRef } from 'vue'
+import { computed, getCurrentScope, onScopeDispose, ref, toValue, watchEffect } from 'vue'
 import { useApp } from '@/stores/app'
-import { computed, getCurrentScope, type MaybeRef, onScopeDispose, ref, toValue, watchEffect } from 'vue'
 import { toMs } from './useTime'
 
 // Formatter for current language.

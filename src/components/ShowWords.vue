@@ -1,14 +1,14 @@
 <script setup lang="ts">
+import { PrivacyScreen } from '@capacitor-community/privacy-screen'
+import { IonButton } from '@ionic/vue'
+import { ScreenshotEvent } from '@rdlabo/capacitor-screenshot-event'
+import { computed, onUnmounted, watch } from 'vue'
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { PrivacyScreen } from '@capacitor-community/privacy-screen'
-import { IonButton } from '@ionic/vue'
-import { ScreenshotEvent } from '@rdlabo/capacitor-screenshot-event'
-import { computed, onUnmounted, watch } from 'vue'
 
 const props = defineProps({ isVisible: Boolean })
 

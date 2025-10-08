@@ -1,11 +1,12 @@
+import type { Address, Transaction as NimiqTransaction } from '@nimiq/core'
+import type { MaybeRef } from 'vue'
 import type { AsyncResultApi } from '@/types'
 import type { Rail } from '@/types/transactions'
-import type { Address, Transaction as NimiqTransaction, PlainAccountType } from '@nimiq/core'
+import { readonly, ref, toValue as v } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib/index'
 import { useApp } from '@/stores/app'
-import { type MaybeRef, readonly, ref, toValue as v } from 'vue'
 import { toSeconds } from './useTime'
 
 const logger = useLogger('useApi')
@@ -144,9 +145,9 @@ export interface Transaction {
   details: {
     format: string
     sender: string
-    senderType: PlainAccountType
+    senderType: 'basic' | 'vesting' | 'htlc' | 'staking'
     recipient: string
-    recipientType: PlainAccountType
+    recipientType: 'basic' | 'vesting' | 'htlc' | 'staking'
     value: number
     fee: number
     validityStartHeight: number

@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import type { PropType } from 'vue'
 import type { Crypto } from '../stores/app'
+import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonToggle } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
+import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import TransactionAmounts from '@/components/TransactionAmounts.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
@@ -11,16 +17,10 @@ import { useLogger } from '@/composables/useLogger'
 import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 // TODO: async import
 import { useToast } from '@/composables/useToast'
-import { PaymentMethod, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { Rail } from '@/types/transactions'
-import { Browser } from '@capacitor/browser'
-import { IonButton, IonToggle } from '@ionic/vue'
-import { computedAsync } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
-import { computed, effectScope, onUnmounted, ref, watch, watchEffect } from 'vue'
+import { PaymentMethod, Rail } from '@/types/transactions'
 import InfoIcon from './icons/info.vue'
 import LoadingSpinner from './icons/loading-spinner.vue'
 
@@ -42,9 +42,12 @@ const { isHtlcActive, isRemoteOk } = storeToRefs(useRemoteSigner())
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
 const { localAddress } = storeToRefs(useLocalWallet())
 
-const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() => typeof props.state[StepName.QRCodeScanner] === 'object'
-  ? props.state[StepName.QRCodeScanner]
-  : { amount: 0, fee: 0, recipient: '' },
+const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() =>
+  typeof props.state[StepName.QRCodeScanner] === 'object'
+    ? props.state[StepName.QRCodeScanner]
+    : typeof props.state[StepName.HoldNakaCardToReader] === 'object'
+      ? props.state[StepName.HoldNakaCardToReader].request
+      : { amount: 0, fee: 0, recipient: '' },
 )
 const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
 
@@ -94,7 +97,7 @@ const swapFee = computedAsync(async () => {
 }, null)
 
 const { hasCashback, message: pointsMessage, pointsState, checkPointsPaymentValidity, isEligible }
-   = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
+  = usePointsPayment({ amount: payment.value.amount, rail: payment.value.rail, recipient: payment.value.recipient, reference: payment.value.paymentRef })
 
 const goCryptoError = ref<string>()
 const goCryptoIsAboutToExpire = ref<boolean>()
@@ -126,7 +129,28 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   })
 }, { immediate: true })
 
-const paymentMethod = ref<PaymentMethod>((!hasEnoughNimBalance.value && isEligible.value) ? PaymentMethod.Points : PaymentMethod.NIM)
+const objectHasData = (obj?: unknown) => typeof obj === 'object' && Object.keys(obj as Record<string, unknown>).length > 0
+// Only show the toggle if he scanned QR code
+const canPayWithPuntos = computed(() => objectHasData(props.state[StepName.QRCodeScanner]))
+/**
+ * Only allow paying with Points if:
+ *   - The user has enough NIM balance
+ *   - The user is eligible for Points
+ *   - The user has scanned something with the QR code scanner in previous steps (no Naka, no bluecode...)
+ */
+const payWithPuntos = ref((!hasEnoughNimBalance.value && isEligible.value && canPayWithPuntos.value))
+
+const paymentMethod = computed(() => {
+  if (payWithPuntos.value)
+    return PaymentMethod.Points
+  else if (props.state[StepName.HoldNakaCardToReader])
+    return PaymentMethod.NakaCard
+  else if (props.state[StepName.QRCodeScanner])
+    return PaymentMethod.NIM
+  // else if (props.state[StepName.BluecodePayment])
+  //   return PaymentMethod.Bluecode
+  throw new Error('Unexpected payment method')
+})
 
 const loadingSwapLimits = ref(false)
 const isAtomicSwap = computed(() => !!payment.value.swap)
@@ -167,7 +191,7 @@ const disabled = computed(() =>
   // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
   || (isAtomicSwap.value && !!nimAddressLimits.value && payment.value.amount > lunaSwapLimit.value) /* Over swap limit */
   || !(
-    (isEligible.value && paymentMethod.value === PaymentMethod.Points)
+    (isEligible.value && payWithPuntos.value)
     || (isHtlcActive.value && hasEnoughNimBalance.value)
   )
   || !!goCryptoError.value,
@@ -199,7 +223,7 @@ function handlePay() {
     return
 
   loading.value = true
-  emit('done', paymentMethod.value)
+  emit('done', { payWithPuntos: payWithPuntos.value })
 }
 
 function formatInvoiced({ currency, amount }: { currency: string, amount: number }) {
@@ -243,10 +267,10 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
       {{ $t('Incl. fees') }}
     </template>
     <template v-else-if="payment.fiatFeeAmount || payment.fee" #fee>
-      {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${amounts?.formattedFee || 0})` : '' }) }}
+      {{ $t('Fees may apply {fee}', { fee: payment.fiatFeeAmount ? `(~${formatFiat(amounts?.fiatFeeAmount || 0)})` : '' }) }}
     </template>
   </TransactionAmounts>
-  <div class="flex flex-col items-center w-full pb-6 mt-auto">
+  <div v-if="canPayWithPuntos" class="flex flex-col items-center w-full pb-6 mt-auto">
     <IonToggle
       v-if="pointsState !== PointsState.NotRegistered && payment.rail !== Rail.BitcoinLightning"
       :disabled="!isEligible"

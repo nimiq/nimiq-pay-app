@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import type { PropType } from 'vue'
+import type { ExternalTransaction } from '@/types/transactions'
+import { Clipboard } from '@capacitor/clipboard'
+import { computedAsync } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
+import { computed, onBeforeMount, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useFormatTime } from '@/composables/useTime'
@@ -8,11 +14,7 @@ import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSync } from '@/stores/sync'
-import { type ExternalTransaction, PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
-import { Clipboard } from '@capacitor/clipboard'
-import { computedAsync } from '@vueuse/core'
-import { storeToRefs } from 'pinia'
-import { computed, onBeforeMount, type PropType, ref } from 'vue'
+import { PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
 import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
 
@@ -83,7 +85,7 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
       :fiat-amount="fiat.total"
       :fiat-currency="fiat.currency"
       :payment-method="tx.paymentMethod || PaymentMethod.NIM"
-      :refunded="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded"
+      :refunded="tx.meta?.refunded"
     >
       <template v-if="tx.invoiced" #invoiced>
         {{ formatInvoiced(tx.invoiced) }}
@@ -106,7 +108,7 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
         <template v-if="isSwapPending">
           {{ $t('Pending') }}
         </template>
-        <template v-else-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded">
+        <template v-else-if="tx.meta?.refunded">
           {{ $t('Refunded') }}
         </template>
         <template v-else>

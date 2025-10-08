@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { HCESdk } from 'capacitor-monetplus-hce'
+import { close } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { close } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import { useRouter } from 'vue-router'
 
 const logger = useLogger('LogOutModal/Confirm')
 
@@ -17,12 +19,22 @@ const router = useRouter()
 const { hasDoneBackup } = storeToRefs(useApp())
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 const { localBalance } = storeToRefs(useLocalWallet())
+const { hasCard } = storeToRefs(useNaka())
 const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
   logger.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
+    if (hasCard.value) {
+      await HCESdk.initialize({ storageName: 'naka-card' })
+      const { cards } = await HCESdk.getAllSucceededCards()
+      console.log('Cards: in SDK storage', cards)
+      for (const card of cards) {
+        console.log('Deactivating card', card)
+        await HCESdk.deactivateCard({ cardId: card.id })
+      }
+    }
     await deleteDatabase()
     router.replace('/setup')
   }

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { alertController, IonButton, modalController } from '@ionic/vue'
+import { useTimestamp } from '@vueuse/core'
+import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
+import { storeToRefs } from 'pinia'
+import { computed, ref, watch, watchEffect } from 'vue'
 import CountrySelectModal from '@/components/CountrySelectModal.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { countdownTo } from '@/composables/useTime'
@@ -6,11 +11,6 @@ import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
-import { alertController, IonButton, modalController } from '@ionic/vue'
-import { useTimestamp } from '@vueuse/core'
-import { getCountries, getCountryCallingCode } from 'libphonenumber-js/mobile'
-import { storeToRefs } from 'pinia'
-import { computed, ref, watch, watchEffect } from 'vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.

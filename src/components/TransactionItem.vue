@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
-import CryptoAmount from '@/components/CryptoAmount.vue'
-import { usePrice } from '@/composables/usePrice'
-import { useRelativeTime } from '@/composables/useRelativeTime'
-import { type ExternalTransaction, isPaymentTx, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
+import type { ExternalTransaction } from '@/types/transactions'
 import { IonRippleEffect } from '@ionic/vue'
 import { FormattableNumber } from '@nimiq/utils'
 import { FiatAmount } from '@nimiq/vue3-components'
 import { computed } from 'vue'
+import CryptoAmount from '@/components/CryptoAmount.vue'
+import { usePrice } from '@/composables/usePrice'
+import { useRelativeTime } from '@/composables/useRelativeTime'
+import { isPaymentTx, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 
@@ -32,7 +33,7 @@ const paymentMethod = computed(() => {
 const category = computed(() => {
   const { tx } = props
   if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-    return tx.merchantCategory
+    return tx.merchantCategory || MerchantCategory.Shop
   if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.AccountType.HTLC && tx.recipientType === Nimiq.AccountType.Basic)
     return 'withdraw'
   if (tx.transfer === Transfer.UserReceipt)
@@ -43,7 +44,7 @@ const category = computed(() => {
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'included' && tx.status !== 'confirmed', 'line-through': tx.transfer === Transfer.UserPaymentToAtomicSwap && tx.meta?.refunded }">
+  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'included' && tx.status !== 'confirmed', 'line-through': tx.meta?.refunded }">
     <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">

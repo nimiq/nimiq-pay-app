@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { IonSkeletonText } from '@ionic/vue'
+import { FiatAmount } from '@nimiq/vue3-components'
+import { animate, useMotionValue } from 'motion-v'
+import { storeToRefs } from 'pinia'
+import { computed, ref, watch } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
@@ -6,11 +11,6 @@ import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
-import { IonSkeletonText } from '@ionic/vue'
-import { FiatAmount } from '@nimiq/vue3-components'
-import { animate, useMotionValue } from 'motion-v'
-import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
 
 const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
 const { isTransactionPending } = storeToRefs(useSync())

@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, StepName } from '@/lib/flows/steps.types'
-import { useCarousel } from '@/composables/useCarousel'
-import { useLogger } from '@/composables/useLogger'
-import { useModal } from '@/composables/useModal'
-import { useToast } from '@/composables/useToast'
-import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
+import type { PropType, Ref } from 'vue'
+import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-import { computed, onMounted, type PropType, reactive, ref, watch, watchEffect } from 'vue'
-import { nextTick } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch, watchEffect } from 'vue'
+import { useCarousel } from '@/composables/useCarousel'
+import { useLogger } from '@/composables/useLogger'
+import { useModal } from '@/composables/useModal'
+import { useToast } from '@/composables/useToast'
+
+import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 
 const props = defineProps({
   flow: {
@@ -29,9 +30,9 @@ const props = defineProps({
 
 const logger = useLogger('Flow.vue')
 
-const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName } = props.flow!
-const historyStack = ref([stepsInFlow[0]])
-const activeIndex = ref(0)
+const { onDone: originalOnFlowDone, onCancel: originalOnFlowCancel, steps: stepsInFlow, flowName, initialStep } = props.flow!
+const activeIndex = ref(Math.max(stepsInFlow.findIndex(s => s.step === initialStep), 0))
+const historyStack: Ref<Step[]> = ref(stepsInFlow.slice(0, activeIndex.value + 1))
 
 const emptyState = inputSteps.reduce((state, stepName) => ({ ...state, [stepName]: undefined }), {} as State)
 const state = ref({ ...emptyState, ...props.initialState })
@@ -117,7 +118,7 @@ const activeStep = computed(() => historyStack.value[activeIndex.value])
 // Get the element in screen knowing the active step using the li key
 const activeStepScrollerItem = computed(() => scrollerItems.value[activeIndex.value])
 
-const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1)
+const allowBack = computed(() => activeIndex.value > 0 && activeStep.value?.goBackBy !== -1 && activeStep.value?.allowGoBack !== false)
 
 type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
@@ -143,30 +144,15 @@ function defaultErrorHandler(errorMessage: string) {
   catch (error) {
     logger.error('Failed to trigger haptic feedback', error)
   }
-}
+} // make sure you import until
 
-/**
- * Change the active step to the given step or relative index:
- *
- * 1. Get the new active index
- * 2. If the new active step index is out of upper bounds, we will call
- *    onFlowDone. If the step index is out of lower bounds, we will call
- *    onFlowCancel and print a warning.
- * 3. If the new active step index is within bounds, we will call the
- *    beforeRender of the new active step
- * 4. We update the history stack:
- *    1. If we are going forward, we will push the new active step to the
- *       history stack.
- *    2. Otherwise, we will remove the steps between the new active step and the
- *       current active step, and then we will remove the last step of the
- *       history stack, since it was the active step and the transition is
- *       already done.
- */
 async function navigateTo(options: NavigateToOptions = 1) {
   if (props.isClosing)
     return
+
   const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
   let newIndex: number = currentIndex + 1
+
   if (typeof options === 'number') {
     newIndex = currentIndex + options
   }
@@ -194,31 +180,50 @@ async function navigateTo(options: NavigateToOptions = 1) {
   if (!newActiveStep)
     return
 
-  await newActiveStep?.beforeRender?.(state.value, stepCallbacks.value)
-
   const isGoingForward = newIndex > activeIndex.value
+  if (!isGoingForward && activeStep.value.beforePrev)
+    await activeStep.value.beforePrev(state.value, stepCallbacks.value)
+
+  await newActiveStep.beforeRender?.(state.value, stepCallbacks.value)
+
   if (isGoingForward) {
-    // @ts-expect-error nextStep is of type Step, which it is the same as the historyStack
     historyStack.value.push(newActiveStep)
+    activeIndex.value = historyStack.value.length - 1
     await nextTick()
-    goToSlide(historyStack.value.length - 1) // Moving forwards means moving to the last slide
+    goToSlide(activeIndex.value)
   }
   else {
-    // To have a smooth transition, we need to remove the steps between the prevStep and the activeStep
-    // but keeping both of them
-    historyStack.value.splice(newIndex + 1, activeIndex.value - newIndex - 1)
-
-    // We need to render the history stack in the template
-    await nextTick()
-
-    // Go to the previous slide and wait for the scroll to start and finish
-    goToSlide(newIndex)
-    await until(isScrolling).toBe(true, { timeout: 1000 })
-    await until(isScrolling).toBe(false, { timeout: 1000 })
-
-    // Remove the last step in the historyStack, since it was the activeStep and
-    // the transition is already done
-    historyStack.value.pop()
+    // If the jump is more than one step, we remove the middle slides from the animation.
+    if (activeIndex.value - newIndex > 1) {
+      // Save the current step.
+      const currentStep = historyStack.value[activeIndex.value]
+      // Temporarily set history to only include the target and the current step.
+      historyStack.value = [historyStack.value[newIndex], currentStep]
+      // The current slide is now at index 1.
+      activeIndex.value = 1
+      await nextTick()
+      // Animate from slide 1 (current) to slide 0 (target).
+      goToSlide(0)
+      // Wait for the scroll to start and finish.
+      await until(isScrolling).toBe(true, { timeout: 1000 })
+      await until(isScrolling).toBe(false, { timeout: 1000 })
+      // Once finished, update historyStack to only contain the target.
+      historyStack.value = [historyStack.value[0]]
+      activeIndex.value = 0
+    }
+    else {
+      // For adjacent navigation, ensure the target is in the history.
+      const exists = historyStack.value.find(s => s.step === newActiveStep.step)
+      if (!exists) {
+        historyStack.value.splice(newIndex, 0, newActiveStep)
+      }
+      await nextTick()
+      goToSlide(newIndex)
+      await until(isScrolling).toBe(true, { timeout: 1000 })
+      await until(isScrolling).toBe(false, { timeout: 1000 })
+      historyStack.value = historyStack.value.slice(0, newIndex + 1)
+      activeIndex.value = newIndex
+    }
   }
 }
 
@@ -345,9 +350,23 @@ function blur() {
         <component
           :is="main"
           v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur }"
+          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur, navigateTo }"
         />
       </div>
     </li>
+    <div class="absolute inset-x-0 bottom-0">
+      <div class="z-[10000] relative">
+        <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
+      </div>
+    </div>
   </ul>
+
+  <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
 </template>
+
+<style scoped>
+/* When we call initializeFlow we setup some css classes */
+:global(ion-modal.nimiq-modal-h-max) {
+  --height: auto;
+}
+</style>

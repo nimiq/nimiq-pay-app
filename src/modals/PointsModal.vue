@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { chevronForwardOutline, close } from 'ionicons/icons'
+import { storeToRefs } from 'pinia'
+import { computed, onMounted } from 'vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import Gamepad from '@/components/icons/gamepad.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
@@ -11,11 +16,6 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { usePoints } from '@/stores/points'
-import { IonButtons, IonCol, IonContent, IonGrid, IonHeader, IonIcon, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync } from '@vueuse/core'
-import { chevronForwardOutline, close } from 'ionicons/icons'
-import { storeToRefs } from 'pinia'
-import { computed, onMounted } from 'vue'
 
 const logger = useLogger('PointsModal')
 

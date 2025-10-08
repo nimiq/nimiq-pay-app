@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { useLogger } from '@/composables/useLogger'
-import { useToast } from '@/composables/useToast'
-import { i18n } from '@/i18n/i18n-setup'
 import { Clipboard } from '@capacitor/clipboard'
 import { IonRippleEffect } from '@ionic/vue'
 import { computed } from 'vue'
+import { useLogger } from '@/composables/useLogger'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 
 const props = defineProps({
   address: {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useModal } from '@/composables/useModal'
 import { IonButtons, IonContent, IonGrid, IonHeader, IonIcon, IonRow, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
+import { useModal } from '@/composables/useModal'
 
 const props = defineProps({
   closeAll: {

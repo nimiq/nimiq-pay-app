@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import CheckmarkIcon from '@/components/icons/check.vue'
 import { computed, ref } from 'vue'
+import CheckmarkIcon from '@/components/icons/check.vue'
 
 const props = defineProps({
   value: {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useApp } from '@/stores/app'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, watch } from 'vue'
+import { useApp } from '@/stores/app'
 
 const props = defineProps({
   modelValue: {

@@ -1,9 +1,10 @@
-import { SQLQuery } from '@/lib/sql-queries'
-import { useConn } from '@/stores/conn'
-import { type ExternalTransaction, translateTransactionTitle } from '@/types/transactions'
+import type { ExternalTransaction } from '@/types/transactions'
 import { watchOnce } from '@vueuse/core'
 import { useFuse } from '@vueuse/integrations/useFuse'
 import { computed, ref } from 'vue'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
+import { translateTransactionTitle } from '@/types/transactions'
 
 export function useTransactionSearch() {
   const searchQuery = ref('')

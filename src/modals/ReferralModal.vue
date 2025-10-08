@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { Clipboard } from '@capacitor/clipboard'
+import { Share } from '@capacitor/share'
+import { IonButton } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
+import { computed } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
@@ -7,11 +12,6 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto } from '@/stores/app'
 import { usePoints } from '@/stores/points'
-import { Clipboard } from '@capacitor/clipboard'
-import { Share } from '@capacitor/share'
-import { IonButton } from '@ionic/vue'
-import { computedAsync } from '@vueuse/core'
-import { computed } from 'vue'
 
 const logger = useLogger('ReferralModal')
 

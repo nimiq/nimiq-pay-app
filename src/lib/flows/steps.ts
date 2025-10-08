@@ -19,6 +19,8 @@ const GenericInput = defineAsyncComponent(() => import('@/components/GenericInpu
 const OnBoardingScreen = defineAsyncComponent(() => import('@/components/OnBoardingScreen.vue'))
 const EnableNotifications = defineAsyncComponent(() => import('@/components/EnableNotifications.vue'))
 const QRScanner = defineAsyncComponent(() => import('@/components/QRScanner.vue'))
+const HoldNakaCardToReader = defineAsyncComponent(() => import('@/components/naka/HoldNakaCardToReader.vue'))
+const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/bluecode/BluecodeNotSupported.vue'))
 const QRCodeDisplay = defineAsyncComponent(() => import('@/components/QRCodeDisplay.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
@@ -34,6 +36,11 @@ const ValidateWords = defineAsyncComponent(() => import('@/components/ValidateWo
 const EnableBiometric = defineAsyncComponent(() => import('@/components/EnableBiometric.vue'))
 const PaymentRequestManualInput = defineAsyncComponent(() => import('@/components/PaymentRequestManualInput.vue'))
 const ComingSoon = defineAsyncComponent(() => import('@/components/ComingSoon.vue'))
+const NakaOnboardingWhatIsNaka = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingWhatIsNaka.vue'))
+const NakaOnboardingVerifyId = defineAsyncComponent(() => import('@/components/naka/NakaOnboardingVerifyId.vue'))
+const NakaCardIsReady = defineAsyncComponent(() => import('@/components/naka/NakaCardIsReady.vue'))
+const NakaCardManagement = defineAsyncComponent(() => import('@/components/naka/NakaCardManagement.vue'))
+const NakaCardDelete = defineAsyncComponent(() => import('@/components/naka/NakaCardDelete.vue'))
 
 const PIN_CODE_REGEX = /^\d{4}$/
 
@@ -74,7 +81,7 @@ export const recoveryWordsStep: StepInit = async () => ({
 
 export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
   const { FlowName: Flow } = await import('@/lib/flows/steps.types')
-  const isTxFlow = (f?: FlowName) => f && [Flow.NimOrPointsPayment, Flow.NimWithdraw].includes(f)
+  const isTxFlow = (f?: FlowName) => f && [Flow.Payment, Flow.NimWithdraw].includes(f)
   return {
     step: StepName.PinCode,
     get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
@@ -354,11 +361,12 @@ export const onBoardingBluecode3: StepInit = async () => ({
   main: markRaw(OnBoardingScreen),
 } satisfies Step)
 
-export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (options) => {
+export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ props: defaultProps, allowGoBack }) => {
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
-    main: markRaw(props => h(QRScanner, { ...props, ...options?.props })),
+    allowGoBack,
+    main: markRaw(props => h(QRScanner, { ...props, ...defaultProps })),
     async beforeRender(state, { navigateTo }) {
       const { qrCodeScanner } = state
       // If it's a string, assume that it's a payment request
@@ -375,28 +383,65 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async (opti
         navigateTo({ step: StepName.PaymentPreview })
       }
     },
-    beforeNext: async (state, { next, prev, navigateTo }) => {
-      if (options?.props?.expect === QRDataFormat.PaymentRequest) {
+    beforeNext: async (state, { prev, navigateTo }) => {
+      document.body.classList.remove('native-qr-scanner-modal-open')
+      if (defaultProps?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
           navigateTo({ step: StepName.PaymentRequestManualInput })
         else
           navigateTo({ step: StepName.PaymentPreview })
       }
-      else if (options?.props?.expect === QRDataFormat.NimCashlink) {
-        next()
+      else if (defaultProps?.expect === QRDataFormat.NimCashlink) {
+        navigateTo({ step: StepName.PaymentRequestManualInput })
       }
       else { // For Top-Up and Withdrawal, we go back to the previous step
         prev()
       }
     },
+    beforePrev: async () => {
+      document.body.classList.remove('native-qr-scanner-modal-open')
+    },
   } satisfies Step
 }
 
-export const paymentRequestManualInputStep: StepInit = async () => {
+export const holdNakaCardToReaderStep: StepInit = async () => ({
+  step: StepName.HoldNakaCardToReader,
+  main: markRaw(__ENABLE_NAKA__ ? HoldNakaCardToReader : ComingSoon),
+  beforeNext: async ({ holdNakaCardToReader: data }, { navigateTo, finalizeFlow }) => {
+    const { request } = data
+    if (request.meta?.requireUserConfirmation) {
+      navigateTo({ step: StepName.PaymentPreview })
+    }
+    else {
+      finalizeFlow()
+    }
+  },
+} satisfies Step)
+
+export const bluecodeNotAvailableStep: StepInit = async ({ allowGoBack }) => ({
+  step: StepName.BluecodePayment,
+  main: markRaw(BluecodeNotSupported),
+  allowGoBack,
+  beforeNext: async (_state, { navigateTo }) => {
+    navigateTo({ step: StepName.PaymentPreview })
+  },
+} satisfies Step)
+
+export const bluecodeNotAvailbleStep: StepInit = async ({ allowGoBack }) => ({
+  step: StepName.BluecodePayment,
+  main: markRaw(BluecodeNotSupported),
+  allowGoBack,
+  beforeNext: async (_state, { navigateTo }) => {
+    navigateTo({ step: StepName.PaymentPreview })
+  },
+} satisfies Step)
+
+export const paymentRequestManualInputStep: StepInit = async ({ allowGoBack }) => {
   return {
     step: StepName.PaymentRequestManualInput,
     get title() { return i18n.t('Enter payment request') },
     main: markRaw(PaymentRequestManualInput),
+    allowGoBack,
     beforeNext: async (state, { next }) => {
       state.qrCodeScanner = state.paymentRequestManualInput
       next()
@@ -421,17 +466,17 @@ export const paymentPreviewStep: StepInit = async () => {
       title.value = qrCodeScanner.merchantName || i18n.t('Payment preview')
       merchantCategory.value = qrCodeScanner.merchantCategory
     },
-    beforeNext: async ({ qrCodeScanner: _request }, { next, navigateTo }) => {
+    beforeNext: async ({ qrCodeScanner: request }, { navigateTo, finalizeFlow }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
-      if (typeof _request === 'string')
+      if (typeof request === 'string')
         // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`Request is a string: ${_request}`)
+        throw new Error(`Request is a string: ${request}`)
 
       // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
       if ((await import('@/stores/app')).useApp().shouldAskPin())
-        next()
+        navigateTo({ step: StepName.PinCode })
       else
-        navigateTo({ skipAheadBy: 2 })
+        finalizeFlow()
     },
   } satisfies Step
 }
@@ -588,3 +633,36 @@ export const comingSoonStep: StepInit = async () => ({
   get title() { return i18n.t('We\'re working on something special') },
   main: markRaw(ComingSoon),
 } satisfies Step)
+
+export const whatIsNakaStep: StepInit = async () => ({
+  step: StepName.WhatIsNaka,
+  get title() { return i18n.t('Pay with NAKA Card') },
+  get description() { return i18n.t('NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted.') },
+  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingWhatIsNaka : ComingSoon),
+} satisfies Step)
+
+export const verifyYourIdNakaStep: StepInit = async () => ({
+  step: StepName.VerifyYourIdNaka,
+  get title() { return i18n.t('Verify your ID') },
+  get description() { return i18n.t('Please verify yourself with SumSub to activate your NAKA card.') },
+  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingVerifyId : ComingSoon),
+} satisfies Step)
+
+export const nakaCardIsReadyStep: StepInit = async () => ({
+  step: StepName.NakaCardIsReady,
+  main: markRaw(__ENABLE_NAKA__ ? NakaCardIsReady : ComingSoon),
+} satisfies Step)
+
+export const nakaCardManagementStep: StepInit = async () => ({
+  step: StepName.NakaCardManagement,
+  main: markRaw(__ENABLE_NAKA__ ? NakaCardManagement : ComingSoon),
+} satisfies Step)
+
+export const nakaCardDeleteStep: StepInit = async () => {
+  return {
+    step: StepName.NakaCardDelete,
+    get title() { return i18n.t('Block card') },
+    get description() { return i18n.t('Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one.') },
+    main: markRaw(__ENABLE_NAKA__ ? NakaCardDelete : ComingSoon),
+  } satisfies Step
+}

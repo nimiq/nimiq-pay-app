@@ -1,4 +1,4 @@
-import type * as Nimiq from '@nimiq/core/web'
+import type * as Nimiq from '@nimiq/core'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {
@@ -56,6 +56,7 @@ export enum Transfer {
 export enum Rail {
   CryptoPaymentLink = 'CPL',
   GoCrypto = 'GoCrypto',
+  NakaCard = 'NakaCard',
   Bluecode = 'bluecode',
   BitcoinLightning = 'bitcoin-lightning',
   NimiqWallet = 'nimiq-wallet',
@@ -191,6 +192,9 @@ export type MerchantTransaction = BaseTransaction & {
   rail: Rail.NimiqWallet
   railMerchantId?: undefined
 } | {
+  rail: Rail.NakaCard
+  railMerchantId?: undefined
+} | {
   rail: Rail.Unknown
   railMerchantId?: undefined
 } /* | {
@@ -254,15 +258,17 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
   return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap].includes(tx.transfer)
 }
 
-export type PartialSendTxArgs =
-  | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
-  | Pick<LocalToRemoteTx, 'transfer'>
-  | Pick<ExtendRemoteTx, 'transfer'>
-  | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
-  | Pick<RemoteToLocalTx, 'transfer'>
-  | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+export type PartialSendTxArgs
+  = | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
+    | Pick<LocalToRemoteTx, 'transfer'>
+    | Pick<ExtendRemoteTx, 'transfer'>
+    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | Pick<RemoteToLocalTx, 'transfer'>
+    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
 
 export enum PaymentMethod {
   NIM = 'nim',
   Points = 'points',
+  NakaCard = 'nakaCard',
+  Bluecode = 'bluecode',
 }

@@ -1,5 +1,6 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
-import type { ExternalTransaction, Transaction, Transfer } from '../../types/transactions'
+import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
+import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 
 export enum FlowName {
   Setup = 'setup',
@@ -9,7 +10,7 @@ export enum FlowName {
   OnBoardingPoints = 'onBoardingPoints',
   OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
-  NimOrPointsPayment = 'payment',
+  Payment = 'payment',
   NimWithdraw = 'nimWithdraw',
   AddressSelection = 'addressSelection',
   NimTopUp = 'nimTopUp',
@@ -18,6 +19,9 @@ export enum FlowName {
   Backup = 'backup',
   ChangePin = 'changePin',
   ComingSoon = 'comingSoon',
+  NakaOnboarding = 'nakaOnboarding',
+  NakaCardIsReady = 'nakaCardIsReady',
+  NakaCardManagement = 'nakaCardManagement',
 }
 
 interface FlowHookCbReturn {
@@ -39,6 +43,12 @@ export interface Flow {
   // Function that will be called when the flow is cancelled. Also, the flow
   // will be closed automatically when the last step is done.
   onCancel?: FlowHookCb
+
+  // In which step the flow will start
+  initialStep?: StepName
+
+  // The component that will be filled in the defeault slot of Flow.vue
+  slotComponent?: Component
 }
 
 export interface FlowInitOptions {
@@ -67,6 +77,8 @@ export enum StepName {
   OnBoardingBluecode2 = 'onBoardingBluecode2',
   OnBoardingBluecode3 = 'onBoardingBluecode3',
   QRCodeScanner = 'qrCodeScanner',
+  HoldNakaCardToReader = 'holdNakaCardToReader',
+  BluecodePayment = 'bluecodePayment',
   QRCodeDisplay = 'qrCodeDisplay',
   PaymentPreview = 'paymentPreview',
   NimWithdrawalAmountSelectionStep = 'nimWithdrawalAmountSelectionStep',
@@ -79,11 +91,16 @@ export enum StepName {
   ShowWords = 'showWords',
   ValidateWords = 'validateWords',
   ComingSoon = 'comingSoon',
+  WhatIsNaka = 'whatIsNaka',
+  VerifyYourIdNaka = 'verifyYourIdNaka',
+  NakaCardIsReady = 'nakaCardIsReady',
+  NakaCardManagement = 'nakaCardManagement',
+  NakaCardDelete = 'nakaDeleteCard',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -104,9 +121,17 @@ export interface State {
   [StepName.PhoneNumberConfirm]: string
   [StepName.RecoveryWordsStep]: string[]
   [StepName.QRCodeScanner]: PaymentRequestData | string
+  [StepName.HoldNakaCardToReader]: {
+    request: PaymentRequestData
+    confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
+  }
   [StepName.NimAddressDisplay]: string
+  [StepName.HoldNakaCardToReader]: {
+    request: PaymentRequestData
+    confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
+  }
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
-  [StepName.PaymentPreview]: PaymentMethod
+  [StepName.PaymentPreview]: { payWithPuntos: boolean }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
   [StepName.NimWithdrawalAddressSelectionStep]: string // User selects a saved address
   [StepName.NimAddressInput]: string
@@ -177,9 +202,16 @@ type BaseStep = {
    * programme the behaviour you want.
    */
   beforeNext?: (state: State, callbacks: StepCallbacks) => Promise<void>
+  /**
+   * Hook that will be triggered when the back button has been pressed. If this
+   * function is not set, the default behaviour of the flow will be to go to the
+   * previous step. If you need custom logic, you should declare that logic
+   * inside this hook. Use the `callbacks` to programme the behaviour you want.
+   */
+  beforePrev?: (state: State, callbacks: StepCallbacks) => Promise<void>
 } & NavigationControl
 
-export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>
+export type NavigateToOptions = number | { step: StepName } | Pick<NavigationControl, 'goBackBy' | 'skipAheadBy'>
 
 export interface StepCallbacks {
   /**
@@ -231,12 +263,19 @@ export type InfoStep = BaseStep & {
   autofocus?: undefined
 }
 
-export type Step = InputStep | InfoStep
+export type Step = (InputStep | InfoStep) & {
+  /**
+   * Whether or not the user can go back to the previous step.
+   * Setting it to false will hide the back button.
+   * @default true
+   */
+  allowGoBack?: boolean
+}
 
 export type StepInitOptions<Props = undefined> = {
   flowName?: FlowName
   props?: Props
-} & NavigationControl
+} & NavigationControl & Pick<Step, 'allowGoBack'>
 
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }
@@ -249,6 +288,7 @@ export const stepEmits: EmitsOptions = {
   skip: () => undefined,
   back: () => undefined,
   focus: () => undefined,
+  navigateTo: (_: NavigateToOptions) => true,
 }
 
 // Complex types for State
@@ -262,12 +302,10 @@ export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'mes
     }
   }
 
+// TODO Define fields
+export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
+
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
-}
-
-export enum PaymentMethod {
-  NIM = 'nim',
-  Points = 'points',
 }
