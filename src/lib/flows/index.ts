@@ -353,6 +353,17 @@ selectionStep ◄────┘
   return { flowName, steps, onDone }
 }
 
+const addressSelectionFlow: FlowInit = async () => {
+  const [
+    { nimWithdrawalAddressSelectionStep },
+  ] = await Promise.all([import('./steps')])
+  const flowName = FlowName.AddressSelection
+  const steps = (await Promise.all([
+    nimWithdrawalAddressSelectionStep,
+  ].map(s => s({ flowName }))))
+  return { flowName, steps }
+}
+
 const nimTopUpFlow: FlowInit = async () => {
   const [
     { nimAddressDisplay, qrCodeDisplayStep, qrCodeScannerStep },
@@ -496,6 +507,7 @@ const flows = {
   [FlowName.NakaOnboarding]: nakaOnboardFlow,
   [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,
+  [FlowName.AddressSelection]: addressSelectionFlow,
 
 }
 
