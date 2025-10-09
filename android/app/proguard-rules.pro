@@ -23,3 +23,5 @@
 # SQLite
 -keep class net.sqlcipher.** { *; }
 -keepclassmembers class net.sqlcipher.** { *; }
+
+-dontwarn org.slf4j.impl.StaticLoggerBinder
