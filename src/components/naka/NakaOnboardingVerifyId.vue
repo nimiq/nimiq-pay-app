@@ -4,12 +4,11 @@ import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
 import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.vue'
 import { useToast } from '@/composables/useToast'
-import { stepEmits } from '@/lib/flows/steps.types'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { useKyc } from '@/stores/kyc'
 import { useNaka } from '@/stores/naka'
-
-const emit = defineEmits(stepEmits)
 
 const { setupCard } = useNaka()
 const { getUserStatus } = useIssuerRestApi()
@@ -24,7 +23,7 @@ async function register() {
   // TODO: Check if initialized and wait until verified before trying KYC again
   if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
     await setupCard(user)
-    return emit('done') // Triggers NakaCardIsReady modal
+    return initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
   }
 
   try {
@@ -48,7 +47,7 @@ onKycApproved.value = async () => {
     console.error('User does not have a VERIFIED identification')
 
   await setupCard(user)
-  emit('done') // Triggers NakaCardIsReady modal
+  initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
 }
 </script>
 

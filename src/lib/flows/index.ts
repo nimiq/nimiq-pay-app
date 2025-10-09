@@ -3,11 +3,12 @@ import type { Result } from '../../types'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import { modalController } from '@ionic/vue'
+import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineAsyncComponent, h, ref } from 'vue'
+
 import FlowCmp from '@/components/Flow.vue'
 
 import { useLogger } from '@/composables/useLogger'
-
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
@@ -456,10 +457,13 @@ const nakaOnboardFlow: FlowInit = async () => {
     verifyYourIdNakaStep({ flowName }),
   ])
 
-  const onDone: Flow['onDone'] = async () => {
-    initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
+  const onCancel: Flow['onCancel'] = async () => {
+    const { useKyc } = await import('@/stores/kyc')
+    if (useKyc().sdkStatus === SumsubSdkStatus.PENDING)
+      useKyc().checkKycInBackground()
   }
-  return { flowName, steps, onDone }
+
+  return { flowName, steps, onCancel }
 }
 
 const nakaCardIsReadyFlow: FlowInit = async () => {

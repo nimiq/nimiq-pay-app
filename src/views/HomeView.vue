@@ -6,6 +6,7 @@ import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
+import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { chevronForward } from 'ionicons/icons'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -32,11 +33,12 @@ import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
 
+import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useKyc } from '@/stores/kyc'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
@@ -313,6 +315,10 @@ onMounted(async () => {
   useNotifications().init()
   useSync().syncWallets()
   detectPaymentRequest()
+
+  if (useKyc().sdkStatus === SumsubSdkStatus.PENDING)
+    useKyc().checkKycInBackground()
+
   isFirstRender.value = false
 })
 

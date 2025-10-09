@@ -1,16 +1,18 @@
 import type { IdentificationTokenResponse } from '@/lib/issuer-schemas/rest.schema'
-import { until, useStorageAsync } from '@vueuse/core'
+import { until, useIntervalFn, useStorageAsync } from '@vueuse/core'
 import { SumsubMobileSdk, SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineStore, storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { kv, useApp } from '@/stores/app'
 
 const logger = useLogger('useKyc')
 const { language } = storeToRefs(useApp())
-const { getNakaIdentificationToken } = useIssuerRestApi()
+const { getNakaIdentificationToken, getUserStatus } = useIssuerRestApi()
 
 /**
  * Represents the various error types that can occur during the KYC verification process.
@@ -38,7 +40,7 @@ export enum SumsubErrorType {
 }
 
 export const useKyc = defineStore('kyc', () => {
-  const sdkStatus = ref<SumsubSdkStatus>(SumsubSdkStatus.NOT_INITIALIZED)
+  const sdkStatus = useStorageAsync<SumsubSdkStatus>('nakaKycStatus', SumsubSdkStatus.NOT_INITIALIZED, kv(), { writeDefaults: true })
   const onKycApproved = ref<() => Promise<void>>()
   const accessToken = useStorageAsync<IdentificationTokenResponse>('sumsubAccessToken', { token: '', tokenExpiresAt: '' }, kv(), { writeDefaults: false })
 
@@ -128,11 +130,25 @@ export const useKyc = defineStore('kyc', () => {
     }
   }
 
+  function checkKycInBackground() {
+    const { pause } = useIntervalFn(async () => {
+      const user = await getUserStatus()
+      if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
+        pause()
+        sdkStatus.value = SumsubSdkStatus.APPROVED
+        const { useNaka } = await import('@/stores/naka')
+        await useNaka().setupCard(user)
+        initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
+      }
+    }, 10 * 60 * 1000, { immediate: true }) // every 10 minutes
+  }
+
   return {
     sdkStatus,
     initializeSdk,
     openKycFlow,
     onKycApproved,
+    checkKycInBackground,
     waitForStatusApproved: async () => await until(sdkStatus).toBe(SumsubSdkStatus.APPROVED),
   }
 })
