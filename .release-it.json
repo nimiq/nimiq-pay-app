@@ -1,4 +1,5 @@
 {
+  "verbose": 2,
   "hooks": {
     "after:bump": [
       "pnpm build:ios",
