@@ -29,9 +29,9 @@ async function handleConfirm() {
     if (hasCard.value) {
       await HCESdk.initialize({ storageName: 'naka-card' })
       const { cards } = await HCESdk.getAllSucceededCards()
-      console.log('Cards: in SDK storage', cards)
+      logger.log('Cards: in SDK storage', cards)
       for (const card of cards) {
-        console.log('Deactivating card', card)
+        logger.log('Deactivating card', card)
         await HCESdk.deactivateCard({ cardId: card.id })
       }
     }

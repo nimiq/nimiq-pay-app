@@ -43,7 +43,7 @@ onUnmounted(() => {
       <AddressDisplay class="w-4/5 min-w-[18rem]" :address="address" />
     </div>
     <div class="w-full mt-auto flex flex-col items-center justify-center">
-      <IonButton size="small" fill="#1F2348" class="text-base font-bold normal-case" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px" @click="handleCopy">
+      <IonButton size="small" fill="clear" class="text-base font-bold normal-case" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px" @click="handleCopy">
         {{ $t('Copy address') }}
       </IonButton>
       <IonButton expand="block" fill="clear" class="text-base font-bold normal-case" @click="$emit('done')">

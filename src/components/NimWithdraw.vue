@@ -3,25 +3,25 @@ import type { PropType } from 'vue'
 import type { State } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
-import { FiatAmount, Identicon } from '@nimiq/vue3-components'
+import { FiatAmount } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
 
 import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
-import IconHorizontalEllipsis from '@/components/icons/horizontal-ellipsis.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
-import MiddleEllipsis from '@/components/MiddleEllipsis.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
+import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import ShortAddressDisplay from './ShortAddressDisplay.vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
 // being inheritable as fallback attributes as there is no single root element in this component.
@@ -34,7 +34,7 @@ const emit = defineEmits(stepEmits)
 const logger = useLogger('NimWithdraw')
 
 const state = toRef(props, 'state')
-const { withdrawalAddress, topUpAddresses, withdrawalAddressesHistory, selectedFiat } = storeToRefs(useApp())
+const { withdrawalAddress, selectedFiat } = storeToRefs(useApp())
 const address = computed(() => {
   const address = withdrawalAddress.value || state.value[StepName.NimAddressInput]
   if (!address)
@@ -50,6 +50,7 @@ const address = computed(() => {
 })
 
 const { height, consensus } = storeToRefs(useNimiqNetwork())
+const { isScannerActive } = storeToRefs(useLocks())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 
 const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))
@@ -73,9 +74,7 @@ const lunaAmount = computed(() => Math.floor(fiatAmount.value / price.value * 1e
 const hasEnoughAmount = computed(() => lunaAmount.value <= remoteBalance.value)
 const remoteBalanceFiat = computed(() => remoteBalance.value / 1e5 * price.value)
 
-const isSelectOpen = ref(false)
 const selected = ref('')
-const options = computed(() => [...new Set([address.value, ...withdrawalAddressesHistory.value, ...topUpAddresses.value])])
 
 watch(address, () => {
   selected.value = address.value
@@ -125,78 +124,56 @@ watch(errorMessage, (value) => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
-    <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
-    <p class="max-w-full text-base font-semibold text-space/60">
-      <CryptoAmount :amount="lunaAmount" :currency="Crypto.NIM" :min-decimals="DECIMALS.NIM" />
-    </p>
-  </div>
-
-  <div
-    class="grid grid-cols-[auto_1fr_auto] gap-x-3 items-center w-11/12 mx-2 p-3 pl-4 text-base font-semibold border-[1.5px] border-solid rounded border-space-space-400"
-    :aria-label="$t('Select withdrawal address')"
-    @click="emit('done', '')"
-  >
-    <Identicon v-if="selected" :address="selected" class="w-8" />
-    <NimiqLogo v-else class="size-6" />
-    <MiddleEllipsis :text="selected" class="text-lg uppercase address" />
-    <TriangleIcon class="h-[10px] ml-auto text-space/30" />
-  </div>
-
-  <div
-    class="grid grid-cols-[auto_1fr_auto] gap-x-4 items-center w-max mx-auto p-3 pl-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
-    :aria-label="$t('Select withdrawal address')"
-    @click="initializeFlow(FlowName.AddressSelection, { height: 'h-max' })"
-  >
-    <Identicon v-if="selected" :address="selected" class="w-8" />
-    <NimiqLogo v-else class="size-6" />
-    <div class="text-lg uppercase address flex items-center gap-x-2">
-      <!-- First 4 characters -->
-      <span>{{ selected.slice(0, 4) }}</span>
-      <!-- Ellipsis -->
-      <IconHorizontalEllipsis class="w-6 text-space/30" />
-      <!-- Last 4 characters -->
-      <span>{{ selected.slice(-4) }}</span>
+  <div v-if="!isScannerActive" class="h-full flex flex-1 flex-col">
+    <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
+      <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
+      <p class="max-w-full text-base font-semibold text-space/60">
+        <CryptoAmount :amount="lunaAmount" :currency="Crypto.NIM" :min-decimals="DECIMALS.NIM" />
+      </p>
     </div>
-    <TriangleIcon class="h-[10px] ml-auto text-space/30" />
-  </div>
 
-  <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
+    <div
+      class="grid grid-cols-[auto_1fr_auto] items-center w-max mx-auto p-3 px-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
+      :aria-label="$t('Select withdrawal address')"
+      @click="initializeFlow(FlowName.AddressSelection, { height: 'h-max', isOnTop: true })"
+    >
+      <ShortAddressDisplay v-if="selected" :address="selected" class="text-lg" />
+      <div v-else class="text-lg text-space flex items-center gap-x-4">
+        <NimiqLogo class="w-8" />
+        <span>
+          {{ $t('Select an address…') }}
+        </span>
+      </div>
+      <TriangleIcon class="h-[10px] ml-4 text-space/30" />
+    </div>
 
-  <div class="flex w-full mt-auto mb-4 justify-evenly">
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25">
-      <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
-    </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50">
-      <FiatAmount :amount="50" :currency="selectedFiat" hide-decimals />
-    </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
-      <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
-    </button>
-    <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
-      {{ $t('All') }}
-    </button>
-  </div>
+    <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
-  <div class="flex flex-col justify-center w-full pb-6">
-    <IonButton size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
-      <Transition
-        mode="out-in"
-        name="slide-fade"
-      >
-        <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
-        <span v-else>{{ $t('Send') }}</span>
-      </Transition>
-    </IonButton>
+    <div class="flex w-full mt-auto mb-4 justify-evenly">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25">
+        <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
+      </button>
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50">
+        <FiatAmount :amount="50" :currency="selectedFiat" hide-decimals />
+      </button>
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
+        <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
+      </button>
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
+        {{ $t('All') }}
+      </button>
+    </div>
+
+    <div class="flex flex-col justify-center w-full pb-6">
+      <IonButton size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
+        <Transition
+          mode="out-in"
+          name="slide-fade"
+        >
+          <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
+          <span v-else>{{ $t('Send') }}</span>
+        </Transition>
+      </IonButton>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.address {
-  font-family: 'Fira Mono', monospace;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: .2px;
-}
-</style>
-

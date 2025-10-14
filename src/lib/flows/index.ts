@@ -333,11 +333,10 @@ selectionStep ◄────┘
         └────► pinCodeStep
    */
   const [
-    { nimWithdrawalAmountSelectionStep, nimWithdrawalAddressSelectionStep, nimAddressInputStep, qrCodeScannerStep, pinCodeStep },
-    { QRDataFormat },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
+    { nimWithdrawalAmountSelectionStep, pinCodeStep },
+  ] = await Promise.all([import('./steps')])
   const flowName = FlowName.NimWithdraw
-  const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, nimWithdrawalAddressSelectionStep, nimAddressInputStep, (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress } }), pinCodeStep].map(s => s({ flowName }))))
+  const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, pinCodeStep].map(s => s({ flowName }))))
   const onDone: Flow['onDone'] = async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { err, setToast }) => {
     const [{ Transfer }, { sendTx }] = await Promise.all([
       import('@/types/transactions'),
@@ -356,12 +355,28 @@ selectionStep ◄────┘
 
 const addressSelectionFlow: FlowInit = async () => {
   const [
-    { nimWithdrawalAddressSelectionStep },
-  ] = await Promise.all([import('./steps')])
+    { nimWithdrawalAddressSelectionStep, nimAddressInputStep, qrCodeScannerStep },
+    { QRDataFormat },
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
   const flowName = FlowName.AddressSelection
   const steps = (await Promise.all([
     nimWithdrawalAddressSelectionStep,
+    (options: StepInitOptions) => nimAddressInputStep({ ...options, props: { overrideHeight: 'h-full' } }),
+    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress, overrideHeight: 'h-full' } }),
   ].map(s => s({ flowName }))))
+
+  const onCancel: Flow['onCancel'] = async () => {
+    // Remove transparency before closing to prevent the camera view to be visible behind the modal
+    document.body.classList.remove('native-qr-scanner-modal-open')
+  }
+
+  return { flowName, steps, onCancel }
+}
+
+const addressDeletionFlow: FlowInit = async () => {
+  const { confirmAddressDeletionStep } = await import('./steps')
+  const flowName = FlowName.AddressDeletion
+  const steps = (await Promise.all([confirmAddressDeletionStep].map(s => s({ flowName }))))
   return { flowName, steps }
 }
 
@@ -376,7 +391,13 @@ const nimTopUpFlow: FlowInit = async () => {
     qrCodeDisplayStep,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } }),
   ].map(s => s({ flowName }))))
-  return { flowName, steps }
+
+  const onCancel: Flow['onCancel'] = async () => {
+    // Remove transparency before closing to prevent the camera view to be visible behind the modal
+    document.body.classList.remove('native-qr-scanner-modal-open')
+  }
+
+  return { flowName, steps, onCancel }
 }
 
 const viewTransactionsFlow: FlowInit = async () => {
@@ -512,8 +533,11 @@ const flows = {
   [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,
   [FlowName.AddressSelection]: addressSelectionFlow,
+  [FlowName.AddressDeletion]: addressDeletionFlow,
 
 }
+
+export type flowHeightOptions = 'h-full' | 'h-max'
 
 interface InitializeFlowOptions {
   initialState?: Partial<State>
@@ -523,8 +547,9 @@ interface InitializeFlowOptions {
    * the logic in the modalControll.create to return `undefined`
    * @default 'h-full'
    */
-  height?: 'h-full' | 'h-max'
+  height?: flowHeightOptions
   preventSwipe?: boolean
+  isOnTop?: boolean
 }
 
 /**
@@ -532,9 +557,11 @@ interface InitializeFlowOptions {
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
-  const { initialState, height = 'h-full', preventSwipe = false } = options
+  const { initialState, height = 'h-full', preventSwipe = false, isOnTop = false } = options
+
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
-  await useModal().closeModal()
+  if (!isOnTop)
+    await useModal().closeModal()
 
   const flow = await flows[name]()
 
@@ -576,7 +603,7 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
     // via componentProps, to make the props reactive. Passing the props to componentProps as reactive() did not work.
     // isClosing could also be passed as ref, but having a ref as a prop instead of the actual value is not the typical
     // vue way of doing things.
-    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value }, slots),
+    component: () => h(FlowCmp, { flow, initialState, isClosing: isClosing.value, height }, slots),
     cssClass: `nimiq-modal-${height}`,
     handle: false,
 

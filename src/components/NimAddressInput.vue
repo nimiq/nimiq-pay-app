@@ -14,7 +14,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
 
-const { withdrawalAddress, withdrawalAddressesHistory } = storeToRefs(useApp())
+const { withdrawalAddressesHistory } = storeToRefs(useApp())
 const address = ref<string>()
 watch(() => toRefs(props.state), ({ qrCodeScanner }) => address.value = qrCodeScanner.value as string || '', { deep: true })
 
@@ -30,7 +30,7 @@ const hasError = computed(() => !validAddress.value && !!address.value)
 function handleSave() {
   if (!address.value)
     return
-  withdrawalAddress.value = address.value
+
   withdrawalAddressesHistory.value.push(address.value)
   emit('done', address.value)
 }

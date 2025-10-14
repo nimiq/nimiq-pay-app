@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType, Ref } from 'vue'
+import type { flowHeightOptions } from '@/lib/flows'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
@@ -9,8 +10,8 @@ import { computed, nextTick, onMounted, reactive, ref, watch, watchEffect } from
 import { useCarousel } from '@/composables/useCarousel'
 import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
-import { useToast } from '@/composables/useToast'
 
+import { useToast } from '@/composables/useToast'
 import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
 
 const props = defineProps({
@@ -26,6 +27,10 @@ const props = defineProps({
     type: Object as PropType<Partial<State>>,
     required: false,
   },
+  height: {
+    type: String as PropType<flowHeightOptions>,
+    required: true,
+  },
 })
 
 const logger = useLogger('Flow.vue')
@@ -40,7 +45,7 @@ const state = ref({ ...emptyState, ...props.initialState })
 const { setToast } = useToast()
 
 let lock = Promise.resolve() // Initially unlocked
-let hasRunSuccessfully = false // Flag to track if the hook has run successfully
+const hasRunSuccessfully = new Map<string, boolean>() // Flag to track if the hook has run successfully
 
 /**
  * Extends the flow handler to ensure that it only executes successfully once.
@@ -53,14 +58,14 @@ let hasRunSuccessfully = false // Flag to track if the hook has run successfully
 function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
   // If no custom handler is not provided, the default behavior is to close the modal.
   if (!originalHandler)
-    originalHandler = async () => useModal().closeModal()
+    originalHandler = async () => {}
 
   const fn = async function (_err = defaultErrorHandler) {
     // Wait for the lock to be released before proceeding.
     await lock
 
     // Prevent execution if the hook has already run successfully.
-    if (hasRunSuccessfully) {
+    if (hasRunSuccessfully.get(flowName)) {
       logger.warn(`${flowName} hook has already completed successfully and cannot be run again.`)
       return
     }
@@ -77,9 +82,9 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
       }
 
       // Execute the original handler with the provided state and utilities.
-      const { prevent } = await originalHandler!(state.value, { err, setToast }) || { prevent: false }
+      const { prevent } = await originalHandler(state.value, { err, setToast }) || { prevent: false }
       if (!hasError)
-        hasRunSuccessfully = true
+        hasRunSuccessfully.set(flowName, true)
 
       // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing && !prevent)
@@ -318,6 +323,27 @@ function blur() {
   else
     logger.warn('Cannot blur', activeElement)
 }
+
+watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
+  // If going from full to max, wait for scrolling to finish to prevent popping
+  if ((oldHeight === 'h-full' && newHeight === 'h-max')
+    || (oldHeight === 'h-full' && newHeight === undefined)
+    || (oldHeight === undefined && newHeight === 'h-max')
+  ) {
+    await until(isScrolling).toBe(true, { timeout: 1000 })
+    await until(isScrolling).toBe(false, { timeout: 1000 })
+  }
+
+  const modal = scroller.value?.parentElement?.parentElement // ion-page -> ion-modal
+  if (!modal)
+    return logger.warn('Cannot find modal element to override height')
+
+  if (newHeight)
+    modal.style.setProperty('--height', newHeight === 'h-full' ? 'calc(100% - (var(--ion-safe-area-top) + 10px))' : 'auto')
+  else
+    // Reset to default height
+    modal.style.setProperty('--height', props.height === 'h-full' ? 'calc(100% - (var(--ion-safe-area-top) + 10px))' : 'auto')
+})
 </script>
 
 <template>
@@ -350,7 +376,7 @@ function blur() {
         <component
           :is="main"
           v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur, navigateTo }"
+          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur, navigateTo, overrideHeight: (value: flowHeightOptions) => { console.log('Override height for step:', { step, value }) } }"
         />
       </div>
     </li>

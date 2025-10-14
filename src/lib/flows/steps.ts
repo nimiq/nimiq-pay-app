@@ -1,4 +1,5 @@
 import type { Component } from 'vue'
+import type { flowHeightOptions } from '@/lib/flows/index'
 import type { Step, StepInit } from '@/lib/flows/steps.types'
 import type { ExternalTransaction } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
@@ -28,6 +29,7 @@ const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
 const WithdrawalAddressList = defineAsyncComponent(() => import('@/components/WithdrawalAddressList.vue'))
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
+const ConfirmAddressDeletion = defineAsyncComponent(() => import('@/components/ConfirmAddressDeletion.vue'))
 const TransactionList = defineAsyncComponent(() => import('@/components/TransactionList.vue'))
 const TransactionDetails = defineAsyncComponent(() => import('@/components/TransactionDetails.vue'))
 const BackupIntroduction = defineAsyncComponent(() => import('@/components/BackupIntroduction.vue'))
@@ -361,11 +363,12 @@ export const onBoardingBluecode3: StepInit = async () => ({
   main: markRaw(OnBoardingScreen),
 } satisfies Step)
 
-export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat }> = async ({ props: defaultProps, allowGoBack }) => {
+export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?: flowHeightOptions }> = async ({ props: defaultProps, allowGoBack }) => {
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
     allowGoBack,
+    overrideHeight: defaultProps?.overrideHeight,
     main: markRaw(props => h(QRScanner, { ...props, ...defaultProps })),
     async beforeRender(state, { navigateTo }) {
       const { qrCodeScanner } = state
@@ -511,24 +514,36 @@ export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
 } satisfies Step)
 
 export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
+  get title() { return i18n.t('Choose an address') },
   step: StepName.NimWithdrawalAddressSelectionStep,
   main: markRaw(WithdrawalAddressList),
   autofocus: false, // Don't autofocus on the search bar
-  beforeNext: async ({ nimWithdrawalAddressSelectionStep }, { next, prev }) => {
+  beforeNext: async ({ nimWithdrawalAddressSelectionStep }, { next, finalizeFlow }) => {
     if (!nimWithdrawalAddressSelectionStep) {
       // User clicked "Add NIM address"
       return next()
     }
-    prev()
+    else {
+      // User selected an address
+      const { useApp } = (await import('@/stores/app'))
+      useApp().withdrawalAddress = nimWithdrawalAddressSelectionStep
+      finalizeFlow()
+    }
   },
 } satisfies Step)
 
-export const nimAddressInputStep: StepInit = async () => ({
+export const confirmAddressDeletionStep: StepInit = async () => ({
+  step: StepName.ConfirmAddressDeletion,
+  main: markRaw(props => h(ConfirmAddressDeletion, props)),
+} satisfies Step)
+
+export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions }> = async ({ props }) => ({
   step: StepName.NimAddressInput,
   get title() { return i18n.t('Send NIM to this address') },
   get description() { return i18n.t('Copy or scan the address') },
   main: markRaw(NimAddressInput),
   autofocus: false, // Usually the user will scan the QR code
+  overrideHeight: props?.overrideHeight,
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
     // The NIM Address Step is a special step:
     //   - if the address is ok, then we would go to the previous slide

@@ -1,6 +1,7 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
+import type { flowHeightOptions } from '@/lib/flows/index'
 
 export enum FlowName {
   Setup = 'setup',
@@ -13,6 +14,7 @@ export enum FlowName {
   Payment = 'payment',
   NimWithdraw = 'nimWithdraw',
   AddressSelection = 'addressSelection',
+  AddressDeletion = 'addressDeletion',
   NimTopUp = 'nimTopUp',
   ViewTransactions = 'viewTransactions',
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow
@@ -85,6 +87,7 @@ export enum StepName {
   NimWithdrawalAddressSelectionStep = 'nimWithdrawalAddressSelectionStep',
   NimAddressInput = 'nimAddressInput',
   NimAddressDisplay = 'nimAddressDisplay',
+  ConfirmAddressDeletion = 'confirmAddressDeletion',
   TransactionList = 'transactionList',
   TransactionDetail = 'transactionDetail',
   BackupIntroduction = 'backupIntroduction',
@@ -100,7 +103,7 @@ export enum StepName {
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -126,6 +129,7 @@ export interface State {
     confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
   }
   [StepName.NimAddressDisplay]: string
+  [StepName.ConfirmAddressDeletion]: string
   [StepName.HoldNakaCardToReader]: {
     request: PaymentRequestData
     confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
@@ -251,6 +255,15 @@ export type InputStep = BaseStep & {
    * input, we want to open the keyboard automatically
    */
   autofocus?: boolean
+  /**
+   * Whether or not the step should override the default max height of the modal
+   * to `h-max` orf `h-full`. Useful when the flow has multiple steps with
+   * different heights and we want to avoid the jumping effect when changing
+   * steps.
+   *
+   * @default false
+   */
+  overrideHeight?: flowHeightOptions
 }
 
 export type InfoStep = BaseStep & {
@@ -261,6 +274,7 @@ export type InfoStep = BaseStep & {
 
   // Just to be explicit, and avoid TS issues
   autofocus?: undefined
+  overrideHeight?: undefined
 }
 
 export type Step = (InputStep | InfoStep) & {

@@ -25,12 +25,15 @@ msgstr "Sobre"
 msgid "Activate Cashback & Rewards"
 msgstr "Ativar Cashback e Recompensas"
 
+msgid "Activate NAKA for contactless payments"
+msgstr ""
+
 msgid "Activating scanner"
 msgstr "A activar o scanner"
 
 #, fuzzy
 #| msgid "Add NIM address"
-msgid "Add NIM address"
+msgid "Add another address"
 msgstr "Adicionar endereço NIM"
 
 msgid "Address copied to clipboard"
@@ -95,11 +98,28 @@ msgstr "Biometria não suportada neste dispositivo"
 msgid "Bitcoin Lightning invoice expired."
 msgstr "Fatura Bitcoin Lightning expirada."
 
+msgid "Block"
+msgstr ""
+
+msgid "Block card"
+msgstr ""
+
+msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
+msgstr ""
+
+#, fuzzy
+#| msgid "Pay with Bluecode"
+msgid "Bluecode"
+msgstr "Pagar com Bluecode"
+
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode é um serviço de pagamento europeu que agora suporta NIM."
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Tanto o PIN esperado quanto o fornecido estão vazios"
+
+msgid "By proceeding, you are agreeing to NAKA's Terms & Conditions and Privacy Policy"
+msgstr ""
 
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "Ao clicares em \"pagar\", concordas com os {terms} do Fastspot."
@@ -132,6 +152,11 @@ msgstr "Muda o PIN"
 
 msgid "Choose a PIN"
 msgstr "Escolhe um PIN"
+
+#, fuzzy
+#| msgid "Copy address"
+msgid "Choose an address"
+msgstr "Copiar endereço"
 
 msgid "Claim Promo Code"
 msgstr "Reclamar código promocional"
@@ -209,6 +234,16 @@ msgstr "Moeda"
 
 msgid "Date"
 msgstr "Data"
+
+#, fuzzy
+#| msgid "Select an address…"
+msgid "Delete {address}?"
+msgstr "Selecionar um endereço…"
+
+#, fuzzy
+#| msgid "Select an address…"
+msgid "Delete Address"
+msgstr "Selecionar um endereço…"
 
 msgid "Delete Cryptocity Points account"
 msgstr "Apagar conta de Pontos Cryptocity"
@@ -357,6 +392,9 @@ msgstr "Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão rec
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Olá! Junta-te a mim na aplicação Nimiq Pay e ganha Pontos Cryptocity para pagar as tuas compras com cripto. Usa o meu código {code} para receberes {amount} em Pontos Cryptocity com o teu registo."
 
+msgid "Hold your phone near the terminal"
+msgstr ""
+
 msgid "I have a promo code"
 msgstr "Tenho um código promocional"
 
@@ -472,6 +510,9 @@ msgstr "Convida um amigo! | Convida um amigo e recebam {amount} ponto cada! | Co
 msgid "Is this your phone number?"
 msgstr "Este é o teu número de telemóvel?"
 
+msgid "Keep pressing…"
+msgstr ""
+
 msgid "Language"
 msgstr "Língua"
 
@@ -493,6 +534,9 @@ msgstr "A carregar tarefas…"
 msgid "Loading…"
 msgstr "A carregar…"
 
+msgid "Lock card"
+msgstr ""
+
 msgid ""
 "Log in again with your recovery words.\n"
 "Please ensure that you have them available before logging out."
@@ -504,6 +548,21 @@ msgstr "Encerrar sessão"
 msgid "Login"
 msgstr "Iniciar sessão"
 
+msgid "Minimum NIM Decimals"
+msgstr ""
+
+msgid "Naka"
+msgstr ""
+
+msgid "Naka Card"
+msgstr ""
+
+msgid "NAKA Card"
+msgstr ""
+
+msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
+msgstr ""
+
 msgid "Network consensus lost."
 msgstr "Consenso da rede perdido."
 
@@ -512,6 +571,14 @@ msgstr "Incompatibilidade de ID da rede"
 
 msgid "New"
 msgstr "Novo"
+
+msgid "NFC is disabled, please enable it"
+msgstr ""
+
+#, fuzzy
+#| msgid "Biometric is not supported on this device"
+msgid "NFC is not supported on this device"
+msgstr "Biometria não suportada neste dispositivo"
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "A Nimiq Pay e a Nimiq Wallet usam palavras de recuperação diferentes."
@@ -528,8 +595,14 @@ msgstr "Nenhuma conta foi encontrada"
 msgid "No accounts found"
 msgstr "Nenhumas contas encontradas"
 
+msgid "No active card"
+msgstr ""
+
 msgid "No Cashlink found"
 msgstr "Nenhum Cashlink encontrado"
+
+msgid "No NAKA card found"
+msgstr ""
 
 msgid "No NIM HTLC found in swap"
 msgstr "Nenhum HTLC de NIM encontrado na troca"
@@ -548,6 +621,11 @@ msgstr "Sem permissão para usar a camara"
 
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Não há pontos a expirar | {amount} está prestes a expirar | {amount} estão prestes a expirar"
+
+#, fuzzy
+#| msgid "Copy or scan the address"
+msgid "No saved addresses"
+msgstr "Copiar ou digitalizar o endereço"
 
 msgid ""
 "No tasks available.\n"
@@ -574,6 +652,9 @@ msgstr "As notificações não podes ser ativadas, saltando esta etapa."
 msgid "Only {count} out of {total} remaining."
 msgstr "Apenas {count} de {total} em falta."
 
+msgid "Open NFC settings"
+msgstr ""
+
 msgid "Pay"
 msgstr "Pagar"
 
@@ -588,6 +669,9 @@ msgstr "Pagar com Pontos Cryptocity"
 
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr "Pagar com Pontos Cryptocity em vez de NIM sempre que for aceite."
+
+msgid "Pay with NAKA Card"
+msgstr ""
 
 msgid "Pay with Points"
 msgstr "Pagar com Pontos"
@@ -665,6 +749,9 @@ msgstr "Por favor insere um código de verificação"
 
 msgid "Please enter at least ten characters"
 msgstr "Por favor insere pelo menos dez caracteres"
+
+msgid "Please verify yourself with SumSub to activate your NAKA card."
+msgstr ""
 
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
 msgstr "Por favor espera {time} minuto antes de pedir um novo código | Por favor espera {time} minutos antes de pedir um novo código"
@@ -747,6 +834,11 @@ msgstr "Digitaliza qualquer código QR Nimiq, Bitcoin Lightning ou NAKA para pag
 
 msgid "Scan Cashlink"
 msgstr "Digitalizar Cashlink"
+
+#, fuzzy
+#| msgid "Scan QR code"
+msgid "Scan QR"
+msgstr "Digitalizar código QR"
 
 msgid "Scan QR code"
 msgstr "Digitalizar código QR"
@@ -849,11 +941,11 @@ msgstr "Estado"
 msgid "Store screenshot safely"
 msgstr "Armazene a captura de ecrã com segurança"
 
-msgid "Submit"
-msgstr "Submeter"
-
 msgid "Syncing with network."
 msgstr "A sincronizar com a rede."
+
+msgid "Tap to pay with your NAKA card!"
+msgstr ""
 
 msgid "Terms of service"
 msgstr "Termos de serviço"
@@ -884,6 +976,9 @@ msgstr "Não há recompensas de cashback quando pagas com pontos."
 
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Estes pontos foram feitos para ser gastos. Vai por aí e ajuda a impulsionar a adoção cripto."
+
+msgid "This action cannot be undone"
+msgstr ""
 
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
 msgstr "Esta conversão e a operação de um canal BTC Lightning requer uma taxa."
@@ -945,6 +1040,9 @@ msgstr "Desconhecido"
 msgid "Unknown error"
 msgstr "Erro desconhecido"
 
+msgid "Unlock card"
+msgstr ""
+
 msgid "Unlock Nimiq Pay with your biometric data"
 msgstr "Desbloqueia a Nimiq Pay com os teus dados biométricos"
 
@@ -963,6 +1061,11 @@ msgstr "Usar {amount}"
 msgid "Verify"
 msgstr "Verificar"
 
+#, fuzzy
+#| msgid "Verify"
+msgid "Verify ID"
+msgstr "Verificar"
+
 msgid "Verify your ID"
 msgstr "Verificar a tua identidade"
 
@@ -971,9 +1074,6 @@ msgstr "Verificar o teu número de telemóvel"
 
 msgid "Wait for consensus before withdrawing"
 msgstr "Esperar por consenso antes de retirar"
-
-msgid "We value your opinion. Please enter at least ten characters."
-msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
 
 msgid "We're working on something special"
 msgstr ""
@@ -1091,9 +1191,6 @@ msgstr "Não tens NIM suficiente. O teu saldo atual é de {balance}."
 msgid "You don't have enough Points for this purchase."
 msgstr "Não tens pontos suficientes para esta compra."
 
-msgid "You earn {amount}"
-msgstr "Tu ganhas {amount}"
-
 msgid "You have a reward to claim!"
 msgstr "Tens uma recompensa para reclamar!"
 
@@ -1112,6 +1209,12 @@ msgstr "Vais receber uma mensagem com um código de verificação"
 msgid "Your account, funds and data will be lost if you log out without a backup."
 msgstr "A tua conta, fundos e dados vai ser perdida se encerrares sessão sem um backup."
 
+msgid "Your ID has been successfully verified. Tap ‘Pay’ on the start screen and chose NAKA to pay."
+msgstr ""
+
+msgid "Your NAKA Card is ready!"
+msgstr ""
+
 #, fuzzy
 #| msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgid "Your NIM balance is not available yet. You can only pay with Points."
@@ -1122,6 +1225,15 @@ msgstr "O teu número"
 
 msgid "Your wallet is ready to use"
 msgstr "A tua wallet está pronta para usar"
+
+#~ msgid "Submit"
+#~ msgstr "Submeter"
+
+#~ msgid "We value your opinion. Please enter at least ten characters."
+#~ msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
+
+#~ msgid "You earn {amount}"
+#~ msgstr "Tu ganhas {amount}"
 
 #, fuzzy
 #~| msgid "Failed to fetch payment request"

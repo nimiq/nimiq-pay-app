@@ -1,39 +1,45 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
-import { Identicon } from '@nimiq/vue3-components'
-import { useFuse } from '@vueuse/integrations/useFuse'
 import { storeToRefs } from 'pinia'
-import { computed, shallowRef } from 'vue'
-import { stepEmits } from '@/lib/flows/steps.types'
+import { computed } from 'vue'
+import RemoveIcon from '@/components/icons/remove.vue'
+import ShortAddressDisplay from '@/components/ShortAddressDisplay.vue'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 
 const emit = defineEmits(stepEmits)
-const { withdrawalAddress, withdrawalAddressesHistory } = storeToRefs(useApp())
-const addressFilter = shallowRef('')
-const addresses = computed(() => withdrawalAddressesHistory.value.slice().reverse())
-const { results: addressList } = useFuse(addressFilter, addresses, { fuseOptions: { ignoreLocation: true, isCaseSensitive: false }, matchAllWhenSearchEmpty: true })
+const { withdrawalAddressesHistory, topUpAddresses } = storeToRefs(useApp())
+const addresses = computed(() => [...new Set([...topUpAddresses.value, ...withdrawalAddressesHistory.value.slice().reverse()])])
 
 function handleSelectAddress(address: string) {
-  withdrawalAddress.value = address
   emit('done', address)
+}
+
+function handleRemoveAddress(address: string) {
+  initializeFlow(FlowName.AddressDeletion, { initialState: { confirmAddressDeletion: address }, isOnTop: true, height: 'h-max' })
+}
+
+function handleAddAddress() {
+  emit('done', '')
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mt-4">
-    <div v-for="{ item: address } in addressList" :key="address" class="p-4 flex gap-4 items-center bg-neutral-100 rounded-lg" @click="() => handleSelectAddress(address)">
-      <Identicon :address="address" class="w-20" />
-      <p class="text-base font-mono font-semibold">
-        {{ address }}
-      </p>
+  <div class="flex flex-col items-center gap-y-8 py-8">
+    <div v-if="addresses.length > 0" class="flex flex-col gap-y-2 max-h-96 overflow-y-auto w-full">
+      <div v-for="address in addresses" :key="address" class="flex items-center">
+        <ShortAddressDisplay :address="address" class="text-lg py-3 w-full" @click="() => handleSelectAddress(address)" />
+        <button class="p-4" @click="() => handleRemoveAddress(address)">
+          <RemoveIcon class="size-5 text-space-space-800" />
+        </button>
+      </div>
     </div>
-  </div>
-  <p v-if="!withdrawalAddressesHistory.length" class="text-center text-space/60">
-    {{ $t('No saved addresses') }}
-  </p>
-  <div class="w-full mt-auto">
-    <IonButton class="w-full mt-6 text-base font-bold" @click="emit('done', '')">
-      {{ $t('Add New Address') }}
+    <p v-else class="text-center text-lg text-space/60">
+      {{ $t('No saved addresses') }}
+    </p>
+    <IonButton size="small" fill="clear" class="text-base font-bold normal-case w-max" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px; --ripple-color: #1F234805" @click="handleAddAddress">
+      {{ $t('Add another address') }}
     </IonButton>
   </div>
 </template>

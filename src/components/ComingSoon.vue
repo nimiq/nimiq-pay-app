@@ -10,7 +10,7 @@ const props = defineProps({ state: { type: Object as PropType<State>, required: 
   <div class="flex flex-col items-center justify-center gap-y-6 mt-[50%]">
     <Gamepad class="w-20 text-sky" />
     <p class="font-bold text-center text-balance text-space/60">
-      {{ props.state.comingSoon as string }}
+      {{ props.state.comingSoon }}
     </p>
   </div>
 </template>

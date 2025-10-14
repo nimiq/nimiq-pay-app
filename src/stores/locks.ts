@@ -1,3 +1,4 @@
+import { useMutationObserver } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
@@ -13,6 +14,12 @@ export const useLocks = defineStore('locks', () => {
   const htlcCheckLock = ref(false)
   const isConsensusNeeded = ref(false)
   const isAppInBackground = ref(false)
+  const isScannerActive = ref(false)
+
+  useMutationObserver(document.body, (mutations) => {
+    // If any mutation adds the class, set isScannerActive to true
+    isScannerActive.value = mutations.some(mutation => (mutation.target as HTMLElement).classList.contains('native-qr-scanner-modal-open'))
+  }, { attributeFilter: ['class'] })
 
   return {
     isNetworkReconnecting,
@@ -26,5 +33,6 @@ export const useLocks = defineStore('locks', () => {
     htlcCheckLock,
     isConsensusNeeded,
     isAppInBackground,
+    isScannerActive,
   }
 })
