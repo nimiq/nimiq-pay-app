@@ -1,12 +1,14 @@
 import type { Address, Transaction as NimiqTransaction } from '@nimiq/core'
 import type { MaybeRef } from 'vue'
-import type { AsyncResultApi } from '@/types'
+import type { AsyncResultApi, ResultApi } from '@/types'
 import type { Rail } from '@/types/transactions'
 import { readonly, ref, toValue as v } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib/index'
 import { useApp } from '@/stores/app'
+import { useWebSocket } from '@vueuse/core'
+import { type MaybeRef, readonly, ref, toValue as v, watch } from 'vue'
 import { toSeconds } from './useTime'
 
 const logger = useLogger('useApi')
@@ -173,6 +175,76 @@ export enum RemoteStatus {
   Unknown = 'unknown',
 }
 
+const remoteSignerWsApi = (function () {
+  const pendingRequests = new Map<string, { id: string, requestObject: any, resolve: (result: ResultApi<any, any>) => void }>()
+  let idCounter = 0
+  const { data, send } = useWebSocket<string>(baseCosignerUrl, {
+    autoReconnect: true,
+    heartbeat: {
+      interval: isDev ? 10e3 : 1e3,
+    },
+    onConnected(ws) {
+      logger.log('Connected:', ws.url)
+      for (const request of pendingRequests.values()) {
+        send(JSON.stringify(request.requestObject))
+      }
+    },
+    onDisconnected(ws, event) {
+      logger.log('Disconnected:', ws.url, event)
+    },
+    onError(ws, event) {
+      logger.error('Error:', ws.url, event)
+    },
+  })
+
+  function request<T = any, E = undefined>(event: string, args: any = {}): AsyncResultApi<T, E> {
+    const id = `${idCounter++}`
+    const requestObject = { event, data: { ...args, id } }
+    return new Promise((resolve) => {
+      pendingRequests.set(id, { id, requestObject, resolve })
+      send(JSON.stringify(requestObject))
+    })
+  }
+
+  watch(data, (newData) => {
+    logger.log('Got:', newData)
+    if (!newData)
+      return
+    if (newData === 'pong')
+      return
+    try {
+      const responseObject: { event: 'result', data: { id: string, payload: any } } | {
+        event: 'error'
+        data: { id: string, statusCode?: number } & object
+      } = JSON.parse(newData)
+      switch (responseObject.event) {
+        case 'result':
+          pendingRequests.get(responseObject.data.id)?.resolve({
+            data: responseObject.data.payload,
+            hasError: false,
+            error: undefined,
+            status: 200,
+          })
+          pendingRequests.delete(responseObject.data.id)
+          break
+        case 'error':
+          pendingRequests.get(responseObject.data.id)?.resolve({
+            data: undefined,
+            hasError: true,
+            error: responseObject.data,
+            status: responseObject.data.statusCode ?? 500,
+          })
+          pendingRequests.delete(responseObject.data.id)
+      }
+    }
+    catch (e) {
+      logger.error('Failed to parse message:', e)
+    }
+  })
+
+  return { request }
+})().request
+
 export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
@@ -192,14 +264,14 @@ export function useRemoteSignerApi() {
   }
 
   async function getStatus(): AsyncResultApi<StatusRes, RemoteErrorRes> {
-    const { data, error, status, hasError } = await api<StatusRes>(new URL('/status', baseCosignerUrl))
+    const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status')
     if (error || data?.status !== 'good' || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
     return { data: data!, status, hasError, error: undefined }
   }
 
   async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
-    const { data, error, status, hasError } = await api<GetRemoteSignerRes, RemoteErrorRes>(new URL(`/wallet/${v(address).toUserFriendlyAddress().replaceAll(' ', '')}`, baseCosignerUrl))
+    const { data, error, status, hasError } = await remoteSignerWsApi<GetRemoteSignerRes, RemoteErrorRes>('wallet', { address: v(address).toUserFriendlyAddress() })
     if (error || !data?.address || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
@@ -208,12 +280,12 @@ export function useRemoteSignerApi() {
 
   return {
     getStatus,
-    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => api<Transaction, RemoteErrorRes>(new URL(`/tx/${v(hash)}`, baseCosignerUrl)),
-    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => api<Transaction[], RemoteErrorRes>(new URL(`/txs/${v(address)}`, baseCosignerUrl)),
-    getTransactionState: ({ hash }: GetTransactionStateArg) => api<GetTransactionStateRes, RemoteErrorRes>(new URL(`/tx/state/${v(hash)}`, baseCosignerUrl)),
+    getTransactionByHash: ({ hash }: GetTransactionByHashArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('tx', { hash: v(hash) }),
+    getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => remoteSignerWsApi<Transaction[], RemoteErrorRes>('wallet-txs', { address: v(address) }),
+    getTransactionState: ({ hash }: GetTransactionStateArg) => remoteSignerWsApi<GetTransactionStateRes, RemoteErrorRes>('tx-state', { hash: v(hash) }),
     getRemoteSigner,
-    sendTransaction: ({ address, tx }: SendTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
-    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => api<Transaction, RemoteErrorRes>(new URL(`/wallet/${v(address)}/send-tx`, baseCosignerUrl), { body }),
+    sendTransaction: ({ address, tx }: SendTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-tx', { address: v(address), payload: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
+    sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-raw-tx', { address: v(address), payload: body }),
   }
 }
 
