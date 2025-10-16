@@ -17,6 +17,8 @@ import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('SettingsModal')
 
+const isNakaEnabled = __ENABLE_NAKA__
+
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations, decimalsAmount } = storeToRefs(useApp())
@@ -145,7 +147,7 @@ onBeforeMount(updateBiometryInfo)
           <IonLabel>{{ $t('Change PIN') }}</IonLabel>
         </IonItem>
 
-        <IonItem button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
+        <IonItem v-if="isNakaEnabled" button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
           <IonLabel>{{ $t('Naka Card') }}</IonLabel>
         </IonItem>
 
