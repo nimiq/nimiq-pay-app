@@ -21,7 +21,8 @@
   },
   "gitlab": {
     "release": true,
-    "useIdsForUrls": true,
+    "genericPackageRepositoryName": "nimiq-pay",
+    "useGenericPackageRepositoryForAssets": true,
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",
       "builds/ios/NimiqPay-${version}.app.tgz",
