@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
-import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { shallowRef } from 'vue'
+import { shallowRef, watch } from 'vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
@@ -17,17 +16,29 @@ defineEmits(stepEmits)
 const { card, /* dailyLimit, paymentLimit, */ isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const showSecretData = shallowRef(false)
+const cardData = shallowRef<{ maskedPan?: string, pan?: string, expiry: string, cvv?: string } | undefined>(undefined)
 const evaluatingCardData = shallowRef(false)
-const cardData = computedAsync(async () => {
-  if (!card.value)
-    return undefined
-  if (showSecretData.value) {
-    return await getDecryptedNakaCardData(card.value.sourceId)
+
+watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
+  if (!newCard) {
+    cardData.value = undefined
+    return
   }
-  else {
-    return { maskedPan: card.value.maskedPan, expiry: `${card.value.expiry.month}/${card.value.expiry.year.toString(10).substring(2, 4)}` }
+
+  evaluatingCardData.value = true
+  try {
+    if (newShowSecretData) {
+      cardData.value = await getDecryptedNakaCardData(newCard.sourceId)
+    }
+    else {
+      cardData.value = { maskedPan: newCard.maskedPan, expiry: `${newCard.expiry.month}/${newCard.expiry.year.toString(10).substring(2, 4)}` }
+    }
   }
-}, undefined, evaluatingCardData)
+  finally {
+    evaluatingCardData.value = false
+  }
+}, { immediate: true })
+
 // const { setDailyLimit, setPaymentLimit } = useNaka()
 // const newDailyLimit = ref<number | undefined>(dailyLimit.value)
 // const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
