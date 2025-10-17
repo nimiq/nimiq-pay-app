@@ -160,6 +160,7 @@ export const useNaka = defineStore('naka', () => {
     }
 
     if (dbCards.length === 1) {
+      logger.log('One card found in DB, using it', { dbCards })
       card.value = dbCards[0]
     }
     else {
@@ -168,6 +169,7 @@ export const useNaka = defineStore('naka', () => {
         return (b.expiry.year - a.expiry.year) || (b.expiry.month - a.expiry.month)
       })
       if (dbCards[0]?.statusId === 'ACTIVE') {
+        logger.log('Multiple cards found in DB, using the newest one', { dbCards })
         // Use the newest card
         card.value = dbCards[0]
       }
