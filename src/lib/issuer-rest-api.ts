@@ -13,10 +13,11 @@ import type {
   NakaPinChangeTokenResponse,
   NakaRegistrationResponse,
   UserStatusResponse,
-} from './issuer-schemas/rest.schema'
+} from '@/lib/issuer-schemas/rest.schema'
 import { parse } from 'valibot'
-import { useLogger } from '../composables/useLogger'
-import { useLocalWallet } from '../stores/local-wallet'
+import { useLogger } from '@/composables/useLogger'
+import { isDev } from '@/lib/index'
+import { useLocalWallet } from '@/stores/local-wallet'
 import {
   AuthCompleteResponseSchema,
   AuthStartResponseSchema,
@@ -33,7 +34,7 @@ import { signMessage } from './issuer-utils'
 
 const logger = useLogger('NakaRestApi')
 
-const ISSUER_SERVER_REST_ORIGIN = 'https://pay-test-issuer.nim.sh'
+const ISSUER_SERVER_REST_ORIGIN = isDev ? 'https://pay-test-issuer.nim.sh' : 'https://rest.issuer.nimpay.app'
 
 interface Token {
   /**
@@ -193,7 +194,6 @@ export function useIssuerRestApi() {
     return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
-  // TODO: change this for correct schema
   async function getSecretData(cardId: string, publicKey: string): Promise<NakaEncryptedCardDataResponse> {
     const body = JSON.stringify({
       publicKey,

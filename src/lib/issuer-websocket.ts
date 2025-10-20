@@ -15,7 +15,7 @@ import {
 } from './issuer-schemas/ws.schema'
 import { signMessage } from './issuer-utils'
 
-const ISSUER_SERVER_WS = 'https://pay-test-issuer.nim.sh/ws/'
+const ISSUER_SERVER_WS = isDev ? 'https://pay-test-issuer.nim.sh/ws/' : 'wss://ws.issuer.nimpay.app'
 
 const logger = useLogger('NakaSocket')
 
