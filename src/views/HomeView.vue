@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { App } from '@capacitor/app'
-import { Browser } from '@capacitor/browser'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonIcon, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, refDebounced, until, useElementSize, useSwipe } from '@vueuse/core'
+import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { computedAsync, refDebounced, until, useElementSize, useResizeObserver, useSwipe } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
-import { chevronForward } from 'ionicons/icons'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, markRaw, onMounted, ref, shallowRef, useTemplateRef, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import BackupNotification from '@/components/BackupNotification.vue'
 import AlertIcon from '@/components/icons/alert.vue'
@@ -69,6 +67,7 @@ const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 
 const isFirstRender = ref(true)
 
+const contentRef = useTemplateRef('contentRef')
 const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
 const footerHeight = useElementSize(footerRef).height
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
@@ -264,6 +263,13 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], ([expired, remoteOk,
   }
 }, { immediate: true })
 
+const contentHeight = shallowRef(0)
+useResizeObserver(contentRef, (entries) => {
+  const entry = entries[0]
+  const { height } = entry.contentRect
+  contentHeight.value = height
+})
+
 async function detectPaymentRequest() {
   try {
     const { type, value: pr } = await Clipboard.read()
@@ -348,7 +354,7 @@ App.addListener('resume', detectPaymentRequest)
         </IonButtons>
       </IonToolbar>
     </IonHeader>
-    <IonContent class="ion-padding scroll-smooth">
+    <IonContent ref="contentRef" class="ion-padding scroll-smooth">
       <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
         <IonRefresherContent />
       </IonRefresher>
@@ -379,7 +385,7 @@ App.addListener('resume', detectPaymentRequest)
       </motion.div>
 
       <!-- TODO: replace with an html grid -->
-      <IonGrid class="flex flex-col mt-10 gap-y-2">
+      <IonGrid class="flex flex-col mt-10 gap-y-2 pb-0">
         <!-- Notification Horizontal Scroll -->
         <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
           <motion.ul
@@ -435,20 +441,20 @@ App.addListener('resume', detectPaymentRequest)
           </p>
         </IonRow>
         <IonRow>
-          <a class="w-full mt-2 bg-white rounded-lg h-80">
+          <a class="mt-2 bg-white rounded-lg relative" :style="{ height: `${contentHeight}px` }">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
-            <iframe class="w-full h-full" sandbox="allow-scripts allow-same-origin allow-popups" src="https://map.nimiq.com/?layout=compact"></iframe>
+            <iframe class="h-full w-screen absolute -translate-x-[21px]" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" src="https://crypto-map-next.je-cf9.workers.dev/"></iframe>
           </a>
         </IonRow>
-        <IonRow class="ion-justify-content-center">
+        <!-- <IonRow class="ion-justify-content-center">
           <IonButton
             fill="clear" class="text-base normal-case"
-            @click="Browser.open({ url: 'https://map.nimiq.com/', toolbarColor: '#fff' })"
+            @click="Browser.open({ url: 'https://crypto-map-next.je-cf9.workers.dev/', toolbarColor: '#fff' })"
           >
             {{ $t('Go to Crypto Map') }}
             <IonIcon slot="end" class="text-space/50" :icon="chevronForward" />
           </IonButton>
-        </IonRow>
+        </IonRow> -->
       </IonGrid>
     </IonContent>
 
