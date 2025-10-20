@@ -94,6 +94,14 @@ export const useKyc = defineStore('kyc', () => {
 
     SumsubMobileSdk.addListener('onVerificationStatusChanged', (status) => {
       logger.log('Status changed event:', status)
+
+      // SDK sometimes returns approved when the KYC is still pending on the backend,
+      // so we ignore it here and wait for issuer server to confirm the approval.
+      if (status.newStatus === SumsubSdkStatus.APPROVED) {
+        sdkStatus.value = SumsubSdkStatus.PENDING
+        return
+      }
+
       sdkStatus.value = status.newStatus
     })
 
@@ -131,8 +139,10 @@ export const useKyc = defineStore('kyc', () => {
   }
 
   function checkKycInBackground() {
+    logger.log('Starting background KYC check interval')
     const { pause } = useIntervalFn(async () => {
       const user = await getUserStatus()
+      logger.log('Background KYC check, user identifications:', user.identifications)
       if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
         pause()
         sdkStatus.value = SumsubSdkStatus.APPROVED
@@ -140,7 +150,7 @@ export const useKyc = defineStore('kyc', () => {
         await useNaka().setupCard(user)
         initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
       }
-    }, 10 * 60 * 1000, { immediate: true }) // every 10 minutes
+    }, 10 * 60 * 1000, { immediate: true, immediateCallback: true }) // every 10 minutes
   }
 
   return {

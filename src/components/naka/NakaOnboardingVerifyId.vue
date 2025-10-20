@@ -5,14 +5,16 @@ import { storeToRefs } from 'pinia'
 import NakaVerificationCheckIcon from '@/components/icons/naka-id-verification.vue'
 import { useToast } from '@/composables/useToast'
 import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
+import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { useKyc } from '@/stores/kyc'
 import { useNaka } from '@/stores/naka'
 
+const emit = defineEmits(stepEmits)
+
 const { setupCard } = useNaka()
 const { getUserStatus } = useIssuerRestApi()
-const { initializeSdk, openKycFlow } = useKyc()
+const { initializeSdk, openKycFlow, checkKycInBackground } = useKyc()
 const { sdkStatus, onKycApproved } = storeToRefs(useKyc())
 
 async function register() {
@@ -43,9 +45,18 @@ async function register() {
 
 onKycApproved.value = async () => {
   const user = await getUserStatus()
-  if (!user.identifications.find(identification => identification.status === 'VERIFIED'))
+  if (!user.identifications.find(identification => identification.status === 'VERIFIED')) {
     console.error('User does not have a VERIFIED identification')
+    useToast().setToast({
+      type: 'spinner',
+      message: 'KYC verification in progress, we will notify you once it is completed.',
+      duration: 10000,
+    })
+    checkKycInBackground()
+    return emit('done')
+  }
 
+  sdkStatus.value = SumsubSdkStatus.APPROVED
   await setupCard(user)
   initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
 }
