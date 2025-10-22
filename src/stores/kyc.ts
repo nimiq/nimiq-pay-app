@@ -42,6 +42,7 @@ export enum SumsubErrorType {
 export const useKyc = defineStore('kyc', () => {
   const sdkStatus = useStorageAsync<SumsubSdkStatus>('nakaKycStatus', SumsubSdkStatus.NOT_INITIALIZED, kv(), { writeDefaults: true })
   const onKycApproved = ref<() => Promise<void>>()
+  const onKycDismissed = ref<(event: { status: string, description: string }) => Promise<void>>()
   const accessToken = useStorageAsync<IdentificationTokenResponse>('sumsubAccessToken', { token: '', tokenExpiresAt: '' }, kv(), { writeDefaults: false })
 
   async function initializeSdk() {
@@ -61,7 +62,6 @@ export const useKyc = defineStore('kyc', () => {
         return logger.log('User already has a verified identification, skipping token retrieval')
       }
       logger.error('Error getting Naka identification token:', error)
-      // TODO: display error
       throw error
     }
 
@@ -116,6 +116,13 @@ export const useKyc = defineStore('kyc', () => {
       logger.log('Event received:', event)
     })
 
+    SumsubMobileSdk.addListener('onDidDismiss', (event) => {
+      logger.log('KYC flow dismissed', event)
+      if (onKycDismissed.value) {
+        onKycDismissed.value(event)
+      }
+    })
+
     SumsubMobileSdk.addListener('onLog', (event) => {
       logger.log('Log received:', event)
     })
@@ -158,6 +165,7 @@ export const useKyc = defineStore('kyc', () => {
     initializeSdk,
     openKycFlow,
     onKycApproved,
+    onKycDismissed,
     checkKycInBackground,
     waitForStatusApproved: async () => await until(sdkStatus).toBe(SumsubSdkStatus.APPROVED),
   }

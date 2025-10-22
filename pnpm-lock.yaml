@@ -72,8 +72,8 @@ importers:
         specifier: link:../capacitor-monetplus-hce
         version: link:../capacitor-monetplus-hce
       capacitor-sumsub-mobile-sdk:
-        specifier: ^0.0.1
-        version: 0.0.1(@capacitor/core@7.4.3)
+        specifier: ^0.0.5
+        version: 0.0.5(@capacitor/core@7.4.3)
       fuse.js:
         specifier: ^7.1.0
         version: 7.1.0
@@ -2976,8 +2976,8 @@ packages:
   caniuse-lite@1.0.30001743:
     resolution: {integrity: sha512-e6Ojr7RV14Un7dz6ASD0aZDmQPT/A+eZU+nuTNfjqmRrmkmQlnTNWH0SKmqagx9PeW87UVqapSurtAXifmtdmw==}
 
-  capacitor-sumsub-mobile-sdk@0.0.1:
-    resolution: {integrity: sha512-tRDDypFwMcAfdsbHpr5VGbveQ121dwdiVTAe0YgVkS9wDNcdn72zc4UqIu6v7Q/pGucBldZ/vK3opINDakX0Tg==}
+  capacitor-sumsub-mobile-sdk@0.0.5:
+    resolution: {integrity: sha512-x/+c8xB29cXtfHqTbk/oYINAtetyP7OaHeNQ5mHLjO8Vi8AvdmF/hI+uZsd5NYH6X/PjhnCHKEaPj2EF7smr1w==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -11099,7 +11099,7 @@ snapshots:
 
   caniuse-lite@1.0.30001743: {}
 
-  capacitor-sumsub-mobile-sdk@0.0.1(@capacitor/core@7.4.3):
+  capacitor-sumsub-mobile-sdk@0.0.5(@capacitor/core@7.4.3):
     dependencies:
       '@capacitor/core': 7.4.3
 

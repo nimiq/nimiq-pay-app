@@ -52,7 +52,7 @@
     "@vueuse/integrations": "^13.9.0",
     "bech32": "^2.0.0",
     "capacitor-monetplus-hce": "link:../capacitor-monetplus-hce",
-    "capacitor-sumsub-mobile-sdk": "^0.0.1",
+    "capacitor-sumsub-mobile-sdk": "^0.0.5",
     "fuse.js": "^7.1.0",
     "jsencrypt": "3.3.2",
     "jssha": "^3.3.1",
