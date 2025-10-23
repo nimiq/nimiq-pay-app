@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
+import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
@@ -8,6 +8,7 @@ import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
+import { isDev } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { useNaka } from '@/stores/naka'
@@ -50,7 +51,7 @@ const { card } = storeToRefs(useNaka())
 const { setCard } = useNaka()
 
 onMounted(async () => {
-  await HCESdk.initialize({ storageName: 'naka-card' })
+  await HCESdk.initialize({ storageName: 'naka-card', environment: isDev ? Environment.SANDBOX : Environment.PRODUCTION })
   const { cards } = await HCESdk.getAllSucceededCards()
   logger.log('Cards: in SDK storage', cards)
 
