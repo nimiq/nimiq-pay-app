@@ -1,11 +1,19 @@
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser'
-import { IonButton, IonButtons, IonHeader, IonIcon, IonItem, IonList, IonToolbar, isPlatform } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { onLongPress } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
-import ItemDivider from '@/components/ItemDivider.vue'
+import BackupIcon from '@/components/icons/backup.vue'
+import CreditCardIcon from '@/components/icons/credit-card.vue'
+import GiftIcon from '@/components/icons/gift.vue'
+import LogoutIcon from '@/components/icons/log-out.vue'
+import NimiqOutlineLogo from '@/components/icons/nimiq-outline.vue'
+import SettingsIcon from '@/components/icons/settings.vue'
+import TopUpIcon from '@/components/icons/top-up.vue'
+import WithdrawIcon from '@/components/icons/withdraw.vue'
+import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -43,48 +51,65 @@ onLongPress(
     </IonToolbar>
   </IonHeader>
 
-  <IonList lines="none" class="px-2 pb-4" :class="isPlatform('ios') && 'pb-8'">
-    <IonItem button :detail="false" @click="initializeFlow(FlowName.NimTopUp)">
-      {{ $t('Top Up') }}
-    </IonItem>
-    <IonItem button :detail="false" @click="initializeFlow(FlowName.NimWithdraw)">
-      {{ $t('Withdraw') }}
-    </IonItem>
+  <div class="flex flex-col gap-y-6 px-4 pt-4 pb-8">
+    <MenuItem
+      :icon="TopUpIcon"
+      :title="$t('Top Up')"
+      @click="initializeFlow(FlowName.NimTopUp)"
+    />
+    <MenuItem
+      :icon="WithdrawIcon"
+      :title="$t('Withdraw')"
+      @click="initializeFlow(FlowName.NimWithdraw)"
+    />
 
-    <!-- TODO: remove if when BlueCode is added -->
-    <ItemDivider v-if="!phoneNumberVerified && isCampaignActive" />
+    <span class="uppercase text-space/60 font-bold text-sm mt-6">
+      {{ $t('Payments') }}
+    </span>
 
-    <!--
-    <IonItem button :detail="false">{{ $t('Activate Bluecode payments') }}</IonItem>
-    -->
-    <IonItem v-if="!phoneNumberVerified && isCampaignActive" button :detail="false" @click="initializeFlow(FlowName.VerifyPhone)">
-      {{ $t('Activate Cashback & Rewards') }}
-    </IonItem>
+    <MenuItem
+      v-if="hasCard && isNakaEnabled"
+      :icon="CreditCardIcon"
+      :title="$t('NAKA Card')"
+      @click="initializeFlow(FlowName.NakaCardManagement)"
+    />
+    <MenuItem
+      v-else-if="isNakaEnabled"
+      :icon="CreditCardIcon"
+      :title="$t('Activate NAKA Card')"
+      @click="initializeFlow(FlowName.NakaOnboarding)"
+    />
 
-    <IonItem v-if="hasCard && isNakaEnabled" button :detail="false" @click="initializeFlow(FlowName.NakaCardManagement)">
-      {{ $t('NAKA Card') }}
-    </IonItem>
+    <MenuItem
+      v-if="!phoneNumberVerified && isCampaignActive"
+      :icon="GiftIcon"
+      :title="$t('Activate Cashback & Rewards')"
+      @click="initializeFlow(FlowName.VerifyPhone)"
+    />
 
-    <ItemDivider />
+    <span class="uppercase text-space/60 font-bold text-sm mt-6">
+      {{ $t('App Settings') }}
+    </span>
 
-    <IonItem ref="htmlRefHook" button :detail="false" @click="showModal(Modal.Settings, { isOnTop: true })">
-      {{ $t('Settings') }}
-    </IonItem>
-    <IonItem button :detail="false" @click="initializeFlow(FlowName.Backup)">
-      {{ $t('Backup Account') }}
-    </IonItem>
-    <IonItem button :detail="false" @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })">
-      {{ $t('About') }}
-    </IonItem>
-    <IonItem button :detail="false" @click="showModal(Modal.LogoutConfirm, { isSmall: true })">
-      {{ $t('Log Out') }}
-    </IonItem>
-  </IonList>
+    <MenuItem
+      :icon="SettingsIcon"
+      :title="$t('Settings')"
+      @click="showModal(Modal.Settings, { isOnTop: true })"
+    />
+    <MenuItem
+      :icon="BackupIcon"
+      :title="$t('Backup Account')"
+      @click="initializeFlow(FlowName.Backup)"
+    />
+    <MenuItem
+      :icon="NimiqOutlineLogo"
+      :title="$t('About')"
+      @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })"
+    />
+    <MenuItem
+      :icon="LogoutIcon"
+      :title="$t('Log Out')"
+      @click="showModal(Modal.LogoutConfirm, { isSmall: true })"
+    />
+  </div>
 </template>
-
-<style scoped>
-ion-item {
-  @apply text-lg font-semibold;
-  --padding-bottom: 8px;
-}
-</style>

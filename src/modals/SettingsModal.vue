@@ -17,8 +17,6 @@ import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('SettingsModal')
 
-const isNakaEnabled = __ENABLE_NAKA__
-
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations, decimalsAmount } = storeToRefs(useApp())
