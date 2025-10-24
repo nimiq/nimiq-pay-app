@@ -18,7 +18,8 @@ function handleClose() {
       <IonIcon :icon="close" />
     </button>
     <div class="w-[50vw]">
-      <span class="block text-lg font-bold text-sky leading-tight">
+      <!-- Margin to give some space for the close button to prevent overlapping -->
+      <span class="block text-lg font-bold text-sky leading-tight mr-4">
         <slot />
       </span>
       <p class="mt-2 text-base text-space/60">
