@@ -63,7 +63,8 @@ onLongPress(
       @click="initializeFlow(FlowName.NimWithdraw)"
     />
 
-    <span class="uppercase text-space/60 font-bold text-sm mt-6">
+    <!-- TODO: Remove this when not needed anymore -->
+    <span v-if="isNakaEnabled || (!phoneNumberVerified && isCampaignActive)" class="uppercase text-space/60 font-bold text-sm mt-6">
       {{ $t('Payments') }}
     </span>
 
