@@ -204,7 +204,7 @@ if (import.meta.env.DEV) {
 watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
-    get title() { return i18n.t('Tap to pay with your NAKA card!') },
+    get title() { return i18n.t('Tap to pay with NAKA!') },
     get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
     action: () => initializeFlow(FlowName.NakaOnboarding),
   }
@@ -229,11 +229,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
   }
 
   // Remove notification if user already has a Naka card
-  if (hasNakaCard.value
-    || (kycSdkStatus.value !== SumsubSdkStatus.NOT_INITIALIZED
-      && kycSdkStatus.value !== SumsubSdkStatus.INITIAL
-      && kycSdkStatus.value !== SumsubSdkStatus.READY)
-  ) {
+  if (hasNakaCard.value) {
     removeLocalNotification(nakaCardActivationNotification.id, false)
   }
 
@@ -243,7 +239,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && kycSdkStatus.value === SumsubSdkStatus.NOT_INITIALIZED && __ENABLE_NAKA__)
+  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && __ENABLE_NAKA__)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
