@@ -77,10 +77,12 @@ platform :android do
   lane :beta do
     sh "cd .. && ionic cap sync android --prod"
 
+    previous_build_number_internal = google_play_track_version_codes(json_key: ENV['GOOGLE_PLAY_JSON_KEY_FILE'], package_name: ENV['APP_IDENTIFIER'], track: "internal")[0]
+    previous_build_number_alpha = google_play_track_version_codes(json_key: ENV['GOOGLE_PLAY_JSON_KEY_FILE'], package_name: ENV['APP_IDENTIFIER'], track: "alpha")[0]
     previous_build_number_beta = google_play_track_version_codes(json_key: ENV['GOOGLE_PLAY_JSON_KEY_FILE'], package_name: ENV['APP_IDENTIFIER'], track: "beta")[0]
     previous_build_number_prod = google_play_track_version_codes(json_key: ENV['GOOGLE_PLAY_JSON_KEY_FILE'], package_name: ENV['APP_IDENTIFIER'], track: "production")[0]
 
-    previous_build_number = [previous_build_number_beta, previous_build_number_prod].max
+    previous_build_number = [previous_build_number_internal, previous_build_number_alpha, previous_build_number_beta, previous_build_number_prod].max
     current_build_number = previous_build_number + 1
 
     android_set_version_code(version_code: current_build_number, gradle_file: gradle_file_path)
