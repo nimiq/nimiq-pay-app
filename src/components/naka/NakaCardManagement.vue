@@ -6,7 +6,8 @@ import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
-import { stepEmits, StepName } from '@/lib/flows/steps.types'
+import { initializeFlow } from '@/lib/flows'
+import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
@@ -28,6 +29,13 @@ watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
   evaluatingCardData.value = true
   try {
     if (newShowSecretData) {
+      // Open PIN flow and wait for confirmation, if cancelled, do not show secret data
+      const modal = await initializeFlow(FlowName.AskForPin, { isOnTop: true })
+      const { role } = await modal.onWillDismiss()
+      if (role !== 'confirm') {
+        showSecretData.value = false
+        return
+      }
       cardData.value = await getDecryptedNakaCardData(newCard.sourceId)
     }
     else {
