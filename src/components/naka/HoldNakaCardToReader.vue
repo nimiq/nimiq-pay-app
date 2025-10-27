@@ -157,8 +157,8 @@ const { pause: stopNfcCheck } = useIntervalFn(async () => {
   isNfcEnabled.value = isEnabled
 }, 1000, { immediate: true })
 
-watch([() => props.isVisible, isNfcEnabled], async ([isVisible, isNfcEnabled]) => {
-  if (isVisible && isCardActive.value && isCardActiveOnDevice.value && isNfcEnabled) {
+watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVisible, isNfcEnabled, isCardActiveOnDevice]) => {
+  if (isVisible && isCardActive.value && isCardActiveOnDevice && isNfcEnabled) {
     // Need to wait until app is in foreground (not in background) or it will crash the app
     await until(isAppInBackground).toBe(false)
     logger.log('Setting app as preferred NFC service')
