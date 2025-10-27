@@ -513,6 +513,15 @@ const nakaCardManagementFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
+const askForPinFlow: FlowInit = async () => {
+  const [
+    { pinCodeStep },
+  ] = await Promise.all([import('./steps')])
+  const flowName = FlowName.AskForPin
+  const steps = (await Promise.all([pinCodeStep].map(s => s({ flowName }))))
+  return { flowName, steps }
+}
+
 const flows = {
   [FlowName.Login]: loginFlow,
   [FlowName.Setup]: setupFlow,
@@ -534,6 +543,7 @@ const flows = {
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,
   [FlowName.AddressSelection]: addressSelectionFlow,
   [FlowName.AddressDeletion]: addressDeletionFlow,
+  [FlowName.AskForPin]: askForPinFlow,
 
 }
 
@@ -633,4 +643,5 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
     breakpoints: [0, 1],
   })
   await modal.present()
+  return modal
 }

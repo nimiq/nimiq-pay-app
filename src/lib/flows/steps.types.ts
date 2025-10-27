@@ -24,6 +24,7 @@ export enum FlowName {
   NakaOnboarding = 'nakaOnboarding',
   NakaCardIsReady = 'nakaCardIsReady',
   NakaCardManagement = 'nakaCardManagement',
+  AskForPin = 'askForPin',
 }
 
 interface FlowHookCbReturn {

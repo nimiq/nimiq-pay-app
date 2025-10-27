@@ -84,15 +84,16 @@ export const recoveryWordsStep: StepInit = async () => ({
 export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
   const { FlowName: Flow } = await import('@/lib/flows/steps.types')
   const isTxFlow = (f?: FlowName) => f && [Flow.Payment, Flow.NimWithdraw].includes(f)
+  const isPinRequired = (f?: FlowName) => f && [Flow.AskForPin].includes(f)
   return {
     step: StepName.PinCode,
-    get title() { return isTxFlow(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
-    get description() { return isTxFlow(flowName) ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
+    get title() { return isTxFlow(flowName) || isPinRequired(flowName) ? i18n.t('Insert PIN to confirm') : i18n.t('Choose a PIN') },
+    get description() { return isTxFlow(flowName) || isPinRequired(flowName) ? '' : i18n.t('Protect your Nimiq Pay app with a pin.') },
     goBackBy,
-    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName), canUseBiometric: isTxFlow(flowName) })),
+    main: markRaw(props => h(PinInput, { ...props, inputLength: 4, showLoading: isTxFlow(flowName), canUseBiometric: isTxFlow(flowName) || isPinRequired(flowName) })),
     beforeRender: async (state) => {
       // We only care about login/setup flows
-      if (isTxFlow(flowName) || flowName === Flow.ChangePin)
+      if (isTxFlow(flowName) || flowName === Flow.ChangePin || isPinRequired(flowName))
         return
 
       // If there is a pinHash, it means that the user is going backwards
