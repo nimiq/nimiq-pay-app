@@ -39,11 +39,7 @@
         <!-- Registering the activity that should handle the payment  -->
         <activity
             android:name="com.nimiq.plugins.monetplushce.MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            android:exported="false">
 
             <!-- NFC intents -->
             <intent-filter>
