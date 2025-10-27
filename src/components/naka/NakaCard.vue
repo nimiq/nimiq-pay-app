@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
@@ -8,9 +7,8 @@ import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
-import { isDev } from '@/lib'
-import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
+import { i18n } from '@/i18n/i18n-setup'
+import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
 
 type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
@@ -43,77 +41,23 @@ const colors: Record<NakaCardColor, string[]> = {
   // purple: TODO - The SVG is not the same :/
 }
 
-const logger = useLogger('NakaCard')
-const { setToast } = useToast()
-
-const { getNakaCardPinChangeToken, changeNakaCardPin } = useIssuerRestApi()
-const { card } = storeToRefs(useNaka())
-const { setCard } = useNaka()
+const logger = useLogger('NakaCard.vue')
+const { isNakaCardActivating } = storeToRefs(useLocks())
+const { activateCardOnDevice } = useNaka()
 
 onMounted(async () => {
-  await HCESdk.initialize({ storageName: 'naka-card', environment: isDev ? Environment.SANDBOX : Environment.PRODUCTION })
-  const { cards } = await HCESdk.getAllSucceededCards()
-  logger.log('Cards: in SDK storage', cards)
-
-  if (!card.value) {
-    // If card is not set, we can assume the user has not registered for a Naka card yet
-    logger.warn('Naka card is not set, user has not registered for a Naka card yet')
-    return
+  isNakaCardActivating.value = true
+  try {
+    await activateCardOnDevice()
   }
-
-  if (!card.value.activationCode) {
-    logger.error('Card activation code is not set', card.value)
-    return
-  }
-
-  if (cards.find(c => c.id === card.value?.hceId)) {
-    logger.log('Naka card is already activated in the SDK', { card })
-    return
-  }
-
-  // Get encrypted data card from issuer
-  const decryptedCard = await getDecryptedNakaCardData(card.value.sourceId)
-  if (!decryptedCard) {
-    // TODO: Show error to user
-    logger.error('Failed to get decrypted Naka card data', { card })
-    return
-  }
-
-  const { success, cardId, error } = await HCESdk.activateCard({
-    tenant: 'naka',
-    activationCode: card.value.activationCode,
-    proof: decryptedCard.pan.slice(-6), // Last 6 digits of the card
-  })
-
-  if (!success) {
-    if (error.errorType === ErrorType.CARD_ALREADY_ACTIVATED) {
-      const id = error.message?.match(/card with id: (.+)$/)?.[1]
-      logger.warn('Naka card is already activated in the SDK, setting card in store', { card, error, cardId: id })
-      if (id)
-        setCard({ ...card.value, hceId: id })
-      return
-    }
-    logger.error('Failed to activate Naka card', { card, error })
-    return setToast({
+  catch (e) {
+    logger.error('Error activating NAKA card on device:', e)
+    useToast().setToast({
+      message: i18n.t('Failed to activate NAKA card on device, {error}', { error: (e as Error).message }),
       type: 'error',
-      message: 'Failed to activate NAKA card',
     })
   }
-
-  logger.log('Naka card activated successfully')
-  setCard({ ...card.value, hceId: cardId })
-
-  // Set card PIN
-  const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(card.value.sourceId)
-  const { JSEncrypt } = await import('jsencrypt/lib/index.js')
-  const encrypter = new JSEncrypt()
-  encrypter.setKey(publicKey)
-  // Set a random PIN (and let user change it later)
-  const PIN = (Math.floor(Math.random() * 9000) + 1000).toString(10)
-  const cypher = encrypter.encrypt(PIN)
-  if (!cypher)
-    throw new Error('Failed to encrypt PIN')
-  await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
+  isNakaCardActivating.value = false
 })
 
 function formatPan(pan: string) {

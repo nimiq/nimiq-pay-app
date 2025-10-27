@@ -1,17 +1,19 @@
 import type { NakaCard as ApiNakaCard, Identification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import { until } from '@vueuse/core'
-import { HCESdk } from 'capacitor-monetplus-hce'
+import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { isDev } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
+import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('useNaka')
 
-const { registerForNaka, getUserStatus } = useIssuerRestApi()
+const { changeNakaCardPin, getNakaCardPinChangeToken, getUserStatus, registerForNaka } = useIssuerRestApi()
 
 export interface CardExpiry {
   year: number
@@ -229,6 +231,68 @@ export const useNaka = defineStore('naka', () => {
     }
   }
 
+  async function activateCardOnDevice() {
+    await HCESdk.initialize({ storageName: 'naka-card', environment: isDev ? Environment.SANDBOX : Environment.PRODUCTION })
+    const { cards } = await HCESdk.getAllSucceededCards()
+    logger.log('Cards: in SDK storage', cards)
+
+    if (!card.value) {
+    // If card is not set, we can assume the user has not registered for a Naka card yet
+      logger.warn('Naka card is not set, user has not registered for a Naka card yet')
+      return
+    }
+
+    if (!card.value.activationCode) {
+      logger.error('Card activation code is not set', card.value)
+      return
+    }
+
+    if (cards.find(c => c.id === card.value?.hceId)) {
+      logger.log('Naka card is already activated in the SDK', { card })
+      return
+    }
+
+    // Get encrypted data card from issuer
+    const decryptedCard = await getDecryptedNakaCardData(card.value.sourceId)
+    if (!decryptedCard) {
+      logger.error('Failed to get decrypted Naka card data', { card })
+      throw new Error('Failed to get decrypted NAKA card data')
+    }
+
+    const { success, cardId, error } = await HCESdk.activateCard({
+      tenant: 'naka',
+      activationCode: card.value.activationCode,
+      proof: decryptedCard.pan.slice(-6), // Last 6 digits of the card
+    })
+
+    if (!success) {
+      if (error.errorType === ErrorType.CARD_ALREADY_ACTIVATED) {
+        const id = error.message?.match(/card with id: (.+)$/)?.[1]
+        logger.warn('NAKA card is already activated in the SDK, setting card in store', { card, error, cardId: id })
+        if (id)
+          setCard({ ...card.value, hceId: id })
+        return
+      }
+      logger.error('Failed to activate NAKA card', { card, error })
+      throw new Error(error.message)
+    }
+
+    logger.log('NAKA card activated successfully')
+    setCard({ ...card.value, hceId: cardId })
+
+    // Set card PIN
+    const { publicKey, expiry: _expiry } = await getNakaCardPinChangeToken(card.value.sourceId)
+    const { JSEncrypt } = await import('jsencrypt/lib/index.js')
+    const encrypter = new JSEncrypt()
+    encrypter.setKey(publicKey)
+    // Set a random PIN (and let user change it later)
+    const PIN = (Math.floor(Math.random() * 9000) + 1000).toString(10)
+    const cypher = encrypter.encrypt(PIN)
+    if (!cypher)
+      return logger.error('Failed to encrypt PIN for NAKA card')
+    await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
+  }
+
   return {
     registration,
     setRegistration,
@@ -242,6 +306,7 @@ export const useNaka = defineStore('naka', () => {
     isCardBlocked,
     isCardActiveOnDevice,
     init,
+    activateCardOnDevice,
 
     dailyLimit,
     setDailyLimit,

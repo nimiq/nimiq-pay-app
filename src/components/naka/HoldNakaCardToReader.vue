@@ -31,7 +31,7 @@ const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, p
 
 const isNfcSupported = ref<boolean | null>(null)
 const isNfcEnabled = ref<boolean | null>(null)
-const isReady = computed(() => isServerReady.value && isNfcSupported.value !== null && isNfcEnabled.value !== null)
+const isReady = computed(() => isServerReady.value && isNfcSupported.value !== null && isNfcEnabled.value !== null && isCardActiveOnDevice.value)
 const paymentSuccessful = ref(false)
 
 watch(paymentRequest, (request) => {
@@ -197,7 +197,7 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
           >
             <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128" />
           </svg>
-          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || card.statusId !== 'ACTIVE' }" />
+          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || !isCardActive || !isCardActiveOnDevice }" />
         </div>
         <template v-if="isReady">
           <span v-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky">
