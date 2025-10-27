@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType, Ref } from 'vue'
+import type { CloseRole } from '@/composables/useModal'
 import type { flowHeightOptions } from '@/lib/flows'
 import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
@@ -55,7 +56,7 @@ const hasRunSuccessfully = new Map<string, boolean>() // Flag to track if the ho
  * has already been triggered. Implements a promise-based locking system to manage execution flow and enforce a single
  * enforce a single successful execution.
  */
-function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
+function makeFlowHandler(originalHandler?: FlowHookCb, role?: CloseRole): () => Promise<void> {
   // If no custom handler is not provided, the default behavior is to close the modal.
   if (!originalHandler)
     originalHandler = async () => {}
@@ -88,7 +89,7 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
 
       // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing && !prevent)
-        await useModal().closeModal()
+        await useModal().closeModal({ role })
     }
     finally {
       // Release the lock for subsequent operations and reset the lock state.
@@ -98,8 +99,8 @@ function makeFlowHandler(originalHandler?: FlowHookCb): () => Promise<void> {
   return fn
 }
 
-const onFlowDone = makeFlowHandler(originalOnFlowDone)
-const onFlowCancel = makeFlowHandler(originalOnFlowCancel)
+const onFlowDone = makeFlowHandler(originalOnFlowDone, 'confirm')
+const onFlowCancel = makeFlowHandler(originalOnFlowCancel, 'cancel')
 
 watch(() => props.isClosing, async () => {
   if (!props.isClosing)

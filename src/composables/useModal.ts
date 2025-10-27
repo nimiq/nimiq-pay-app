@@ -6,6 +6,8 @@ import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('useModal')
 
+export type CloseRole = 'confirm' | 'cancel'
+
 export enum Modal {
   DeletePoints = '@/modals/DeletePointsModal.vue',
   Disclaimer = '@/modals/DisclaimerModal.vue',
@@ -94,7 +96,7 @@ function _useModal() {
     await modalToShow.present()
   }
 
-  async function closeModal(modalToClose?: HTMLIonModalElement) {
+  async function closeModal({ modal: modalToClose, data = null, role = 'confirm' }: { modal?: HTMLIonModalElement, data?: any, role?: CloseRole } = {}) {
     // Close the top modal
     const modal = modalToClose || await modalController.getTop()
 
@@ -103,7 +105,7 @@ function _useModal() {
 
     if (modal) {
       modal.canDismiss = true
-      await modal.dismiss()
+      await modal.dismiss(data, role)
     }
   }
 
