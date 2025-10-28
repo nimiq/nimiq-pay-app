@@ -93,6 +93,7 @@ onLongPress(
     </span>
 
     <MenuItem
+      ref="htmlRefHook"
       :icon="SettingsIcon"
       :title="$t('Settings')"
       @click="showModal(Modal.Settings, { isOnTop: true })"
