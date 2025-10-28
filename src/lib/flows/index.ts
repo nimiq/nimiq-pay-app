@@ -17,7 +17,7 @@ import { PaymentMethod } from '@/types/transactions'
 const logger = useLogger('flows/index.ts')
 
 const loginFlow: FlowInit = async () => {
-  const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
   const flowName = FlowName.Login
   const steps = await Promise.all([
     recoveryWordsStep,
@@ -25,7 +25,7 @@ const loginFlow: FlowInit = async () => {
     pinCodeConfirmStep,
     enableBiometricStep,
     getNotifiedStep,
-    onBoardingPoints,
+    /* onBoardingPoints */
   ].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async (state, { err }) => {
     const [
@@ -63,9 +63,15 @@ const loginFlow: FlowInit = async () => {
 }
 
 const setupFlow: FlowInit = async () => {
-  const { pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const { pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
   const flowName = FlowName.Setup
-  const steps = await Promise.all([pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep, onBoardingPoints].map(s => s({ flowName })))
+  const steps = await Promise.all([
+    pinCodeStep,
+    pinCodeConfirmStep,
+    enableBiometricStep,
+    getNotifiedStep,
+    /* onBoardingPoints */
+  ].map(s => s({ flowName })))
   const onDone: FlowHookCb = async (state, { err }) => {
     const [
       { default: router },
@@ -96,9 +102,13 @@ const setupFlow: FlowInit = async () => {
 }
 
 const verifyPhoneFlow: FlowInit = async () => {
-  const { phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints } = await import('./steps')
+  const { phoneNumberStep, phoneNumberConfirmStep /* onBoardingPoints */ } = await import('./steps')
   const flowName = FlowName.VerifyPhone
-  const steps = await Promise.all([phoneNumberStep, phoneNumberConfirmStep, onBoardingPoints].map(s => s({ flowName })))
+  const steps = await Promise.all([
+    phoneNumberStep,
+    phoneNumberConfirmStep,
+    /* onBoardingPoints */
+  ].map(s => s({ flowName })))
   const onDone: Flow['onDone'] = async () => {
     useModal().showModal(Modal.Points)
     return { prevent: true }
@@ -107,7 +117,7 @@ const verifyPhoneFlow: FlowInit = async () => {
 }
 
 const setupWithPromoCodeFlow: FlowInit = async () => {
-  const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep, onBoardingPoints } = await import('./steps')
+  const { promoCodeStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, phoneNumberStep, phoneNumberConfirmStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
   const flowName = FlowName.SetupWithPromoCode
   const stepOptions: StepInitOptions = { goBackBy: 2, skipAheadBy: 2 }
   const steps = await Promise.all([
@@ -118,7 +128,8 @@ const setupWithPromoCodeFlow: FlowInit = async () => {
     (options: StepInitOptions) => phoneNumberStep({ ...options, ...stepOptions }),
     phoneNumberConfirmStep,
     getNotifiedStep,
-    onBoardingPoints,
+    // TODO: Re-enable when cc points are back
+    // onBoardingPoints,
   ].map(s => s({ flowName })))
   const onCancel: Flow['onCancel'] = async () => {
     const [
@@ -148,12 +159,12 @@ const onBoardingPointsFlow: FlowInit = async () => {
   return { flowName, steps, onDone }
 }
 
-const onBoardingCashbackFlow: FlowInit = async () => {
-  const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
-  const flowName = FlowName.OnBoardingCashback
-  const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
-  return { flowName, steps }
-}
+// const onBoardingCashbackFlow: FlowInit = async () => {
+//   const { onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4 } = await import('./steps')
+//   const flowName = FlowName.OnBoardingCashback
+//   const steps = (await Promise.all([onBoardingCashback1, onBoardingCashback2, onBoardingCashback3, onBoardingCashback4].map(s => s({ flowName }))))
+//   return { flowName, steps }
+// }
 
 const onBoardingBluecodeFlow: FlowInit = async () => {
   const { onBoardingBluecode1, onBoardingBluecode2, onBoardingBluecode3 } = await import('./steps')
@@ -528,7 +539,7 @@ const flows = {
   [FlowName.VerifyPhone]: verifyPhoneFlow,
   [FlowName.SetupWithPromoCode]: setupWithPromoCodeFlow,
   [FlowName.OnBoardingPoints]: onBoardingPointsFlow,
-  [FlowName.OnBoardingCashback]: onBoardingCashbackFlow,
+  // [FlowName.OnBoardingCashback]: onBoardingCashbackFlow,
   [FlowName.OnBoardingBluecode]: onBoardingBluecodeFlow,
   [FlowName.Payment]: paymentFlow,
   [FlowName.NimWithdraw]: nimWithdrawFlow,

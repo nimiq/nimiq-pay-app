@@ -316,32 +316,32 @@ export const onBoardingPoints: StepInit = async () => ({
   main: markRaw(OnBoardingScreen),
 } satisfies Step)
 
-export const onBoardingCashback1: StepInit = async () => ({
-  step: StepName.OnBoardingCashback1,
-  get title() { return i18n.t('What are Cryptocity Points?') },
-  get description() { return i18n.t('Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM).') },
-  main: markRaw(OnBoardingScreen),
-} satisfies Step)
+// export const onBoardingCashback1: StepInit = async () => ({
+//   step: StepName.OnBoardingCashback1,
+//   get title() { return i18n.t('What are Cryptocity Points?') },
+//   get description() { return i18n.t('Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM).') },
+//   main: markRaw(OnBoardingScreen),
+// } satisfies Step)
 
-export const onBoardingCashback2: StepInit = async () => ({
-  step: StepName.OnBoardingCashback2,
-  get title() { return i18n.t('Pay with Cryptocity Points') },
-  get description() { return i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.') },
-  main: markRaw(OnBoardingScreen),
-} satisfies Step)
+// export const onBoardingCashback2: StepInit = async () => ({
+//   step: StepName.OnBoardingCashback2,
+//   get title() { return i18n.t('Pay with Cryptocity Points') },
+//   get description() { return i18n.t('Pay with Cryptocity Points instead of NIM wherever they\'re accepted.') },
+//   main: markRaw(OnBoardingScreen),
+// } satisfies Step)
 
-export const onBoardingCashback3: StepInit = async () => ({
-  step: StepName.OnBoardingCashback3,
-  get title() { return i18n.t('Get Cryptocity Points') },
-  get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
-  main: markRaw(OnBoardingScreen),
-} satisfies Step)
+// export const onBoardingCashback3: StepInit = async () => ({
+//   step: StepName.OnBoardingCashback3,
+//   get title() { return i18n.t('Get Cryptocity Points') },
+//   get description() { return i18n.t('Get Cryptocity Points as cashback rewards or complete challenges to earn them.') },
+//   main: markRaw(OnBoardingScreen),
+// } satisfies Step)
 
-export const onBoardingCashback4: StepInit = async () => ({
-  step: StepName.OnBoardingCashback4,
-  get title() { return i18n.t('Find places to pay with, and earn Cryptocity Points') },
-  main: markRaw(OnBoardingScreen),
-} satisfies Step)
+// export const onBoardingCashback4: StepInit = async () => ({
+//   step: StepName.OnBoardingCashback4,
+//   get title() { return i18n.t('Find places to pay with, and earn Cryptocity Points') },
+//   main: markRaw(OnBoardingScreen),
+// } satisfies Step)
 
 export const onBoardingBluecode1: StepInit = async () => ({
   step: StepName.OnBoardingBluecode1,
