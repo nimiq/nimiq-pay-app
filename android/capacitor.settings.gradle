@@ -42,7 +42,7 @@ include ':capacitor-monetplus-hce'
 project(':capacitor-monetplus-hce').projectDir = new File('../../capacitor-monetplus-hce/android')
 
 include ':capacitor-sumsub-mobile-sdk'
-project(':capacitor-sumsub-mobile-sdk').projectDir = new File('../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.5_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk/android')
+project(':capacitor-sumsub-mobile-sdk').projectDir = new File('../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.6_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk/android')
 
 include ':capacitor-community-sqlite'
 project(':capacitor-community-sqlite').projectDir = new File('../node_modules/.pnpm/@capacitor-community+sqlite@7.0.1_@capacitor+core@7.4.3/node_modules/@capacitor-community/sqlite/android')
