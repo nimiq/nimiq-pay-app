@@ -3,6 +3,7 @@ import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 import { until, useIntervalFn } from '@vueuse/core'
 import { HCESdk } from 'capacitor-monetplus-hce'
+import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import NfcPos from '@/components/icons/nfc-pos.vue'
@@ -17,6 +18,7 @@ import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import Check from '../icons/check.vue'
+import NfcCrossed from '../icons/nfc-crossed.vue'
 
 const props = defineProps({ isVisible: Boolean })
 const emit = defineEmits(stepEmits)
@@ -186,38 +188,58 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
         </div>
       </div>
       <div class="mt-20 font-bold text-lg transition-opacity duration-200" :class="{ 'opacity-0': paymentSuccessful }">
-        <div class="w-16 h-16 mx-auto mb-3 relative">
-          <svg
-            class="w-16 h-16 absolute animate-spin text-sky transition-opacity"
-            viewBox="0 0 64 64"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            aria-hidden="true"
-            :class="{ 'opacity-0': isReady }"
+        <div class="w-16 h-16 mx-auto mb-4 relative">
+          <motion.div
+            v-if="!isReady || !isCardActive || !isCardActiveOnDevice"
+            class="w-16 h-16 absolute"
+            :initial="{ opacity: isReady ? 0 : 1 }"
+            :animate="{ opacity: isReady ? 0 : 1 }"
+            :transition="{ duration: 0.3 }"
           >
-            <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128" />
-          </svg>
-          <NfcPos class="w-16 h-16 absolute transition-opacity" :class="{ 'opacity-0': !isReady || !isCardActive || !isCardActiveOnDevice }" />
+            <svg
+              class="w-16 h-16 animate-spin text-sky"
+              viewBox="0 0 64 64"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="3.5" stroke-dasharray="128" />
+            </svg>
+          </motion.div>
+          <motion.div
+            v-if="isReady && !isNfcEnabled"
+            class="size-16 absolute"
+            :initial="{ opacity: 0 }"
+            :animate="{ opacity: 1 }"
+            :transition="{ duration: 0.3 }"
+          >
+            <NfcCrossed class="size-16 text-sky" />
+          </motion.div>
+          <motion.div
+            v-if="isReady && isNfcEnabled"
+            class="w-16 h-16 absolute"
+            :initial="{ opacity: 0 }"
+            :animate="{ opacity: 1 }"
+            :transition="{ duration: 0.3 }"
+          >
+            <NfcPos class="w-16 h-16 text-sky" />
+          </motion.div>
         </div>
         <template v-if="isReady">
-          <span v-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky">
+          <span v-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky text-balance">
             {{ $t('Hold your phone near the terminal') }}
           </span>
           <span v-else-if="!isNfcSupported" class="text-tomato">
             {{ $t('NFC is not supported on this device') }}
           </span>
-          <div v-else-if="!isNfcEnabled" class="flex flex-col items-center">
-            <span class="text-tomato">
-              {{ $t('NFC is disabled, please enable it') }}
-            </span>
-            <!-- TODO: ask for a design for this -->
-            <IonButton
-              class="mt-4"
-              @click="() => HCESdk.openNfcSettings()"
-            >
-              {{ $t('Open NFC settings') }}
-            </IonButton>
-          </div>
+          <IonButton
+            v-else-if="!isNfcEnabled"
+            class="mt-4 normal-case font-bold text-sm"
+            style="--padding-top: 6px; --padding-bottom: 6px; --padding-start: 16px; --padding-end: 16px"
+            @click="() => HCESdk.openNfcSettings()"
+          >
+            {{ $t('Enable NFC to pay') }}
+          </IonButton>
           <span v-else class="text-tomato">
             {{ $t('No active card') }}
           </span>
@@ -227,22 +249,5 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
     <div v-else class="mt-20 font-bold text-lg text-neutral-500">
       {{ $t('No NAKA card found') }}
     </div>
-
-    <!-- div class="mt-auto mb-24 text-center">
-      <button
-        v-if="card && card.statusId === 'ACTIVE'"
-        class="text-sm font-bold text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
-        @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(100e5))"
-      >
-        Simulate NFC tap-to-pay (100 NIM)
-      </button>
-      <button
-        v-if="card && card.statusId === 'ACTIVE'"
-        class="text-sm font-bold mt-4 text-gray-400 border border-gray-400 border-solid px-3 py-1 rounded-full"
-        @click="triggerPayment('NQ07 0000 0000 0000 0000 0000 0000 0000 0000', BigInt(remoteBalance + 1000e5))"
-      >
-        Simulate NFC tap-to-pay ({{ Math.floor(remoteBalance / 1e5 + 1000) }} NIM)
-      </button>
-    </div> -->
   </div>
 </template>
