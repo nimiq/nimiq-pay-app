@@ -28,6 +28,15 @@ function inputHandler(e: Event) {
   timeout && clearTimeout(timeout)
 
   const input = e.target as HTMLInputElement
+
+  // Check if key is space and skip to next input
+  if (e instanceof InputEvent && e.data === ' ') {
+    const nextInput = document.getElementById((Number(input.id) + 1).toString().padStart(2, '0')) as HTMLInputElement
+    if (nextInput)
+      nextInput.focus()
+    return
+  }
+
   // Get parent element
   const parent = input.parentElement as HTMLElement
   const value = input.value.toLowerCase().trim()
@@ -41,7 +50,6 @@ function inputHandler(e: Event) {
   }
 
   // Wait if user is still typing
-  // TODO: Jump to next word if valid
   if (wordList.includes(value)) {
     loginWords.value[index] = value
   }
