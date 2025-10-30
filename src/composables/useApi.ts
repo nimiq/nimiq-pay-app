@@ -2,13 +2,12 @@ import type { Address, Transaction as NimiqTransaction } from '@nimiq/core'
 import type { MaybeRef } from 'vue'
 import type { AsyncResultApi, ResultApi } from '@/types'
 import type { Rail } from '@/types/transactions'
-import { readonly, ref, toValue as v } from 'vue'
+import { useWebSocket } from '@vueuse/core'
+import { readonly, ref, toValue as v, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '@/lib/index'
 import { useApp } from '@/stores/app'
-import { useWebSocket } from '@vueuse/core'
-import { type MaybeRef, readonly, ref, toValue as v, watch } from 'vue'
 import { toSeconds } from './useTime'
 
 const logger = useLogger('useApi')
@@ -184,16 +183,16 @@ const remoteSignerWsApi = (function () {
       interval: isDev ? 10e3 : 1e3,
     },
     onConnected(ws) {
-      logger.log('Connected:', ws.url)
+      logger.log('[remoteSignerWsApi] Connected:', ws.url)
       for (const request of pendingRequests.values()) {
         send(JSON.stringify(request.requestObject))
       }
     },
     onDisconnected(ws, event) {
-      logger.log('Disconnected:', ws.url, event)
+      logger.warn('[remoteSignerWsApi] Disconnected:', ws.url, event)
     },
     onError(ws, event) {
-      logger.error('Error:', ws.url, event)
+      logger.error('[remoteSignerWsApi] Error:', ws.url, event)
     },
   })
 
@@ -207,7 +206,7 @@ const remoteSignerWsApi = (function () {
   }
 
   watch(data, (newData) => {
-    logger.log('Got:', newData)
+    logger.log('[remoteSignerWsApi] Got:', newData)
     if (!newData)
       return
     if (newData === 'pong')
