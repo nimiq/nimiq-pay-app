@@ -125,9 +125,9 @@ export const useApp = defineStore('app', () => {
     const addresses = topUpAddresses.value
     addresses.push(address)
     topUpAddresses.value = addresses
-    // Limit the number of addresses to 2
-    if (addresses.length > 3)
-      topUpAddresses.value = addresses.slice(addresses.length - 2)
+    // Limit the number of addresses to 5
+    if (addresses.length > 5)
+      topUpAddresses.value = addresses.slice(addresses.length - 5)
   }
 
   function addNewWithdrawalAddress(address: string) {

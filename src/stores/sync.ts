@@ -362,8 +362,8 @@ export const useSync = defineStore('sync', () => {
         return useTransactions().setNakaTxRefunded(tx.value)
       }
 
-      // Only add non cashlink address to the withdrawal list
-      if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING)
+      // Only add non cashlink and non HTLC address to the withdrawal list
+      if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING && tx.senderType !== 'htlc')
         useApp().addNewTopUpAddress(tx.sender)
 
       useTransactions().addReceiptTransaction({
