@@ -34,8 +34,8 @@ countMotionValue.on('change', (value) => {
   animatedAmount.value = Math.max(0, value)
 })
 
-watch(() => fiat.total, (newTotal) => {
-  if (!showSkeleton.value && newTotal !== undefined) {
+watch([() => fiat.total, showSkeleton], ([newTotal, showSkeleton]) => {
+  if (!showSkeleton && newTotal !== undefined) {
     if (!showAnimations.value) {
       animatedAmount.value = newTotal
       countMotionValue.set(newTotal)
