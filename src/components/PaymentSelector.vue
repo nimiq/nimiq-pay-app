@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { Step } from '@/lib/flows/steps.types'
-import { useElementSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, useTemplateRef, watchEffect } from 'vue'
+import { computed, useTemplateRef } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useNaka } from '@/stores/naka'

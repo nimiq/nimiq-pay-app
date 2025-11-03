@@ -9,7 +9,7 @@ export enum FlowName {
   Login = 'login',
   VerifyPhone = 'verifyPhone',
   OnBoardingPoints = 'onBoardingPoints',
-  OnBoardingCashback = 'onBoardingCashback',
+  // OnBoardingCashback = 'onBoardingCashback',
   OnBoardingBluecode = 'onBoardingBluecode',
   Payment = 'payment',
   NimWithdraw = 'nimWithdraw',
@@ -72,10 +72,10 @@ export enum StepName {
   RecoveryWordsStep = 'recoveryWordsStep',
   GetNotified = 'getNotified',
   OnBoardingPoints = 'onBoardingPoints',
-  OnBoardingCashback1 = 'onBoardingCashback1',
-  OnBoardingCashback2 = 'onBoardingCashback2',
-  OnBoardingCashback3 = 'onBoardingCashback3',
-  OnBoardingCashback4 = 'onBoardingCashback4',
+  // OnBoardingCashback1 = 'onBoardingCashback1',
+  // OnBoardingCashback2 = 'onBoardingCashback2',
+  // OnBoardingCashback3 = 'onBoardingCashback3',
+  // OnBoardingCashback4 = 'onBoardingCashback4',
   OnBoardingBluecode1 = 'onBoardingBluecode1',
   OnBoardingBluecode2 = 'onBoardingBluecode2',
   OnBoardingBluecode3 = 'onBoardingBluecode3',
@@ -104,7 +104,7 @@ export enum StepName {
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3, StepName.OnBoardingCashback4, StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
