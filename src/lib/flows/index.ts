@@ -194,9 +194,14 @@ const paymentFlow: FlowInit = async () => {
     ? await import('@/stores/naka')
     : { useNaka: () => ({ isCardActive: false, isCardLocked: false }) }
 
+  const hasActiveNakaCard = useNaka().isCardActive && !useNaka().isCardLocked
+  const initialStep = hasActiveNakaCard ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
+
+  const slotComponent = hasActiveNakaCard ? defineAsyncComponent(() => import('@/components/PaymentSelector.vue')) : undefined
+
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    __ENABLE_NAKA__ ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
+    __ENABLE_NAKA__ && hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
     __ENABLE_BLUECODE__ ? (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }) : undefined,
     paymentRequestManualInputStep,
@@ -309,11 +314,6 @@ const paymentFlow: FlowInit = async () => {
     document.body.classList.remove('native-qr-scanner-modal-open')
     logger.log('🤑  Cancelling payment process')
   }
-
-  const hasActiveNakaCard = useNaka().isCardActive && !useNaka().isCardLocked
-  const initialStep = hasActiveNakaCard ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
-
-  const slotComponent = defineAsyncComponent(() => import('@/components/PaymentSelector.vue'))
 
   return { flowName, steps, onDone, onCancel, initialStep, slotComponent } satisfies Flow
 }
