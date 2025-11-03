@@ -4,7 +4,7 @@ import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, refDebounced, until, useElementSize, useResizeObserver, useSwipe } from '@vueuse/core'
+import { computedAsync, refDebounced, refThrottled, until, useElementSize, useResizeObserver, useSwipe } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -122,8 +122,8 @@ const statusMessageBgColorDebounced = refDebounced(statusMessageBgColor, debounc
 const statusMessageTextColorDebounced = refDebounced(statusMessageTextColor, debounceDelay, { maxWait: debounceMaxWait })
 const statusMessageIconColorDebounced = refDebounced(statusMessageIconColor, debounceDelay, { maxWait: debounceMaxWait })
 const statusMessageIconDebounced = refDebounced(statusMessageIcon, debounceDelay, { maxWait: debounceMaxWait })
-const isStatusMessageShownDebounced = refDebounced(isStatusMessageShown, debounceDelay, { maxWait: debounceMaxWait })
-const isConsensusMessageShownDebounced = refDebounced(isConsensusMessageShown, debounceDelay, { maxWait: debounceMaxWait })
+const isStatusMessageShownDebounced = refThrottled(isStatusMessageShown, debounceDelay)
+const isConsensusMessageShownDebounced = refThrottled(isConsensusMessageShown, debounceDelay)
 
 // Payment Request Notification
 const prNotificationRef = ref<HTMLDivElement | null>(null)

@@ -97,6 +97,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     else if (!pending && !processing)
       isHtlcRecreating.value = false
   })
+  watch(remoteSigner, (newSigner) => {
+    if (newSigner === undefined)
+      isHtlcActive.value = false
+  })
 
   const isRemoteOk = computed(() => status.value === RemoteStatus.Good || false)
 

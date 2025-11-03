@@ -228,7 +228,7 @@ export const useTransactions = defineStore('transactions', () => {
       // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one
       await useRemoteSigner().updateRemoteSigner(undefined)
     }
-    else {
+    else if (tx.transfer !== Transfer.LocalToRemote && tx.transfer !== Transfer.ExtendRemote) {
       await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
     }
 

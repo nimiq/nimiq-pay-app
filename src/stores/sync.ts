@@ -439,16 +439,27 @@ export const useSync = defineStore('sync', () => {
     }
     else {
       try {
-        const tx = await client.value!.getTransaction(hash)
-        state = tx.state
-        timestamp = tx.timestamp
-        if (tx.state !== 'pending'
-          && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === tx.transactionHash)
-            || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === tx.transactionHash)
+        try {
+          const tx = await client.value!.getTransaction(hash)
+          state = tx.state
+          timestamp = tx.timestamp
+        }
+        catch {
+          const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash })
+          if (error || !tx || tx.state === 'unknown') {
+            logger.error('[updateSingleTransaction] Error while getting transaction state from remote signer', error)
+            return
+          }
+          state = tx.state
+          timestamp = tx.timestamp
+        }
+        if (state !== 'pending'
+          && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === hash)
+            || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === hash)
           )) {
-          logger.log(`Removing transaction ${tx.transactionHash} from pending transactions`)
-          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== tx.transactionHash)
-          pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== tx.transactionHash)
+          logger.log(`Removing transaction ${hash} from pending transactions`)
+          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== hash)
+          pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== hash)
         }
       }
       catch (error) {
