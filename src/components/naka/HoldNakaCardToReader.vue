@@ -29,7 +29,7 @@ const { card, isCardActive, isCardActiveOnDevice } = storeToRefs(useNaka())
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 const { isAppInBackground } = storeToRefs(useLocks())
 
-const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection/* , triggerPayment */ } = useIssuerWebSocket()
+const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection } = useIssuerWebSocket()
 
 const isNfcSupported = ref<boolean | null>(null)
 const isNfcEnabled = ref<boolean | null>(null)
@@ -127,7 +127,7 @@ watch(paymentRejection, (rejection) => {
   })
 })
 
-const { pause: stopNfcCheck } = useIntervalFn(async () => {
+const { pause: stopNfcCheck, resume: startNfcCheck } = useIntervalFn(async () => {
   if (useDevice().isWeb) {
     isNfcSupported.value = false
     isNfcEnabled.value = false
@@ -157,7 +157,14 @@ const { pause: stopNfcCheck } = useIntervalFn(async () => {
   const { isEnabled } = await HCESdk.isNfcEnabled()
   logger.log('NFC enabled:', isEnabled)
   isNfcEnabled.value = isEnabled
-}, 1000, { immediate: true })
+}, 1000, { immediate: false })
+
+watch([() => props.isVisible, isCardActiveOnDevice], async ([isVisible, isCardActiveOnDevice]) => {
+  if (isVisible && isCardActiveOnDevice)
+    startNfcCheck()
+  else
+    stopNfcCheck()
+}, { immediate: true })
 
 watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVisible, isNfcEnabled, isCardActiveOnDevice]) => {
   if (isVisible && isCardActive.value && isCardActiveOnDevice && isNfcEnabled) {
