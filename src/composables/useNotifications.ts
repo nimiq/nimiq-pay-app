@@ -58,8 +58,8 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
 
 export function useNotifications() {
   const status: Ref<PermissionState | undefined> = ref()
-  const isStatusGranted = computedAsync(async () => (await PushNotifications.checkPermissions()).receive === 'granted')
   const { isAndroid, isWeb } = useDevice()
+  const isStatusGranted = computedAsync(async () => isWeb ? false : (await PushNotifications.checkPermissions()).receive === 'granted')
   const { closedNotifications, pushNotificationsStatus } = storeToRefs(useApp())
 
   async function init() {
