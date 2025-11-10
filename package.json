@@ -80,7 +80,7 @@
     "@capacitor/keyboard": "^7.0.3",
     "@capacitor/push-notifications": "^7.0.3",
     "@capacitor/status-bar": "^7.0.3",
-    "@iconify-json/nimiq": "https://pkg.pr.new/onmax/nimiq-ui/nimiq-icons@2c34cae",
+    "@iconify-json/nimiq": "npm:nimiq-icons",
     "@ionic/cli": "^7.2.1",
     "@ionic/core": "8.7.3",
     "@ionic/vue": "8.7.3",
