@@ -53,7 +53,7 @@ onMounted(async () => {
   catch (e) {
     logger.error('Error activating NAKA card on device:', e)
     useToast().setToast({
-      message: i18n.t('Failed to activate NAKA card on device, {error}', { error: (e as Error).message }),
+      message: i18n.t('Failed to activate NAKA card on device: {error}', { error: (e as Error).message }),
       type: 'error',
     })
   }
