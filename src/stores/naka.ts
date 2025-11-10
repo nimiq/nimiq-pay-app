@@ -1,13 +1,17 @@
 import type { NakaCard as ApiNakaCard, Identification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
-import { until } from '@vueuse/core'
+import type { Fiat } from '@/stores/app'
+import { until, useStorageAsync } from '@vueuse/core'
 import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { usePrice } from '@/composables/usePrice'
+import { useToast } from '@/composables/useToast'
 import { isDev } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { SQLQuery } from '@/lib/sql-queries'
+import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
 
@@ -18,6 +22,11 @@ const { changeNakaCardPin, getNakaCardPinChangeToken, getUserStatus, registerFor
 export interface CardExpiry {
   year: number
   month: number
+}
+
+export interface Limit {
+  amount: number
+  currency: Fiat
 }
 
 // TODO: Derive from or directly use rest.schema's NakaCard type
@@ -139,6 +148,71 @@ export const useNaka = defineStore('naka', () => {
     return true
   }
 
+  const dailyLimit = useStorageAsync('nakaDailyLimit', undefined, kv(), { writeDefaults: false, serializer: {
+    write: (limit: Limit | undefined) => limit ? JSON.stringify(limit) : '',
+    read: (str: string) => str ? JSON.parse(str) as Limit : undefined,
+  } })
+  async function setDailyLimit(amount: number, currency: Fiat) {
+    if (amount <= 0) {
+      dailyLimit.value = undefined
+      useToast().setToast({
+        type: 'success',
+        message: 'Daily limit removed',
+      })
+    }
+    else {
+      dailyLimit.value = { amount, currency }
+      useToast().setToast({
+        type: 'success',
+        message: 'Daily limit updated',
+      })
+    }
+  }
+
+  const paymentLimit = useStorageAsync('nakaPaymentLimit', undefined, kv(), { writeDefaults: false, serializer: {
+    write: (limit: Limit | undefined) => limit ? JSON.stringify(limit) : '',
+    read: (str: string) => str ? JSON.parse(str) as Limit : undefined,
+  } })
+  async function setPaymentLimit(amount: number, currency: Fiat) {
+    if (amount <= 0) {
+      paymentLimit.value = undefined
+      useToast().setToast({
+        type: 'success',
+        message: 'Payment limit removed',
+      })
+    }
+    else {
+      paymentLimit.value = { amount, currency }
+      useToast().setToast({
+        type: 'success',
+        message: 'Payment limit updated',
+      })
+    }
+  }
+
+  // Convert spending limits when selected fiat changes
+  const { selectedFiat } = storeToRefs(useApp())
+  watch(selectedFiat, async (newFiat, oldFiat) => {
+    const oldPrice = usePrice(0, { fiatCurrency: oldFiat })
+    await oldPrice.getFiatPrice()
+    const newPrice = usePrice(0, { fiatCurrency: newFiat })
+    await newPrice.getFiatPrice()
+
+    if (dailyLimit.value && dailyLimit.value.currency === oldFiat) {
+      const amountInNim = dailyLimit.value.amount / oldPrice.price.nim.value
+      const newAmount = Math.round(amountInNim * newPrice.price.nim.value)
+      logger.log('Converted daily limit due to fiat change', { oldFiat, newFiat, oldAmount: dailyLimit.value.amount, newAmount })
+      dailyLimit.value = { amount: newAmount, currency: newFiat }
+    }
+
+    if (paymentLimit.value && paymentLimit.value.currency === oldFiat) {
+      const amountInNim = paymentLimit.value.amount / oldPrice.price.nim.value
+      const newAmount = Math.round(amountInNim * newPrice.price.nim.value)
+      logger.log('Converted payment limit due to fiat change', { oldFiat, newFiat, oldAmount: paymentLimit.value.amount, newAmount })
+      paymentLimit.value = { amount: newAmount, currency: newFiat }
+    }
+  })
+
   const hasCard = computed(() => Boolean(card.value?.sourceId))
   const isCardActive = computed(() => card.value?.statusId === 'ACTIVE')
   const isCardLocked = computed(() => card.value?.lockLevel !== null)
@@ -196,16 +270,6 @@ export const useNaka = defineStore('naka', () => {
         await insertNakaCard(card.value)
       }
     }
-  }
-
-  const dailyLimit = ref<number>()
-  function setDailyLimit(limit: number) {
-    dailyLimit.value = limit
-  }
-
-  const paymentLimit = ref<number>()
-  function setPaymentLimit(limit: number) {
-    paymentLimit.value = limit
   }
 
   /**

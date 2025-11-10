@@ -8,8 +8,10 @@ import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import NfcPos from '@/components/icons/nfc-pos.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
+import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerWebSocket } from '@/lib/issuer-websocket'
@@ -31,13 +33,35 @@ const { isAppInBackground } = storeToRefs(useLocks())
 
 const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection } = useIssuerWebSocket()
 
+const { paymentLimit, dailyLimit } = storeToRefs(useNaka())
+const { formatFiat } = useCurrencyFormatter()
+
+let paymentLimitPricePromise: Promise<ReturnType<typeof usePrice>>
+let dailyLimitPricePromise: Promise<ReturnType<typeof usePrice>>
+if (paymentLimit.value || dailyLimit.value) {
+  if (paymentLimit.value) {
+    const paymentLimitPrice = usePrice(0, { fiatCurrency: paymentLimit.value.currency })
+    paymentLimitPricePromise = new Promise(async (resolve) => { // eslint-disable-line no-async-promise-executor
+      await paymentLimitPrice.getFiatPrice()
+      resolve(paymentLimitPrice)
+    })
+  }
+  if (dailyLimit.value) {
+    const dailyLimitPrice = usePrice(0, { fiatCurrency: dailyLimit.value.currency })
+    dailyLimitPricePromise = new Promise(async (resolve) => { // eslint-disable-line no-async-promise-executor
+      await dailyLimitPrice.getFiatPrice()
+      resolve(dailyLimitPrice)
+    })
+  }
+}
+
 const isNfcSupported = ref<boolean | null>(null)
 const isNfcEnabled = ref<boolean | null>(null)
 const { isWeb } = useDevice()
 const isReady = computed(() => isServerReady.value && (isWeb || (isNfcSupported.value !== null && isNfcEnabled.value !== null && isCardActiveOnDevice.value)))
 const paymentSuccessful = ref(false)
 
-watch(paymentRequest, (request) => {
+watch(paymentRequest, async (request) => {
   if (!request)
     return
 
@@ -49,7 +73,42 @@ watch(paymentRequest, (request) => {
   }
   // TODO: Parse signature (it's a 0x-prefixed hex string) and verify it against the card's public key (maybe the Monet+ SDK can do that)
 
-  // TODO: Compare request.amount with the user's per-tx limit
+  // Compare request.amount with the user's per-tx limit
+  const requestedLuna = Number.parseInt(request.amount, 10)
+  if (paymentLimit.value) {
+    try {
+      const { fiat: { currency }, price: { luna } } = await paymentLimitPricePromise
+      if (currency === paymentLimit.value.currency) {
+        const paymentLimitLuna = paymentLimit.value.amount / luna.value
+        if (requestedLuna > paymentLimitLuna) {
+          rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Amount exceeds payment limit')
+          useToast().setToast({
+            type: 'error',
+            message: `Amount exceeds payment limit of ${formatFiat(paymentLimit.value.amount, { currency: paymentLimit.value.currency })}`,
+          })
+          return
+        }
+      }
+      else {
+        console.warn('Payment limit currency does not match price currency')
+        rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify payment limit in app')
+        useToast().setToast({
+          type: 'error',
+          message: `Cannot verify payment limits: asked for ${paymentLimit.value.currency} but got ${currency}`,
+        })
+        return
+      }
+    }
+    catch (error) {
+      console.error('Failed to check payment limit', error)
+      rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify payment limit in app')
+      useToast().setToast({
+        type: 'error',
+        message: `Cannot verify payment limits: ${(error as Error).message}`,
+      })
+      return
+    }
+  }
 
   // TODO: Compare request.amount with the user's daily limit, which requires listing the user's naka-card txs for the current day
 
@@ -67,7 +126,7 @@ watch(paymentRequest, (request) => {
   const invoiced = request.additionalAmounts?.find(({ currency }) => currency !== 'USDT')
   const data: PaymentRequestData = {
     recipient: request.recipient,
-    amount: Number(request.amount),
+    amount: Number.parseInt(request.amount, 10),
     merchantName: request.store?.name,
     merchantCategory: MerchantCategory.Shop,
     rail: Rail.NakaCard,
