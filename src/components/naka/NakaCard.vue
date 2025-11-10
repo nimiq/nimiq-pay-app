@@ -5,6 +5,7 @@ import { onMounted } from 'vue'
 import EyeCrossedIcon from '@/components/icons/eye-crossed.vue'
 import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -46,6 +47,9 @@ const { isNakaCardActivating } = storeToRefs(useLocks())
 const { activateCardOnDevice } = useNaka()
 
 onMounted(async () => {
+  if (useDevice().isWeb)
+    return
+
   isNakaCardActivating.value = true
   try {
     await activateCardOnDevice()

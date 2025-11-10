@@ -33,7 +33,8 @@ const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, p
 
 const isNfcSupported = ref<boolean | null>(null)
 const isNfcEnabled = ref<boolean | null>(null)
-const isReady = computed(() => isServerReady.value && isNfcSupported.value !== null && isNfcEnabled.value !== null && isCardActiveOnDevice.value)
+const { isWeb } = useDevice()
+const isReady = computed(() => isServerReady.value && (isWeb || (isNfcSupported.value !== null && isNfcEnabled.value !== null && isCardActiveOnDevice.value)))
 const paymentSuccessful = ref(false)
 
 watch(paymentRequest, (request) => {
@@ -128,7 +129,7 @@ watch(paymentRejection, (rejection) => {
 })
 
 const { pause: stopNfcCheck, resume: startNfcCheck } = useIntervalFn(async () => {
-  if (useDevice().isWeb) {
+  if (isWeb) {
     isNfcSupported.value = false
     isNfcEnabled.value = false
     stopNfcCheck()
@@ -233,10 +234,14 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
           </motion.div>
         </div>
         <template v-if="isReady">
-          <span v-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky text-balance">
+          <div v-if="isWeb" class="text-sky text-balance text-center">
+            {{ $t('Trigger a payment on the issuer') }}<br>
+            <small>Card: {{ card.maskedPan }}</small>
+          </div>
+          <span v-else-if="isCardActive && isCardActiveOnDevice && isNfcEnabled" class="text-sky text-balance">
             {{ $t('Hold your phone near the terminal') }}
           </span>
-          <span v-else-if="!isNfcSupported" class="text-tomato">
+          <span v-else-if="!isWeb && !isNfcSupported" class="text-tomato">
             {{ $t('NFC is not supported on this device') }}
           </span>
           <IonButton
