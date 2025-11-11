@@ -52,14 +52,6 @@ export function useCurrencyFormatter() {
     return `${options.isPayment ? '- ' : ''}${amount < 0.01 && amount > 0 ? '~' : ''}${formatter.format(amount)}`
   }
 
-  function formatFiatToParts(amount: number, options: FormatFiatOptions = {}): Intl.NumberFormatPart[] {
-    const currency = toValue(options.currency || selectedFiat)
-    const locale = toValue(options.locale || language)
-    const digitsOptions = options.short ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-    const formatter = new Intl.NumberFormat(locale, { currency, ...baseFormatterOptions, ...digitsOptions })
-    return formatter.formatToParts(amount)
-  }
-
   function formatCrypto(amountInLuna: number, options?: FormatCryptoOptions): string {
     if (!amountInLuna)
       return '0 NIM'
@@ -70,7 +62,6 @@ export function useCurrencyFormatter() {
 
   return {
     formatFiat,
-    formatFiatToParts,
     formatCrypto,
   }
 }

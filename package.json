@@ -43,6 +43,7 @@
     "@capawesome/capacitor-android-edge-to-edge-support": "^7.2.3",
     "@capawesome/capacitor-screen-orientation": "^7.0.2",
     "@capgo/camera-preview": "^7.15.0",
+    "@internationalized/number": "^3.6.5",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.10.3",
     "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.0",
     "@nimiq/utils": "^0.12.4",
@@ -62,6 +63,7 @@
     "pinia": "^3.0.3",
     "qr-scanner-wechat": "^0.1.3",
     "radix-vue": "^1.9.17",
+    "reka-ui": "^2.6.0",
     "valibot": "^1.0.0-beta.14",
     "vue-virtual-scroller": "2.0.0-beta.8",
     "youtube-player": "^5.6.0"
