@@ -59,7 +59,7 @@ const newDailyLimit = (() => {
     return ref<string>('')
   }
   const parts = formatFiatToParts(dailyLimit.value.amount, { currency: dailyLimit.value.currency })
-  return ref<string>(parts.filter(part => part.type === 'integer').map(part => part.value).join(''))
+  return ref<string>(parts.filter(part => part.type !== 'currency').map(part => part.value).join(''))
 })()
 
 const newPaymentLimit = (() => {
@@ -67,7 +67,7 @@ const newPaymentLimit = (() => {
     return ref<string>('')
   }
   const parts = formatFiatToParts(paymentLimit.value.amount, { currency: paymentLimit.value.currency })
-  return ref<string>(parts.filter(part => part.type === 'integer').map(part => part.value).join(''))
+  return ref<string>(parts.filter(part => part.type !== 'currency').map(part => part.value).join(''))
 })()
 
 async function lockCard() {
@@ -125,7 +125,7 @@ async function resetNaka() {
 
       <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setDailyLimit(Number(newDailyLimit), dailyLimit?.currency || selectedFiat)">
         {{ dailyLimit?.currency || selectedFiat }}
-        <InputText v-model="newDailyLimit" min="0" type="number" inputmode="numeric" placeholder="0" />
+        <InputText v-model="newDailyLimit" min="0" step="0.01" type="number" inputmode="decimal" placeholder="0" />
         <button class="secondary" :disabled="isNaN(Number(newDailyLimit)) || Number(newDailyLimit) === dailyLimit?.amount">
           {{ $t('save') }}
         </button>
@@ -137,7 +137,7 @@ async function resetNaka() {
 
       <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setPaymentLimit(Number(newPaymentLimit), paymentLimit?.currency || selectedFiat)">
         {{ paymentLimit?.currency || selectedFiat }}
-        <InputText v-model="newPaymentLimit" min="0" type="text" inputmode="numeric" placeholder="0" />
+        <InputText v-model="newPaymentLimit" min="0" step="0.01" type="number" inputmode="decimal" placeholder="0" />
         <button class="secondary" :disabled="isNaN(Number(newPaymentLimit)) || Number(newPaymentLimit) === paymentLimit?.amount">
           {{ $t('save') }}
         </button>
