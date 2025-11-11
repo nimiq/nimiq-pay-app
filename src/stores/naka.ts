@@ -14,6 +14,7 @@ import { SQLQuery } from '@/lib/sql-queries'
 import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
+import { Rail } from '@/types/transactions'
 
 const logger = useLogger('useNaka')
 
@@ -102,6 +103,14 @@ export function useNakaDb() {
     async purgeNakaCards() {
       logger.log('🗑️ Purging Naka cards from DB')
       await run(SQLQuery.PurgeNakaCards)
+    },
+    async getTransactionsAfter(afterTimestamp: number) {
+      return query<{
+        hash: string
+        timestamp: number
+        amount: number
+        status: string
+      }[]>(SQLQuery.GetIncludedTransactionsByRailAfter, [Rail.NakaCard, afterTimestamp])
     },
   }
 }

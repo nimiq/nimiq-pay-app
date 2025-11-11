@@ -16,7 +16,7 @@ import { useToast } from '@/composables/useToast'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useLocks } from '@/stores/locks'
-import { useNaka } from '@/stores/naka'
+import { useNaka, useNakaDb } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import Check from '../icons/check.vue'
@@ -110,7 +110,48 @@ watch(paymentRequest, async (request) => {
     }
   }
 
-  // TODO: Compare request.amount with the user's daily limit, which requires listing the user's naka-card txs for the current day
+  // Compare request.amount with the user's daily limit, which requires listing the user's naka-card txs for the current day
+  if (dailyLimit.value) {
+    try {
+      const { fiat: { currency }, price: { luna } } = await dailyLimitPricePromise
+      if (currency === dailyLimit.value.currency) {
+        const dailyLimitLuna = dailyLimit.value.amount / luna.value
+
+        // Sum up all NAKA transactions for today
+        const startOfDay = new Date()
+        startOfDay.setHours(0, 0, 0, 0)
+        const dailyTxs = await useNakaDb().getTransactionsAfter(startOfDay.getTime())
+        const dailyVolume = dailyTxs.reduce((sum, tx) => sum + tx.amount, 0)
+
+        if (dailyVolume + requestedLuna > dailyLimitLuna) {
+          rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Amount exceeds daily limit')
+          useToast().setToast({
+            type: 'error',
+            message: `Amount exceeds daily limit of ${formatFiat(dailyLimit.value.amount, { currency: dailyLimit.value.currency })}`,
+          })
+          return
+        }
+      }
+      else {
+        console.warn('Daily limit currency does not match price currency')
+        rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify daily limit in app')
+        useToast().setToast({
+          type: 'error',
+          message: `Cannot verify daily limits: asked for ${dailyLimit.value.currency} but got ${currency}`,
+        })
+        return
+      }
+    }
+    catch (error) {
+      console.error('Failed to check daily limit', error)
+      rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify daily limit in app')
+      useToast().setToast({
+        type: 'error',
+        message: `Cannot verify daily limits: ${(error as Error).message}`,
+      })
+      return
+    }
+  }
 
   // Compare request.amount with the available balance
   if (Number.parseInt(request.amount, 10) > remoteBalance.value) {

@@ -119,7 +119,7 @@ async function resetNaka() {
         {{ $t('Payment limits') }}
       </h2>
 
-      <!-- <h3 class="text-space/40 text-sm mt-4 self-start">
+      <h3 class="text-space/40 text-sm mt-4 self-start">
         {{ $t('Daily limit') }}
       </h3>
 
@@ -129,7 +129,7 @@ async function resetNaka() {
         <button class="secondary" :disabled="isNaN(Number(newDailyLimit)) || Number(newDailyLimit) === dailyLimit?.amount">
           {{ $t('save') }}
         </button>
-      </form> -->
+      </form>
 
       <h3 class="text-space/40 text-sm mt-4 self-start">
         {{ $t('Payment limit') }}
@@ -138,7 +138,7 @@ async function resetNaka() {
       <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setPaymentLimit(Number(newPaymentLimit), paymentLimit?.currency || selectedFiat)">
         {{ paymentLimit?.currency || selectedFiat }}
         <InputText v-model="newPaymentLimit" min="0" class="w-1/2" type="text" inputmode="numeric" placeholder="0" />
-        <button class="secondary" :disabled="isNaN(Number(newPaymentLimit))">
+        <button class="secondary" :disabled="isNaN(Number(newPaymentLimit)) || Number(newPaymentLimit) === paymentLimit?.amount">
           {{ $t('save') }}
         </button>
       </form>
