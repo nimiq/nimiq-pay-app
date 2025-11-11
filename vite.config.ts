@@ -1,10 +1,6 @@
 import { copyFileSync } from 'node:fs'
 import path from 'node:path'
 import vue from '@vitejs/plugin-vue'
-import { ExternalPackageIconLoader } from 'unplugin-icons/loaders'
-import IconResolver from 'unplugin-icons/resolver'
-import Icons from 'unplugin-icons/vite'
-import Components from 'unplugin-vue-components/vite'
 import { defineConfig, loadEnv } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import topLevelAwait from 'vite-plugin-top-level-await'
@@ -41,15 +37,6 @@ export default defineConfig(({ mode }) => {
           }
         },
       },
-      Components({
-        dirs: [], // We don't auto-import at the moment, just icons
-        resolvers: [
-          IconResolver({ customCollections: ['nimiq'] }),
-        ],
-      }),
-      Icons({
-        customCollections: ExternalPackageIconLoader('@iconify-json/nimiq'),
-      }),
     ],
     resolve: {
       alias: {
