@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { shallowRef, watch } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
+import InputText from '@/components/InputText.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
+import { useApp } from '@/stores/app'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
 
 defineEmits(stepEmits)
 
-const { card, /* dailyLimit, paymentLimit, */ isCardActive, isCardLocked } = storeToRefs(useNaka())
+const { selectedFiat } = storeToRefs(useApp())
+const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const showSecretData = shallowRef(false)
 const cardData = shallowRef<{ maskedPan?: string, pan?: string, expiry: string, cvv?: string } | undefined>(undefined)
@@ -47,9 +51,24 @@ watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
   }
 }, { immediate: true })
 
-// const { setDailyLimit, setPaymentLimit } = useNaka()
-// const newDailyLimit = ref<number | undefined>(dailyLimit.value)
-// const newPaymentLimit = ref<number | undefined>(paymentLimit.value)
+const { setDailyLimit, setPaymentLimit } = useNaka()
+const { formatFiatToParts } = useCurrencyFormatter()
+
+const newDailyLimit = (() => {
+  if (!dailyLimit.value) {
+    return ref<string>('')
+  }
+  const parts = formatFiatToParts(dailyLimit.value.amount, { currency: dailyLimit.value.currency })
+  return ref<string>(parts.filter(part => part.type !== 'currency').map(part => part.value).join(''))
+})()
+
+const newPaymentLimit = (() => {
+  if (!paymentLimit.value) {
+    return ref<string>('')
+  }
+  const parts = formatFiatToParts(paymentLimit.value.amount, { currency: paymentLimit.value.currency })
+  return ref<string>(parts.filter(part => part.type !== 'currency').map(part => part.value).join(''))
+})()
 
 async function lockCard() {
   if (!card.value)
@@ -84,7 +103,7 @@ async function resetNaka() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full items-center w-max mx-auto">
+  <div class="flex flex-col h-full items-center w-full mx-auto">
     <NakaCard class="w-full h-max" :card-data="cardData" :loading-animation="evaluatingCardData" @show-secret-data-change="showSecretData = !showSecretData" />
 
     <!-- <div class="mt-8 flex items-center gap-6">
@@ -95,7 +114,7 @@ async function resetNaka() {
 
     <div v-if="isCardActive" class="h-12" />
 
-    <!-- <template v-if="isCardActive">
+    <template v-if="isCardActive">
       <h2 class="text-[13px] font-bold tracking-wider uppercase text-space/60 lh-none self-start">
         {{ $t('Payment limits') }}
       </h2>
@@ -104,9 +123,10 @@ async function resetNaka() {
         {{ $t('Daily limit') }}
       </h3>
 
-      <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setDailyLimit(newDailyLimit)">
-        <InputText v-model="newDailyLimit" min="0" class="w-1/2" placeholder="0,00" type="number" />
-        <button class="secondary" :disabled="!newDailyLimit?.value || newDailyLimit?.value === dailyLimit.value">
+      <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setDailyLimit(Number(newDailyLimit), dailyLimit?.currency || selectedFiat)">
+        {{ dailyLimit?.currency || selectedFiat }}
+        <InputText v-model="newDailyLimit" min="0" step="0.01" type="number" inputmode="decimal" placeholder="0" />
+        <button class="secondary" :disabled="isNaN(Number(newDailyLimit)) || Number(newDailyLimit) === dailyLimit?.amount">
           {{ $t('save') }}
         </button>
       </form>
@@ -115,13 +135,14 @@ async function resetNaka() {
         {{ $t('Payment limit') }}
       </h3>
 
-      <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setPaymentLimit(newPaymentLimit)">
-        <InputText v-model="newPaymentLimit" min="0" class="w-1/2" type="number" placeholder="0,00" />
-        <button class="secondary" :disabled="!newPaymentLimit?.value || newPaymentLimit?.value === paymentLimit.value">
+      <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setPaymentLimit(Number(newPaymentLimit), paymentLimit?.currency || selectedFiat)">
+        {{ paymentLimit?.currency || selectedFiat }}
+        <InputText v-model="newPaymentLimit" min="0" step="0.01" type="number" inputmode="decimal" placeholder="0" />
+        <button class="secondary" :disabled="isNaN(Number(newPaymentLimit)) || Number(newPaymentLimit) === paymentLimit?.amount">
           {{ $t('save') }}
         </button>
       </form>
-    </template> -->
+    </template>
 
     <!-- <IonList lines="none" class="mt-10 w-full mb-16">
       <IonItem style="--padding-start:0">

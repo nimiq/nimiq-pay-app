@@ -40,6 +40,7 @@ export enum SQLQuery {
   ClearTxHistory = 'DELETE FROM transactions',
   AddInvoicedColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN invoiced_json TEXT',
   AddMetaColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN meta_json TEXT',
+  GetIncludedTransactionsByRailAfter = `SELECT hash, timestamp, amount, status FROM transactions WHERE status IN ('included', 'confirmed') AND rail = ? AND timestamp >= ? ORDER BY timestamp`,
 
   // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
