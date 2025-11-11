@@ -21,7 +21,7 @@ const { selectedFiat } = storeToRefs(useApp())
 const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const showSecretData = shallowRef(false)
-const cardData = shallowRef<{ maskedPan?: string, pan?: string, expiry: string, cvv?: string } | undefined>(undefined)
+const cardData = shallowRef<{ maskedPan: string, expiry: string } | { pan: string, expiry: string, cvc: string } | undefined>(undefined)
 const evaluatingCardData = shallowRef(false)
 
 watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
