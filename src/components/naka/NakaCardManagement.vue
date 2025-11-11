@@ -103,7 +103,7 @@ async function resetNaka() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full items-center w-max mx-auto">
+  <div class="flex flex-col h-full items-center w-full mx-auto">
     <NakaCard class="w-full h-max" :card-data="cardData" :loading-animation="evaluatingCardData" @show-secret-data-change="showSecretData = !showSecretData" />
 
     <!-- <div class="mt-8 flex items-center gap-6">
@@ -123,9 +123,9 @@ async function resetNaka() {
         {{ $t('Daily limit') }}
       </h3>
 
-      <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setDailyLimit(Number(newDailyLimit), dailyLimit?.currency || selectedFiat)">
+      <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setDailyLimit(Number(newDailyLimit), dailyLimit?.currency || selectedFiat)">
         {{ dailyLimit?.currency || selectedFiat }}
-        <InputText v-model="newDailyLimit" min="0" class="w-1/2" type="number" inputmode="numeric" placeholder="0" />
+        <InputText v-model="newDailyLimit" min="0" type="number" inputmode="numeric" placeholder="0" />
         <button class="secondary" :disabled="isNaN(Number(newDailyLimit)) || Number(newDailyLimit) === dailyLimit?.amount">
           {{ $t('save') }}
         </button>
@@ -135,9 +135,9 @@ async function resetNaka() {
         {{ $t('Payment limit') }}
       </h3>
 
-      <form class="flex items-center gap-4 mt-1.5" @submit.prevent="() => setPaymentLimit(Number(newPaymentLimit), paymentLimit?.currency || selectedFiat)">
+      <form class="flex items-center gap-4 mt-1.5 w-full" @submit.prevent="() => setPaymentLimit(Number(newPaymentLimit), paymentLimit?.currency || selectedFiat)">
         {{ paymentLimit?.currency || selectedFiat }}
-        <InputText v-model="newPaymentLimit" min="0" class="w-1/2" type="text" inputmode="numeric" placeholder="0" />
+        <InputText v-model="newPaymentLimit" min="0" type="text" inputmode="numeric" placeholder="0" />
         <button class="secondary" :disabled="isNaN(Number(newPaymentLimit)) || Number(newPaymentLimit) === paymentLimit?.amount">
           {{ $t('save') }}
         </button>
