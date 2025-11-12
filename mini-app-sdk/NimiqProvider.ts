@@ -1,5 +1,7 @@
 import type { PlainAccount, PlainTransaction, PlainTransactionRecipientData } from '@nimiq/core'
 
+export { PlainAccount, PlainTransaction, PlainTransactionRecipientData }
+
 export interface NimiqProvider {
     /**
      * Checks if the app has established consensus on the Nimiq network.
@@ -115,7 +117,7 @@ export type TransactionData = SendTransactionData | ClaimTransactionData
 /// RETURN VALUES
 
 // TODO: Use https://www.typescript-result.dev?
-type Result<T, E> = {
+export type Result<T, E> = {
     ok: true
     value: T
   } | {
@@ -123,14 +125,18 @@ type Result<T, E> = {
     error: E
   }
 
-class PermissionDeniedError extends Error {
+export class PermissionDeniedError extends Error {
     readonly type = 'permission-denied'
 }
 
-class NetworkError extends Error {
+export class NetworkError extends Error {
     readonly type = 'network'
 }
 
-class InvalidTransactionError extends Error {
+export class InvalidTransactionError extends Error {
     readonly type = 'invalid-transaction'
+}
+
+export class TimeoutError extends Error {
+    readonly type = 'timeout'
 }
