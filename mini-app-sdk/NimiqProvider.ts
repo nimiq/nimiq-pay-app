@@ -1,4 +1,5 @@
 import type { PlainAccount, PlainTransaction, PlainTransactionRecipientData } from '@nimiq/core'
+import { Result } from './Result'
 
 export { PlainAccount, PlainTransaction, PlainTransactionRecipientData }
 
@@ -115,15 +116,6 @@ export type ClaimTransactionData = {
 export type TransactionData = SendTransactionData | ClaimTransactionData
 
 /// RETURN VALUES
-
-// TODO: Use https://www.typescript-result.dev?
-export type Result<T, E> = {
-    ok: true
-    value: T
-  } | {
-    ok: false
-    error: E
-  }
 
 export class PermissionDeniedError extends Error {
     readonly type = 'permission-denied'

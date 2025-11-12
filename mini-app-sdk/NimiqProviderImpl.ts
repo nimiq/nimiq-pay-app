@@ -5,23 +5,23 @@ import {
     PlainAccount,
     PlainTransaction,
     NimiqProvider as ProviderInterface,
-    Result,
     TransactionData,
 } from "./NimiqProvider"
+import { mapError, Result, unwrap } from "./Result";
 
 /**
  * Window interface extension for mobileApp injected by InAppBrowser
  */
 export interface MobileAppWindow extends Window {
-  mobileApp?: {
-    postMessage: (message: any) => void;
-  };
+    mobileApp?: {
+        postMessage: (message: any) => void;
+    };
 }
 
 export class NimiqProvider implements ProviderInterface {
-    private subscriptions: {[K in keyof SubscriptionType]?: Set<Handler<K>>}= {};
+    private subscriptions: { [K in keyof SubscriptionType]?: Set<Handler<K>> } = {};
     private requestId = 0;
-    private pendingRequests = new Map<string, { resolve: (value: ResponseData) => void; reject: (error: ErrorData) => void }>();
+    private pendingRequests = new Map<string, (value: Result<ResponseData, ErrorData>) => void>();
 
     constructor() {
         this.setupMessageListener();
@@ -53,44 +53,39 @@ export class NimiqProvider implements ProviderInterface {
         };
     }
 
-    isConsensusEstablished(): Promise<boolean> {
-        return this.request('isConsensusEstablished', {})
+    async isConsensusEstablished(): Promise<boolean> {
+        const result = await this.request('isConsensusEstablished', {})
+        return unwrap(result)
     }
 
     async getSenderAddress(): Promise<Result<string, PermissionDeniedError>> {
-        try {
-            const address = await this.request('getSenderAddress', {})
-            return { ok: true, value: address }
-        } catch (error) {
-            if (error === 'permission-denied') {
-                return { ok: false, error: new PermissionDeniedError('User denied permission to access sender address.') }
+        const result = await this.request('getSenderAddress', {})
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'permission-denied': return new PermissionDeniedError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async getDepositAddress(): Promise<Result<string, PermissionDeniedError>> {
-        try {
-            const address = await this.request('getDepositAddress', {})
-            return { ok: true, value: address }
-        } catch (error) {
-            if (error === 'permission-denied') {
-                return Promise.resolve({ ok: false, error: new PermissionDeniedError('User denied permission to access deposit address.') })
+        const result = await this.request('getDepositAddress', {})
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'permission-denied': return new PermissionDeniedError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async getAccount(address: string): Promise<Result<PlainAccount, NetworkError>> {
-        try {
-            const account = await this.request('getAccount', { address })
-            return { ok: true, value: account }
-        } catch (error) {
-            if (error === 'network') {
-                return { ok: false, error: new NetworkError('Network error while fetching account.') }
+        const result = await this.request('getAccount', { address })
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'network': return new NetworkError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async makeTransaction(transactionData: TransactionData): Promise<Result<{
@@ -98,72 +93,59 @@ export class NimiqProvider implements ProviderInterface {
         serializedContent: string,
         plain: PlainTransaction,
     }, InvalidTransactionError>> {
-        try {
-            const result = await this.request('makeTransaction', transactionData)
-            return { ok: true, value: result }
-        } catch (error) {
-            if (error === 'invalid-transaction') {
-                return { ok: false, error: new InvalidTransactionError('The provided transaction data is invalid.') }
+        const result = await this.request('makeTransaction', transactionData)
+        return mapError(result, (error) => {
+            if (error.type === 'invalid-transaction') {
+                return new InvalidTransactionError(error.message)
             }
-            throw error
-        }
+            throw new Error(`${error.type}: ${error.message}`)
+        })
     }
 
     async signTransaction(transactionData: string | TransactionData): Promise<Result<{
         serialized: string,
         plain: PlainTransaction,
     }, PermissionDeniedError | InvalidTransactionError>> {
-        try {
-            const result = await this.request('signTransaction', transactionData)
-            return { ok: true, value: result }
-        } catch (error) {
-            if (error === 'permission-denied') {
-                return { ok: false, error: new PermissionDeniedError('User denied permission to sign the transaction.') }
-            } else if (error === 'invalid-transaction') {
-                return { ok: false, error: new InvalidTransactionError('The provided transaction data is invalid.') }
+        const result = await this.request('signTransaction', transactionData)
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'permission-denied': return new PermissionDeniedError(error.message)
+                case 'invalid-transaction': return new InvalidTransactionError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async sendTransaction(signedTransaction: string | PlainTransaction): Promise<Result<string, NetworkError | InvalidTransactionError>> {
-        try {
-            const txHash = await this.request('sendTransaction', signedTransaction)
-            return { ok: true, value: txHash }
-        } catch (error) {
-            if (error === 'network') {
-                return { ok: false, error: new NetworkError('Network error while sending transaction.') }
-            } else if (error === 'invalid-transaction') {
-                return { ok: false, error: new InvalidTransactionError('The signed transaction is invalid.') }
+        const result = await this.request('sendTransaction', signedTransaction)
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'network': return new NetworkError(error.message)
+                case 'invalid-transaction': return new InvalidTransactionError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async getUserTransactions(limit?: number, cursor?: string): Promise<Result<PlainTransaction[], PermissionDeniedError | NetworkError>> {
-        try {
-            const transactions = await this.request('getUserTransactions', { limit, cursor })
-            return { ok: true, value: transactions }
-        } catch (error) {
-            if (error === 'permission-denied') {
-                return { ok: false, error: new PermissionDeniedError('User denied permission to access transaction history.') }
-            } else if (error === 'network') {
-                return { ok: false, error: new NetworkError('Network error while fetching user transactions.') }
+        const result = await this.request('getUserTransactions', { limit, cursor })
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'permission-denied': return new PermissionDeniedError(error.message)
+                case 'network': return new NetworkError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     async getTransactionsByAddress(address: string, limit?: number, cursor?: string): Promise<Result<PlainTransaction[], NetworkError>> {
-        try {
-            const transactions = await this.request('getTransactionsByAddress', { address, limit, cursor })
-            return { ok: true, value: transactions }
-        } catch (error) {
-            if (error === 'network') {
-                return { ok: false, error: new NetworkError('Network error while fetching transactions for address.') }
+        const result = await this.request('getTransactionsByAddress', { address, limit, cursor })
+        return mapError(result, (error) => {
+            switch (error.type) {
+                case 'network': return new NetworkError(error.message)
+                default: throw new Error(`${error.type}: ${error.message}`)
             }
-            throw error
-        }
+        })
     }
 
     hexToBytes(hex: string): Uint8Array {
@@ -206,12 +188,12 @@ export class NimiqProvider implements ProviderInterface {
         if ('id' in message) {
             if (!this.pendingRequests.has(message.id)) return;
 
-            const pending = this.pendingRequests.get(message.id)!;
+            const resolver = this.pendingRequests.get(message.id)!;
             this.pendingRequests.delete(message.id);
             if (message.type === 'error') {
-                pending.reject(message.data);
+                resolver({ ok: false, error: message.data });
             } else {
-                pending.resolve(message.data);
+                resolver({ ok: true, value: message.data });
             }
             return;
         }
@@ -240,30 +222,16 @@ export class NimiqProvider implements ProviderInterface {
         win.mobileApp.postMessage({ detail: message });
     }
 
-    private async request<T extends keyof RequestType>(type: T, data: RequestType[T]): Promise<ResponseType[T]> {
-        return new Promise<ResponseType[T]>((resolve, reject) => {
+    private async request<T extends keyof RequestType>(type: T, data: RequestType[T]): Promise<Result<ResponseType[T], ErrorData>> {
+        return new Promise((resolve) => {
             const id = `request-${++this.requestId}`;
             // const timeout = setTimeout(() => {
             //   this.pendingRequests.delete(id);
             //   reject(new Error('Request timeout'));
             // }, 5000);
 
-            this.pendingRequests.set(id, {
-                resolve: (message: ResponseData) => {
-                    // clearTimeout(timeout);
-                    resolve(message as ResponseType[T]);
-                },
-                reject: (error) => {
-                    // clearTimeout(timeout);
-                    reject(error);
-                },
-            });
-
-            this.postMessage({
-                type,
-                data,
-                id,
-            });
+            this.pendingRequests.set(id, resolve as (message: Result<ResponseData, ErrorData>) => void);
+            this.postMessage({ type, data, id });
         });
     }
 }
@@ -306,7 +274,6 @@ export type ResponseData = ResponseType[keyof ResponseType]
 export type ErrorData = {
     type: string,
     message: string,
-    details?: any,
 }
 
 export type ResponseMessage<T extends keyof ResponseType = keyof ResponseType> = { type: T, data: ResponseType[T], id: string }
