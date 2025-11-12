@@ -44,7 +44,7 @@ const itemHeight = 42 /* Height */ + 24 /* padding-y */
       :items="transactions"
       :item-size="itemHeight"
       key-field="hash"
-      @scroll-end="() => canLoadMore && loadMoreTxs()"
+      @scroll-end="() => canLoadMore() && loadMoreTxs()"
     >
       <TransactionItem :tx="item" @click="$emit('select', item)" />
     </RecycleScroller>
