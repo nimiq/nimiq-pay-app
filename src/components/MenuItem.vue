@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import ArrowUpRightIcon from '@/components/icons/arrow-up-right.vue'
 import ChevronRightIcon from '@/components/icons/chevron-right.vue'
 
 defineProps<{
   icon: any
   title: string
+  external?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -21,6 +23,7 @@ function onClick() {
     <span class="w-full font-semibold text-lg text-left">
       {{ title }}
     </span>
-    <ChevronRightIcon class="size-6 text-space" />
+    <ChevronRightIcon v-if="!external" class="size-6 text-space" />
+    <ArrowUpRightIcon v-else class="size-6 text-space" />
   </button>
 </template>

@@ -106,6 +106,7 @@ onLongPress(
     <MenuItem
       :icon="NimiqOutlineLogo"
       :title="$t('About')"
+      external
       @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })"
     />
     <MenuItem
