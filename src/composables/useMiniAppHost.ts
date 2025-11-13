@@ -96,15 +96,12 @@ export class MiniAppHost {
    * @private
    */
   // private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseType[T]> {
-  private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseType[keyof RequestType]> {
+  private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseData> {
     console.log('[MiniAppHost] Handling message:', message);
 
     // Handle built-in message types
     console.log('[MiniAppHost] Handling built-in message type:', message.type);
     try {
-      if (message.type === 'isConsensusEstablished') {
-        return this.handleIsConsensusEstablished() as ResponseType['isConsensusEstablished'];
-      }
       switch (message.type) {
         case 'isConsensusEstablished': return this.handleIsConsensusEstablished();
         case 'getSenderAddress': return this.handleGetSenderAddress();
