@@ -175,6 +175,8 @@ export enum RemoteStatus {
 }
 
 const remoteSignerWsApi = (function () {
+  logger.log('[remoteSignerWsApi] Initializing WebSocket connection to', baseCosignerUrl.toString())
+
   const pendingRequests = new Map<string, { id: string, requestObject: any, resolve: (result: ResultApi<any, any>) => void }>()
   let idCounter = 0
   const { data, send } = useWebSocket<string>(baseCosignerUrl, {
@@ -217,23 +219,35 @@ const remoteSignerWsApi = (function () {
         data: { id: string, statusCode?: number } & object
       } = JSON.parse(newData)
       switch (responseObject.event) {
-        case 'result':
-          pendingRequests.get(responseObject.data.id)?.resolve({
+        case 'result': {
+          const pendingRequest = pendingRequests.get(responseObject.data.id)
+          if (!pendingRequest) {
+            logger.warn('[remoteSignerWsApi] No pending request for id:', responseObject.data.id)
+            break
+          }
+          pendingRequest.resolve({
             data: responseObject.data.payload,
             hasError: false,
             error: undefined,
             status: 200,
           })
           pendingRequests.delete(responseObject.data.id)
+        }
           break
-        case 'error':
-          pendingRequests.get(responseObject.data.id)?.resolve({
+        case 'error': {
+          const pendingRequest = pendingRequests.get(responseObject.data.id)
+          if (!pendingRequest) {
+            logger.warn('[remoteSignerWsApi] No pending request for id:', responseObject.data.id)
+            break
+          }
+          pendingRequest.resolve({
             data: undefined,
             hasError: true,
             error: responseObject.data,
             status: responseObject.data.statusCode ?? 500,
           })
           pendingRequests.delete(responseObject.data.id)
+        }
       }
     }
     catch (e) {
