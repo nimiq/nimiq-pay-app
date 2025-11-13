@@ -105,6 +105,16 @@ onLongPress(
     />
 
     <span class="uppercase text-space/60 font-bold text-sm mt-6">
+      {{ $t('Features') }}
+    </span>
+
+    <MenuItem
+      :icon="NimiqOutlineLogo"
+      :title="$t('Mini Apps')"
+      @click="showModal(Modal.MiniApps)"
+    />
+
+    <span class="uppercase text-space/60 font-bold text-sm mt-6">
       {{ $t('App Settings') }}
     </span>
 

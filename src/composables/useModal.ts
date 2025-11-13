@@ -19,6 +19,7 @@ export enum Modal {
   LongTimeNoSee = '@/modals/LongTimeNoSeeModal.vue',
   Menu = '@/modals/MenuModal.vue',
   Points = '@/modals/PointsModal.vue',
+  MiniApps = '@/modals/MiniAppsModal.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
@@ -65,6 +66,9 @@ function _useModal() {
         break
       case Modal.Points:
         component = defineAsyncComponent(() => import(Modal.Points))
+        break
+      case Modal.MiniApps:
+        component = defineAsyncComponent(() => import(Modal.MiniApps))
         break
       case Modal.Settings:
         component = defineAsyncComponent(() => import(Modal.Settings))
