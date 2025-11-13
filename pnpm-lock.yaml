@@ -169,8 +169,8 @@ importers:
         specifier: 8.7.3
         version: 8.7.3(@stencil/core@4.37.0)(vue-router@4.5.1(vue@3.5.21(typescript@5.9.2)))(vue@3.5.21(typescript@5.9.2))
       '@nimiq/core':
-        specifier: ^2.1.1
-        version: 2.1.1
+        specifier: ^2.2.1
+        version: 2.2.1
       '@types/youtube-player':
         specifier: ^5.5.11
         version: 5.5.11
@@ -1581,8 +1581,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@nimiq/core@2.1.1':
-    resolution: {integrity: sha512-GOgWG5Uo9TPQld13EbVVKCBAL411LrqBd5qOXrrv0Qr52uq6GmY9AjbchUyMahtpFFOisX7Zvdtz8agYBNuS2A==}
+  '@nimiq/core@2.2.1':
+    resolution: {integrity: sha512-RrjZrSxR/1fBVhBddXABiQ2L/9QT7hRTBFpLYURcm2LX4mTgRIyz5YLpNEnzFrShNR2kITaa51KAl5X3JLfIZQ==}
 
   '@nimiq/fastspot-api@1.10.3':
     resolution: {integrity: sha512-CUkIAcF7R3OlN45idB+yC9Wnuz2YXTPx25xYswCdmbMGu/EGZFNnGHLIe6HkbHd8Eh+uBrwqBmLZGm8jyQ9+6A==}
@@ -9440,7 +9440,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.4.15
 
-  '@nimiq/core@2.1.1':
+  '@nimiq/core@2.2.1':
     dependencies:
       comlink: 4.4.2
       websocket: 1.0.35
