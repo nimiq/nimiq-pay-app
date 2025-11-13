@@ -208,11 +208,12 @@ const remoteSignerWsApi = (function () {
   }
 
   watch(data, (newData) => {
-    logger.log('[remoteSignerWsApi] Got:', newData)
     if (!newData)
       return
     if (newData === 'pong')
       return
+
+    logger.log('[remoteSignerWsApi] Got:', newData)
     try {
       const responseObject: { event: 'result', data: { id: string, payload: any } } | {
         event: 'error'
