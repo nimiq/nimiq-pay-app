@@ -50,6 +50,9 @@ importers:
       '@capgo/camera-preview':
         specifier: ^7.15.0
         version: 7.20.0(@capacitor/core@7.4.3)
+      '@capgo/inappbrowser':
+        specifier: link:../mini-apps-demo/packages/capacitor-inappbrowser
+        version: link:../mini-apps-demo/packages/capacitor-inappbrowser
       '@internationalized/number':
         specifier: ^3.6.5
         version: 3.6.5
