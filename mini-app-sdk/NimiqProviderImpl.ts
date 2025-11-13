@@ -10,12 +10,14 @@ import {
 import { mapError, Result, unwrap } from "./Result";
 
 /**
- * Window interface extension for mobileApp injected by InAppBrowser
+ * Window interface extension for `mobileApp` injected by InAppBrowser plugin
  */
-export interface MobileAppWindow extends Window {
-    mobileApp?: {
-        postMessage: (message: any) => void;
-    };
+declare global {
+    interface Window {
+        mobileApp?: {
+            postMessage: (message: any) => void;
+        };
+    }
 }
 
 export class NimiqProvider implements ProviderInterface {
@@ -31,7 +33,7 @@ export class NimiqProvider implements ProviderInterface {
      * Check if running inside InAppBrowser
      */
     public isInMiniApp(): boolean {
-        return !!(window as MobileAppWindow).mobileApp;
+        return !!window.mobileApp;
     }
 
     /**
@@ -213,13 +215,12 @@ export class NimiqProvider implements ProviderInterface {
      * Send a message to the host app
      */
     private postMessage(message: RequestMessage): void {
-        const win = window as MobileAppWindow;
-        if (!win.mobileApp) {
+        if (!window.mobileApp) {
             console.warn('[MiniAppClient] mobileApp not available, are you running inside InAppBrowser?');
             return;
         }
 
-        win.mobileApp.postMessage({ detail: message });
+        window.mobileApp.postMessage({ detail: message });
     }
 
     private async request<T extends keyof RequestType>(type: T, data: RequestType[T]): Promise<Result<ResponseType[T], ErrorData>> {
