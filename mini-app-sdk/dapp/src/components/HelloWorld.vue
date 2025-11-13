@@ -12,11 +12,35 @@ async function isConsensusEstablished() {
 }
 
 async function getSenderAddress() {
-  output.value = await provider.getSenderAddress()
+  const addressResult = await provider.getSenderAddress()
+  if (!addressResult.ok) {
+    output.value = `Error getting sender address: ${addressResult.error.type} - ${addressResult.error.message}`
+    return
+  }
+  output.value = addressResult.value
 }
 
 async function getDepositAddress() {
-  output.value = await provider.getDepositAddress()
+  const addressResult = await provider.getDepositAddress()
+  if (!addressResult.ok) {
+    output.value = `Error getting deposit address: ${addressResult.error.type} - ${addressResult.error.message}`
+    return
+  }
+  output.value = addressResult.value
+}
+
+async function getAccount() {
+  const addressResult = await provider.getSenderAddress()
+  if (!addressResult.ok) {
+    output.value = `Error getting sender address: ${addressResult.error.type} - ${addressResult.error.message}`
+    return
+  }
+  const accountResult = await provider.getAccount(addressResult.value)
+  if (!accountResult.ok) {
+    output.value = `Error getting account: ${accountResult.error.type} - ${accountResult.error.message}`
+    return
+  }
+  output.value = accountResult.value
 }
 
 const output = ref()
@@ -34,6 +58,7 @@ const output = ref()
     <button type="button" @click="isConsensusEstablished" :disabled="!inMiniApp">isConsensusEstablished</button>
     <button type="button" @click="getSenderAddress" :disabled="!inMiniApp">getSenderAddress</button>
     <button type="button" @click="getDepositAddress" :disabled="!inMiniApp">getDepositAddress</button>
+    <button type="button" @click="getAccount" :disabled="!inMiniApp">getAccount</button>
     <br/>
     <strong>Response:</strong>
     <pre>
@@ -59,5 +84,12 @@ pre {
   padding: 1em;
   border-radius: 0.5em;
   background: #eee;
+}
+
+@media (prefers-color-scheme: dark) {
+  pre {
+    background: #333;
+    color: #eee;
+  }
 }
 </style>

@@ -7,6 +7,7 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
+import { networkInterfaces } from 'node:os'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -57,6 +58,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
     },
     define: {
+      __VITE_SERVER_IP__: JSON.stringify(getLocalIP()),
       __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component
       __VUE_I18N_LEGACY_API__: true, // We use the legacy api, which is also vue-i18n's default
       __INTLIFY_PROD_DEVTOOLS__: false,
@@ -67,3 +69,17 @@ export default defineConfig(({ mode }) => {
     },
   }
 })
+
+// Get local network IP
+function getLocalIP() {
+  const nets = networkInterfaces()
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+      // Skip internal (i.e. 127.0.0.1) and non-IPv4 addresses
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address
+      }
+    }
+  }
+  return 'localhost'
+}

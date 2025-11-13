@@ -4,7 +4,7 @@ export type RequestType = {
     isConsensusEstablished: {},
     getSenderAddress: {},
     getDepositAddress: {},
-    getAccount: { address: string },
+    getAccount: string,
     makeTransaction: TransactionData,
     signTransaction: string | TransactionData,
     sendTransaction: string | PlainTransaction,

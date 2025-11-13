@@ -2,12 +2,12 @@ import {
     InvalidTransactionError,
     NetworkError,
     PermissionDeniedError,
-    PlainAccount,
-    PlainTransaction,
-    NimiqProvider as ProviderInterface,
-    TransactionData,
+    type PlainAccount,
+    type PlainTransaction,
+    type NimiqProvider as ProviderInterface,
+    type TransactionData,
 } from "./NimiqProvider"
-import {
+import type {
     ErrorData,
     ErrorMessage,
     Handler,
@@ -19,7 +19,7 @@ import {
     SubscriptionMessage,
     SubscriptionType,
 } from './types'
-import { mapError, Result, unwrap } from "./Result";
+import { mapError, type Result, unwrap } from "./Result";
 
 /**
  * Window interface extension for `mobileApp` injected by InAppBrowser plugin
@@ -93,7 +93,7 @@ export class NimiqProvider implements ProviderInterface {
     }
 
     async getAccount(address: string): Promise<Result<PlainAccount, NetworkError>> {
-        const result = await this.request('getAccount', { address })
+        const result = await this.request('getAccount', address)
         return mapError(result, (error) => {
             switch (error.type) {
                 case 'network': return new NetworkError(error.message)

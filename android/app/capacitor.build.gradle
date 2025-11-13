@@ -22,6 +22,7 @@ dependencies {
     implementation project(':capawesome-capacitor-android-edge-to-edge-support')
     implementation project(':capawesome-capacitor-screen-orientation')
     implementation project(':capgo-camera-preview')
+    implementation project(':capgo-inappbrowser')
     implementation project(':rdlabo-capacitor-screenshot-event')
     implementation project(':capacitor-sumsub-mobile-sdk')
     implementation project(':capacitor-community-sqlite')

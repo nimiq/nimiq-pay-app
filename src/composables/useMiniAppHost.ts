@@ -79,10 +79,15 @@ export class MiniAppHost {
             data,
           });
         } catch (error) {
-          if (error instanceof UnknownRequestError) {
+          if (error instanceof UnknownRequestError
+            || error instanceof InternalError
+            || error instanceof PermissionDeniedError
+            || error instanceof InvalidTransactionError
+            || error instanceof NetworkError
+          ) {
             this.sendError(message.id, error.type, error.message);
-          } else if (error instanceof InternalError) {
-            this.sendError(message.id, error.type, error.message);
+          } else {
+            this.sendError(message.id, 'UNKNOWN_ERROR', 'An unknown error occurred: ' + (error as Error).message);
           }
         }
       } else {
@@ -106,6 +111,7 @@ export class MiniAppHost {
         case 'isConsensusEstablished': return this.handleIsConsensusEstablished();
         case 'getSenderAddress': return this.handleGetSenderAddress();
         case 'getDepositAddress': return this.handleGetDepositAddress();
+        case 'getAccount': return this.getAccount(message.data as RequestType['getAccount']);
         default:
           console.warn('[MiniAppHost] Unknown message type:', message.type);
           throw new UnknownRequestError(`Unknown message type: ${message.type}`);
@@ -128,6 +134,15 @@ export class MiniAppHost {
   private handleGetDepositAddress(): ResponseType['getDepositAddress'] {
     const address = useLocalWallet().localAddress;
     return address.toUserFriendlyAddress();
+  }
+
+  private async getAccount(address: RequestType['getAccount']): Promise<ResponseType['getAccount']> {
+    const store = useNimiqNetwork();
+    const result = await store.getAccount(Nimiq.Address.fromUserFriendlyAddress(address));
+    if (result.error) {
+      throw new NetworkError(`Failed to get account: ${result.error}`);
+    }
+    return result.data!;
   }
 
   /**
@@ -163,9 +178,9 @@ export class MiniAppHost {
 }
 
 class UnknownRequestError extends Error {
-  readonly type = 'UNKNOWN_REQUEST';
+  readonly type = 'unknown-request';
 }
 
 class InternalError extends Error {
-  readonly type = 'INTERNAL_ERROR';
+  readonly type = 'internal-error';
 }

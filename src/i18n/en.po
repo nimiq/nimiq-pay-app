@@ -513,6 +513,10 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
+#: src/modals/MenuModal.vue:56
+msgid "Features"
+msgstr ""
+
 #: src/components/PaymentPreview.vue:33
 msgid "Fees may apply {fee}"
 msgstr ""
@@ -801,6 +805,15 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
+#: src/modals/MiniAppsModal.vue:10
+msgid "Mini App URL"
+msgstr ""
+
+#: src/modals/MenuModal.vue:61
+#: src/modals/MiniAppsModal.vue:5
+msgid "Mini Apps"
+msgstr ""
+
 #: src/modals/SettingsModal.vue:37
 msgid "Minimum NIM Decimals"
 msgstr ""
@@ -926,6 +939,10 @@ msgstr ""
 
 #: src/modals/ReferralModal.vue:21
 msgid "Only {count} out of {total} remaining."
+msgstr ""
+
+#: src/modals/MiniAppsModal.vue:22
+msgid "Open Mini App"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104

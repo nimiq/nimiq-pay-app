@@ -78,7 +78,7 @@ async function requestUserConfirmation(message: string): Promise<boolean> {
 
 const { showModal, closeModal } = useModal()
 
-const miniAppUrl = ref('')
+const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5173`)
 
 async function openMiniApp() {
   // Create the mini app host with configuration
