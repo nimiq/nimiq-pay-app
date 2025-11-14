@@ -274,7 +274,7 @@ interface GetSignedTxByRemoteArgs {
   address?: Address
 }
 
-async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
+export async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   logger.log('Signing transaction by remote')
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }

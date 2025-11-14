@@ -27,6 +27,7 @@ const routes: Array<RouteRecordRaw> = [
     ],
   },
   { path: '/setup', name: 'Setup', component: () => import('@/views/SetupView.vue') },
+  { path: '/alert', name: 'Alert', component: () => import('@/views/AlertView.vue') },
 ]
 
 const router = createRouter({

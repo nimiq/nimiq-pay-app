@@ -45,6 +45,7 @@ export interface NimiqProvider {
      * @param transactionData - The transaction data to be signed
      * @returns An object containing the serialized signed transaction as a hex string and the PlainTransaction representation
      */
+    // TODO: Rename to "sendPayment" (which are automatically broadcast as well by the cosigner), and separate claiming transactions into their own method
     signTransaction(transactionData: string | TransactionData): Promise<Result<{
         serialized: string,
         plain: PlainTransaction,
@@ -95,8 +96,8 @@ export type SendTransactionData = {
     direction: 'send',
     recipient: string,
     recipientType?: 'basic' | 'vesting' | 'htlc' | 'staking',
-    value: string,
-    fee?: string,
+    value: number,
+    fee?: number,
     data?: PlainTransactionRecipientData,
     flags?: number,
 }
@@ -106,11 +107,13 @@ export type ClaimTransactionData = {
     sender: string,
     senderType: 'vesting' | 'htlc' | 'staking',
     senderData?: {
-        type: 'delete-validator' | 'remove-stake',
+        type: 'delete-validator',
+    } | {
+        type: 'remove-stake',
     },
-    value: string,
-    fee?: string,
-    data?: string,
+    value: number,
+    fee?: number,
+    data?: PlainTransactionRecipientData,
 }
 
 export type TransactionData = SendTransactionData | ClaimTransactionData

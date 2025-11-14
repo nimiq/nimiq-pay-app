@@ -6,21 +6,21 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { ref, watch } from 'vue'
-import { MiniAppHost } from '@/composables/useMiniAppHost';
+import { MiniAppHost, UserConfirmationRequest } from '@/composables/useMiniAppHost';
 
 const logger = useLogger('MiniAppModal')
 
-interface AlertModalReadyMessage {
+export interface AlertModalReadyMessage {
   type: 'modal-ready';
 }
 
-interface AlertModalConfirmationMessage {
+export interface AlertModalConfirmationMessage {
   type: 'modal-response';
   action: 'confirm' | 'cancel';
 }
 
-type AlertModalResponseMessage =  AlertModalReadyMessage | AlertModalConfirmationMessage;
-interface AlertModalPostMessage {
+export type AlertModalResponseMessage =  AlertModalReadyMessage | AlertModalConfirmationMessage;
+export interface AlertModalPostMessage {
   type: 'modal-data';
   modalData: {
     type: 'confirmation';
@@ -31,30 +31,34 @@ interface AlertModalPostMessage {
   }
 }
 
-const { post: broadcastToAlert, data: broadcastedMessage, error } = useBroadcastChannel<AlertModalResponseMessage, AlertModalPostMessage>({ name: 'alert-modal-channel' })
+const { post: broadcast, data: broadcastMessage, error } = useBroadcastChannel<AlertModalResponseMessage, AlertModalPostMessage>({ name: 'alert-modal-channel' })
 watch(error, (err) => {
   if (err) {
     console.error('Broadcast channel error:', err);
   }
-});
+}, { immediate: true });
 
 // Request user confirmation for sensitive operations
-async function requestUserConfirmation(message: string): Promise<boolean> {
+async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
   return new Promise((resolve) => {
-    const unwatch = watch(broadcastedMessage, (newMessage) => {
+    const unwatch = watch(broadcastMessage, (newMessage) => {
       console.log('[requestUserConfirmation] Received message from alert modal:', newMessage);
 
       if (newMessage.type === 'modal-ready') {
-        broadcastToAlert({
-          type: 'modal-data',
-          modalData: {
-            type: 'confirmation',
-            title: 'Confirmation',
-            message,
-            confirmText: 'Confirm',
-            cancelText: 'Cancel',
-          }
-        });
+        switch (request.type) {
+          case 'transaction':
+            broadcast({
+              type: 'modal-data',
+              modalData: {
+                type: 'confirmation',
+                title: 'Confirm Transaction',
+                message: JSON.stringify(request.plain, null, 2),
+                confirmText: 'Confirm',
+                cancelText: 'Cancel',
+              }
+            });
+            break;
+        }
       }
 
       if (newMessage.type === 'modal-response') {

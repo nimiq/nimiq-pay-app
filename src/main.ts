@@ -44,12 +44,14 @@ if (import.meta.env.DEV)
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
 
+const isAlertRoute = window.location.pathname.startsWith('/alert')
+
 window.addEventListener('DOMContentLoaded', async () => {
   const app = createApp(App)
   app.use(IonicVue)
   app.use(createPinia())
   app.use(i18nRegistration)
-  app.use(VueVirtualScroller)
+  if (!isAlertRoute) app.use(VueVirtualScroller)
 
   // load and set the initial language
   const { language } = storeToRefs(useApp())
@@ -62,14 +64,14 @@ window.addEventListener('DOMContentLoaded', async () => {
    *    - When the setup flow is finished
    */
 
-  await useConn().init()
-  useNimiqNetwork().init()
+  if (!isAlertRoute) await useConn().init()
+  if (!isAlertRoute) useNimiqNetwork().init()
   useLogger().init()
-  useNaka().init()
+  if (!isAlertRoute) useNaka().init()
 
   const { isWeb } = useDevice()
 
-  router.beforeEach((to, from, next) => {
+  if (!isAlertRoute) router.beforeEach((to, from, next) => {
     const isWebAndNoPin = isWeb && !useDecrypt().hasPin()
     const isMobileAndNoDb = !isWeb && !useConn().dbExists
 
