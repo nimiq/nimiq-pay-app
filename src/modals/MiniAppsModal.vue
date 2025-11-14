@@ -51,7 +51,7 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
               type: 'modal-data',
               modalData: {
                 type: 'confirmation',
-                title: 'Confirm Transaction',
+                title: 'Confirm Payment',
                 message: JSON.stringify(request.plain, null, 2),
                 confirmText: 'Confirm',
                 cancelText: 'Cancel',
@@ -87,6 +87,7 @@ const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5173`)
 async function openMiniApp() {
   // Create the mini app host with configuration
   new MiniAppHost(InAppBrowser, {
+    url: miniAppUrl.value,
     requestUserConfirmation,
   });
 

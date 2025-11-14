@@ -14,6 +14,7 @@ export enum Transfer {
 
   /**
    * Normal payment from the user to another user
+   * TODO: Only used for withdrawals -> rename?
    */
   UserPayment = 'user-payment',
 

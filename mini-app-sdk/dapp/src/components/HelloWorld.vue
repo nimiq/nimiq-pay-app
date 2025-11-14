@@ -43,31 +43,13 @@ async function getAccount() {
   output.value = accountResult.value
 }
 
-async function makeTransaction() {
-  const txResult = await provider.makeTransaction({
-    direction: 'send',
+async function sendPayment() {
+  const txResult = await provider.sendPayment({
     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
     value: 100e5,
-    data: {
-      type: 'raw',
-      raw: provider.bytesToHex(new TextEncoder().encode('Hello from mini-app!')),
-    },
-  })
-  if (!txResult.ok) {
-    output.value = `Error making transaction: ${txResult.error.type} - ${txResult.error.message}`
-    return
-  }
-  output.value = txResult.value
-}
-
-async function signTransaction() {
-  const txResult = await provider.signTransaction({
-    direction: 'send',
-    recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
-    value: 100e5,
-    data: {
-      type: 'raw',
-      raw: provider.bytesToHex(new TextEncoder().encode('Hello from mini-app!')),
+    message: 'Hello from mini-app!',
+    merchant: {
+      name: 'Nimiq Mini-App Donation',
     },
   })
   if (!txResult.ok) {
@@ -93,8 +75,7 @@ const output = ref()
     <button type="button" @click="getSenderAddress" :disabled="!inMiniApp">getSenderAddress</button>
     <button type="button" @click="getDepositAddress" :disabled="!inMiniApp">getDepositAddress</button>
     <button type="button" @click="getAccount" :disabled="!inMiniApp">getAccount</button>
-    <button type="button" @click="makeTransaction" :disabled="!inMiniApp">makeTransaction</button>
-    <button type="button" @click="signTransaction" :disabled="!inMiniApp">signTransaction</button>
+    <button type="button" @click="sendPayment" :disabled="!inMiniApp">sendPayment</button>
     <br/>
     <strong>Response:</strong>
     <pre>

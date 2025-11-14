@@ -1,13 +1,11 @@
-import { PlainAccount, PlainTransaction, TransactionData } from './NimiqProvider'
+import { PlainAccount, PlainTransaction, SendPaymentData } from './NimiqProvider'
 
 export type RequestType = {
     isConsensusEstablished: {},
     getSenderAddress: {},
     getDepositAddress: {},
     getAccount: string,
-    makeTransaction: TransactionData,
-    signTransaction: string | TransactionData,
-    sendTransaction: string | PlainTransaction,
+    sendPayment: SendPaymentData,
     getUserTransactions: { limit?: number, cursor?: string },
     getTransactionsByAddress: { address: string, limit?: number, cursor?: string },
 }
@@ -19,16 +17,10 @@ export type ResponseType = {
     getSenderAddress: string,
     getDepositAddress: string,
     getAccount: PlainAccount,
-    makeTransaction: {
+    sendPayment: {
         serialized: string,
-        serializedContent: string,
-        plain: PlainTransaction,
+        plain: Record<string, unknown>,
     },
-    signTransaction: {
-        serialized: string,
-        plain: PlainTransaction,
-    },
-    sendTransaction: string,
     getUserTransactions: PlainTransaction[],
     getTransactionsByAddress: PlainTransaction[],
 }

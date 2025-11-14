@@ -1,7 +1,7 @@
-import type { PlainAccount, PlainTransaction, PlainTransactionRecipientData } from '@nimiq/core'
+import type { PlainAccount, PlainTransaction } from '@nimiq/core'
 import { Result } from './Result'
 
-export { PlainAccount, PlainTransaction, PlainTransactionRecipientData }
+export type { PlainAccount, PlainTransaction }
 
 export interface NimiqProvider {
     /**
@@ -30,33 +30,15 @@ export interface NimiqProvider {
     getAccount(address: string): Promise<Result<PlainAccount, NetworkError>>
 
     /**
-     * Creates a transaction based on the provided transaction data.
-     * @param transactionData - The transaction data
-     * @returns An object containing the serialized transaction as a hex string, the serialized content for signing, and the PlainTransaction representation
-     */
-    makeTransaction(transactionData: TransactionData): Promise<Result<{
-        serialized: string,
-        serializedContent: string,
-        plain: PlainTransaction,
-    }, InvalidTransactionError>>
-
-    /**
      * Signs a transaction with the user's private key.
-     * @param transactionData - The transaction data to be signed
+     * @param paymentData - The payment data to be signed
      * @returns An object containing the serialized signed transaction as a hex string and the PlainTransaction representation
      */
-    // TODO: Rename to "sendPayment" (which are automatically broadcast as well by the cosigner), and separate claiming transactions into their own method
-    signTransaction(transactionData: string | TransactionData): Promise<Result<{
+    // TODO: Separate claiming transactions into their own method
+    sendPayment(paymentData: SendPaymentData): Promise<Result<{
         serialized: string,
-        plain: PlainTransaction,
+        plain: Record<string, any>,
     }, PermissionDeniedError | InvalidTransactionError>>
-
-    /**
-     * Sends a signed transaction to the Nimiq network.
-     * @param signedTransaction - The signed transaction as a hex string or PlainTransaction
-     * @returns The transaction hash as a hex string
-     */
-    sendTransaction(signedTransaction: string | PlainTransaction): Promise<Result<string, NetworkError | InvalidTransactionError>>
 
     /**
      * Retrieves the user's transaction history.
@@ -92,31 +74,16 @@ export interface NimiqProvider {
 
 /// INPUTS
 
-export type SendTransactionData = {
-    direction: 'send',
+export type SendPaymentData = {
     recipient: string,
-    recipientType?: 'basic' | 'vesting' | 'htlc' | 'staking',
     value: number,
     fee?: number,
-    data?: PlainTransactionRecipientData,
-    flags?: number,
-}
-
-export type ClaimTransactionData = {
-    direction: 'claim',
-    sender: string,
-    senderType: 'vesting' | 'htlc' | 'staking',
-    senderData?: {
-        type: 'delete-validator',
-    } | {
-        type: 'remove-stake',
+    message?: string,
+    merchant?: {
+        name: string,
+        // category?: string,
     },
-    value: number,
-    fee?: number,
-    data?: PlainTransactionRecipientData,
 }
-
-export type TransactionData = SendTransactionData | ClaimTransactionData
 
 /// RETURN VALUES
 

@@ -2,10 +2,10 @@ import {
     InvalidTransactionError,
     NetworkError,
     PermissionDeniedError,
+    type SendPaymentData,
     type PlainAccount,
     type PlainTransaction,
     type NimiqProvider as ProviderInterface,
-    type TransactionData,
 } from "./NimiqProvider"
 import type {
     ErrorData,
@@ -102,39 +102,14 @@ export class NimiqProvider implements ProviderInterface {
         })
     }
 
-    async makeTransaction(transactionData: TransactionData): Promise<Result<{
-        serialized: string,
-        serializedContent: string,
-        plain: PlainTransaction,
-    }, InvalidTransactionError>> {
-        const result = await this.request('makeTransaction', transactionData)
-        return mapError(result, (error) => {
-            if (error.type === 'invalid-transaction') {
-                return new InvalidTransactionError(error.message)
-            }
-            throw new Error(`${error.type}: ${error.message}`)
-        })
-    }
-
-    async signTransaction(transactionData: string | TransactionData): Promise<Result<{
+    async sendPayment(paymentData: SendPaymentData): Promise<Result<{
         serialized: string,
         plain: PlainTransaction,
     }, PermissionDeniedError | InvalidTransactionError>> {
-        const result = await this.request('signTransaction', transactionData)
+        const result = await this.request('sendPayment', paymentData)
         return mapError(result, (error) => {
             switch (error.type) {
                 case 'permission-denied': return new PermissionDeniedError(error.message)
-                case 'invalid-transaction': return new InvalidTransactionError(error.message)
-                default: throw new Error(`${error.type}: ${error.message}`)
-            }
-        })
-    }
-
-    async sendTransaction(signedTransaction: string | PlainTransaction): Promise<Result<string, NetworkError | InvalidTransactionError>> {
-        const result = await this.request('sendTransaction', signedTransaction)
-        return mapError(result, (error) => {
-            switch (error.type) {
-                case 'network': return new NetworkError(error.message)
                 case 'invalid-transaction': return new InvalidTransactionError(error.message)
                 default: throw new Error(`${error.type}: ${error.message}`)
             }

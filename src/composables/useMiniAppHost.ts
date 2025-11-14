@@ -6,7 +6,7 @@ import {
     PlainAccount,
     PlainTransaction,
     NimiqProvider as ProviderInterface,
-    TransactionData,
+    SendPaymentData,
 } from "./../../mini-app-sdk/NimiqProvider"
 
 import {
@@ -28,6 +28,8 @@ import { useRemoteSigner } from '@/stores/remote-signer';
 import type { PlainTransactionSenderData, Transaction } from '@nimiq/core';
 import { createResolveProof, getSignedTxByRemote } from '@/lib/tx';
 import { storeToRefs } from 'pinia';
+import { useTransactions } from '@/stores/transactions';
+import { Transfer } from '@/types/transactions';
 
 export interface InAppBrowserMessageEvent {
   detail: {
@@ -38,13 +40,15 @@ export interface InAppBrowserMessageEvent {
 
 export type UserConfirmationRequest = {
   type: 'transaction',
-  plain: PlainTransaction,
+  plain: Record<string, any>,
 }
 
 /**
  * Configuration for the MiniAppHost
  */
 export interface MiniAppHostConfig {
+  url: string;
+
   /**
    * Callback to request user confirmation for sensitive operations
    * @param message - Message to show to the user
@@ -120,8 +124,8 @@ export class MiniAppHost {
         case 'getSenderAddress': return this.handleGetSenderAddress();
         case 'getDepositAddress': return this.handleGetDepositAddress();
         case 'getAccount': return this.getAccount(message.data as RequestType['getAccount']);
-        case 'makeTransaction': return this.makeTransaction(message.data as RequestType['makeTransaction']);
-        case 'signTransaction': return this.signTransaction(message.data as RequestType['signTransaction']);
+        case 'sendPayment': return this.sendPayment(message.data as RequestType['sendPayment']);
+        // case 'signTransaction': return this.signTransaction(message.data as RequestType['signTransaction']);
         default:
           console.warn('[MiniAppHost] Unknown message type:', message.type);
           throw new UnknownRequestError(`Unknown message type: ${message.type}`);
@@ -156,26 +160,8 @@ export class MiniAppHost {
     return result.data!;
   }
 
-  private makeTransaction(txData: RequestType['makeTransaction']): ResponseType['makeTransaction'] {
-    try {
-      const tx = parseTransactionData(txData);
-      return {
-        serialized: tx.toHex(),
-        serializedContent: Nimiq.BufferUtils.toHex(tx.serializeContent()),
-        plain: tx.toPlain(),
-      }
-    } catch (error) {
-      throw new InvalidTransactionError(`Failed to parse transaction: ${(error as Error).message}`);
-    }
-  }
-
-  private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
-    let tx: Transaction;
-    try {
-      tx = typeof txData === 'string' ? Nimiq.Transaction.fromAny(txData) : parseTransactionData(txData);
-    } catch (error) {
-      throw new InvalidTransactionError(`Failed to parse transaction: ${(error as Error).message}`);
-    }
+  private async sendPayment(txData: SendPaymentData): Promise<ResponseType['sendPayment']> {
+    // TODO: Validate txData fields
 
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided');
@@ -183,36 +169,85 @@ export class MiniAppHost {
 
     const confirmed = await this.config.requestUserConfirmation({
       type: 'transaction',
-      plain: tx.toPlain(),
+      plain: txData,
     });
     if (!confirmed) {
       throw new PermissionDeniedError('User said no.');
     }
 
-    if (tx.recipient.equals(useLocalWallet().localAddress)) {
-      tx.sign(Nimiq.KeyPair.derive(useLocalWallet().localWallet.privateKey))
-      return {
-        serialized: tx.toHex(),
-        plain: tx.toPlain(),
-      };
+    const result = await useTransactions().sendTx({
+      recipient: txData.recipient,
+      amount: txData.value,
+      title: 'Payment',
+      transfer: Transfer.UserPaymentToMerchant,
+      message: txData.message,
+      merchantName: txData.merchant?.name,
+      // merchantCategory: txData.merchant?.category,
+      // invoiced:
+      // fiatAmount:
+      // fiatCurrency:
+      // paymentRef:
+      meta: {
+        miniApp: {
+          url: this.config.url,
+        },
+      },
+    })
+    if (result.error) {
+      throw new InternalError(`Failed to send payment transaction: ${result.error}`);
     }
-
-    const remoteAddress = useRemoteSigner().remoteAddress;
-    if (remoteAddress && tx.sender.equals(remoteAddress)) {
-      tx.proof = createResolveProof({ tx,  mode: 'early' });
-      const res = await getSignedTxByRemote(tx)
-      if (res.error) {
-        throw new InternalError(`Failed to sign transaction by cosigner: ${res.error}`);
-      }
-      const signedTx = res.data!.newTx;
-      return {
-        serialized: signedTx.toHex(),
-        plain: signedTx.toPlain(),
-      };
-    }
-
-    throw new PermissionDeniedError('Neither the sender nor recipient match any available account');
+    return {
+      serialized: result.data!.serialized,
+      plain: result.data!.tx as Record<string, any>,
+    };
   }
+
+  // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
+  //   let tx: Transaction;
+  //   try {
+  //     tx = typeof txData === 'string' ? Nimiq.Transaction.fromAny(txData) : parseTransactionData(txData);
+  //   } catch (error) {
+  //     throw new InvalidTransactionError(`Failed to parse transaction: ${(error as Error).message}`);
+  //   }
+
+  //   if (!this.config.requestUserConfirmation) {
+  //     throw new InternalError('Confirmation handler not provided');
+  //   }
+
+  //   const confirmed = await this.config.requestUserConfirmation({
+  //     type: 'transaction',
+  //     plain: tx.toPlain(),
+  //   });
+  //   if (!confirmed) {
+  //     throw new PermissionDeniedError('User said no.');
+  //   }
+
+  //   // Handle claiming transactions
+  //   if (tx.recipient.equals(useLocalWallet().localAddress)) {
+  //     tx.sign(Nimiq.KeyPair.derive(useLocalWallet().localWallet.privateKey))
+  //     return {
+  //       serialized: tx.toHex(),
+  //       plain: tx.toPlain(),
+  //     };
+  //   }
+
+  //   // Handle sending transactions
+  //   const remoteAddress = useRemoteSigner().remoteAddress;
+  //   if (remoteAddress && tx.sender.equals(remoteAddress)) {
+  //     tx.proof = createResolveProof({ tx,  mode: 'early' });
+  //     const res = await getSignedTxByRemote(tx)
+  //     if (res.error) {
+  //       throw new InternalError(`Failed to sign transaction by cosigner: ${res.error}`);
+  //     }
+  //     const signedTx = res.data!.newTx;
+  //     return {
+  //       serialized: signedTx.toHex(),
+  //       plain: signedTx.toPlain(),
+  //     };
+  //   }
+
+  //   throw new PermissionDeniedError('Neither the sender nor recipient match any available account');
+  // }
 
   /**
    * Send a message to the mini app
@@ -254,54 +289,54 @@ class InternalError extends Error {
   readonly type = 'internal-error';
 }
 
-function parseTransactionData(txData: TransactionData): Transaction {
-  const { height, networkId } = storeToRefs(useNimiqNetwork())
+// function parseTransactionData(txData: TransactionData): Transaction {
+//   const { height, networkId } = storeToRefs(useNimiqNetwork())
 
-  if (txData.direction === 'send' && txData.recipient === useLocalWallet().localAddress.toUserFriendlyAddress()) {
-    throw new Error('Cannot send transaction to own local address');
-  }
-  if (txData.direction === 'claim' && txData.sender === useRemoteSigner().remoteAddress!.toUserFriendlyAddress()) {
-    throw new Error('Cannot claim transaction from own sender address');
-  }
+//   if (txData.direction === 'send' && txData.recipient === useLocalWallet().localAddress.toUserFriendlyAddress()) {
+//     throw new Error('Cannot send transaction to own local address');
+//   }
+//   if (txData.direction === 'claim' && txData.sender === useRemoteSigner().remoteAddress!.toUserFriendlyAddress()) {
+//     throw new Error('Cannot claim transaction from own sender address');
+//   }
 
-  return Nimiq.Transaction.fromPlain(txData.direction === 'send' ? {
-    sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
-    senderType: 'htlc',
-    recipient: txData.recipient,
-    recipientType: txData.recipientType || 'basic',
-    value: txData.value,
-    fee: txData.fee || 0,
-    validityStartHeight: height.value,
-    network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-    flags: txData.flags || 0,
-    data: txData.data || { type: 'raw', raw: '' },
+//   return Nimiq.Transaction.fromPlain(txData.direction === 'send' ? {
+//     sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
+//     senderType: 'htlc',
+//     recipient: txData.recipient,
+//     recipientType: txData.recipientType || 'basic',
+//     value: txData.value,
+//     fee: txData.fee || 0,
+//     validityStartHeight: height.value,
+//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
+//     flags: txData.flags || 0,
+//     data: txData.data || { type: 'raw', raw: '' },
 
-    // Required fields without effect in `fromPlain()`
-    transactionHash: '',
-    format: "basic",
-    feePerByte: 0,
-    proof: { type: 'raw', raw: '' },
-    size: 0,
-    valid: true,
-  } : {
-    sender: txData.sender,
-    senderType: txData.senderType,
-    recipient: useLocalWallet().localAddress.toUserFriendlyAddress(),
-    recipientType: 'basic',
-    value: txData.value,
-    fee: txData.fee || 0,
-    validityStartHeight: height.value,
-    network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-    flags: 0,
-    ...(txData.senderData ? { senderData: txData.senderData as PlainTransactionSenderData} : {}),
-    data: txData.data || { type: 'raw', raw: '' },
+//     // Required fields without effect in `fromPlain()`
+//     transactionHash: '',
+//     format: "basic",
+//     feePerByte: 0,
+//     proof: { type: 'raw', raw: '' },
+//     size: 0,
+//     valid: true,
+//   } : {
+//     sender: txData.sender,
+//     senderType: txData.senderType,
+//     recipient: useLocalWallet().localAddress.toUserFriendlyAddress(),
+//     recipientType: 'basic',
+//     value: txData.value,
+//     fee: txData.fee || 0,
+//     validityStartHeight: height.value,
+//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
+//     flags: 0,
+//     ...(txData.senderData ? { senderData: txData.senderData as PlainTransactionSenderData} : {}),
+//     data: txData.data || { type: 'raw', raw: '' },
 
-    // Required fields without effect in `fromPlain()`
-    transactionHash: '',
-    format: "basic",
-    feePerByte: 0,
-    proof: { type: 'raw', raw: '' },
-    size: 0,
-    valid: true,
-  });
-}
+//     // Required fields without effect in `fromPlain()`
+//     transactionHash: '',
+//     format: "basic",
+//     feePerByte: 0,
+//     proof: { type: 'raw', raw: '' },
+//     size: 0,
+//     valid: true,
+//   });
+// }
