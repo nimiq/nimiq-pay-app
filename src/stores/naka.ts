@@ -264,7 +264,6 @@ export const useNaka = defineStore('naka', () => {
     if (!card.value)
       return
 
-    // TODO: Check card status against issuer API?
     if (card.value.statusId === 'ACTIVE') {
       // Check expiry
       if (
@@ -279,6 +278,20 @@ export const useNaka = defineStore('naka', () => {
         await insertNakaCard(card.value)
       }
     }
+  }
+
+  async function updateUser() {
+    // Check user status against issuer API
+    const user = await getUserStatus()
+    registration.value = {
+      state: user.state,
+      nakaIdentification: user.identifications.find(i => i.provider === 'NAKA-SUMSUB'),
+      nakaCards: user.naka ? user.naka.cards.map(nakaCardFromApi) : [],
+    }
+    // Update local card data
+    card.value = registration.value.nakaCards.find(c => c.sourceId === card.value?.sourceId) || card.value
+    if (card.value)
+      await insertNakaCard(card.value)
   }
 
   /**
@@ -372,6 +385,7 @@ export const useNaka = defineStore('naka', () => {
     card,
     setCard,
     setupCard,
+    updateUser,
     reset,
     hasCard,
     isCardActive,
