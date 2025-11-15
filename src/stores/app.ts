@@ -139,6 +139,8 @@ export const useApp = defineStore('app', () => {
       withdrawalAddressesHistory.value = addresses.slice(addresses.length - 3)
   }
 
+  const liveChatEnabled = ref(false)
+
   return {
     pinHash,
     phoneNumber,
@@ -165,5 +167,6 @@ export const useApp = defineStore('app', () => {
     displayedPaymentRequests,
     showAnimations,
     decimalsAmount,
+    liveChatEnabled,
   }
 })

@@ -16,6 +16,7 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
+import LiveChat from '@/components/LiveChat.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
@@ -31,7 +32,6 @@ import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
-
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
@@ -54,7 +54,7 @@ const { showModal } = useModal()
 const { isIOS } = useDevice()
 const { localBalance } = storeToRefs(useLocalWallet())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests, showAnimations } = storeToRefs(useApp())
+const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests, showAnimations, liveChatEnabled } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
@@ -460,6 +460,7 @@ App.addListener('resume', detectPaymentRequest)
           </IonButton>
         </IonRow> -->
       </IonGrid>
+      <LiveChat v-if="liveChatEnabled" />
     </IonContent>
 
     <Transition name="slide-left" style="--slide-left-distance: 100vw">

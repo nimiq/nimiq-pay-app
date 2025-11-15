@@ -15,7 +15,13 @@ export default defineConfig(({ mode }) => {
     plugins: [
       wasm(),
       topLevelAwait(),
-      vue({ script: { defineModel: true } }),
+      vue({
+        template: {
+          compilerOptions: {
+            isCustomElement: (tag) => tag.startsWith('chatlio-'),
+          },
+        },
+      }),
       poLoader(),
       poOptimizer(),
       // legacy(),
