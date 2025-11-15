@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { FormType, WidgetInstance, WidgetProps } from '@/nq-feedback.types'
+import { useScriptTag } from '@vueuse/core'
+import { onMounted, onUnmounted, ref } from 'vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { logsAsString } from '@/composables/useLogger'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
-import { useScriptTag } from '@vueuse/core'
-import { onMounted, onUnmounted, ref } from 'vue'
 
 const emit = defineEmits(stepEmits)
 
@@ -56,12 +56,16 @@ useScriptTag(nqFeedbackUrlJs, () => {
 </script>
 
 <template>
-  <div class="h-full pb-6 px-8 overflow-y-auto feedback-container">
-    <svg v-show="formType" xmlns="http://www.w3.org/2000/svg"
+  <div class="h-full w-full pb-6 px-8 overflow-y-auto feedback-container">
+    <svg
+      v-show="formType" xmlns="http://www.w3.org/2000/svg"
       class="absolute -top-10 z-10 text-space text-opacity-40 cursor-pointer" width="18" height="18" viewBox="0 0 12 12"
-      @click="widget?.goBack()">
-      <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M4.666 10 1 6l3.667-4M2.619 6H11" />
+      @click="widget?.goBack()"
+    >
+      <path
+        fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M4.666 10 1 6l3.667-4M2.619 6H11"
+      />
     </svg>
     <div id="feedback-widget" class="h-full">
       <div class="flex items-center gap-2 font-semibold opacity-0 loading">
@@ -83,10 +87,6 @@ ul.hide-scrollbar:has(#feedback-widget) {
 
     >div {
       height: 100%;
-
-      >div {
-        width: calc(100% - 76px);
-      }
     }
   }
 }
