@@ -5,6 +5,7 @@ import { onLongPress } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import AppsIcon from '@/components/icons/apps.vue'
 import BackupIcon from '@/components/icons/backup.vue'
 import CreditCardIcon from '@/components/icons/credit-card.vue'
 import GiftIcon from '@/components/icons/gift.vue'
@@ -109,7 +110,7 @@ onLongPress(
     </span>
 
     <MenuItem
-      :icon="NimiqOutlineLogo"
+      :icon="AppsIcon"
       :title="$t('Mini Apps')"
       @click="showModal(Modal.MiniApps)"
     />
