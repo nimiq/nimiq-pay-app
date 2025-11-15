@@ -30,6 +30,7 @@ import { createResolveProof, getSignedTxByRemote } from '@/lib/tx';
 import { storeToRefs } from 'pinia';
 import { useTransactions } from '@/stores/transactions';
 import { Transfer } from '@/types/transactions';
+import { PaymentRequestData } from '@/lib/flows/steps.types';
 
 export interface InAppBrowserMessageEvent {
   detail: {
@@ -40,7 +41,7 @@ export interface InAppBrowserMessageEvent {
 
 export type UserConfirmationRequest = {
   type: 'transaction',
-  plain: Record<string, any>,
+  data: Omit<PaymentRequestData, 'transfer'>,
 }
 
 /**
@@ -169,7 +170,13 @@ export class MiniAppHost {
 
     const confirmed = await this.config.requestUserConfirmation({
       type: 'transaction',
-      plain: txData,
+      data: {
+        recipient: txData.recipient,
+        amount: txData.value,
+        fee: txData.fee || 0,
+        message: txData.message,
+        merchantName: txData.merchant?.name,
+      },
     });
     if (!confirmed) {
       throw new PermissionDeniedError('User said no.');

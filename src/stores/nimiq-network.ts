@@ -37,10 +37,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const networkName = ref('')
   const networkId = ref(0)
 
-  async function init() {
+  async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
     networkName.value = isDev ? 'testalbatross' : 'MainAlbatross'
 
     await Nimiq.default()
+
+    if (!options.launchNimiqClient) return
 
     const config = new Nimiq.ClientConfiguration()
     config.network(networkName.value)

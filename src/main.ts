@@ -65,7 +65,7 @@ window.addEventListener('DOMContentLoaded', async () => {
    */
 
   if (!isAlertRoute) await useConn().init()
-  if (!isAlertRoute) useNimiqNetwork().init()
+  useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute })
   useLogger().init()
   if (!isAlertRoute) useNaka().init()
 

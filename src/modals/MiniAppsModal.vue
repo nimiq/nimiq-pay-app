@@ -7,6 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { ref, watch } from 'vue'
 import { MiniAppHost, UserConfirmationRequest } from '@/composables/useMiniAppHost';
+import { PaymentRequestData } from '@/lib/flows/steps.types';
 
 const logger = useLogger('MiniAppModal')
 
@@ -23,11 +24,8 @@ export type AlertModalResponseMessage =  AlertModalReadyMessage | AlertModalConf
 export interface AlertModalPostMessage {
   type: 'modal-data';
   modalData: {
-    type: 'confirmation';
-    title?: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
+    type: 'confirm-transaction';
+    data: Omit<PaymentRequestData, "transfer">;
   }
 }
 
@@ -50,11 +48,8 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
             broadcast({
               type: 'modal-data',
               modalData: {
-                type: 'confirmation',
-                title: 'Confirm Payment',
-                message: JSON.stringify(request.plain, null, 2),
-                confirmText: 'Confirm',
-                cancelText: 'Cancel',
+                type: 'confirm-transaction',
+                data: request.data,
               }
             });
             break;
@@ -82,7 +77,7 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
 
 const { showModal, closeModal } = useModal()
 
-const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5173`)
+const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5174`)
 
 async function openMiniApp() {
   // Create the mini app host with configuration

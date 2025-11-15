@@ -31,6 +31,7 @@ const props = defineProps({
   errorMsg: { type: String },
   canSkip: { type: Boolean },
   state: { type: Object as PropType<State>, required: true },
+  isConfirmationAlert: { type: Boolean },
 })
 
 const emit = defineEmits(stepEmits)
@@ -48,7 +49,7 @@ const payment = computed<Omit<PaymentRequestData, 'transfer'>>(() =>
       ? props.state[StepName.HoldNakaCardToReader].request
       : { amount: 0, fee: 0, recipient: '' },
 )
-const hasEnoughNimBalance = computed(() => useRemoteSigner().remoteBalance >= payment.value.amount)
+const hasEnoughNimBalance = computed(() => props.isConfirmationAlert || useRemoteSigner().remoteBalance >= payment.value.amount)
 
 const amounts = computedAsync(async () => {
   // If the tx has its own fiat values, use them, otherwise use the API to get the fiat values
@@ -331,7 +332,7 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
         </a>
       </template>
     </i18n-t>
-    <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="handlePay">
+    <IonButton expand="block" class="w-full text-base font-bold [&_ion-spinner]:h-4" :disabled="!isConfirmationAlert && disabled" @click="handlePay">
       <Transition
         mode="out-in"
         name="slide-fade"

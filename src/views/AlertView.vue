@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PaymentPreview from '@/components/PaymentPreview.vue';
+import { StepName } from '@/lib/flows/steps.types';
 import { AlertModalPostMessage, AlertModalResponseMessage } from '@/modals/MiniAppsModal.vue';
 import { IonPage, IonContent, IonButton, IonButtons, IonHeader, IonFooter, IonToolbar, IonTitle } from '@ionic/vue';
 import { useBroadcastChannel } from '@vueuse/core';
@@ -11,14 +13,6 @@ watch(error, (err) => {
   }
 }, { immediate: true });
 
-interface ModalData {
-  type: 'confirmation';
-  title?: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-}
-
 declare global {
   interface Window {
     mobileApp?: {
@@ -27,13 +21,7 @@ declare global {
   }
 }
 
-const modalData = ref<ModalData>({
-  type: 'confirmation',
-  title: 'Confirmation',
-  message: 'Are you sure?',
-  confirmText: 'Confirm',
-  cancelText: 'Cancel',
-});
+const modalData = ref<AlertModalPostMessage['modalData']>();
 
 watch(broadcastMessage, (newMessage) => {
   if (newMessage.type === 'modal-data') {
@@ -76,25 +64,37 @@ window.addEventListener("messageFromNative", (event) => {
 </script>
 
 <template>
-  <IonPage>
+  <IonPage v-if="modalData && modalData.type === 'confirm-transaction'" class="p-4">
+    <PaymentPreview
+      class="p-2"
+      :state="{
+        [StepName.QRCodeScanner]: modalData.data,
+      }"
+      is-confirmation-alert
+      @done="handleConfirm"
+      @cancel="handleCancel"
+    />
+  </IonPage>
+
+  <IonPage v-else-if="modalData">
     <IonHeader class="ion-no-border">
       <IonToolbar>
-        <IonTitle>{{ modalData.title }}</IonTitle>
+        <IonTitle>{{ $t('Generic Confirmation') }}</IonTitle>
       </IonToolbar>
     </IonHeader>
 
     <IonContent class="ion-padding">
-      <p>{{ modalData.message }}</p>
+      <pre>{{ JSON.stringify(modalData, null, 2) }}</pre>
     </IonContent>
 
     <IonFooter class="ion-no-border">
       <IonToolbar>
         <IonButtons slot="end">
           <IonButton color="medium" @click="handleCancel">
-            {{ modalData.cancelText || 'Cancel' }}
+            {{ $t('Cancel') }}
           </IonButton>
           <IonButton color="primary" @click="handleConfirm">
-            {{ modalData.confirmText || 'Confirm' }}
+            {{ $t('Confirm') }}
           </IonButton>
         </IonButtons>
       </IonToolbar>
