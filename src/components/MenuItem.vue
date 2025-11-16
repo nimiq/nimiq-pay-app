@@ -23,7 +23,7 @@ function onClick() {
     <span class="w-full font-semibold text-lg text-left">
       {{ title }}
     </span>
-    <ChevronRightIcon v-if="!external" class="size-6 text-space" />
-    <ArrowUpRightIcon v-else class="size-6 text-space" />
+    <ArrowUpRightIcon v-if="external" class="size-6 text-space" />
+    <ChevronRightIcon v-else class="size-6 text-space" />
   </button>
 </template>
