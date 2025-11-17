@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { App } from '@capacitor/app'
+import { Device } from '@capacitor/device'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { computedAsync, onLongPress } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -14,11 +15,13 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
+import { useRemoteSigner } from '@/stores/remote-signer'
 
 const logger = useLogger('SettingsModal')
 
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
+const { getAllRemoteSigners } = useRemoteSigner()
 const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations, decimalsAmount } = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
@@ -35,7 +38,7 @@ const appVersion = computedAsync(async () => {
     return '0.0.0'
   }
 })
-function onLongPressCallback() {
+async function onLongPressCallback() {
   logger.log({
     headChangePendingDrainLock: headChangePendingDrainLock.value,
     htlcCheckLock: htlcCheckLock.value,
@@ -46,9 +49,9 @@ function onLongPressCallback() {
     isSyncingWallets: isSyncingWallets.value,
     isUpdatingTransactions: isUpdatingTransactions.value,
   })
-  // TODO: get device info after updating to Capacitor 7
-  // https://capacitorjs.com/docs/apis/device
-  // logger.log('Device Info:', )
+
+  logger.log('Remote signers:', await getAllRemoteSigners())
+  logger.log('Device Info:', await Device.getInfo())
   logger.log(`Nimiq Pay v${appVersion.value}`)
   logger.sendReport()
 }
