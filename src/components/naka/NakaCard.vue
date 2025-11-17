@@ -136,6 +136,12 @@ function formatExpiry(expiry: string) {
     >
       <IonIcon v-if="locked && !loadingAnimation" :icon="lockClosed" class="size-20 text-white" />
     </div>
+    <div
+      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center"
+      :class="blocked ? 'opacity-100' : 'opacity-0'"
+    >
+      <span v-if="blocked" class="font-black text-red-700 text-shadow text-4xl uppercase tracking-widest">{{ $t('Blocked') }}</span>
+    </div>
     <motion.div
       v-if="cardData"
       :animate="loadingAnimation ? { opacity: 0, y: 8 } : { opacity: 1, y: 0 }"
