@@ -9,7 +9,6 @@ import BackupIcon from '@/components/icons/backup.vue'
 import CreditCardIcon from '@/components/icons/credit-card.vue'
 import GiftIcon from '@/components/icons/gift.vue'
 import LiveChatIcon from '@/components/icons/live-chat.vue'
-import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import LogoutIcon from '@/components/icons/log-out.vue'
 import NimiqOutlineLogo from '@/components/icons/nimiq-outline.vue'
 import SettingsIcon from '@/components/icons/settings.vue'
@@ -21,60 +20,26 @@ import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
-import { useLocalWallet } from '@/stores/local-wallet'
+import { useLiveChat } from '@/stores/livechat'
 import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
-const { phoneNumberVerified, liveChatEnabled } = storeToRefs(useApp())
+const { phoneNumberVerified } = storeToRefs(useApp())
 const { isCampaignActive } = storeToRefs(usePoints())
+const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
 
-const { hasCard, registration, card } = storeToRefs(useNaka())
+const { hasCard, registration } = storeToRefs(useNaka())
 
-const liveChatLoading = ref(false)
-
-async function openLiveChat() {
+function openLiveChat() {
   liveChatEnabled.value = true
-
-  // Wait for _chatlio to be available
-  await new Promise((resolve) => {
-    function check() {
-      if (window._chatlio) {
-        resolve(true)
-      }
-      else {
-        liveChatLoading.value = true
-        setTimeout(check, 50)
-      }
-    }
-    check()
-  })
-
-  const openPromise = new Promise((resolve) => {
-    const handler = function (_event: Event) {
-      document.removeEventListener('chatlio.visibilityChange', handler)
-      resolve(true)
-    }
-    document.addEventListener('chatlio.visibilityChange', handler)
-  })
-
-  window._chatlio.show({ expanded: true })
-  await openPromise
+  liveChatShown.value = true
   useModal().closeModal()
-  liveChatLoading.value = false
-
-  window._chatlio.identify(useLocalWallet().localAddress.toUserFriendlyAddress(), {
-    'name': registration.value?.nakaIdentification?.firstName?.split(' ')[0],
-    'KYC Status': registration.value?.nakaIdentification?.status || '-',
-    'Card Masked PAN': card.value?.maskedPan || '-',
-    'Card Status': card.value?.statusId || '-',
-    'Card Lock': card.value?.lockLevel || 'no',
-  })
 }
 
 onLongPress(
@@ -126,9 +91,9 @@ onLongPress(
     />
     <MenuItem
       v-if="registration"
-      :icon="liveChatLoading ? LoadingSpinnerIcon : LiveChatIcon"
+      :icon="LiveChatIcon"
       :title="$t('NAKA Support')"
-      @click="openLiveChat()"
+      @click="openLiveChat"
     />
 
     <MenuItem
