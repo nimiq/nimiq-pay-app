@@ -2,7 +2,7 @@
 import { IonButton } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { NumberFieldInput, NumberFieldRoot } from 'radix-vue'
-import { ref, shallowRef, watch } from 'vue'
+import { ref, watch } from 'vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
@@ -17,11 +17,12 @@ import { nakaCardFromApi, useNaka } from '@/stores/naka'
 defineEmits(stepEmits)
 
 const { selectedFiat } = storeToRefs(useApp())
-const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked } = storeToRefs(useNaka())
+const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked, isCardBlocked } = storeToRefs(useNaka())
 
-const showSecretData = shallowRef(false)
-const cardData = shallowRef<{ maskedPan: string, expiry: string } | { pan: string, expiry: string, cvc: string } | undefined>(undefined)
-const evaluatingCardData = shallowRef(false)
+const showSecretData = ref(false)
+const cardData = ref<{ maskedPan: string, expiry: string } | { pan: string, expiry: string, cvc: string }>()
+const evaluatingCardData = ref(false)
+const lockingOrUnlockingCard = ref(false)
 
 watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
   if (!newCard) {
@@ -59,24 +60,27 @@ async function lockCard() {
   if (!card.value)
     return
   const { lockNakaCard } = useIssuerRestApi()
-  // TODO: Button loading state
+  lockingOrUnlockingCard.value = true
   const apiCard = await lockNakaCard(card.value.sourceId)
+  showSecretData.value = false
   card.value = nakaCardFromApi(apiCard)
   useToast().setToast({
     message: 'Card locked',
   })
+  lockingOrUnlockingCard.value = false
 }
 
 async function unlockCard() {
   if (!card.value)
     return
   const { unlockNakaCard } = useIssuerRestApi()
-  // TODO: Button loading state
+  lockingOrUnlockingCard.value = true
   const apiCard = await unlockNakaCard(card.value.sourceId)
   card.value = nakaCardFromApi(apiCard)
   useToast().setToast({
     message: 'Card unlocked',
   })
+  lockingOrUnlockingCard.value = false
 }
 
 async function resetNaka() {
@@ -89,7 +93,14 @@ async function resetNaka() {
 
 <template>
   <div class="flex flex-col h-full items-center w-full mx-auto">
-    <NakaCard class="w-full h-max" :card-data="cardData" :loading-animation="evaluatingCardData" @show-secret-data-change="showSecretData = !showSecretData" />
+    <NakaCard
+      class="w-full h-max"
+      :card-data="cardData"
+      :loading-animation="evaluatingCardData || lockingOrUnlockingCard"
+      :locked="isCardLocked"
+      :blocked="isCardBlocked"
+      @show-secret-data-change="showSecretData = !showSecretData"
+    />
 
     <!-- <div class="mt-8 flex items-center gap-6">
       <button v-if="!isCardActive" class="secondary" @click="createNewCard">
@@ -176,10 +187,10 @@ async function resetNaka() {
       DEV: Reset NAKA
     </QuickButton>
 
-    <IonButton v-if="isCardActive && !isCardLocked" class="mt-auto mb-4 w-full" @click="lockCard">
+    <IonButton v-if="isCardActive && !isCardLocked" class="mt-auto mb-4 w-full" :disabled="lockingOrUnlockingCard" @click="lockCard">
       {{ $t('Lock card') }}
     </IonButton>
-    <IonButton v-else-if="isCardActive && isCardLocked" class="mt-auto mb-4 w-full" @click="unlockCard">
+    <IonButton v-else-if="isCardActive && isCardLocked" class="mt-auto mb-4 w-full" :disabled="lockingOrUnlockingCard" @click="unlockCard">
       {{ $t('Unlock card') }}
     </IonButton>
 
