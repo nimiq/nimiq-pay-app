@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { IonButton } from '@ionic/vue'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonIcon, IonItem, IonList } from '@ionic/vue'
+import { documentTextOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { NumberFieldInput, NumberFieldRoot } from 'radix-vue'
 import { ref, watch } from 'vue'
@@ -14,11 +16,13 @@ import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { useApp } from '@/stores/app'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
+import ChevronRight from '../icons/chevron-right.vue'
 
 defineEmits(stepEmits)
 
 const { selectedFiat } = storeToRefs(useApp())
 const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked, isCardBlocked } = storeToRefs(useNaka())
+// const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 const showSecretData = ref(false)
 const cardData = ref<{ maskedPan: string, expiry: string } | { pan: string, expiry: string, cvc: string }>()
@@ -83,6 +87,11 @@ async function unlockCard() {
   })
   lockingOrUnlockingCard.value = false
 }
+
+// function openLiveChat() {
+//   liveChatEnabled.value = true
+//   liveChatShown.value = true
+// }
 
 async function resetNaka() {
   if (!(await useNaka().reset()))
@@ -168,24 +177,24 @@ async function resetNaka() {
       </form>
     </template>
 
-    <!-- <IonList lines="none" class="mt-10 w-full mb-16">
-      <IonItem style="--padding-start:0">
-        <a class="flex items-center gap-2 text-space font-semibold w-full" @click="Browser.open({ url: 'https://nimiq.com', toolbarColor: '#0582CA' })">
-          <i-nimiq-help />
+    <IonList lines="none" class="mt-10 w-full mb-auto">
+      <!-- <IonItem style="--padding-start:0">
+        <a class="flex items-center gap-2 text-space font-semibold w-full" @click="openLiveChat">
+          <IonIcon :icon="helpCircleOutline" class="size-7" />
           {{ $t('Support') }}
-          <i-nimiq-chevron-right class="ml-auto text-xs " />
+          <ChevronRight class="size-6 ml-auto" />
         </a>
-      </IonItem>
+      </IonItem> -->
       <IonItem style="--padding-start:0">
-        <a class="flex items-center gap-2 w-full text-space font-semibold" @click="Browser.open({ url: 'https://nimiq.com', toolbarColor: '#0582CA' })">
-          <i-nimiq-file-text class="text-[18px]" />
-          {{ $t('Terms and conditions') }}
-          <i-nimiq-chevron-right class="ml-auto text-xs " />
+        <a class="flex items-center gap-2 w-full text-space font-semibold" @click="Browser.open({ url: 'https://rest.issuer.nimpay.app/public/Nimiq_NAKA_Card_TC.pdf', toolbarColor: '#0582CA' })">
+          <IonIcon :icon="documentTextOutline" class="size-7" />
+          {{ $t('Terms & Conditions') }}
+          <ChevronRight class="size-6 ml-auto" />
         </a>
       </IonItem>
-    </IonList> -->
+    </IonList>
 
-    <QuickButton show-chevron center @click="resetNaka">
+    <QuickButton show-chevron center class="mt-auto" @click="resetNaka">
       DEV: Reset NAKA
     </QuickButton>
 
