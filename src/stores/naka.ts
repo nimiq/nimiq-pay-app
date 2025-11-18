@@ -335,7 +335,7 @@ export const useNaka = defineStore('naka', () => {
         // Sort descending (latest expiry first)
         return (b.expiry.year - a.expiry.year) || (b.expiry.month - a.expiry.month)
       })
-      logger.log('User has NAKA cards, using the latest one', { cards })
+      logger.log('User has NAKA Cards, using the latest one', { cards })
       await setCard(cards[0])
     }
   }
@@ -365,7 +365,7 @@ export const useNaka = defineStore('naka', () => {
     const decryptedCard = await getDecryptedNakaCardData(card.value.sourceId)
     if (!decryptedCard) {
       logger.error('Failed to get decrypted Naka card data', { card })
-      throw new Error('Failed to get decrypted NAKA card data')
+      throw new Error('Failed to get decrypted NAKA Card data')
     }
 
     const { success, cardId, error } = await HCESdk.activateCard({
@@ -377,16 +377,16 @@ export const useNaka = defineStore('naka', () => {
     if (!success) {
       if (error.errorType === ErrorType.CARD_ALREADY_ACTIVATED) {
         const id = error.message?.match(/card with id: (.+)$/)?.[1]
-        logger.warn('NAKA card is already activated in the SDK, setting card in store', { card, error, cardId: id })
+        logger.warn('NAKA Card is already activated in the SDK, setting card in store', { card, error, cardId: id })
         if (id)
           setCard({ ...card.value, hceId: id })
         return
       }
-      logger.error('Failed to activate NAKA card', { card, error })
+      logger.error('Failed to activate NAKA Card', { card, error })
       throw new Error(error.message)
     }
 
-    logger.log('NAKA card activated successfully')
+    logger.log('NAKA Card activated successfully')
     setCard({ ...card.value, hceId: cardId })
 
     // Set card PIN
@@ -398,7 +398,7 @@ export const useNaka = defineStore('naka', () => {
     const PIN = (Math.floor(Math.random() * 9000) + 1000).toString(10)
     const cypher = encrypter.encrypt(PIN)
     if (!cypher)
-      return logger.error('Failed to encrypt PIN for NAKA card')
+      return logger.error('Failed to encrypt PIN for NAKA Card')
     await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
   }
 

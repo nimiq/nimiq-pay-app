@@ -396,7 +396,7 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
       </div>
     </template>
     <div v-else class="mt-20 font-bold text-lg text-neutral-500">
-      {{ $t('No NAKA card found') }}
+      {{ $t('No NAKA Card found') }}
     </div>
   </div>
 </template>

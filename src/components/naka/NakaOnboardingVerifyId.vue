@@ -82,10 +82,10 @@ onKycApproved.value = async () => {
   }
   catch (error) {
     isLoading.value = false
-    logger.error('Error setting up NAKA card after KYC approval:', error)
+    logger.error('Error setting up NAKA Card after KYC approval:', error)
     useToast().setToast({
       type: 'error',
-      message: i18n.t('There was an error setting up your NAKA card. Please try again later.'),
+      message: i18n.t('There was an error setting up your NAKA Card. Please try again later.'),
     })
     emit('done')
   }

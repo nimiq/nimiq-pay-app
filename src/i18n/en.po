@@ -14,12 +14,12 @@ msgstr ""
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:66
+#: src/modals/MenuModal.vue:72
 msgid "About"
 msgstr ""
 
-#: src/modals/MenuModal.vue:45
-#: src/views/HomeView.vue:216
+#: src/modals/MenuModal.vue:51
+#: src/views/HomeView.vue:219
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -27,7 +27,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:209
+#: src/views/HomeView.vue:212
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -98,7 +98,7 @@ msgstr ""
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
-#: src/modals/MenuModal.vue:50
+#: src/modals/MenuModal.vue:56
 msgid "App Settings"
 msgstr ""
 
@@ -107,7 +107,7 @@ msgid "Are you sure you want to log out?"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:61
+#: src/modals/MenuModal.vue:67
 msgid "Backup Account"
 msgstr ""
 
@@ -164,10 +164,6 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:7
-msgid "By proceeding, you are agreeing to NAKA's Terms & Conditions and Privacy Policy"
-msgstr ""
-
 #: src/components/PaymentPreview.vue:89
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr ""
@@ -213,11 +209,11 @@ msgstr ""
 msgid "Card blocked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:69
+#: src/components/naka/NakaCardManagement.vue:73
 msgid "Card locked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:82
+#: src/components/naka/NakaCardManagement.vue:86
 msgid "Card unlocked"
 msgstr ""
 
@@ -477,7 +473,7 @@ msgid "Expiring Points"
 msgstr ""
 
 #: src/components/naka/NakaCard.vue:66
-msgid "Failed to activate NAKA card on device: {error}"
+msgid "Failed to activate NAKA Card on device: {error}"
 msgstr ""
 
 #: src/components/AddressDisplay.vue:40
@@ -557,6 +553,10 @@ msgstr ""
 
 #: src/components/naka/HoldNakaCardToReader.vue:62
 msgid "Hold your phone near the terminal"
+msgstr ""
+
+#: src/components/naka/NakaOnboardingVerifyId.vue:7
+msgid "I agree to NAKA Card's {terms}"
 msgstr ""
 
 #: src/views/SetupView.vue:28
@@ -723,7 +723,7 @@ msgstr ""
 msgid "Keep pressing…"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:65
+#: src/components/naka/NakaOnboardingVerifyId.vue:71
 msgid "KYC verification in progress, we will notify you once it is completed."
 msgstr ""
 
@@ -751,6 +751,10 @@ msgstr ""
 msgid "Loading tasks…"
 msgstr ""
 
+#: src/components/LiveChat.vue:17
+msgid "Loading..."
+msgstr ""
+
 #: src/modals/ReferralModal.vue:14
 msgid "Loading…"
 msgstr ""
@@ -765,7 +769,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:72
+#: src/modals/MenuModal.vue:78
 msgid "Log Out"
 msgstr ""
 
@@ -783,6 +787,10 @@ msgstr ""
 
 #: src/modals/MenuModal.vue:32
 msgid "NAKA Card"
+msgstr ""
+
+#: src/modals/MenuModal.vue:44
+msgid "NAKA Support"
 msgstr ""
 
 #: src/lib/flows/steps.ts:657
@@ -839,7 +847,7 @@ msgid "No Cashlink found"
 msgstr ""
 
 #: src/components/naka/HoldNakaCardToReader.vue:82
-msgid "No NAKA card found"
+msgid "No NAKA Card found"
 msgstr ""
 
 #: src/lib/tx.ts:90
@@ -1048,7 +1056,7 @@ msgid "Please enter at least ten characters"
 msgstr ""
 
 #: src/lib/flows/steps.ts:664
-msgid "Please verify yourself with SumSub to activate your NAKA card."
+msgid "Please verify yourself with SumSub to activate your NAKA Card."
 msgstr ""
 
 #: src/lib/flows/steps.ts:264
@@ -1075,7 +1083,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:106
+#: src/views/HomeView.vue:109
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1124,7 +1132,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:217
+#: src/views/HomeView.vue:220
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1217,11 +1225,11 @@ msgid "Send NIM to top up"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:102
-#: src/views/HomeView.vue:97
+#: src/views/HomeView.vue:100
 msgid "Server not available"
 msgstr ""
 
-#: src/modals/MenuModal.vue:56
+#: src/modals/MenuModal.vue:62
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1320,8 +1328,13 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:208
+#: src/views/HomeView.vue:211
 msgid "Tap to pay with NAKA!"
+msgstr ""
+
+#: src/components/naka/NakaCardManagement.vue:87
+#: src/components/naka/NakaOnboardingVerifyId.vue:10
+msgid "Terms & Conditions"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:94
@@ -1361,8 +1374,8 @@ msgstr ""
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:82
-msgid "There was an error setting up your NAKA card. Please try again later."
+#: src/components/naka/NakaOnboardingVerifyId.vue:88
+msgid "There was an error setting up your NAKA Card. Please try again later."
 msgstr ""
 
 #: src/modals/ExpiringPointsModal.vue:7
@@ -1486,7 +1499,7 @@ msgstr ""
 msgid "Verify"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:15
+#: src/components/naka/NakaOnboardingVerifyId.vue:22
 msgid "Verify ID"
 msgstr ""
 
@@ -1638,7 +1651,7 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/views/HomeView.vue:222
+#: src/views/HomeView.vue:225
 msgid "You have a reward to claim!"
 msgstr ""
 
