@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { IonButton } from '@ionic/vue'
+import { Browser } from '@capacitor/browser'
+import { IonButton, IonToggle } from '@ionic/vue'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
@@ -23,6 +24,11 @@ const { initializeSdk, openKycFlow, checkKycInBackground } = useKyc()
 const { sdkStatus, onKycApproved, onKycDismissed } = storeToRefs(useKyc())
 
 const isLoading = ref(false)
+const isTCAccepted = ref(false)
+
+function handleTCToggle(event: CustomEvent) {
+  isTCAccepted.value = Boolean(event.detail.checked)
+}
 
 async function register() {
   if (isLoading.value)
@@ -95,10 +101,17 @@ onKycDismissed.value = async () => {
     <div class="flex flex-1 items-center justify-center">
       <NakaVerificationCheckIcon class="translate-y-[-10%]" />
     </div>
-    <p class="text-center mb-4 text-opacity-60">
-      {{ $t('By proceeding, you are agreeing to NAKA\'s Terms & Conditions and Privacy Policy') }}
-    </p>
-    <IonButton size="small" class="self-stretch my-6 text-base font-bold mt-auto" @click="register">
+    <div class="mb-8 text-space/60 flex flex-row items-center gap-2">
+      <i18n-t tag="span" keypath="I agree to NAKA Card's {terms}">
+        <template #terms>
+          <span class="underline text-primary font-bold whitespace-nowrap" @click="Browser.open({ url: 'https://rest.issuer.nimpay.app/public/Nimiq_NAKA_Card_TC.pdf', toolbarColor: '#0582CA' })">
+            {{ $t('Terms & Conditions') }}
+          </span>
+        </template>
+      </i18n-t>
+      <IonToggle :checked="isTCAccepted" @ion-change="handleTCToggle" />
+    </div>
+    <IonButton size="small" class="self-stretch my-6 text-base font-bold mt-auto" :disabled="!isTCAccepted || isLoading" @click="register">
       <Transition
         mode="out-in"
         name="slide-fade"
