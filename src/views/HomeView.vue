@@ -29,7 +29,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { debounceDelay, debounceMaxWait } from '@/lib'
+import { debounceDelay, debounceMaxWait, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 
 import { FlowName } from '@/lib/flows/steps.types'
@@ -239,7 +239,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && __ENABLE_NAKA__)
+  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 

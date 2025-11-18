@@ -15,6 +15,7 @@ import TopUpIcon from '@/components/icons/top-up.vue'
 import WithdrawIcon from '@/components/icons/withdraw.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
+import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
@@ -29,8 +30,6 @@ const { isCampaignActive } = storeToRefs(usePoints())
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
-
-const isNakaEnabled = __ENABLE_NAKA__
 const { hasCard } = storeToRefs(useNaka())
 
 onLongPress(

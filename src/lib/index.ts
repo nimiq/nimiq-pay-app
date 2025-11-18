@@ -1,3 +1,5 @@
+import { useDevice } from '@/composables/useDevice'
+
 export const isDev = import.meta.env.DEV
 
 export const nimiqDomainUrl = isDev ? 'nimiq-testnet.com' : 'nimiq.com'
@@ -11,3 +13,5 @@ export const nakaBufferAddresses = [
 
 export const debounceDelay = 1000
 export const debounceMaxWait = 3000
+
+export const isNakaEnabled = __ENABLE_NAKA__ && useDevice().isAndroid

@@ -5,12 +5,13 @@ import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOpt
 import { modalController } from '@ionic/vue'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineAsyncComponent, h, ref } from 'vue'
-
 import FlowCmp from '@/components/Flow.vue'
 
 import { useLogger } from '@/composables/useLogger'
+
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
+import { isNakaEnabled } from '@/lib'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { PaymentMethod } from '@/types/transactions'
 
@@ -190,7 +191,7 @@ const paymentFlow: FlowInit = async () => {
     { QRDataFormat },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
 
-  const { useNaka } = __ENABLE_NAKA__
+  const { useNaka } = isNakaEnabled
     ? await import('@/stores/naka')
     : { useNaka: () => ({ isCardActive: false, isCardLocked: false }) }
 
@@ -201,7 +202,7 @@ const paymentFlow: FlowInit = async () => {
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    __ENABLE_NAKA__ && hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
+    isNakaEnabled && hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
     __ENABLE_BLUECODE__ ? (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }) : undefined,
     paymentRequestManualInputStep,
@@ -233,7 +234,7 @@ const paymentFlow: FlowInit = async () => {
       throw new Error('User can only pay with puntos if they have scanned a payment request')
     if (isBluecodePaymentRequest)
       throw new Error('Bluecode payments are not supported yet')
-    if (isNakaPaymentRequest && !__ENABLE_NAKA__)
+    if (isNakaPaymentRequest && !isNakaEnabled)
       throw new Error('Naka payments are not supported yet')
 
     // Only one of the state can be true, otherwise the flow is not as expected

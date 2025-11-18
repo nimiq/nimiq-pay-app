@@ -8,6 +8,7 @@ import { hash } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
+import { isNakaEnabled } from '@/lib'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
@@ -410,7 +411,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
 
 export const holdNakaCardToReaderStep: StepInit = async () => ({
   step: StepName.HoldNakaCardToReader,
-  main: markRaw(__ENABLE_NAKA__ ? HoldNakaCardToReader : ComingSoon),
+  main: markRaw(isNakaEnabled ? HoldNakaCardToReader : ComingSoon),
   beforeNext: async ({ holdNakaCardToReader: data }, { navigateTo, finalizeFlow }) => {
     const { request } = data
     if (request.meta?.requireUserConfirmation) {
@@ -654,24 +655,24 @@ export const whatIsNakaStep: StepInit = async () => ({
   step: StepName.WhatIsNaka,
   get title() { return i18n.t('Pay with NAKA Card') },
   get description() { return i18n.t('NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted.') },
-  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingWhatIsNaka : ComingSoon),
+  main: markRaw(isNakaEnabled ? NakaOnboardingWhatIsNaka : ComingSoon),
 } satisfies Step)
 
 export const verifyYourIdNakaStep: StepInit = async () => ({
   step: StepName.VerifyYourIdNaka,
   get title() { return i18n.t('Verify your ID') },
   get description() { return i18n.t('Please verify yourself with SumSub to activate your NAKA card.') },
-  main: markRaw(__ENABLE_NAKA__ ? NakaOnboardingVerifyId : ComingSoon),
+  main: markRaw(isNakaEnabled ? NakaOnboardingVerifyId : ComingSoon),
 } satisfies Step)
 
 export const nakaCardIsReadyStep: StepInit = async () => ({
   step: StepName.NakaCardIsReady,
-  main: markRaw(__ENABLE_NAKA__ ? NakaCardIsReady : ComingSoon),
+  main: markRaw(isNakaEnabled ? NakaCardIsReady : ComingSoon),
 } satisfies Step)
 
 export const nakaCardManagementStep: StepInit = async () => ({
   step: StepName.NakaCardManagement,
-  main: markRaw(__ENABLE_NAKA__ ? NakaCardManagement : ComingSoon),
+  main: markRaw(isNakaEnabled ? NakaCardManagement : ComingSoon),
 } satisfies Step)
 
 export const nakaCardDeleteStep: StepInit = async () => {
@@ -679,6 +680,6 @@ export const nakaCardDeleteStep: StepInit = async () => {
     step: StepName.NakaCardDelete,
     get title() { return i18n.t('Block card') },
     get description() { return i18n.t('Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one.') },
-    main: markRaw(__ENABLE_NAKA__ ? NakaCardDelete : ComingSoon),
+    main: markRaw(isNakaEnabled ? NakaCardDelete : ComingSoon),
   } satisfies Step
 }

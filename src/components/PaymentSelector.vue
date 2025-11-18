@@ -3,6 +3,7 @@ import type { Step } from '@/lib/flows/steps.types'
 import { storeToRefs } from 'pinia'
 import { computed, useTemplateRef } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
+import { isNakaEnabled } from '@/lib'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useNaka } from '@/stores/naka'
 
@@ -13,7 +14,7 @@ const emit = defineEmits(stepEmits)
 const { isCardActive, isCardLocked } = storeToRefs(useNaka())
 
 const options = [
-  ...(isCardActive.value && !isCardLocked.value && __ENABLE_NAKA__ ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
+  ...(isCardActive.value && !isCardLocked.value && isNakaEnabled ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
   { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
 ].filter(Boolean) as { label: string, value: StepName }[]
 const stepNames = options.map(o => o.value)

@@ -7,7 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
-import { isDev } from '@/lib'
+import { isDev, isNakaEnabled } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -229,7 +229,7 @@ export const useNaka = defineStore('naka', () => {
   const isCardActiveOnDevice = computed(() => card.value?.hceId !== undefined)
 
   async function init() {
-    if (!__ENABLE_NAKA__)
+    if (!isNakaEnabled)
       return logger.log('NAKA support not enabled, skipping naka store init')
 
     const dbCards = await getAllNakaCards()
