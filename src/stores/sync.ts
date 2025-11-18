@@ -799,6 +799,51 @@ export const useSync = defineStore('sync', () => {
     logger.log('Draining remote signer', { address: address.toUserFriendlyAddress(), amount })
   }
 
+  async function ensureSingleRemoteActive() {
+    const remoteSigners = await useConn().query<RemoteSigner[]>(SQLQuery.GetActiveRemoteSigner).then(parseAddress)
+    if (remoteSigners.length <= 1)
+      return
+
+    logger.log('😵‍💫 There are multiple active remote signers. Checking balances...', { remoteSigners })
+
+    // Check balances from blockchain, if only one has balance, set that as active and the rest as inactive
+    const remoteSignersWithBalance: RemoteSigner[] = []
+    for (const remoteSigner of remoteSigners) {
+      const { data: balance, error } = await getBalance(remoteSigner.address)
+      if (error) {
+        logger.error('Error while getting balance in ensureSingleRemoteActive', error)
+        continue
+      }
+      if (balance > 0) {
+        remoteSignersWithBalance.push(remoteSigner)
+      }
+    }
+
+    if (remoteSignersWithBalance.length === 1) {
+      logger.log('🫥 There is one remote signers with a balance greater than zero. Setting the one with balance as active', remoteSignersWithBalance[0].address.toUserFriendlyAddress())
+      for (const remoteSigner of remoteSigners) {
+        const isActive = remoteSigner.address.toUserFriendlyAddress() === remoteSignersWithBalance[0].address.toUserFriendlyAddress()
+        await useRemoteSigner().updateRemoteSigner({
+          ...remoteSigner,
+          active: isActive,
+        })
+      }
+    }
+    else {
+      logger.log('😱 There are multiple active remote signers with a balance greater than zero. Draining them', remoteSignersWithBalance.map((x) => {
+        return { ...x, address: x.address.toUserFriendlyAddress() }
+      }))
+      const canEveryHtlcBeDrained = remoteSignersWithBalance.every(remoteSigner => remoteSigner.start < Date.now())
+      if (canEveryHtlcBeDrained)
+        await Promise.all(remoteSignersWithBalance.map(async remoteSigner => await drainRemoteSigner(remoteSigner)))
+      else
+        logger.log('🫠 There are multiple remote signers with a balance greater than zero, but cannot be drained yet... Delaying draining')
+    }
+
+    // Updating balance because the active remote signer has changed
+    updateBalances()
+  }
+
   /**
    * This function ensures that there is only one active remote signer with a balance greater than zero.
    * If there are multiple, it initiates transactions to transfer the balance from the remote to the local signer.
@@ -853,6 +898,7 @@ export const useSync = defineStore('sync', () => {
 
   async function verifyRemoteSignersDb() {
     await useRemoteSigner().updateSignersTableBalance()
+    await ensureSingleRemoteActive()
     await ensureSingleRemoteSignerWithBalance()
   }
 
