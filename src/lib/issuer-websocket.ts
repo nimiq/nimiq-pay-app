@@ -206,6 +206,8 @@ export function useIssuerWebSocket() {
         timeEnd: Date.now(),
       }
     }
+
+    logger.log('Confirming payment:', message)
     send(JSON.stringify(message))
     return promise
   }
@@ -229,6 +231,8 @@ export function useIssuerWebSocket() {
         timeEnd: Date.now(),
       }
     }
+
+    logger.log('Rejecting payment:', msg)
     send(JSON.stringify(msg))
   }
 
