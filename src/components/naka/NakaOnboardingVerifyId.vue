@@ -59,7 +59,7 @@ onKycApproved.value = async () => {
     const user = await getUserStatus()
     if (!user.identifications.find(identification => identification.status === 'VERIFIED')) {
       isLoading.value = false
-      console.error('User does not have a VERIFIED identification')
+      logger.error('User does not have a VERIFIED identification')
       useToast().setToast({
         type: 'spinner',
         message: i18n.t('KYC verification in progress, we will notify you once it is completed.'),

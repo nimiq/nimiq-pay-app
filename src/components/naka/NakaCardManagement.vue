@@ -7,6 +7,7 @@ import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
@@ -65,7 +66,7 @@ async function lockCard() {
   showSecretData.value = false
   card.value = nakaCardFromApi(apiCard)
   useToast().setToast({
-    message: 'Card locked',
+    message: i18n.t('Card locked'),
   })
   lockingOrUnlockingCard.value = false
 }
@@ -78,7 +79,7 @@ async function unlockCard() {
   const apiCard = await unlockNakaCard(card.value.sourceId)
   card.value = nakaCardFromApi(apiCard)
   useToast().setToast({
-    message: 'Card unlocked',
+    message: i18n.t('Card unlocked'),
   })
   lockingOrUnlockingCard.value = false
 }
@@ -86,6 +87,7 @@ async function unlockCard() {
 async function resetNaka() {
   if (!(await useNaka().reset()))
     return
+  // Not translated, dev only
   useToast().setToast({ message: 'NAKA data reset' })
   useModal().closeModal()
 }

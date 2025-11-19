@@ -209,6 +209,18 @@ msgstr ""
 msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
 msgstr ""
 
+#: src/components/naka/NakaCardDelete.vue:28
+msgid "Card blocked"
+msgstr ""
+
+#: src/components/naka/NakaCardManagement.vue:69
+msgid "Card locked"
+msgstr ""
+
+#: src/components/naka/NakaCardManagement.vue:82
+msgid "Card unlocked"
+msgstr ""
+
 #: src/composables/useQRScanner.ts:83
 msgid "Cashlink claimed successfully"
 msgstr ""

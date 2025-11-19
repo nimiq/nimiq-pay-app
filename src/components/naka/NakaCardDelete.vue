@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import LongPressButton from '@/components/LongPressButton.vue'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
@@ -24,7 +25,7 @@ async function blockCard() {
   const apiCard = await blockNakaCard(card.value.sourceId)
   card.value = nakaCardFromApi(apiCard)
   useToast().setToast({
-    message: 'Card blocked',
+    message: i18n.t('Card blocked'),
   })
   loading.value = false
   emit('navigateTo', { step: StepName.NakaCardManagement })
