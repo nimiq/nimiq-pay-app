@@ -13,6 +13,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useIssuerWebSocket } from '@/lib/issuer-websocket'
 import { useLocks } from '@/stores/locks'
@@ -84,27 +85,34 @@ watch(paymentRequest, async (request) => {
           rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Amount exceeds payment limit')
           useToast().setToast({
             type: 'error',
-            message: `Amount exceeds payment limit of ${formatFiat(paymentLimit.value.amount, { currency: paymentLimit.value.currency })}`,
+            message: i18n.t('Amount exceeds payment limit of {fiatAmount}', {
+              fiatAmount: formatFiat(paymentLimit.value.amount, { currency: paymentLimit.value.currency }),
+            }),
           })
           return
         }
       }
       else {
-        console.warn('Payment limit currency does not match price currency')
+        logger.warn('Payment limit currency does not match price currency', { expected: paymentLimit.value.currency, actual: currency })
         rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify payment limit in app')
         useToast().setToast({
           type: 'error',
-          message: `Cannot verify payment limits: asked for ${paymentLimit.value.currency} but got ${currency}`,
+          message: i18n.t('Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}', {
+            expectedCurrency: paymentLimit.value.currency,
+            actualCurrency: currency,
+          }),
         })
         return
       }
     }
     catch (error) {
-      console.error('Failed to check payment limit', error)
+      logger.error('Failed to check payment limit', error)
       rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify payment limit in app')
       useToast().setToast({
         type: 'error',
-        message: `Cannot verify payment limits: ${(error as Error).message}`,
+        message: i18n.t('Cannot verify payment limits: {error}', {
+          error: (error as Error).message,
+        }),
       })
       return
     }
@@ -127,27 +135,34 @@ watch(paymentRequest, async (request) => {
           rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Amount exceeds daily limit')
           useToast().setToast({
             type: 'error',
-            message: `Amount exceeds daily limit of ${formatFiat(dailyLimit.value.amount, { currency: dailyLimit.value.currency })}`,
+            message: i18n.t('Amount exceeds daily limit of {fiatAmount}', {
+              fiatAmount: formatFiat(dailyLimit.value.amount, { currency: dailyLimit.value.currency }),
+            }),
           })
           return
         }
       }
       else {
-        console.warn('Daily limit currency does not match price currency')
+        logger.warn('Daily limit currency does not match price currency', { expected: dailyLimit.value.currency, actual: currency })
         rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify daily limit in app')
         useToast().setToast({
           type: 'error',
-          message: `Cannot verify daily limits: asked for ${dailyLimit.value.currency} but got ${currency}`,
+          message: i18n.t('Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}', {
+            expectedCurrency: dailyLimit.value.currency,
+            actualCurrency: currency,
+          }),
         })
         return
       }
     }
     catch (error) {
-      console.error('Failed to check daily limit', error)
+      logger.error('Failed to check daily limit', error)
       rejectPayment(request.id, request.rail, 'AMOUNT_BIGGER_THAN_ALLOWED', 'Failed to verify daily limit in app')
       useToast().setToast({
         type: 'error',
-        message: `Cannot verify daily limits: ${(error as Error).message}`,
+        message: i18n.t('Cannot verify daily limits: {error}', {
+          error: (error as Error).message,
+        }),
       })
       return
     }
@@ -158,7 +173,7 @@ watch(paymentRequest, async (request) => {
     rejectPayment(request.id, request.rail, 'INSUFFICIENT_BALANCE', 'Not enough balance')
     useToast().setToast({
       type: 'error',
-      message: 'Insufficient balance',
+      message: i18n.t('Insufficient balance'),
     })
     return
   }
@@ -279,20 +294,20 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
         isNfcSupported.value = false
         useToast().setToast({
           type: 'error',
-          message: 'NFC is not supported on this device',
+          message: i18n.t('NFC is not supported on this device'),
         })
       }
       else if (error.errorType === ErrorType.NFC_NOT_ENABLED) {
         isNfcEnabled.value = false
         useToast().setToast({
           type: 'error',
-          message: 'NFC is not enabled',
+          message: i18n.t('NFC is not enabled'),
         })
       }
       else {
         useToast().setToast({
           type: 'error',
-          message: `Failed to set app as preferred NFC service: ${error.message}`,
+          message: i18n.t('Failed to set app as preferred NFC service: {error}', { error: error.message }),
         })
       }
     }
