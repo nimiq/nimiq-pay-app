@@ -2,7 +2,7 @@
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 import { until, useIntervalFn } from '@vueuse/core'
-import { HCESdk } from 'capacitor-monetplus-hce'
+import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -267,13 +267,35 @@ watch([() => props.isVisible, isCardActiveOnDevice], async ([isVisible, isCardAc
     stopNfcCheck()
 }, { immediate: true })
 
-watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVisible, isNfcEnabled, isCardActiveOnDevice]) => {
-  if (isVisible && isCardActive.value && isCardActiveOnDevice && isNfcEnabled) {
+watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVisible, isCardActiveOnDevice]) => {
+  if (isVisible && isCardActive.value && isCardActiveOnDevice && isNfcEnabled.value) {
     // Need to wait until app is in foreground (not in background) or it will crash the app
     await until(isAppInBackground).toBe(false)
     logger.log('Setting app as preferred NFC service')
-    // TODO: show error message if this fails
-    await HCESdk.setAsPreferredService()
+    const { success, error } = await HCESdk.setAsPreferredService()
+    if (!success) {
+      logger.error('Failed to set app as preferred NFC service:', error)
+      if (error.errorType === ErrorType.NFC_NOT_SUPPORTED) {
+        isNfcSupported.value = false
+        useToast().setToast({
+          type: 'error',
+          message: 'NFC is not supported on this device',
+        })
+      }
+      else if (error.errorType === ErrorType.NFC_NOT_ENABLED) {
+        isNfcEnabled.value = false
+        useToast().setToast({
+          type: 'error',
+          message: 'NFC is not enabled',
+        })
+      }
+      else {
+        useToast().setToast({
+          type: 'error',
+          message: `Failed to set app as preferred NFC service: ${error.message}`,
+        })
+      }
+    }
   }
 }, { immediate: true })
 </script>
