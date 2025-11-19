@@ -39,11 +39,13 @@ onMounted(async () => {
 
   await identify()
 
+  document.addEventListener('chatlio.firstMessageSent', onFirstMessageSent)
   document.addEventListener('chatlio.messageReceived', onMessageReceived)
   document.addEventListener('chatlio.conversationEnded', onConversationEnded)
 })
 
 onUnmounted(() => {
+  document.removeEventListener('chatlio.firstMessageSent', onFirstMessageSent)
   document.removeEventListener('chatlio.messageReceived', onMessageReceived)
   document.removeEventListener('chatlio.conversationEnded', onConversationEnded)
 })
@@ -74,6 +76,18 @@ async function identify() {
   })
 }
 
+/**
+ * If this is true, the chat badge is removed when the chat overlay is closed (shown = false).
+ * We set this to true initially, to remove the badge if the user never sends a message.
+ * Once the user sends their first message (onFirstMessageSent), we set this to false.
+ * Then again to true when the conversation ends (onConversationEnded).
+ */
+const conversationEnded = ref(true)
+
+function onFirstMessageSent() {
+  conversationEnded.value = false
+}
+
 // Pending message count logic
 function onMessageReceived() {
   if (shown.value)
@@ -87,9 +101,6 @@ watch(shown, (isShown) => {
     pendingMessageCount.value = 0
   }
 })
-
-// Conversation end logic
-const conversationEnded = ref(false)
 
 function onConversationEnded() {
   conversationEnded.value = true
