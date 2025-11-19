@@ -270,13 +270,7 @@ export const useNaka = defineStore('naka', () => {
 
     if (card.value.statusId === 'ACTIVE') {
       // Check expiry
-      if (
-        card.value.expiry.year < new Date().getUTCFullYear()
-        || (
-          card.value.expiry.year === new Date().getUTCFullYear()
-          && card.value.expiry.month < new Date().getUTCMonth() + 1
-        )
-      ) {
+      if (isCardExpired(card.value)) {
         logger.log('Card expired', card.value.expiry)
         card.value.statusId = 'EXPIRED'
         await insertNakaCard(card.value)
@@ -307,7 +301,20 @@ export const useNaka = defineStore('naka', () => {
         return (a.expiry.year - b.expiry.year) || (a.expiry.month - b.expiry.month)
       }).at(-1)!
 
+    if (card.value.statusId === 'ACTIVE' && isCardExpired(card.value)) {
+      logger.log('Card expired', card.value.expiry)
+      card.value.statusId = 'EXPIRED'
+    }
+
     await insertNakaCard(card.value)
+  }
+
+  function isCardExpired(card: NakaCard): boolean {
+    return card.expiry.year < new Date().getUTCFullYear()
+      || (
+        card.expiry.year === new Date().getUTCFullYear()
+        && card.expiry.month < new Date().getUTCMonth() + 1
+      )
   }
 
   /**
