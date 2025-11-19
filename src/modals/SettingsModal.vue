@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
@@ -56,7 +57,7 @@ async function onLongPressCallback() {
   logger.sendReport()
 }
 
-function handlePushNotificationsToggle(event: CustomEvent) {
+function handlePushNotificationsToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
   if (event.detail.checked && pushNotificationsStatus.value !== PushNotificationsStatus.GRANTED)
     registerNotifications()
 
@@ -64,7 +65,7 @@ function handlePushNotificationsToggle(event: CustomEvent) {
     unregisterNotifications()
 }
 
-function handleBiometricToggle(event: CustomEvent) {
+function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
   if (event.detail.checked)
     showModal(Modal.EnableBiometric, { isOnTop: true })
   else

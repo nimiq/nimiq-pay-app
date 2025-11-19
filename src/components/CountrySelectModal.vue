@@ -52,7 +52,7 @@ function handleClose() {
         @input="countryFilter = ($event.target as HTMLTextAreaElement).value"
       >
     </div>
-    <IonRadioGroup @ion-change="(e) => selectedCountry = e.detail.value">
+    <IonRadioGroup @ion-change="selectedCountry = $event.detail.value">
       <RecycleScroller
         v-slot="{ item }"
         class="py-4 px-6 h-[calc(100%-62px)]"

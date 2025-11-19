@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import type { PropType } from 'vue'
 import type { Crypto } from '../stores/app'
 import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
@@ -276,7 +275,7 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
       :disabled="!isEligible"
       label-placement="end" class="mb-4"
       :checked="paymentMethod === PaymentMethod.Points"
-      @ion-change="(e: IonToggleCustomEvent<ToggleChangeEventDetail>) => e.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
+      @ion-change="$event.detail.checked ? paymentMethod = PaymentMethod.Points : paymentMethod = PaymentMethod.NIM"
     >
       <i18n-t keypath="Use {amount}" tag="div" class="flex items-center text-lg font-semibold">
         <template #amount>

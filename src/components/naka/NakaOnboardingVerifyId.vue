@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
@@ -26,7 +27,7 @@ const { sdkStatus, onKycApproved, onKycDismissed } = storeToRefs(useKyc())
 const isLoading = ref(false)
 const isTCAccepted = ref(false)
 
-function handleTCToggle(event: CustomEvent) {
+function handleTCToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
   isTCAccepted.value = Boolean(event.detail.checked)
 }
 

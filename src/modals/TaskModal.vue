@@ -143,7 +143,7 @@ async function handleSubmit() {
       <!-- Radio Input -->
       <IonRadioGroup
         v-else-if="type === 'question'"
-        @ion-change="(e) => { errorMsg = ''; radioValueChecked = e.detail.value }"
+        @ion-change="{ errorMsg = ''; radioValueChecked = $event.detail.value }"
       >
         <IonRadio v-for="(option, index) in [...options].sort(() => Math.random() - 0.5)" :key="option + index" mode="md" label-placement="end" justify="start" :value="option" class="w-full my-2">
           <p class="text-left whitespace-normal text-space/60">
