@@ -16,7 +16,7 @@ import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { useApp } from '@/stores/app'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
-import ChevronRight from '../icons/chevron-right.vue'
+import ArrowUpRightIcon from '../icons/arrow-up-right.vue'
 
 defineEmits(stepEmits)
 
@@ -182,14 +182,14 @@ async function resetNaka() {
         <a class="flex items-center gap-2 text-space font-semibold w-full" @click="openLiveChat">
           <IonIcon :icon="helpCircleOutline" class="size-7" />
           {{ $t('Support') }}
-          <ChevronRight class="size-6 ml-auto" />
+          <ChevronRightIcon class="size-6 ml-auto" />
         </a>
       </IonItem> -->
       <IonItem style="--padding-start:0; --inner-padding-end:0;">
         <a class="flex items-center gap-2 w-full text-space font-semibold" @click="Browser.open({ url: 'https://rest.issuer.nimpay.app/public/Nimiq_NAKA_Card_TC.pdf', toolbarColor: '#0582CA' })">
           <IonIcon :icon="documentTextOutline" class="size-7" />
           {{ $t('Terms & Conditions') }}
-          <ChevronRight class="size-6 ml-auto" />
+          <ArrowUpRightIcon class="size-6 ml-auto" />
         </a>
       </IonItem>
     </IonList>
