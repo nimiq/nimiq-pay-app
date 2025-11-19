@@ -57,13 +57,14 @@ const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(
 const { phoneNumberVerified, referralCode, hasDoneBackup, displayedPaymentRequests, showAnimations } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
-const { updatePointsBalance, updateTasks, updateStatus, redeemReferral, getReferralInfo } = usePoints()
+const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
 const { hasCard: hasNakaCard } = storeToRefs(useNaka())
+const { updateUser: updateNakaUser } = useNaka()
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { checkKycInBackground } = useKyc()
 
@@ -181,7 +182,7 @@ async function handleRefresh(event: CustomEvent) {
   await Promise.all([
     sleep(2000),
     updatePointsBalance(),
-    updateStatus(),
+    updatePointsStatus(),
     useSync().updateBalances(),
     useSync().updateTransactionHistory(),
   ])
@@ -313,7 +314,8 @@ onMounted(async () => {
     return
   }
 
-  await updateStatus()
+  updateNakaUser() // Fire and forget
+  await updatePointsStatus()
   if (phoneNumberVerified.value) {
     updatePointsBalance()
     updateTasks()

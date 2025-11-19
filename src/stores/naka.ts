@@ -100,6 +100,10 @@ export function useNakaDb() {
         return { sourceId, statusId: statusId as NakaCard['statusId'], expiry: expiryFromDb(expiryDate), ...extraFields } satisfies NakaCard
       })
     },
+    async deleteNakaCard(sourceId: string) {
+      logger.log('🗑️ Deleting Naka card from DB', { sourceId })
+      await run(SQLQuery.DeleteNakaCard, [sourceId])
+    },
     async purgeNakaCards() {
       logger.log('🗑️ Purging Naka cards from DB')
       await run(SQLQuery.PurgeNakaCards)
@@ -264,21 +268,53 @@ export const useNaka = defineStore('naka', () => {
     if (!card.value)
       return
 
-    // TODO: Check card status against issuer API?
     if (card.value.statusId === 'ACTIVE') {
       // Check expiry
-      if (
-        card.value.expiry.year < new Date().getUTCFullYear()
-        || (
-          card.value.expiry.year === new Date().getUTCFullYear()
-          && card.value.expiry.month < new Date().getUTCMonth() + 1
-        )
-      ) {
+      if (isCardExpired(card.value)) {
         logger.log('Card expired', card.value.expiry)
         card.value.statusId = 'EXPIRED'
         await insertNakaCard(card.value)
       }
     }
+  }
+
+  async function updateUser() {
+    // Check user status against issuer API
+    const user = await getUserStatus()
+    registration.value = {
+      state: user.state,
+      nakaIdentification: user.identifications.find(i => i.provider === 'NAKA-SUMSUB'),
+      nakaCards: user.naka?.cards.map(nakaCardFromApi) || [],
+    }
+
+    if (!registration.value.nakaCards.length) {
+      await purgeNakaCards()
+      card.value = undefined
+      return
+    }
+
+    // Update local card data
+    card.value = registration.value.nakaCards.find(c => c.statusId === 'ACTIVE')
+      // If not found, use the newest one
+      || registration.value.nakaCards.sort((a, b) => {
+        // Sort ascending (oldest expiry first)
+        return (a.expiry.year - b.expiry.year) || (a.expiry.month - b.expiry.month)
+      }).at(-1)!
+
+    if (card.value.statusId === 'ACTIVE' && isCardExpired(card.value)) {
+      logger.log('Card expired', card.value.expiry)
+      card.value.statusId = 'EXPIRED'
+    }
+
+    await insertNakaCard(card.value)
+  }
+
+  function isCardExpired(card: NakaCard): boolean {
+    return card.expiry.year < new Date().getUTCFullYear()
+      || (
+        card.expiry.year === new Date().getUTCFullYear()
+        && card.expiry.month < new Date().getUTCMonth() + 1
+      )
   }
 
   /**
@@ -372,6 +408,7 @@ export const useNaka = defineStore('naka', () => {
     card,
     setCard,
     setupCard,
+    updateUser,
     reset,
     hasCard,
     isCardActive,
