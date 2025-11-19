@@ -194,7 +194,7 @@ async function resetNaka() {
       {{ $t('Unlock card') }}
     </IonButton>
 
-    <IonButton v-if="isCardActive" class="mb-4 delete-btn w-full" :disabled="isCardBlocked" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
+    <IonButton class="mb-4 delete-btn w-full" :disabled="isCardBlocked" @click="$emit('navigateTo', { step: StepName.NakaCardDelete })">
       {{ $t('Block card') }}
     </IonButton>
   </div>

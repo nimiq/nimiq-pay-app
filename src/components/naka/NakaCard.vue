@@ -125,21 +125,13 @@ function formatExpiry(expiry: string) {
       </defs>
     </svg>
     <div
-      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center"
-      :class="loadingAnimation ? 'opacity-100' : 'opacity-0'"
+      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center opacity-0 pointer-events-none"
+      :class="{
+        'opacity-100 pointer-events-auto': loadingAnimation || locked || blocked,
+      }"
     >
       <LoadingSpinner v-if="loadingAnimation" class="size-10 text-white" />
-    </div>
-    <div
-      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center"
-      :class="locked && !loadingAnimation ? 'opacity-100' : 'opacity-0'"
-    >
       <IonIcon v-if="locked && !loadingAnimation" :icon="lockClosed" class="size-20 text-white" />
-    </div>
-    <div
-      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center"
-      :class="blocked ? 'opacity-100' : 'opacity-0'"
-    >
       <span v-if="blocked" class="font-black text-red-700 text-shadow text-4xl uppercase tracking-widest">{{ $t('Blocked') }}</span>
     </div>
     <motion.div
