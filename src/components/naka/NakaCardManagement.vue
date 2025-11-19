@@ -178,14 +178,14 @@ async function resetNaka() {
     </template>
 
     <IonList lines="none" class="mt-10 w-full mb-auto">
-      <!-- <IonItem style="--padding-start:0">
+      <!-- <IonItem style="--padding-start:0; --inner-padding-end:0;">
         <a class="flex items-center gap-2 text-space font-semibold w-full" @click="openLiveChat">
           <IonIcon :icon="helpCircleOutline" class="size-7" />
           {{ $t('Support') }}
           <ChevronRight class="size-6 ml-auto" />
         </a>
       </IonItem> -->
-      <IonItem style="--padding-start:0">
+      <IonItem style="--padding-start:0; --inner-padding-end:0;">
         <a class="flex items-center gap-2 w-full text-space font-semibold" @click="Browser.open({ url: 'https://rest.issuer.nimpay.app/public/Nimiq_NAKA_Card_TC.pdf', toolbarColor: '#0582CA' })">
           <IonIcon :icon="documentTextOutline" class="size-7" />
           {{ $t('Terms & Conditions') }}
