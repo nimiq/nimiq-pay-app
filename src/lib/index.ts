@@ -14,4 +14,4 @@ export const nakaBufferAddresses = [
 export const debounceDelay = 1000
 export const debounceMaxWait = 3000
 
-export const isNakaEnabled = __ENABLE_NAKA__ && useDevice().isAndroid
+export const isNakaEnabled = __ENABLE_NAKA__ && (useDevice().isAndroid || isDev)
