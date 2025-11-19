@@ -100,6 +100,10 @@ export function useNakaDb() {
         return { sourceId, statusId: statusId as NakaCard['statusId'], expiry: expiryFromDb(expiryDate), ...extraFields } satisfies NakaCard
       })
     },
+    async deleteNakaCard(sourceId: string) {
+      logger.log('🗑️ Deleting Naka card from DB', { sourceId })
+      await run(SQLQuery.DeleteNakaCard, [sourceId])
+    },
     async purgeNakaCards() {
       logger.log('🗑️ Purging Naka cards from DB')
       await run(SQLQuery.PurgeNakaCards)
@@ -288,19 +292,22 @@ export const useNaka = defineStore('naka', () => {
       nakaIdentification: user.identifications.find(i => i.provider === 'NAKA-SUMSUB'),
       nakaCards: user.naka?.cards.map(nakaCardFromApi) || [],
     }
+
+    if (!registration.value.nakaCards.length) {
+      await purgeNakaCards()
+      card.value = undefined
+      return
+    }
+
     // Update local card data
-    card.value = registration.value.nakaCards.length
-      // If the user has card(s), first try to find the active one
-      ? registration.value.nakaCards.find(c => c.statusId === 'ACTIVE')
+    card.value = registration.value.nakaCards.find(c => c.statusId === 'ACTIVE')
       // If not found, use the newest one
       || registration.value.nakaCards.sort((a, b) => {
         // Sort ascending (oldest expiry first)
         return (a.expiry.year - b.expiry.year) || (a.expiry.month - b.expiry.month)
-      }).at(-1)
-      : undefined
+      }).at(-1)!
 
-    if (card.value)
-      await insertNakaCard(card.value)
+    await insertNakaCard(card.value)
   }
 
   /**
