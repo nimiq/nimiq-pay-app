@@ -620,7 +620,7 @@ msgstr ""
 msgid "No Cashlink found"
 msgstr "Kein Cashlink gefunden"
 
-msgid "No NAKA card found"
+msgid "No NAKA Card found"
 msgstr ""
 
 msgid "No NIM HTLC found in swap"
@@ -773,7 +773,7 @@ msgstr "Bitte einen Verifizierungscode eingeben"
 msgid "Please enter at least ten characters"
 msgstr "Bitte gib mindestens zehn Zeichen ein"
 
-msgid "Please verify yourself with SumSub to activate your NAKA card."
+msgid "Please verify yourself with SumSub to activate your NAKA Card."
 msgstr ""
 
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
@@ -977,7 +977,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr "Synchronisiere mit dem Netzwerk."
 
-msgid "Tap to pay with your NAKA card!"
+msgid "Tap to pay with your NAKA Card!"
 msgstr ""
 
 msgid "Terms of service"
