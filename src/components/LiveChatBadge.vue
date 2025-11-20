@@ -128,9 +128,13 @@ declare global {
 </script>
 
 <template>
-  <button class="badge flex flex-row items-center gap-1 rounded-full text-white px-3 py-1.5 font-semibold" :class="{ 'bg-fire': pendingMessageCount > 0, 'bg-space': pendingMessageCount === 0 }" @click="shown = !shown">
+  <button class="badge flex flex-row items-center gap-1 rounded-full text-white px-3 py-1.5 font-semibold bg-space" @click="shown = !shown">
     <LiveChatIcon class="size-5 text-white" />
     Chat
     <chatlio-widget widgetid="7aa22465-fd98-4f3a-7621-c7a124a3a8cf" widgettype="inline" />
+    <template v-if="pendingMessageCount">
+      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3"></div>
+      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3 animate-ping"></div>
+    </template>
   </button>
 </template>
