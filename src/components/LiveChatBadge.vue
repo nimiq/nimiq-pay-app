@@ -133,8 +133,8 @@ declare global {
     Chat
     <chatlio-widget widgetid="7aa22465-fd98-4f3a-7621-c7a124a3a8cf" widgettype="inline" />
     <template v-if="pendingMessageCount">
-      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3"></div>
-      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3 animate-ping"></div>
+      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3" />
+      <div class="absolute top-1 -right-1 rounded-full bg-fire size-3 animate-ping" />
     </template>
   </button>
 </template>

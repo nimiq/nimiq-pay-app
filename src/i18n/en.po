@@ -209,11 +209,11 @@ msgstr ""
 msgid "Card blocked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:73
+#: src/components/naka/NakaCardManagement.vue:75
 msgid "Card locked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:86
+#: src/components/naka/NakaCardManagement.vue:88
 msgid "Card unlocked"
 msgstr ""
 
@@ -723,7 +723,7 @@ msgstr ""
 msgid "Keep pressing…"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:71
+#: src/components/naka/NakaOnboardingVerifyId.vue:72
 msgid "KYC verification in progress, we will notify you once it is completed."
 msgstr ""
 
@@ -1324,6 +1324,10 @@ msgstr ""
 msgid "Store screenshot safely"
 msgstr ""
 
+#: src/components/naka/NakaCardManagement.vue:80
+msgid "Support"
+msgstr ""
+
 #: src/lib/utils.ts:64
 msgid "Syncing with network."
 msgstr ""
@@ -1374,7 +1378,7 @@ msgstr ""
 msgid "There is no cashback reward when paying with Points."
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:88
+#: src/components/naka/NakaOnboardingVerifyId.vue:89
 msgid "There was an error setting up your NAKA Card. Please try again later."
 msgstr ""
 

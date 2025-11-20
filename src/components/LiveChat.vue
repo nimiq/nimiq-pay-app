@@ -29,7 +29,7 @@ const { shown, loading } = storeToRefs(useLiveChat())
       </IonToolbar>
       <div v-if="loading" class="text-center mb-10 flex flex-row gap-2 h-full items-center justify-center">
         <LoadingSpinnerIcon class="size-6 opacity-50" />
-        <span class="text-space/50 text-xl font-semibold">{{ $t('Loading...')  }}</span>
+        <span class="text-space/50 text-xl font-semibold">{{ $t('Loading...') }}</span>
       </div>
       <!-- Add this div in your DOM where you want the inline div to be inserted by Chatlio, change height/width to fit your needs -->
       <div id="chatlioWidgetPlaceholder" class="w-full flex-grow" />
