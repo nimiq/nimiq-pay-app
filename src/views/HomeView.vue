@@ -3,7 +3,7 @@ import type { Ref } from 'vue'
 import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
-import { IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { IonBackdrop, IonButton, IonButtons, IonContent, IonFooter, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, refDebounced, refThrottled, until, useElementSize, useResizeObserver, useSwipe } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
@@ -16,6 +16,8 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import InfoIcon from '@/components/icons/info.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
+import LiveChat from '@/components/LiveChat.vue'
+import LiveChatBadge from '@/components/LiveChatBadge.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import PaymentRequestDetectedNotification from '@/components/PaymentRequestDetectedNotification.vue'
@@ -31,12 +33,12 @@ import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
-
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useKyc } from '@/stores/kyc'
+import { useLiveChat } from '@/stores/livechat'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
@@ -67,6 +69,7 @@ const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 const { updateUser: updateNakaUser } = useNaka()
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { checkKycInBackground } = useKyc()
+const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 const isFirstRender = ref(true)
 
@@ -512,6 +515,11 @@ App.addListener('resume', detectPaymentRequest)
         </motion.div>
       </IonToolbar>
     </IonFooter>
+
+    <!-- Live Chat -->
+    <IonBackdrop v-if="liveChatEnabled && liveChatShown" class="bg-black opacity-[0.32] z-20" @ion-backdrop-tap="liveChatShown = false" />
+    <LiveChatBadge v-if="liveChatEnabled" class="absolute top-[10px] left-[72px] z-20" />
+    <LiveChat />
   </IonPage>
 </template>
 

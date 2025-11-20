@@ -19,7 +19,7 @@ function onClick() {
 
 <template>
   <button class="flex gap-x-2 items-center" @click="onClick">
-    <component :is="icon" class="size-7 text-space" />
+    <component :is="icon" class="w-7 text-space" />
     <span class="w-full font-semibold text-lg text-left">
       {{ title }}
     </span>

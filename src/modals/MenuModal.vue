@@ -8,6 +8,7 @@ import { ref } from 'vue'
 import BackupIcon from '@/components/icons/backup.vue'
 import CreditCardIcon from '@/components/icons/credit-card.vue'
 import GiftIcon from '@/components/icons/gift.vue'
+import LiveChatIcon from '@/components/icons/live-chat.vue'
 import LogoutIcon from '@/components/icons/log-out.vue'
 import NimiqOutlineLogo from '@/components/icons/nimiq-outline.vue'
 import SettingsIcon from '@/components/icons/settings.vue'
@@ -19,18 +20,27 @@ import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
+import { useLiveChat } from '@/stores/livechat'
+import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
-import { useNaka } from '../stores/naka'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
 const { showModal, closeModal } = useModal()
 const { phoneNumberVerified } = storeToRefs(useApp())
 const { isCampaignActive } = storeToRefs(usePoints())
+const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
-const { hasCard } = storeToRefs(useNaka())
+
+const { hasCard, registration } = storeToRefs(useNaka())
+
+function openLiveChat() {
+  liveChatEnabled.value = true
+  liveChatShown.value = true
+  useModal().closeModal()
+}
 
 onLongPress(
   htmlRefHook,
@@ -78,6 +88,12 @@ onLongPress(
       :icon="CreditCardIcon"
       :title="$t('Activate NAKA Card')"
       @click="initializeFlow(FlowName.NakaOnboarding)"
+    />
+    <MenuItem
+      v-if="registration"
+      :icon="LiveChatIcon"
+      :title="$t('NAKA Support')"
+      @click="openLiveChat"
     />
 
     <MenuItem
