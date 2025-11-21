@@ -1,0 +1,22 @@
+diff --git a/dist/helpers.js b/dist/helpers.js
+index 8f2afb2704df1b1f6241f4232062907962c4d58f..3a5f6cdeb5e24bf51703632e88a077293d0f40a7 100644
+--- a/dist/helpers.js
++++ b/dist/helpers.js
+@@ -4,14 +4,14 @@ import { AssetId, Ticker, Precision,
+ // HtlcDetails,
+  } from './types';
+ export function coinsToUnits(asset, value) {
+-    let decimals = Precision[asset];
++        let decimals = Precision[asset];
+     if (typeof decimals === 'undefined')
+         throw new Error(`Invalid asset ${asset}`);
+     if (typeof value === 'number') {
+-        return value * Math.pow(10, decimals);
++        return Math.round(value * Math.pow(10, decimals));
+     }
+     // Move the decimal point before parsing to number, to reduce inaccuracy due to floating point precision
+-    const [coins, units] = value.split('.');
++    const [coins, units = ''] = value.split('.');
+     value = `${coins}${units.substring(0, decimals).padEnd(decimals, '0')}.${units.substring(decimals)}`;
+     return parseFloat(value);
+ }

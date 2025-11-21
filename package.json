@@ -135,6 +135,9 @@
       "sharp",
       "utf-8-validate",
       "vue-demi"
-    ]
+    ],
+    "patchedDependencies": {
+      "@nimiq/fastspot-api@2.0.0-beta.0": "patches/@nimiq__fastspot-api@2.0.0-beta.0.patch"
+    }
   }
 }

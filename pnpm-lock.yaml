@@ -7,6 +7,11 @@ settings:
 overrides:
   jeep-sqlite: 2.5.6
 
+patchedDependencies:
+  '@nimiq/fastspot-api@2.0.0-beta.0':
+    hash: b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3
+    path: patches/@nimiq__fastspot-api@2.0.0-beta.0.patch
+
 importers:
 
   .:
@@ -55,7 +60,7 @@ importers:
         version: '@nimiq/fastspot-api@1.10.3'
       '@nimiq/fastspot-api-v2':
         specifier: npm:@nimiq/fastspot-api@2.0.0-beta.0
-        version: '@nimiq/fastspot-api@2.0.0-beta.0'
+        version: '@nimiq/fastspot-api@2.0.0-beta.0(patch_hash=b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3)'
       '@nimiq/utils':
         specifier: ^0.12.4
         version: 0.12.4
@@ -9461,7 +9466,7 @@ snapshots:
 
   '@nimiq/fastspot-api@1.10.3': {}
 
-  '@nimiq/fastspot-api@2.0.0-beta.0': {}
+  '@nimiq/fastspot-api@2.0.0-beta.0(patch_hash=b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3)': {}
 
   '@nimiq/identicons@1.6.2':
     dependencies:
