@@ -450,7 +450,7 @@ App.addListener('resume', detectPaymentRequest)
         <IonRow>
           <a class="mt-2 bg-white rounded-lg relative" :style="{ height: `${contentHeight}px` }">
             <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
-            <iframe class="h-full w-screen absolute -translate-x-[21px]" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" src="https://crypto-map-next.je-cf9.workers.dev/"></iframe>
+            <iframe class="h-full w-screen absolute -translate-x-[21px]" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" src="https://map.nimiq.com"></iframe>
           </a>
         </IonRow>
         <!-- <IonRow class="ion-justify-content-center">
