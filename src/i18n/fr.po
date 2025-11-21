@@ -27,6 +27,9 @@ msgstr "À propos"
 msgid "Activate Cashback & Rewards"
 msgstr "Activer les Cashback et les Récompenses"
 
+msgid "Activate NAKA Card"
+msgstr ""
+
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -59,6 +62,12 @@ msgstr "Toutes les transactions"
 msgid "Already paid"
 msgstr "Déjà payé"
 
+msgid "Amount exceeds daily limit of {fiatAmount}"
+msgstr ""
+
+msgid "Amount exceeds payment limit of {fiatAmount}"
+msgstr ""
+
 msgid "Amount too small"
 msgstr ""
 
@@ -79,6 +88,11 @@ msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
 #| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+
+#, fuzzy
+#| msgid "Settings"
+msgid "App Settings"
+msgstr "Paramètres"
 
 msgid "Are you sure you want to log out?"
 msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
@@ -110,22 +124,17 @@ msgstr ""
 msgid "Block card"
 msgstr ""
 
-msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
+msgid "Blocked"
 msgstr ""
 
-#, fuzzy
-#| msgid "Pay with Bluecode"
-msgid "Bluecode"
-msgstr "Payer avec Bluecode"
+msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
+msgstr ""
 
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode est un service de paiement européen qui prend désormais en charge NIM."
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Le code PIN attendu et le code PIN donné sont tous deux vides"
-
-msgid "By proceeding, you are agreeing to NAKA's Terms & Conditions and Privacy Policy"
-msgstr ""
 
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "En cliquant sur « payer », vous acceptez les {terms} de Fastspot"
@@ -143,6 +152,27 @@ msgid "Cannot enable biometric"
 msgstr ""
 
 msgid "Cannot fetch existing NIM/BTC_LN swap"
+msgstr ""
+
+msgid "Cannot verify daily limits: {error}"
+msgstr ""
+
+msgid "Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}"
+msgstr ""
+
+msgid "Cannot verify payment limits: {error}"
+msgstr ""
+
+msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
+msgstr ""
+
+msgid "Card blocked"
+msgstr ""
+
+msgid "Card locked"
+msgstr ""
+
+msgid "Card unlocked"
 msgstr ""
 
 msgid "Cashlink claimed successfully"
@@ -229,14 +259,14 @@ msgstr "Points Cryptocity"
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr "Les points Cryptocity ont été crédités"
 
-msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
-msgstr "Les Points Cryptocity sont des points de fidélité que vous pouvez gagner et payer. Ils ont la même valeur que les NIM ( Point Cryptocity : 1 NIM)."
-
 msgid "Cryptocity Points have been credited"
 msgstr "Les points Cryptocity ont été crédités"
 
 msgid "Currency"
 msgstr "Devise"
+
+msgid "Daily limit"
+msgstr ""
 
 msgid "Date"
 msgstr "Date"
@@ -267,6 +297,9 @@ msgid "Earn Points"
 msgstr "Gagner des points"
 
 msgid "Enable Fingerprint"
+msgstr ""
+
+msgid "Enable NFC to pay"
 msgstr ""
 
 msgid "Enable notifications"
@@ -345,6 +378,9 @@ msgstr "Expiré"
 msgid "Expiring Points"
 msgstr "Points en cours d'expiration"
 
+msgid "Failed to activate NAKA Card on device: {error}"
+msgstr ""
+
 #, fuzzy
 #| msgid "Address copied to clipboard"
 msgid "Failed to copy address to clipboard"
@@ -366,6 +402,9 @@ msgstr ""
 msgid "Failed to fetch payment request"
 msgstr "Pas de demande de paiement en cours"
 
+msgid "Failed to set app as preferred NFC service: {error}"
+msgstr ""
+
 msgid "Featured"
 msgstr "En vedette"
 
@@ -374,12 +413,6 @@ msgstr "Des frais peuvent s'appliquer {fee}"
 
 msgid "Find places that accept crypto!"
 msgstr "Trouvez des lieux qui acceptent les crypto-monnaies !"
-
-msgid "Find places to pay with, and earn Cryptocity Points"
-msgstr "Trouvez des endroits où payer et gagner des Points Cryptocity"
-
-msgid "Get Cryptocity Points"
-msgstr "Obtenez des points Cryptocity"
 
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr "Obtenez des points Cryptocity comme récompenses de cashback ou complétez des défis pour les gagner."
@@ -392,9 +425,6 @@ msgstr "Obtenir des points"
 
 msgid "Get Started"
 msgstr "Commencer"
-
-msgid "Go to Crypto Map"
-msgstr "Aller à Crypto Map"
 
 msgid "GoCrypto refused connecting"
 msgstr "GoCrypto a refusé la connexion"
@@ -410,7 +440,13 @@ msgstr "Aidez à développer le mouvement d'adoption des crypto-monnaies. Invite
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Rejoignez-moi sur l'application Nimiq Pay et gagnez des Cryptocity Points pour payer vos achats en crypto ! Utilisez mon code {code} pour gagner {amount} en points Cryptocity à l'inscription."
 
+msgid "Hold the button to confirm."
+msgstr ""
+
 msgid "Hold your phone near the terminal"
+msgstr ""
+
+msgid "I agree to NAKA Card's {terms}"
 msgstr ""
 
 msgid "I have a promo code"
@@ -424,6 +460,11 @@ msgstr ""
 
 msgid "Insert PIN to confirm"
 msgstr "Insérer le code PIN pour confirmer"
+
+#, fuzzy
+#| msgid "Insufficient funds"
+msgid "Insufficient balance"
+msgstr "Fonds insuffisants"
 
 msgid "Insufficient funds"
 msgstr "Fonds insuffisants"
@@ -535,6 +576,9 @@ msgstr "Est-ce votre numéro de téléphone ?"
 msgid "Keep pressing…"
 msgstr ""
 
+msgid "KYC verification in progress, we will notify you once it is completed."
+msgstr ""
+
 msgid "Language"
 msgstr "Langue"
 
@@ -554,6 +598,9 @@ msgstr "Chargement..."
 
 msgid "Loading tasks…"
 msgstr "Chargement des tâches…"
+
+msgid "Loading..."
+msgstr "Chargement..."
 
 msgid "Loading…"
 msgstr "Chargement…"
@@ -578,10 +625,10 @@ msgstr ""
 msgid "Naka"
 msgstr ""
 
-msgid "Naka Card"
+msgid "NAKA Card"
 msgstr ""
 
-msgid "NAKA Card"
+msgid "NAKA Support"
 msgstr ""
 
 msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
@@ -596,7 +643,7 @@ msgstr ""
 msgid "New"
 msgstr "Nouveau"
 
-msgid "NFC is disabled, please enable it"
+msgid "NFC is not enabled"
 msgstr ""
 
 msgid "NFC is not supported on this device"
@@ -623,8 +670,10 @@ msgstr ""
 msgid "No Cashlink found"
 msgstr "Aucun Cashlink trouvé"
 
+#, fuzzy
+#| msgid "No Cashlink found"
 msgid "No NAKA Card found"
-msgstr ""
+msgstr "Aucun Cashlink trouvé"
 
 msgid "No NIM HTLC found in swap"
 msgstr "Aucun HTLC NIM n'a été trouvé dans le swap"
@@ -674,9 +723,6 @@ msgstr "Les notifications ne peuvent pas être activées, nous passons donc cett
 msgid "Only {count} out of {total} remaining."
 msgstr "Il ne reste que {count} sur {total}."
 
-msgid "Open NFC settings"
-msgstr ""
-
 msgid "Pay"
 msgstr "Payer"
 
@@ -685,9 +731,6 @@ msgstr ""
 
 msgid "Pay with Bluecode"
 msgstr "Payer avec Bluecode"
-
-msgid "Pay with Cryptocity Points"
-msgstr "Payer avec des points Cryptocity"
 
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr "Payez avec des points Cryptocity au lieu de NIM partout où ils sont acceptés."
@@ -716,6 +759,16 @@ msgstr "Paiement non valide"
 msgid "Payment is being processed"
 msgstr "Le paiement est en cours de traitement"
 
+#, fuzzy
+#| msgid "Payment invalid"
+msgid "Payment limit"
+msgstr "Paiement non valide"
+
+#, fuzzy
+#| msgid "Payment invalid"
+msgid "Payment limits"
+msgstr "Paiement non valide"
+
 msgid "Payment preview"
 msgstr "Aperçu des paiements"
 
@@ -735,6 +788,11 @@ msgstr "Le paiement n'a pas abouti"
 
 msgid "Payment was refunded"
 msgstr "Le paiement a été remboursé"
+
+#, fuzzy
+#| msgid "Payment"
+msgid "Payments"
+msgstr "Paiement"
 
 msgid "Pending"
 msgstr "En attente"
@@ -848,6 +906,9 @@ msgstr "Réinitialiser la recherche"
 
 msgid "Rewards Notifications"
 msgstr "Notifications de récompenses"
+
+msgid "save"
+msgstr ""
 
 msgid "Save"
 msgstr "Sauvegarder"
@@ -977,10 +1038,16 @@ msgstr "Statut"
 msgid "Store screenshot safely"
 msgstr ""
 
+msgid "Support"
+msgstr ""
+
 msgid "Syncing with network."
 msgstr "Synchronisation avec le réseau."
 
-msgid "Tap to pay with your NAKA Card!"
+msgid "Tap to pay with NAKA!"
+msgstr ""
+
+msgid "Terms & Conditions"
 msgstr ""
 
 msgid "Terms of service"
@@ -1011,6 +1078,9 @@ msgstr "Il n'y a pas de \"mot de passe oublié\""
 
 msgid "There is no cashback reward when paying with Points."
 msgstr "Il n'y a pas de cashback lorsque vous payez avec des points."
+
+msgid "There was an error setting up your NAKA Card. Please try again later."
+msgstr ""
 
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Ces points sont faits pour être dépensés. Allez-y et contribuez à l'adoption des crypto-monnaies."
@@ -1064,6 +1134,9 @@ msgstr "Transaction invalide"
 #| msgid "Transaction invalid"
 msgid "Transaction invalid for PoS network"
 msgstr "Transaction invalide"
+
+msgid "Trigger a payment on the issuer"
+msgstr ""
 
 msgid "Try again"
 msgstr "Réessayer"
@@ -1127,9 +1200,6 @@ msgstr "Découvrez les Points Cryptocity"
 #| msgid "Welcome to Nimiq Pay"
 msgid "Welcome to Nimiq Pay"
 msgstr "Bienvenue sur Nimiq Pay"
-
-msgid "What are Cryptocity Points?"
-msgstr "Que sont les points Cryptocity ?"
 
 msgid "What do you want to do?"
 msgstr "Que voulez-vous faire ?"
@@ -1266,6 +1336,29 @@ msgstr "Votre numéro"
 msgid "Your wallet is ready to use"
 msgstr "Votre wallet est prêt à l'emploi"
 
+#, fuzzy
+#~| msgid "Pay with Bluecode"
+#~ msgid "Bluecode"
+#~ msgstr "Payer avec Bluecode"
+
+#~ msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
+#~ msgstr "Les Points Cryptocity sont des points de fidélité que vous pouvez gagner et payer. Ils ont la même valeur que les NIM ( Point Cryptocity : 1 NIM)."
+
+#~ msgid "Find places to pay with, and earn Cryptocity Points"
+#~ msgstr "Trouvez des endroits où payer et gagner des Points Cryptocity"
+
+#~ msgid "Get Cryptocity Points"
+#~ msgstr "Obtenez des points Cryptocity"
+
+#~ msgid "Go to Crypto Map"
+#~ msgstr "Aller à Crypto Map"
+
+#~ msgid "Pay with Cryptocity Points"
+#~ msgstr "Payer avec des points Cryptocity"
+
+#~ msgid "What are Cryptocity Points?"
+#~ msgstr "Que sont les points Cryptocity ?"
+
 #~ msgid "Submit"
 #~ msgstr "Valider"
 
@@ -1302,9 +1395,6 @@ msgstr "Votre wallet est prêt à l'emploi"
 #~| msgid "Consensus established."
 #~ msgid "Consensus not established."
 #~ msgstr "Consensus établi."
-
-#~ msgid "Loading..."
-#~ msgstr "Chargement..."
 
 #~ msgid "Swap pending"
 #~ msgstr "Swap en attente"
