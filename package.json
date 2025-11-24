@@ -46,7 +46,7 @@
     "@capgo/camera-preview": "^7.15.0",
     "@internationalized/number": "^3.6.5",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.10.3",
-    "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.0",
+    "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.1",
     "@nimiq/utils": "^0.12.4",
     "@nimiq/vue3-components": "github:nimiq/vue3-components#build/full",
     "@rdlabo/capacitor-screenshot-event": "^7.0.0",
@@ -135,9 +135,6 @@
       "sharp",
       "utf-8-validate",
       "vue-demi"
-    ],
-    "patchedDependencies": {
-      "@nimiq/fastspot-api@2.0.0-beta.0": "patches/@nimiq__fastspot-api@2.0.0-beta.0.patch"
-    }
+    ]
   }
 }

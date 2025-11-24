@@ -7,11 +7,6 @@ settings:
 overrides:
   jeep-sqlite: 2.5.6
 
-patchedDependencies:
-  '@nimiq/fastspot-api@2.0.0-beta.0':
-    hash: b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3
-    path: patches/@nimiq__fastspot-api@2.0.0-beta.0.patch
-
 importers:
 
   .:
@@ -59,8 +54,8 @@ importers:
         specifier: npm:@nimiq/fastspot-api@^1.10.3
         version: '@nimiq/fastspot-api@1.10.3'
       '@nimiq/fastspot-api-v2':
-        specifier: npm:@nimiq/fastspot-api@2.0.0-beta.0
-        version: '@nimiq/fastspot-api@2.0.0-beta.0(patch_hash=b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3)'
+        specifier: npm:@nimiq/fastspot-api@2.0.0-beta.1
+        version: '@nimiq/fastspot-api@2.0.0-beta.1'
       '@nimiq/utils':
         specifier: ^0.12.4
         version: 0.12.4
@@ -1600,8 +1595,8 @@ packages:
   '@nimiq/fastspot-api@1.10.3':
     resolution: {integrity: sha512-CUkIAcF7R3OlN45idB+yC9Wnuz2YXTPx25xYswCdmbMGu/EGZFNnGHLIe6HkbHd8Eh+uBrwqBmLZGm8jyQ9+6A==}
 
-  '@nimiq/fastspot-api@2.0.0-beta.0':
-    resolution: {integrity: sha512-f+Iltez0OLO8LZ1Mhp3B4U8oCaMbTULfniQttDvhyv1QdgQaleZBYkbJEPmd0RZERDJvuAiDjZ5kPwymU1kqbg==}
+  '@nimiq/fastspot-api@2.0.0-beta.1':
+    resolution: {integrity: sha512-bgIelKdyPaT0qkJcpW1cwl+wVftuJZidx75Re92kiutffzvYySbzPoy1rDa6WbJl2MwrR3iJ8l5bHooXi1geWg==}
 
   '@nimiq/identicons@1.6.2':
     resolution: {integrity: sha512-O8XaSRoOwDjnQjOaWIi4wnELoYSu48WXfApYtz2dzMlFpY+pzekTmQaqS2kYR9uj+6KUiUfBSIVPJUhpWkp88w==}
@@ -9466,7 +9461,7 @@ snapshots:
 
   '@nimiq/fastspot-api@1.10.3': {}
 
-  '@nimiq/fastspot-api@2.0.0-beta.0(patch_hash=b839ec1753f6417fae907f1ff99bc972f16f9cbb09baab2506fb328bbe1da6a3)': {}
+  '@nimiq/fastspot-api@2.0.0-beta.1': {}
 
   '@nimiq/identicons@1.6.2':
     dependencies:
