@@ -231,6 +231,7 @@ export const useNaka = defineStore('naka', () => {
   const isCardLocked = computed(() => card.value?.lockLevel !== null)
   const isCardBlocked = computed(() => card.value?.statusId === 'BLOCKED')
   const isCardActiveOnDevice = computed(() => card.value?.hceId !== undefined)
+  const cardBlockedCount = ref(0)
 
   async function init() {
     if (!isNakaEnabled)
@@ -306,6 +307,8 @@ export const useNaka = defineStore('naka', () => {
       card.value.statusId = 'EXPIRED'
     }
 
+    cardBlockedCount.value = registration.value.nakaCards.filter(c => c.statusId === 'BLOCKED').length
+
     await insertNakaCard(card.value)
   }
 
@@ -321,7 +324,6 @@ export const useNaka = defineStore('naka', () => {
    * Registers the user in the issuer server and if the user has any cards, saves the active card in the store and db.
    */
   async function setupCard(user: UserStatusResponse) {
-    // TODO: get new card if current one blocked?
     const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
     const { setRegistration, setCard } = useNaka()
     setRegistration({
@@ -338,6 +340,7 @@ export const useNaka = defineStore('naka', () => {
       logger.log('User has NAKA Cards, using the latest one', { cards })
       await setCard(cards[0])
     }
+    cardBlockedCount.value = registration.cards.filter(c => c.status === 'BLOCKED').length
   }
 
   async function activateCardOnDevice() {
@@ -414,6 +417,7 @@ export const useNaka = defineStore('naka', () => {
     isCardActive,
     isCardLocked,
     isCardBlocked,
+    cardBlockedCount,
     isCardActiveOnDevice,
     init,
     activateCardOnDevice,

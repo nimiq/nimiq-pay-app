@@ -13,7 +13,8 @@ defineProps<{ prop1: string }>()
 
 const emit = defineEmits(stepEmits)
 
-const { card } = storeToRefs(useNaka())
+const MAX_BLOCKED_CARDS = 3 // TODO: get this from server
+const { card, cardBlockedCount } = storeToRefs(useNaka())
 
 const loading = ref(false)
 
@@ -36,6 +37,9 @@ async function blockCard() {
   <div class="flex flex-col items-center h-full">
     <div class="mt-auto mb-4 font-medium text-space/60">
       {{ $t('Hold the button to confirm.') }}
+    </div>
+    <div v-if="cardBlockedCount === MAX_BLOCKED_CARDS - 1" class="mb-4 text-center text-sm text-pumpkin">
+      {{ $t('This is your last card. If you block it, you will need to contact support for a replacement.') }}
     </div>
     <LongPressButton :component="IonButton" class="mb-4 block-btn w-full" :disabled="loading" @long-press="blockCard">
       {{ $t('Block') }}

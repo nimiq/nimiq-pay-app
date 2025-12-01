@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonIcon, IonItem, IonList } from '@ionic/vue'
-import { documentTextOutline, helpCircleOutline } from 'ionicons/icons'
+import { documentTextOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { NumberFieldInput, NumberFieldRoot } from 'radix-vue'
 import { ref, watch } from 'vue'
+import LiveChatIcon from '@/components/icons/live-chat.vue'
 import NakaCard from '@/components/naka/NakaCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
+import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -22,8 +24,12 @@ import ChevronRightIcon from '../icons/chevron-right.vue'
 
 defineEmits(stepEmits)
 
+const logger = useLogger('NakaCardManagement.vue')
+
 const { selectedFiat } = storeToRefs(useApp())
 const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked, isCardBlocked } = storeToRefs(useNaka())
+const { setupCard } = useNaka()
+const { getUserStatus } = useIssuerRestApi()
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 const showSecretData = ref(false)
@@ -34,6 +40,10 @@ const lockingOrUnlockingCard = ref(false)
 watch([card, showSecretData], async ([newCard, newShowSecretData]) => {
   if (!newCard) {
     cardData.value = undefined
+    return
+  }
+
+  if (isCardBlocked.value) {
     return
   }
 
@@ -103,6 +113,26 @@ async function resetNaka() {
   useToast().setToast({ message: 'NAKA data reset' })
   useModal().closeModal()
 }
+
+async function handleCreateNewCard() {
+  logger.log('Creating new card')
+  try {
+    const user = await getUserStatus()
+    if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
+      evaluatingCardData.value = true
+      await setupCard(user)
+      evaluatingCardData.value = false
+    }
+  }
+  catch (error) {
+    evaluatingCardData.value = false
+    logger.error('Error creating new NAKA Card:', error)
+    useToast().setToast({
+      type: 'error',
+      message: (error as Error).message,
+    })
+  }
+}
 </script>
 
 <template>
@@ -116,11 +146,13 @@ async function resetNaka() {
       @show-secret-data-change="showSecretData = !showSecretData"
     />
 
-    <!-- <div class="mt-8 flex items-center gap-6">
-      <button v-if="!isCardActive" class="secondary" @click="createNewCard">
-        {{ $t('Add new card') }}
-      </button>
-    </div> -->
+    <IonButton
+      v-if="isCardBlocked"
+      size="small" fill="clear" class="mt-8 text-base font-bold normal-case" style="--background: #1F23480D; --padding-top: 4px; --padding-bottom: 4px; --padding-start: 18px; --padding-end: 18px"
+      @click="handleCreateNewCard"
+    >
+      {{ $t('Add new card') }}
+    </IonButton>
 
     <div v-if="isCardActive" class="h-12" />
 
@@ -183,7 +215,7 @@ async function resetNaka() {
     <IonList lines="none" class="mt-10 w-full mb-auto">
       <IonItem style="--padding-start:0; --inner-padding-end:0;">
         <a class="flex items-center gap-2 text-space font-semibold w-full" @click="openLiveChat">
-          <IonIcon :icon="helpCircleOutline" class="size-7" />
+          <LiveChatIcon class="size-7" />
           {{ $t('Support') }}
           <ChevronRightIcon class="size-6 ml-auto" />
         </a>
