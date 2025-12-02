@@ -3,6 +3,7 @@ import { useWebSocket } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { parse } from 'valibot'
 import { computed, ref, watch } from 'vue'
+import { i18n } from '@/i18n/i18n-setup'
 import { isDev } from '.'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
@@ -54,6 +55,26 @@ export function useIssuerWebSocket() {
 
   const paymentRequest = ref<PaymentRequestMessage>()
   const paymentRejection = ref<PaymentRejectedMessage['code']>()
+  const paymentRejectionMessage = computed(() => {
+    switch (paymentRejection.value) {
+      case 'AMOUNT_BIGGER_THAN_ALLOWED':
+        return i18n.t('The payment amount exceeds the allowed limit')
+      case 'DAILY_SPENDING_LIMIT_REACHED':
+        return i18n.t('You have reached your daily spending limit')
+      case 'INVALID_SIGNATURE':
+        return i18n.t('Invalid signature. Please try again')
+      case 'INVALID_NAKA_SIGNATURE':
+        return i18n.t('Invalid card signature. Please try again')
+      case 'INSUFFICIENT_BALANCE':
+        return i18n.t('Insufficient balance for this payment')
+      case 'UNFAIR_EXCHANGE_RATE':
+        return i18n.t('The exchange rate is unfavorable. Please try again later')
+      case 'MISSING_KYC_DATA':
+        return i18n.t('KYC verification required to complete this payment')
+      default:
+        return i18n.t('Payment rejected due to unknown reason')
+    }
+  })
 
   // Internal queue of pending payments, not exposed
   const pendingPayments = new Map<PaymentConfirmMessage['id'], {
@@ -250,6 +271,7 @@ export function useIssuerWebSocket() {
     isReady,
     paymentRequest,
     paymentRejection,
+    paymentRejectionMessage,
     confirmPayment,
     rejectPayment,
     // triggerPayment,

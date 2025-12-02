@@ -32,7 +32,7 @@ const { card, isCardActive, isCardActiveOnDevice } = storeToRefs(useNaka())
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 const { isAppInBackground } = storeToRefs(useLocks())
 
-const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection } = useIssuerWebSocket()
+const { isReady: isServerReady, paymentRequest, confirmPayment, rejectPayment, paymentRejection, paymentRejectionMessage } = useIssuerWebSocket()
 
 const { paymentLimit, dailyLimit } = storeToRefs(useNaka())
 const { formatFiat } = useCurrencyFormatter()
@@ -238,8 +238,7 @@ watch(paymentRejection, (rejection) => {
     return
   useToast().setToast({
     type: 'error',
-    // TODO: Map rejection reasons to user-friendly messages
-    message: rejection,
+    message: paymentRejectionMessage.value,
   })
 })
 
