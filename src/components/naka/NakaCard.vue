@@ -53,7 +53,7 @@ const { isNakaCardActivating } = storeToRefs(useLocks())
 const { activateCardOnDevice } = useNaka()
 
 onMounted(async () => {
-  if (useDevice().isWeb)
+  if (useDevice().isWeb || blocked)
     return
 
   isNakaCardActivating.value = true
@@ -124,15 +124,22 @@ function formatExpiry(expiry: string) {
         </clipPath>
       </defs>
     </svg>
+    <!-- Blocked overlay -->
+    <div v-if="blocked" class="absolute z-10 left-0 right-0 top-1/2 transform -translate-y-1/2 bg-tomato h-16 shadow-blocked" />
+
+    <!-- Blocked/Loading overlay -->
     <div
-      class="absolute z-10 inset-0 rounded-xl bg-white/20 backdrop-blur-sm will-change-[opacity] transition-opacity duration-300 flex justify-center items-center opacity-0 pointer-events-none"
+      class="absolute z-10 inset-0 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 will-change-[opacity] transition-opacity duration-300 flex justify-center items-center opacity-0 pointer-events-none"
       :class="{
         'opacity-100 pointer-events-auto': loadingAnimation || locked || blocked,
       }"
     >
       <LoadingSpinner v-if="loadingAnimation" class="size-10 text-white" />
       <IonIcon v-if="locked && !loadingAnimation" :icon="lockClosed" class="size-20 text-white" />
-      <span v-if="blocked" class="font-black text-red-700 text-shadow text-4xl uppercase tracking-widest">{{ $t('Blocked') }}</span>
+      <div v-if="blocked && !loadingAnimation" class="flex items-center gap-x-2">
+        <IonIcon :icon="lockClosed" class="size-8 text-white" />
+        <span class="font-semibold text-white text-4xl uppercase">{{ $t('Blocked') }}</span>
+      </div>
     </div>
     <motion.div
       v-if="cardData"
@@ -165,5 +172,11 @@ function formatExpiry(expiry: string) {
 <style scoped>
 .card-data {
   font-family: 'Fira Mono', monospace;
+}
+
+.shadow-blocked {
+  box-shadow:
+    0 -10px 10px -5px rgba(255, 0, 0, 0.5),
+    0 10px 10px -5px rgba(255, 0, 0, 0.5);
 }
 </style>

@@ -37,7 +37,7 @@ async function register() {
   isLoading.value = true
 
   try {
-  // If user already has a VERIFIED identification, skip KYC and setup card directly
+    // If user already has a VERIFIED identification, skip KYC and setup card directly
     const user = await getUserStatus()
     // TODO: Check if initialized and wait until verified before trying KYC again
     if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
