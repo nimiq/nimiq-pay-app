@@ -19,7 +19,7 @@ import { useNaka } from '@/stores/naka'
 const emit = defineEmits(stepEmits)
 const logger = useLogger('NakaOnboardingVerifyId')
 
-const { setupCard } = useNaka()
+const { setupCard, updateUser } = useNaka()
 const { getUserStatus } = useIssuerRestApi()
 const { initializeSdk, openKycFlow, checkKycInBackground } = useKyc()
 const { sdkStatus, onKycApproved, onKycDismissed } = storeToRefs(useKyc())
@@ -94,6 +94,7 @@ onKycApproved.value = async () => {
 
 onKycDismissed.value = async () => {
   isLoading.value = false
+  updateUser()
 }
 </script>
 
