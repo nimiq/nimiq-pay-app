@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
-import { computedAsync, until, useResizeObserver } from '@vueuse/core'
+import { computedAsync, until } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import BackupNotification from '@/components/BackupNotification.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
@@ -15,7 +15,6 @@ import LiveChatBadge from '@/components/LiveChatBadge.vue'
 import NotificationCard from '@/components/NotificationCard.vue'
 import QuickButton from '@/components/QuickButton.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
-import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 import TransactionList from '@/components/TransactionList.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -34,7 +33,6 @@ import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
-import { useTransactions } from '@/stores/transactions'
 
 const logger = useLogger('HomeView')
 
@@ -44,7 +42,6 @@ const { isRemoteOk, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, referralCode, hasDoneBackup, showAnimations } = storeToRefs(useApp())
 const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
-const { transactions } = storeToRefs(useTransactions())
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
 const { hasCard: hasNakaCard } = storeToRefs(useNaka())
