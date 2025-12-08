@@ -42,6 +42,9 @@ msgstr ""
 msgid "Add another address"
 msgstr "Agregar dirección NIM"
 
+msgid "Add new card"
+msgstr ""
+
 msgid "Address copied to clipboard"
 msgstr "La dirección se ha copiado al portapapeles"
 
@@ -56,9 +59,6 @@ msgstr ""
 
 msgid "All"
 msgstr "Todo"
-
-msgid "All transactions"
-msgstr "Todas las transacciones"
 
 msgid "Already paid"
 msgstr "Ya está pagado"
@@ -187,6 +187,9 @@ msgstr "El Cashlink no tiene fondos"
 msgid "Change PIN"
 msgstr "Elije un PIN"
 
+msgid "Check"
+msgstr ""
+
 msgid "Choose a PIN"
 msgstr "Elije un PIN"
 
@@ -312,6 +315,11 @@ msgstr ""
 msgid "Enter Address"
 msgstr "Ingresar dirección"
 
+#, fuzzy
+#| msgid "Enter recovery words"
+msgid "Enter feature password"
+msgstr "Ingresar palabras de recuperación"
+
 msgid "Enter manually"
 msgstr ""
 
@@ -412,9 +420,6 @@ msgstr "Destacado"
 msgid "Fees may apply {fee}"
 msgstr "Pueden aplicarse tarifas {fee}"
 
-msgid "Find places that accept crypto!"
-msgstr "¡Encuentra lugares que acepten cripto!"
-
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr "Recibe Puntos Criptociudad como recompensas por cashback o completa tareas para ganártelos."
 
@@ -467,6 +472,11 @@ msgstr "Inserta el PIN para confirmar"
 msgid "Insufficient balance"
 msgstr "Fondos insuficientes"
 
+#, fuzzy
+#| msgid "Insufficient funds"
+msgid "Insufficient balance for this payment"
+msgstr "Fondos insuficientes"
+
 msgid "Insufficient funds"
 msgstr "Fondos insuficientes"
 
@@ -484,6 +494,9 @@ msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Factura de Bitcoin Lightning no válida."
 
 msgid "Invalid callback URL"
+msgstr ""
+
+msgid "Invalid card signature. Please try again"
 msgstr ""
 
 msgid "Invalid CPLink. Could not fetch payment details."
@@ -556,6 +569,9 @@ msgstr "Código QR inválido"
 msgid "Invalid recovery words"
 msgstr "Palabras de recuperación inválidas"
 
+msgid "Invalid signature. Please try again"
+msgstr ""
+
 msgid "Invalid swap hash"
 msgstr "Hash de intercambio inválido"
 
@@ -579,6 +595,11 @@ msgstr ""
 
 msgid "KYC verification in progress, we will notify you once it is completed."
 msgstr ""
+
+#, fuzzy
+#| msgid "This merchant is not registered to receive Points payments."
+msgid "KYC verification required to complete this payment"
+msgstr "Este comerciante no está registrado para recibir pagos con Puntos."
 
 msgid "Language"
 msgstr "Lenguaje"
@@ -709,9 +730,6 @@ msgstr ""
 msgid "No transactions found"
 msgstr "No se encontraron transacciones"
 
-msgid "No transactions found for \"{searchQuery}\""
-msgstr "No se encontraron transacciones para \"{searchQuery}\""
-
 msgid "Not a pending payment request"
 msgstr "No es una solicitud de pago pendiente"
 
@@ -772,6 +790,9 @@ msgstr "Pago inválido"
 
 msgid "Payment preview"
 msgstr "Prevista del pago"
+
+msgid "Payment rejected due to unknown reason"
+msgstr ""
 
 #, fuzzy
 #| msgid "Payment Secret"
@@ -902,9 +923,6 @@ msgstr "Verifica tu número de teléfono"
 msgid "Resend"
 msgstr "Reenviar"
 
-msgid "Reset search"
-msgstr "Reiniciar búsqueda"
-
 msgid "Rewards Notifications"
 msgstr "Notificaciones de recompensas"
 
@@ -940,14 +958,8 @@ msgstr "Escanear código QR"
 msgid "Scan the QR code to send NIM to this address"
 msgstr "Envíar NIM a esta dirección"
 
-msgid "Search"
-msgstr "Buscar"
-
 msgid "Search for a country"
 msgstr "Buscar un país"
-
-msgid "See all"
-msgstr "Ver todo"
 
 msgid "See words"
 msgstr "Ver palabras"
@@ -1063,6 +1075,12 @@ msgstr "El respaldo de seguridad es una lista de 12 palabras en inglés. Asegúr
 msgid "The correct answer is \"{correct}\"."
 msgstr "La respuesta correcta es \"{correct}\"."
 
+msgid "The exchange rate is unfavorable. Please try again later"
+msgstr ""
+
+msgid "The payment amount exceeds the allowed limit"
+msgstr ""
+
 #, fuzzy
 #| msgid "PIN did not match"
 msgid "The PINs do not match"
@@ -1090,6 +1108,9 @@ msgid "This action cannot be undone"
 msgstr ""
 
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
+msgstr ""
+
+msgid "This is your last card. If you block it, you will need to contact support for a replacement."
 msgstr ""
 
 msgid "This merchant is not registered to receive Points payments."
@@ -1197,11 +1218,6 @@ msgstr ""
 msgid "Welcome to Cryptocity Points"
 msgstr "Bienvenido a los Puntos Criptociudad"
 
-#, fuzzy
-#| msgid "Welcome to Nimiq Pay"
-msgid "Welcome to Nimiq Pay"
-msgstr "Bienvenido a Nimiq Pay"
-
 msgid "What do you want to do?"
 msgstr "¿Qué deseas hacer?"
 
@@ -1308,6 +1324,9 @@ msgstr "¡Tienes una recompensa por reclamar!"
 msgid "You have chosen \"{selected}\"."
 msgstr "Has elegido \"{selected}\"."
 
+msgid "You have reached your daily spending limit"
+msgstr ""
+
 msgid "You received Cryptocity Points"
 msgstr "Has recibido Puntos Criptociudad"
 
@@ -1334,8 +1353,31 @@ msgstr "Tu saldo de NIM aún no está disponible. Solo puedes pagar con Puntos."
 msgid "Your number"
 msgstr "Tu número"
 
-msgid "Your wallet is ready to use"
-msgstr "Tu billetera está lista para usar"
+#~ msgid "All transactions"
+#~ msgstr "Todas las transacciones"
+
+#~ msgid "No transactions found for \"{searchQuery}\""
+#~ msgstr "No se encontraron transacciones para \"{searchQuery}\""
+
+#~ msgid "Reset search"
+#~ msgstr "Reiniciar búsqueda"
+
+#~ msgid "Search"
+#~ msgstr "Buscar"
+
+#~ msgid "See all"
+#~ msgstr "Ver todo"
+
+#~ msgid "Find places that accept crypto!"
+#~ msgstr "¡Encuentra lugares que acepten cripto!"
+
+#, fuzzy
+#~| msgid "Welcome to Nimiq Pay"
+#~ msgid "Welcome to Nimiq Pay"
+#~ msgstr "Bienvenido a Nimiq Pay"
+
+#~ msgid "Your wallet is ready to use"
+#~ msgstr "Tu billetera está lista para usar"
 
 #, fuzzy
 #~| msgid "Pay with Bluecode"

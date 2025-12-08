@@ -14,12 +14,12 @@ msgstr ""
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:72
+#: src/modals/MenuModal.vue:73
 msgid "About"
 msgstr ""
 
-#: src/modals/MenuModal.vue:51
-#: src/views/HomeView.vue:219
+#: src/modals/MenuModal.vue:52
+#: src/views/HomeView.vue:102
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -27,7 +27,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:212
+#: src/views/HomeView.vue:95
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -37,6 +37,10 @@ msgstr ""
 
 #: src/components/WithdrawalAddressList.vue:15
 msgid "Add another address"
+msgstr ""
+
+#: src/components/naka/NakaCardManagement.vue:17
+msgid "Add new card"
 msgstr ""
 
 #: src/components/AddressDisplay.vue:36
@@ -60,10 +64,6 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:38
 msgid "All"
-msgstr ""
-
-#: src/components/TransactionList.vue:4
-msgid "All transactions"
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:108
@@ -98,7 +98,7 @@ msgstr ""
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
-#: src/modals/MenuModal.vue:56
+#: src/modals/MenuModal.vue:57
 msgid "App Settings"
 msgstr ""
 
@@ -107,7 +107,7 @@ msgid "Are you sure you want to log out?"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:67
+#: src/modals/MenuModal.vue:68
 msgid "Backup Account"
 msgstr ""
 
@@ -139,16 +139,16 @@ msgstr ""
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
-#: src/components/naka/NakaCardDelete.vue:7
+#: src/components/naka/NakaCardDelete.vue:10
 msgid "Block"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:105
+#: src/components/naka/NakaCardManagement.vue:107
 #: src/lib/flows/steps.ts:681
 msgid "Block card"
 msgstr ""
 
-#: src/components/naka/NakaCard.vue:43
+#: src/components/naka/NakaCard.vue:49
 msgid "Blocked"
 msgstr ""
 
@@ -205,15 +205,15 @@ msgstr ""
 msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
 msgstr ""
 
-#: src/components/naka/NakaCardDelete.vue:28
+#: src/components/naka/NakaCardDelete.vue:29
 msgid "Card blocked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:75
+#: src/components/naka/NakaCardManagement.vue:85
 msgid "Card locked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:88
+#: src/components/naka/NakaCardManagement.vue:98
 msgid "Card unlocked"
 msgstr ""
 
@@ -227,6 +227,10 @@ msgstr ""
 
 #: src/modals/SettingsModal.vue:66
 msgid "Change PIN"
+msgstr ""
+
+#: src/modals/SecretFeaturesModal.vue:10
+msgid "Check"
 msgstr ""
 
 #: src/lib/flows/steps.ts:91
@@ -328,7 +332,7 @@ msgstr ""
 msgid "Currency"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:26
+#: src/components/naka/NakaCardManagement.vue:28
 msgid "Daily limit"
 msgstr ""
 
@@ -384,6 +388,10 @@ msgstr ""
 
 #: src/components/NimAddressInput.vue:5
 msgid "Enter Address"
+msgstr ""
+
+#: src/modals/SecretFeaturesModal.vue:4
+msgid "Enter feature password"
 msgstr ""
 
 #: src/components/QRScanner.vue:59
@@ -456,7 +464,7 @@ msgid "Error while topping up deposit"
 msgstr ""
 
 #: src/modals/LongTimeNoSeeModal.vue:21
-#: src/views/HomeView.vue:171
+#: src/views/MainView.vue:41
 msgid "Establishing consensus"
 msgstr ""
 
@@ -497,7 +505,7 @@ msgstr ""
 msgid "Failed to fetch payment request"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:310
+#: src/components/naka/HoldNakaCardToReader.vue:309
 msgid "Failed to set app as preferred NFC service: {error}"
 msgstr ""
 
@@ -507,10 +515,6 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:33
 msgid "Fees may apply {fee}"
-msgstr ""
-
-#: src/views/HomeView.vue:107
-msgid "Find places that accept crypto!"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:34
@@ -580,6 +584,10 @@ msgstr ""
 msgid "Insufficient balance"
 msgstr ""
 
+#: src/lib/issuer-websocket.ts:69
+msgid "Insufficient balance for this payment"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:104
 msgid "Insufficient funds"
 msgstr ""
@@ -603,6 +611,10 @@ msgstr ""
 
 #: src/composables/useBitcoinLightning.ts:44
 msgid "Invalid callback URL"
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:67
+msgid "Invalid card signature. Please try again"
 msgstr ""
 
 #: src/composables/useStringParser.ts:163
@@ -693,6 +705,10 @@ msgstr ""
 msgid "Invalid recovery words"
 msgstr ""
 
+#: src/lib/issuer-websocket.ts:65
+msgid "Invalid signature. Please try again"
+msgstr ""
+
 #: src/lib/tx.ts:85
 msgid "Invalid swap hash"
 msgstr ""
@@ -711,7 +727,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:52
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:98
+#: src/views/HomeView.vue:84
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -725,6 +741,10 @@ msgstr ""
 
 #: src/components/naka/NakaOnboardingVerifyId.vue:72
 msgid "KYC verification in progress, we will notify you once it is completed."
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:73
+msgid "KYC verification required to complete this payment"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:15
@@ -759,7 +779,7 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:98
+#: src/components/naka/NakaCardManagement.vue:100
 msgid "Lock card"
 msgstr ""
 
@@ -769,7 +789,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:78
+#: src/modals/MenuModal.vue:79
 msgid "Log Out"
 msgstr ""
 
@@ -789,7 +809,7 @@ msgstr ""
 msgid "NAKA Card"
 msgstr ""
 
-#: src/modals/MenuModal.vue:44
+#: src/modals/MenuModal.vue:45
 msgid "NAKA Support"
 msgstr ""
 
@@ -809,11 +829,11 @@ msgstr ""
 msgid "New"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:304
+#: src/components/naka/HoldNakaCardToReader.vue:303
 msgid "NFC is not enabled"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:297
+#: src/components/naka/HoldNakaCardToReader.vue:296
 #: src/components/naka/HoldNakaCardToReader.vue:65
 msgid "NFC is not supported on this device"
 msgstr ""
@@ -888,10 +908,6 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/components/TransactionList.vue:11
-msgid "No transactions found for \"{searchQuery}\""
-msgstr ""
-
 #: src/composables/useGoCryptoMonitoring.ts:103
 msgid "Not a pending payment request"
 msgstr ""
@@ -909,7 +925,7 @@ msgid "Only {count} out of {total} remaining."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:104
-#: src/views/HomeView.vue:164
+#: src/components/TheHomeFooter.vue:19
 msgid "Pay"
 msgstr ""
 
@@ -958,17 +974,21 @@ msgstr ""
 msgid "Payment is being processed"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:51
+#: src/components/naka/NakaCardManagement.vue:53
 msgid "Payment limit"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:22
+#: src/components/naka/NakaCardManagement.vue:24
 msgid "Payment limits"
 msgstr ""
 
 #: src/lib/flows/steps.ts:459
 #: src/lib/flows/steps.ts:471
 msgid "Payment preview"
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:75
+msgid "Payment rejected due to unknown reason"
 msgstr ""
 
 #: src/components/PaymentRequestDetectedNotification.vue:12
@@ -1083,7 +1103,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/MainView.vue:83
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1132,7 +1152,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/views/HomeView.vue:220
+#: src/views/HomeView.vue:103
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1140,16 +1160,12 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/components/TransactionList.vue:17
-msgid "Reset search"
-msgstr ""
-
 #: src/composables/useNotifications.ts:139
 msgid "Rewards Notifications"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:46
-#: src/components/naka/NakaCardManagement.vue:71
+#: src/components/naka/NakaCardManagement.vue:48
+#: src/components/naka/NakaCardManagement.vue:73
 msgid "save"
 msgstr ""
 
@@ -1184,16 +1200,8 @@ msgstr ""
 msgid "Scan the QR code to send NIM to this address"
 msgstr ""
 
-#: src/components/TransactionList.vue:8
-msgid "Search"
-msgstr ""
-
 #: src/components/CountrySelectModal.vue:17
 msgid "Search for a country"
-msgstr ""
-
-#: src/views/HomeView.vue:50
-msgid "See all"
 msgstr ""
 
 #: src/components/ValidateWords.vue:31
@@ -1225,11 +1233,11 @@ msgid "Send NIM to top up"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:102
-#: src/views/HomeView.vue:100
+#: src/views/MainView.vue:74
 msgid "Server not available"
 msgstr ""
 
-#: src/modals/MenuModal.vue:62
+#: src/modals/MenuModal.vue:63
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1324,7 +1332,7 @@ msgstr ""
 msgid "Store screenshot safely"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:80
+#: src/components/naka/NakaCardManagement.vue:82
 msgid "Support"
 msgstr ""
 
@@ -1332,11 +1340,11 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:211
+#: src/views/HomeView.vue:94
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:87
+#: src/components/naka/NakaCardManagement.vue:89
 #: src/components/naka/NakaOnboardingVerifyId.vue:10
 msgid "Terms & Conditions"
 msgstr ""
@@ -1355,6 +1363,14 @@ msgstr ""
 
 #: src/components/ValidateWords.vue:20
 msgid "The correct answer is \"{correct}\"."
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:71
+msgid "The exchange rate is unfavorable. Please try again later"
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:61
+msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
 #: src/lib/flows/index.ts:453
@@ -1392,6 +1408,10 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:21
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
+msgstr ""
+
+#: src/components/naka/NakaCardDelete.vue:7
+msgid "This is your last card. If you block it, you will need to contact support for a replacement."
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:69
@@ -1475,7 +1495,7 @@ msgstr ""
 msgid "Unknown error"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:101
+#: src/components/naka/NakaCardManagement.vue:103
 msgid "Unlock card"
 msgstr ""
 
@@ -1526,10 +1546,6 @@ msgstr ""
 
 #: src/components/OnBoardingScreen.vue:22
 msgid "Welcome to Cryptocity Points"
-msgstr ""
-
-#: src/composables/useNotifications.ts:53
-msgid "Welcome to Nimiq Pay"
 msgstr ""
 
 #: src/components/ValidateWords.vue:23
@@ -1655,12 +1671,16 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/views/HomeView.vue:225
+#: src/views/HomeView.vue:108
 msgid "You have a reward to claim!"
 msgstr ""
 
 #: src/components/ValidateWords.vue:17
 msgid "You have chosen \"{selected}\"."
+msgstr ""
+
+#: src/lib/issuer-websocket.ts:63
+msgid "You have reached your daily spending limit"
 msgstr ""
 
 #: src/modals/TaskModal.vue:117
@@ -1693,8 +1713,4 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:9
 msgid "Your number"
-msgstr ""
-
-#: src/composables/useNotifications.ts:54
-msgid "Your wallet is ready to use"
 msgstr ""
