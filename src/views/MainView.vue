@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import type { Ref } from 'vue'
 import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonPage, IonRouterOutlet, IonTabs } from '@ionic/vue'
-import { refDebounced, refThrottled, until, useElementSize, useSwipe } from '@vueuse/core'
+import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
 import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
@@ -51,8 +50,6 @@ const { checkKycInBackground } = useKyc()
 
 const isFirstRender = ref(true)
 
-const footerRef: Ref<HTMLIonFooterElement | undefined> = ref()
-const footerHeight = useElementSize(footerRef).height
 const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value)
 
 const isConsensusMessageShown = computed(() => consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value))
@@ -223,8 +220,7 @@ App.addListener('resume', detectPaymentRequest)
       <IonRouterOutlet v-show="!isScannerActive" />
       <!-- Floating notifications -->
       <div
-        class="absolute left-0 w-full"
-        :style="{ bottom: `${footerHeight}px` }"
+        class="absolute left-0 w-full bottom-0"
       >
         <!-- Payment Request from Clipboard -->
         <Transition name="slide-left" style="--slide-left-distance: 100vw">

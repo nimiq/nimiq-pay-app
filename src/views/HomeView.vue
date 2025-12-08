@@ -48,7 +48,6 @@ const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
-const contentRef = useTemplateRef('contentRef')
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
@@ -169,7 +168,7 @@ onMounted(() => {
         </IonButtons>
       </IonToolbar>
     </IonHeader>
-    <IonContent ref="contentRef" class="ion-padding scroll-smooth">
+    <IonContent class="ion-padding scroll-smooth">
       <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
         <IonRefresherContent />
       </IonRefresher>
