@@ -3,7 +3,7 @@ import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
-import { computedAsync, onLongPress } from '@vueuse/core'
+import { computedAsync, onLongPress, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { onBeforeMount, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -70,6 +70,24 @@ function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDeta
     showModal(Modal.EnableBiometric, { isOnTop: true })
   else
     isBiometricEnabled.value = false
+}
+
+const clickCount = ref(0)
+const { start: startClickTimer, stop: stopClickTimer } = useTimeoutFn(() => {
+  clickCount.value = 0
+}, 2000, { immediate: false })
+
+function handleVersionClick() {
+  startClickTimer()
+
+  clickCount.value++
+
+  if (clickCount.value >= 5) {
+    logger.log('Opening Secret Features Modal')
+    clickCount.value = 0
+    stopClickTimer()
+    showModal(Modal.SecretFeatures)
+  }
 }
 
 onLongPress(
@@ -153,7 +171,7 @@ onBeforeMount(updateBiometryInfo)
           <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
         </IonItem>
       </IonList>
-      <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60">v{{ appVersion }}</code>
+      <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60" @click="handleVersionClick">v{{ appVersion }}</code>
     </div>
   </ModalTemplate>
 </template>

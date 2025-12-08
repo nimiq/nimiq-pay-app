@@ -22,6 +22,7 @@ import { debounceDelay, debounceMaxWait } from '@/lib'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useGeoIp } from '@/stores/geoip'
 import { useKyc } from '@/stores/kyc'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -44,7 +45,8 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
-const { updateUser: updateNakaUser } = useNaka()
+const { updateUser: updateNakaUser, isCountryNakaSupported } = useNaka()
+const { isNakaAvailable } = storeToRefs(useNaka())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { checkKycInBackground } = useKyc()
 
@@ -193,6 +195,16 @@ onMounted(async () => {
     await router.replace('/pin')
     return
   }
+
+  // Check if NAKA is available in this region
+  // const { country } = await useGeoIp().locate(ip)
+  // if (country)
+  //   isNakaAvailable.value = isCountryNakaSupported(country)
+  // Getting IP first to store it in cache
+  const ip = await useGeoIp().getIp()
+  const { countryCode } = await useGeoIp().locate(ip)
+  if (countryCode)
+    isNakaAvailable.value = isCountryNakaSupported(countryCode)
 
   updateNakaUser() // Fire and forget
   await updatePointsStatus()

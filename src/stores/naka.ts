@@ -126,6 +126,7 @@ export interface NakaRegistration {
 }
 
 export const useNaka = defineStore('naka', () => {
+  const isNakaAvailable = ref(false)
   const { isAppStarting } = storeToRefs(useLocks())
   const { getAllNakaCards, insertNakaCard, purgeNakaCards } = useNakaDb()
 
@@ -405,7 +406,30 @@ export const useNaka = defineStore('naka', () => {
     await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
   }
 
+  function isCountryNakaSupported(countryCode: string): boolean {
+    const supportedCountries = [
+      // Europe
+      'CH', // Switzerland
+      'AT', // Austria
+      'DE', // Germany
+      'FR', // France
+      'IT', // Italy
+      'LI', // Liechtenstein
+      'MC', // Monaco
+      // Latin America
+      'SV', // El Salvador
+      'PA', // Panama
+      'CR', // Costa Rica
+      'NI', // Nicaragua
+      'GT', // Guatemala
+    ]
+    return supportedCountries.includes(countryCode.toUpperCase())
+  }
+
   return {
+    isNakaAvailable,
+    isCountryNakaSupported,
+
     registration,
     setRegistration,
     card,

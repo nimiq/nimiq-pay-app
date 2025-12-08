@@ -34,7 +34,7 @@ function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
 
-const { hasCard, registration } = storeToRefs(useNaka())
+const { hasCard, registration, isNakaAvailable } = storeToRefs(useNaka())
 
 function openLiveChat() {
   liveChatEnabled.value = true
@@ -73,7 +73,7 @@ onLongPress(
     />
 
     <!-- TODO: Remove this when not needed anymore -->
-    <span v-if="isNakaEnabled || (!phoneNumberVerified && isCampaignActive)" class="uppercase text-space/60 font-bold text-sm mt-6">
+    <span v-if="(isNakaEnabled && (isNakaAvailable || registration?.nakaIdentification)) || (!phoneNumberVerified && isCampaignActive)" class="uppercase text-space/60 font-bold text-sm mt-6">
       {{ $t('Payments') }}
     </span>
 
@@ -84,13 +84,14 @@ onLongPress(
       @click="initializeFlow(FlowName.NakaCardManagement)"
     />
     <MenuItem
-      v-else-if="isNakaEnabled"
+      v-else-if="isNakaEnabled && isNakaAvailable"
       :icon="CreditCardIcon"
       :title="$t('Activate NAKA Card')"
       @click="initializeFlow(FlowName.NakaOnboarding)"
     />
+    <!-- Show Support only if KYC has been started -->
     <MenuItem
-      v-if="registration"
+      v-if="registration?.nakaIdentification"
       :icon="LiveChatIcon"
       :title="$t('NAKA Support')"
       @click="openLiveChat"

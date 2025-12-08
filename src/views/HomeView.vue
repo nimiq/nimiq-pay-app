@@ -44,7 +44,7 @@ const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
-const { hasCard: hasNakaCard } = storeToRefs(useNaka())
+const { hasCard: hasNakaCard, isNakaAvailable } = storeToRefs(useNaka())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
@@ -88,7 +88,7 @@ async function handleRefresh(event: CustomEvent) {
   event.detail.complete()
 }
 
-watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus], () => {
+watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus, isNakaAvailable], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
     get title() { return i18n.t('Tap to pay with NAKA!') },
@@ -126,7 +126,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled)
+  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled && isNakaAvailable.value)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
