@@ -18,7 +18,7 @@ const { showAnimations } = storeToRefs(useApp())
 const { transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
 
-const MAX_TRANSACTIONS = 3
+const MAX_TRANSACTIONS = 4
 const showSingleTxSkeleton = computed(() => isConsensusNeeded.value && consensus.value !== 'established')
 const showSingleTxSkeletonDebounced = refDebounced(showSingleTxSkeleton, debounceDelay, { maxWait: debounceMaxWait })
 const maxTransactions = computed(() => showSingleTxSkeletonDebounced.value ? MAX_TRANSACTIONS - 1 : MAX_TRANSACTIONS)

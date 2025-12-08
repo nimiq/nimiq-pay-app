@@ -5,9 +5,27 @@ import PinView from '@/views/PinView.vue'
 // TODO: Add animations
 // https://ionicframework.com/docs/vue/navigation#navigating-using-useionrouter
 const routes: Array<RouteRecordRaw> = [
-  // { path: '/', redirect: '/pin' },
   { path: '/pin', name: 'Pin', component: PinView },
-  { path: '/app', name: 'Home', component: () => import('@/views/HomeView.vue') },
+  {
+    path: '/app/',
+    component: () => import('@/views/MainView.vue'),
+    children: [
+      {
+        path: '',
+        redirect: '/app/home',
+      },
+      {
+        path: 'home',
+        name: 'Home',
+        component: () => import('@/views/HomeView.vue'),
+      },
+      {
+        path: 'map',
+        name: 'Map',
+        component: () => import('@/views/MapView.vue'),
+      },
+    ],
+  },
   { path: '/setup', name: 'Setup', component: () => import('@/views/SetupView.vue') },
 ]
 

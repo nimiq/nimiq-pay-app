@@ -48,12 +48,12 @@ const localNotificationsArray: Ref<LocalNotification[]> = ref([
   //   get subtitle() { return i18n.t('This is an early beta version, please report any bugs and remember to backup your words') },
   //   action: () => logger.log('Notification Card 2 clicked'),
   // },
-  {
-    id: 'welcome-message',
-    get title() { return i18n.t('Welcome to Nimiq Pay') },
-    get subtitle() { return i18n.t('Your wallet is ready to use') },
-    // action: () => initializeFlow(FlowName.OnBoardingPoints),
-  },
+  // {
+  //   id: 'welcome-message',
+  //   get title() { return i18n.t('Welcome to Nimiq Pay') },
+  //   get subtitle() { return i18n.t('Your wallet is ready to use') },
+  //   // action: () => initializeFlow(FlowName.OnBoardingPoints),
+  // },
 ])
 
 export function useNotifications() {

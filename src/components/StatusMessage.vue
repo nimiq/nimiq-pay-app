@@ -3,7 +3,7 @@ import InfoIcon from '@/components/icons/info.vue'
 
 defineProps({
   message: { type: String, required: true },
-  bgColor: { type: String, default: 'bg-pumpkin/15' },
+  bgColor: { type: String, default: 'bg-[#F9EDE1]' },
   textColor: { type: String, default: 'text-pumpkin' },
   iconColor: { type: String, default: 'text-pumpkin/60' },
   iconSize: { type: String, default: 'size-4' },
