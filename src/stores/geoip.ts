@@ -74,9 +74,7 @@ export const useGeoIp = defineStore('geoip', () => {
   // }
 
   async function locate(host = ''): Promise<GeoIpResponse> {
-    console.log('[GeoIP] locate called for host:', host)
     const cachedResponse = cached(host)
-    console.log('[GeoIP] Cached response:', cachedResponse)
     if (cachedResponse) {
       latestCheck.value = cachedResponse
       return cachedResponse
@@ -91,7 +89,7 @@ export const useGeoIp = defineStore('geoip', () => {
     else {
       cache(host, response)
     }
-    console.log('[GeoIP] Fetched response:', response)
+
     latestCheck.value = response
     return response
   }
