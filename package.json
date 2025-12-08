@@ -1,7 +1,7 @@
 {
   "name": "nimiq-pay",
   "type": "module",
-  "version": "2.6.8",
+  "version": "2.7.0",
   "private": true,
   "description": "An Ionic project",
   "scripts": {
