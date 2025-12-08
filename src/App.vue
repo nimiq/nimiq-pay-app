@@ -5,7 +5,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { CameraPreview } from '@capgo/camera-preview'
-import { IonApp, IonFab, IonFabButton, IonIcon } from '@ionic/vue'
+import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
@@ -107,7 +107,7 @@ App.addListener('resume', async () => {
 
 <template>
   <IonApp>
-    <RouterView />
+    <IonRouterOutlet />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
       <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">

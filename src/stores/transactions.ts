@@ -5,7 +5,7 @@ import type { DbPagination } from '@/lib/sql-queries'
 import type { AsyncResult } from '@/types'
 import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, readonly, ref } from 'vue'
+import { computed, onMounted, readonly, shallowRef } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
 
@@ -46,7 +46,7 @@ export const useTransactions = defineStore('transactions', () => {
   const { updateActiveRemoteBalance } = useRemoteSigner()
   const { remoteBalance } = storeToRefs(useRemoteSigner())
 
-  const transactions = ref<ExternalTransaction[]>([])
+  const transactions = shallowRef<ExternalTransaction[]>([])
 
   /**
    * Select transactions from the database using a basic pagination system. Loads the newest transactions first.
@@ -222,7 +222,8 @@ export const useTransactions = defineStore('transactions', () => {
     await upsertTx(tx)
 
     if (isExternalTx(tx))
-      transactions.value.unshift(tx)
+      // Not using unshift to keep reactivity
+      transactions.value = [tx, ...transactions.value]
 
     if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
       // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one

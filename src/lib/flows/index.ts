@@ -570,6 +570,7 @@ interface InitializeFlowOptions {
    * @default 'h-full'
    */
   height?: flowHeightOptions
+  isFullscreen?: boolean
   preventSwipe?: boolean
   isOnTop?: boolean
 }
@@ -579,7 +580,7 @@ interface InitializeFlowOptions {
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
-  const { initialState, height = 'h-full', preventSwipe = false, isOnTop = false } = options
+  const { initialState, height = 'h-full', isFullscreen = false, preventSwipe = false, isOnTop = false } = options
 
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   if (!isOnTop)
@@ -651,9 +652,13 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
       }
       return true
     },
-    initialBreakpoint: 1,
-    breakpoints: [0, 1],
+    initialBreakpoint: isFullscreen ? undefined : 1,
+    breakpoints: isFullscreen ? undefined : [0, 1],
   })
+  if (isFullscreen) {
+    modal.style.setProperty('--border-radius', '0')
+  }
+
   await modal.present()
   return modal
 }
