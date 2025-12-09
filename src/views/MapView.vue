@@ -18,7 +18,7 @@ const mapUrl = computed(() => {
   <IonPage>
     <IonContent :force-overscroll="false" :scroll-x="false" :scroll-y="false">
       <!-- eslint-disable-next-line vue/html-self-closing -- self closing iframe is invalid html which the i18n extractor can't parse -->
-      <iframe class="h-full w-screen absolute" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" :src="mapUrl"></iframe>
+      <iframe class="fullscreen-iframe absolute" sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation" :src="mapUrl"></iframe>
     </IonContent>
   </IonPage>
 </template>
@@ -26,5 +26,11 @@ const mapUrl = computed(() => {
 <style scoped>
 ion-content::part(scroll) {
   padding-top: var(--ion-safe-area-top, 0);
+}
+
+.fullscreen-iframe {
+  height: 100%;
+  height: -webkit-fill-available;
+  width: 100vw;
 }
 </style>
