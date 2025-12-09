@@ -202,9 +202,10 @@ onMounted(async () => {
   //   isNakaAvailable.value = isCountryNakaSupported(country)
   // Getting IP first to store it in cache
   const ip = await useGeoIp().getIp()
-  const { countryCode } = await useGeoIp().locate(ip)
-  if (countryCode)
-    isNakaAvailable.value = isCountryNakaSupported(countryCode)
+  const response = await useGeoIp().locate(ip)
+
+  if ('country_code' in response)
+    isNakaAvailable.value = isCountryNakaSupported(response.country_code)
 
   updateNakaUser() // Fire and forget
   await updatePointsStatus()

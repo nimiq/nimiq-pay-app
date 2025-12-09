@@ -16,14 +16,17 @@ const logger = useLogger('geoip')
 //   city_names?: { [language: string]: string }
 // }
 
-export interface GeoIpResponse {
-  status: 'success' | 'fail'
-  message?: string
-  countryCode?: string
-  lat?: number
-  lon?: number
-  query?: string
+interface GeoIpSuccess {
+  ip: string
+  country_code: string
 }
+
+interface GeoIpError {
+  error: boolean
+  reason: string
+}
+
+export type GeoIpResponse = GeoIpSuccess | GeoIpError
 
 const CACHE_MAX_SIZE = 1000
 const serializer = {
@@ -73,24 +76,23 @@ export const useGeoIp = defineStore('geoip', () => {
   //   return response
   // }
 
-  async function locate(host = ''): Promise<GeoIpResponse> {
+  async function locate(host: string): Promise<GeoIpResponse> {
     const cachedResponse = cached(host)
     if (cachedResponse) {
       latestCheck.value = cachedResponse
       return cachedResponse
     }
 
-    const url = `http://ip-api.com/json/${host ? `${host}` : ''}?fields=status,message,countryCode,lat,lon,query`
+    const url = `https://ipapi.co/${host}/json/`
 
     const response: GeoIpResponse = await fetch(url).then(res => res.json())
-    if (response.status !== 'success') {
-      logger.error('Fetch failed with message:', response.message)
+    if ('error' in response) {
+      logger.warn(`GeoIP lookup failed for host ${host}: ${response.reason}`)
     }
     else {
       cache(host, response)
+      latestCheck.value = response
     }
-
-    latestCheck.value = response
     return response
   }
 
