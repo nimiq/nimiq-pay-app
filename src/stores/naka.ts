@@ -1,4 +1,4 @@
-import type { NakaCard as ApiNakaCard, Identification, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
+import type { NakaCard as ApiNakaCard, Identification, NakaRegistrationResponse, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import type { Fiat } from '@/stores/app'
 import { until, useStorageAsync } from '@vueuse/core'
 import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
@@ -18,7 +18,7 @@ import { Rail } from '@/types/transactions'
 
 const logger = useLogger('useNaka')
 
-const { changeNakaCardPin, getNakaCardPinChangeToken, getUserStatus, registerForNaka } = useIssuerRestApi()
+const { changeNakaCardPin, getNakaCardPinChangeToken, getUserStatus, registerForNaka, issueCard } = useIssuerRestApi()
 
 export interface CardExpiry {
   year: number
@@ -326,6 +326,15 @@ export const useNaka = defineStore('naka', () => {
    */
   async function setupCard(user: UserStatusResponse) {
     const registration = await registerForNaka() // Only passes when the user has a VERIFIED identification
+    return updateRegistration(user, registration)
+  }
+
+  async function issueNewCard(user: UserStatusResponse) {
+    const registration = await issueCard()
+    return updateRegistration(user, registration)
+  }
+
+  async function updateRegistration(user: UserStatusResponse, registration: NakaRegistrationResponse) {
     const { setRegistration, setCard } = useNaka()
     setRegistration({
       state: user.state,
@@ -435,6 +444,7 @@ export const useNaka = defineStore('naka', () => {
     card,
     setCard,
     setupCard,
+    issueNewCard,
     updateUser,
     reset,
     hasCard,

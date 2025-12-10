@@ -194,6 +194,10 @@ export function useIssuerRestApi() {
     return api('/naka/register', 'POST', '', NakaRegistrationResponseSchema)
   }
 
+  async function issueCard(): Promise<NakaRegistrationResponse> {
+    return api('/naka/issue-card', 'POST', '', NakaRegistrationResponseSchema)
+  }
+
   async function getSecretData(cardId: string, publicKey: string): Promise<NakaEncryptedCardDataResponse> {
     const body = JSON.stringify({
       publicKey,
@@ -230,6 +234,7 @@ export function useIssuerRestApi() {
     getNakaIdentificationToken,
     getNakaIdentificationById,
     registerForNaka,
+    issueCard,
     getSecretData,
     createFakeIdentification,
     lockNakaCard,
