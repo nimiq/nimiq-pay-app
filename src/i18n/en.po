@@ -1455,7 +1455,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:152
+#: src/stores/transactions.ts:153
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1463,11 +1463,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:171
+#: src/stores/transactions.ts:172
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:206
+#: src/stores/transactions.ts:207
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
