@@ -15,7 +15,7 @@ import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning
 import { useFastspotApiV1 } from '../composables/useFastspotv1'
 
 const logger = useLogger('tx.ts')
-const { networkId } = storeToRefs(useNimiqNetwork())
+const { networkId, height } = storeToRefs(useNimiqNetwork())
 
 /**
  * Signs any transaction in the wallet.
@@ -351,7 +351,7 @@ export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
  * @returns The height at which the validity of the transaction starts
  */
 function getValidityStartHeight() {
-  return useRemoteSigner().remoteHeight + 1
+  return Math.max(useRemoteSigner().remoteHeight, height.value) + 1
 }
 
 export function toAccountType(type: 'basic' | 'vesting' | 'htlc' | 'staking'): AccountType {

@@ -25,7 +25,7 @@ const logger = useLogger('DevModal')
 const router = useRouter()
 const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
-const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired } = storeToRefs(useRemoteSigner())
+const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(useRemoteSigner())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
@@ -139,6 +139,7 @@ onMounted(async () => {
         <IonCardTitle>Remote Wallet</IonCardTitle>
       </IonCardHeader>
       <IonCardContent>
+        <p>Remote Height: <strong>{{ remoteHeight }}</strong></p>
         <p @click="() => writeToClipboard(remoteAddress?.toUserFriendlyAddress() || '')">
           Address: <code>{{ remoteAddress?.toUserFriendlyAddress() }}</code>
         </p>

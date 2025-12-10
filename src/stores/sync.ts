@@ -125,7 +125,7 @@ export const useSync = defineStore('sync', () => {
   }
 
   async function extendValidity() {
-    if (remoteBalance.value === 0 || !isHtlcActive.value)
+    if (remoteBalance.value === 0 || !isHtlcActive.value || remoteHeight.value === -1)
       return
     logger.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
     if (htlcCanBeExtended.value) {
@@ -990,7 +990,7 @@ export const useSync = defineStore('sync', () => {
       logger.log('Nodes are synced. Stopping reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPendingReconnectNetwork.value })
       stopReconnectNetwork()
     }
-    else if (!synced && !isPendingReconnectNetwork.value && localHeight.value !== -1) {
+    else if (!synced && !isPendingReconnectNetwork.value && localHeight.value !== -1 && remoteHeight.value !== -1) {
       logger.log('Nodes are not synced. Starting reconnect network timeout', { localHeight: localHeight.value, remoteHeight: remoteHeight.value, synced, isPending: isPendingReconnectNetwork.value })
       startReconnectNetwork()
     }

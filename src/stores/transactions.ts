@@ -119,7 +119,8 @@ export const useTransactions = defineStore('transactions', () => {
       logger.error('Error while signing transaction', res.error)
       return res
     }
-    logger.log('✈️ Signed transaction', res.data)
+    // TODO: check if tx is valid before continuing
+    logger.log('✈️ Signed transaction', { signedTx: res.data!.signedTx.toPlain(), isValid: res.data!.signedTx.toPlain().valid, swap: res.data!.swap, txSent: res.data!.txSent })
     const { signedTx, swap } = res.data!
 
     let patchedSwap: Promise<Swap> | undefined
