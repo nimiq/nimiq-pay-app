@@ -12,6 +12,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { isDev } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
@@ -229,7 +230,7 @@ async function handleCreateNewCard() {
       </IonItem>
     </IonList>
 
-    <QuickButton show-chevron center class="mt-auto" @click="resetNaka">
+    <QuickButton v-if="isDev" show-chevron center class="mt-auto" @click="resetNaka">
       DEV: Reset NAKA
     </QuickButton>
 
