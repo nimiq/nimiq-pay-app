@@ -182,7 +182,7 @@ const remoteSignerWsApi = (function () {
   const { data, send } = useWebSocket<string>(baseCosignerUrl, {
     autoReconnect: true,
     heartbeat: {
-      interval: isDev ? 10e3 : 1e3,
+      interval: isDev ? 10e3 : 5e3,
     },
     onConnected(ws) {
       logger.log('[remoteSignerWsApi] Connected:', ws.url)
