@@ -29,7 +29,7 @@ const logger = useLogger('NakaCardManagement.vue')
 
 const { selectedFiat } = storeToRefs(useApp())
 const { card, dailyLimit, paymentLimit, isCardActive, isCardLocked, isCardBlocked } = storeToRefs(useNaka())
-const { setupCard } = useNaka()
+const { issueNewCard } = useNaka()
 const { getUserStatus } = useIssuerRestApi()
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
@@ -119,10 +119,13 @@ async function handleCreateNewCard() {
   logger.log('Creating new card')
   try {
     const user = await getUserStatus()
-    if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
+    if (user.identifications.find(identification => identification.provider === 'NAKA-SUMSUB' && identification.status === 'VERIFIED')) {
       evaluatingCardData.value = true
-      await setupCard(user)
+      await issueNewCard(user)
       evaluatingCardData.value = false
+    }
+    else {
+      throw new Error(i18n.t('Identification is not verified. Please contact support.'))
     }
   }
   catch (error) {
