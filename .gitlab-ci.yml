@@ -26,6 +26,8 @@ build-web:
     - corepack enable
     - corepack prepare pnpm@latest-8 --activate
     - pnpm config set store-dir .pnpm-store
+    - echo "@nimiq:registry=https://scm.nim.team/api/v4/packages/npm/" > .npmrc
+    - echo "//scm.nim.team/api/v4/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
   cache:
     key:
       files:

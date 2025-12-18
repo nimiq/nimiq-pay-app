@@ -52,3 +52,4 @@ builds/ios/bundle/*
 google-service-account.json
 
 ./components.d.ts
+.npmrc

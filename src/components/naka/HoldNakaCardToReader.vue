@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
 import { IonButton } from '@ionic/vue'
 import { until, useIntervalFn } from '@vueuse/core'
-import { ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'

@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { HCESdk } from '@apps/capacitor-monetplus-hce'
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
-import { HCESdk } from 'capacitor-monetplus-hce'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'

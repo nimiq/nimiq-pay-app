@@ -1,7 +1,7 @@
 import type { NakaCard as ApiNakaCard, Identification, NakaRegistrationResponse, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import type { Fiat } from '@/stores/app'
+import { Environment, ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
 import { until, useStorageAsync } from '@vueuse/core'
-import { Environment, ErrorType, HCESdk } from 'capacitor-monetplus-hce'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'

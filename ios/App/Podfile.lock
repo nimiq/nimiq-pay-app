@@ -4,6 +4,8 @@ PODS:
   - AparajitaCapacitorSecureStorage (7.1.3):
     - Capacitor
     - KeychainSwift (~> 21.0)
+  - AppsCapacitorMonetplusHce (1.0.10):
+    - Capacitor
   - Capacitor (7.4.3):
     - CapacitorCordova
   - CapacitorApp (7.1.0):
@@ -29,8 +31,6 @@ PODS:
   - CapacitorHaptics (7.0.2):
     - Capacitor
   - CapacitorKeyboard (7.0.3):
-    - Capacitor
-  - CapacitorMonetplusHce (0.0.1):
     - Capacitor
   - CapacitorPreferences (7.0.2):
     - Capacitor
@@ -118,6 +118,7 @@ PODS:
 DEPENDENCIES:
   - "AparajitaCapacitorBiometricAuth (from `../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@9.0.0_@capacitor+core@7.4.3/node_modules/@aparajita/capacitor-biometric-auth`)"
   - "AparajitaCapacitorSecureStorage (from `../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@7.1.3/node_modules/@aparajita/capacitor-secure-storage`)"
+  - "AppsCapacitorMonetplusHce (from `../../node_modules/.pnpm/@apps+capacitor-monetplus-hce@1.0.10_@capacitor+core@7.4.3/node_modules/@apps/capacitor-monetplus-hce`)"
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.3/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/browser`)"
@@ -130,7 +131,6 @@ DEPENDENCIES:
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@7.1.4_@capacitor+core@7.4.3/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/keyboard`)"
-  - CapacitorMonetplusHce (from `../../../capacitor-monetplus-hce`)
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences`)"
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share`)"
@@ -164,6 +164,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@9.0.0_@capacitor+core@7.4.3/node_modules/@aparajita/capacitor-biometric-auth"
   AparajitaCapacitorSecureStorage:
     :path: "../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@7.1.3/node_modules/@aparajita/capacitor-secure-storage"
+  AppsCapacitorMonetplusHce:
+    :path: "../../node_modules/.pnpm/@apps+capacitor-monetplus-hce@1.0.10_@capacitor+core@7.4.3/node_modules/@apps/capacitor-monetplus-hce"
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios"
   CapacitorApp:
@@ -188,8 +190,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/haptics"
   CapacitorKeyboard:
     :path: "../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/keyboard"
-  CapacitorMonetplusHce:
-    :path: "../../../capacitor-monetplus-hce"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
@@ -210,6 +210,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   AparajitaCapacitorBiometricAuth: 77be369942778adf29e20893caa5c0a75e5936fa
   AparajitaCapacitorSecureStorage: 0ee936f927c536e48dada7452c6223fd569f7414
+  AppsCapacitorMonetplusHce: 6833707726d8176121b20be6352819b26b92eedd
   Capacitor: 28d6c01026a9a3f7156529498ec1f389a2a28dbc
   CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
   CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
@@ -222,7 +223,6 @@ SPEC CHECKSUMS:
   CapacitorFilesystem: f9bd850c41e048180e5dc0cbb90f2033ede9d2cc
   CapacitorHaptics: b3fb2869e72c4466e18ce9ccbeb60a3d8723b3d4
   CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
-  CapacitorMonetplusHce: c630f5d12601f291f94f514ea5cad0e778f254c8
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
   CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
   CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
@@ -246,6 +246,6 @@ SPEC CHECKSUMS:
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 7a498f32dc9fbc3d9d427367416d0c2180630d68
+PODFILE CHECKSUM: c13fb092e74ff913973d8cb1651f8c8e89a19c18
 
 COCOAPODS: 1.15.2
