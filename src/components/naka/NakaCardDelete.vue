@@ -14,6 +14,7 @@ defineProps<{ prop1: string }>()
 const emit = defineEmits(stepEmits)
 
 const MAX_BLOCKED_CARDS = 3 // TODO: get this from server
+const { setCard } = useNaka()
 const { card, cardBlockedCount } = storeToRefs(useNaka())
 
 const loading = ref(false)
@@ -24,7 +25,7 @@ async function blockCard() {
   const { blockNakaCard } = useIssuerRestApi()
   loading.value = true
   const apiCard = await blockNakaCard(card.value.sourceId)
-  card.value = nakaCardFromApi(apiCard)
+  setCard(nakaCardFromApi(apiCard))
   useToast().setToast({
     message: i18n.t('Card blocked'),
   })
