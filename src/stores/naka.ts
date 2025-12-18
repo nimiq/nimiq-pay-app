@@ -146,6 +146,14 @@ export const useNaka = defineStore('naka', () => {
     logger.log('setCard', newCard)
     await insertNakaCard(newCard)
     card.value = newCard
+
+    // Set this card as the default for payments
+    if (card.value.hceId) {
+      await HCESdk.setDefaultCard({ cardId: card.value.hceId })
+    }
+    else {
+      logger.warn('Card has no hceId, cannot set as default in SDK', { card: card.value })
+    }
   }
 
   async function reset() {
@@ -374,6 +382,7 @@ export const useNaka = defineStore('naka', () => {
       return
     }
 
+    logger.log('Activating NAKA Card on device', { card })
     // Get encrypted data card from issuer
     const decryptedCard = await getDecryptedNakaCardData(card.value.sourceId)
     if (!decryptedCard) {
@@ -413,6 +422,16 @@ export const useNaka = defineStore('naka', () => {
     if (!cypher)
       return logger.error('Failed to encrypt PIN for NAKA Card')
     await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
+  }
+
+  async function deactivateCardOnDevice() {
+    if (!card.value?.hceId) {
+      logger.log('No NAKA Card activated on device, skipping deactivation')
+      return
+    }
+
+    await HCESdk.deactivateCard({ cardId: card.value.hceId })
+    logger.log('NAKA Card deactivated on device', { card: card.value })
   }
 
   function isCountryNakaSupported(countryCode: string): boolean {
@@ -455,6 +474,7 @@ export const useNaka = defineStore('naka', () => {
     isCardActiveOnDevice,
     init,
     activateCardOnDevice,
+    deactivateCardOnDevice,
 
     dailyLimit,
     setDailyLimit,

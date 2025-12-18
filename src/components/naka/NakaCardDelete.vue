@@ -9,12 +9,10 @@ import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { nakaCardFromApi, useNaka } from '@/stores/naka'
 
-defineProps<{ prop1: string }>()
-
 const emit = defineEmits(stepEmits)
 
 const MAX_BLOCKED_CARDS = 3 // TODO: get this from server
-const { setCard } = useNaka()
+const { setCard, deactivateCardOnDevice } = useNaka()
 const { card, cardBlockedCount } = storeToRefs(useNaka())
 
 const loading = ref(false)
@@ -24,7 +22,11 @@ async function blockCard() {
     return
   const { blockNakaCard } = useIssuerRestApi()
   loading.value = true
+  // Blocking card on server
   const apiCard = await blockNakaCard(card.value.sourceId)
+  // Removing card from device
+  await deactivateCardOnDevice()
+  // Updating store
   setCard(nakaCardFromApi(apiCard))
   useToast().setToast({
     message: i18n.t('Card blocked'),
