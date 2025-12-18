@@ -205,15 +205,15 @@ msgstr ""
 msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
 msgstr ""
 
-#: src/components/naka/NakaCardDelete.vue:29
+#: src/components/naka/NakaCardDelete.vue:32
 msgid "Card blocked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:85
+#: src/components/naka/NakaCardManagement.vue:86
 msgid "Card locked"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:98
+#: src/components/naka/NakaCardManagement.vue:99
 msgid "Card unlocked"
 msgstr ""
 
@@ -565,6 +565,10 @@ msgstr ""
 
 #: src/views/SetupView.vue:28
 msgid "I have a promo code"
+msgstr ""
+
+#: src/components/naka/NakaCardManagement.vue:128
+msgid "Identification is not verified. Please contact support."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:30

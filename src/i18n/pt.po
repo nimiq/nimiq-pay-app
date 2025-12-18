@@ -439,6 +439,9 @@ msgstr ""
 msgid "I have a promo code"
 msgstr "Tenho um código promocional"
 
+msgid "Identification is not verified. Please contact support."
+msgstr ""
+
 msgid "Incl. fees"
 msgstr "Taxas incluídas"
 
