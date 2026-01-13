@@ -66,6 +66,7 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
     InAppBrowser.openWebView({
       url: `${window.location.origin}/alert`,
       toolbarType: ToolBarType.BLANK,
+
     }).catch((err) => {
       logger.error('Failed to open alert modal:', err);
       alert('Could not open the alert modal webview');
@@ -93,6 +94,10 @@ async function openMiniApp() {
     enabledSafeBottomMargin: true,
     useTopInset: true,
     activeNativeNavigationForWebview: true,
+    isPresentAfterPageLoad: true,
+    // TODO: Load file into variable with node:path at build time instead? Would avoid copying the file to /public.
+    preShowScript: await fetch('/web3-provider.js').then(res => res.text()),
+    preShowScriptInjectionTime: 'documentStart',
   });
 }
 </script>

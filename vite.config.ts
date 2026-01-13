@@ -44,6 +44,19 @@ export default defineConfig(({ mode }) => {
           }
         },
       },
+      {
+        name: 'copy-web3-provider:serve',
+        apply: () => true, // apply for both 'serve' (dev server) and 'build'
+        buildStart() {
+          try {
+            copyFileSync('./web3-provider/dist/provider.js', 'public/web3-provider.js')
+            console.log('📋 Copied web3 provider script')
+          }
+          catch {
+            console.error('🚫 ERROR: Failed to copy web3 provider script, make sure you have built the "web3-provider" directory!')
+          }
+        },
+      },
     ],
     resolve: {
       alias: {
