@@ -15,6 +15,9 @@ importers:
         specifier: ^3.5.24
         version: 3.5.24(typescript@5.9.3)
     devDependencies:
+      '@trustwallet/web3-provider-nimiq':
+        specifier: ../../../trust-web3-provider/packages/nimiq
+        version: link:../../../trust-web3-provider/packages/nimiq
       '@types/node':
         specifier: ^24.10.0
         version: 24.10.1
