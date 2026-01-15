@@ -47,6 +47,11 @@ export type Request = {
   object?: object | unknown[];
 }
 
+export type SignatureResult = {
+  publicKey: string,
+  signature: string,
+}
+
 export type UserConfirmationRequest = {
   type: 'transaction',
   data: Omit<PaymentRequestData, 'transfer'>,
@@ -154,11 +159,12 @@ export class MiniAppHost {
 
     try {
       switch (message.name) {
-        case 'isConsensusEstablished': return this.handleIsConsensusEstablished();
-        case 'requestAccounts': return this.requestAccounts();
-        // case 'getAccount': return this.getAccount(message.data as RequestType['getAccount']);
-        // case 'sendPayment': return this.sendPayment(message.data as RequestType['sendPayment']);
-        // case 'signTransaction': return this.signTransaction(message.data as RequestType['signTransaction']);
+        case 'listAccounts': return this.listAccounts();
+        case 'sign': return this.sign(message.params);
+        case 'isConsensusEstablished': return this.isConsensusEstablished();
+        case 'getBlockNumber': return this.getBlockNumber();
+        case 'sendBasicTransaction': return this.sendBasicTransaction(message.params);
+        case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params);
         default:
           console.warn('[MiniAppHost] Unknown message name:', message.name);
           throw new UnknownRequestError(`Unknown message name: ${message.name}`);
@@ -169,73 +175,168 @@ export class MiniAppHost {
     }
   }
 
-  private handleIsConsensusEstablished() {
+  private isConsensusEstablished() {
     return useNimiqNetwork().consensus === 'established';
   }
 
-  private requestAccounts() {
-    const remoteAddress = useRemoteSigner().remoteAddress;
-    const localAddress = useLocalWallet().localAddress;
-    return [localAddress.toUserFriendlyAddress(), remoteAddress?.toUserFriendlyAddress()].filter(Boolean);
+  private getBlockNumber() {
+    return Math.max(useNimiqNetwork().height, useRemoteSigner().remoteHeight);
   }
 
-  // private async getAccount(address: RequestType['getAccount']): Promise<ResponseType['getAccount']> {
-  //   const store = useNimiqNetwork();
-  //   // TODO: If address is local or remote address, we can skip the network request and reply with data from the store
-  //   const result = await store.getAccount(Nimiq.Address.fromUserFriendlyAddress(address));
-  //   if (result.error) {
-  //     throw new NetworkError(`Failed to get account: ${result.error}`);
-  //   }
-  //   return result.data!;
-  // }
+  private listAccounts() {
+    return [
+      useLocalWallet().localAddress.toUserFriendlyAddress(),
+      useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+    ].filter(Boolean);
+  }
 
-  // private async sendPayment(txData: SendPaymentData): Promise<ResponseType['sendPayment']> {
-  //   // TODO: Validate txData fields
+  private async sign(params: unknown): Promise<SignatureResult> {
+    // Parse params
+    let message: string;
+    let isHex = false;
+    if (Array.isArray(params) && params.length > 0) {
+      message = String(params[0]);
+      isHex = Boolean(params[1].isHex);
+    } else if (typeof params === 'object' && params !== null) {
+      message = String((params as any).message);
+      isHex = Boolean((params as any).isHex);
+    } else {
+      throw new InternalError('Invalid parameters for sign method');
+    }
 
-  //   if (!this.config.requestUserConfirmation) {
-  //     throw new InternalError('Confirmation handler not provided');
-  //   }
+    // TODO: Ask user for persmission to sign the message
 
-  //   const confirmed = await this.config.requestUserConfirmation({
-  //     type: 'transaction',
-  //     data: {
-  //       recipient: txData.recipient,
-  //       amount: txData.value,
-  //       fee: txData.fee || 0,
-  //       message: txData.message,
-  //       merchantName: txData.merchant?.name,
-  //     },
-  //   });
-  //   if (!confirmed) {
-  //     throw new PermissionDeniedError('User said no.');
-  //   }
+    let messageBuffer: Uint8Array;
+    if (isHex) {
+      // Remove 0x prefix if present
+      const hex = message.startsWith('0x') ? message.slice(2) : message;
+      messageBuffer = Nimiq.BufferUtils.fromHex(hex);
+    } else {
+      messageBuffer = new TextEncoder().encode(message);
+    }
 
-  //   const result = await useTransactions().sendTx({
-  //     recipient: txData.recipient,
-  //     amount: txData.value,
-  //     title: 'Payment',
-  //     transfer: Transfer.UserPaymentToMerchant,
-  //     message: txData.message,
-  //     merchantName: txData.merchant?.name,
-  //     // merchantCategory: txData.merchant?.category,
-  //     // invoiced:
-  //     // fiatAmount:
-  //     // fiatCurrency:
-  //     // paymentRef:
-  //     meta: {
-  //       miniApp: {
-  //         url: this.config.url,
-  //       },
-  //     },
-  //   })
-  //   if (result.error) {
-  //     throw new InternalError(`Failed to send payment transaction: ${result.error}`);
-  //   }
-  //   return {
-  //     serialized: result.data!.serialized,
-  //     plain: result.data!.tx as Record<string, any>,
-  //   };
-  // }
+    const localWallet = useLocalWallet().localWallet;
+    const prefix = `\x16Nimiq Signed Message:\n${messageBuffer.length}`;
+
+    const payload = new Nimiq.SerialBuffer(prefix.length + messageBuffer.length);
+    payload.write(Nimiq.BufferUtils.fromUtf8(prefix));
+    payload.write(messageBuffer);
+
+    const hash = Nimiq.Hash.computeSha256(payload);
+    const signature = localWallet.sign(hash);
+
+    return {
+      publicKey: localWallet.publicKey.toHex(),
+      signature: signature.toHex(),
+    };
+  }
+
+  private sendBasicTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let recipient: string;
+    let value: number;
+    let fee = 0;
+
+    if (Array.isArray(params) && params.length >= 2) {
+      recipient = String(params[0]);
+      value = Number(params[1]);
+      if (params.length >= 3) {
+        fee = Number(params[2]);
+      }
+    } else if (typeof params === 'object' && params !== null) {
+      recipient = String((params as any).recipient);
+      value = Number((params as any).value);
+      if ((params as any).fee !== undefined) {
+        fee = Number((params as any).fee);
+      }
+    } else {
+      throw new InternalError('Invalid parameters for createBasicTransaction method');
+    }
+
+    return this.sendPayment({ recipient, value, fee });
+  }
+
+  private sendBasicTransactionWithData(params: unknown): Promise<string> {
+    // Parse params
+    let recipient: string;
+    let value: number;
+    let fee = 0;
+    let data: string;
+
+    if (Array.isArray(params) && params.length >= 2) {
+      recipient = String(params[0]);
+      value = Number(params[1]);
+      if (params.length >= 3) {
+        fee = Number(params[2]);
+      }
+      if (params.length >= 4) {
+        data = String(params[3]);
+      }
+    } else if (typeof params === 'object' && params !== null) {
+      recipient = String((params as any).recipient);
+      value = Number((params as any).value);
+      if ((params as any).fee !== undefined) {
+        fee = Number((params as any).fee);
+      }
+      data = String((params as any).data);
+    } else {
+      throw new InternalError('Invalid parameters for createBasicTransaction method');
+    }
+
+    return this.sendPayment({ recipient, value, fee });
+  }
+
+  private async sendPayment(txData: {
+    recipient: string;
+    value: number;
+    fee?: number;
+    message?: string;
+    merchant?: {
+      name?: string;
+      // category?: string;
+    };
+  }): Promise<string> {
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided');
+    }
+
+    const confirmed = await this.config.requestUserConfirmation({
+      type: 'transaction',
+      data: {
+        recipient: txData.recipient,
+        amount: txData.value,
+        fee: txData.fee || 0,
+        message: txData.message,
+        merchantName: txData.merchant?.name,
+      },
+    });
+    if (!confirmed) {
+      throw new PermissionDeniedError('User said no.');
+    }
+
+    const result = await useTransactions().sendTx({
+      recipient: txData.recipient,
+      amount: txData.value,
+      title: 'Payment',
+      transfer: Transfer.UserPaymentToMerchant,
+      message: txData.message,
+      merchantName: txData.merchant?.name,
+      // merchantCategory: txData.merchant?.category,
+      // invoiced:
+      // fiatAmount:
+      // fiatCurrency:
+      // paymentRef:
+      meta: {
+        miniApp: {
+          url: this.config.url,
+        },
+      },
+    })
+    if (result.error) {
+      throw new InternalError(`Failed to send payment transaction: ${result.error}`);
+    }
+    return result.data!.serialized;
+  }
 
   // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
   //   let tx: Transaction;

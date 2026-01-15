@@ -19,48 +19,41 @@ const providerCheck = setInterval(() => {
 }, 500)
 
 async function isConsensusEstablished() {
-  output.value = await window.nimiq.request({ method: 'nim_isConsensusEstablished' })
+  output.value = await window.nimiq.isConsensusEstablished()
 }
 
-async function getSenderAddress() {
-  const addressResult = await window.nimiq.request({ method: 'nim_requestAccounts' })
-  output.value = addressResult[1]
+async function getBlockNumber() {
+  output.value = await window.nimiq.getBlockNumber()
 }
 
-async function getDepositAddress() {
-  const addressResult = await window.nimiq.request({ method: 'nim_requestAccounts' })
-  output.value = addressResult[0]
+async function listAccounts() {
+  output.value = await window.nimiq.listAccounts()
 }
 
-// async function getAccount() {
-//   const addressResult = await provider.getSenderAddress()
-//   if (!addressResult.ok) {
-//     output.value = `Error getting sender address: ${addressResult.error.type} - ${addressResult.error.message}`
-//     return
-//   }
-//   const accountResult = await provider.getAccount(addressResult.value)
-//   if (!accountResult.ok) {
-//     output.value = `Error getting account: ${accountResult.error.type} - ${accountResult.error.message}`
-//     return
-//   }
-//   output.value = accountResult.value
-// }
+async function sign() {
+  output.value = await window.nimiq.sign("Hello Mini-App!")
+}
 
-// async function sendPayment() {
-//   const txResult = await provider.sendPayment({
-//     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
-//     value: 100e5,
-//     message: 'Hello from mini-app!',
-//     merchant: {
-//       name: 'Nimiq Mini-App Donation',
-//     },
-//   })
-//   if (!txResult.ok) {
-//     output.value = `Error making transaction: ${txResult.error.type} - ${txResult.error.message}`
-//     return
-//   }
-//   output.value = txResult.value
-// }
+async function sendBasicTransaction() {
+  output.value = await window.nimiq.sendBasicTransaction({
+    recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    value: 100e5,
+    // merchant: {
+    //   name: 'Nimiq Mini-App Donation',
+    // },
+  })
+}
+
+async function sendBasicTransactionWithData() {
+  output.value = await window.nimiq.sendBasicTransactionWithData({
+    recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    value: 100e5,
+    data: 'Hello from mini-app!',
+    // merchant: {
+    //   name: 'Nimiq Mini-App Donation',
+    // },
+  })
+}
 
 const output = ref()
 </script>
@@ -75,10 +68,11 @@ const output = ref()
   <div class="card">
     <strong>Test requests:</strong>
     <button type="button" @click="isConsensusEstablished" :disabled="!isInMiniApp">isConsensusEstablished</button>
-    <button type="button" @click="getSenderAddress" :disabled="!isInMiniApp">getSenderAddress</button>
-    <button type="button" @click="getDepositAddress" :disabled="!isInMiniApp">getDepositAddress</button>
-    <!-- <button type="button" @click="getAccount" :disabled="!isInMiniApp">getAccount</button> -->
-    <!-- <button type="button" @click="sendPayment" :disabled="!isInMiniApp">sendPayment</button> -->
+    <button type="button" @click="getBlockNumber" :disabled="!isInMiniApp">getBlockNumber</button>
+    <button type="button" @click="listAccounts" :disabled="!isInMiniApp">listAccounts</button>
+    <button type="button" @click="sign" :disabled="!isInMiniApp">sign</button>
+    <button type="button" @click="sendBasicTransaction" :disabled="!isInMiniApp">sendBasicTransaction</button>
+    <button type="button" @click="sendBasicTransactionWithData" :disabled="!isInMiniApp">sendBasicTransactionWithData</button>
     <br/>
     <strong>Response:</strong>
     <pre>
