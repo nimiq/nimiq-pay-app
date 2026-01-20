@@ -24,6 +24,10 @@ export type AlertModalResponseMessage =  AlertModalReadyMessage | AlertModalConf
 export interface AlertModalPostMessage {
   type: 'modal-data';
   modalData: {
+    app: {
+      url: string;
+      name?: string;
+    };
   } & ({
     type: 'list-accounts';
   } | {
@@ -57,6 +61,10 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
             broadcast({
               type: 'modal-data',
               modalData: {
+                app: {
+                  url: request.url,
+                  name: request.name,
+                },
                 type: 'list-accounts',
               }
             });
@@ -65,6 +73,10 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
             broadcast({
               type: 'modal-data',
               modalData: {
+                app: {
+                  url: request.url,
+                  name: request.name,
+                },
                 type: 'confirm-transaction',
                 data: request.data,
               }
@@ -74,6 +86,10 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
             broadcast({
               type: 'modal-data',
               modalData: {
+                app: {
+                  url: request.url,
+                  name: request.name,
+                },
                 type: 'sign-message',
                 data: request.data,
               }
@@ -111,13 +127,14 @@ async function openMiniApp() {
   // Create the mini app host with configuration
   const host = new MiniAppHost(InAppBrowser, {
     url: miniAppUrl.value,
+    title: 'Mini App', // TODO: Use app name of the mini-app if available
     requestUserConfirmation,
   });
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
   const miniAppWebView = await InAppBrowser.openWebView({
     url: miniAppUrl.value,
-    title: 'Mini App',
+    title: 'Mini App', // TODO: Use app name of the mini-app if available
     toolbarType: ToolBarType.NAVIGATION,
     enabledSafeBottomMargin: true,
     useTopInset: true,

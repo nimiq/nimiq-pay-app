@@ -53,6 +53,8 @@ export type SignatureResult = {
 }
 
 export type UserConfirmationRequest = {
+  url: string;
+  name?: string;
 } & ({
   type: 'accounts',
 } | {
@@ -71,6 +73,7 @@ export type UserConfirmationRequest = {
  */
 export interface MiniAppHostConfig {
   url: string;
+  title: string;
 
   /**
    * Callback to request user confirmation for sensitive operations
@@ -208,6 +211,8 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided');
     }
     const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
       type: 'accounts',
     });
     if (!confirmed) {
@@ -239,6 +244,8 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided');
     }
     const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
       type: 'message',
       data: {
         message,
@@ -343,6 +350,8 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided');
     }
     const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
       type: 'transaction',
       data: {
         recipient: txData.recipient,
