@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import PaymentPreview from '@/components/PaymentPreview.vue';
-import { StepName } from '@/lib/flows/steps.types';
 import { AlertModalPostMessage, AlertModalResponseMessage } from '@/modals/MiniAppsModal.vue';
 import { IonPage, IonContent, IonButton, IonButtons, IonHeader, IonFooter, IonToolbar, IonTitle } from '@ionic/vue';
 import { useBroadcastChannel } from '@vueuse/core';
@@ -64,19 +62,7 @@ window.addEventListener("messageFromNative", (event) => {
 </script>
 
 <template>
-  <IonPage v-if="modalData && modalData.type === 'confirm-transaction'" class="p-4">
-    <PaymentPreview
-      class="p-2"
-      :state="{
-        [StepName.QRCodeScanner]: modalData.data,
-      }"
-      is-confirmation-alert
-      @done="handleConfirm"
-      @cancel="handleCancel"
-    />
-  </IonPage>
-
-  <IonPage v-else-if="modalData">
+  <IonPage>
     <IonHeader class="ion-no-border">
       <IonToolbar>
         <IonTitle>{{ $t('Generic Confirmation') }}</IonTitle>
