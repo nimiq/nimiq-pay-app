@@ -24,9 +24,18 @@ export type AlertModalResponseMessage =  AlertModalReadyMessage | AlertModalConf
 export interface AlertModalPostMessage {
   type: 'modal-data';
   modalData: {
+  } & ({
+    type: 'list-accounts';
+  } | {
     type: 'confirm-transaction';
     data: Omit<PaymentRequestData, "transfer">;
-  }
+  } | {
+    type: 'sign-message';
+    data: {
+      message: string;
+      isHex: boolean;
+    };
+  });
 }
 
 const { post: broadcast, data: broadcastMessage, error } = useBroadcastChannel<AlertModalResponseMessage, AlertModalPostMessage>({ name: 'alert-modal-channel' })
@@ -38,17 +47,34 @@ watch(error, (err) => {
 
 // Request user confirmation for sensitive operations
 async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(async (resolve) => {
     const unwatch = watch(broadcastMessage, (newMessage) => {
       console.log('[requestUserConfirmation] Received message from alert modal:', newMessage);
 
       if (newMessage.type === 'modal-ready') {
         switch (request.type) {
+          case 'accounts':
+            broadcast({
+              type: 'modal-data',
+              modalData: {
+                type: 'list-accounts',
+              }
+            });
+            break;
           case 'transaction':
             broadcast({
               type: 'modal-data',
               modalData: {
                 type: 'confirm-transaction',
+                data: request.data,
+              }
+            });
+            break;
+          case 'message':
+            broadcast({
+              type: 'modal-data',
+              modalData: {
+                type: 'sign-message',
                 data: request.data,
               }
             });

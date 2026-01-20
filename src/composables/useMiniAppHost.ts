@@ -53,9 +53,18 @@ export type SignatureResult = {
 }
 
 export type UserConfirmationRequest = {
+} & ({
+  type: 'accounts',
+} | {
   type: 'transaction',
   data: Omit<PaymentRequestData, 'transfer'>,
-}
+} | {
+  type: 'message',
+  data: {
+    message: string;
+    isHex: boolean;
+  },
+})
 
 /**
  * Configuration for the MiniAppHost
@@ -193,7 +202,18 @@ export class MiniAppHost {
     return Math.max(useNimiqNetwork().height, useRemoteSigner().remoteHeight);
   }
 
-  private listAccounts() {
+  private async listAccounts() {
+    // Ask user for persmission to list accounts
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided');
+    }
+    const confirmed = await this.config.requestUserConfirmation({
+      type: 'accounts',
+    });
+    if (!confirmed) {
+      throw new PermissionDeniedError('User said no.');
+    }
+
     return [
       useLocalWallet().localAddress.toUserFriendlyAddress(),
       useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
@@ -214,7 +234,20 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for sign method');
     }
 
-    // TODO: Ask user for persmission to sign the message
+    // Ask user for persmission to sign the message
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided');
+    }
+    const confirmed = await this.config.requestUserConfirmation({
+      type: 'message',
+      data: {
+        message,
+        isHex,
+      },
+    });
+    if (!confirmed) {
+      throw new PermissionDeniedError('User said no.');
+    }
 
     let messageBuffer: Uint8Array;
     if (isHex) {
@@ -309,7 +342,6 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided');
     }
-
     const confirmed = await this.config.requestUserConfirmation({
       type: 'transaction',
       data: {
