@@ -78,6 +78,7 @@ export interface MiniAppHostConfig {
 export class MiniAppHost {
   private inAppBrowser: typeof InAppBrowser;
   private config: MiniAppHostConfig;
+  private destroyed = false;
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser;
@@ -85,45 +86,54 @@ export class MiniAppHost {
     this.setupMessageListener();
   }
 
+  public destroy(): void {
+    this.inAppBrowser.removeAllListeners();
+    this.inAppBrowser = null as unknown as typeof InAppBrowser;
+    this.destroyed = true;
+  }
+
   /**
    * Setup listener for messages from the mini app
    */
   private setupMessageListener(): void {
-    this.inAppBrowser.addListener('messageFromWebview', async (event: InAppBrowserMessageEvent) => {
-      if (!event.detail) return;
+    this.inAppBrowser.addListener('messageFromWebview', this.messageListener.bind(this));
+  }
 
-      console.log('[MiniAppHost] Received message from webview:', event.detail);
+  private async messageListener(event: InAppBrowserMessageEvent) {
+    if (this.destroyed) return;
+    if (!event.detail) return;
 
-      // Ensure message structure
-      if (typeof event.detail.id !== 'number') {
-        console.warn('[MiniAppHost] Message has no id property, skipping');
-        this.sendError(NaN, 'INVALID_MESSAGE', 'Message has no id property');
-        return;
+    console.log('[MiniAppHost] Received message from webview:', event.detail);
+
+    // Ensure message structure
+    if (typeof event.detail.id !== 'number') {
+      console.warn('[MiniAppHost] Message has no id property, skipping');
+      this.sendError(NaN, 'INVALID_MESSAGE', 'Message has no id property');
+      return;
+    }
+
+    if (typeof event.detail.network !== 'string') {
+      console.warn('[MiniAppHost] Message has no network property, skipping');
+      this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no network property');
+      return;
+    }
+
+    if (typeof event.detail.name !== 'string') {
+      console.warn('[MiniAppHost] Message has no name property, skipping');
+      this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no name property');
+      return;
+    }
+
+    const message = event.detail as Request;
+
+    switch (message.network) {
+      case 'nimiq': this.handleNimiqMessage(message); break;
+      case 'ethereum': this.handleEthereumMessage(message); break;
+      default: {
+        console.warn('[MiniAppHost] Unknown network in message:', event.detail.network);
+        this.sendError(message.id, 'INVALID_NETWORK', `Unknown network: ${message.network}`);
       }
-
-      if (typeof event.detail.network !== 'string') {
-        console.warn('[MiniAppHost] Message has no network property, skipping');
-        this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no network property');
-        return;
-      }
-
-      if (typeof event.detail.name !== 'string') {
-        console.warn('[MiniAppHost] Message has no name property, skipping');
-        this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no name property');
-        return;
-      }
-
-      const message = event.detail as Request;
-
-      switch (message.network) {
-        case 'nimiq': this.handleNimiqMessage(message); break;
-        case 'ethereum': this.handleEthereumMessage(message); break;
-        default: {
-          console.warn('[MiniAppHost] Unknown network in message:', event.detail.network);
-          this.sendError(message.id, 'INVALID_NETWORK', `Unknown network: ${message.network}`);
-        }
-      }
-    });
+    }
   }
 
   private async handleNimiqMessage(message: Request) {

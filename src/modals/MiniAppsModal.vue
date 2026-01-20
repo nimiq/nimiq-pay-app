@@ -63,7 +63,8 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
     });
 
     // Open the modal
-    InAppBrowser.openWebView({
+    // (the modal is closed again from inside the AlertView.vue when user responds)
+    await InAppBrowser.openWebView({
       url: `${window.location.origin}/alert`,
       toolbarType: ToolBarType.BLANK,
 
@@ -82,12 +83,13 @@ const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5174`)
 
 async function openMiniApp() {
   // Create the mini app host with configuration
-  new MiniAppHost(InAppBrowser, {
+  const host = new MiniAppHost(InAppBrowser, {
     url: miniAppUrl.value,
     requestUserConfirmation,
   });
 
-  await InAppBrowser.openWebView({
+  // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
+  const miniAppWebView = await InAppBrowser.openWebView({
     url: miniAppUrl.value,
     title: 'Mini App',
     toolbarType: ToolBarType.NAVIGATION,
@@ -98,6 +100,17 @@ async function openMiniApp() {
     // TODO: Load file into variable with node:path at build time instead? Would avoid copying the file to /public.
     preShowScript: await fetch('/web3-provider.js').then(res => res.text()),
     preShowScriptInjectionTime: 'documentStart',
+  }).catch((err) => {
+    logger.error('Failed to open mini-app:', err);
+    alert('Could not open the mini-app webview');
+  });
+  if (!miniAppWebView) return;
+
+  InAppBrowser.addListener('closeEvent', (state) => {
+    if (state.webViewId === miniAppWebView.webViewId) {
+      logger.log('Mini-app webview closed, destroying host:', state);
+      host.destroy();
+    }
   });
 }
 </script>
