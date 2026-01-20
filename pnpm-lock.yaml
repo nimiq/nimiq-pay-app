@@ -51,8 +51,8 @@ importers:
         specifier: ^7.15.0
         version: 7.20.0(@capacitor/core@7.4.3)
       '@capgo/inappbrowser':
-        specifier: link:../mini-apps-demo/packages/capacitor-inappbrowser
-        version: link:../mini-apps-demo/packages/capacitor-inappbrowser
+        specifier: ^8.0.6
+        version: 8.0.6(@capacitor/core@7.4.3)
       '@internationalized/number':
         specifier: ^3.6.5
         version: 3.6.5
@@ -80,6 +80,9 @@ importers:
       bech32:
         specifier: ^2.0.0
         version: 2.0.0
+      capacitor-extended-dialog:
+        specifier: ^0.0.2
+        version: 0.0.2(@capacitor/core@7.4.3)
       capacitor-sumsub-mobile-sdk:
         specifier: ^0.0.6
         version: 0.0.6(@capacitor/core@7.4.3)
@@ -986,6 +989,11 @@ packages:
     resolution: {integrity: sha512-FX39ecF6kTw/XO9bSZw15okJd6e2FT95h7Q+lsV9DvgRcBv2Q/0QmsQ1gBK0c2LrN1vfdwyxv0CYeO7H9CYbMQ==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
+
+  '@capgo/inappbrowser@8.0.6':
+    resolution: {integrity: sha512-OTVM9p+zvhtPbjUjMJQNx3gLRigTLUBqvfQqYy4yOKFCRJvTVd/jdYbr9Xhe9GDO9JJzbCsVOPOAQloUvEcsUA==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
 
   '@clack/core@0.5.0':
     resolution: {integrity: sha512-p3y0FIOwaYRUPRcMO7+dlmLh8PSRcrjuTndsiA0WAFbWES0mLZlrjVoBRZ9DzkPFJZG6KGkJmoEAY0ZcVWTkow==}
@@ -2992,6 +3000,11 @@ packages:
 
   caniuse-lite@1.0.30001743:
     resolution: {integrity: sha512-e6Ojr7RV14Un7dz6ASD0aZDmQPT/A+eZU+nuTNfjqmRrmkmQlnTNWH0SKmqagx9PeW87UVqapSurtAXifmtdmw==}
+
+  capacitor-extended-dialog@0.0.2:
+    resolution: {integrity: sha512-Ak3sntI1QrhCRNU+VjFmVwkRFYBWVLfenGKTeF71zgVFRySN+k+YPiTaq7eH2uuCVM0D1G71W4S6PtRyjEbvdQ==}
+    peerDependencies:
+      '@capacitor/core': '>=7.0.0'
 
   capacitor-sumsub-mobile-sdk@0.0.6:
     resolution: {integrity: sha512-0IdrI5vB8buitaq26ChIbnfQMG1FzPHfySNc4s76EGOQzfponFYy+157h9WpbTf4LQOQREdsmr/xbb53O/gfzw==}
@@ -8741,6 +8754,10 @@ snapshots:
     dependencies:
       '@capacitor/core': 7.4.3
 
+  '@capgo/inappbrowser@8.0.6(@capacitor/core@7.4.3)':
+    dependencies:
+      '@capacitor/core': 7.4.3
+
   '@clack/core@0.5.0':
     dependencies:
       picocolors: 1.1.1
@@ -10957,6 +10974,10 @@ snapshots:
   camelcase@5.3.1: {}
 
   caniuse-lite@1.0.30001743: {}
+
+  capacitor-extended-dialog@0.0.2(@capacitor/core@7.4.3):
+    dependencies:
+      '@capacitor/core': 7.4.3
 
   capacitor-sumsub-mobile-sdk@0.0.6(@capacitor/core@7.4.3):
     dependencies:

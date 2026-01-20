@@ -3,7 +3,7 @@ source 'https://github.com/SumSubstance/Specs.git'
 
 require_relative '../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios/scripts/pods_helpers'
 
-platform :ios, '14.0'
+platform :ios, '15.0'
 use_frameworks!
 
 # workaround to avoid Xcode caching of Pods that requires
@@ -26,7 +26,9 @@ def capacitor_pods
   pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share'
   pod 'CapawesomeCapacitorScreenOrientation', :path => '../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation'
   pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview'
+  pod 'CapgoInappbrowser', :path => '../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser'
   pod 'RdlaboCapacitorScreenshotEvent', :path => '../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event'
+  pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.2_@capacitor+core@7.4.3/node_modules/capacitor-extended-dialog'
   pod 'CapacitorSumsubMobileSdk', :path => '../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.6_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk'
   pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@7.0.1_@capacitor+core@7.4.3/node_modules/@capacitor-community/sqlite'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@7.1.0_@capacitor+core@7.4.3/node_modules/@capacitor/app'
