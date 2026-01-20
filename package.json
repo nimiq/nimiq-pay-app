@@ -59,6 +59,7 @@
     "bech32": "^2.0.0",
     "capacitor-extended-dialog": "^0.0.2",
     "capacitor-sumsub-mobile-sdk": "^0.0.6",
+    "ethers": "^6.16.0",
     "fuse.js": "^7.1.0",
     "jsencrypt": "3.3.2",
     "jssha": "^3.3.1",
