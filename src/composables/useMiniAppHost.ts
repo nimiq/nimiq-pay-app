@@ -271,7 +271,7 @@ export class MiniAppHost {
     let recipient: string;
     let value: number;
     let fee = 0;
-    let data: string;
+    let message = '';
 
     if (Array.isArray(params) && params.length >= 2) {
       recipient = String(params[0]);
@@ -280,7 +280,7 @@ export class MiniAppHost {
         fee = Number(params[2]);
       }
       if (params.length >= 4) {
-        data = String(params[3]);
+        message = String(params[3]);
       }
     } else if (typeof params === 'object' && params !== null) {
       recipient = String((params as any).recipient);
@@ -288,12 +288,12 @@ export class MiniAppHost {
       if ((params as any).fee !== undefined) {
         fee = Number((params as any).fee);
       }
-      data = String((params as any).data);
+      message = String((params as any).data);
     } else {
       throw new InternalError('Invalid parameters for createBasicTransaction method');
     }
 
-    return this.sendPayment({ recipient, value, fee });
+    return this.sendPayment({ recipient, value, fee, message });
   }
 
   private async sendPayment(txData: {
@@ -345,7 +345,7 @@ export class MiniAppHost {
     if (result.error) {
       throw new InternalError(`Failed to send payment transaction: ${result.error}`);
     }
-    return result.data!.serialized;
+    return result.data!.tx.hash;
   }
 
   // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
