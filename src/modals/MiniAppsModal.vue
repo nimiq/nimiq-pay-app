@@ -9,6 +9,45 @@ import { MiniAppHost, UserConfirmationRequest } from '@/composables/useMiniAppHo
 
 const logger = useLogger('MiniAppModal')
 
+interface DApp {
+  name: string
+  url: string
+  icon: string
+}
+
+const popularDApps: DApp[] = [
+  {
+    name: 'Uniswap',
+    url: 'https://app.uniswap.org',
+    icon: 'https://app.uniswap.org/favicon.png',
+  },
+  {
+    name: 'Polymarket',
+    url: 'https://polymarket.com',
+    icon: 'https://polymarket.com/icons/favicon-32x32.png',
+  },
+  {
+    name: 'DappRadar',
+    url: 'https://dappradar.com',
+    icon: 'https://dappradar.com/favicon.ico',
+  },
+  {
+    name: 'Aave',
+    url: 'https://app.aave.com',
+    icon: 'https://app.aave.com/favicon.ico',
+  },
+  {
+    name: 'OpenSea',
+    url: 'https://opensea.io',
+    icon: 'https://opensea.io/favicon.ico',
+  },
+  {
+    name: '1inch',
+    url: 'https://app.1inch.io',
+    icon: 'https://app.1inch.io/favicon.ico',
+  },
+]
+
 // Request user confirmation for sensitive operations
 async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
   const appName = request.name || request.url;
@@ -70,18 +109,21 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
 
 const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5174`)
 
-async function openMiniApp() {
+async function openMiniApp(url?: string, title?: string) {
+  const targetUrl = url || miniAppUrl.value
+  const appTitle = title || 'Mini App'
+
   // Create the mini app host with configuration
   const host = new MiniAppHost(InAppBrowser, {
-    url: miniAppUrl.value,
-    title: 'Mini App', // TODO: Use app name of the mini-app if available
+    url: targetUrl,
+    title: appTitle,
     requestUserConfirmation,
   });
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
   const miniAppWebView = await InAppBrowser.openWebView({
-    url: miniAppUrl.value,
-    title: 'Mini App', // TODO: Use app name of the mini-app if available
+    url: targetUrl,
+    title: appTitle,
     toolbarType: ToolBarType.NAVIGATION,
     enabledSafeBottomMargin: true,
     useTopInset: true,
@@ -105,28 +147,50 @@ async function openMiniApp() {
 
 <template>
   <ModalTemplate :close-all="true">
-    <div class="w-full h-full flex flex-col">
+    <div class="w-full h-full flex flex-col gap-6">
       <p class="text-space/60 text-sm font-bold text-left uppercase">
         Mini Apps
       </p>
 
-      <form class="m-4 flex flex-col gap-4" @submit.prevent="openMiniApp">
-        <label class="text-sm font-medium text-gray-700">
-          Mini App URL
-        </label>
-        <IonInput
-          placeholder="Enter URL"
-          clear-input
-          v-model="miniAppUrl"
-        />
+      <!-- Popular dApps Grid -->
+      <div class="grid grid-cols-3 gap-4">
         <button
-          type="submit"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none"
-          :disabled="!miniAppUrl"
+          v-for="dapp in popularDApps"
+          :key="dapp.url"
+          class="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors"
+          @click="openMiniApp(dapp.url, dapp.name)"
         >
-          Open Mini App
+          <img
+            :src="dapp.icon"
+            :alt="dapp.name"
+            class="w-12 h-12 rounded-xl object-contain bg-white/10 p-1"
+            @error="($event.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'"
+          >
+          <span class="text-xs text-center font-medium truncate w-full">{{ dapp.name }}</span>
         </button>
-      </form>
+      </div>
+
+      <!-- Custom URL Section -->
+      <div class="border-t border-white/10 pt-4">
+        <form class="flex flex-col gap-3" @submit.prevent="openMiniApp()">
+          <label class="text-xs font-medium text-space/60 uppercase">
+            Custom URL
+          </label>
+          <IonInput
+            placeholder="Enter URL"
+            clear-input
+            v-model="miniAppUrl"
+            class="bg-white/5 rounded-lg"
+          />
+          <button
+            type="submit"
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            :disabled="!miniAppUrl"
+          >
+            Open
+          </button>
+        </form>
+      </div>
     </div>
   </ModalTemplate>
 </template>
