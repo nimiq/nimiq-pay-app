@@ -14,6 +14,7 @@
   "packageManager": "pnpm@10.28.0",
   "dependencies": {
     "@trustwallet/web3-provider-core": "../../trust-web3-provider/packages/core",
+    "@trustwallet/web3-provider-ethereum": "../../trust-web3-provider/packages/ethereum",
     "@trustwallet/web3-provider-nimiq": "../../trust-web3-provider/packages/nimiq"
   },
   "devDependencies": {
@@ -21,6 +22,7 @@
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
     "rollup": "^4.55.1",
+    "rollup-plugin-polyfill-node": "^0.13.0",
     "tslib": "^2.8.1",
     "typescript": "^5.9.3"
   }
