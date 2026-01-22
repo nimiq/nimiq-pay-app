@@ -81,8 +81,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       capacitor-extended-dialog:
-        specifier: ^0.0.2
-        version: 0.0.2(@capacitor/core@7.4.3)
+        specifier: ^0.0.3
+        version: 0.0.3(@capacitor/core@7.4.3)
       capacitor-sumsub-mobile-sdk:
         specifier: ^0.0.6
         version: 0.0.6(@capacitor/core@7.4.3)
@@ -3017,8 +3017,8 @@ packages:
   caniuse-lite@1.0.30001743:
     resolution: {integrity: sha512-e6Ojr7RV14Un7dz6ASD0aZDmQPT/A+eZU+nuTNfjqmRrmkmQlnTNWH0SKmqagx9PeW87UVqapSurtAXifmtdmw==}
 
-  capacitor-extended-dialog@0.0.2:
-    resolution: {integrity: sha512-Ak3sntI1QrhCRNU+VjFmVwkRFYBWVLfenGKTeF71zgVFRySN+k+YPiTaq7eH2uuCVM0D1G71W4S6PtRyjEbvdQ==}
+  capacitor-extended-dialog@0.0.3:
+    resolution: {integrity: sha512-k68I5ILexEWLqYtCQttSkIqLslQ6Jjdt/kP7aJ4k97wMVJ1EV/P6cb+DXxDNscVDLJnHzjjV4gxNfzHwEl9nZw==}
     peerDependencies:
       '@capacitor/core': '>=7.0.0'
 
@@ -11008,7 +11008,7 @@ snapshots:
 
   caniuse-lite@1.0.30001743: {}
 
-  capacitor-extended-dialog@0.0.2(@capacitor/core@7.4.3):
+  capacitor-extended-dialog@0.0.3(@capacitor/core@7.4.3):
     dependencies:
       '@capacitor/core': 7.4.3
 

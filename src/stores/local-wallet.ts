@@ -84,5 +84,6 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     getWords,
     importWords,
     getEthAddress,
+    getEthWallet,
   }
 })
