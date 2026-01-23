@@ -206,8 +206,9 @@ export class MiniAppHost {
       case 'signMessage':
       case 'signPersonalMessage':
         return this.signPersonalMessage(message.params ?? message.object)
-      case 'signTransaction':
       case 'signTypedMessage':
+        return this.signTypedMessage(message.params ?? message.object)
+      case 'signTransaction':
         throw new UnknownRequestError(`${message.name} not implemented yet`)
       default:
         throw new UnknownRequestError(`Unknown Ethereum method: ${message.name}`)
@@ -314,6 +315,97 @@ export class MiniAppHost {
     }
 
     const signature = await ethWallet!.signMessage(messageToSign)
+    return signature
+  }
+
+  private async signTypedMessage(params: unknown): Promise<string> {
+    // Parse params - expect { raw: string, address: string, version?: string }
+    let raw: string
+    let address: string
+
+    if (typeof params === 'object' && params !== null) {
+      raw = (params as { raw?: string }).raw ?? ''
+      address = (params as { address?: string }).address ?? ''
+    }
+    else {
+      throw new InternalError('Invalid parameters for signTypedMessage')
+    }
+
+    if (!raw) {
+      throw new InternalError('Missing raw parameter for signTypedMessage')
+    }
+    if (!address) {
+      throw new InternalError('Missing address parameter for signTypedMessage')
+    }
+
+    // Parse the EIP-712 typed data
+    let typedData: {
+      types: Record<string, Array<{ name: string, type: string }>>
+      domain: Record<string, unknown>
+      primaryType: string
+      message: Record<string, unknown>
+    }
+
+    try {
+      typedData = JSON.parse(raw)
+    }
+    catch {
+      throw new InternalError('Failed to parse typed data JSON')
+    }
+
+    // Validate required EIP-712 fields
+    if (!typedData.types || !typedData.domain || !typedData.primaryType || !typedData.message) {
+      throw new InternalError('Invalid typed data: missing required EIP-712 fields (types, domain, primaryType, message)')
+    }
+
+    // Format typed data for display (show domain and message)
+    const displayMessage = `Domain: ${typedData.domain.name || 'Unknown'}\n`
+      + `Chain: ${typedData.domain.chainId}\n`
+      + `Type: ${typedData.primaryType}\n\n`
+      + `Message:\n${JSON.stringify(typedData.message, null, 2)}`
+
+    // Request user confirmation
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided')
+    }
+
+    const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
+      type: 'message',
+      data: {
+        message: displayMessage,
+        isHex: false,
+      },
+    })
+
+    if (!confirmed) {
+      throw new PermissionDeniedError('User rejected typed data signing.')
+    }
+
+    // Get Ethereum wallet
+    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
+    if (error) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error}`)
+    }
+
+    // Verify the address matches (case-insensitive)
+    if (ethWallet!.address.toLowerCase() !== address.toLowerCase()) {
+      throw new PermissionDeniedError(
+        `Address mismatch: requested ${address}, but wallet address is ${ethWallet!.address}`,
+      )
+    }
+
+    // Remove EIP712Domain from types (ethers.js handles it automatically)
+    const { EIP712Domain, ...types } = typedData.types
+
+    // Sign using ethers.js signTypedData (EIP-712)
+    const signature = await ethWallet!.signTypedData(
+      typedData.domain,
+      types,
+      typedData.message,
+    )
+
     return signature
   }
 
