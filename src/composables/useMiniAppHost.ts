@@ -100,9 +100,9 @@ export class MiniAppHost {
     this.setupMessageListener()
   }
 
-  public destroy(): void {
-    this.messageFromWebviewListener?.remove()
-    this.inAppBrowser.removeAllListeners()
+  public async destroy(): Promise<void> {
+    await this.messageFromWebviewListener?.remove()
+    await this.inAppBrowser.removeAllListeners()
     this.inAppBrowser = null as unknown as typeof InAppBrowser
     this.destroyed = true
   }

@@ -6,6 +6,7 @@ import { ExtendedDialog } from 'capacitor-extended-dialog'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost, UserConfirmationRequest } from '@/composables/useMiniAppHost'
+import { useToast } from '@/composables/useToast'
 
 const logger = useLogger('MiniAppModal')
 
@@ -121,7 +122,7 @@ async function openMiniApp(url?: string, title?: string) {
   });
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
-  const miniAppWebView = await InAppBrowser.openWebView({
+  await InAppBrowser.openWebView({
     url: targetUrl,
     title: appTitle,
     toolbarType: ToolBarType.NAVIGATION,
@@ -133,15 +134,17 @@ async function openMiniApp(url?: string, title?: string) {
     preShowScript: await fetch('/web3-provider.js').then(res => res.text()),
     preShowScriptInjectionTime: 'documentStart',
   }).catch((err) => {
-    logger.error('Failed to open mini-app:', err);
-    alert('Could not open the mini-app webview');
-  });
-  if (!miniAppWebView) return;
+    logger.error('Failed to open mini-app:', err)
+    useToast().setToast({
+      message: 'Could not open the mini-app webview',
+      type: 'error',
+    })
+  })
 
-  InAppBrowser.addListener('closeEvent', () => {
-    logger.log('Mini-app webview closed, destroying host');
-    host.destroy();
-  });
+  InAppBrowser.addListener('closeEvent', async () => {
+    logger.log('Mini-app webview closed, destroying host')
+    await host.destroy()
+  })
 }
 </script>
 
