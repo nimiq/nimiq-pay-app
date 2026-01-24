@@ -1,7 +1,9 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/inappbrowser'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
+import { i18n } from '@/i18n/i18n-setup'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -18,10 +20,10 @@ import { useLocalWallet } from '@/stores/local-wallet'
 //     SubscriptionType,
 // } from './../../mini-app-sdk/types'
 // import { mapError, Result, unwrap } from "./../../mini-app-sdk/Result";
-import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Transfer } from '@/types/transactions'
+import { markAsUnknownTransactionTitle, Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS } from '../../web3-provider/src/allowedChains'
 import { useLogger } from './useLogger'
 
@@ -880,6 +882,12 @@ export class MiniAppHost {
         case 'getBlockNumber': return this.getBlockNumber()
         case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
         case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
+        case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
+        case 'sendStakeTransaction': return this.sendAddStakeTransaction(message.params)
+        case 'sendSetActiveStakeTransaction': return this.sendSetActiveStakeTransaction(message.params)
+        case 'sendUpdateStakerTransaction': return this.sendUpdateStakerTransaction(message.params)
+        case 'sendRetireStakeTransaction': return this.sendRetireStakeTransaction(message.params)
+        case 'sendRemoveStakeTransaction': return this.sendRemoveStakeTransaction(message.params)
         default:
           logger.log('[MiniAppHost] Unknown message name:', message.name)
           throw new UnknownRequestError(`Unknown message name: ${message.name}`)
@@ -986,13 +994,13 @@ export class MiniAppHost {
     // Parse params
     let recipient: string
     let value: number
-    let fee = 0
+    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 2) {
       recipient = String(params[0])
       value = Number(params[1])
       if (params.length >= 3) {
-        fee = Number(params[2])
+        _fee = Number(params[2])
       }
     }
     else if (typeof params === 'object' && params !== null) {
@@ -1000,28 +1008,28 @@ export class MiniAppHost {
       recipient = String(txParams.recipient ?? '')
       value = Number(txParams.value ?? 0)
       if (txParams.fee !== undefined) {
-        fee = Number(txParams.fee)
+        _fee = Number(txParams.fee)
       }
     }
     else {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, fee })
+    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment })
   }
 
   private sendBasicTransactionWithData(params: unknown): Promise<string> {
     // Parse params
     let recipient: string
     let value: number
-    let fee = 0
+    let _fee = 0
     let message = ''
 
-    if (Array.isArray(params) && params.length >= 2) {
+    if (Array.isArray(params) && params.length >= 4) {
       recipient = String(params[0])
       value = Number(params[1])
       if (params.length >= 3) {
-        fee = Number(params[2])
+        _fee = Number(params[2])
       }
       if (params.length >= 4) {
         message = String(params[3])
@@ -1032,7 +1040,7 @@ export class MiniAppHost {
       recipient = String(txParams.recipient ?? '')
       value = Number(txParams.value ?? 0)
       if (txParams.fee !== undefined) {
-        fee = Number(txParams.fee)
+        _fee = Number(txParams.fee)
       }
       message = String(txParams.data ?? '')
     }
@@ -1040,19 +1048,199 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, fee, message })
+    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, message })
+  }
+
+  private sendNewStakerTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let delegation: string
+    let value: number
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 2) {
+      delegation = String(params[0])
+      value = Number(params[1])
+      if (params.length >= 3) {
+        _fee = Number(params[2])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      delegation = String((params as any).delegation)
+      value = Number((params as any).value)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for createNewStakerTransaction method')
+    }
+
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'create-staker', delegation },
+      stakingTitle: i18n.t('Create Staker'),
+      value,
+    })
+  }
+
+  private sendAddStakeTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let value: number
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 1) {
+      value = Number(params[0])
+      if (params.length >= 2) {
+        _fee = Number(params[1])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      value = Number((params as any).value)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for createStakeTransaction method')
+    }
+
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'add-stake' },
+      stakingTitle: i18n.t('Add Stake'),
+      value,
+    })
+  }
+
+  private async sendSetActiveStakeTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let newActiveBalance: number
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 1) {
+      newActiveBalance = Number(params[0])
+      if (params.length >= 2) {
+        _fee = Number(params[1])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      newActiveBalance = Number((params as any).newActiveBalance)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendSetActiveStakeTransaction method')
+    }
+
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'set-active-stake', newActiveBalance },
+      stakingTitle: i18n.t('Set Active Stake'),
+      value: 0,
+    })
+  }
+
+  private async sendUpdateStakerTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let newDelegation: string
+    let reactivateAllStake: boolean
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 2) {
+      newDelegation = String(params[0])
+      reactivateAllStake = Boolean(params[1])
+      if (params.length >= 3) {
+        _fee = Number(params[2])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      newDelegation = String((params as any).newDelegation)
+      reactivateAllStake = Boolean((params as any).reactivateAllStake)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendUpdateStakerTransaction method')
+    }
+
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
+      stakingTitle: i18n.t('Update Staker'),
+      value: 0,
+    })
+  }
+
+  private async sendRetireStakeTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let retireStake: number
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 1) {
+      retireStake = Number(params[0])
+      if (params.length >= 2) {
+        _fee = Number(params[1])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      retireStake = Number((params as any).retireStake)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
+    }
+
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'retire-stake', retireStake },
+      stakingTitle: i18n.t('Retire Stake'),
+      value: 0,
+    })
+  }
+
+  private async sendRemoveStakeTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let value: number
+    let _fee = 0
+
+    if (Array.isArray(params) && params.length >= 1) {
+      value = Number(params[0])
+      if (params.length >= 2) {
+        _fee = Number(params[1])
+      }
+    }
+    else if (typeof params === 'object' && params !== null) {
+      value = Number((params as any).value)
+      if ((params as any).fee !== undefined) {
+        _fee = Number((params as any).fee)
+      }
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRemoveStakeTransaction method')
+    }
+    return this.sendPayment({
+      transfer: Transfer.Staking,
+      stakingData: { type: 'remove-stake' },
+      stakingTitle: i18n.t('Remove Stake'),
+      value,
+    })
   }
 
   private async sendPayment(txData: {
-    recipient: string
     value: number
-    fee?: number
     message?: string
-    merchant?: {
-      name?: string
-      // category?: string;
-    }
-  }): Promise<string> {
+  } & ({
+    transfer: Transfer.UserPayment
+    recipient: string
+  } | {
+    transfer: Transfer.Staking
+    stakingTitle: string
+    stakingData: StakingData
+  })): Promise<string> {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
@@ -1061,35 +1249,51 @@ export class MiniAppHost {
       name: this.config.title,
       type: 'transaction',
       data: {
-        recipient: txData.recipient,
+        recipient: txData.transfer === Transfer.Staking ? STAKING_CONTRACT_ADDRESS : txData.recipient,
+        recipientType: txData.transfer === Transfer.Staking ? Nimiq.AccountType.Staking : Nimiq.AccountType.Basic,
         amount: txData.value,
-        fee: txData.fee || 0,
+        fee: 0,
         message: txData.message,
-        merchantName: txData.merchant?.name,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+        // TODO: Change PaymentRequestData to accept stakingData
+        meta: 'stakingData' in txData ? txData.stakingData : {},
       },
     })
     if (!confirmed) {
       throw new PermissionDeniedError('User said no.')
     }
 
-    const result = await useTransactions().sendTx({
-      recipient: txData.recipient,
-      amount: txData.value,
-      title: 'Payment',
-      transfer: Transfer.UserPaymentToMerchant,
-      message: txData.message,
-      merchantName: txData.merchant?.name,
-      // merchantCategory: txData.merchant?.category,
-      // invoiced:
-      // fiatAmount:
-      // fiatCurrency:
-      // paymentRef:
-      meta: {
-        miniApp: {
-          url: this.config.url,
-        },
-      },
-    })
+    let partialTx: PartialSendTxArgs
+    if (txData.transfer === Transfer.UserPayment) {
+      partialTx = {
+        recipient: txData.recipient,
+        amount: txData.value,
+        title: 'Payment',
+        transfer: txData.transfer,
+        message: txData.message,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+      } satisfies PartialUserTxArgs
+    }
+    else if (txData.transfer === Transfer.Staking) {
+      partialTx = {
+        amount: txData.value,
+        title: markAsUnknownTransactionTitle(txData.stakingTitle || 'Staking'),
+        transfer: txData.transfer,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+        stakingData: txData.stakingData!,
+      } satisfies PartialStakingTxArgs
+    }
+    else {
+      throw new InternalError('Invalid transfer type')
+    }
+
+    const result = await useTransactions().sendTx(partialTx)
     if (result.error || !result.data) {
       throw new InternalError(`Failed to send payment transaction: ${result.error || 'no transaction data'}`)
     }

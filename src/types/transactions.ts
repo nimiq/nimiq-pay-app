@@ -49,6 +49,11 @@ export enum Transfer {
    * A special transaction to extend the validity of the HTLC contract
    */
   ExtendRemote = 'extend-remote',
+
+  /**
+   * Staking transactions (both to and from the staking contract, both value-transferring and signaling)
+   */
+  Staking = 'staking',
 }
 
 /**
@@ -61,6 +66,7 @@ export enum Rail {
   Bluecode = 'bluecode',
   BitcoinLightning = 'bitcoin-lightning',
   NimiqWallet = 'nimiq-wallet',
+  MiniApp = 'mini-app',
   // Used when fetching old txs from blockchain
   Unknown = 'unknown',
 }
@@ -85,9 +91,9 @@ export enum MerchantCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
-  senderType: Nimiq.AccountType
+  senderType?: Nimiq.AccountType
   recipient: string
-  recipientType: Nimiq.AccountType
+  recipientType?: Nimiq.AccountType
   status: Nimiq.TransactionState
   timestamp: number | undefined
   amount: number
@@ -141,7 +147,7 @@ export function translateTransactionState(state: Nimiq.TransactionState) {
 
 export type UserTransaction = BaseTransaction & {
   transfer: Transfer.UserPayment
-  rail?: undefined
+  rail?: Rail.MiniApp
   railMerchantId?: undefined
   paymentRef?: undefined
   merchantName?: undefined
@@ -152,6 +158,8 @@ export type UserTransaction = BaseTransaction & {
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
   isCashbackClaimed?: undefined
+  recipientData?: undefined
+  senderData?: undefined
 }
 
 export type UserReceiptTransaction = BaseTransaction & {
@@ -167,6 +175,8 @@ export type UserReceiptTransaction = BaseTransaction & {
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
   isCashbackClaimed?: undefined
+  recipientData?: undefined
+  senderData?: undefined
 }
 
 export type MerchantTransaction = BaseTransaction & {
@@ -180,6 +190,8 @@ export type MerchantTransaction = BaseTransaction & {
   title: TransactionTitle
   paymentMethod: PaymentMethod
   paymentRef: string // The reference of the payment in the rail system
+  recipientData?: undefined
+  senderData?: undefined
 } & ({
   rail: Rail.CryptoPaymentLink
   railMerchantId?: undefined // The merchant id in CPL is not exposed
@@ -204,6 +216,43 @@ export type MerchantTransaction = BaseTransaction & {
   railMerchantId: string
 } */)
 
+export type StakingData = {
+  type: 'create-staker'
+  delegation: string
+} | {
+  type: 'add-stake'
+} | {
+  type: 'update-staker'
+  newDelegation: string
+  reactivateAllStake: boolean
+} | {
+  type: 'set-active-stake'
+  newActiveBalance: number
+} | {
+  type: 'retire-stake'
+  retireStake: number
+} | {
+  type: 'remove-stake'
+}
+
+export type StakingTransaction = BaseTransaction & {
+  transfer: Transfer.Staking
+  title: TransactionTitle
+  recipientData?: Uint8Array
+  senderData?: Uint8Array
+  rail?: Rail.MiniApp
+  railMerchantId?: string // Mini-app URL
+  merchantName?: string // Mini-app name
+
+  // Unused properties for type compatibility
+  merchantCategory?: undefined
+  paymentRef?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
+  fiatCurrency?: undefined
+  isCashbackClaimed?: undefined
+}
+
 interface SyncTransactionBase {
   title?: undefined
   rail?: undefined
@@ -216,6 +265,8 @@ interface SyncTransactionBase {
   fiatAmount?: undefined
   fiatFeeAmount?: undefined
   isCashbackClaimed?: undefined
+  recipientData?: undefined
+  senderData?: undefined
 }
 
 export type LocalToRemoteTx = BaseTransaction & SyncTransactionBase & { transfer: Transfer.LocalToRemote }
@@ -226,9 +277,9 @@ export type ExtendRemoteTx = BaseTransaction & SyncTransactionBase & { transfer:
 export type SyncTransaction = LocalToRemoteTx | RemoteToLocalTx | RemoteToLocalAfterTimeoutTx | ExtendRemoteTx | RemoteToLocalImmediateReclaimTx
 
 /**
- * Transactions that are sent by the user and the recipient is another user
+ * Transactions that are sent by the user and the recipient is another user or the staking contract
  */
-export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction
+export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction | StakingTransaction
 
 /**
  * Transaction that the user sent to another user or internally to the HTLC contract
@@ -249,7 +300,7 @@ export type Transaction = ExternalTransaction | SyncTransaction
  * Transactions that are not internal (synchronization) transactions
  */
 export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt].includes(tx.transfer)
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking].includes(tx.transfer)
 }
 
 /**
@@ -259,13 +310,17 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
   return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap].includes(tx.transfer)
 }
 
+export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
+export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
+
 export type PartialSendTxArgs
-  = | Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
+  = | PartialUserTxArgs
     | Pick<LocalToRemoteTx, 'transfer'>
     | Pick<ExtendRemoteTx, 'transfer'>
     | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
     | Pick<RemoteToLocalTx, 'transfer'>
     | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | PartialStakingTxArgs
 
 export enum PaymentMethod {
   NIM = 'nim',

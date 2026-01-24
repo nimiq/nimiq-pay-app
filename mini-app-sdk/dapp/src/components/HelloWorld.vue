@@ -55,6 +55,13 @@ async function sendBasicTransactionWithData() {
   })
 }
 
+async function sendNewStakerTransaction() {
+  output.value = await window.nimiq.sendNewStakerTransaction({
+    delegation: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
+    value: 100e5,
+  })
+}
+
 const output = ref()
 </script>
 
@@ -73,6 +80,7 @@ const output = ref()
     <button type="button" @click="sign" :disabled="!isInMiniApp">sign</button>
     <button type="button" @click="sendBasicTransaction" :disabled="!isInMiniApp">sendBasicTransaction</button>
     <button type="button" @click="sendBasicTransactionWithData" :disabled="!isInMiniApp">sendBasicTransactionWithData</button>
+    <button type="button" @click="sendNewStakerTransaction" :disabled="!isInMiniApp">sendNewStakerTransaction</button>
     <br/>
     <strong>Response:</strong>
     <pre>

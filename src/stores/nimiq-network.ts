@@ -25,6 +25,8 @@ export const CashlinkExtraDataHex = {
   CLAIMING: CashlinkExtraData.CLAIMING.reduce((hex, value) => hex + value.toString(16).padStart(2, '0'), ''),
 }
 
+export const STAKING_CONTRACT_ADDRESS = 'NQ77 0000 0000 0000 0000 0000 0000 0000 0001'
+
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const { isNetworkReconnecting, isAppStarting } = storeToRefs(useLocks())
   const client = ref<Client>()

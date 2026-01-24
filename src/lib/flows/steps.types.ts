@@ -308,9 +308,9 @@ export const stepEmits: EmitsOptions = {
 
 // Complex types for State
 
-export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency'>
+export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency' | 'railMerchantId' | 'recipientType' | 'senderType' | 'recipientData' | 'senderData'>
   & {
-    transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap
+    transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap | Transfer.Staking
     feeIncludedInAmount?: boolean
     swap?: {
       fees: { asset: string, amount: number }[]

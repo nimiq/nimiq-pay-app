@@ -80,7 +80,41 @@ export const useTransactions = defineStore('transactions', () => {
       SQLQuery.UpsertTx,
       // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
       // time to whatever language the user has selected at that time.
-      [tx.hash, tx.timestamp, tx.sender, tx.senderType, tx.recipient, tx.recipientType, tx.amount, tx.fee, tx.status, tx.raw, tx.title, tx.transfer, tx.message, tx.rail, tx.railMerchantId, tx.merchantName, tx.merchantCategory, tx.paymentRef, tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap ? tx.paymentMethod : null, tx.fiatAmount, tx.fiatFeeAmount, tx.fiatCurrency, tx.isCashbackClaimed, tx.invoiced ? JSON.stringify(tx.invoiced) : null, tx.meta ? JSON.stringify(tx.meta) : null],
+      [
+        tx.hash,
+        tx.timestamp,
+        tx.sender,
+        tx.senderType,
+        tx.recipient,
+        tx.recipientType,
+        tx.amount,
+        tx.fee,
+        tx.status,
+        tx.raw,
+        tx.title,
+        tx.transfer,
+        tx.message,
+        tx.rail,
+        tx.railMerchantId,
+        tx.merchantName,
+        tx.merchantCategory,
+        tx.paymentRef,
+        tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap
+          ? tx.paymentMethod
+          : null,
+        tx.fiatAmount,
+        tx.fiatFeeAmount,
+        tx.fiatCurrency,
+        tx.isCashbackClaimed,
+        tx.invoiced
+          ? JSON.stringify(tx.invoiced)
+          : null,
+        tx.meta
+          ? JSON.stringify(tx.meta)
+          : null,
+        tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+        tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      ],
     )
   }
 
