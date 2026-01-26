@@ -7,19 +7,6 @@ import { i18n } from '@/i18n/i18n-setup'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { useLocalWallet } from '@/stores/local-wallet'
-// import {
-//     ErrorData,
-//     ErrorMessage,
-//     Handler,
-//     RequestMessage,
-//     RequestType,
-//     ResponseData,
-//     ResponseMessage,
-//     ResponseType,
-//     SubscriptionMessage,
-//     SubscriptionType,
-// } from './../../mini-app-sdk/types'
-// import { mapError, Result, unwrap } from "./../../mini-app-sdk/Result";
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
