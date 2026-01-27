@@ -861,28 +861,22 @@ export class MiniAppHost {
   private async _handleNimiqMessage(message: Request) {
     logger.log('[MiniAppHost] Handling Nimiq message:', message)
 
-    try {
-      switch (message.name) {
-        case 'listAccounts': return this.listAccounts()
-        case 'sign': return this.sign(message.params)
-        case 'isConsensusEstablished': return this.isConsensusEstablished()
-        case 'getBlockNumber': return this.getBlockNumber()
-        case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
-        case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
-        case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
-        case 'sendStakeTransaction': return this.sendAddStakeTransaction(message.params)
-        case 'sendSetActiveStakeTransaction': return this.sendSetActiveStakeTransaction(message.params)
-        case 'sendUpdateStakerTransaction': return this.sendUpdateStakerTransaction(message.params)
-        case 'sendRetireStakeTransaction': return this.sendRetireStakeTransaction(message.params)
-        case 'sendRemoveStakeTransaction': return this.sendRemoveStakeTransaction(message.params)
-        default:
-          logger.log('[MiniAppHost] Unknown message name:', message.name)
-          throw new UnknownRequestError(`Unknown message name: ${message.name}`)
-      }
-    }
-    catch (error) {
-      logger.error('[MiniAppHost] Error handling message:', error)
-      throw new InternalError(`Internal error handling message: ${(error as Error).message}`)
+    switch (message.name) {
+      case 'listAccounts': return this.listAccounts()
+      case 'sign': return this.sign(message.params)
+      case 'isConsensusEstablished': return this.isConsensusEstablished()
+      case 'getBlockNumber': return this.getBlockNumber()
+      case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
+      case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
+      case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
+      case 'sendStakeTransaction': return this.sendAddStakeTransaction(message.params)
+      case 'sendSetActiveStakeTransaction': return this.sendSetActiveStakeTransaction(message.params)
+      case 'sendUpdateStakerTransaction': return this.sendUpdateStakerTransaction(message.params)
+      case 'sendRetireStakeTransaction': return this.sendRetireStakeTransaction(message.params)
+      case 'sendRemoveStakeTransaction': return this.sendRemoveStakeTransaction(message.params)
+      default:
+        logger.log('[MiniAppHost] Unknown message name:', message.name)
+        throw new UnknownRequestError(`Unknown message name: ${message.name}`)
     }
   }
 
