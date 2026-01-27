@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import HelloWorld from './components/HelloWorld.vue'
+import Staking from './components/Staking.vue';
+
+const view = ref('kitchen-sink');
 </script>
 
 <template>
@@ -11,7 +15,14 @@ import HelloWorld from './components/HelloWorld.vue'
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
   </div>
-  <HelloWorld msg="Nimiq Mini-App" />
+
+  <nav>
+    <button @click="view = 'kitchen-sink'">Kitchen Sink</button>
+    <button @click="view = 'staking'">Staking</button>
+  </nav>
+
+  <HelloWorld v-if="view === 'kitchen-sink'" />
+  <Staking v-if="view === 'staking'" />
 </template>
 
 <style scoped>

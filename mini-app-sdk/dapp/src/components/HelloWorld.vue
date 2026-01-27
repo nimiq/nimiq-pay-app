@@ -2,21 +2,21 @@
 import { ref } from 'vue'
 import type { NimiqProvider } from "@trustwallet/web3-provider-nimiq"
 
-defineProps<{ msg: string }>()
-
 declare global {
     interface Window {
         nimiq: NimiqProvider
     }
 }
 
-const isInMiniApp = ref(!!window.nimiq)
-const providerCheck = setInterval(() => {
-  if (!!window.nimiq) {
-    isInMiniApp.value = true
-    clearInterval(providerCheck)
-  }
-}, 500)
+const hasProvider = ref(!!window.nimiq)
+if (!hasProvider.value) {
+  const providerCheck = setInterval(() => {
+      hasProvider.value = !!window.nimiq
+      if (hasProvider.value) {
+          clearInterval(providerCheck)
+      }
+  }, 100)
+}
 
 async function isConsensusEstablished() {
   output.value = await window.nimiq.isConsensusEstablished()
@@ -66,21 +66,21 @@ const output = ref()
 </script>
 
 <template>
-  <h1>{{ msg }}</h1>
+  <h2>Kitchen Sink</h2>
 
-  <p v-if="!isInMiniApp" class="error">
-    This mini-app is not running inside the Nimiq Pay app! Some features may not be available.
+  <p v-if="!hasProvider" class="error">
+    Nimiq Web3 Provider not detected! Some features may not be available.
   </p>
 
   <div class="card">
     <strong>Test requests:</strong>
-    <button type="button" @click="isConsensusEstablished" :disabled="!isInMiniApp">isConsensusEstablished</button>
-    <button type="button" @click="getBlockNumber" :disabled="!isInMiniApp">getBlockNumber</button>
-    <button type="button" @click="listAccounts" :disabled="!isInMiniApp">listAccounts</button>
-    <button type="button" @click="sign" :disabled="!isInMiniApp">sign</button>
-    <button type="button" @click="sendBasicTransaction" :disabled="!isInMiniApp">sendBasicTransaction</button>
-    <button type="button" @click="sendBasicTransactionWithData" :disabled="!isInMiniApp">sendBasicTransactionWithData</button>
-    <button type="button" @click="sendNewStakerTransaction" :disabled="!isInMiniApp">sendNewStakerTransaction</button>
+    <button type="button" @click="isConsensusEstablished" :disabled="!hasProvider">isConsensusEstablished</button>
+    <button type="button" @click="getBlockNumber" :disabled="!hasProvider">getBlockNumber</button>
+    <button type="button" @click="listAccounts" :disabled="!hasProvider">listAccounts</button>
+    <button type="button" @click="sign" :disabled="!hasProvider">sign</button>
+    <button type="button" @click="sendBasicTransaction" :disabled="!hasProvider">sendBasicTransaction</button>
+    <button type="button" @click="sendBasicTransactionWithData" :disabled="!hasProvider">sendBasicTransactionWithData</button>
+    <button type="button" @click="sendNewStakerTransaction" :disabled="!hasProvider">sendNewStakerTransaction</button>
     <br/>
     <strong>Response:</strong>
     <pre>
