@@ -332,24 +332,31 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!hasLocalWallet.value)
       return
 
-    remoteSigner.value = await getActiveRemoteSigner()
-    await updateSignersTableBalance()
+    try {
+      logger.log('📡 Initializing Remote Signer Store')
+      remoteSigner.value = await getActiveRemoteSigner()
+      logger.log('📡 Remote Signer from DB', remoteSigner.value ? { ...remoteSigner.value, address: remoteSigner.value.address.toUserFriendlyAddress() } : null)
+      await updateSignersTableBalance()
 
-    if (!remoteSigner.value) {
-      logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
-      getRemoteSignersFromBlockchain()
-    }
-
-    updateRemoteFromApi()
-    await until(client).not.toBeUndefined()
-    client.value!.addHeadChangedListener(async () => {
-      // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
-      // Mainly for the case when the user recovers the wallet from the words
-      if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % (10 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0) {
-        logger.log('📡👀 Searching for new remote wallets')
-        await updateRemoteFromApi()
+      if (!remoteSigner.value) {
+        logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+        getRemoteSignersFromBlockchain()
       }
-    })
+
+      updateRemoteFromApi()
+      await until(client).not.toBeUndefined()
+      client.value!.addHeadChangedListener(async () => {
+        // Check if there is a new remote wallet that we don't have in the database, only if the one we have has 0 balance
+        // Mainly for the case when the user recovers the wallet from the words
+        if ((remoteBalance.value === 0 || remoteBalance.value === -1) && height.value % (10 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0) {
+          logger.log('📡👀 Searching for new remote wallets')
+          await updateRemoteFromApi()
+        }
+      })
+    }
+    catch (error) {
+      logger.error('Error initializing Remote Signer Store', error)
+    }
   }
 
   async function blockHeightToTimestamp(blockHeight: number): Promise<number> {

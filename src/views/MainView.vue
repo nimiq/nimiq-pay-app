@@ -201,20 +201,45 @@ onMounted(async () => {
   // if (country)
   //   isNakaAvailable.value = isCountryNakaSupported(country)
   // Getting IP first to store it in cache
-  const ip = await useGeoIp().getIp()
-  const response = await useGeoIp().locate(ip)
+  try {
+    const ip = await useGeoIp().getIp()
+    const response = await useGeoIp().locate(ip)
+    logger.log('Geo IP response for NAKA availability', response)
 
-  if ('country_code' in response)
-    isNakaAvailable.value = isCountryNakaSupported(response.country_code)
+    if ('country_code' in response)
+      isNakaAvailable.value = isCountryNakaSupported(response.country_code)
 
-  updateNakaUser() // Fire and forget
-  await updatePointsStatus()
-  if (phoneNumberVerified.value) {
-    updatePointsBalance()
-    updateTasks()
+    updateNakaUser() // Fire and forget
+  }
+  catch (error) {
+    logger.error('Error determining geo IP for NAKA availability:', error)
   }
 
-  useNotifications().init()
+  try {
+    await updatePointsStatus()
+  }
+  catch (error) {
+    logger.error('Error updating points status:', error)
+  }
+
+  try {
+    if (phoneNumberVerified.value) {
+      updatePointsBalance()
+      updateTasks()
+    }
+  }
+  catch (error) {
+    logger.error('Error updating points balance or tasks:', error)
+  }
+
+  try {
+    useNotifications().init()
+  }
+  catch (error) {
+    logger.error('Error initializing notifications:', error)
+  }
+
+  logger.log('Initial checks done, starting sync process')
   useSync().syncWallets()
   detectPaymentRequest()
 
