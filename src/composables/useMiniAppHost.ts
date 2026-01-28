@@ -10,10 +10,7 @@ import type { PluginListenerHandle } from '@capacitor/core'
 // } from "./../../mini-app-sdk/NimiqProvider"
 
 import type { InAppBrowser } from '@capgo/inappbrowser'
-import type { PlainTransactionSenderData, Transaction } from '@nimiq/core'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { storeToRefs } from 'pinia'
-import { createResolveProof, getSignedTxByRemote } from '@/lib/tx'
 import { useLocalWallet } from '@/stores/local-wallet'
 // import {
 //     ErrorData,
@@ -209,9 +206,40 @@ export class MiniAppHost {
       case 'signTransaction':
       case 'signTypedMessage':
         throw new UnknownRequestError(`${message.name} not implemented yet`)
+      case 'rpcCall':
+        return this.rpcCall(message.params ?? message.object)
       default:
         throw new UnknownRequestError(`Unknown Ethereum method: ${message.name}`)
     }
+  }
+
+  private async rpcCall(params: unknown): Promise<unknown> {
+    if (typeof params !== 'object' || params === null) {
+      throw new InternalError('Invalid parameters for rpcCall')
+    }
+
+    const { rpcUrl, payload } = params as { rpcUrl?: string, payload?: unknown }
+
+    if (!rpcUrl || typeof rpcUrl !== 'string') {
+      throw new InternalError('Missing or invalid rpcUrl parameter')
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      throw new InternalError('Missing or invalid payload parameter')
+    }
+
+    console.log('[MiniAppHost] rpcCall fetching:', rpcUrl, 'with payload:', payload)
+
+    const response = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+
+    return await response.json()
   }
 
   private async listEthAccounts(): Promise<string[]> {
