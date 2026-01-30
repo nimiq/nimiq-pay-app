@@ -643,7 +643,7 @@ export const useSync = defineStore('sync', () => {
 
       // Check for transactions made from the remote signers
       if (remoteSigners && remoteSigners.length) {
-        for (const remoteSigner of remoteSigners) {
+        for (const remoteSigner of remoteSigners.sort((a, b) => b.end - a.end)) {
           const accountTxs = await getAccountTransactions(remoteSigner.address)
           const txsToProcess = accountTxs.data
           // Only transactions sent from the remote signer to other addresses
