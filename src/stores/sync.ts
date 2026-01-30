@@ -347,6 +347,10 @@ export const useSync = defineStore('sync', () => {
       if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
         return
 
+      // Ignore re-staking transactions from pools
+      if (tx.recipientType === 'staking' && tx.data.type === 'add-stake' && (remoteAddress.value && tx.sender !== remoteAddress.value.toUserFriendlyAddress()))
+        return
+
       // Check if tx is already in DB
       const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
       const hash = tx.transactionHash
