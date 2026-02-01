@@ -16,7 +16,7 @@ const view = ref('kitchen-sink');
     </a>
   </div>
 
-  <nav>
+  <nav style="display: flex; flex-direction: row; justify-content: center; gap: 8px;">
     <button @click="view = 'kitchen-sink'">Kitchen Sink</button>
     <button @click="view = 'staking'">Staking</button>
   </nav>
