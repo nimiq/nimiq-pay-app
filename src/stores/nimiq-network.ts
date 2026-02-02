@@ -42,7 +42,8 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
 
     await Nimiq.default()
 
-    if (!options.launchNimiqClient) return
+    if (!options.launchNimiqClient)
+      return
 
     const config = new Nimiq.ClientConfiguration()
     config.network(networkName.value)

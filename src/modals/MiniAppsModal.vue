@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { IonInput } from '@ionic/vue'
+import type { UserConfirmationRequest } from '@/composables/useMiniAppHost'
 import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
+import { IonInput } from '@ionic/vue'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
+import { ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
-import { MiniAppHost, UserConfirmationRequest } from '@/composables/useMiniAppHost'
+import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
 
 const logger = useLogger('MiniAppModal')
@@ -51,7 +52,7 @@ const popularDApps: DApp[] = [
 
 // Request user confirmation for sensitive operations
 async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
-  const appName = request.name || request.url;
+  const appName = request.name || request.url
 
   switch (request.type) {
     case 'accounts': {
@@ -63,48 +64,51 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
           { label: 'View account addresses', value: 'view_addresses' },
         ],
         selectedValues: ['view_addresses'],
-      });
+      })
       // User confirmed if they didn't cancel and selected the option
-      return !result.cancelled && result.values.includes('view_addresses');
+      return !result.cancelled && result.values.includes('view_addresses')
     }
 
     case 'transaction': {
       // Use confirm for transaction confirmation
-      const { recipient, amount, fee, message, merchantName } = request.data;
-      const amountNim = (amount / 1e5).toFixed(5);
-      const feeNim = fee ? (fee / 1e5).toFixed(5) : '0';
+      const { recipient, amount, fee, message, merchantName } = request.data
+      const amountNim = (amount / 1e5).toFixed(5)
+      const feeNim = fee ? (fee / 1e5).toFixed(5) : '0'
 
-      let confirmMessage = `${appName} wants to send a transaction:`;
-      confirmMessage += `\n\nRecipient: ${recipient}`;
-      confirmMessage += `\nAmount: ${amountNim} NIM`;
-      if (fee) confirmMessage += `\nFee: ${feeNim} NIM`;
-      if (message) confirmMessage += `\nMessage: ${message}`;
-      if (merchantName) confirmMessage += `\nMerchant: ${merchantName}`;
+      let confirmMessage = `${appName} wants to send a transaction:`
+      confirmMessage += `\n\nRecipient: ${recipient}`
+      confirmMessage += `\nAmount: ${amountNim} NIM`
+      if (fee)
+        confirmMessage += `\nFee: ${feeNim} NIM`
+      if (message)
+        confirmMessage += `\nMessage: ${message}`
+      if (merchantName)
+        confirmMessage += `\nMerchant: ${merchantName}`
 
       const result = await ExtendedDialog.confirm({
         title: 'Confirm Transaction',
         message: confirmMessage,
-      });
-      return result.value;
+      })
+      return result.value
     }
 
     case 'message': {
       // Use confirm for message signing confirmation
-      const { message: msgToSign, isHex } = request.data;
+      const { message: msgToSign, isHex } = request.data
       const displayMessage = isHex
         ? `Hex data: ${msgToSign.slice(0, 50)}${msgToSign.length > 50 ? '...' : ''}`
-        : msgToSign;
+        : msgToSign
 
       const result = await ExtendedDialog.confirm({
         title: 'Sign Message',
         message: `${appName} wants to sign a message:\n\n${displayMessage}`,
-      });
-      return result.value;
+      })
+      return result.value
     }
 
     default:
-      logger.error('Unknown confirmation request type:', request);
-      return false;
+      logger.error('Unknown confirmation request type:', request)
+      return false
   }
 }
 
@@ -119,7 +123,7 @@ async function openMiniApp(url?: string, title?: string) {
     url: targetUrl,
     title: appTitle,
     requestUserConfirmation,
-  });
+  })
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
   await InAppBrowser.openWebView({
@@ -180,9 +184,9 @@ async function openMiniApp(url?: string, title?: string) {
             Custom URL
           </label>
           <IonInput
+            v-model="miniAppUrl"
             placeholder="Enter URL"
             clear-input
-            v-model="miniAppUrl"
             class="bg-white/5 rounded-lg"
           />
           <button

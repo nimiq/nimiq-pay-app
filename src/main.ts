@@ -51,7 +51,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   app.use(IonicVue)
   app.use(createPinia())
   app.use(i18nRegistration)
-  if (!isAlertRoute) app.use(VueVirtualScroller)
+  if (!isAlertRoute)
+    app.use(VueVirtualScroller)
 
   // load and set the initial language
   const { language } = storeToRefs(useApp())
@@ -64,33 +65,37 @@ window.addEventListener('DOMContentLoaded', async () => {
    *    - When the setup flow is finished
    */
 
-  if (!isAlertRoute) await useConn().init()
+  if (!isAlertRoute)
+    await useConn().init()
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute })
   useLogger().init()
-  if (!isAlertRoute) useNaka().init()
+  if (!isAlertRoute)
+    useNaka().init()
 
   const { isWeb } = useDevice()
 
-  if (!isAlertRoute) router.beforeEach((to, from, next) => {
-    const isWebAndNoPin = isWeb && !useDecrypt().hasPin()
-    const isMobileAndNoDb = !isWeb && !useConn().dbExists
+  if (!isAlertRoute) {
+    router.beforeEach((to, from, next) => {
+      const isWebAndNoPin = isWeb && !useDecrypt().hasPin()
+      const isMobileAndNoDb = !isWeb && !useConn().dbExists
 
-    // Check if setup is completed
-    if (isWebAndNoPin || isMobileAndNoDb) {
-      if (to.name === 'Setup')
-        return next()
-      return next({ name: 'Setup', replace: true })
-    }
+      // Check if setup is completed
+      if (isWebAndNoPin || isMobileAndNoDb) {
+        if (to.name === 'Setup')
+          return next()
+        return next({ name: 'Setup', replace: true })
+      }
 
-    // Check if the db is unlocked
-    if (!useDecrypt().decrypted.value) {
-      if (to.name === 'Pin')
-        return next()
-      return next({ name: 'Pin', replace: true })
-    }
+      // Check if the db is unlocked
+      if (!useDecrypt().decrypted.value) {
+        if (to.name === 'Pin')
+          return next()
+        return next({ name: 'Pin', replace: true })
+      }
 
-    return next()
-  })
+      return next()
+    })
+  }
 
   // This router navigation guard is to prevent switching to the new route before the language file finished loading.
   // If there are any routes which do not require translations, they can be skipped here.

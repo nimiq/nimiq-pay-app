@@ -29,6 +29,9 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
+import { useLogger } from './useLogger'
+
+const logger = useLogger('MiniAppHost')
 
 export interface InAppBrowserMessageEvent {
   detail: {
@@ -117,23 +120,23 @@ export class MiniAppHost {
     if (!event.detail)
       return
 
-    console.log('[MiniAppHost] Received message from webview:', event.detail)
+    logger.log('[MiniAppHost] Received message from webview:', event.detail)
 
     // Ensure message structure
     if (typeof event.detail.id !== 'number') {
-      console.log('[MiniAppHost] Message has no id property, skipping')
+      logger.log('[MiniAppHost] Message has no id property, skipping')
       this.sendError(Number.NaN, 'INVALID_MESSAGE', 'Message has no id property')
       return
     }
 
     if (typeof event.detail.network !== 'string') {
-      console.log('[MiniAppHost] Message has no network property, skipping')
+      logger.log('[MiniAppHost] Message has no network property, skipping')
       this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no network property')
       return
     }
 
     if (typeof event.detail.name !== 'string') {
-      console.log('[MiniAppHost] Message has no name property, skipping')
+      logger.log('[MiniAppHost] Message has no name property, skipping')
       this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no name property')
       return
     }
@@ -148,7 +151,7 @@ export class MiniAppHost {
         this.handleEthereumMessage(message)
         break
       default: {
-        console.log('[MiniAppHost] Unknown network in message:', event.detail.network)
+        logger.log('[MiniAppHost] Unknown network in message:', event.detail.network)
         this.sendError(message.id, 'INVALID_NETWORK', `Unknown network: ${message.network}`)
       }
     }
@@ -195,7 +198,7 @@ export class MiniAppHost {
   }
 
   private async _handleEthereumMessage(message: Request) {
-    console.log('[MiniAppHost] Handling Ethereum message:', message)
+    logger.log('[MiniAppHost] Handling Ethereum message:', message)
 
     switch (message.name) {
       case 'requestAccounts':
@@ -229,7 +232,7 @@ export class MiniAppHost {
       throw new InternalError('Missing or invalid payload parameter')
     }
 
-    console.log('[MiniAppHost] rpcCall fetching:', rpcUrl, 'with payload:', payload)
+    logger.log('[MiniAppHost] rpcCall fetching:', rpcUrl, 'with payload:', payload)
 
     const response = await fetch(rpcUrl, {
       method: 'POST',
@@ -276,16 +279,16 @@ export class MiniAppHost {
       address = (params as { address?: string }).address ?? ''
     }
     else {
-      console.error('[MiniAppHost] Invalid parameters for signPersonalMessage:', params)
+      logger.error('[MiniAppHost] Invalid parameters for signPersonalMessage:', params)
       throw new InternalError('Invalid parameters for signPersonalMessage')
     }
 
     if (!data) {
-      console.error('[MiniAppHost] Missing data parameter for signPersonalMessage')
+      logger.error('[MiniAppHost] Missing data parameter for signPersonalMessage')
       throw new InternalError('Missing data parameter for signPersonalMessage')
     }
     if (!address) {
-      console.error('[MiniAppHost] Missing address parameter for signPersonalMessage')
+      logger.error('[MiniAppHost] Missing address parameter for signPersonalMessage')
       throw new InternalError('Missing address parameter for signPersonalMessage')
     }
 
@@ -306,7 +309,7 @@ export class MiniAppHost {
       throw new InternalError('Confirmation handler not provided')
     }
 
-    console.log('[MiniAppHost] Requesting user confirmation for message signing:', messageToDisplay)
+    logger.log('[MiniAppHost] Requesting user confirmation for message signing:', messageToDisplay)
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
@@ -443,7 +446,7 @@ export class MiniAppHost {
    */
   // private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseType[T]> {
   private async _handleNimiqMessage(message: Request) {
-    console.log('[MiniAppHost] Handling Nimiq message:', message)
+    logger.log('[MiniAppHost] Handling Nimiq message:', message)
 
     try {
       switch (message.name) {
@@ -454,12 +457,12 @@ export class MiniAppHost {
         case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
         case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
         default:
-          console.log('[MiniAppHost] Unknown message name:', message.name)
+          logger.log('[MiniAppHost] Unknown message name:', message.name)
           throw new UnknownRequestError(`Unknown message name: ${message.name}`)
       }
     }
     catch (error) {
-      console.error('[MiniAppHost] Error handling message:', error)
+      logger.error('[MiniAppHost] Error handling message:', error)
       throw new InternalError(`Internal error handling message: ${(error as Error).message}`)
     }
   }
@@ -738,7 +741,7 @@ export class MiniAppHost {
    * @private
    */
   private postMessage(message: { id: number, data: any }): void {
-    console.log('[MiniAppHost] Posting message to mini app:', message)
+    logger.log('[MiniAppHost] Posting message to mini app:', message)
     this.inAppBrowser.postMessage({ detail: message })
   }
 }
