@@ -3,7 +3,7 @@ import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
 import type { AsyncResult } from '@/types'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onMounted, readonly, shallowRef } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
@@ -371,6 +371,11 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
+  async function addStakingtransaction(tx: StakingTransaction) {
+    await upsertTx(tx)
+    addTransaction(tx)
+  }
+
   function addTransaction(tx: ExternalTransaction) {
     transactions.value = [tx, ...transactions.value].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
@@ -433,6 +438,7 @@ export const useTransactions = defineStore('transactions', () => {
     addPaymentToMerchantTransaction,
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
+    addStakingtransaction,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,

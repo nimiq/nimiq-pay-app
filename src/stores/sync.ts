@@ -26,7 +26,7 @@ import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { markAsUnknownTransactionTitle, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const { isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions, headChangePendingDrainLock, headChangeUpdatesLock, htlcCheckLock } = storeToRefs(useLocks())
@@ -42,7 +42,7 @@ export const useSync = defineStore('sync', () => {
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey, remoteSigner } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
-  const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
+  const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, addStakingtransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
   // Whether the remote wallet is synced with the local wallet or not.
   // We allow a difference of MAX_BLOCK_HEIGHT_MISMATCH blocks between the two wallets.
@@ -506,23 +506,29 @@ export const useSync = defineStore('sync', () => {
           return
 
         logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
-        useTransactions().addReceiptTransaction({
-          transfer: Transfer.UserReceipt,
-          amount: tx.value,
-          sender: tx.sender,
-          senderType: toAccountType(tx.senderType),
-          recipient: tx.recipient,
-          recipientType: toAccountType(tx.recipientType),
-          hash,
-          status: tx.state,
-          timestamp: tx.timestamp,
-          title: 'Top-Up', // translated at display time
-          message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
-          fee: tx.fee,
-          // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
-          // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-          proofSize: useRemoteSigner().remoteProofSize,
-        })
+        if (tx.senderType === 'staking') {
+          // Staking removal transactions should not show as deposits
+          handleStakingTxs(tx)
+        }
+        else {
+          useTransactions().addReceiptTransaction({
+            transfer: Transfer.UserReceipt,
+            amount: tx.value,
+            sender: tx.sender,
+            senderType: toAccountType(tx.senderType),
+            recipient: tx.recipient,
+            recipientType: toAccountType(tx.recipientType),
+            hash,
+            status: tx.state,
+            timestamp: tx.timestamp,
+            title: 'Top-Up', // translated at display time
+            message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+            fee: tx.fee,
+            // proofSize: 'raw' in tx.proof ? Math.floor(tx.proof.raw.length / 2) : 0,
+            // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
+            proofSize: useRemoteSigner().remoteProofSize,
+          })
+        }
       }))
 
       async function handleSwapTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
@@ -581,6 +587,67 @@ export const useSync = defineStore('sync', () => {
         })
       }
 
+      function handleStakingTxs(tx: PlainTransactionDetails) {
+        let title: string
+        if (tx.senderType === 'staking') {
+          logger.log(`📬 New ${tx.senderData!.type} transaction found with ${tx.value / 1e5} NIM from staking contract`)
+          switch (tx.senderData!.type) {
+            case 'remove-stake':
+              title = i18n.t('Remove Stake')
+              break
+            case 'delete-validator':
+              title = i18n.t('Delete Validator')
+              break
+            default:
+              title = i18n.t('Staking Contract')
+              break
+          }
+        }
+        else if (tx.recipientType === 'staking') {
+          logger.log(`📬 New ${tx.data.type} transaction found with ${tx.value / 1e5} NIM to staking contract`)
+          switch (tx.data.type) {
+            case 'create-staker':
+              title = i18n.t('Create Staker')
+              break
+            case 'add-stake':
+              title = i18n.t('Add Stake')
+              break
+            case 'set-active-stake':
+              title = i18n.t('Set Active Stake')
+              break
+            case 'update-staker':
+              title = i18n.t('Update Staker')
+              break
+            case 'retire-stake':
+              title = i18n.t('Retire Stake')
+              break
+            default:
+              title = i18n.t('Staking Contract')
+              break
+          }
+        }
+        else {
+          title = i18n.t('Staking Contract')
+        }
+
+        addStakingtransaction({
+          transfer: Transfer.Staking,
+          amount: tx.value,
+          fee: tx.fee,
+          hash: tx.transactionHash,
+          sender: tx.sender,
+          senderType: toAccountType(tx.senderType),
+          senderData: tx.senderData ? Nimiq.BufferUtils.fromHex(tx.senderData.raw) : undefined,
+          recipient: tx.recipient,
+          recipientType: toAccountType(tx.recipientType),
+          recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
+          status: tx.state,
+          timestamp: tx.timestamp,
+          title: markAsUnknownTransactionTitle(title),
+          proofSize: tx.proof.raw.length / 2,
+        })
+      }
+
       function handleUnknownTxs(tx: PlainTransactionDetails, { remoteSigner }: { remoteSigner: RemoteSigner }) {
         logger.log(`📬 New merchant transaction found with ${tx.value / 1e5} NIM from remote signer ${remoteSigner.address.toUserFriendlyAddress()}`)
         addUnknownPaymentToMerchantTransaction(tx)
@@ -593,6 +660,7 @@ export const useSync = defineStore('sync', () => {
         const htlcExtensionTxs: PlainTransactionDetails[] = []
         const htlcSwapTxs: PlainTransactionDetails[] = []
         const withdrawalTxs: PlainTransactionDetails[] = []
+        const stakingTxs: PlainTransactionDetails[] = []
         const unknownTxs: PlainTransactionDetails[] = []
         for (const tx of txs) {
           if (tx.recipientType === 'htlc') {
@@ -603,6 +671,9 @@ export const useSync = defineStore('sync', () => {
             else
               htlcSwapTxs.push(tx)
           }
+          else if (tx.recipientType === 'staking' || tx.senderType === 'staking') {
+            stakingTxs.push(tx)
+          }
           else if (topUpAddresses.includes(tx.recipient)) {
             withdrawalTxs.push(tx)
           }
@@ -612,6 +683,7 @@ export const useSync = defineStore('sync', () => {
           htlcExtensionTxs,
           htlcSwapTxs,
           withdrawalTxs,
+          stakingTxs,
           unknownTxs,
         }
       }
@@ -662,18 +734,20 @@ export const useSync = defineStore('sync', () => {
               return true
             })
 
-          const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, unknownTxs } = categorizeTransactions(txsToProcess)
+          const { htlcExtensionTxs, htlcSwapTxs, withdrawalTxs, stakingTxs, unknownTxs } = categorizeTransactions(txsToProcess)
 
           await Promise.all(htlcExtensionTxs.map(async (tx) => {
             const txs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient))
             const categorized = categorizeTransactions(txs)
             htlcSwapTxs.concat(categorized.htlcSwapTxs)
             withdrawalTxs.concat(categorized.withdrawalTxs)
+            stakingTxs.concat(categorized.stakingTxs)
             unknownTxs.concat(categorized.unknownTxs)
           }))
           await Promise.all([
             htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
             withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
+            stakingTxs.map(tx => handleStakingTxs(tx)),
             unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
           ].flat())
         }
