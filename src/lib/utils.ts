@@ -9,13 +9,13 @@ export function promiseWithTimeout<T>(promise: Promise<T>, timeoutMs: number): P
   let timeoutId: number
 
   const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => {
+    timeoutId = window.setTimeout(() => {
       reject(new Error(`Operation timed out after ${timeoutMs} milliseconds`))
     }, timeoutMs)
   })
 
   return Promise.race([promise, timeoutPromise])
-    .finally(() => clearTimeout(timeoutId))
+    .finally(() => window.clearTimeout(timeoutId))
 }
 
 export function base64ToImageData(base64Str: string): Promise<ImageData> {
