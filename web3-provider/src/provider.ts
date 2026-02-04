@@ -1,11 +1,38 @@
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { NimiqProvider } from '@trustwallet/web3-provider-nimiq'
+import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 
 const Nimiq = new NimiqProvider()
 const Ethereum = new EthereumProvider({
   chainId: '0x1', // Ethereum mainnet
 })
+
+function normalizeChainId(chainId: unknown): number | null {
+  if (chainId === undefined || chainId === null)
+    return null
+
+  if (typeof chainId === 'number' && Number.isInteger(chainId) && chainId > 0)
+    return chainId
+
+  if (typeof chainId === 'string') {
+    const trimmed = chainId.trim()
+    if (trimmed.length === 0)
+      return null
+    const parsed = trimmed.startsWith('0x') ? Number.parseInt(trimmed, 16) : Number.parseInt(trimmed, 10)
+    if (Number.isInteger(parsed) && parsed > 0)
+      return parsed
+  }
+
+  return null
+}
+
+function respondUnsupportedChain(requestId: number | undefined) {
+  if (!requestId)
+    return
+  // EIP-1193 / MetaMask error code for unsupported chain
+  provider.sendError(requestId, { code: 4902, message: 'Unsupported chain' })
+}
 
 const provider = new Web3Provider({
   strategy: 'CALLBACK',
@@ -13,8 +40,15 @@ const provider = new Web3Provider({
     console.log('[Provider] Dapp requested:', params)
     switch (params.name) {
       case 'switchEthereumChain':
+        // TODO: ask user confirmation before switching chain
         if ((params.object as any)?.chainId) {
-          Ethereum.setChainId((params.object as any).chainId)
+          const normalized = normalizeChainId((params.object as any).chainId)
+          if (!normalized || !ALLOWED_EVM_CHAIN_IDS.has(normalized)) {
+            respondUnsupportedChain(params.id)
+            break
+          }
+          const normalizedHex = `0x${normalized.toString(16)}`
+          Ethereum.setChainId(normalizedHex)
           console.log(`[Provider] Switched Ethereum chain to ${Ethereum.getChainId()}`)
           if (params.id)
             provider.sendResponse(params.id, null)

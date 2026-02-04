@@ -11,6 +11,7 @@ import type { PluginListenerHandle } from '@capacitor/core'
 
 import type { InAppBrowser } from '@capgo/inappbrowser'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
+import { ALLOWED_EVM_CHAIN_IDS } from '../../web3-provider/src/allowedChains'
 import { useLocalWallet } from '@/stores/local-wallet'
 // import {
 //     ErrorData,
@@ -236,6 +237,34 @@ export class MiniAppHost {
     }
   }
 
+  private parseChainId(chainId: unknown): number | null {
+    if (chainId === undefined || chainId === null)
+      return null
+
+    if (typeof chainId === 'number' && Number.isInteger(chainId) && chainId > 0)
+      return chainId
+
+    if (typeof chainId === 'string') {
+      const trimmed = chainId.trim()
+      if (trimmed.length === 0)
+        return null
+      try {
+        const normalized = trimmed.startsWith('0x') ? Number.parseInt(trimmed, 16) : Number.parseInt(trimmed, 10)
+        if (Number.isInteger(normalized) && normalized > 0)
+          return normalized
+      }
+      catch {
+        return null
+      }
+    }
+
+    return null
+  }
+
+  private isAllowedChain(chainId: number): boolean {
+    return ALLOWED_EVM_CHAIN_IDS.has(chainId)
+  }
+
   private async rpcCall(params: unknown): Promise<unknown> {
     if (typeof params !== 'object' || params === null) {
       throw new InternalError('Invalid parameters for rpcCall')
@@ -406,6 +435,11 @@ export class MiniAppHost {
     // Validate required EIP-712 fields
     if (!typedData.types || !typedData.domain || !typedData.primaryType || !typedData.message) {
       throw new InternalError('Invalid typed data: missing required EIP-712 fields (types, domain, primaryType, message)')
+    }
+
+    const typedChainId = this.parseChainId((typedData.domain as { chainId?: unknown })?.chainId)
+    if (typedChainId && !this.isAllowedChain(typedChainId)) {
+      throw new InvalidTransactionError(`Unsupported chainId in typed data: ${typedChainId}`)
     }
 
     // Format typed data for display (show domain and message)
@@ -579,9 +613,16 @@ export class MiniAppHost {
       tx.nonce = typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce
     }
 
-    // Set chainId if provided
+    // Set chainId if provided and allowed
     if (txParams.chainId) {
-      tx.chainId = BigInt(txParams.chainId)
+      const chainIdNumber = this.parseChainId(txParams.chainId)
+      if (!chainIdNumber) {
+        throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
+      }
+      if (!this.isAllowedChain(chainIdNumber)) {
+        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${chainIdNumber}`)
+      }
+      tx.chainId = BigInt(chainIdNumber)
     }
 
     // Sign the transaction
