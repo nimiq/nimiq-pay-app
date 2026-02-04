@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { NimiqProvider } from '@trustwallet/web3-provider-nimiq'
@@ -20,6 +21,12 @@ function log(...args: unknown[]) {
 /** Type guard for objects with a chainId property */
 function hasChainId(obj: unknown): obj is { chainId: unknown } {
   return typeof obj === 'object' && obj !== null && 'chainId' in obj
+}
+
+// Ensure Buffer exists for webviews that don't provide a Node global (iOS WKWebView).
+const globalObj = globalThis as typeof globalThis & { Buffer?: typeof Buffer }
+if (typeof globalObj.Buffer === 'undefined') {
+  globalObj.Buffer = Buffer
 }
 
 const Nimiq = new NimiqProvider()

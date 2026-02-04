@@ -15,7 +15,8 @@
   "dependencies": {
     "@trustwallet/web3-provider-core": "../../trust-web3-provider/packages/core",
     "@trustwallet/web3-provider-ethereum": "../../trust-web3-provider/packages/ethereum",
-    "@trustwallet/web3-provider-nimiq": "../../trust-web3-provider/packages/nimiq"
+    "@trustwallet/web3-provider-nimiq": "../../trust-web3-provider/packages/nimiq",
+    "buffer": "^6.0.3"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.0",
