@@ -3,13 +3,27 @@ import type { UserConfirmationRequest } from '@/composables/useMiniAppHost'
 import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
 import { IonInput } from '@ionic/vue'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
-import { ref } from 'vue'
+import { formatEther } from 'ethers'
+import { computed, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
+import { useLocalWallet } from '@/stores/local-wallet'
 
 const logger = useLogger('MiniAppModal')
+const localWallet = useLocalWallet()
+const ethereumRpcUrl = import.meta.env.VITE_ETHEREUM_RPC_URL
+
+const ethAddress = computed(() => {
+  const { data, error } = localWallet.getEthAddress()
+  if (error) {
+    logger.error('Failed to get ETH address:', error)
+    return null
+  }
+  console.log('ETH address:', data)
+  return data
+})
 
 interface DApp {
   name: string
@@ -31,7 +45,7 @@ const popularDApps: DApp[] = [
   {
     name: 'DappRadar',
     url: 'https://dappradar.com',
-    icon: 'https://dappradar.com/favicon.ico',
+    icon: 'https://static.dappradar.com/website-fe-pr/public-assets/favicon-32x32.png',
   },
   {
     name: 'Aave',
@@ -46,64 +60,86 @@ const popularDApps: DApp[] = [
   {
     name: '1inch',
     url: 'https://app.1inch.io',
-    icon: 'https://app.1inch.io/favicon.ico',
+    icon: 'https://1inch.com/favicon/favicon-96x96.png',
   },
 ]
 
 // Request user confirmation for sensitive operations
 async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
-  const appName = request.name || request.url
-
   switch (request.type) {
     case 'accounts': {
-      // Use multiSelect for permission request
-      const result = await ExtendedDialog.multiSelect({
+      const result = await ExtendedDialog.sheet({
         title: 'Permission Request',
-        message: `${appName} wants to access your accounts`,
-        options: [
-          { label: 'View account addresses', value: 'view_addresses' },
-        ],
-        selectedValues: ['view_addresses'],
+        rows: [{ title: 'Permission', value: 'View account addresses' }],
+        confirmButtonTitle: 'Allow',
+        cancelButtonTitle: 'Deny',
       })
-      // User confirmed if they didn't cancel and selected the option
-      return !result.cancelled && result.values.includes('view_addresses')
+      return result.confirmed
     }
 
     case 'transaction': {
-      // Use confirm for transaction confirmation
       const { recipient, amount, fee, message, merchantName } = request.data
       const amountNim = (amount / 1e5).toFixed(5)
       const feeNim = fee ? (fee / 1e5).toFixed(5) : '0'
 
-      let confirmMessage = `${appName} wants to send a transaction:`
-      confirmMessage += `\n\nRecipient: ${recipient}`
-      confirmMessage += `\nAmount: ${amountNim} NIM`
+      const rows: { title: string, value: string }[] = [
+        { title: 'Recipient', value: recipient },
+        { title: 'Amount', value: `${amountNim} NIM` },
+      ]
       if (fee)
-        confirmMessage += `\nFee: ${feeNim} NIM`
+        rows.push({ title: 'Fee', value: `${feeNim} NIM` })
       if (message)
-        confirmMessage += `\nMessage: ${message}`
+        rows.push({ title: 'Message', value: message })
       if (merchantName)
-        confirmMessage += `\nMerchant: ${merchantName}`
+        rows.push({ title: 'Merchant', value: merchantName })
 
-      const result = await ExtendedDialog.confirm({
+      const result = await ExtendedDialog.sheet({
         title: 'Confirm Transaction',
-        message: confirmMessage,
+        rows,
       })
-      return result.value
+      return result.confirmed
+    }
+
+    case 'eth-transaction': {
+      const txParams = request.data as {
+        to: string
+        from: string
+        value?: string
+        data?: string
+        gas?: string
+      }
+      const valueEth = formatEther(BigInt(txParams.value || '0x0'))
+      const gasLimit = txParams.gas ? Number.parseInt(txParams.gas, 16) : 0
+
+      const rows: { title: string, value: string }[] = [
+        { title: 'To', value: txParams.to },
+        { title: 'From', value: txParams.from },
+        { title: 'Value', value: `${valueEth} ETH` },
+        { title: 'Gas Limit', value: String(gasLimit) },
+      ]
+      if (txParams.data && txParams.data !== '0x')
+        rows.push({ title: 'Contract Interaction', value: 'Yes' })
+
+      const result = await ExtendedDialog.sheet({
+        title: 'Confirm ETH Transaction',
+        rows,
+      })
+      return result.confirmed
     }
 
     case 'message': {
-      // Use confirm for message signing confirmation
       const { message: msgToSign, isHex } = request.data
       const displayMessage = isHex
         ? `Hex data: ${msgToSign.slice(0, 50)}${msgToSign.length > 50 ? '...' : ''}`
         : msgToSign
 
-      const result = await ExtendedDialog.confirm({
+      const result = await ExtendedDialog.sheet({
         title: 'Sign Message',
-        message: `${appName} wants to sign a message:\n\n${displayMessage}`,
+        rows: [{ title: 'Message', value: displayMessage }],
+        confirmButtonTitle: 'Sign',
+        cancelButtonTitle: 'Reject',
       })
-      return result.value
+      return result.confirmed
     }
 
     default:
@@ -123,6 +159,7 @@ async function openMiniApp(url?: string, title?: string) {
     url: targetUrl,
     title: appTitle,
     requestUserConfirmation,
+    ethereumRpcUrl,
   })
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
@@ -158,6 +195,16 @@ async function openMiniApp(url?: string, title?: string) {
       <p class="text-space/60 text-sm font-bold text-left uppercase">
         Mini Apps
       </p>
+
+      <!-- ETH Address Display -->
+      <div v-if="ethAddress" class="bg-white/5 rounded-lg p-3">
+        <p class="text-xs text-space/60 uppercase mb-1">
+          ETH Address
+        </p>
+        <p class="text-sm font-mono break-all">
+          {{ ethAddress }}
+        </p>
+      </div>
 
       <!-- Popular dApps Grid -->
       <div class="grid grid-cols-3 gap-4">

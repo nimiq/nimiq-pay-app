@@ -62,6 +62,20 @@ export type UserConfirmationRequest = {
   type: 'transaction'
   data: Omit<PaymentRequestData, 'transfer'>
 } | {
+  type: 'eth-transaction'
+  data: {
+    to: string
+    from: string
+    value: string // wei as hex
+    data?: string // calldata
+    gas: string // gas limit as hex
+    maxFeePerGas?: string
+    maxPriorityFeePerGas?: string
+    gasPrice?: string // legacy transactions
+    nonce?: number
+    chainId?: string
+  }
+} | {
   type: 'message'
   data: {
     message: string
@@ -75,6 +89,11 @@ export type UserConfirmationRequest = {
 export interface MiniAppHostConfig {
   url: string
   title: string
+  /**
+   * Optional Ethereum JSON-RPC endpoint used to broadcast signed transactions.
+   * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
+   */
+  ethereumRpcUrl?: string
 
   /**
    * Callback to request user confirmation for sensitive operations
@@ -209,7 +228,7 @@ export class MiniAppHost {
       case 'signTypedMessage':
         return this.signTypedMessage(message.params ?? message.object)
       case 'signTransaction':
-        throw new UnknownRequestError(`${message.name} not implemented yet`)
+        return this.signEthTransaction(message.params ?? message.object)
       case 'rpcCall':
         return this.rpcCall(message.params ?? message.object)
       default:
@@ -438,6 +457,165 @@ export class MiniAppHost {
     )
 
     return signature
+  }
+
+  private async signEthTransaction(params: unknown): Promise<string> {
+    // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
+    // Some dApps send params as array, others as object directly
+    let txParams: {
+      to: string
+      from: string
+      value?: string
+      data?: string
+      gas?: string
+      gasLimit?: string
+      maxFeePerGas?: string
+      maxPriorityFeePerGas?: string
+      gasPrice?: string
+      nonce?: string | number
+      chainId?: string
+      rpcUrl?: string
+    }
+
+    if (Array.isArray(params) && params.length > 0) {
+      txParams = params[0] as typeof txParams
+    }
+    else if (params && typeof params === 'object' && 'from' in params) {
+      txParams = params as typeof txParams
+    }
+    else {
+      throw new InternalError('Invalid parameters for signTransaction')
+    }
+
+    // Validate required fields
+    if (!txParams.to || !txParams.from) {
+      throw new InternalError('Transaction must include "to" and "from" addresses')
+    }
+
+    const gasLimit = txParams.gas || txParams.gasLimit
+    if (!gasLimit) {
+      throw new InternalError('Transaction must include "gas" or "gasLimit"')
+    }
+
+    // Get Ethereum wallet to verify address
+    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
+    if (error) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error}`)
+    }
+
+    // Verify the from address matches the wallet (case-insensitive)
+    if (ethWallet!.address.toLowerCase() !== txParams.from.toLowerCase()) {
+      throw new PermissionDeniedError(
+        `Address mismatch: requested ${txParams.from}, but wallet address is ${ethWallet!.address}`,
+      )
+    }
+
+    // Request user confirmation
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided')
+    }
+
+    const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
+      type: 'eth-transaction',
+      data: {
+        to: txParams.to,
+        from: txParams.from,
+        value: txParams.value || '0x0',
+        data: txParams.data,
+        gas: gasLimit,
+        maxFeePerGas: txParams.maxFeePerGas,
+        maxPriorityFeePerGas: txParams.maxPriorityFeePerGas,
+        gasPrice: txParams.gasPrice,
+        nonce: typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce,
+        chainId: txParams.chainId,
+      },
+    })
+
+    if (!confirmed) {
+      throw new PermissionDeniedError('User rejected transaction signing.')
+    }
+
+    // Build transaction object for ethers.js
+    const tx: {
+      to: string
+      value?: bigint
+      data?: string
+      gasLimit: bigint
+      maxFeePerGas?: bigint
+      maxPriorityFeePerGas?: bigint
+      gasPrice?: bigint
+      nonce?: number
+      chainId?: bigint
+    } = {
+      to: txParams.to,
+      gasLimit: BigInt(gasLimit),
+    }
+
+    // Set value (convert from hex wei)
+    if (txParams.value) {
+      tx.value = BigInt(txParams.value)
+    }
+
+    // Set data (calldata for contract interactions)
+    if (txParams.data && txParams.data !== '0x') {
+      tx.data = txParams.data
+    }
+
+    // Set gas parameters (EIP-1559 or legacy)
+    if (txParams.maxFeePerGas) {
+      tx.maxFeePerGas = BigInt(txParams.maxFeePerGas)
+    }
+    if (txParams.maxPriorityFeePerGas) {
+      tx.maxPriorityFeePerGas = BigInt(txParams.maxPriorityFeePerGas)
+    }
+    if (txParams.gasPrice) {
+      tx.gasPrice = BigInt(txParams.gasPrice)
+    }
+
+    // Set nonce if provided
+    if (txParams.nonce !== undefined) {
+      tx.nonce = typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce
+    }
+
+    // Set chainId if provided
+    if (txParams.chainId) {
+      tx.chainId = BigInt(txParams.chainId)
+    }
+
+    // Sign the transaction
+    const signedTx = await ethWallet!.signTransaction(tx)
+
+    const rpcUrl = txParams.rpcUrl || this.config.ethereumRpcUrl
+    if (!rpcUrl) {
+      throw new NetworkError('Missing Ethereum RPC URL to broadcast transaction')
+    }
+
+    const rpcResponse = await this.rpcCall({
+      rpcUrl,
+      payload: {
+        jsonrpc: '2.0',
+        id: Date.now(),
+        method: 'eth_sendRawTransaction',
+        params: [signedTx],
+      },
+    })
+
+    if (!rpcResponse || typeof rpcResponse !== 'object') {
+      throw new NetworkError('Invalid RPC response while broadcasting transaction')
+    }
+
+    if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
+      throw new NetworkError((rpcResponse as { error?: { message?: string } }).error?.message || 'RPC error while broadcasting transaction')
+    }
+
+    const txHash = (rpcResponse as { result?: string }).result
+    if (!txHash || typeof txHash !== 'string') {
+      throw new NetworkError('RPC response missing transaction hash')
+    }
+
+    return txHash
   }
 
   /**
