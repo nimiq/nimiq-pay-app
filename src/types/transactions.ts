@@ -246,6 +246,7 @@ export type StakingTransaction = BaseTransaction & {
 
   // Unused properties for type compatibility
   merchantCategory?: undefined
+  paymentMethod?: undefined
   paymentRef?: undefined
   fiatAmount?: undefined
   fiatFeeAmount?: undefined

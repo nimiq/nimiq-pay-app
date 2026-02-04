@@ -2,13 +2,14 @@ import type { Slots } from 'vue'
 import type { Result } from '../../types'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
+import type { PartialSendTxArgs } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { defineAsyncComponent, h, ref } from 'vue'
+
 import FlowCmp from '@/components/Flow.vue'
 
 import { useLogger } from '@/composables/useLogger'
-
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
@@ -268,7 +269,7 @@ const paymentFlow: FlowInit = async () => {
           title: payment.request.merchantName
             ? markAsUnknownTransactionTitle(payment.request.merchantName)
             : 'Payment', // translated at display time
-        }).catch((error) => {
+        } as PartialSendTxArgs).catch((error) => {
           logger.error('🤑  Transaction failed:', error)
           return {
             data: undefined,
