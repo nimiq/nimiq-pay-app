@@ -57,22 +57,35 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     }
   }
 
-  function getEthWallet(): Result<HDNodeWallet, string> {
-    const { data: words, error } = getWords()
-    if (error) {
-      return { data: undefined, error }
+  // Cache the Ethereum wallet to avoid expensive BIP44 derivation on every call
+  const ethWallet = computed<HDNodeWallet | null>(() => {
+    if (!entropy.value) {
+      return null
     }
-    const mnemonic = Mnemonic.fromPhrase(words!.join(' '))
-    const hdNode = HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/0`)
-    return { data: hdNode, error: undefined }
+    const { data: words, error } = getWords()
+    if (error || !words) {
+      return null
+    }
+    const mnemonic = Mnemonic.fromPhrase(words.join(' '))
+    return HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/0`)
+  })
+
+  function getEthWallet(): Result<HDNodeWallet, string> {
+    const wallet = ethWallet.value
+    if (!wallet) {
+      const err = i18n.t('No account has been found')
+      return { data: undefined, error: err }
+    }
+    return { data: wallet, error: undefined }
   }
 
   function getEthAddress(): Result<string, string> {
-    const { data: hdNode, error } = getEthWallet()
-    if (error) {
-      return { data: undefined, error }
+    const wallet = ethWallet.value
+    if (!wallet) {
+      const err = i18n.t('No account has been found')
+      return { data: undefined, error: err }
     }
-    return { data: hdNode!.address, error: undefined }
+    return { data: wallet.address, error: undefined }
   }
 
   return {

@@ -2,6 +2,7 @@
 import type { UserConfirmationRequest } from '@/composables/useMiniAppHost'
 import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
 import { IonInput } from '@ionic/vue'
+import { computedAsync } from '@vueuse/core'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
 import { computed, ref } from 'vue'
@@ -21,9 +22,15 @@ const ethAddress = computed(() => {
     logger.error('Failed to get ETH address:', error)
     return null
   }
-  console.log('ETH address:', data)
+  logger.log('ETH address:', data)
   return data
 })
+
+// Pre-cache web3-provider script for instant injection when opening mini-apps
+const web3ProviderScript = computedAsync(
+  () => fetch('/web3-provider.js').then(res => res.text()),
+  null,
+)
 
 interface DApp {
   name: string
@@ -163,6 +170,10 @@ async function openMiniApp(url?: string, title?: string) {
   })
 
   // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
+  // Use pre-cached script if available, fallback to fetch if not yet loaded
+  const cachedScript = web3ProviderScript.value
+  const scriptContent = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
+
   await InAppBrowser.openWebView({
     url: targetUrl,
     title: appTitle,
@@ -171,8 +182,7 @@ async function openMiniApp(url?: string, title?: string) {
     useTopInset: true,
     activeNativeNavigationForWebview: true,
     isPresentAfterPageLoad: true,
-    // TODO: Load file into variable with node:path at build time instead? Would avoid copying the file to /public.
-    preShowScript: await fetch('/web3-provider.js').then(res => res.text()),
+    preShowScript: scriptContent,
     preShowScriptInjectionTime: 'documentStart',
   }).catch((err) => {
     logger.error('Failed to open mini-app:', err)

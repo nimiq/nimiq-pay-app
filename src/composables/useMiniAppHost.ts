@@ -1,17 +1,9 @@
 import type { PluginListenerHandle } from '@capacitor/core'
-// import {
-//     InvalidTransactionError,
-//     NetworkError,
-//     PermissionDeniedError,
-//     PlainAccount,
-//     PlainTransaction,
-//     NimiqProvider as ProviderInterface,
-//     SendPaymentData,
-// } from "./../../mini-app-sdk/NimiqProvider"
-
 import type { InAppBrowser } from '@capgo/inappbrowser'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { ALLOWED_EVM_CHAIN_IDS } from '../../web3-provider/src/allowedChains'
+import { Toast } from '@capacitor/toast'
+import { hexToBytes } from '@/lib/ethereum/hex-utils'
+import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { useLocalWallet } from '@/stores/local-wallet'
 // import {
 //     ErrorData,
@@ -30,6 +22,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
+import { ALLOWED_EVM_CHAIN_IDS } from '../../web3-provider/src/allowedChains'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
@@ -52,6 +45,20 @@ export interface Request {
 export interface SignatureResult {
   publicKey: string
   signature: string
+}
+
+/** Type for Nimiq message signing params */
+interface NimiqSignParams {
+  message?: string
+  isHex?: boolean
+}
+
+/** Type for Nimiq transaction params */
+interface NimiqTransactionParams {
+  recipient?: string
+  value?: number | string
+  fee?: number | string
+  data?: string
 }
 
 export type UserConfirmationRequest = {
@@ -109,10 +116,12 @@ export interface MiniAppHostConfig {
  * Provides typed communication with mini apps and handles permissions, signing, transactions
  */
 export class MiniAppHost {
-  private inAppBrowser: typeof InAppBrowser
+  private inAppBrowser: typeof InAppBrowser | null
   private config: MiniAppHostConfig
   private destroyed = false
   private messageFromWebviewListener: PluginListenerHandle | null = null
+  /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
+  private currentChainId: string = '0x1' // Default to Ethereum mainnet
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
@@ -121,9 +130,13 @@ export class MiniAppHost {
   }
 
   public async destroy(): Promise<void> {
+    if (this.destroyed) {
+      return
+    }
     await this.messageFromWebviewListener?.remove()
-    await this.inAppBrowser.removeAllListeners()
-    this.inAppBrowser = null as unknown as typeof InAppBrowser
+    this.messageFromWebviewListener = null
+    await this.inAppBrowser?.removeAllListeners()
+    this.inAppBrowser = null
     this.destroyed = true
   }
 
@@ -131,6 +144,9 @@ export class MiniAppHost {
    * Setup listener for messages from the mini app
    */
   private async setupMessageListener(): Promise<void> {
+    if (!this.inAppBrowser) {
+      return
+    }
     this.messageFromWebviewListener = await this.inAppBrowser.addListener('messageFromWebview', this.messageListener.bind(this))
   }
 
@@ -142,7 +158,14 @@ export class MiniAppHost {
 
     logger.log('[MiniAppHost] Received message from webview:', event.detail)
 
-    // Ensure message structure
+    // Handle chain change notifications from the webview provider
+    if (event.detail.type === 'chainChanged' && typeof event.detail.chainId === 'string') {
+      this.currentChainId = event.detail.chainId
+      logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
+      return
+    }
+
+    // Ensure message structure for RPC requests
     if (typeof event.detail.id !== 'number') {
       logger.log('[MiniAppHost] Message has no id property, skipping')
       this.sendError(Number.NaN, 'INVALID_MESSAGE', 'Message has no id property')
@@ -165,10 +188,10 @@ export class MiniAppHost {
 
     switch (message.network) {
       case 'nimiq':
-        this.handleNimiqMessage(message)
+        await this.handleNimiqMessage(message)
         break
       case 'ethereum':
-        this.handleEthereumMessage(message)
+        await this.handleEthereumMessage(message)
         break
       default: {
         logger.log('[MiniAppHost] Unknown network in message:', event.detail.network)
@@ -177,93 +200,81 @@ export class MiniAppHost {
     }
   }
 
-  private async handleNimiqMessage(message: Request) {
+  private async handleNimiqMessage(message: Request): Promise<void> {
     try {
       const response = await this._handleNimiqMessage(message)
       this.send(message.id, response)
     }
     catch (error) {
-      if (error instanceof UnknownRequestError
-        || error instanceof InternalError
-        || error instanceof PermissionDeniedError
-        || error instanceof InvalidTransactionError
-        || error instanceof NetworkError
-      ) {
-        this.sendError(message.id, error.type, error.message)
-      }
-      else {
-        this.sendError(message.id, 'UNKNOWN_ERROR', `An unknown error occurred: ${(error as Error).message}`)
-      }
+      this.handleMessageError(message.id, error)
     }
   }
 
-  private async handleEthereumMessage(message: Request) {
+  private async handleEthereumMessage(message: Request): Promise<void> {
     try {
       const response = await this._handleEthereumMessage(message)
       this.send(message.id, response)
     }
     catch (error) {
-      if (error instanceof UnknownRequestError
-        || error instanceof InternalError
-        || error instanceof PermissionDeniedError
-        || error instanceof InvalidTransactionError
-        || error instanceof NetworkError
-      ) {
-        this.sendError(message.id, error.type, error.message)
-      }
-      else {
-        this.sendError(message.id, 'UNKNOWN_ERROR', `An unknown error occurred: ${(error as Error).message}`)
+      this.handleMessageError(message.id, error)
+    }
+  }
+
+  private handleMessageError(messageId: number, error: unknown): void {
+    if (error instanceof MiniAppError) {
+      this.sendError(messageId, error.type, error.message)
+      // Show toast for user-actionable errors (skip permission denied - user already knows)
+      if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
+        this.showErrorToast(error.message)
       }
     }
+    else {
+      const message = `An unknown error occurred: ${(error as Error).message}`
+      this.sendError(messageId, 'UNKNOWN_ERROR', message)
+      this.showErrorToast(message)
+    }
+  }
+
+  private showErrorToast(message: string): void {
+    // Truncate long messages for toast display (native toasts have limited space)
+    const displayMessage = message.length > 100
+      ? `${message.slice(0, 97)}...`
+      : message
+
+    Toast.show({
+      text: displayMessage,
+      duration: 'long', // 3500ms - gives user time to read error
+      position: 'top', // Note: Android 12+ always shows at bottom
+    })
   }
 
   private async _handleEthereumMessage(message: Request) {
     logger.log('[MiniAppHost] Handling Ethereum message:', message)
+    const params = message.params ?? message.object
 
     switch (message.name) {
       case 'requestAccounts':
         return this.listEthAccounts()
       case 'signMessage':
       case 'signPersonalMessage':
-        return this.signPersonalMessage(message.params ?? message.object)
+        return this.signPersonalMessage(params)
       case 'signTypedMessage':
-        return this.signTypedMessage(message.params ?? message.object)
+        return this.signTypedMessage(params)
       case 'signTransaction':
-        return this.signEthTransaction(message.params ?? message.object)
-      case 'rpcCall':
-        return this.rpcCall(message.params ?? message.object)
+        return this.signEthTransaction(params)
+      // case 'rpcCall':
+      //   return this.rpcCall(params)
       default:
         throw new UnknownRequestError(`Unknown Ethereum method: ${message.name}`)
     }
   }
 
-  private parseChainId(chainId: unknown): number | null {
-    if (chainId === undefined || chainId === null)
-      return null
-
-    if (typeof chainId === 'number' && Number.isInteger(chainId) && chainId > 0)
-      return chainId
-
-    if (typeof chainId === 'string') {
-      const trimmed = chainId.trim()
-      if (trimmed.length === 0)
-        return null
-      try {
-        const normalized = trimmed.startsWith('0x') ? Number.parseInt(trimmed, 16) : Number.parseInt(trimmed, 10)
-        if (Number.isInteger(normalized) && normalized > 0)
-          return normalized
-      }
-      catch {
-        return null
-      }
-    }
-
-    return null
-  }
-
   private isAllowedChain(chainId: number): boolean {
     return ALLOWED_EVM_CHAIN_IDS.has(chainId)
   }
+
+  /** Default timeout for RPC calls in milliseconds */
+  private static readonly RPC_TIMEOUT_MS = 30000
 
   private async rpcCall(params: unknown): Promise<unknown> {
     if (typeof params !== 'object' || params === null) {
@@ -282,14 +293,29 @@ export class MiniAppHost {
 
     logger.log('[MiniAppHost] rpcCall fetching:', rpcUrl, 'with payload:', payload)
 
-    const response = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+    let response: Response
+    try {
+      response = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(MiniAppHost.RPC_TIMEOUT_MS),
+      })
+    }
+    catch (error) {
+      if (error instanceof Error && error.name === 'TimeoutError') {
+        throw new NetworkError(`RPC request timed out after ${MiniAppHost.RPC_TIMEOUT_MS}ms`)
+      }
+      throw new NetworkError(`RPC request failed: ${(error as Error).message}`)
+    }
+
+    // Validate HTTP status before parsing JSON
+    if (!response.ok) {
+      throw new NetworkError(`RPC request failed with status ${response.status}: ${response.statusText}`)
+    }
 
     return await response.json()
   }
@@ -319,17 +345,12 @@ export class MiniAppHost {
 
   private async signPersonalMessage(params: unknown): Promise<string> {
     // Parse params - expect { data: string, address: string }
-    let data: string
-    let address: string
-
-    if (typeof params === 'object' && params !== null) {
-      data = (params as { data?: string }).data ?? ''
-      address = (params as { address?: string }).address ?? ''
-    }
-    else {
+    if (typeof params !== 'object' || params === null) {
       logger.error('[MiniAppHost] Invalid parameters for signPersonalMessage:', params)
       throw new InternalError('Invalid parameters for signPersonalMessage')
     }
+
+    const { data, address } = params as { data?: string, address?: string }
 
     if (!data) {
       logger.error('[MiniAppHost] Missing data parameter for signPersonalMessage')
@@ -339,18 +360,16 @@ export class MiniAppHost {
       logger.error('[MiniAppHost] Missing address parameter for signPersonalMessage')
       throw new InternalError('Missing address parameter for signPersonalMessage')
     }
+    if (!isValidEthAddress(address)) {
+      logger.error('[MiniAppHost] Invalid Ethereum address for signPersonalMessage:', address)
+      throw new InternalError('Invalid Ethereum address format')
+    }
 
     // Decode hex message to display to user
-    let messageToDisplay: string
     const isHex = data.startsWith('0x')
-    if (isHex) {
-      const hex = data.slice(2)
-      const bytes = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => Number.parseInt(byte, 16)))
-      messageToDisplay = new TextDecoder().decode(bytes)
-    }
-    else {
-      messageToDisplay = data
-    }
+    const messageToDisplay = isHex
+      ? new TextDecoder().decode(hexToBytes(data))
+      : data
 
     // Request user confirmation
     if (!this.config.requestUserConfirmation) {
@@ -362,59 +381,42 @@ export class MiniAppHost {
       url: this.config.url,
       name: this.config.title,
       type: 'message',
-      data: {
-        message: messageToDisplay,
-        isHex: false,
-      },
+      data: { message: messageToDisplay, isHex: false },
     })
     if (!confirmed) {
       throw new PermissionDeniedError('User rejected message signing.')
     }
 
-    // Get Ethereum wallet
+    // Get Ethereum wallet and verify address
     const { data: ethWallet, error } = useLocalWallet().getEthWallet()
-    if (error) {
-      throw new InternalError(`Failed to get Ethereum wallet: ${error}`)
+    if (error || !ethWallet) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
+    }
+    if (!addressesEqual(ethWallet.address, address)) {
+      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
     }
 
-    // Verify the address matches
-    if (ethWallet!.address.toLowerCase() !== address.toLowerCase()) {
-      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet!.address}`)
-    }
-
-    // Sign the message - ethers.js signMessage handles the personal_sign prefix
-    // For hex data, we need to pass the raw bytes
-    let messageToSign: string | Uint8Array
-    if (isHex) {
-      const hex = data.slice(2)
-      messageToSign = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => Number.parseInt(byte, 16)))
-    }
-    else {
-      messageToSign = data
-    }
-
-    const signature = await ethWallet!.signMessage(messageToSign)
-    return signature
+    // Sign the message - for hex data, pass raw bytes; ethers.js handles personal_sign prefix
+    const messageToSign = isHex ? hexToBytes(data) : data
+    return await ethWallet.signMessage(messageToSign)
   }
 
   private async signTypedMessage(params: unknown): Promise<string> {
     // Parse params - expect { raw: string, address: string, version?: string }
-    let raw: string
-    let address: string
-
-    if (typeof params === 'object' && params !== null) {
-      raw = (params as { raw?: string }).raw ?? ''
-      address = (params as { address?: string }).address ?? ''
-    }
-    else {
+    if (typeof params !== 'object' || params === null) {
       throw new InternalError('Invalid parameters for signTypedMessage')
     }
+
+    const { raw, address } = params as { raw?: string, address?: string }
 
     if (!raw) {
       throw new InternalError('Missing raw parameter for signTypedMessage')
     }
     if (!address) {
       throw new InternalError('Missing address parameter for signTypedMessage')
+    }
+    if (!isValidEthAddress(address)) {
+      throw new InternalError('Invalid Ethereum address format')
     }
 
     // Parse the EIP-712 typed data
@@ -424,7 +426,6 @@ export class MiniAppHost {
       primaryType: string
       message: Record<string, unknown>
     }
-
     try {
       typedData = JSON.parse(raw)
     }
@@ -437,12 +438,21 @@ export class MiniAppHost {
       throw new InternalError('Invalid typed data: missing required EIP-712 fields (types, domain, primaryType, message)')
     }
 
-    const typedChainId = this.parseChainId((typedData.domain as { chainId?: unknown })?.chainId)
-    if (typedChainId && !this.isAllowedChain(typedChainId)) {
-      throw new InvalidTransactionError(`Unsupported chainId in typed data: ${typedChainId}`)
+    // Validate chainId in typed data matches current chain
+    const typedChainId = parseChainId((typedData.domain as { chainId?: unknown })?.chainId)
+    const currentChainNumber = parseChainId(this.currentChainId)
+    if (typedChainId) {
+      if (!this.isAllowedChain(typedChainId)) {
+        throw new InvalidTransactionError(`Unsupported chainId in typed data: ${typedChainId}`)
+      }
+      if (currentChainNumber && typedChainId !== currentChainNumber) {
+        throw new InvalidTransactionError(
+          `Typed data chainId (${typedChainId}) doesn't match current chain (${currentChainNumber})`,
+        )
+      }
     }
 
-    // Format typed data for display (show domain and message)
+    // Format typed data for display
     const displayMessage = `Domain: ${typedData.domain.name || 'Unknown'}\n`
       + `Chain: ${typedData.domain.chainId}\n`
       + `Type: ${typedData.primaryType}\n\n`
@@ -452,45 +462,30 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
-
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,
       type: 'message',
-      data: {
-        message: displayMessage,
-        isHex: false,
-      },
+      data: { message: displayMessage, isHex: false },
     })
-
     if (!confirmed) {
       throw new PermissionDeniedError('User rejected typed data signing.')
     }
 
-    // Get Ethereum wallet
+    // Get Ethereum wallet and verify address
     const { data: ethWallet, error } = useLocalWallet().getEthWallet()
-    if (error) {
-      throw new InternalError(`Failed to get Ethereum wallet: ${error}`)
+    if (error || !ethWallet) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
-
-    // Verify the address matches (case-insensitive)
-    if (ethWallet!.address.toLowerCase() !== address.toLowerCase()) {
-      throw new PermissionDeniedError(
-        `Address mismatch: requested ${address}, but wallet address is ${ethWallet!.address}`,
-      )
+    if (!addressesEqual(ethWallet.address, address)) {
+      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
     }
 
     // Remove EIP712Domain from types (ethers.js handles it automatically)
     const { EIP712Domain, ...types } = typedData.types
 
     // Sign using ethers.js signTypedData (EIP-712)
-    const signature = await ethWallet!.signTypedData(
-      typedData.domain,
-      types,
-      typedData.message,
-    )
-
-    return signature
+    return await ethWallet.signTypedData(typedData.domain, types, typedData.message)
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
@@ -526,6 +521,14 @@ export class MiniAppHost {
       throw new InternalError('Transaction must include "to" and "from" addresses')
     }
 
+    // Validate Ethereum addresses using EIP-55
+    if (!isValidEthAddress(txParams.to)) {
+      throw new InternalError('Invalid "to" address format')
+    }
+    if (!isValidEthAddress(txParams.from)) {
+      throw new InternalError('Invalid "from" address format')
+    }
+
     const gasLimit = txParams.gas || txParams.gasLimit
     if (!gasLimit) {
       throw new InternalError('Transaction must include "gas" or "gasLimit"')
@@ -533,14 +536,14 @@ export class MiniAppHost {
 
     // Get Ethereum wallet to verify address
     const { data: ethWallet, error } = useLocalWallet().getEthWallet()
-    if (error) {
-      throw new InternalError(`Failed to get Ethereum wallet: ${error}`)
+    if (error || !ethWallet) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
 
-    // Verify the from address matches the wallet (case-insensitive)
-    if (ethWallet!.address.toLowerCase() !== txParams.from.toLowerCase()) {
+    // Verify the from address matches the wallet using EIP-55 safe comparison
+    if (!addressesEqual(ethWallet.address, txParams.from)) {
       throw new PermissionDeniedError(
-        `Address mismatch: requested ${txParams.from}, but wallet address is ${ethWallet!.address}`,
+        `Address mismatch: requested ${txParams.from}, but wallet address is ${ethWallet.address}`,
       )
     }
 
@@ -613,20 +616,31 @@ export class MiniAppHost {
       tx.nonce = typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce
     }
 
-    // Set chainId if provided and allowed
+    // Set chainId - use current chain if not provided, validate if provided
+    const currentChainNumber = parseChainId(this.currentChainId)
     if (txParams.chainId) {
-      const chainIdNumber = this.parseChainId(txParams.chainId)
-      if (!chainIdNumber) {
+      const txChainIdNumber = parseChainId(txParams.chainId)
+      if (!txChainIdNumber) {
         throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
       }
-      if (!this.isAllowedChain(chainIdNumber)) {
-        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${chainIdNumber}`)
+      if (!this.isAllowedChain(txChainIdNumber)) {
+        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${txChainIdNumber}`)
       }
-      tx.chainId = BigInt(chainIdNumber)
+      // Validate transaction chainId matches current chain
+      if (currentChainNumber && txChainIdNumber !== currentChainNumber) {
+        throw new InvalidTransactionError(
+          `Transaction chainId (${txChainIdNumber}) doesn't match current chain (${currentChainNumber})`,
+        )
+      }
+      tx.chainId = BigInt(txChainIdNumber)
+    }
+    else if (currentChainNumber) {
+      // Use current chain if not specified in transaction
+      tx.chainId = BigInt(currentChainNumber)
     }
 
     // Sign the transaction
-    const signedTx = await ethWallet!.signTransaction(tx)
+    const signedTx = await ethWallet.signTransaction(tx)
 
     const rpcUrl = txParams.rpcUrl || this.config.ethereumRpcUrl
     if (!rpcUrl) {
@@ -720,11 +734,15 @@ export class MiniAppHost {
     let isHex = false
     if (Array.isArray(params) && params.length > 0) {
       message = String(params[0])
-      isHex = Boolean(params[1].isHex)
+      // Check if params[1] exists before accessing .isHex
+      if (params.length >= 2 && params[1] && typeof params[1] === 'object') {
+        isHex = Boolean((params[1] as { isHex?: boolean }).isHex)
+      }
     }
     else if (typeof params === 'object' && params !== null) {
-      message = String((params as any).message)
-      isHex = Boolean((params as any).isHex)
+      const signParams = params as NimiqSignParams
+      message = String(signParams.message ?? '')
+      isHex = Boolean(signParams.isHex)
     }
     else {
       throw new InternalError('Invalid parameters for sign method')
@@ -787,10 +805,11 @@ export class MiniAppHost {
       }
     }
     else if (typeof params === 'object' && params !== null) {
-      recipient = String((params as any).recipient)
-      value = Number((params as any).value)
-      if ((params as any).fee !== undefined) {
-        fee = Number((params as any).fee)
+      const txParams = params as NimiqTransactionParams
+      recipient = String(txParams.recipient ?? '')
+      value = Number(txParams.value ?? 0)
+      if (txParams.fee !== undefined) {
+        fee = Number(txParams.fee)
       }
     }
     else {
@@ -818,12 +837,13 @@ export class MiniAppHost {
       }
     }
     else if (typeof params === 'object' && params !== null) {
-      recipient = String((params as any).recipient)
-      value = Number((params as any).value)
-      if ((params as any).fee !== undefined) {
-        fee = Number((params as any).fee)
+      const txParams = params as NimiqTransactionParams
+      recipient = String(txParams.recipient ?? '')
+      value = Number(txParams.value ?? 0)
+      if (txParams.fee !== undefined) {
+        fee = Number(txParams.fee)
       }
-      message = String((params as any).data)
+      message = String(txParams.data ?? '')
     }
     else {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
@@ -879,10 +899,10 @@ export class MiniAppHost {
         },
       },
     })
-    if (result.error) {
-      throw new InternalError(`Failed to send payment transaction: ${result.error}`)
+    if (result.error || !result.data) {
+      throw new InternalError(`Failed to send payment transaction: ${result.error || 'no transaction data'}`)
     }
-    return result.data!.tx.hash
+    return result.data.tx.hash
   }
 
   // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
@@ -935,7 +955,7 @@ export class MiniAppHost {
   /**
    * Send a message to the mini app
    */
-  private send(id: number, data: any): void {
+  private send(id: number, data: unknown): void {
     this.postMessage({ id, data })
   }
 
@@ -959,29 +979,38 @@ export class MiniAppHost {
    * Send a message to the mini app
    * @private
    */
-  private postMessage(message: { id: number, data: any }): void {
+  private postMessage(message: { id: number, data: unknown }): void {
+    if (this.destroyed || !this.inAppBrowser) {
+      logger.warn('[MiniAppHost] Cannot post message - host is destroyed')
+      return
+    }
     logger.log('[MiniAppHost] Posting message to mini app:', message)
     this.inAppBrowser.postMessage({ detail: message })
   }
 }
 
-class UnknownRequestError extends Error {
+/** Base class for MiniApp errors with typed error codes */
+abstract class MiniAppError extends Error {
+  abstract readonly type: string
+}
+
+class UnknownRequestError extends MiniAppError {
   readonly type = 'UNKNOWN_REQUEST'
 }
 
-class InternalError extends Error {
+class InternalError extends MiniAppError {
   readonly type = 'INTERNAL_ERROR'
 }
 
-export class PermissionDeniedError extends Error {
+export class PermissionDeniedError extends MiniAppError {
   readonly type = 'PERMISSION_DENIED'
 }
 
-export class NetworkError extends Error {
+export class NetworkError extends MiniAppError {
   readonly type = 'NETWORK_ERROR'
 }
 
-export class InvalidTransactionError extends Error {
+export class InvalidTransactionError extends MiniAppError {
   readonly type = 'INVALID_TRANSACTION'
 }
 
