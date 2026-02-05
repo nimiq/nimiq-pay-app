@@ -10,6 +10,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
+import { getFaviconUrl } from '@/lib/favicon'
 import { useLocalWallet } from '@/stores/local-wallet'
 
 const logger = useLogger('MiniAppModal')
@@ -42,44 +43,70 @@ const popularDApps: DApp[] = [
   {
     name: 'Uniswap',
     url: 'https://app.uniswap.org',
-    icon: 'https://app.uniswap.org/favicon.png',
+    icon: getAppIcon('https://app.uniswap.org'),
   },
   {
     name: 'Polymarket',
     url: 'https://polymarket.com',
-    icon: 'https://polymarket.com/icons/favicon-32x32.png',
+    icon: getAppIcon('https://polymarket.com'),
   },
   {
     name: 'DappRadar',
     url: 'https://dappradar.com',
-    icon: 'https://static.dappradar.com/website-fe-pr/public-assets/favicon-32x32.png',
+    icon: getAppIcon('https://dappradar.com'),
   },
   {
     name: 'Aave',
     url: 'https://app.aave.com',
-    icon: 'https://app.aave.com/favicon.ico',
+    icon: getAppIcon('https://app.aave.com'),
   },
   {
     name: 'OpenSea',
     url: 'https://opensea.io',
-    icon: 'https://opensea.io/favicon.ico',
+    icon: getAppIcon('https://opensea.io'),
   },
   {
     name: '1inch',
     url: 'https://app.1inch.io',
-    icon: 'https://1inch.com/favicon/favicon-96x96.png',
+    icon: getAppIcon('https://app.1inch.io'),
   },
 ]
+
+function getAppIcon(url: string): string {
+  try {
+    const hostname = new URL(url).hostname
+    const known = popularDApps.find((d) => {
+      const dappHost = new URL(d.url).hostname
+      return hostname === dappHost || hostname.endsWith(`.${dappHost}`)
+    })
+    return known?.icon || getFaviconUrl(url)
+  }
+  catch {
+    return getFaviconUrl(url)
+  }
+}
 
 // Request user confirmation for sensitive operations
 async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
   switch (request.type) {
     case 'accounts': {
+      const appName = request.name || new URL(request.url).hostname
+      const truncatedAddress = ethAddress.value
+        ? `${ethAddress.value.slice(0, 6)}\u2026${ethAddress.value.slice(-4)}`
+        : ''
+
       const result = await ExtendedDialog.sheet({
-        title: 'Permission Request',
-        rows: [{ title: 'Permission', value: 'View account addresses' }],
-        confirmButtonTitle: 'Allow',
-        cancelButtonTitle: 'Deny',
+        title: `Connect to ${appName}`,
+        headerLogo: getAppIcon(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: `${appName} will be able to:` },
+          { title: `See your address ${truncatedAddress}` },
+          { title: 'View your balance and activity' },
+          { title: 'Request approval for transactions' },
+        ],
+        confirmButtonTitle: 'Connect',
+        cancelButtonTitle: 'Cancel',
       })
       return result.confirmed
     }
@@ -135,14 +162,17 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
     }
 
     case 'message': {
+      const appName = request.name || new URL(request.url).hostname
       const { message: msgToSign, isHex } = request.data
       const displayMessage = isHex
         ? `Hex data: ${msgToSign.slice(0, 50)}${msgToSign.length > 50 ? '...' : ''}`
         : msgToSign
 
-      const result = await ExtendedDialog.sheet({
-        title: 'Sign Message',
-        rows: [{ title: 'Message', value: displayMessage }],
+      const result = await ExtendedDialog.messageSheet({
+        title: `Sign message from ${appName}`,
+        headerLogo: getAppIcon(request.url),
+        headerLogoCornerRadius: -1,
+        message: displayMessage,
         confirmButtonTitle: 'Sign',
         cancelButtonTitle: 'Reject',
       })
