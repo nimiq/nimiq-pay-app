@@ -1230,8 +1230,18 @@ export class MiniAppHost {
       name: this.config.title,
       type: 'transaction',
       data: {
-        recipient: txData.transfer === Transfer.Staking ? STAKING_CONTRACT_ADDRESS : txData.recipient,
-        recipientType: txData.transfer === Transfer.Staking ? Nimiq.AccountType.Staking : Nimiq.AccountType.Basic,
+        recipient: txData.transfer === Transfer.Staking
+          ? txData.stakingData.type === 'remove-stake'
+            // For remove-stake, the recipient is the user's own address
+            ? useLocalWallet().localAddress.toUserFriendlyAddress()
+            : STAKING_CONTRACT_ADDRESS
+          : txData.recipient,
+        recipientType: txData.transfer === Transfer.Staking
+          ? txData.stakingData.type === 'remove-stake'
+            // For remove-stake transactions, the recipient is the user's local address, which is a basic account
+            ? Nimiq.AccountType.Basic
+            : Nimiq.AccountType.Staking
+          : Nimiq.AccountType.Basic,
         amount: txData.value,
         fee: 0,
         message: txData.message,
