@@ -97,10 +97,10 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
 
       const result = await ExtendedDialog.sheet({
         title: `Connect to ${appName}`,
+        subtitle: `${appName} will be able to:`,
         headerLogo: getAppIcon(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: `${appName} will be able to:` },
           { title: `See your address ${truncatedAddress}` },
           { title: 'View your balance and activity' },
           { title: 'Request approval for transactions' },
