@@ -1,3 +1,5 @@
+import type { IRequestArguments } from '@trustwallet/web3-provider-core'
+// eslint-disable-next-line unicorn/prefer-node-protocol
 import { Buffer } from 'buffer'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
@@ -141,3 +143,19 @@ announceProvider()
 
 // Dispatch EIP-1193 initialization event for dApp compatibility
 window.dispatchEvent(new Event('ethereum#initialized'))
+
+// Extra logs for debugging
+// TODO: Remove or conditionally compile out in production
+const originalRequest = window.ethereum.request.bind(window.ethereum)
+window.ethereum.request = async <T>(args: IRequestArguments): Promise<T> => {
+  try {
+    const res = await originalRequest(args)
+    // eslint-disable-next-line no-console
+    console.log('eth.request OK', args?.method, res)
+    return res as T
+  }
+  catch (e) {
+    console.error('eth.request ERR', args?.method, e)
+    throw e
+  }
+}
