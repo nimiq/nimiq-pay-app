@@ -133,6 +133,7 @@ export class MiniAppHost {
     if (this.destroyed) {
       return
     }
+    await this.inAppBrowser?.clearAllCookies()
     await this.messageFromWebviewListener?.remove()
     this.messageFromWebviewListener = null
     await this.inAppBrowser?.removeAllListeners()
