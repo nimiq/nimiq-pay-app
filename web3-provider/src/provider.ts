@@ -34,6 +34,7 @@ if (typeof globalObj.Buffer === 'undefined') {
 const Nimiq = new NimiqProvider()
 const Ethereum = new EthereumProvider({
   chainId: '0x1', // Ethereum mainnet
+  rpc: 'https://rpc.mevblocker.io/',
 })
 
 function normalizeChainId(chainId: unknown): number | null {

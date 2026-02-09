@@ -318,7 +318,9 @@ export class MiniAppHost {
       throw new NetworkError(`RPC request failed with status ${response.status}: ${response.statusText}`)
     }
 
-    return await response.json()
+    const data = await response.json()
+    logger.log('[MiniAppHost] rpcCall response:', JSON.stringify(data))
+    return data
   }
 
   private async listEthAccounts(): Promise<string[]> {
@@ -490,6 +492,8 @@ export class MiniAppHost {
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
+    logger.log('[ETH_TX] Step 1 - Raw params received:', JSON.stringify(params))
+
     // Validate params format: [{ to, from, value, gas, ... }] or { to, from, value, gas, ... }
     // Some dApps send params as array, others as object directly
     let txParams: {
@@ -517,6 +521,22 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for signTransaction')
     }
 
+    logger.log('[ETH_TX] Step 2 - Parsed txParams:', {
+      to: txParams.to,
+      from: txParams.from,
+      value: txParams.value,
+      data: txParams.data ? `${txParams.data.slice(0, 10)}...` : undefined,
+      gas: txParams.gas,
+      gasLimit: txParams.gasLimit,
+      maxFeePerGas: txParams.maxFeePerGas,
+      maxPriorityFeePerGas: txParams.maxPriorityFeePerGas,
+      gasPrice: txParams.gasPrice,
+      nonce: txParams.nonce,
+      nonceType: typeof txParams.nonce,
+      chainId: txParams.chainId,
+      rpcUrl: txParams.rpcUrl,
+    })
+
     // Validate required fields
     if (!txParams.to || !txParams.from) {
       throw new InternalError('Transaction must include "to" and "from" addresses')
@@ -531,9 +551,6 @@ export class MiniAppHost {
     }
 
     const gasLimit = txParams.gas || txParams.gasLimit
-    if (!gasLimit) {
-      throw new InternalError('Transaction must include "gas" or "gasLimit"')
-    }
 
     // Get Ethereum wallet to verify address
     const { data: ethWallet, error } = useLocalWallet().getEthWallet()
@@ -548,7 +565,138 @@ export class MiniAppHost {
       )
     }
 
-    // Request user confirmation
+    // --- Resolve all missing tx fields from RPC before showing confirmation ---
+    const rpcUrl = txParams.rpcUrl || this.config.ethereumRpcUrl
+
+    // Nonce resolution: fetch from broadcast RPC if not provided by dApp
+    logger.log('[ETH_TX] Step 3 - Nonce analysis:', {
+      nonceProvided: txParams.nonce !== undefined,
+      nonceRawValue: txParams.nonce,
+      nonceParsed: typeof txParams.nonce === 'string'
+        ? Number.parseInt(txParams.nonce, 16) : txParams.nonce,
+    })
+
+    let resolvedNonce: number | undefined
+    if (rpcUrl) {
+      try {
+        const nonceResponse = await this.rpcCall({
+          rpcUrl,
+          payload: {
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'eth_getTransactionCount',
+            params: [txParams.from, 'pending'],
+          },
+        })
+        const onChainNonce = (nonceResponse as { result?: string }).result
+        const onChainNonceDec = onChainNonce ? Number.parseInt(onChainNonce, 16) : undefined
+        logger.log('[ETH_TX] Step 3b - On-chain nonce (pending):', {
+          onChainNonce,
+          onChainNonceDec,
+          txNonce: txParams.nonce,
+          match: txParams.nonce !== undefined && onChainNonceDec !== undefined
+            ? onChainNonceDec === (typeof txParams.nonce === 'string'
+              ? Number.parseInt(txParams.nonce, 16) : txParams.nonce)
+            : 'nonce not provided by dApp',
+        })
+
+        if (txParams.nonce === undefined && onChainNonceDec !== undefined) {
+          resolvedNonce = onChainNonceDec
+          logger.log('[ETH_TX] Step 3c - Auto-resolved nonce from RPC:', resolvedNonce)
+        }
+      }
+      catch (e) {
+        logger.warn('[ETH_TX] Step 3b - Failed to fetch on-chain nonce:', (e as Error).message)
+      }
+    }
+
+    // Gas price resolution: fetch from RPC if not provided by dApp
+    let resolvedMaxFeePerGas: bigint | undefined
+    let resolvedMaxPriorityFeePerGas: bigint | undefined
+    let resolvedGasPrice: bigint | undefined
+
+    if (!txParams.maxFeePerGas && !txParams.maxPriorityFeePerGas && !txParams.gasPrice) {
+      if (rpcUrl) {
+        logger.log('[ETH_TX] Step 3d - No gas pricing provided, fetching from RPC')
+        try {
+          const [gasPriceResponse, maxPriorityFeeResponse] = await Promise.all([
+            this.rpcCall({ rpcUrl, payload: { jsonrpc: '2.0', id: Date.now(), method: 'eth_gasPrice', params: [] } }),
+            this.rpcCall({ rpcUrl, payload: { jsonrpc: '2.0', id: Date.now() + 1, method: 'eth_maxPriorityFeePerGas', params: [] } }).catch(() => null),
+          ])
+
+          const gasPriceHex = (gasPriceResponse as { result?: string }).result
+          const maxPriorityFeeHex = (maxPriorityFeeResponse as { result?: string } | null)?.result
+
+          if (maxPriorityFeeHex && gasPriceHex) {
+            // EIP-1559: use 2x gasPrice as maxFeePerGas buffer for base fee fluctuations
+            resolvedMaxPriorityFeePerGas = BigInt(maxPriorityFeeHex)
+            resolvedMaxFeePerGas = BigInt(gasPriceHex) * 2n
+            logger.log('[ETH_TX] Step 3e - Resolved EIP-1559 gas:', {
+              maxFeePerGas: resolvedMaxFeePerGas.toString(),
+              maxPriorityFeePerGas: resolvedMaxPriorityFeePerGas.toString(),
+            })
+          }
+          else if (gasPriceHex) {
+            // Legacy fallback
+            resolvedGasPrice = BigInt(gasPriceHex)
+            logger.log('[ETH_TX] Step 3e - Resolved legacy gasPrice:', resolvedGasPrice.toString())
+          }
+        }
+        catch (e) {
+          logger.warn('[ETH_TX] Step 3e - Failed to fetch gas prices:', (e as Error).message)
+        }
+      }
+      else {
+        logger.warn('[ETH_TX] No RPC URL available to fetch gas prices')
+      }
+    }
+
+    // Gas limit resolution: estimate from RPC if not provided by dApp
+    let resolvedGasLimit: string | undefined = gasLimit
+    if (!resolvedGasLimit && rpcUrl) {
+      logger.log('[ETH_TX] Step 3f - No gas limit provided, estimating from RPC')
+      try {
+        const estimateResponse = await this.rpcCall({
+          rpcUrl,
+          payload: {
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'eth_estimateGas',
+            params: [{
+              from: txParams.from,
+              to: txParams.to,
+              value: txParams.value || '0x0',
+              data: txParams.data,
+            }],
+          },
+        })
+        const estimatedGas = (estimateResponse as { result?: string }).result
+        if (estimatedGas) {
+          // Add 20% buffer to gas estimate
+          const estimated = BigInt(estimatedGas)
+          const buffered = estimated + (estimated * 20n / 100n)
+          resolvedGasLimit = `0x${buffered.toString(16)}`
+          logger.log('[ETH_TX] Step 3g - Estimated gas:', { estimated: estimated.toString(), buffered: buffered.toString() })
+        }
+      }
+      catch (e) {
+        logger.warn('[ETH_TX] Step 3g - Failed to estimate gas:', (e as Error).message)
+      }
+    }
+
+    if (!resolvedGasLimit) {
+      throw new InternalError('Transaction must include "gas" or "gasLimit", and estimation failed')
+    }
+
+    // Compute final gas price hex strings for the confirmation dialog
+    const finalMaxFeePerGas = txParams.maxFeePerGas || (resolvedMaxFeePerGas ? `0x${resolvedMaxFeePerGas.toString(16)}` : undefined)
+    const finalMaxPriorityFeePerGas = txParams.maxPriorityFeePerGas || (resolvedMaxPriorityFeePerGas ? `0x${resolvedMaxPriorityFeePerGas.toString(16)}` : undefined)
+    const finalGasPrice = txParams.gasPrice || (resolvedGasPrice && !finalMaxFeePerGas ? `0x${resolvedGasPrice.toString(16)}` : undefined)
+    const finalNonce = txParams.nonce !== undefined
+      ? (typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce)
+      : resolvedNonce
+
+    // --- Request user confirmation with all resolved values ---
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
@@ -562,11 +710,11 @@ export class MiniAppHost {
         from: txParams.from,
         value: txParams.value || '0x0',
         data: txParams.data,
-        gas: gasLimit,
-        maxFeePerGas: txParams.maxFeePerGas,
-        maxPriorityFeePerGas: txParams.maxPriorityFeePerGas,
-        gasPrice: txParams.gasPrice,
-        nonce: typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce,
+        gas: resolvedGasLimit,
+        maxFeePerGas: finalMaxFeePerGas,
+        maxPriorityFeePerGas: finalMaxPriorityFeePerGas,
+        gasPrice: finalGasPrice,
+        nonce: finalNonce,
         chainId: txParams.chainId,
       },
     })
@@ -588,7 +736,7 @@ export class MiniAppHost {
       chainId?: bigint
     } = {
       to: txParams.to,
-      gasLimit: BigInt(gasLimit),
+      gasLimit: BigInt(resolvedGasLimit),
     }
 
     // Set value (convert from hex wei)
@@ -601,20 +749,33 @@ export class MiniAppHost {
       tx.data = txParams.data
     }
 
-    // Set gas parameters (EIP-1559 or legacy)
+    // Set gas parameters (EIP-1559 or legacy) - use dApp values if provided, otherwise use resolved
     if (txParams.maxFeePerGas) {
       tx.maxFeePerGas = BigInt(txParams.maxFeePerGas)
+    }
+    else if (resolvedMaxFeePerGas) {
+      tx.maxFeePerGas = resolvedMaxFeePerGas
     }
     if (txParams.maxPriorityFeePerGas) {
       tx.maxPriorityFeePerGas = BigInt(txParams.maxPriorityFeePerGas)
     }
+    else if (resolvedMaxPriorityFeePerGas) {
+      tx.maxPriorityFeePerGas = resolvedMaxPriorityFeePerGas
+    }
     if (txParams.gasPrice) {
       tx.gasPrice = BigInt(txParams.gasPrice)
     }
+    else if (resolvedGasPrice && !tx.maxFeePerGas) {
+      // Only use legacy gasPrice if EIP-1559 params aren't set
+      tx.gasPrice = resolvedGasPrice
+    }
 
-    // Set nonce if provided
+    // Set nonce: use dApp-provided nonce, or fall back to on-chain nonce from broadcast RPC
     if (txParams.nonce !== undefined) {
       tx.nonce = typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce
+    }
+    else if (resolvedNonce !== undefined) {
+      tx.nonce = resolvedNonce
     }
 
     // Set chainId - use current chain if not provided, validate if provided
@@ -640,13 +801,31 @@ export class MiniAppHost {
       tx.chainId = BigInt(currentChainNumber)
     }
 
+    logger.log('[ETH_TX] Step 4 - Built tx object:', {
+      to: tx.to,
+      value: tx.value?.toString(),
+      gasLimit: tx.gasLimit?.toString(),
+      maxFeePerGas: tx.maxFeePerGas?.toString(),
+      maxPriorityFeePerGas: tx.maxPriorityFeePerGas?.toString(),
+      gasPrice: tx.gasPrice?.toString(),
+      nonce: tx.nonce,
+      chainId: tx.chainId?.toString(),
+      hasData: !!tx.data,
+    })
+
     // Sign the transaction
     const signedTx = await ethWallet.signTransaction(tx)
 
-    const rpcUrl = txParams.rpcUrl || this.config.ethereumRpcUrl
+    logger.log('[ETH_TX] Step 5 - Transaction signed:', {
+      signedTxLength: signedTx.length,
+      signedTxPreview: `${signedTx.slice(0, 22)}...${signedTx.slice(-20)}`,
+    })
+
     if (!rpcUrl) {
       throw new NetworkError('Missing Ethereum RPC URL to broadcast transaction')
     }
+
+    logger.log('[ETH_TX] Step 6 - Broadcasting via RPC:', { rpcUrl, method: 'eth_sendRawTransaction' })
 
     const rpcResponse = await this.rpcCall({
       rpcUrl,
@@ -658,18 +837,28 @@ export class MiniAppHost {
       },
     })
 
+    logger.log('[ETH_TX] Step 7 - RPC response:', JSON.stringify(rpcResponse))
+
     if (!rpcResponse || typeof rpcResponse !== 'object') {
       throw new NetworkError('Invalid RPC response while broadcasting transaction')
     }
 
     if ('error' in rpcResponse && (rpcResponse as { error?: { message?: string } }).error) {
-      throw new NetworkError((rpcResponse as { error?: { message?: string } }).error?.message || 'RPC error while broadcasting transaction')
+      const rpcError = (rpcResponse as { error?: { message?: string, code?: number, data?: unknown } }).error
+      logger.error('[ETH_TX] Step 7 - RPC error details:', {
+        message: rpcError?.message,
+        code: rpcError?.code,
+        data: rpcError?.data,
+      })
+      throw new NetworkError(rpcError?.message || 'RPC error while broadcasting transaction')
     }
 
     const txHash = (rpcResponse as { result?: string }).result
     if (!txHash || typeof txHash !== 'string') {
       throw new NetworkError('RPC response missing transaction hash')
     }
+
+    logger.log('[ETH_TX] Step 8 - Transaction broadcast success:', { txHash })
 
     return txHash
   }
