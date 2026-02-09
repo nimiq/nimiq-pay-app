@@ -141,22 +141,67 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
         value?: string
         data?: string
         gas?: string
+        maxFeePerGas?: string
+        maxPriorityFeePerGas?: string
+        gasPrice?: string
+        nonce?: number
+        chainId?: string
       }
+      const appName = request.name || new URL(request.url).hostname
       const valueEth = formatEther(BigInt(txParams.value || '0x0'))
       const gasLimit = txParams.gas ? Number.parseInt(txParams.gas, 16) : 0
 
+      // Convert wei hex to Gwei for readable gas prices
+      const toGwei = (hex?: string) => {
+        if (!hex)
+          return null
+        const wei = BigInt(hex)
+        // 1 Gwei = 1e9 wei. Show up to 2 decimals.
+        const gwei = Number(wei) / 1e9
+        return `${gwei.toFixed(2)} Gwei`
+      }
+
+      // Estimate max total fee: gasLimit * maxFeePerGas (or gasPrice)
+      const feePerGasHex = txParams.maxFeePerGas || txParams.gasPrice
+      const maxTotalFee = feePerGasHex && gasLimit
+        ? formatEther(BigInt(feePerGasHex) * BigInt(gasLimit))
+        : null
+
       const rows: { title: string, value: string }[] = [
         { title: 'To', value: txParams.to },
-        { title: 'From', value: txParams.from },
         { title: 'Value', value: `${valueEth} ETH` },
         { title: 'Gas Limit', value: String(gasLimit) },
       ]
+
+      if (txParams.maxFeePerGas) {
+        const gwei = toGwei(txParams.maxFeePerGas)
+        if (gwei)
+          rows.push({ title: 'Max Fee', value: gwei })
+      }
+      if (txParams.maxPriorityFeePerGas) {
+        const gwei = toGwei(txParams.maxPriorityFeePerGas)
+        if (gwei)
+          rows.push({ title: 'Priority Fee', value: gwei })
+      }
+      if (txParams.gasPrice && !txParams.maxFeePerGas) {
+        const gwei = toGwei(txParams.gasPrice)
+        if (gwei)
+          rows.push({ title: 'Gas Price', value: gwei })
+      }
+      if (maxTotalFee)
+        rows.push({ title: 'Max Total Fee', value: `${maxTotalFee} ETH` })
+      if (txParams.nonce !== undefined)
+        rows.push({ title: 'Nonce', value: String(txParams.nonce) })
       if (txParams.data && txParams.data !== '0x')
         rows.push({ title: 'Contract Interaction', value: 'Yes' })
 
       const result = await ExtendedDialog.sheet({
-        title: 'Confirm ETH Transaction',
+        title: `Confirm ETH Transaction`,
+        headerLogo: getAppIcon(request.url),
+        headerLogoCornerRadius: -1,
         rows,
+        confirmButtonTitle: 'Confirm',
+        cancelButtonTitle: 'Reject',
       })
       return result.confirmed
     }
@@ -208,6 +253,7 @@ async function openMiniApp(url?: string, title?: string) {
     url: targetUrl,
     title: appTitle,
     toolbarType: ToolBarType.NAVIGATION,
+    showReloadButton: true,
     enabledSafeBottomMargin: true,
     useTopInset: true,
     activeNativeNavigationForWebview: true,
