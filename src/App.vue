@@ -5,6 +5,7 @@ import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { CameraPreview } from '@capgo/camera-preview'
+import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
@@ -79,6 +80,10 @@ App.addListener('resume', async () => {
   if (lastPauseTimestamp !== 0 && timeInBackground > 2 * 60 * 1000) {
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
+    try {
+      await InAppBrowser.close()
+    }
+    catch {}
     lastPauseTimestamp = 0
     router.go(0)
   }
