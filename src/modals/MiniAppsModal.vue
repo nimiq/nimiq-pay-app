@@ -253,6 +253,7 @@ async function openMiniApp(url?: string, title?: string) {
     url: targetUrl,
     title: appTitle,
     toolbarType: ToolBarType.NAVIGATION,
+    preventDeeplink: true,
     showReloadButton: true,
     enabledSafeBottomMargin: true,
     useTopInset: true,
