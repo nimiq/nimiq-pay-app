@@ -573,7 +573,8 @@ export class MiniAppHost {
       nonceProvided: txParams.nonce !== undefined,
       nonceRawValue: txParams.nonce,
       nonceParsed: typeof txParams.nonce === 'string'
-        ? Number.parseInt(txParams.nonce, 16) : txParams.nonce,
+        ? Number.parseInt(txParams.nonce, 16)
+        : txParams.nonce,
     })
 
     let resolvedNonce: number | undefined
@@ -595,8 +596,7 @@ export class MiniAppHost {
           onChainNonceDec,
           txNonce: txParams.nonce,
           match: txParams.nonce !== undefined && onChainNonceDec !== undefined
-            ? onChainNonceDec === (typeof txParams.nonce === 'string'
-              ? Number.parseInt(txParams.nonce, 16) : txParams.nonce)
+            ? onChainNonceDec === (typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce)
             : 'nonce not provided by dApp',
         })
 

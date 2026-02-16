@@ -147,7 +147,7 @@ async function requestUserConfirmation(request: UserConfirmationRequest): Promis
         nonce?: number
         chainId?: string
       }
-      const appName = request.name || new URL(request.url).hostname
+      const _appName = request.name || new URL(request.url).hostname
       const valueEth = formatEther(BigInt(txParams.value || '0x0'))
       const gasLimit = txParams.gas ? Number.parseInt(txParams.gas, 16) : 0
 
