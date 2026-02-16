@@ -148,6 +148,7 @@ export class MiniAppHost {
     if (!this.inAppBrowser) {
       return
     }
+    // @ts-expect-error - TS cannot detect the correct overload
     this.messageFromWebviewListener = await this.inAppBrowser.addListener('messageFromWebview', this.messageListener.bind(this))
   }
 
