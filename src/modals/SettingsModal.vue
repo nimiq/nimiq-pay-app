@@ -23,7 +23,15 @@ const logger = useLogger('SettingsModal')
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { getAllRemoteSigners } = useRemoteSigner()
-const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations, decimalsAmount } = storeToRefs(useApp())
+const {
+  language,
+  selectedFiat,
+  pushNotificationsStatus,
+  phoneNumberVerified,
+  showAnimations,
+  decimalsAmount,
+  reopenMiniAppWebviewAfterResume,
+} = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const { unregisterNotifications, registerNotifications } = useNotifications()
@@ -159,6 +167,12 @@ onBeforeMount(updateBiometryInfo)
         <IonItem>
           <IonToggle :checked="!showAnimations" @ion-change="showAnimations = !$event.detail.checked">
             {{ $t('Reduce Animations') }}
+          </IonToggle>
+        </IonItem>
+
+        <IonItem>
+          <IonToggle :checked="reopenMiniAppWebviewAfterResume" @ion-change="reopenMiniAppWebviewAfterResume = $event.detail.checked">
+            {{ $t('Reopen mini-app on unlock') }}
           </IonToggle>
         </IonItem>
 

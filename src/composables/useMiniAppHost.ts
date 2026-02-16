@@ -16,6 +16,28 @@ import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
 
+/**
+ * Snapshot of an active MiniAppHost session.
+ * Used to persist state across app reloads (e.g., PIN lock after background).
+ */
+export interface MiniAppSessionState {
+  url: string
+  title: string
+  chainId: string
+  ethereumRpcUrl?: string
+}
+
+/** Module-level reference to the active session state (set by constructor, cleared by destroy) */
+let _activeMiniAppSession: MiniAppSessionState | null = null
+
+/**
+ * Returns a snapshot of the active MiniAppHost session, or null if none is active.
+ * Used by App.vue to decide whether to hide (rather than close) the webview on background timeout.
+ */
+export function getActiveMiniAppSession(): MiniAppSessionState | null {
+  return _activeMiniAppSession ? { ..._activeMiniAppSession } : null
+}
+
 export interface InAppBrowserMessageEvent {
   detail: {
     message?: string
@@ -116,12 +138,38 @@ export class MiniAppHost {
     this.inAppBrowser = inAppBrowser
     this.config = config
     this.setupMessageListener()
+
+    // Track the active session at module level
+    _activeMiniAppSession = {
+      url: config.url,
+      title: config.title,
+      chainId: this.currentChainId,
+      ethereumRpcUrl: config.ethereumRpcUrl,
+    }
+  }
+
+  /**
+   * Factory method to reconnect to an existing hidden webview after app reload.
+   * Re-registers listeners without opening a new webview.
+   */
+  static reconnect(
+    inAppBrowser: typeof InAppBrowser,
+    config: MiniAppHostConfig,
+    restoredChainId: string,
+  ): MiniAppHost {
+    const host = new MiniAppHost(inAppBrowser, config)
+    host.currentChainId = restoredChainId
+    if (_activeMiniAppSession) {
+      _activeMiniAppSession.chainId = restoredChainId
+    }
+    return host
   }
 
   public async destroy(): Promise<void> {
     if (this.destroyed) {
       return
     }
+    _activeMiniAppSession = null
     await this.inAppBrowser?.clearAllCookies()
     await this.messageFromWebviewListener?.remove()
     this.messageFromWebviewListener = null
@@ -152,6 +200,9 @@ export class MiniAppHost {
     // Handle chain change notifications from the webview provider
     if (event.detail.type === 'chainChanged' && typeof event.detail.chainId === 'string') {
       this.currentChainId = event.detail.chainId
+      if (_activeMiniAppSession) {
+        _activeMiniAppSession.chainId = this.currentChainId
+      }
       logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
       return
     }
@@ -586,7 +637,9 @@ export class MiniAppHost {
           onChainNonceDec,
           txNonce: txParams.nonce,
           match: txParams.nonce !== undefined && onChainNonceDec !== undefined
-            ? onChainNonceDec === (typeof txParams.nonce === 'string' ? Number.parseInt(txParams.nonce, 16) : txParams.nonce)
+            ? onChainNonceDec === (typeof txParams.nonce === 'string'
+              ? Number.parseInt(txParams.nonce, 16)
+              : txParams.nonce)
             : 'nonce not provided by dApp',
         })
 

@@ -45,7 +45,7 @@ include ':capgo-camera-preview'
 project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview/android')
 
 include ':capgo-inappbrowser'
-project(':capgo-inappbrowser').projectDir = new File('../node_modules/.pnpm/@capgo+inappbrowser@8.1.14_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser/android')
+project(':capgo-inappbrowser').projectDir = new File('../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser/android')
 
 include ':rdlabo-capacitor-screenshot-event'
 project(':rdlabo-capacitor-screenshot-event').projectDir = new File('../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event/android')

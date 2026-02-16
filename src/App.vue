@@ -15,9 +15,11 @@ import { useRouter } from 'vue-router'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
+import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
+import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
@@ -74,16 +76,49 @@ App.addListener('pause', () => {
 })
 
 App.addListener('resume', async () => {
-  const timeInBackground = Date.now() - lastPauseTimestamp
+  const { reopenMiniAppWebviewAfterResume } = storeToRefs(useApp())
+  const now = Date.now()
+  const timeInBackground = now - lastPauseTimestamp
   logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
   // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
-  if (lastPauseTimestamp !== 0 && timeInBackground > 2 * 60 * 1000) {
+  if (shouldReloadAppAfterBackground(lastPauseTimestamp, now)) {
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
-    try {
-      await InAppBrowser.close()
+
+    // If a mini-app webview is open, keep it only when auto-reopen is enabled
+    const { getActiveMiniAppSession } = await import('@/composables/useMiniAppHost')
+    const { clearSession, saveSession } = await import('@/composables/useMiniAppSession')
+    const activeSession = getActiveMiniAppSession()
+    const preserveSession = shouldPreserveMiniAppSession({
+      hasActiveMiniAppSession: !!activeSession,
+      reopenMiniAppWebviewAfterResume: reopenMiniAppWebviewAfterResume.value,
+    })
+
+    if (preserveSession && activeSession) {
+      try {
+        await InAppBrowser.hide()
+        saveSession(activeSession)
+        logger.log('Mini-app webview hidden, session saved for reconnection after PIN')
+      }
+      catch (err) {
+        logger.error('Failed to hide webview, falling back to close:', err)
+        await clearSession()
+        try {
+          await InAppBrowser.close()
+        }
+        catch {}
+      }
     }
-    catch {}
+    else {
+      await clearSession()
+      if (activeSession && !reopenMiniAppWebviewAfterResume.value)
+        logger.log('Mini-app webview auto-reopen disabled, closing webview on app reload')
+      try {
+        await InAppBrowser.close()
+      }
+      catch {}
+    }
+
     lastPauseTimestamp = 0
     router.go(0)
   }
