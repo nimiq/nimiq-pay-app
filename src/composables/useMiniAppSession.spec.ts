@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { clearSession, saveSession } from './useMiniAppSession'
+
 const { clearAllCookies } = vi.hoisted(() => ({
   clearAllCookies: vi.fn(() => Promise.resolve()),
 }))
@@ -19,8 +21,6 @@ vi.mock('@/composables/useLogger', () => ({
     error: vi.fn(),
   }),
 }))
-
-import { clearSession, saveSession } from './useMiniAppSession'
 
 describe('clearSession', () => {
   beforeEach(() => {
