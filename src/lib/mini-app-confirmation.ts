@@ -2,18 +2,10 @@ import type { UserConfirmationRequest } from '@/composables/useMiniAppHost'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
 import { useLogger } from '@/composables/useLogger'
-import { getFaviconUrl } from '@/lib/favicon'
+import { getFaviconUrl } from '@/lib/site-metadata'
 import { useLocalWallet } from '@/stores/local-wallet'
 
 const logger = useLogger('mini-app-confirmation')
-
-/**
- * Get a favicon icon URL for a dApp.
- * Uses Google's favicon service via getFaviconUrl.
- */
-export function getAppIcon(url: string): string {
-  return getFaviconUrl(url)
-}
 
 /**
  * Request user confirmation for sensitive mini-app operations.
@@ -31,7 +23,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const result = await ExtendedDialog.sheet({
         title: `Connect to ${appName}`,
         subtitle: `${appName} will be able to:`,
-        headerLogo: getAppIcon(request.url),
+        headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         rows: [
           { title: `See your address ${truncatedAddress}` },
@@ -129,7 +121,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
 
       const result = await ExtendedDialog.sheet({
         title: `Confirm ETH Transaction`,
-        headerLogo: getAppIcon(request.url),
+        headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         rows,
         confirmButtonTitle: 'Confirm',
@@ -147,7 +139,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
 
       const result = await ExtendedDialog.messageSheet({
         title: `Sign message from ${appName}`,
-        headerLogo: getAppIcon(request.url),
+        headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         message: displayMessage,
         confirmButtonTitle: 'Sign',

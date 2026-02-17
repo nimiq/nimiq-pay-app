@@ -1,34 +1,29 @@
 <script setup lang="ts">
 import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
-import { IonInput } from '@ionic/vue'
+import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
-import { computed, ref } from 'vue'
+import { motion } from 'motion-v'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
-import { getAppIcon, requestUserConfirmation } from '@/lib/mini-app-confirmation'
-import { useLocalWallet } from '@/stores/local-wallet'
+import { isDev } from '@/lib'
+import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
+import { fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
+import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
 const logger = useLogger('MiniAppModal')
-const localWallet = useLocalWallet()
 const ethereumRpcUrl = import.meta.env.VITE_ETHEREUM_RPC_URL
-
-const ethAddress = computed(() => {
-  const { data, error } = localWallet.getEthAddress()
-  if (error) {
-    logger.error('Failed to get ETH address:', error)
-    return null
-  }
-  logger.log('ETH address:', data)
-  return data
-})
 
 // Pre-cache web3-provider script for instant injection when opening mini-apps
 const web3ProviderScript = computedAsync(
   () => fetch('/web3-provider.js').then(res => res.text()),
   null,
 )
+
+const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZjIzNDgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1nbG9iZS1pY29uIGx1Y2lkZS1nbG9iZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMmExNC41IDE0LjUgMCAwIDAgMCAyMCAxNC41IDE0LjUgMCAwIDAgMC0yMCIvPjxwYXRoIGQ9Ik0yIDEyaDIwIi8+PC9zdmc+'
 
 interface DApp {
   name: string
@@ -37,143 +32,302 @@ interface DApp {
 }
 
 const popularDApps: DApp[] = [
+  ...(isDev
+    ? [{
+        name: 'Demo App',
+        url: 'http://localhost:5174/',
+        icon: getFaviconUrl('http://localhost:5174/'),
+      }]
+    : []),
   {
     name: 'Uniswap',
     url: 'https://app.uniswap.org',
-    icon: getAppIcon('https://app.uniswap.org'),
+    icon: getFaviconUrl('https://app.uniswap.org'),
   },
   {
     name: 'Polymarket',
     url: 'https://polymarket.com',
-    icon: getAppIcon('https://polymarket.com'),
+    icon: getFaviconUrl('https://polymarket.com'),
   },
   {
     name: 'DappRadar',
     url: 'https://dappradar.com',
-    icon: getAppIcon('https://dappradar.com'),
+    icon: getFaviconUrl('https://dappradar.com'),
   },
   {
     name: 'Aave',
     url: 'https://app.aave.com',
-    icon: getAppIcon('https://app.aave.com'),
+    icon: getFaviconUrl('https://app.aave.com'),
   },
   {
     name: 'OpenSea',
     url: 'https://opensea.io',
-    icon: getAppIcon('https://opensea.io'),
+    icon: getFaviconUrl('https://opensea.io'),
   },
   {
     name: '1inch',
-    url: 'https://app.1inch.io',
-    icon: getAppIcon('https://app.1inch.io'),
+    url: 'https://1inch.com/',
+    icon: getFaviconUrl('https://1inch.com/'),
   },
 ]
 
-const miniAppUrl = ref(`http://${__VITE_SERVER_IP__}:5174`)
+type DescriptionStatus = 'loading' | 'done'
+const descriptionState = reactive<Record<string, { status: DescriptionStatus, text?: string }>>({})
+
+const descriptionTexts = computed(() => {
+  const texts: Record<string, string> = {}
+  for (const [url, state] of Object.entries(descriptionState)) {
+    if (state.text)
+      texts[url] = state.text
+  }
+  return texts
+})
+
+const searchQuery = ref('')
+const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
+const normalizedSearchUrl = computed(() => normalizeMiniAppUrl(searchQuery.value))
+const featuredLabel = computed(() => searchQuery.value.trim() ? 'Matching Apps' : 'Featured Apps')
+const openingUrl = ref<string | null>(null)
+const isOpeningAny = computed(() => openingUrl.value !== null)
+
+const searchedUrlApp = computed(() => {
+  const url = normalizedSearchUrl.value
+  if (!url)
+    return undefined
+
+  const matchedFeaturedApp = popularDApps.find(dapp => normalizeMiniAppUrl(dapp.url) === url)
+  const fallbackTitle = new URL(url).hostname
+
+  return {
+    url,
+    title: matchedFeaturedApp?.name || fallbackTitle,
+    description: descriptionState[url]?.text || (matchedFeaturedApp ? descriptionState[matchedFeaturedApp.url]?.text : undefined),
+    icon: matchedFeaturedApp?.icon || getFaviconUrl(url),
+    isLoading: descriptionState[url]?.status === 'loading',
+  }
+})
+
+async function ensureDescription(url: string) {
+  if (!url || descriptionState[url])
+    return
+
+  descriptionState[url] = { status: 'loading' }
+  const desc = await fetchPageDescription(url)
+  descriptionState[url] = { status: 'done', text: desc || undefined }
+}
+
+onMounted(() => {
+  for (const dapp of popularDApps) {
+    void ensureDescription(dapp.url)
+  }
+})
+
+watch(normalizedSearchUrl, (url) => {
+  if (url)
+    void ensureDescription(url)
+}, { immediate: true })
+
+function isOpeningUrl(url: string): boolean {
+  const normalizedUrl = normalizeMiniAppUrl(url)
+  return !!normalizedUrl && openingUrl.value === normalizedUrl
+}
+
+function toUrlTestId(url: string): string {
+  const normalizedUrl = normalizeMiniAppUrl(url) || url
+  return normalizedUrl.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
+}
 
 async function openMiniApp(url?: string, title?: string) {
-  const targetUrl = url || miniAppUrl.value
-  const appTitle = title || 'Mini App'
+  const searchedUrl = normalizeMiniAppUrl(searchQuery.value)
+  const targetUrl = normalizeMiniAppUrl(url || searchedUrl || '')
 
-  // Create the mini app host with configuration
-  const host = new MiniAppHost(InAppBrowser, {
-    url: targetUrl,
-    title: appTitle,
-    requestUserConfirmation,
-    ethereumRpcUrl,
-  })
+  if (isOpeningAny.value)
+    return
 
-  // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
-  // Use pre-cached script if available, fallback to fetch if not yet loaded
-  const cachedScript = web3ProviderScript.value
-  const scriptContent = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
+  if (!targetUrl) {
+    useToast().setToast({
+      message: 'Enter a valid app URL',
+      type: 'error',
+    })
+    return
+  }
 
-  await InAppBrowser.openWebView({
-    url: targetUrl,
-    title: appTitle,
-    toolbarType: ToolBarType.NAVIGATION,
-    preventDeeplink: true,
-    showReloadButton: true,
-    enabledSafeBottomMargin: true,
-    useTopInset: true,
-    activeNativeNavigationForWebview: true,
-    isPresentAfterPageLoad: true,
-    preShowScript: scriptContent,
-    preShowScriptInjectionTime: 'documentStart',
-  }).catch((err) => {
+  const appTitle = title || (searchedUrl ? searchedUrlApp.value?.title : undefined) || 'Mini App'
+  let host: MiniAppHost | null = null
+  openingUrl.value = targetUrl
+
+  try {
+    // Create the mini app host with configuration
+    host = new MiniAppHost(InAppBrowser, {
+      url: targetUrl,
+      title: appTitle,
+      requestUserConfirmation,
+      ethereumRpcUrl,
+    })
+
+    // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
+    // Use pre-cached script if available, fallback to fetch if not yet loaded
+    const cachedScript = web3ProviderScript.value
+    const scriptContent = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
+
+    await InAppBrowser.openWebView({
+      url: targetUrl,
+      title: appTitle,
+      toolbarType: ToolBarType.NAVIGATION,
+      preventDeeplink: true,
+      showReloadButton: true,
+      enabledSafeBottomMargin: true,
+      useTopInset: true,
+      activeNativeNavigationForWebview: true,
+      isPresentAfterPageLoad: true,
+      preShowScript: scriptContent,
+      preShowScriptInjectionTime: 'documentStart',
+    })
+
+    InAppBrowser.addListener('closeEvent', async () => {
+      logger.log('Mini-app webview closed, destroying host')
+      await host?.destroy()
+    })
+  }
+  catch (err) {
     logger.error('Failed to open mini-app:', err)
     useToast().setToast({
       message: 'Could not open the mini-app webview',
       type: 'error',
     })
-  })
 
-  InAppBrowser.addListener('closeEvent', async () => {
-    logger.log('Mini-app webview closed, destroying host')
-    await host.destroy()
-  })
+    if (host)
+      await host.destroy()
+  }
+  finally {
+    openingUrl.value = null
+  }
 }
 </script>
 
 <template>
   <ModalTemplate :close-all="true">
     <div class="w-full h-full flex flex-col gap-6">
-      <p class="text-space/60 text-sm font-bold text-left uppercase">
-        Mini Apps
+      <p class="text-2xl font-bold">
+        Discover
       </p>
 
-      <!-- ETH Address Display -->
-      <div v-if="ethAddress" class="bg-white/5 rounded-lg p-3">
-        <p class="text-xs text-space/60 uppercase mb-1">
-          ETH Address
-        </p>
-        <p class="text-sm font-mono break-all">
-          {{ ethAddress }}
-        </p>
-      </div>
+      <!-- Search Bar -->
+      <IonSearchbar
+        v-model="searchQuery"
+        placeholder="Search or enter App URL"
+        :debounce="300"
+        inputmode="url"
+        enterkeyhint="go"
+        class="mini-app-searchbar p-0 border-2 text-left border-space/15 rounded-full"
+        @keydown.enter="openMiniApp()"
+      />
 
-      <!-- Popular dApps Grid -->
-      <div class="grid grid-cols-3 gap-4">
+      <button
+        v-if="searchedUrlApp"
+        data-testid="searched-dapp-button"
+        class="flex items-center gap-3 text-left transition-opacity"
+        :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+        :disabled="isOpeningAny"
+        @click="openMiniApp(searchedUrlApp.url, searchedUrlApp.title)"
+      >
+        <div class="relative w-14 h-14 shrink-0">
+          <img
+            :src="searchedUrlApp.icon"
+            :alt="searchedUrlApp.title"
+            class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+            :class="{ 'opacity-40': isOpeningUrl(searchedUrlApp.url) }"
+            @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+          >
+          <motion.div
+            v-if="isOpeningUrl(searchedUrlApp.url)"
+            :data-testid="`dapp-icon-loading-${toUrlTestId(searchedUrlApp.url)}`"
+            class="absolute inset-0 flex items-center justify-center"
+            :initial="{ opacity: 0, scale: 0.85 }"
+            :animate="{ opacity: 1, scale: 1 }"
+            :transition="{ duration: 0.16, ease: 'easeOut' }"
+          >
+            <LoadingSpinnerIcon class="size-6" />
+          </motion.div>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="font-bold text-base truncate">{{ searchedUrlApp.title }}</span>
+          <span class="text-xs text-space/60 truncate">{{ searchedUrlApp.url }}</span>
+          <span
+            v-if="searchedUrlApp.description"
+            class="text-sm text-space/50 truncate"
+          >
+            {{ searchedUrlApp.description }}
+          </span>
+          <IonSkeletonText v-else-if="searchedUrlApp.isLoading" :animated="true" class="h-4 w-3/4 rounded" />
+        </div>
+      </button>
+
+      <!-- Featured Apps -->
+      <p class="text-lg font-bold text-space text-left">
+        {{ featuredLabel }}
+      </p>
+      <div class="flex flex-col gap-4 text-left">
         <button
-          v-for="dapp in popularDApps"
+          v-for="dapp in filteredDApps"
           :key="dapp.url"
-          class="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/15 transition-colors"
+          :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
+          class="flex items-center gap-3 text-left transition-opacity"
+          :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+          :disabled="isOpeningAny"
           @click="openMiniApp(dapp.url, dapp.name)"
         >
-          <img
-            :src="dapp.icon"
-            :alt="dapp.name"
-            class="w-12 h-12 rounded-xl object-contain bg-white/10 p-1"
-            @error="($event.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌐</text></svg>'"
-          >
-          <span class="text-xs text-center font-medium truncate w-full">{{ dapp.name }}</span>
+          <div class="relative w-14 h-14 shrink-0">
+            <img
+              :src="dapp.icon"
+              :alt="dapp.name"
+              class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+              :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+              @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+            >
+            <motion.div
+              v-if="isOpeningUrl(dapp.url)"
+              :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+              class="absolute inset-0 flex items-center justify-center"
+              :initial="{ opacity: 0, scale: 0.85 }"
+              :animate="{ opacity: 1, scale: 1 }"
+              :transition="{ duration: 0.16, ease: 'easeOut' }"
+            >
+              <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+            </motion.div>
+          </div>
+          <div class="flex flex-col min-w-0">
+            <span class="font-bold text-base">{{ dapp.name }}</span>
+            <motion.span
+              :key="descriptionState[dapp.url]?.text || dapp.url"
+              :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
+              class="text-sm text-space/50 truncate"
+              :initial="{ opacity: 0, y: 4 }"
+              :animate="{ opacity: 1, y: 0 }"
+              :transition="{ duration: 0.16, ease: 'easeOut' }"
+            >
+              {{ descriptionState[dapp.url]?.text || dapp.url }}
+            </motion.span>
+          </div>
         </button>
-      </div>
-
-      <!-- Custom URL Section -->
-      <div class="border-t border-white/10 pt-4">
-        <form class="flex flex-col gap-3" @submit.prevent="openMiniApp()">
-          <label class="text-xs font-medium text-space/60 uppercase">
-            Custom URL
-          </label>
-          <IonInput
-            v-model="miniAppUrl"
-            placeholder="Enter URL"
-            clear-input
-            class="bg-white/5 rounded-lg"
-          />
-          <button
-            type="submit"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:pointer-events-none transition-colors"
-            :disabled="!miniAppUrl"
-          >
-            Open
-          </button>
-        </form>
+        <p
+          v-if="filteredDApps.length === 0"
+          class="text-sm text-space/60"
+        >
+          No apps found.
+        </p>
       </div>
     </div>
   </ModalTemplate>
 </template>
 
 <style scoped>
+.mini-app-searchbar {
+  --background: transparent;
+  --border-radius: 9999px;
+  --box-shadow: none;
+  --placeholder-color: theme('colors.space.DEFAULT / 60%');
+  --icon-color: theme('colors.space.DEFAULT / 40%');
+  --clear-button-color: theme('colors.space.DEFAULT / 40%');
+}
 </style>
