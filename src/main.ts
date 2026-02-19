@@ -19,6 +19,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 
 import App from './App.vue'
 import router from './router'
+import { useMiniApps } from './stores/mini-apps'
 import { useNaka } from './stores/naka'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
@@ -69,8 +70,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     await useConn().init()
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute })
   useLogger().init()
-  if (!isAlertRoute)
+  if (!isAlertRoute) {
     useNaka().init()
+    useMiniApps() // computedAsync triggers description fetching on store creation
+  }
 
   const { isWeb } = useDevice()
 

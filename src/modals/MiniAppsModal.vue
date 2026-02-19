@@ -3,15 +3,15 @@ import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
 import { motion } from 'motion-v'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
-import { isDev } from '@/lib'
 import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
-import { fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
+import { getFaviconUrl } from '@/lib/site-metadata'
+import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
 const logger = useLogger('MiniAppModal')
@@ -25,63 +25,7 @@ const web3ProviderScript = computedAsync(
 
 const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZjIzNDgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1nbG9iZS1pY29uIGx1Y2lkZS1nbG9iZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMmExNC41IDE0LjUgMCAwIDAgMCAyMCAxNC41IDE0LjUgMCAwIDAgMC0yMCIvPjxwYXRoIGQ9Ik0yIDEyaDIwIi8+PC9zdmc+'
 
-interface DApp {
-  name: string
-  url: string
-  icon: string
-}
-
-const popularDApps: DApp[] = [
-  ...(isDev
-    ? [{
-        name: 'Demo App',
-        url: 'http://localhost:5174/',
-        icon: getFaviconUrl('http://localhost:5174/'),
-      }]
-    : []),
-  {
-    name: 'Uniswap',
-    url: 'https://app.uniswap.org',
-    icon: getFaviconUrl('https://app.uniswap.org'),
-  },
-  {
-    name: 'Polymarket',
-    url: 'https://polymarket.com',
-    icon: getFaviconUrl('https://polymarket.com'),
-  },
-  {
-    name: 'DappRadar',
-    url: 'https://dappradar.com',
-    icon: getFaviconUrl('https://dappradar.com'),
-  },
-  {
-    name: 'Aave',
-    url: 'https://app.aave.com',
-    icon: getFaviconUrl('https://app.aave.com'),
-  },
-  {
-    name: 'OpenSea',
-    url: 'https://opensea.io',
-    icon: getFaviconUrl('https://opensea.io'),
-  },
-  {
-    name: '1inch',
-    url: 'https://1inch.com/',
-    icon: getFaviconUrl('https://1inch.com/'),
-  },
-]
-
-type DescriptionStatus = 'loading' | 'done'
-const descriptionState = reactive<Record<string, { status: DescriptionStatus, text?: string }>>({})
-
-const descriptionTexts = computed(() => {
-  const texts: Record<string, string> = {}
-  for (const [url, state] of Object.entries(descriptionState)) {
-    if (state.text)
-      texts[url] = state.text
-  }
-  return texts
-})
+const { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription } = useMiniApps()
 
 const searchQuery = ref('')
 const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
@@ -101,24 +45,9 @@ const searchedUrlApp = computed(() => {
   return {
     url,
     title: matchedFeaturedApp?.name || fallbackTitle,
-    description: descriptionState[url]?.text || (matchedFeaturedApp ? descriptionState[matchedFeaturedApp.url]?.text : undefined),
+    description: searchedDescriptions[url]?.text || matchedFeaturedApp?.description,
     icon: matchedFeaturedApp?.icon || getFaviconUrl(url),
-    isLoading: descriptionState[url]?.status === 'loading',
-  }
-})
-
-async function ensureDescription(url: string) {
-  if (!url || descriptionState[url])
-    return
-
-  descriptionState[url] = { status: 'loading' }
-  const desc = await fetchPageDescription(url)
-  descriptionState[url] = { status: 'done', text: desc || undefined }
-}
-
-onMounted(() => {
-  for (const dapp of popularDApps) {
-    void ensureDescription(dapp.url)
+    isLoading: searchedDescriptions[url]?.status === 'loading',
   }
 })
 
@@ -299,14 +228,14 @@ async function openMiniApp(url?: string, title?: string) {
           <div class="flex flex-col min-w-0">
             <span class="font-bold text-base">{{ dapp.name }}</span>
             <motion.span
-              :key="descriptionState[dapp.url]?.text || dapp.url"
+              :key="dapp.description || dapp.url"
               :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
               class="text-sm text-space/50 truncate"
               :initial="{ opacity: 0, y: 4 }"
               :animate="{ opacity: 1, y: 0 }"
               :transition="{ duration: 0.16, ease: 'easeOut' }"
             >
-              {{ descriptionState[dapp.url]?.text || dapp.url }}
+              {{ dapp.description || dapp.url }}
             </motion.span>
           </div>
         </button>
