@@ -1,5 +1,6 @@
 # Used in KYC process for NAKA
 source 'https://github.com/SumSubstance/Specs.git'
+source 'https://cdn.cocoapods.org/'
 
 require_relative '../../node_modules/.pnpm/@capacitor+ios@7.4.3_@capacitor+core@7.4.3/node_modules/@capacitor/ios/scripts/pods_helpers'
 
@@ -25,6 +26,7 @@ def capacitor_pods
   pod 'CapacitorPreferences', :path => '../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences'
   pod 'CapacitorShare', :path => '../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share'
   pod 'CapacitorToast', :path => '../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast'
+  pod 'CapawesomeCapacitorPosthog', :path => '../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog'
   pod 'CapawesomeCapacitorScreenOrientation', :path => '../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation'
   pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview'
   pod 'CapgoInappbrowser', :path => '../../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser'

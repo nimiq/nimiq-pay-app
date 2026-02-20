@@ -38,6 +38,9 @@ project(':capacitor-toast').projectDir = new File('../node_modules/.pnpm/@capaci
 include ':capawesome-capacitor-android-edge-to-edge-support'
 project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-android-edge-to-edge-support@7.2.3_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
 
+include ':capawesome-capacitor-posthog'
+project(':capawesome-capacitor-posthog').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog/android')
+
 include ':capawesome-capacitor-screen-orientation'
 project(':capawesome-capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation/android')
 

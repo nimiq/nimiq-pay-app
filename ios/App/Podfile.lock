@@ -47,6 +47,9 @@ PODS:
     - IdensicMobileSDK
   - CapacitorToast (8.0.0):
     - Capacitor
+  - CapawesomeCapacitorPosthog (8.2.1):
+    - Capacitor
+    - PostHog (~> 3.19.1)
   - CapawesomeCapacitorScreenOrientation (7.0.2):
     - Capacitor
   - CapgoCameraPreview (7.20.0):
@@ -111,6 +114,7 @@ PODS:
     - nanopb/encode (= 2.30909.1)
   - nanopb/decode (2.30909.1)
   - nanopb/encode (2.30909.1)
+  - PostHog (3.19.9)
   - PromisesObjC (2.3.1)
   - RdlaboCapacitorScreenshotEvent (7.0.0):
     - Capacitor
@@ -144,6 +148,7 @@ DEPENDENCIES:
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/status-bar`)"
   - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.6_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk`)"
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast`)"
+  - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog`)"
   - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
   - "CapgoInappbrowser (from `../../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser`)"
@@ -164,6 +169,7 @@ SPEC REPOS:
     - IONFilesystemLib
     - KeychainSwift
     - nanopb
+    - PostHog
     - PromisesObjC
     - SQLCipher
     - ZIPFoundation
@@ -213,6 +219,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.6_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk"
   CapacitorToast:
     :path: "../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast"
+  CapawesomeCapacitorPosthog:
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog"
   CapawesomeCapacitorScreenOrientation:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
@@ -245,6 +253,7 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   CapacitorSumsubMobileSdk: 8857a2d21c73b7af105cde417994a0d1085d3b49
   CapacitorToast: aefebcd4cead9f44a04ace80c66a7eb4031751e7
+  CapawesomeCapacitorPosthog: a081a8101ef38508c73e272da33bc1c3fbc52af4
   CapawesomeCapacitorScreenOrientation: 1c6874ef6768c35c6eb9e9c31e98c08816b993f8
   CapgoCameraPreview: 8e48300969673baeffac368a42d9f0487497ac79
   CapgoInappbrowser: 50ed6c108f0c6ea5915d8ea44444fbf2b224cd0a
@@ -259,11 +268,12 @@ SPEC CHECKSUMS:
   IONFilesystemLib: 89258b8e3e85465da93127d25d7ce37f977e8a6f
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
   nanopb: d4d75c12cd1316f4a64e3c6963f879ecd4b5e0d5
+  PostHog: 49247855f4cfdc1d2750b4247e6f6c0ff921e142
   PromisesObjC: c50d2056b5253dadbd6c2bea79b0674bd5a52fa4
   RdlaboCapacitorScreenshotEvent: e6fb3216833c508a76734c377554e289cdbd79ad
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: ef062144f14be91e8027560b564ced05d3b9f5fc
+PODFILE CHECKSUM: 91ff3280a7657f3fd6d05175d1571003275c590e
 
 COCOAPODS: 1.15.2

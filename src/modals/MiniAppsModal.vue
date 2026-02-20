@@ -10,6 +10,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
+import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
 import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { useMiniApps } from '@/stores/mini-apps'
@@ -68,7 +69,7 @@ function toUrlTestId(url: string): string {
   return normalizedUrl.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
 }
 
-async function openMiniApp(url?: string, title?: string) {
+async function openMiniApp(url?: string, title?: string, source: 'featured' | 'recent' | 'search' = 'search') {
   const searchedUrl = normalizeMiniAppUrl(searchQuery.value)
   const targetUrl = normalizeMiniAppUrl(url || searchedUrl || '')
 
@@ -115,10 +116,14 @@ async function openMiniApp(url?: string, title?: string) {
       preShowScriptInjectionTime: 'documentStart',
     })
 
+    const openedAt = Date.now()
+    trackDAppOpened(targetUrl, appTitle, source)
+
     addRecentlyViewed({ url: targetUrl, name: appTitle, icon: getFaviconUrl(targetUrl) })
 
     InAppBrowser.addListener('closeEvent', async () => {
       logger.log('Mini-app webview closed, destroying host')
+      trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
       await host?.destroy()
     })
   }
@@ -162,7 +167,7 @@ async function openMiniApp(url?: string, title?: string) {
         class="flex items-center gap-3 text-left transition-opacity"
         :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
         :disabled="isOpeningAny"
-        @click="openMiniApp(searchedUrlApp.url, searchedUrlApp.title)"
+        @click="openMiniApp(searchedUrlApp.url, searchedUrlApp.title, 'search')"
       >
         <div class="relative w-14 h-14 shrink-0">
           <img
@@ -208,7 +213,7 @@ async function openMiniApp(url?: string, title?: string) {
             class="flex items-center gap-3 text-left transition-opacity"
             :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
             :disabled="isOpeningAny"
-            @click="openMiniApp(dapp.url, dapp.name)"
+            @click="openMiniApp(dapp.url, dapp.name, 'recent')"
           >
             <div class="relative w-14 h-14 shrink-0">
               <img
@@ -248,7 +253,7 @@ async function openMiniApp(url?: string, title?: string) {
           class="flex items-center gap-3 text-left transition-opacity"
           :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
           :disabled="isOpeningAny"
-          @click="openMiniApp(dapp.url, dapp.name)"
+          @click="openMiniApp(dapp.url, dapp.name, 'featured')"
         >
           <div class="relative w-14 h-14 shrink-0">
             <img

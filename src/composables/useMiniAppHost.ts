@@ -2,11 +2,13 @@ import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/inappbrowser'
 import type { BirpcReturn } from 'birpc'
 import type { NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
+import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { i18n } from '@/i18n/i18n-setup'
+import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -212,11 +214,14 @@ export class MiniAppHost {
         }
       },
       onChainChanged: (chainId: string): void => {
+        const previousChainId = this.currentChainId
         this.currentChainId = chainId
         if (_activeMiniAppSession) {
           _activeMiniAppSession.chainId = this.currentChainId
         }
         logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
+        trackChainSwitched(this.config.url, previousChainId, chainId)
+        trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
       },
     }, {
       post: (data) => {
@@ -348,6 +353,7 @@ export class MiniAppHost {
       type: 'accounts',
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User denied account access.')
     }
 
@@ -357,6 +363,7 @@ export class MiniAppHost {
       throw new InternalError(`Failed to get Ethereum address: ${error}`)
     }
 
+    trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return [ethAddress!]
   }
 
@@ -401,6 +408,7 @@ export class MiniAppHost {
       data: { message: messageToDisplay, isHex: false },
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'sign_message', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User rejected message signing.')
     }
 
@@ -415,7 +423,9 @@ export class MiniAppHost {
 
     // Sign the message - for hex data, pass raw bytes; ethers.js handles personal_sign prefix
     const messageToSign = isHex ? hexToBytes(data) : data
-    return await ethWallet.signMessage(messageToSign)
+    const signature = await ethWallet.signMessage(messageToSign)
+    trackWeb3Request({ requestType: 'sign_message', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+    return signature
   }
 
   private async signTypedMessage(params: unknown): Promise<string> {
@@ -486,6 +496,7 @@ export class MiniAppHost {
       data: { message: displayMessage, isHex: false },
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'sign_typed_data', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User rejected typed data signing.')
     }
 
@@ -502,7 +513,9 @@ export class MiniAppHost {
     const { EIP712Domain, ...types } = typedData.types
 
     // Sign using ethers.js signTypedData (EIP-712)
-    return await ethWallet.signTypedData(typedData.domain, types, typedData.message)
+    const signature = await ethWallet.signTypedData(typedData.domain, types, typedData.message)
+    trackWeb3Request({ requestType: 'sign_typed_data', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+    return signature
   }
 
   private async signEthTransaction(params: unknown): Promise<string> {
@@ -736,6 +749,7 @@ export class MiniAppHost {
     })
 
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
       throw new PermissionDeniedError('User rejected transaction signing.')
     }
 
@@ -876,6 +890,7 @@ export class MiniAppHost {
 
     logger.log('[ETH_TX] Step 8 - Transaction broadcast success:', { txHash })
 
+    trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId })
     return txHash
   }
 
@@ -925,13 +940,16 @@ export class MiniAppHost {
       type: 'accounts',
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User said no.')
     }
 
-    return [
+    const accounts = [
       useLocalWallet().localAddress.toUserFriendlyAddress(),
       useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
     ].filter(Boolean)
+    trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+    return accounts
   }
 
   private async sign(params: unknown): Promise<SignatureResult> {
@@ -968,6 +986,7 @@ export class MiniAppHost {
       },
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: 'nimiq_sign', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User said no.')
     }
 
@@ -991,6 +1010,7 @@ export class MiniAppHost {
     const hash = Nimiq.Hash.computeSha256(payload)
     const signature = localWallet.sign(hash)
 
+    trackWeb3Request({ requestType: 'nimiq_sign', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return {
       publicKey: localWallet.publicKey.toHex(),
       signature: signature.toHex(),
@@ -1022,7 +1042,7 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment })
+    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, analyticsRequestType: 'nimiq_send_transaction' })
   }
 
   private sendBasicTransactionWithData(params: unknown): Promise<string> {
@@ -1055,7 +1075,7 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, message })
+    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, message, analyticsRequestType: 'nimiq_send_transaction' })
   }
 
   private sendNewStakerTransaction(params: unknown): Promise<string> {
@@ -1087,6 +1107,7 @@ export class MiniAppHost {
       stakingData: { type: 'create-staker', delegation },
       stakingTitle: i18n.t('Create Staker'),
       value,
+      analyticsRequestType: 'nimiq_staking_create_staker',
     })
   }
 
@@ -1116,6 +1137,7 @@ export class MiniAppHost {
       stakingData: { type: 'add-stake' },
       stakingTitle: i18n.t('Add Stake'),
       value,
+      analyticsRequestType: 'nimiq_staking_add_stake',
     })
   }
 
@@ -1145,6 +1167,7 @@ export class MiniAppHost {
       stakingData: { type: 'set-active-stake', newActiveBalance },
       stakingTitle: i18n.t('Set Active Stake'),
       value: 0,
+      analyticsRequestType: 'nimiq_staking_set_active',
     })
   }
 
@@ -1177,6 +1200,7 @@ export class MiniAppHost {
       stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
       stakingTitle: i18n.t('Update Staker'),
       value: 0,
+      analyticsRequestType: 'nimiq_staking_update',
     })
   }
 
@@ -1206,6 +1230,7 @@ export class MiniAppHost {
       stakingData: { type: 'retire-stake', retireStake },
       stakingTitle: i18n.t('Retire Stake'),
       value: 0,
+      analyticsRequestType: 'nimiq_staking_retire',
     })
   }
 
@@ -1234,12 +1259,14 @@ export class MiniAppHost {
       stakingData: { type: 'remove-stake' },
       stakingTitle: i18n.t('Remove Stake'),
       value,
+      analyticsRequestType: 'nimiq_staking_remove',
     })
   }
 
   private async sendPayment(txData: {
     value: number
     message?: string
+    analyticsRequestType: Web3RequestType
   } & ({
     transfer: Transfer.UserPayment
     recipient: string
@@ -1279,6 +1306,7 @@ export class MiniAppHost {
       },
     })
     if (!confirmed) {
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
       throw new PermissionDeniedError('User said no.')
     }
 
@@ -1312,8 +1340,10 @@ export class MiniAppHost {
 
     const result = await useTransactions().sendTx(partialTx)
     if (result.error || !result.data) {
+      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: false })
       throw new InternalError(`Failed to send payment transaction: ${result.error || 'no transaction data'}`)
     }
+    trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
     return result.data.tx.hash
   }
 
