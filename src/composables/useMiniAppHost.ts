@@ -1,8 +1,11 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/inappbrowser'
+import type { BirpcReturn } from 'birpc'
+import type { NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
+import { createBirpc } from 'birpc'
 import { i18n } from '@/i18n/i18n-setup'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
@@ -36,21 +39,6 @@ let _activeMiniAppSession: MiniAppSessionState | null = null
  */
 export function getActiveMiniAppSession(): MiniAppSessionState | null {
   return _activeMiniAppSession ? { ..._activeMiniAppSession } : null
-}
-
-export interface InAppBrowserMessageEvent {
-  detail: {
-    message?: string
-    [key: string]: any
-  }
-}
-
-export interface Request {
-  id: number
-  network: string
-  name: string // The method being called
-  params?: object | unknown[]
-  object?: object | unknown[]
 }
 
 export interface SignatureResult {
@@ -130,6 +118,7 @@ export class MiniAppHost {
   private inAppBrowser: typeof InAppBrowser | null
   private config: MiniAppHostConfig
   private destroyed = false
+  private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
@@ -137,7 +126,7 @@ export class MiniAppHost {
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
     this.config = config
-    this.setupMessageListener()
+    this.setupBirpc()
 
     // Track the active session at module level
     _activeMiniAppSession = {
@@ -173,108 +162,80 @@ export class MiniAppHost {
     await this.inAppBrowser?.clearAllCookies()
     await this.messageFromWebviewListener?.remove()
     this.messageFromWebviewListener = null
+    this.birpc?.$close()
+    this.birpc = null
     await this.inAppBrowser?.removeAllListeners()
     this.inAppBrowser = null
     this.destroyed = true
   }
 
-  /**
-   * Setup listener for messages from the mini app
-   */
-  private async setupMessageListener(): Promise<void> {
+  private setupBirpc(): void {
     if (!this.inAppBrowser) {
       return
     }
-    // @ts-expect-error - TS cannot detect the correct overload
-    this.messageFromWebviewListener = await this.inAppBrowser.addListener('messageFromWebview', this.messageListener.bind(this))
-  }
 
-  private async messageListener(event: InAppBrowserMessageEvent) {
-    if (this.destroyed)
-      return
-    if (!event.detail)
-      return
+    const browser = this.inAppBrowser
 
-    logger.log('[MiniAppHost] Received message from webview:', event.detail)
+    this.birpc = createBirpc<WebviewFunctions, NativeFunctions>({
+      handleRequest: async (params: RequestParams): Promise<unknown> => {
+        if (this.destroyed)
+          throw new InternalError('Host is destroyed')
 
-    // Handle chain change notifications from the webview provider
-    if (event.detail.type === 'chainChanged' && typeof event.detail.chainId === 'string') {
-      this.currentChainId = event.detail.chainId
-      if (_activeMiniAppSession) {
-        _activeMiniAppSession.chainId = this.currentChainId
-      }
-      logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
-      return
-    }
+        logger.log('[MiniAppHost] handleRequest:', params)
 
-    // Ensure message structure for RPC requests
-    if (typeof event.detail.id !== 'number') {
-      logger.log('[MiniAppHost] Message has no id property, skipping')
-      this.sendError(Number.NaN, 'INVALID_MESSAGE', 'Message has no id property')
-      return
-    }
-
-    if (typeof event.detail.network !== 'string') {
-      logger.log('[MiniAppHost] Message has no network property, skipping')
-      this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no network property')
-      return
-    }
-
-    if (typeof event.detail.name !== 'string') {
-      logger.log('[MiniAppHost] Message has no name property, skipping')
-      this.sendError(event.detail.id, 'INVALID_MESSAGE', 'Message has no name property')
-      return
-    }
-
-    const message = event.detail as Request
-
-    switch (message.network) {
-      case 'nimiq':
-        await this.handleNimiqMessage(message)
-        break
-      case 'ethereum':
-        await this.handleEthereumMessage(message)
-        break
-      default: {
-        logger.log('[MiniAppHost] Unknown network in message:', event.detail.network)
-        this.sendError(message.id, 'INVALID_NETWORK', `Unknown network: ${message.network}`)
-      }
-    }
-  }
-
-  private async handleNimiqMessage(message: Request): Promise<void> {
-    try {
-      const response = await this._handleNimiqMessage(message)
-      this.send(message.id, response)
-    }
-    catch (error) {
-      this.handleMessageError(message.id, error)
-    }
-  }
-
-  private async handleEthereumMessage(message: Request): Promise<void> {
-    try {
-      const response = await this._handleEthereumMessage(message)
-      this.send(message.id, response)
-    }
-    catch (error) {
-      this.handleMessageError(message.id, error)
-    }
-  }
-
-  private handleMessageError(messageId: number, error: unknown): void {
-    if (error instanceof MiniAppError) {
-      this.sendError(messageId, error.type, error.message)
-      // Show toast for user-actionable errors (skip permission denied - user already knows)
-      if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
-        this.showErrorToast(error.message)
-      }
-    }
-    else {
-      const message = `An unknown error occurred: ${(error as Error).message}`
-      this.sendError(messageId, 'UNKNOWN_ERROR', message)
-      this.showErrorToast(message)
-    }
+        try {
+          switch (params.network) {
+            case 'nimiq':
+              return await this._handleNimiqMessage(params)
+            case 'ethereum':
+              return await this._handleEthereumMessage(params)
+            default:
+              throw new UnknownRequestError(`Unknown network: ${params.network}`)
+          }
+        }
+        catch (error) {
+          if (error instanceof MiniAppError) {
+            // Show toast for user-actionable errors (skip permission denied - user already knows)
+            if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
+              this.showErrorToast(error.message)
+            }
+            // Re-throw as serializable error for birpc transport
+            const rpcError = new Error(error.message)
+            Object.assign(rpcError, { code: this.errorCode(error) })
+            throw rpcError
+          }
+          const message = `An unknown error occurred: ${(error as Error).message}`
+          this.showErrorToast(message)
+          const rpcError = new Error(message)
+          Object.assign(rpcError, { code: -32603 })
+          throw rpcError
+        }
+      },
+      onChainChanged: (chainId: string): void => {
+        this.currentChainId = chainId
+        if (_activeMiniAppSession) {
+          _activeMiniAppSession.chainId = this.currentChainId
+        }
+        logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
+      },
+    }, {
+      post: (data) => {
+        if (this.destroyed || !browser)
+          return
+        logger.log('[MiniAppHost] birpc post:', data)
+        browser.postMessage({ detail: data })
+      },
+      on: (fn) => {
+        // @ts-expect-error - TS cannot detect the correct overload
+        browser.addListener('messageFromWebview', (event: { detail: unknown }) => {
+          if (event.detail)
+            fn(event.detail)
+        }).then((handle: PluginListenerHandle) => {
+          this.messageFromWebviewListener = handle
+        })
+      },
+      timeout: 120_000,
+    })
   }
 
   private showErrorToast(message: string): void {
@@ -290,7 +251,19 @@ export class MiniAppHost {
     })
   }
 
-  private async _handleEthereumMessage(message: Request) {
+  private errorCode(error: MiniAppError): number {
+    if (error instanceof PermissionDeniedError)
+      return 4001
+    if (error instanceof UnknownRequestError)
+      return 4200
+    if (error instanceof InvalidTransactionError)
+      return -32602
+    if (error instanceof NetworkError)
+      return -32000
+    return -32603 // InternalError / default
+  }
+
+  private async _handleEthereumMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling Ethereum message:', message)
     const params = message.params ?? message.object
 
@@ -911,7 +884,7 @@ export class MiniAppHost {
    * @private
    */
   // private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseType[T]> {
-  private async _handleNimiqMessage(message: Request) {
+  private async _handleNimiqMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling Nimiq message:', message)
 
     switch (message.name) {
@@ -1390,42 +1363,6 @@ export class MiniAppHost {
 
   //   throw new PermissionDeniedError('Neither the sender nor recipient match any available account');
   // }
-
-  /**
-   * Send a message to the mini app
-   */
-  private send(id: number, data: unknown): void {
-    this.postMessage({ id, data })
-  }
-
-  /**
-   * Send error response
-   * @private
-   */
-  private sendError(id: number, type: string, message: string): void {
-    this.postMessage({
-      id,
-      data: {
-        error: {
-          type,
-          message,
-        },
-      },
-    })
-  }
-
-  /**
-   * Send a message to the mini app
-   * @private
-   */
-  private postMessage(message: { id: number, data: unknown }): void {
-    if (this.destroyed || !this.inAppBrowser) {
-      logger.warn('[MiniAppHost] Cannot post message - host is destroyed')
-      return
-    }
-    logger.log('[MiniAppHost] Posting message to mini app:', message)
-    this.inAppBrowser.postMessage({ detail: message })
-  }
 }
 
 /** Base class for MiniApp errors with typed error codes */
