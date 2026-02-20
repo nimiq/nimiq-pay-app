@@ -1,8 +1,9 @@
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { isDev } from '@/lib'
 import { fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
+import { kv } from '@/stores/app'
 
 export interface DApp {
   name: string
@@ -59,7 +60,28 @@ const baseDApps: BaseDApp[] = [
 
 type SearchedDescriptionState = 'loading' | 'done'
 
+interface RecentDApp {
+  name: string
+  url: string
+  icon: string
+}
+
+const MAX_RECENT = 5
+
 export const useMiniApps = defineStore('mini-apps', () => {
+  const recentlyViewedDApps = useStorageAsync<RecentDApp[]>(
+    'recentlyViewedDApps',
+    [],
+    kv(),
+    { writeDefaults: false },
+  )
+
+  function addRecentlyViewed(dapp: RecentDApp) {
+    const filtered = recentlyViewedDApps.value.filter(d => d.url !== dapp.url)
+    filtered.unshift(dapp)
+    recentlyViewedDApps.value = filtered.slice(0, MAX_RECENT)
+  }
+
   // Each dApp gets its own computedAsync so descriptions load incrementally
   const descriptions = baseDApps.map(dapp =>
     computedAsync(() => fetchPageDescription(dapp.url), undefined),
@@ -100,5 +122,5 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return texts
   })
 
-  return { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription }
+  return { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription, recentlyViewedDApps, addRecentlyViewed }
 })

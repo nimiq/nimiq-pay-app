@@ -3,6 +3,7 @@ import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
 import { motion } from 'motion-v'
+import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
@@ -25,7 +26,8 @@ const web3ProviderScript = computedAsync(
 
 const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZjIzNDgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1nbG9iZS1pY29uIGx1Y2lkZS1nbG9iZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMmExNC41IDE0LjUgMCAwIDAgMCAyMCAxNC41IDE0LjUgMCAwIDAgMC0yMCIvPjxwYXRoIGQ9Ik0yIDEyaDIwIi8+PC9zdmc+'
 
-const { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription } = useMiniApps()
+const { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription, addRecentlyViewed } = useMiniApps()
+const { recentlyViewedDApps } = storeToRefs(useMiniApps())
 
 const searchQuery = ref('')
 const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
@@ -113,6 +115,8 @@ async function openMiniApp(url?: string, title?: string) {
       preShowScriptInjectionTime: 'documentStart',
     })
 
+    addRecentlyViewed({ url: targetUrl, name: appTitle, icon: getFaviconUrl(targetUrl) })
+
     InAppBrowser.addListener('closeEvent', async () => {
       logger.log('Mini-app webview closed, destroying host')
       await host?.destroy()
@@ -191,6 +195,46 @@ async function openMiniApp(url?: string, title?: string) {
           <IonSkeletonText v-else-if="searchedUrlApp.isLoading" :animated="true" class="h-4 w-3/4 rounded" />
         </div>
       </button>
+
+      <!-- Recently Viewed (shown only when not searching) -->
+      <template v-if="!searchQuery.trim() && recentlyViewedDApps.length > 0">
+        <p class="text-lg font-bold text-space text-left">
+          Recently Viewed
+        </p>
+        <div class="flex flex-col gap-4 text-left">
+          <button
+            v-for="dapp in recentlyViewedDApps"
+            :key="dapp.url"
+            class="flex items-center gap-3 text-left transition-opacity"
+            :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+            :disabled="isOpeningAny"
+            @click="openMiniApp(dapp.url, dapp.name)"
+          >
+            <div class="relative w-14 h-14 shrink-0">
+              <img
+                :src="dapp.icon"
+                :alt="dapp.name"
+                class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+                :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+                @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+              >
+              <motion.div
+                v-if="isOpeningUrl(dapp.url)"
+                class="absolute inset-0 flex items-center justify-center"
+                :initial="{ opacity: 0, scale: 0.85 }"
+                :animate="{ opacity: 1, scale: 1 }"
+                :transition="{ duration: 0.16, ease: 'easeOut' }"
+              >
+                <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+              </motion.div>
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="font-bold text-base">{{ dapp.name }}</span>
+              <span class="text-sm text-space/50 truncate">{{ dapp.url }}</span>
+            </div>
+          </button>
+        </div>
+      </template>
 
       <!-- Featured Apps -->
       <p class="text-lg font-bold text-space text-left">
