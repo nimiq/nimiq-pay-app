@@ -64,6 +64,7 @@ interface RecentDApp {
   name: string
   url: string
   icon: string
+  description?: string
 }
 
 const MAX_RECENT = 5
@@ -108,6 +109,20 @@ export const useMiniApps = defineStore('mini-apps', () => {
     searchedDescriptions[url] = { status: 'done', text: desc || undefined }
   }
 
+  const recentDAppsWithDescriptions = computedAsync(async () => {
+    const recentDApps = recentlyViewedDApps.value ?? []
+    return Promise.all(recentDApps.map(async (dapp) => {
+      // First check if it's in popularDApps to avoid unnecessary fetches, matching URLs with or without trailing slash
+      const popular = popularDApps.value.find(p =>
+        p.url === dapp.url || p.url.replace(/\/$/, '') === dapp.url.replace(/\/$/, ''),
+      )
+      if (popular)
+        return { ...dapp, description: popular.description }
+      const description = await fetchPageDescription(dapp.url)
+      return { ...dapp, description: description ?? undefined }
+    }))
+  }, recentlyViewedDApps.value ?? [])
+
   // Used by useMiniAppSearch for fuzzy search indexing
   const descriptionTexts = computed(() => {
     const texts: Record<string, string> = {}
@@ -122,5 +137,5 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return texts
   })
 
-  return { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription, recentlyViewedDApps, addRecentlyViewed }
+  return { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription, recentlyViewedDApps, recentDAppsWithDescriptions, addRecentlyViewed }
 })
