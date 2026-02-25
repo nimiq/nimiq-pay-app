@@ -142,6 +142,7 @@
       "es5-ext",
       "esbuild",
       "sharp",
+      "protobufjs",
       "utf-8-validate",
       "vue-demi"
     ]
