@@ -15,10 +15,15 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
   switch (request.type) {
     case 'accounts': {
       const appName = request.name || new URL(request.url).hostname
-      const { data: ethAddr } = useLocalWallet().getEthAddress()
-      const truncatedAddress = ethAddr
-        ? `${ethAddr.slice(0, 6)}\u2026${ethAddr.slice(-4)}`
-        : ''
+      let truncatedAddress = ''
+      if (request.network === 'ethereum') {
+        const ethAddress = useLocalWallet().getEthAddress().data
+        truncatedAddress = ethAddress ? `${ethAddress.slice(0, 6)}\u2026${ethAddress.slice(-4)}` : ''
+      }
+      if (request.network === 'nimiq') {
+        const nimAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
+        truncatedAddress = `${nimAddress.slice(0, 4)}\u2026${nimAddress.slice(-4)}`
+      }
 
       const result = await ExtendedDialog.sheet({
         title: `Connect to ${appName}`,

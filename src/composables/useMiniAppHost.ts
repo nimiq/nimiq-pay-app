@@ -65,6 +65,7 @@ interface NimiqTransactionParams {
 export type UserConfirmationRequest = {
   url: string
   name?: string
+  network: 'ethereum' | 'nimiq'
 } & ({
   type: 'accounts'
 } | {
@@ -351,6 +352,7 @@ export class MiniAppHost {
       url: this.config.url,
       name: this.config.title,
       type: 'accounts',
+      network: 'ethereum',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
@@ -406,6 +408,7 @@ export class MiniAppHost {
       name: this.config.title,
       type: 'message',
       data: { message: messageToDisplay, isHex: false },
+      network: 'ethereum',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_message', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
@@ -494,6 +497,7 @@ export class MiniAppHost {
       name: this.config.title,
       type: 'message',
       data: { message: displayMessage, isHex: false },
+      network: 'ethereum',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_typed_data', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
@@ -746,6 +750,7 @@ export class MiniAppHost {
         nonce: finalNonce,
         chainId: txParams.chainId,
       },
+      network: 'ethereum',
     })
 
     if (!confirmed) {
@@ -938,6 +943,7 @@ export class MiniAppHost {
       url: this.config.url,
       name: this.config.title,
       type: 'accounts',
+      network: 'nimiq',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
@@ -984,6 +990,7 @@ export class MiniAppHost {
         message,
         isHex,
       },
+      network: 'nimiq',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'nimiq_sign', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
@@ -1304,6 +1311,7 @@ export class MiniAppHost {
         // TODO: Change PaymentRequestData to accept stakingData
         meta: 'stakingData' in txData ? txData.stakingData : {},
       },
+      network: 'nimiq',
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
