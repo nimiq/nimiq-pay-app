@@ -50,7 +50,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
 
       const { formatCrypto } = useCurrencyFormatter()
       const amountNim = formatCrypto(amount, { currency: Crypto.NIM })
-      const feeNim = formatCrypto(amount, { currency: Crypto.NIM })
+      const feeNim = formatCrypto(fee, { currency: Crypto.NIM })
 
       const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
         ? 'Staking Contract'
