@@ -123,8 +123,7 @@ async function startStaking() {
             alert('Error starting staking: ' + result.error.message);
         } else {
             console.log('Staking started successfully:', result);
-            fetchStaker();
-            fetchBalance();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while starting staking:', e);
@@ -144,8 +143,7 @@ async function addStake() {
             alert('Error adding stake: ' + result.error.message);
         } else {
             console.log('Stake added successfully:', result);
-            fetchStaker();
-            fetchBalance();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while adding stake:', e);
@@ -165,7 +163,7 @@ async function setActiveStake() {
             alert('Error setting active stake: ' + result.error.message);
         } else {
             console.log('Active stake set successfully:', result);
-            fetchStaker();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while setting active stake:', e);
@@ -185,7 +183,7 @@ async function retireStake() {
             alert('Error retiring stake: ' + result.error.message);
         } else {
             console.log('Stake retired successfully:', result);
-            fetchStaker();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while retiring stake:', e);
@@ -205,8 +203,7 @@ async function removeStake() {
             alert('Error removing stake: ' + result.error.message);
         } else {
             console.log('Stake removed successfully:', result);
-            fetchStaker();
-            fetchBalance();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while removing stake:', e);
@@ -226,7 +223,7 @@ async function updateStaker() {
             alert('Error updating staker: ' + result.error.message);
         } else {
             console.log('Staker updated successfully:', result);
-            fetchStaker();
+            setTimeout(refresh, 1500);
         }
     } catch (e) {
         console.error('Exception while updating staker:', e);

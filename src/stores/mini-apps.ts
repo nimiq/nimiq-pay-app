@@ -22,7 +22,7 @@ const baseDApps: BaseDApp[] = [
   ...(isDev
     ? [{
         name: 'Demo App',
-        url: 'http://localhost:5174/',
+        url: `http://${__VITE_SERVER_IP__}:5174/`,
         icon: getFaviconUrl('http://localhost:5174/'),
       }]
     : []),
