@@ -1,9 +1,12 @@
 import type { UserConfirmationRequest } from '@/composables/useMiniAppHost'
 import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
+import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { getFaviconUrl } from '@/lib/site-metadata'
+import { Crypto } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { STAKING_CONTRACT_ADDRESS } from '@/stores/nimiq-network'
 
 const logger = useLogger('mini-app-confirmation')
 
@@ -31,9 +34,9 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         rows: [
-          { title: `See your address ${truncatedAddress}` },
-          { title: 'View your balance and activity' },
-          { title: 'Request approval for transactions' },
+          { title: `• See your address ${truncatedAddress}` },
+          { title: '• View your balance and activity' },
+          { title: '• Request approval for transactions' },
         ],
         confirmButtonTitle: 'Connect',
         cancelButtonTitle: 'Cancel',
@@ -42,24 +45,36 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
     }
 
     case 'transaction': {
-      const { recipient, amount, fee, message, merchantName } = request.data
-      const amountNim = (amount / 1e5).toFixed(5)
-      const feeNim = fee ? (fee / 1e5).toFixed(5) : '0'
+      const { recipient, amount, fee, message } = request.data
 
-      const rows: { title: string, value: string }[] = [
-        { title: 'Recipient', value: recipient },
-        { title: 'Amount', value: `${amountNim} NIM` },
+      const { formatCrypto } = useCurrencyFormatter()
+      const amountNim = formatCrypto(amount, { currency: Crypto.NIM })
+      const feeNim = formatCrypto(amount, { currency: Crypto.NIM })
+
+      const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
+        ? 'Staking Contract'
+        : recipient === useLocalWallet().localAddress.toUserFriendlyAddress()
+          ? 'You'
+          : `${recipient.slice(0, 4)}\u2026${recipient.slice(-4)}`
+
+      const rows: { title: string, value?: string }[] = [
+        { title: 'Recipient', value: formattedRecipient },
+        { title: 'Amount', value: `${amountNim}` },
       ]
       if (fee)
-        rows.push({ title: 'Fee', value: `${feeNim} NIM` })
+        rows.push({ title: 'Fee', value: `${feeNim}` })
       if (message)
         rows.push({ title: 'Message', value: message })
-      if (merchantName)
-        rows.push({ title: 'Merchant', value: merchantName })
 
+      const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({
         title: 'Confirm Transaction',
+        subtitle: `${appName} asks to send this transaction:`,
+        headerLogo: getFaviconUrl(request.url),
+        headerLogoCornerRadius: -1,
         rows,
+        confirmButtonTitle: 'Confirm',
+        cancelButtonTitle: 'Reject',
       })
       return result.confirmed
     }
@@ -143,7 +158,8 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         : msgToSign
 
       const result = await ExtendedDialog.messageSheet({
-        title: `Sign message from ${appName}`,
+        title: 'Sign Message',
+        subtitle: `${appName} asks to sign this message:`,
         headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         message: displayMessage,
