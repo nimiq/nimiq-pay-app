@@ -3,6 +3,7 @@ import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { formatEther } from 'ethers'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
+import { i18n } from '@/i18n/i18n-setup'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { Crypto } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -65,6 +66,44 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows.push({ title: 'Fee', value: `${feeNim}` })
       if (message)
         rows.push({ title: 'Message', value: message })
+
+      if (request.stakingData) {
+        rows.push({ title: '' })
+        rows.push({ title: 'STAKING' })
+        switch (request.stakingData.type) {
+          case 'create-staker': {
+            rows.push({ title: 'Action', value: i18n.t('Create Staker') })
+            rows.push({ title: 'Validator', value: request.stakingData.delegation })
+            break
+          }
+          case 'add-stake': {
+            rows.push({ title: 'Action', value: i18n.t('Add Stake') })
+            break
+          }
+          case 'set-active-stake': {
+            rows.push({ title: 'Action', value: i18n.t('Set Active Stake') })
+            rows.push({ title: 'New Active Stake', value: formatCrypto(request.stakingData.newActiveBalance, { currency: Crypto.NIM }) })
+            break
+          }
+          case 'update-staker': {
+            rows.push({ title: 'Action', value: i18n.t('Update Staker') })
+            if (request.stakingData.newDelegation) {
+              rows.push({ title: 'New Validator', value: request.stakingData.newDelegation })
+              rows.push({ title: 'Reactivate?', value: request.stakingData.reactivateAllStake ? i18n.t('Yes') : i18n.t('No') })
+            }
+            break
+          }
+          case 'retire-stake': {
+            rows.push({ title: 'Action', value: i18n.t('Retire Stake') })
+            rows.push({ title: 'Amount', value: formatCrypto(request.stakingData.retireStake, { currency: Crypto.NIM }) })
+            break
+          }
+          case 'remove-stake': {
+            rows.push({ title: 'Action', value: i18n.t('Remove Stake') })
+            break
+          }
+        }
+      }
 
       const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({

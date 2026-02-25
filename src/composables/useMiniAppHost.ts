@@ -71,6 +71,7 @@ export type UserConfirmationRequest = {
 } | {
   type: 'transaction'
   data: Omit<PaymentRequestData, 'transfer'>
+  stakingData?: StakingData
 } | {
   type: 'eth-transaction'
   data: {
@@ -1308,9 +1309,8 @@ export class MiniAppHost {
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
         merchantName: this.config.title,
-        // TODO: Change PaymentRequestData to accept stakingData
-        meta: 'stakingData' in txData ? txData.stakingData : {},
       },
+      stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
       network: 'nimiq',
     })
     if (!confirmed) {
