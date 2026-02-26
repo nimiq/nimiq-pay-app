@@ -16,7 +16,7 @@ import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-networ
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { markAsUnknownTransactionTitle, Rail, Transfer } from '@/types/transactions'
-import { ALLOWED_EVM_CHAIN_IDS } from '../../web3-provider/src/allowedChains'
+import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
@@ -256,6 +256,14 @@ export class MiniAppHost {
         if (newRpcUrl) {
           this.birpc?.updateRpcUrl(newRpcUrl)
         }
+
+        const numericChainId = parseChainId(chainId)
+        const chainName = numericChainId ? EVM_CHAIN_NAMES[numericChainId] : `Chain ${numericChainId}`
+        Toast.show({
+          text: i18n.t('Switched to {chain}', { chain: chainName }),
+          duration: 'short',
+          position: 'bottom',
+        })
       },
     }, {
       post: (data) => {

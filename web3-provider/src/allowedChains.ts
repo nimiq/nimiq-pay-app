@@ -17,3 +17,13 @@ export const ALLOWED_EVM_CHAIN_IDS = new Set<number>([
   AllowedEvmChainId.BnbSmartChain,
   AllowedEvmChainId.Sepolia,
 ])
+
+export const EVM_CHAIN_NAMES: Record<number, string> = {
+  [AllowedEvmChainId.Ethereum]: 'Ethereum',
+  [AllowedEvmChainId.Polygon]: 'Polygon',
+  [AllowedEvmChainId.ArbitrumOne]: 'Arbitrum One',
+  [AllowedEvmChainId.Optimism]: 'Optimism',
+  [AllowedEvmChainId.Base]: 'Base',
+  [AllowedEvmChainId.BnbSmartChain]: 'BNB Smart Chain',
+  [AllowedEvmChainId.Sepolia]: 'Sepolia',
+}
