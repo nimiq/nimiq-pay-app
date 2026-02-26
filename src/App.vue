@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { URLOpenListenerEvent } from '@capacitor/app'
 import { App } from '@capacitor/app'
+import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
-import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
@@ -26,15 +26,6 @@ const logger = useLogger('App.vue')
 const router = useRouter()
 
 onMounted(async () => {
-  if (!useDevice().isWeb) {
-    try {
-      await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
-    }
-    catch (error) {
-      logger.error('Failed to lock screen orientation', error)
-    }
-  }
-
   // Stop scanning in case it was still active
   document.body.classList.remove('native-qr-scanner-modal-open')
   try {
@@ -51,6 +42,16 @@ onMounted(async () => {
     }
     catch (error) {
       logger.error('Failed to set status bar style', error)
+    }
+  }
+
+  // Moved here because it was not locking if calling lock too early
+  if (!useDevice().isWeb) {
+    try {
+      await ScreenOrientation.lock({ orientation: 'portrait' })
+    }
+    catch (error) {
+      logger.error('Failed to lock screen orientation', error)
     }
   }
 })

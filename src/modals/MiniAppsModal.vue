@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
 import { computedAsync } from '@vueuse/core'
@@ -115,6 +116,7 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
       preShowScript: scriptContent,
       preShowScriptInjectionTime: 'documentStart',
     })
+    await ScreenOrientation.unlock()
 
     const openedAt = Date.now()
     trackDAppOpened(targetUrl, appTitle, source)
@@ -125,6 +127,7 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
       logger.log('Mini-app webview closed, destroying host')
       trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
       await host?.destroy()
+      await ScreenOrientation.lock({ orientation: 'portrait' })
     })
   }
   catch (err) {

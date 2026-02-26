@@ -38,6 +38,8 @@ PODS:
     - Capacitor
   - CapacitorPushNotifications (7.0.3):
     - Capacitor
+  - CapacitorScreenOrientation (8.0.1):
+    - Capacitor
   - CapacitorShare (7.0.2):
     - Capacitor
   - CapacitorStatusBar (7.0.3):
@@ -50,8 +52,6 @@ PODS:
   - CapawesomeCapacitorPosthog (8.2.1):
     - Capacitor
     - PostHog (~> 3.19.1)
-  - CapawesomeCapacitorScreenOrientation (7.0.2):
-    - Capacitor
   - CapgoCameraPreview (7.20.0):
     - Capacitor
   - CapgoInappbrowser (8.1.19):
@@ -144,12 +144,12 @@ DEPENDENCIES:
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/keyboard`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences`)"
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications`)"
+  - "CapacitorScreenOrientation (from `../../node_modules/.pnpm/@capacitor+screen-orientation@8.0.1_@capacitor+core@7.4.3/node_modules/@capacitor/screen-orientation`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/status-bar`)"
   - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.6_@capacitor+core@7.4.3/node_modules/capacitor-sumsub-mobile-sdk`)"
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast`)"
   - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog`)"
-  - "CapawesomeCapacitorScreenOrientation (from `../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
   - "CapgoInappbrowser (from `../../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser`)"
   - Firebase/Messaging
@@ -211,6 +211,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences"
   CapacitorPushNotifications:
     :path: "../../node_modules/.pnpm/@capacitor+push-notifications@7.0.3_@capacitor+core@7.4.3/node_modules/@capacitor/push-notifications"
+  CapacitorScreenOrientation:
+    :path: "../../node_modules/.pnpm/@capacitor+screen-orientation@8.0.1_@capacitor+core@7.4.3/node_modules/@capacitor/screen-orientation"
   CapacitorShare:
     :path: "../../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share"
   CapacitorStatusBar:
@@ -221,8 +223,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast"
   CapawesomeCapacitorPosthog:
     :path: "../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog"
-  CapawesomeCapacitorScreenOrientation:
-    :path: "../../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation"
   CapgoCameraPreview:
     :path: "../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview"
   CapgoInappbrowser:
@@ -249,12 +249,12 @@ SPEC CHECKSUMS:
   CapacitorKeyboard: 62f36104f26d53d8b3a2a43f2a69fe714f1777d5
   CapacitorPreferences: 65107ed7437d96ee72583df5763985e3c0ff2bc2
   CapacitorPushNotifications: bdd621fbd562be34a41f4a7b1750efa000447d5a
+  CapacitorScreenOrientation: 6c3c84223ea1dd44aaa7184e2b416dd1192270d0
   CapacitorShare: be166411fa995ead2d39b104aa0aae56d8615c66
   CapacitorStatusBar: 0659ddc7b1713764a05831463d215b177a15d054
   CapacitorSumsubMobileSdk: 8857a2d21c73b7af105cde417994a0d1085d3b49
   CapacitorToast: aefebcd4cead9f44a04ace80c66a7eb4031751e7
   CapawesomeCapacitorPosthog: a081a8101ef38508c73e272da33bc1c3fbc52af4
-  CapawesomeCapacitorScreenOrientation: 1c6874ef6768c35c6eb9e9c31e98c08816b993f8
   CapgoCameraPreview: 8e48300969673baeffac368a42d9f0487497ac79
   CapgoInappbrowser: 50ed6c108f0c6ea5915d8ea44444fbf2b224cd0a
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
@@ -274,6 +274,6 @@ SPEC CHECKSUMS:
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 91ff3280a7657f3fd6d05175d1571003275c590e
+PODFILE CHECKSUM: 1d3f0bdc0bb3a56900354acde0f322d360e39362
 
 COCOAPODS: 1.15.2

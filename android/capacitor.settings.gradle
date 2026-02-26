@@ -29,6 +29,9 @@ project(':capacitor-filesystem').projectDir = new File('../node_modules/.pnpm/@c
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/.pnpm/@capacitor+preferences@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/preferences/android')
 
+include ':capacitor-screen-orientation'
+project(':capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capacitor+screen-orientation@8.0.1_@capacitor+core@7.4.3/node_modules/@capacitor/screen-orientation/android')
+
 include ':capacitor-share'
 project(':capacitor-share').projectDir = new File('../node_modules/.pnpm/@capacitor+share@7.0.2_@capacitor+core@7.4.3/node_modules/@capacitor/share/android')
 
@@ -40,9 +43,6 @@ project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new F
 
 include ':capawesome-capacitor-posthog'
 project(':capawesome-capacitor-posthog').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog/android')
-
-include ':capawesome-capacitor-screen-orientation'
-project(':capawesome-capacitor-screen-orientation').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-screen-orientation@7.0.2_@capacitor+core@7.4.3/node_modules/@capawesome/capacitor-screen-orientation/android')
 
 include ':capgo-camera-preview'
 project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview/android')
