@@ -179,7 +179,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         rows.push({ title: 'Contract Interaction', value: 'Yes' })
 
       const result = await ExtendedDialog.sheet({
-        title: `Confirm ETH Transaction`,
+        title: `Confirm Transaction`,
         headerLogo: getFaviconUrl(request.url),
         headerLogoCornerRadius: -1,
         rows,

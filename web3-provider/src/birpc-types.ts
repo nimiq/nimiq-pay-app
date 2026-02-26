@@ -12,5 +12,7 @@ export interface NativeFunctions {
   onChainChanged: (chainId: string) => void // fire-and-forget event
 }
 
-/** Functions the webview exposes (called by native) - extensible for future use */
-export interface WebviewFunctions {}
+/** Functions the webview exposes (called by native) */
+export interface WebviewFunctions {
+  updateRpcUrl: (rpcUrl: string) => void
+}

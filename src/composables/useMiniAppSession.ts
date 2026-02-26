@@ -86,7 +86,7 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
     const host = MiniAppHost.reconnect(InAppBrowser, {
       url: session.url,
       title: session.title,
-      ethereumRpcUrl: session.ethereumRpcUrl,
+      evmRpcUrls: session.evmRpcUrls,
       requestUserConfirmation,
     }, session.chainId)
 

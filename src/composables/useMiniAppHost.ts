@@ -29,7 +29,7 @@ export interface MiniAppSessionState {
   url: string
   title: string
   chainId: string
-  ethereumRpcUrl?: string
+  evmRpcUrls?: Record<string, string>
 }
 
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
@@ -101,10 +101,11 @@ export interface MiniAppHostConfig {
   url: string
   title: string
   /**
-   * Optional Ethereum JSON-RPC endpoint used to broadcast signed transactions.
+   * Map of hex chain IDs to their JSON-RPC endpoints.
+   * Used for nonce fetching, gas estimation, and transaction broadcasting.
    * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
    */
-  ethereumRpcUrl?: string
+  evmRpcUrls?: Record<string, string>
 
   /**
    * Callback to request user confirmation for sensitive operations
@@ -127,6 +128,12 @@ export class MiniAppHost {
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
 
+  /** Resolve the RPC URL for the given chain (or current chain if not specified) */
+  private getRpcUrlForChain(chainId?: string): string | undefined {
+    const chain = chainId || this.currentChainId
+    return this.config.evmRpcUrls?.[chain]
+  }
+
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
     this.config = config
@@ -137,7 +144,7 @@ export class MiniAppHost {
       url: config.url,
       title: config.title,
       chainId: this.currentChainId,
-      ethereumRpcUrl: config.ethereumRpcUrl,
+      evmRpcUrls: config.evmRpcUrls,
     }
   }
 
@@ -224,6 +231,12 @@ export class MiniAppHost {
         logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
         trackChainSwitched(this.config.url, previousChainId, chainId)
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
+
+        // Update the webview's RPC URL to match the new chain
+        const newRpcUrl = this.getRpcUrlForChain(chainId)
+        if (newRpcUrl) {
+          this.birpc?.updateRpcUrl(newRpcUrl)
+        }
       },
     }, {
       post: (data) => {
@@ -598,7 +611,7 @@ export class MiniAppHost {
     }
 
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
-    const rpcUrl = txParams.rpcUrl || this.config.ethereumRpcUrl
+    const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
 
     // Nonce resolution: fetch from broadcast RPC if not provided by dApp
     logger.log('[ETH_TX] Step 3 - Nonce analysis:', {

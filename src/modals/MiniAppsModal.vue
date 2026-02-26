@@ -18,7 +18,15 @@ import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
 const logger = useLogger('MiniAppModal')
-const ethereumRpcUrl = import.meta.env.VITE_ETHEREUM_RPC_URL
+const evmRpcUrls: Record<string, string> = {
+  '0x1': import.meta.env.VITE_ETHEREUM_RPC_URL,
+  '0x89': import.meta.env.VITE_POLYGON_RPC_URL,
+  '0xa4b1': import.meta.env.VITE_ARBITRUM_RPC_URL,
+  '0xa': import.meta.env.VITE_OPTIMISM_RPC_URL,
+  '0x2105': import.meta.env.VITE_BASE_RPC_URL,
+  '0x38': import.meta.env.VITE_BNB_RPC_URL,
+  '0xaa36a7': import.meta.env.VITE_SEPOLIA_RPC_URL,
+}
 
 // Pre-cache web3-provider script for instant injection when opening mini-apps
 const web3ProviderScript = computedAsync(
@@ -95,7 +103,7 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
       url: targetUrl,
       title: appTitle,
       requestUserConfirmation,
-      ethereumRpcUrl,
+      evmRpcUrls,
     })
 
     // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor

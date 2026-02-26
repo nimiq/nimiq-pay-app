@@ -58,7 +58,12 @@ function normalizeChainId(chainId: unknown): number | null {
   return null
 }
 
-const birpc = createBirpc<NativeFunctions, WebviewFunctions>({}, {
+const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
+  updateRpcUrl: (rpcUrl: string) => {
+    Ethereum.setRPCUrl(rpcUrl)
+    log(`Updated RPC URL to ${rpcUrl}`)
+  },
+}, {
   post: data => window.mobileApp?.postMessage({ detail: data }),
   on: (fn) => {
     window.addEventListener('messageFromNative', ((event: CustomEvent) => {
