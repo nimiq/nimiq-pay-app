@@ -12,6 +12,7 @@ export type Web3RequestType
     | 'sign_typed_data'
     | 'sign_transaction'
     | 'switch_chain'
+    | 'add_chain'
     | 'nimiq_list_accounts'
     | 'nimiq_sign'
     | 'nimiq_send_transaction'

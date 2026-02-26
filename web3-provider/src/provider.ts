@@ -8,6 +8,13 @@ import { NimiqProvider } from '@trustwallet/web3-provider-nimiq'
 import { createBirpc } from 'birpc'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 
+/** Chains added dynamically via wallet_addEthereumChain (session-scoped) */
+const dynamicChainIds = new Set<number>()
+
+function isChainAvailable(chainId: number): boolean {
+  return ALLOWED_EVM_CHAIN_IDS.has(chainId) || dynamicChainIds.has(chainId)
+}
+
 // Enable debug logging - disabled by default in production build
 // In development, the script can set window.__NIMIQ_PAY_DEBUG__ = true
 function log(...args: unknown[]) {
@@ -71,7 +78,7 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
         fn(event.detail)
     }) as EventListener)
   },
-  eventNames: ['onChainChanged', 'onUnsupportedChain'],
+  eventNames: ['onChainChanged', 'onChainAdded', 'onUnsupportedChain'],
   timeout: 120_000,
 })
 
@@ -81,37 +88,63 @@ const provider = new Web3Provider({
     log('Dapp requested:', params)
     switch (params.name) {
       case 'switchEthereumChain':
-        // Validate chain before switching
         if (hasChainId(params.object)) {
           const normalized = normalizeChainId(params.object.chainId)
-          if (!normalized || !ALLOWED_EVM_CHAIN_IDS.has(normalized)) {
+          if (!normalized || !isChainAvailable(normalized)) {
             respondUnsupportedChain(params.id, String(params.object.chainId))
             break
           }
           const normalizedHex = `0x${normalized.toString(16)}`
           Ethereum.setChainId(normalizedHex)
           log(`Switched Ethereum chain to ${Ethereum.getChainId()}`)
-
-          // Notify native app of chain change (fire-and-forget birpc event)
           birpc.onChainChanged.asEvent(normalizedHex)
-
           if (params.id)
             provider.sendResponse(params.id, null)
         }
         break
-      case 'addEthereumChain':
-        // If chain is already supported, return success; otherwise fire unsupported error
-        if (hasChainId(params.object)) {
-          const normalized = normalizeChainId(params.object.chainId)
-          if (normalized && ALLOWED_EVM_CHAIN_IDS.has(normalized)) {
-            if (params.id)
-              provider.sendResponse(params.id, null)
-          }
-          else {
-            respondUnsupportedChain(params.id, String(params.object.chainId))
-          }
+
+      case 'addEthereumChain': {
+        const obj = params.object as { chainId?: unknown, rpcUrls?: string[] } | undefined
+        if (!obj || !hasChainId(obj)) {
+          if (params.id)
+            provider.sendError(params.id, { code: -32602, message: 'Missing chainId' })
+          break
         }
+
+        const rpcUrls = (obj as { rpcUrls?: string[] }).rpcUrls
+
+        const normalized = normalizeChainId(obj.chainId)
+        if (!normalized) {
+          if (params.id)
+            provider.sendError(params.id, { code: -32602, message: 'Invalid chainId' })
+          break
+        }
+
+        const normalizedHex = `0x${normalized.toString(16)}`
+
+        // If chain is not yet known, register it with its RPC URL
+        if (!isChainAvailable(normalized)) {
+          const rpcUrl = rpcUrls?.[0]
+          if (!rpcUrl) {
+            if (params.id)
+              provider.sendError(params.id, { code: -32602, message: 'Missing rpcUrls' })
+            break
+          }
+          dynamicChainIds.add(normalized)
+          birpc.onChainAdded.asEvent(normalizedHex, rpcUrl)
+          log(`Added dynamic chain ${normalizedHex} with RPC ${rpcUrl}`)
+        }
+
+        // Switch to the chain (per EIP-3085 spec)
+        Ethereum.setChainId(normalizedHex)
+        Ethereum.setRPCUrl(rpcUrls?.[0] || '')
+        log(`Switched Ethereum chain to ${Ethereum.getChainId()}`)
+        birpc.onChainChanged.asEvent(normalizedHex)
+
+        if (params.id)
+          provider.sendResponse(params.id, null)
         break
+      }
       default: {
         const { id, ...requestParams } = params
         birpc.handleRequest(requestParams)

@@ -227,6 +227,20 @@ export class MiniAppHost {
         this.showErrorToast(i18n.t('This network is not supported by Nimiq Pay'))
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId })
       },
+      onChainAdded: (chainId: string, rpcUrl: string): void => {
+        logger.log('[MiniAppHost] Chain added:', chainId, 'RPC:', rpcUrl)
+        if (!this.config.evmRpcUrls) {
+          this.config.evmRpcUrls = {}
+        }
+        this.config.evmRpcUrls[chainId] = rpcUrl
+        if (_activeMiniAppSession) {
+          if (!_activeMiniAppSession.evmRpcUrls) {
+            _activeMiniAppSession.evmRpcUrls = {}
+          }
+          _activeMiniAppSession.evmRpcUrls[chainId] = rpcUrl
+        }
+        trackWeb3Request({ requestType: 'add_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
+      },
       onChainChanged: (chainId: string): void => {
         const previousChainId = this.currentChainId
         this.currentChainId = chainId
