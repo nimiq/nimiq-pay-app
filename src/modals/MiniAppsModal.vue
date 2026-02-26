@@ -103,6 +103,10 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
     const cachedScript = web3ProviderScript.value
     const scriptContent = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
 
+    // Just in casa, clear cookies
+    // TODO: think a better fix, some dApps use cookies to keep account session, maybe allow dapps approved in the past to get address without confirmation
+    await InAppBrowser.clearAllCookies()
+
     await InAppBrowser.openWebView({
       url: targetUrl,
       title: appTitle,
