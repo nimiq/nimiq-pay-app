@@ -222,6 +222,11 @@ export class MiniAppHost {
           throw rpcError
         }
       },
+      onUnsupportedChain: (chainId: string): void => {
+        logger.log('[MiniAppHost] Unsupported chain requested:', chainId)
+        this.showErrorToast(i18n.t('This network is not supported by Nimiq Pay'))
+        trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId })
+      },
       onChainChanged: (chainId: string): void => {
         const previousChainId = this.currentChainId
         this.currentChainId = chainId

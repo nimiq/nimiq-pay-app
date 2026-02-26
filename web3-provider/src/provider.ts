@@ -71,7 +71,7 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
         fn(event.detail)
     }) as EventListener)
   },
-  eventNames: ['onChainChanged'],
+  eventNames: ['onChainChanged', 'onUnsupportedChain'],
   timeout: 120_000,
 })
 
@@ -85,7 +85,7 @@ const provider = new Web3Provider({
         if (hasChainId(params.object)) {
           const normalized = normalizeChainId(params.object.chainId)
           if (!normalized || !ALLOWED_EVM_CHAIN_IDS.has(normalized)) {
-            respondUnsupportedChain(params.id)
+            respondUnsupportedChain(params.id, String(params.object.chainId))
             break
           }
           const normalizedHex = `0x${normalized.toString(16)}`
@@ -97,6 +97,19 @@ const provider = new Web3Provider({
 
           if (params.id)
             provider.sendResponse(params.id, null)
+        }
+        break
+      case 'addEthereumChain':
+        // If chain is already supported, return success; otherwise fire unsupported error
+        if (hasChainId(params.object)) {
+          const normalized = normalizeChainId(params.object.chainId)
+          if (normalized && ALLOWED_EVM_CHAIN_IDS.has(normalized)) {
+            if (params.id)
+              provider.sendResponse(params.id, null)
+          }
+          else {
+            respondUnsupportedChain(params.id, String(params.object.chainId))
+          }
         }
         break
       default: {
@@ -115,7 +128,8 @@ const provider = new Web3Provider({
   .registerProvider(Nimiq)
   .registerProvider(Ethereum)
 
-function respondUnsupportedChain(requestId: number | undefined) {
+function respondUnsupportedChain(requestId: number | undefined, chainId: string) {
+  birpc.onUnsupportedChain.asEvent(chainId)
   if (!requestId)
     return
   // EIP-1193 / MetaMask error code for unsupported chain

@@ -10,6 +10,7 @@ export interface RequestParams {
 export interface NativeFunctions {
   handleRequest: (params: RequestParams) => Promise<unknown>
   onChainChanged: (chainId: string) => void // fire-and-forget event
+  onUnsupportedChain: (chainId: string) => void // fire-and-forget event
 }
 
 /** Functions the webview exposes (called by native) */
