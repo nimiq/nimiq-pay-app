@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:52
-#: src/views/HomeView.vue:102
+#: src/views/HomeView.vue:106
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -27,7 +27,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:95
+#: src/views/HomeView.vue:99
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -43,7 +43,8 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1144
+#: src/composables/useMiniAppHost.ts:1186
+#: src/lib/mini-app-confirmation.ts:80
 #: src/stores/sync.ts:613
 msgid "Add Stake"
 msgstr ""
@@ -321,7 +322,8 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1115
+#: src/composables/useMiniAppHost.ts:1156
+#: src/lib/mini-app-confirmation.ts:75
 #: src/stores/sync.ts:610
 msgid "Create Staker"
 msgstr ""
@@ -379,7 +381,6 @@ msgid "Disclaimer"
 msgstr ""
 
 #: src/modals/PointsModal.vue:59
-#: src/views/HomeView.vue:19
 msgid "Earn Points"
 msgstr ""
 
@@ -749,7 +750,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:52
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:84
+#: src/views/HomeView.vue:105
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -866,6 +867,10 @@ msgstr ""
 
 #: src/components/BricksInput.vue:10
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:92
+msgid "No"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:171
@@ -1180,7 +1185,8 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1262
+#: src/composables/useMiniAppHost.ts:1308
+#: src/lib/mini-app-confirmation.ts:102
 #: src/stores/sync.ts:596
 msgid "Remove Stake"
 msgstr ""
@@ -1189,7 +1195,7 @@ msgstr ""
 msgid "Reopen mini-app on unlock"
 msgstr ""
 
-#: src/views/HomeView.vue:103
+#: src/views/HomeView.vue:107
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1197,7 +1203,8 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1234
+#: src/composables/useMiniAppHost.ts:1279
+#: src/lib/mini-app-confirmation.ts:97
 #: src/stores/sync.ts:622
 msgid "Retire Stake"
 msgstr ""
@@ -1279,7 +1286,8 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1173
+#: src/composables/useMiniAppHost.ts:1216
+#: src/lib/mini-app-confirmation.ts:84
 #: src/stores/sync.ts:616
 msgid "Set Active Stake"
 msgstr ""
@@ -1389,11 +1397,15 @@ msgstr ""
 msgid "Support"
 msgstr ""
 
+#: src/composables/useMiniAppHost.ts:263
+msgid "Switched to {chain}"
+msgstr ""
+
 #: src/lib/utils.ts:64
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:94
+#: src/views/HomeView.vue:98
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1471,6 +1483,10 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
+#: src/composables/useMiniAppHost.ts:227
+msgid "This network is not supported by Nimiq Pay"
+msgstr ""
+
 #: src/composables/usePointsPayment.ts:47
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
@@ -1496,7 +1512,7 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr ""
 
 #: src/modals/MenuModal.vue:15
-#: src/views/HomeView.vue:37
+#: src/views/HomeView.vue:58
 msgid "Top Up"
 msgstr ""
 
@@ -1564,7 +1580,8 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1205
+#: src/composables/useMiniAppHost.ts:1249
+#: src/lib/mini-app-confirmation.ts:89
 #: src/stores/sync.ts:619
 msgid "Update Staker"
 msgstr ""
@@ -1705,6 +1722,10 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:92
+msgid "Yes"
+msgstr ""
+
 #: src/components/NimAddressInput.vue:13
 msgid "You can not use this address"
 msgstr ""
@@ -1729,7 +1750,7 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/views/HomeView.vue:108
+#: src/views/HomeView.vue:112
 msgid "You have a reward to claim!"
 msgstr ""
 
