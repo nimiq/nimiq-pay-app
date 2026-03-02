@@ -40,7 +40,9 @@ if (typeof globalObj.Buffer === 'undefined') {
   globalObj.Buffer = Buffer
 }
 
-const Nimiq = new NimiqProvider()
+const Nimiq = new NimiqProvider({
+  rpc: 'https://rpc.nimiqwatch.com/',
+})
 const Ethereum = new EthereumProvider({
   chainId: '0x1', // Ethereum mainnet
   rpc: 'https://rpc.mevblocker.io/',

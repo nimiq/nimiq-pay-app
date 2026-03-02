@@ -1,6 +1,20 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { getAccountByAddress, getStakerByAddress, type Account, type Staker } from '../lib/rpc';
+
+interface Account {
+    address: string;
+    balance: number;
+    type: 'basic' | 'vesting' | 'htlc' | 'staking';
+}
+
+interface Staker {
+    address: string;
+    balance: number;
+    delegation: string | null;
+    inactiveBalance: number;
+    inactiveFrom: number | null;
+    retiredBalance: number;
+}
 
 const addresses = ref<string[]>();
 const account = ref<Account>();
@@ -60,13 +74,13 @@ function logout() {
 
 async function fetchBalance() {
     if (!addresses.value) return;
-    account.value = await getAccountByAddress(addresses.value[1]!);
+    account.value = await window.nimiq.request({ method: 'getAccountByAddress', params: [addresses.value[1]!] });
 }
 
 async function fetchStaker() {
     if (!addresses.value) return;
     try {
-        staker.value = await getStakerByAddress(addresses.value[0]!);
+        staker.value = await window.nimiq.request({ method: 'getStakerByAddress', params: [addresses.value[0]!] });
     } catch (e) {
         console.error('Error fetching staker info:', e);
         staker.value = null;
