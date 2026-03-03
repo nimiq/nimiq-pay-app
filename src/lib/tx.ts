@@ -44,7 +44,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.AccountType.Basic,
       /* recipientData */ Nimiq.BufferUtils.fromUtf8(partialArgs.message || ''),
       /* value */ BigInt(Math.ceil(partialArgs.amount)),
-      /* fee */ 0n,
+      /* fee */ BigInt(partialArgs.fee ?? 0),
       /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
@@ -122,7 +122,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.AccountType.HTLC,
       /* recipientData */ data,
       /* value */ BigInt(partialArgs.amount), // Must be the exact amount
-      /* fee */ 0n,
+      /* fee */ BigInt(partialArgs.fee ?? 0),
       /* flags */ 1,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,

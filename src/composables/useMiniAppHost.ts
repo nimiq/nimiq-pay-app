@@ -1090,7 +1090,13 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, analyticsRequestType: 'nimiq_send_transaction' })
+    return this.sendPayment({
+      recipient,
+      value,
+      fee: _fee,
+      transfer: Transfer.UserPayment,
+      analyticsRequestType: 'nimiq_send_transaction',
+    })
   }
 
   private sendBasicTransactionWithData(params: unknown): Promise<string> {
@@ -1123,28 +1129,28 @@ export class MiniAppHost {
       throw new InternalError('Invalid parameters for createBasicTransaction method')
     }
 
-    return this.sendPayment({ recipient, value, transfer: Transfer.UserPayment, message, analyticsRequestType: 'nimiq_send_transaction' })
+    return this.sendPayment({
+      recipient,
+      value,
+      fee: _fee,
+      transfer: Transfer.UserPayment,
+      message,
+      analyticsRequestType: 'nimiq_send_transaction',
+    })
   }
 
   private sendNewStakerTransaction(params: unknown): Promise<string> {
     // Parse params
     let delegation: string
     let value: number
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 2) {
       delegation = String(params[0])
       value = Number(params[1])
-      if (params.length >= 3) {
-        _fee = Number(params[2])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       delegation = String((params as any).delegation)
       value = Number((params as any).value)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for createNewStakerTransaction method')
@@ -1162,19 +1168,12 @@ export class MiniAppHost {
   private sendAddStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
-      if (params.length >= 2) {
-        _fee = Number(params[1])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for createStakeTransaction method')
@@ -1192,19 +1191,12 @@ export class MiniAppHost {
   private async sendSetActiveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let newActiveBalance: number
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 1) {
       newActiveBalance = Number(params[0])
-      if (params.length >= 2) {
-        _fee = Number(params[1])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       newActiveBalance = Number((params as any).newActiveBalance)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for sendSetActiveStakeTransaction method')
@@ -1223,21 +1215,14 @@ export class MiniAppHost {
     // Parse params
     let newDelegation: string
     let reactivateAllStake: boolean
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 2) {
       newDelegation = String(params[0])
       reactivateAllStake = Boolean(params[1])
-      if (params.length >= 3) {
-        _fee = Number(params[2])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       newDelegation = String((params as any).newDelegation)
       reactivateAllStake = Boolean((params as any).reactivateAllStake)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for sendUpdateStakerTransaction method')
@@ -1255,19 +1240,12 @@ export class MiniAppHost {
   private async sendRetireStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let retireStake: number
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 1) {
       retireStake = Number(params[0])
-      if (params.length >= 2) {
-        _fee = Number(params[1])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       retireStake = Number((params as any).retireStake)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for sendRetireStakeTransaction method')
@@ -1285,19 +1263,12 @@ export class MiniAppHost {
   private async sendRemoveStakeTransaction(params: unknown): Promise<string> {
     // Parse params
     let value: number
-    let _fee = 0
 
     if (Array.isArray(params) && params.length >= 1) {
       value = Number(params[0])
-      if (params.length >= 2) {
-        _fee = Number(params[1])
-      }
     }
     else if (typeof params === 'object' && params !== null) {
       value = Number((params as any).value)
-      if ((params as any).fee !== undefined) {
-        _fee = Number((params as any).fee)
-      }
     }
     else {
       throw new InternalError('Invalid parameters for sendRemoveStakeTransaction method')
@@ -1313,6 +1284,7 @@ export class MiniAppHost {
 
   private async sendPayment(txData: {
     value: number
+    fee?: number
     message?: string
     analyticsRequestType: Web3RequestType
   } & ({
@@ -1344,7 +1316,7 @@ export class MiniAppHost {
             : Nimiq.AccountType.Staking
           : Nimiq.AccountType.Basic,
         amount: txData.value,
-        fee: 0,
+        fee: txData.fee ?? 0,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
@@ -1365,6 +1337,7 @@ export class MiniAppHost {
         amount: txData.value,
         title: 'Payment',
         transfer: txData.transfer,
+        fee: txData.fee ?? 0,
         message: txData.message,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,
