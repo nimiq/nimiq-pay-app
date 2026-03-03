@@ -155,7 +155,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       height.value,
       await client.value!.getNetworkId(),
     )
-    tx.sign(keyPair)
+    tx.sign(keyPair, undefined)
 
     if (tx.networkId === networkId.value)
       logger.log('Claiming Cashlink', tx.toPlain())
