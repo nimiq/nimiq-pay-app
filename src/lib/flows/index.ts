@@ -357,7 +357,7 @@ selectionStep ◄────┘
     ])
 
     const title = 'Withdrawal' // translated at display time
-    const { error } = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, title })
+    const { error } = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
     if (error)
       return err(`${i18n.t('Something went wrong')}.\n${error}`)
 
