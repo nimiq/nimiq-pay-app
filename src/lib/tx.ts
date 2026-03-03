@@ -170,7 +170,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
             /* retireStake */ BigInt(partialArgs.stakingData.retireStake),
           )
           break
-        case 'remove-stake':
+        case 'remove-stake': {
           // For stake removal, the local wallet must sign the transaction, the remote wallet is not involved.
           const tx = Nimiq.TransactionBuilder.newRemoveStake(
             /* recipient */ useLocalWallet().localAddress,
@@ -181,6 +181,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
           )
           tx.sign(useLocalWallet().localWallet, undefined)
           return { data: { signedTx: tx }, error: undefined }
+        }
       }
     }
     catch (e) {
