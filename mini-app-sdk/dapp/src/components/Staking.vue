@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import type { NimiqProvider } from '@nimiq/mini-app-sdk'
+import { computed, onUnmounted, ref, watch } from 'vue';
 
 interface Account {
     address: string;
@@ -16,45 +17,57 @@ interface Staker {
     retiredBalance: number;
 }
 
+const props = defineProps<{
+    provider: NimiqProvider | null;
+    isInitializing: boolean;
+    initError: string | null;
+    retryInit: () => Promise<NimiqProvider>;
+}>();
+
+const provider = computed(() => props.provider);
+const hasProvider = computed(() => !!provider.value);
+
 const addresses = ref<string[]>();
 const account = ref<Account>();
 const staker = ref<Staker | null>();
-const hasConsensus = ref(false);
 const blockNumber = ref(0);
 
-const hasProvider = ref(!!window.nimiq);
-if (hasProvider.value) {
-    updateChainState();
-} else {
-    const providerCheck = setInterval(() => {
-        hasProvider.value = !!window.nimiq;
-        if (hasProvider.value) {
-            updateChainState();
-            clearInterval(providerCheck);
-        }
-    }, 100);
-}
+let blockNumberInterval: number | undefined;
 
-async function updateChainState() {
-    if (!hasProvider.value) return;
-    const [isConsensusEstablished, currentBlockNumber] = await Promise.all([
-        window.nimiq.isConsensusEstablished(),
-        window.nimiq.getBlockNumber()
-    ]);
-    hasConsensus.value = isConsensusEstablished;
-    blockNumber.value = currentBlockNumber;
-    setTimeout(updateChainState, 1e3);
-}
+watch(() => props.provider, (nextProvider) => {
+    if (blockNumberInterval !== undefined) {
+        clearInterval(blockNumberInterval);
+        blockNumberInterval = undefined;
+    }
 
-setInterval(async () => {
-    if (!hasProvider.value) return;
-    try {
-        blockNumber.value = await window.nimiq.getBlockNumber();
-    } catch {}
-}, 2e3);
+    if (!nextProvider) {
+        blockNumber.value = 0;
+        return;
+    }
+
+    const refreshBlockNumber = async () => {
+        try {
+            blockNumber.value = await nextProvider.getBlockNumber();
+        } catch {}
+    };
+
+    refreshBlockNumber();
+    blockNumberInterval = window.setInterval(refreshBlockNumber, 2e3);
+}, { immediate: true });
+
+onUnmounted(() => {
+    if (blockNumberInterval !== undefined) {
+        clearInterval(blockNumberInterval);
+    }
+});
+
+async function retryProviderInit() {
+    await props.retryInit().catch(() => {});
+}
 
 async function login() {
-    let accounts = await window.nimiq.listAccounts()
+    if (!provider.value) return;
+    const accounts = await provider.value.listAccounts()
     if ('error' in accounts) {
         console.error('Error listing accounts:', accounts.error);
         return;
@@ -73,14 +86,15 @@ function logout() {
 }
 
 async function fetchBalance() {
-    if (!addresses.value) return;
-    account.value = await window.nimiq.request({ method: 'getAccountByAddress', params: [addresses.value[1]!] });
+    if (!provider.value || !addresses.value) return;
+    account.value = await provider.value.request({ method: 'getAccountByAddress', params: [addresses.value[1]!] });
+    console.log('Fetched account info:', account.value);
 }
 
 async function fetchStaker() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     try {
-        staker.value = await window.nimiq.request({ method: 'getStakerByAddress', params: [addresses.value[0]!] });
+        staker.value = await provider.value.request({ method: 'getStakerByAddress', params: [addresses.value[0]!] });
     } catch (e) {
         console.error('Error fetching staker info:', e);
         staker.value = null;
@@ -122,14 +136,14 @@ const canUpdateStaker = computed(() => {
 })
 
 async function startStaking() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const delegationStr = prompt('Enter validator address to stake with:');
     if (!delegationStr) return;
     const valueStr = prompt(`Enter amount of NIM to stake (${account.value!.balance / 1e5} NIM available):`);
     if (!valueStr) return;
     const value = parseFloat(valueStr) * 1e5;
     try {
-        const result = await window.nimiq.sendNewStakerTransaction({
+        const result = await provider.value.sendNewStakerTransaction({
             delegation: delegationStr,
             value, // TODO
         });
@@ -145,12 +159,12 @@ async function startStaking() {
 }
 
 async function addStake() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const valueStr = prompt(`Enter amount of NIM to add to stake (${account.value!.balance / 1e5} NIM available):`);
     if (!valueStr) return;
     const value = parseFloat(valueStr) * 1e5;
     try {
-        const result = await window.nimiq.sendStakeTransaction({
+        const result = await provider.value.sendStakeTransaction({
             value,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -165,12 +179,12 @@ async function addStake() {
 }
 
 async function setActiveStake() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const newActiveStr = prompt(`Enter new active stake amount (current: ${staker!.value!.balance / 1e5} NIM, inactive: ${staker!.value!.inactiveBalance / 1e5} NIM):`);
     if (!newActiveStr) return;
     const newActiveBalance = parseFloat(newActiveStr) * 1e5;
     try {
-        const result = await window.nimiq.sendSetActiveStakeTransaction({
+        const result = await provider.value.sendSetActiveStakeTransaction({
             newActiveBalance,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -185,12 +199,12 @@ async function setActiveStake() {
 }
 
 async function retireStake() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const retireStakeStr = prompt(`Enter amount of NIM to retire (inactive: ${staker!.value!.inactiveBalance / 1e5} NIM):`);
     if (!retireStakeStr) return;
     const retireStake = parseFloat(retireStakeStr) * 1e5;
     try {
-        const result = await window.nimiq.sendRetireStakeTransaction({
+        const result = await provider.value.sendRetireStakeTransaction({
             retireStake,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -205,12 +219,12 @@ async function retireStake() {
 }
 
 async function removeStake() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const removeStakeStr = prompt(`Enter amount of NIM to remove (retired: ${staker!.value!.retiredBalance / 1e5} NIM):`);
     if (!removeStakeStr) return;
     const removeStake = parseFloat(removeStakeStr) * 1e5;
     try {
-        const result = await window.nimiq.sendRemoveStakeTransaction({
+        const result = await provider.value.sendRemoveStakeTransaction({
             value: removeStake,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -225,11 +239,11 @@ async function removeStake() {
 }
 
 async function updateStaker() {
-    if (!addresses.value) return;
+    if (!provider.value || !addresses.value) return;
     const newDelegationStr = prompt('Enter new validator address to stake with:');
     if (!newDelegationStr) return;
     try {
-        const result = await window.nimiq.sendUpdateStakerTransaction({
+        const result = await provider.value.sendUpdateStakerTransaction({
             newDelegation: newDelegationStr,
             reactivateAllStake: true,
         });
@@ -263,7 +277,13 @@ function timeToUnlock(inactiveFrom: number | null, currentBlockNumber: number): 
 
         <div v-if="!addresses">
             <button v-if="hasProvider" @click="login" style="background-color: green;">Connect Wallet</button>
-            <p v-else>Waiting for Nimiq Web3 provider...</p>
+            <template v-else>
+                <p v-if="initError" style="color: red;">{{ initError }}</p>
+                <button v-if="initError" @click="retryProviderInit">
+                    Retry Provider Init
+                </button>
+                <p v-else>Waiting for Nimiq Web3 provider...</p>
+            </template>
         </div>
         <div v-else>
             <h3>Account Balance</h3>

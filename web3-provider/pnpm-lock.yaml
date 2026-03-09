@@ -8,15 +8,15 @@ importers:
 
   .:
     dependencies:
+      '@nimiq/web3-provider-nimiq':
+        specifier: ../../trust-web3-provider/packages/nimiq
+        version: link:../../trust-web3-provider/packages/nimiq
       '@trustwallet/web3-provider-core':
         specifier: ../../trust-web3-provider/packages/core
         version: link:../../trust-web3-provider/packages/core
       '@trustwallet/web3-provider-ethereum':
         specifier: ../../trust-web3-provider/packages/ethereum
         version: link:../../trust-web3-provider/packages/ethereum
-      '@trustwallet/web3-provider-nimiq':
-        specifier: ../../trust-web3-provider/packages/nimiq
-        version: link:../../trust-web3-provider/packages/nimiq
       birpc:
         specifier: ^4.0.0
         version: 4.0.0

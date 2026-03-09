@@ -2,9 +2,9 @@ import type { IRequestArguments } from '@trustwallet/web3-provider-core'
 import type { NativeFunctions, WebviewFunctions } from './birpc-types'
 // eslint-disable-next-line unicorn/prefer-node-protocol
 import { Buffer } from 'buffer'
+import { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
-import { NimiqProvider } from '@trustwallet/web3-provider-nimiq'
 import { createBirpc } from 'birpc'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 
@@ -41,7 +41,7 @@ if (typeof globalObj.Buffer === 'undefined') {
 }
 
 const Nimiq = new NimiqProvider({
-  rpc: 'https://rpc.nimiqwatch.com/',
+  rpc: 'https://rpc.nimiqwatch.com', // https://rpc.testnet.nimiqwatch.com
 })
 const Ethereum = new EthereumProvider({
   chainId: '0x1', // Ethereum mainnet

@@ -1,5 +1,5 @@
+import type { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import type { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
-import type { NimiqProvider } from '@trustwallet/web3-provider-nimiq'
 
 // EIP-6963 Types
 interface EIP6963ProviderInfo {

@@ -1,41 +1,36 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { NimiqProvider } from "@trustwallet/web3-provider-nimiq"
+import type { NimiqProvider } from '@nimiq/mini-app-sdk'
+import { computed, ref } from 'vue'
 
-declare global {
-    interface Window {
-        nimiq: NimiqProvider
-    }
-}
+const props = defineProps<{
+  provider: NimiqProvider | null
+  isInitializing: boolean
+  initError: string | null
+  retryInit: () => Promise<NimiqProvider>
+}>()
 
-const hasProvider = ref(!!window.nimiq)
-if (!hasProvider.value) {
-  const providerCheck = setInterval(() => {
-      hasProvider.value = !!window.nimiq
-      if (hasProvider.value) {
-          clearInterval(providerCheck)
-      }
-  }, 100)
-}
+const hasProvider = computed(() => props.provider !== null)
+const provider = computed(() => props.provider as NimiqProvider)
+const output = ref<unknown | null>(null)
 
 async function isConsensusEstablished() {
-  output.value = await window.nimiq.isConsensusEstablished()
+  output.value = await provider.value.isConsensusEstablished()
 }
 
 async function getBlockNumber() {
-  output.value = await window.nimiq.getBlockNumber()
+  output.value = await provider.value.getBlockNumber()
 }
 
 async function listAccounts() {
-  output.value = await window.nimiq.listAccounts()
+  output.value = await provider.value.listAccounts()
 }
 
 async function sign() {
-  output.value = await window.nimiq.sign("Hello Mini-App!")
+  output.value = await provider.value.sign("Hello Mini-App!")
 }
 
 async function sendBasicTransaction() {
-  output.value = await window.nimiq.sendBasicTransaction({
+  output.value = await provider.value.sendBasicTransaction({
     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
     value: 100e5,
     // merchant: {
@@ -45,7 +40,7 @@ async function sendBasicTransaction() {
 }
 
 async function sendBasicTransactionWithData() {
-  output.value = await window.nimiq.sendBasicTransactionWithData({
+  output.value = await provider.value.sendBasicTransactionWithData({
     recipient: 'NQ07 0000 0000 0000 0000 0000 0000 0000 0000',
     value: 100e5,
     data: 'Hello from mini-app!',
@@ -55,15 +50,30 @@ async function sendBasicTransactionWithData() {
   })
 }
 
-const output = ref()
+async function retryProviderInit() {
+  await props.retryInit().catch(() => {})
+}
 </script>
 
 <template>
   <h2>Kitchen Sink</h2>
 
-  <p v-if="!hasProvider" class="error">
-    Nimiq Web3 Provider not detected! Some features may not be available.
+  <p v-if="initError" class="error">
+    {{ initError }}
   </p>
+  <p v-else-if="isInitializing">
+    Waiting for the Nimiq mini-app provider...
+  </p>
+  <p v-else-if="!hasProvider">
+    Nimiq mini-app provider unavailable.
+  </p>
+
+  <button
+    v-if="initError"
+    @click="retryProviderInit"
+  >
+    Retry Provider Init
+  </button>
 
   <div class="card">
     <strong>Test requests:</strong>

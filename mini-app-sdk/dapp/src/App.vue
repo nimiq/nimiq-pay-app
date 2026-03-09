@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
-import Staking from './components/Staking.vue';
+import Staking from './components/Staking.vue'
+import { useNimiqMiniApp } from './composables/useNimiqMiniApp'
 
 const view = ref('kitchen-sink');
+const { provider, isInitializing, initError, initProvider, retryInit } = useNimiqMiniApp()
+
+onMounted(initProvider)
 </script>
 
 <template>
@@ -21,8 +25,20 @@ const view = ref('kitchen-sink');
     <button @click="view = 'staking'">Staking</button>
   </nav>
 
-  <HelloWorld v-if="view === 'kitchen-sink'" />
-  <Staking v-if="view === 'staking'" />
+  <HelloWorld
+    v-if="view === 'kitchen-sink'"
+    :provider="provider"
+    :is-initializing="isInitializing"
+    :init-error="initError"
+    :retry-init="retryInit"
+  />
+  <Staking
+    v-else
+    :provider="provider"
+    :is-initializing="isInitializing"
+    :init-error="initError"
+    :retry-init="retryInit"
+  />
 </template>
 
 <style scoped>

@@ -15,7 +15,7 @@
   "dependencies": {
     "@trustwallet/web3-provider-core": "../../trust-web3-provider/packages/core",
     "@trustwallet/web3-provider-ethereum": "../../trust-web3-provider/packages/ethereum",
-    "@trustwallet/web3-provider-nimiq": "../../trust-web3-provider/packages/nimiq",
+    "@nimiq/web3-provider-nimiq": "../../trust-web3-provider/packages/nimiq",
     "birpc": "^4.0.0",
     "buffer": "^6.0.3"
   },
