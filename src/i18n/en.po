@@ -43,9 +43,8 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1185
 #: src/lib/mini-app-confirmation.ts:80
-#: src/stores/sync.ts:613
+#: src/types/transactions.ts:140
 msgid "Add Stake"
 msgstr ""
 
@@ -268,12 +267,12 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:141
+#: src/types/transactions.ts:161
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:138
+#: src/types/transactions.ts:158
 msgid "Confirming"
 msgstr ""
 
@@ -322,9 +321,8 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1162
 #: src/lib/mini-app-confirmation.ts:75
-#: src/stores/sync.ts:610
+#: src/types/transactions.ts:139
 msgid "Create Staker"
 msgstr ""
 
@@ -368,7 +366,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/stores/sync.ts:599
+#: src/types/transactions.ts:145
 msgid "Delete Validator"
 msgstr ""
 
@@ -487,7 +485,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:140
+#: src/types/transactions.ts:160
 msgid "Expired"
 msgstr ""
 
@@ -616,7 +614,7 @@ msgid "Insufficient funds"
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:139
+#: src/types/transactions.ts:159
 msgid "Invalid"
 msgstr ""
 
@@ -852,7 +850,7 @@ msgstr ""
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:136
+#: src/types/transactions.ts:156
 msgid "New"
 msgstr ""
 
@@ -982,7 +980,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:125
+#: src/types/transactions.ts:137
 msgid "Payment"
 msgstr ""
 
@@ -1050,7 +1048,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:29
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:137
+#: src/types/transactions.ts:157
 msgid "Pending"
 msgstr ""
 
@@ -1128,7 +1126,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:126
+#: src/types/transactions.ts:138
 msgid "Points Payment"
 msgstr ""
 
@@ -1185,9 +1183,8 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1279
 #: src/lib/mini-app-confirmation.ts:102
-#: src/stores/sync.ts:596
+#: src/types/transactions.ts:144
 msgid "Remove Stake"
 msgstr ""
 
@@ -1203,9 +1200,8 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1257
 #: src/lib/mini-app-confirmation.ts:97
-#: src/stores/sync.ts:622
+#: src/types/transactions.ts:143
 msgid "Retire Stake"
 msgstr ""
 
@@ -1286,9 +1282,8 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1208
 #: src/lib/mini-app-confirmation.ts:84
-#: src/stores/sync.ts:616
+#: src/types/transactions.ts:141
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1375,9 +1370,7 @@ msgstr ""
 msgid "Something went wrong while starting the camera"
 msgstr ""
 
-#: src/stores/sync.ts:602
-#: src/stores/sync.ts:625
-#: src/stores/sync.ts:630
+#: src/types/transactions.ts:146
 msgid "Staking Contract"
 msgstr ""
 
@@ -1397,7 +1390,7 @@ msgstr ""
 msgid "Support"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:263
+#: src/composables/useMiniAppHost.ts:300
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1483,7 +1476,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:227
+#: src/composables/useMiniAppHost.ts:264
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -1516,7 +1509,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:123
+#: src/types/transactions.ts:135
 msgid "Top-Up"
 msgstr ""
 
@@ -1556,7 +1549,7 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/types/transactions.ts:145
+#: src/types/transactions.ts:165
 msgid "Unknown"
 msgstr ""
 
@@ -1580,9 +1573,8 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1234
 #: src/lib/mini-app-confirmation.ts:89
-#: src/stores/sync.ts:619
+#: src/types/transactions.ts:142
 msgid "Update Staker"
 msgstr ""
 
@@ -1692,7 +1684,7 @@ msgstr ""
 msgid "Withdraw"
 msgstr ""
 
-#: src/types/transactions.ts:124
+#: src/types/transactions.ts:136
 msgid "Withdrawal"
 msgstr ""
 
