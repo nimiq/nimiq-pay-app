@@ -1,8 +1,5 @@
 import { Posthog } from '@capawesome/capacitor-posthog'
-// import { isDev } from '@/lib'
-
-// TODO: remove when working
-const isDev = false
+import { isDev } from '@/lib'
 
 export type DAppOpenSource = 'featured' | 'recent' | 'search'
 
