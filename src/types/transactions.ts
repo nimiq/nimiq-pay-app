@@ -108,19 +108,19 @@ export interface BaseTransaction {
   meta?: Record<string, any>
 }
 
-type KnownTransactionTitle =
-  | 'Top-Up'
-  | 'Withdrawal'
-  | 'Payment'
-  | 'Points Payment'
-  | 'Create Staker'
-  | 'Add Stake'
-  | 'Set Active Stake'
-  | 'Update Staker'
-  | 'Retire Stake'
-  | 'Remove Stake'
-  | 'Delete Validator'
-  | 'Staking Contract'
+type KnownTransactionTitle
+  = | 'Top-Up'
+    | 'Withdrawal'
+    | 'Payment'
+    | 'Points Payment'
+    | 'Create Staker'
+    | 'Add Stake'
+    | 'Set Active Stake'
+    | 'Update Staker'
+    | 'Retire Stake'
+    | 'Remove Stake'
+    | 'Delete Validator'
+    | 'Staking Contract'
 // artificial string type which is actually just a string, but that assigning a regular string to is a type error
 type UnknownTransactionTitle = string & { isUnknownTitle: true }
 export type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
