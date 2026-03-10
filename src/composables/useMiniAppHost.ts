@@ -15,7 +15,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { markAsUnknownTransactionTitle, Rail, Transfer } from '@/types/transactions'
+import { Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import { useLogger } from './useLogger'
 
@@ -1196,7 +1196,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'create-staker', delegation },
-      stakingTitle: i18n.t('Create Staker'),
+      stakingTitle: 'Create Staker',
       value,
       analyticsRequestType: 'nimiq_staking_create_staker',
     })
@@ -1219,7 +1219,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'add-stake' },
-      stakingTitle: i18n.t('Add Stake'),
+      stakingTitle: 'Add Stake',
       value,
       analyticsRequestType: 'nimiq_staking_add_stake',
     })
@@ -1242,7 +1242,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'set-active-stake', newActiveBalance },
-      stakingTitle: i18n.t('Set Active Stake'),
+      stakingTitle: 'Set Active Stake',
       value: 0,
       analyticsRequestType: 'nimiq_staking_set_active',
     })
@@ -1268,7 +1268,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'update-staker', newDelegation, reactivateAllStake },
-      stakingTitle: i18n.t('Update Staker'),
+      stakingTitle: 'Update Staker',
       value: 0,
       analyticsRequestType: 'nimiq_staking_update',
     })
@@ -1291,7 +1291,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'retire-stake', retireStake },
-      stakingTitle: i18n.t('Retire Stake'),
+      stakingTitle: 'Retire Stake',
       value: 0,
       analyticsRequestType: 'nimiq_staking_retire',
     })
@@ -1313,7 +1313,7 @@ export class MiniAppHost {
     return this.sendPayment({
       transfer: Transfer.Staking,
       stakingData: { type: 'remove-stake' },
-      stakingTitle: i18n.t('Remove Stake'),
+      stakingTitle: 'Remove Stake',
       value,
       analyticsRequestType: 'nimiq_staking_remove',
     })
@@ -1329,7 +1329,7 @@ export class MiniAppHost {
     recipient: string
   } | {
     transfer: Transfer.Staking
-    stakingTitle: string
+    stakingTitle: PartialStakingTxArgs['title']
     stakingData: StakingData
   })): Promise<string> {
     if (!this.config.requestUserConfirmation) {
@@ -1384,7 +1384,7 @@ export class MiniAppHost {
     else if (txData.transfer === Transfer.Staking) {
       partialTx = {
         amount: txData.value,
-        title: markAsUnknownTransactionTitle(txData.stakingTitle || 'Staking'),
+        title: txData.stakingTitle,
         transfer: txData.transfer,
         rail: Rail.MiniApp,
         railMerchantId: this.config.url,

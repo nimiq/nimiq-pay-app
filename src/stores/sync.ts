@@ -4,7 +4,7 @@ import type { Ref } from 'vue'
 import type { RemoteSignerTransactionState } from '@/composables/useApi'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { SwapHtlc } from '@/types/swapHtlcs'
-import type { ExternalTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
+import type { ExternalTransaction, StakingTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { computedAsync, until, useTimeoutFn } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -26,7 +26,7 @@ import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { markAsUnknownTransactionTitle, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const { isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions, headChangePendingDrainLock, headChangeUpdatesLock, htlcCheckLock } = storeToRefs(useLocks())
@@ -595,18 +595,18 @@ export const useSync = defineStore('sync', () => {
       }
 
       function handleStakingTxs(tx: PlainTransactionDetails) {
-        let title: string
+        let title: StakingTransaction['title']
         if (tx.senderType === 'staking') {
           logger.log(`📬 New ${tx.senderData!.type} transaction found with ${tx.value / 1e5} NIM from staking contract`)
           switch (tx.senderData!.type) {
             case 'remove-stake':
-              title = i18n.t('Remove Stake')
+              title = 'Remove Stake'
               break
             case 'delete-validator':
-              title = i18n.t('Delete Validator')
+              title = 'Delete Validator'
               break
             default:
-              title = i18n.t('Staking Contract')
+              title = 'Staking Contract'
               break
           }
         }
@@ -614,27 +614,27 @@ export const useSync = defineStore('sync', () => {
           logger.log(`📬 New ${tx.data.type} transaction found with ${tx.value / 1e5} NIM to staking contract`)
           switch (tx.data.type) {
             case 'create-staker':
-              title = i18n.t('Create Staker')
+              title = 'Create Staker'
               break
             case 'add-stake':
-              title = i18n.t('Add Stake')
+              title = 'Add Stake'
               break
             case 'set-active-stake':
-              title = i18n.t('Set Active Stake')
+              title = 'Set Active Stake'
               break
             case 'update-staker':
-              title = i18n.t('Update Staker')
+              title = 'Update Staker'
               break
             case 'retire-stake':
-              title = i18n.t('Retire Stake')
+              title = 'Retire Stake'
               break
             default:
-              title = i18n.t('Staking Contract')
+              title = 'Staking Contract'
               break
           }
         }
         else {
-          title = i18n.t('Staking Contract')
+          title = 'Staking Contract'
         }
 
         addStakingtransaction({
@@ -650,7 +650,7 @@ export const useSync = defineStore('sync', () => {
           recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
           status: tx.state,
           timestamp: tx.timestamp,
-          title: markAsUnknownTransactionTitle(title),
+          title,
           proofSize: tx.proof.raw.length / 2,
         })
       }

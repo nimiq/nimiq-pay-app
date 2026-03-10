@@ -108,10 +108,22 @@ export interface BaseTransaction {
   meta?: Record<string, any>
 }
 
-type KnownTransactionTitle = 'Top-Up' | 'Withdrawal' | 'Payment' | 'Points Payment'
+type KnownTransactionTitle =
+  | 'Top-Up'
+  | 'Withdrawal'
+  | 'Payment'
+  | 'Points Payment'
+  | 'Create Staker'
+  | 'Add Stake'
+  | 'Set Active Stake'
+  | 'Update Staker'
+  | 'Retire Stake'
+  | 'Remove Stake'
+  | 'Delete Validator'
+  | 'Staking Contract'
 // artificial string type which is actually just a string, but that assigning a regular string to is a type error
 type UnknownTransactionTitle = string & { isUnknownTitle: true }
-type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
+export type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
 
 export function markAsUnknownTransactionTitle(title: string) {
   return title as UnknownTransactionTitle
@@ -124,6 +136,14 @@ export function translateTransactionTitle(title: TransactionTitle) {
     'Withdrawal': i18n.t('Withdrawal'),
     'Payment': i18n.t('Payment'),
     'Points Payment': i18n.t('Points Payment'),
+    'Create Staker': i18n.t('Create Staker'),
+    'Add Stake': i18n.t('Add Stake'),
+    'Set Active Stake': i18n.t('Set Active Stake'),
+    'Update Staker': i18n.t('Update Staker'),
+    'Retire Stake': i18n.t('Retire Stake'),
+    'Remove Stake': i18n.t('Remove Stake'),
+    'Delete Validator': i18n.t('Delete Validator'),
+    'Staking Contract': i18n.t('Staking Contract'),
   }
   return Object.keys(knownTitleTranslations).includes(title)
     ? knownTitleTranslations[title as KnownTransactionTitle]
