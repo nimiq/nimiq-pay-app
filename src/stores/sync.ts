@@ -80,7 +80,7 @@ export const useSync = defineStore('sync', () => {
     if (localBalance.value === 0)
       return
     if (isTransactionPending.value || isSendingTx.value) {
-      logger.log('There is a pending transaction. Delaying handleFunds', pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions)
+      logger.log('There is a pending transaction. Delaying handleFunds', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
       return
     }
 
@@ -257,17 +257,24 @@ export const useSync = defineStore('sync', () => {
    * Syncs the local and the remote wallet immediately and then every time a new block is minted.
    */
   async function syncWallets() {
+    logger.log('Starting wallet sync process', { hasLocalWallet: hasLocalWallet.value })
     if (!hasLocalWallet.value)
       return
 
     isSyncingWallets.value = true
+    logger.log('🔄 Remote Signer initialization')
     await useRemoteSigner().init()
+    logger.log('Updating balances')
     await updateBalances()
+    logger.log('Checking HTLC state and updating transactions in DB')
     await Promise.all([checkHtlcState(), updateTransactionsInDb()])
 
+    logger.log('Waiting for client to be ready')
     await until(client).toBeTruthy()
+    logger.log('Waiting for consensus to be established')
     await client.value!.waitForConsensusEstablished()
 
+    logger.log('Verifying remote signers in DB')
     await verifyRemoteSignersDb()
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
