@@ -1,7 +1,7 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/inappbrowser'
 import type { BirpcReturn } from 'birpc'
-import type { NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
+import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
@@ -91,6 +91,11 @@ export type UserConfirmationRequest = {
   data: {
     message: string
     isHex: boolean
+  }
+} | {
+  type: 'chain'
+  data: ChainApprovalRequest & {
+    chainName?: string
   }
 })
 
@@ -221,6 +226,38 @@ export class MiniAppHost {
           Object.assign(rpcError, { code: -32603 })
           throw rpcError
         }
+      },
+      requestChainApproval: async (request: ChainApprovalRequest): Promise<boolean> => {
+        if (!this.config.requestUserConfirmation) {
+          throw new InternalError('Confirmation handler not provided')
+        }
+
+        const numericChainId = parseChainId(request.chainId)
+        const chainName = request.chainName || (numericChainId ? EVM_CHAIN_NAMES[numericChainId] : undefined)
+        const confirmed = await this.config.requestUserConfirmation({
+          url: this.config.url,
+          name: this.config.title,
+          type: 'chain',
+          data: {
+            ...request,
+            chainName,
+          },
+          network: 'ethereum',
+        })
+
+        if (!confirmed) {
+          trackWeb3Request({
+            requestType: request.action === 'add' ? 'add_chain' : 'switch_chain',
+            blockchain: 'ethereum',
+            dappUrl: this.config.url,
+            dappName: this.config.title,
+            approved: false,
+            success: false,
+            chainId: request.chainId,
+          })
+        }
+
+        return confirmed
       },
       onUnsupportedChain: (chainId: string): void => {
         logger.log('[MiniAppHost] Unsupported chain requested:', chainId)

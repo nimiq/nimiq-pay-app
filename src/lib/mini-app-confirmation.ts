@@ -208,6 +208,40 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return result.confirmed
     }
 
+    case 'chain': {
+      const appName = request.name || new URL(request.url).hostname
+      const { action, chainId, chainName, rpcUrl } = request.data
+      let rpcHost: string | undefined
+      if (rpcUrl) {
+        try {
+          rpcHost = new URL(rpcUrl).host
+        }
+        catch {
+          rpcHost = rpcUrl
+        }
+      }
+
+      const rows: { title: string, value: string }[] = [
+        { title: 'Action', value: action === 'add' ? 'Add Network' : 'Switch Network' },
+        { title: 'Network', value: chainName || chainId },
+        { title: 'Chain ID', value: chainId },
+      ]
+
+      if (rpcHost)
+        rows.push({ title: 'RPC Host', value: rpcHost })
+
+      const result = await ExtendedDialog.sheet({
+        title: action === 'add' ? 'Add Network' : 'Switch Network',
+        subtitle: `${appName} wants to ${action === 'add' ? 'add and switch to' : 'switch to'} this network:`,
+        headerLogo: getFaviconUrl(request.url),
+        headerLogoCornerRadius: -1,
+        rows,
+        confirmButtonTitle: action === 'add' ? 'Approve Network' : 'Switch Network',
+        cancelButtonTitle: 'Cancel',
+      })
+      return result.confirmed
+    }
+
     default:
       logger.error('Unknown confirmation request type:', request)
       return false
