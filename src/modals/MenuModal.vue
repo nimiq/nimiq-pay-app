@@ -17,7 +17,7 @@ import TopUpIcon from '@/components/icons/top-up.vue'
 import WithdrawIcon from '@/components/icons/withdraw.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
-import { isNakaEnabled } from '@/lib'
+import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
@@ -105,11 +105,15 @@ onLongPress(
       @click="initializeFlow(FlowName.VerifyPhone)"
     />
 
-    <span class="uppercase text-space/60 font-bold text-sm mt-6">
+    <span
+      v-if="isMiniAppsEnabled"
+      class="uppercase text-space/60 font-bold text-sm mt-6"
+    >
       {{ $t('Features') }}
     </span>
 
     <MenuItem
+      v-if="isMiniAppsEnabled"
       :icon="AppsIcon"
       :title="$t('Mini Apps')"
       @click="showModal(Modal.MiniApps)"

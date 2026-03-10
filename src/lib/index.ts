@@ -15,3 +15,5 @@ export const debounceDelay = 1000
 export const debounceMaxWait = 3000
 
 export const isNakaEnabled = __ENABLE_NAKA__ && (useDevice().isAndroid || isDev)
+// export const isBlueCodeEnabled = __ENABLE_BLUECODE__ && (useDevice().isIOS || isDev)
+export const isMiniAppsEnabled = __ENABLE_MINI_APPS__

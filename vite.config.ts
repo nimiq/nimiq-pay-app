@@ -1,4 +1,5 @@
 import { copyFileSync } from 'node:fs'
+import { networkInterfaces } from 'node:os'
 import path from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
@@ -7,7 +8,6 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
-import { networkInterfaces } from 'node:os'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       vue({
         template: {
           compilerOptions: {
-            isCustomElement: (tag) => tag.startsWith('chatlio-'),
+            isCustomElement: tag => tag.startsWith('chatlio-'),
           },
         },
       }),
@@ -79,6 +79,7 @@ export default defineConfig(({ mode }) => {
       __ENABLE_BTC_LN__: true, // Enable BTC LN by default, remove this once Apple is not complaining
       __ENABLE_NAKA__: env.VITE_ENABLE_NAKA === 'true',
       __ENABLE_BLUECODE__: env.VITE_ENABLE_BLUECODE === 'true',
+      __ENABLE_MINI_APPS__: env.VITE_ENABLE_MINI_APPS === 'true',
     },
   }
 })

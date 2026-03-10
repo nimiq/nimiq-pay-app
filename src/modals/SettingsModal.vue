@@ -12,6 +12,7 @@ import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-setup'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
@@ -170,9 +171,9 @@ onBeforeMount(updateBiometryInfo)
           </IonToggle>
         </IonItem>
 
-        <IonItem>
+        <IonItem v-if="isMiniAppsEnabled">
           <IonToggle :checked="reopenMiniAppWebviewAfterResume" @ion-change="reopenMiniAppWebviewAfterResume = $event.detail.checked">
-            {{ $t('Reopen mini-app on unlock') }}
+            {{ $t('Reopen Mini App on unlock') }}
           </IonToggle>
         </IonItem>
 

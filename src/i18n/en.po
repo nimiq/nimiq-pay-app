@@ -14,7 +14,7 @@ msgstr ""
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:83
+#: src/modals/MenuModal.vue:87
 msgid "About"
 msgstr ""
 
@@ -43,7 +43,7 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1186
+#: src/composables/useMiniAppHost.ts:1185
 #: src/lib/mini-app-confirmation.ts:80
 #: src/stores/sync.ts:613
 msgid "Add Stake"
@@ -104,7 +104,7 @@ msgstr ""
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
-#: src/modals/MenuModal.vue:67
+#: src/modals/MenuModal.vue:71
 msgid "App Settings"
 msgstr ""
 
@@ -113,7 +113,7 @@ msgid "Are you sure you want to log out?"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:78
+#: src/modals/MenuModal.vue:82
 msgid "Backup Account"
 msgstr ""
 
@@ -322,7 +322,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1156
+#: src/composables/useMiniAppHost.ts:1162
 #: src/lib/mini-app-confirmation.ts:75
 #: src/stores/sync.ts:610
 msgid "Create Staker"
@@ -528,7 +528,7 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: src/modals/MenuModal.vue:57
+#: src/modals/MenuModal.vue:60
 msgid "Features"
 msgstr ""
 
@@ -736,7 +736,7 @@ msgstr ""
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:364
+#: src/lib/tx.ts:353
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -750,7 +750,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:52
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:105
+#: src/views/HomeView.vue:106
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -812,7 +812,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:89
+#: src/modals/MenuModal.vue:93
 msgid "Log Out"
 msgstr ""
 
@@ -820,7 +820,7 @@ msgstr ""
 msgid "Login"
 msgstr ""
 
-#: src/modals/MenuModal.vue:62
+#: src/modals/MenuModal.vue:66
 msgid "Mini Apps"
 msgstr ""
 
@@ -848,7 +848,7 @@ msgstr ""
 msgid "Network consensus lost."
 msgstr ""
 
-#: src/lib/tx.ts:379
+#: src/lib/tx.ts:368
 msgid "Network ID mismatch"
 msgstr ""
 
@@ -877,7 +877,7 @@ msgstr ""
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:268
+#: src/lib/tx.ts:257
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1185,14 +1185,14 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1308
+#: src/composables/useMiniAppHost.ts:1279
 #: src/lib/mini-app-confirmation.ts:102
 #: src/stores/sync.ts:596
 msgid "Remove Stake"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:66
-msgid "Reopen mini-app on unlock"
+msgid "Reopen Mini App on unlock"
 msgstr ""
 
 #: src/views/HomeView.vue:107
@@ -1203,7 +1203,7 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1279
+#: src/composables/useMiniAppHost.ts:1257
 #: src/lib/mini-app-confirmation.ts:97
 #: src/stores/sync.ts:622
 msgid "Retire Stake"
@@ -1286,13 +1286,13 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1216
+#: src/composables/useMiniAppHost.ts:1208
 #: src/lib/mini-app-confirmation.ts:84
 #: src/stores/sync.ts:616
 msgid "Set Active Stake"
 msgstr ""
 
-#: src/modals/MenuModal.vue:73
+#: src/modals/MenuModal.vue:77
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1344,14 +1344,14 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:385
+#: src/lib/tx.ts:374
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:283
 #: src/composables/useApi.ts:290
-#: src/lib/tx.ts:271
-#: src/lib/tx.ts:376
+#: src/lib/tx.ts:260
+#: src/lib/tx.ts:365
 #: src/lib/tx.ts:38
 #: src/lib/tx.ts:60
 msgid "Something went wrong syncing your account"
@@ -1512,7 +1512,7 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr ""
 
 #: src/modals/MenuModal.vue:15
-#: src/views/HomeView.vue:58
+#: src/views/HomeView.vue:59
 msgid "Top Up"
 msgstr ""
 
@@ -1580,7 +1580,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:1249
+#: src/composables/useMiniAppHost.ts:1234
 #: src/lib/mini-app-confirmation.ts:89
 #: src/stores/sync.ts:619
 msgid "Update Staker"

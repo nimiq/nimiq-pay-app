@@ -21,7 +21,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev, isNakaEnabled } from '@/lib'
+import { isDev, isMiniAppsEnabled, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
@@ -174,6 +174,7 @@ onMounted(() => {
           </IonButton>
 
           <button
+            v-if="isMiniAppsEnabled"
             aria-label="Mini Apps"
             class="p-2 ion-activatable relative overflow-hidden rounded-3xl"
             @click="showModal(Modal.MiniApps)"
