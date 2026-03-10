@@ -112,8 +112,8 @@ export const useTransactions = defineStore('transactions', () => {
         tx.meta
           ? JSON.stringify(tx.meta)
           : null,
-        tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
         tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+        tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
       ],
     )
   }
