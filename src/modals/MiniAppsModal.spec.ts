@@ -1,5 +1,6 @@
 import type { Component } from 'vue'
 import { flushPromises, mount } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import MiniAppsModal from './MiniAppsModal.vue'
@@ -17,6 +18,7 @@ function createDeferred<T = void>() {
 
 const {
   addListener,
+  clearAllCookies,
   fetchPageDescription,
   getFaviconUrl,
   hostDestroy,
@@ -24,23 +26,36 @@ const {
   loggerError,
   loggerLog,
   openWebView,
+  screenOrientationLock,
+  screenOrientationUnlock,
   setToast,
 } = vi.hoisted(() => ({
   openWebView: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+  clearAllCookies: vi.fn(() => Promise.resolve()),
   setToast: vi.fn(),
   loggerError: vi.fn(),
   loggerLog: vi.fn(),
   fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
   getFaviconUrl: vi.fn((url: string) => `https://icons.example/${encodeURIComponent(url)}`),
   hostDestroy: vi.fn(() => Promise.resolve()),
+  screenOrientationUnlock: vi.fn(() => Promise.resolve()),
+  screenOrientationLock: vi.fn(() => Promise.resolve()),
   isDevState: { value: false },
+}))
+
+vi.mock('@capacitor/screen-orientation', () => ({
+  ScreenOrientation: {
+    lock: screenOrientationLock,
+    unlock: screenOrientationUnlock,
+  },
 }))
 
 vi.mock('@capgo/inappbrowser', () => ({
   InAppBrowser: {
     openWebView,
     addListener,
+    clearAllCookies,
   },
   ToolBarType: {
     NAVIGATION: 'navigation',
@@ -75,6 +90,11 @@ vi.mock('@/lib/site-metadata', () => ({
   getFaviconUrl,
 }))
 
+vi.mock('@/lib/analytics', () => ({
+  trackDAppClosed: vi.fn(),
+  trackDAppOpened: vi.fn(),
+}))
+
 vi.mock('@/lib', () => ({
   get isDev() {
     return isDevState.value
@@ -95,6 +115,7 @@ const IonSearchbarStub = defineComponent({
 function mountModal(component: Component = MiniAppsModal) {
   return mount(component, {
     global: {
+      plugins: [createPinia()],
       stubs: {
         ModalTemplate: {
           template: '<div><slot /></div>',
@@ -108,12 +129,18 @@ function mountModal(component: Component = MiniAppsModal) {
   })
 }
 
+function toUrlTestId(url: string) {
+  return url.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
+}
+
 describe('mini apps modal', () => {
   beforeEach(() => {
     openWebView.mockReset()
     openWebView.mockImplementation(() => Promise.resolve())
     addListener.mockReset()
     addListener.mockImplementation(() => Promise.resolve({ remove: vi.fn() }))
+    clearAllCookies.mockReset()
+    clearAllCookies.mockImplementation(() => Promise.resolve())
     setToast.mockReset()
     loggerError.mockReset()
     loggerLog.mockReset()
@@ -123,6 +150,10 @@ describe('mini apps modal', () => {
     getFaviconUrl.mockImplementation((url: string) => `https://icons.example/${encodeURIComponent(url)}`)
     hostDestroy.mockReset()
     hostDestroy.mockImplementation(() => Promise.resolve())
+    screenOrientationUnlock.mockReset()
+    screenOrientationUnlock.mockImplementation(() => Promise.resolve())
+    screenOrientationLock.mockReset()
+    screenOrientationLock.mockImplementation(() => Promise.resolve())
     isDevState.value = false
 
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('window.__provider = true') })))
@@ -201,10 +232,11 @@ describe('mini apps modal', () => {
     isDevState.value = true
     const { default: DevMiniAppsModal } = await import('./MiniAppsModal.vue')
     const wrapper = mountModal(DevMiniAppsModal)
+    const demoUrl = `http://${__VITE_SERVER_IP__}:5174/`
 
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="featured-dapp-button-http-localhost-5174"]').exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="featured-dapp-button-${toUrlTestId(demoUrl)}"]`).exists()).toBe(true)
   })
 
   it('falls back to fallback icon when image loading fails', async () => {
