@@ -42,6 +42,9 @@ msgstr "Adicionar endereço NIM"
 msgid "Add new card"
 msgstr ""
 
+msgid "Add Stake"
+msgstr ""
+
 msgid "Address copied to clipboard"
 msgstr "Endereço copiado para a área de transferência"
 
@@ -248,6 +251,9 @@ msgstr "Criar um backup. É a única forma de recuperar a tua conta."
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr "Cria um código de barras Bluecode e mostra-o no caixa para pagar."
 
+msgid "Create Staker"
+msgstr ""
+
 msgid "Cryptocity Points"
 msgstr "Pontos Cryptocity"
 
@@ -283,6 +289,11 @@ msgstr "Apagar conta de Pontos Cryptocity"
 
 msgid "Delete Points Account"
 msgstr "Apagar Pontos da Conta"
+
+#, fuzzy
+#| msgid "Select an address…"
+msgid "Delete Validator"
+msgstr "Selecionar um endereço…"
 
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr "Apagar o teu número de telemóvel do sistema de Pontos Cryptocity resultará na perda de quaisquer Pontos que tenhas atualmente."
@@ -398,6 +409,11 @@ msgid "Failed to set app as preferred NFC service: {error}"
 msgstr ""
 
 msgid "Featured"
+msgstr "Destacado"
+
+#, fuzzy
+#| msgid "Featured"
+msgid "Features"
 msgstr "Destacado"
 
 msgid "Fees may apply {fee}"
@@ -619,6 +635,9 @@ msgstr "Encerrar sessão"
 msgid "Login"
 msgstr "Iniciar sessão"
 
+msgid "Mini Apps"
+msgstr ""
+
 msgid "Minimum NIM Decimals"
 msgstr ""
 
@@ -653,6 +672,9 @@ msgstr "Biometria não suportada neste dispositivo"
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "A Nimiq Pay e a Nimiq Wallet usam palavras de recuperação diferentes."
+
+msgid "No"
+msgstr ""
 
 msgid "No account found"
 msgstr "Conta não encontrada"
@@ -889,11 +911,22 @@ msgstr "A recarregar conexão"
 msgid "Refunded"
 msgstr "Devolvido"
 
+msgid "Remove Stake"
+msgstr ""
+
+msgid "Reopen Mini App on unlock"
+msgstr ""
+
 msgid "Requires Phone Number"
 msgstr "Necessita número de telemóvel"
 
 msgid "Resend"
 msgstr "Reenviar"
+
+#, fuzzy
+#| msgid "Get Started"
+msgid "Retire Stake"
+msgstr "Começar"
 
 msgid "Rewards Notifications"
 msgstr "Notificações de Recompensas"
@@ -957,6 +990,9 @@ msgstr "Enviar NIM para recarregar saldo"
 msgid "Server not available"
 msgstr "Servidor não disponível"
 
+msgid "Set Active Stake"
+msgstr ""
+
 msgid "Settings"
 msgstr "Definições"
 
@@ -1008,6 +1044,9 @@ msgstr "Alguma coisa deu errado ao verificar o teu número de telemóvel"
 msgid "Something went wrong while starting the camera"
 msgstr "Alguma coisa deu errado ao começar a camara"
 
+msgid "Staking Contract"
+msgstr ""
+
 msgid "Standard rates may apply."
 msgstr "Podem ser aplicadas taxas padrão."
 
@@ -1018,6 +1057,9 @@ msgid "Store screenshot safely"
 msgstr "Armazene a captura de ecrã com segurança"
 
 msgid "Support"
+msgstr ""
+
+msgid "Switched to {chain}"
 msgstr ""
 
 msgid "Syncing with network."
@@ -1079,6 +1121,11 @@ msgstr ""
 
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Este comerciante não está registado para receber pagamentos de pontos."
+
+#, fuzzy
+#| msgid "Biometric is not supported on this device"
+msgid "This network is not supported by Nimiq Pay"
+msgstr "Biometria não suportada neste dispositivo"
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Este pagamento não é eligível para receber ou pagar com pontos."
@@ -1148,6 +1195,9 @@ msgstr "Desbloqueia a aplicação com a tua impressão digital em vez do PIN"
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr "Desbloqueia a aplicação ao usar o Touch ID/Face ID em vez do PIN"
+
+msgid "Update Staker"
+msgstr ""
 
 msgid "Updating connection"
 msgstr "A atualizar conexão"
@@ -1255,6 +1305,9 @@ msgstr "Rede errada na fatura Bitcoin Lightning."
 
 msgid "Wrong number of recovery words"
 msgstr "Número errado das palavras de recuperação"
+
+msgid "Yes"
+msgstr ""
 
 msgid "You can not use this address"
 msgstr "Não podes usar este endereço"

@@ -5,6 +5,7 @@ import { onLongPress } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
+import AppsIcon from '@/components/icons/apps.vue'
 import BackupIcon from '@/components/icons/backup.vue'
 import CreditCardIcon from '@/components/icons/credit-card.vue'
 import GiftIcon from '@/components/icons/gift.vue'
@@ -16,7 +17,7 @@ import TopUpIcon from '@/components/icons/top-up.vue'
 import WithdrawIcon from '@/components/icons/withdraw.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
-import { isNakaEnabled } from '@/lib'
+import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
@@ -102,6 +103,20 @@ onLongPress(
       :icon="GiftIcon"
       :title="$t('Activate Cashback & Rewards')"
       @click="initializeFlow(FlowName.VerifyPhone)"
+    />
+
+    <span
+      v-if="isMiniAppsEnabled"
+      class="uppercase text-space/60 font-bold text-sm mt-6"
+    >
+      {{ $t('Features') }}
+    </span>
+
+    <MenuItem
+      v-if="isMiniAppsEnabled"
+      :icon="AppsIcon"
+      :title="$t('Mini Apps')"
+      @click="showModal(Modal.MiniApps)"
     />
 
     <span class="uppercase text-space/60 font-bold text-sm mt-6">

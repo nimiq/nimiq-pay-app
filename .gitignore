@@ -53,3 +53,4 @@ google-service-account.json
 
 ./components.d.ts
 .npmrc
+public/web3-provider.js

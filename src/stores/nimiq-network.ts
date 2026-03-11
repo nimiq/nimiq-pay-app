@@ -25,6 +25,8 @@ export const CashlinkExtraDataHex = {
   CLAIMING: CashlinkExtraData.CLAIMING.reduce((hex, value) => hex + value.toString(16).padStart(2, '0'), ''),
 }
 
+export const STAKING_CONTRACT_ADDRESS = 'NQ77 0000 0000 0000 0000 0000 0000 0000 0001'
+
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const { isNetworkReconnecting, isAppStarting } = storeToRefs(useLocks())
   const client = ref<Client>()
@@ -37,10 +39,13 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const networkName = ref('')
   const networkId = ref(0)
 
-  async function init() {
+  async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
     networkName.value = isDev ? 'testalbatross' : 'MainAlbatross'
 
     await Nimiq.default()
+
+    if (!options.launchNimiqClient)
+      return
 
     const config = new Nimiq.ClientConfiguration()
     config.network(networkName.value)
@@ -150,7 +155,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       height.value,
       await client.value!.getNetworkId(),
     )
-    tx.sign(keyPair)
+    tx.sign(keyPair, undefined)
 
     if (tx.networkId === networkId.value)
       logger.log('Claiming Cashlink', tx.toPlain())

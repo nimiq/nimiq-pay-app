@@ -1,4 +1,5 @@
 import { copyFileSync } from 'node:fs'
+import { networkInterfaces } from 'node:os'
 import path from 'node:path'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig, loadEnv } from 'vite'
@@ -18,7 +19,7 @@ export default defineConfig(({ mode }) => {
       vue({
         template: {
           compilerOptions: {
-            isCustomElement: (tag) => tag.startsWith('chatlio-'),
+            isCustomElement: tag => tag.startsWith('chatlio-'),
           },
         },
       }),
@@ -43,6 +44,19 @@ export default defineConfig(({ mode }) => {
           }
         },
       },
+      {
+        name: 'copy-web3-provider:serve',
+        apply: () => true, // apply for both 'serve' (dev server) and 'build'
+        buildStart() {
+          try {
+            copyFileSync('./web3-provider/dist/provider.js', 'public/web3-provider.js')
+            console.log('📋 Copied web3 provider script')
+          }
+          catch {
+            console.error('🚫 ERROR: Failed to copy web3 provider script, make sure you have built the "web3-provider" directory!')
+          }
+        },
+      },
     ],
     resolve: {
       alias: {
@@ -57,6 +71,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
     },
     define: {
+      __VITE_SERVER_IP__: JSON.stringify(getLocalIP()),
       __VUE_I18N_FULL_INSTALL__: true, // support <i18-t> component
       __VUE_I18N_LEGACY_API__: true, // We use the legacy api, which is also vue-i18n's default
       __INTLIFY_PROD_DEVTOOLS__: false,
@@ -64,6 +79,21 @@ export default defineConfig(({ mode }) => {
       __ENABLE_BTC_LN__: true, // Enable BTC LN by default, remove this once Apple is not complaining
       __ENABLE_NAKA__: env.VITE_ENABLE_NAKA === 'true',
       __ENABLE_BLUECODE__: env.VITE_ENABLE_BLUECODE === 'true',
+      __ENABLE_MINI_APPS__: env.VITE_ENABLE_MINI_APPS === 'true',
     },
   }
 })
+
+// Get local network IP
+function getLocalIP() {
+  const nets = networkInterfaces()
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+      // Skip internal (i.e. 127.0.0.1) and non-IPv4 addresses
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address
+      }
+    }
+  }
+  return 'localhost'
+}

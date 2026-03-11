@@ -31,16 +31,18 @@ export enum SQLQuery {
 
   // Transactions
   CreateTxsTable = 'CREATE TABLE IF NOT EXISTS transactions (hash TEXT UNIQUE, timestamp INTEGER, sender TEXT, senderType INTEGER, recipient TEXT, recipientType INTEGER, amount INTEGER, fee INTEGER, status TEXT, raw TEXT, title TEXT, transfer TEXT, message TEXT, rail TEXT, railMerchantId TEXT, merchantName TEXT, merchantCategory TEXT, paymentRef TEXT, paymentMethod TEXT, fiatAmount REAL, fiatFeeAmount REAL, fiatCurrency TEXT, isCashbackClaimed INTEGER)',
-  SelectPaginationTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\') ORDER BY timestamp DESC NULLS FIRST LIMIT ? OFFSET ?`, // eslint-disable-line ts/prefer-literal-enum-member
-  SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
+  SelectPaginationTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST LIMIT ? OFFSET ?`, // eslint-disable-line ts/prefer-literal-enum-member
+  SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json, meta_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, invoiced_json, meta_json, senderData, recipientData) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = ? WHERE hash = ?',
   UpdateCashbackStatus = 'UPDATE transactions SET isCashbackClaimed = ? WHERE hash = ?',
   ClearTxHistory = 'DELETE FROM transactions',
   AddInvoicedColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN invoiced_json TEXT',
   AddMetaColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN meta_json TEXT',
   GetIncludedTransactionsByRailAfter = `SELECT hash, timestamp, amount, status FROM transactions WHERE status IN ('included', 'confirmed') AND rail = ? AND timestamp >= ? ORDER BY timestamp`,
+  AddSenderDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN senderData TEXT',
+  AddRecipientDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN recipientData TEXT',
 
   // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
@@ -131,6 +133,13 @@ export const migrations: Migration[] = [
     toVersion: 5,
     statements: [
       SQLQuery.CreateNakaCardsTable,
+    ],
+  },
+  {
+    toVersion: 6,
+    statements: [
+      SQLQuery.AddSenderDataToTxsTable,
+      SQLQuery.AddRecipientDataToTxsTable,
     ],
   },
 ]

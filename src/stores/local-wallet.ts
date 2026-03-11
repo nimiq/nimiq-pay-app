@@ -1,4 +1,5 @@
 import type { Result } from '@/types'
+import { HDNodeWallet, Mnemonic } from 'ethers/wallet'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
@@ -56,6 +57,37 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     }
   }
 
+  // Cache the Ethereum wallet to avoid expensive BIP44 derivation on every call
+  const ethWallet = computed<HDNodeWallet | null>(() => {
+    if (!entropy.value) {
+      return null
+    }
+    const { data: words, error } = getWords()
+    if (error || !words) {
+      return null
+    }
+    const mnemonic = Mnemonic.fromPhrase(words.join(' '))
+    return HDNodeWallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/0`)
+  })
+
+  function getEthWallet(): Result<HDNodeWallet, string> {
+    const wallet = ethWallet.value
+    if (!wallet) {
+      const err = i18n.t('No account has been found')
+      return { data: undefined, error: err }
+    }
+    return { data: wallet, error: undefined }
+  }
+
+  function getEthAddress(): Result<string, string> {
+    const wallet = ethWallet.value
+    if (!wallet) {
+      const err = i18n.t('No account has been found')
+      return { data: undefined, error: err }
+    }
+    return { data: wallet.address, error: undefined }
+  }
+
   return {
     hasLocalWallet: computed(() => !!entropy?.value),
     localWallet,
@@ -64,5 +96,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     localBalance,
     getWords,
     importWords,
+    getEthAddress,
+    getEthWallet,
   }
 })

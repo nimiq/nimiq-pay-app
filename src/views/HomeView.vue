@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRippleEffect, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, until } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
@@ -21,7 +21,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { isNakaEnabled } from '@/lib'
+import { isDev, isMiniAppsEnabled, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
@@ -29,6 +29,7 @@ import { Crypto, useApp } from '@/stores/app'
 import { useKyc } from '@/stores/kyc'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
+import { useMiniApps } from '@/stores/mini-apps'
 import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -47,6 +48,9 @@ const { isUpdatingTransactions } = storeToRefs(useLocks())
 const { hasCard: hasNakaCard, isNakaAvailable } = storeToRefs(useNaka())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
+
+const { popularDApps } = storeToRefs(useMiniApps())
+const topDAppIcons = computed(() => popularDApps.value.slice(isDev ? 1 : 0, isDev ? 4 : 3).map(d => d.icon))
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -162,9 +166,31 @@ onMounted(() => {
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
             @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { initialState: { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') } })"
           >
-            <CryptoCityLogo slot="start" class="w-5 h-5 mr-2" />
-            {{ phoneNumberVerified ? (pointsBalance / 1e5).toLocaleString() : $t('Earn Points') }}
+            <CryptoCityLogo slot="start" class="w-5 h-5" />
+
+            <span v-if="phoneNumberVerified" class="ml-2">
+              {{ (pointsBalance / 1e5).toLocaleString() }}
+            </span>
           </IonButton>
+
+          <button
+            v-if="isMiniAppsEnabled"
+            aria-label="Mini Apps"
+            class="p-2 ion-activatable relative overflow-hidden rounded-3xl"
+            @click="showModal(Modal.MiniApps)"
+          >
+            <div slot="icon-only" class="relative h-[30px] w-16">
+              <img
+                v-for="(icon, i) in topDAppIcons"
+                :key="i"
+                :src="icon"
+                class="size-[30px] rounded-full ring-2 ring-white object-cover absolute top-0"
+                :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
+                alt=""
+              >
+            </div>
+            <IonRippleEffect />
+          </button>
         </IonButtons>
       </IonToolbar>
     </IonHeader>

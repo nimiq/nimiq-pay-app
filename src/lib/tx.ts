@@ -44,7 +44,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.AccountType.Basic,
       /* recipientData */ Nimiq.BufferUtils.fromUtf8(partialArgs.message || ''),
       /* value */ BigInt(Math.ceil(partialArgs.amount)),
-      /* fee */ 0n,
+      /* fee */ BigInt(partialArgs.fee ?? 0),
       /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
@@ -122,7 +122,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientType */ Nimiq.AccountType.HTLC,
       /* recipientData */ data,
       /* value */ BigInt(partialArgs.amount), // Must be the exact amount
-      /* fee */ 0n,
+      /* fee */ BigInt(partialArgs.fee ?? 0),
       /* flags */ 1,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
@@ -135,6 +135,91 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     if (res.error)
       return res
     return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent, swap }, error: undefined }
+  }
+  else if (partialArgs.transfer === Transfer.Staking) {
+    let data: Uint8Array
+    let value = BigInt(0)
+
+    try {
+      switch (partialArgs.stakingData.type) {
+        case 'create-staker':
+          data = Nimiq.StakingDataBuilder.createStaker(
+            /* delegation */ Nimiq.Address.fromString(partialArgs.stakingData.delegation),
+          )
+          value = BigInt(partialArgs.amount)
+          break
+        case 'add-stake':
+          data = Nimiq.StakingDataBuilder.addStake(
+            /* stakerAddress */ useLocalWallet().localAddress,
+          )
+          value = BigInt(partialArgs.amount)
+          break
+        case 'update-staker':
+          data = Nimiq.StakingDataBuilder.updateStaker(
+            /* newDelegation */ Nimiq.Address.fromString(partialArgs.stakingData.newDelegation),
+            /* reactivateAllStake */ partialArgs.stakingData.reactivateAllStake,
+          )
+          break
+        case 'set-active-stake':
+          data = Nimiq.StakingDataBuilder.setActiveStake(
+            /* newActiveBalance */ BigInt(partialArgs.stakingData.newActiveBalance),
+          )
+          break
+        case 'retire-stake':
+          data = Nimiq.StakingDataBuilder.retireStaker(
+            /* retireStake */ BigInt(partialArgs.stakingData.retireStake),
+          )
+          break
+        case 'remove-stake': {
+          // For stake removal, the local wallet must sign the transaction, the remote wallet is not involved.
+          const tx = Nimiq.TransactionBuilder.newRemoveStake(
+            /* recipient */ useLocalWallet().localAddress,
+            /* value */ BigInt(partialArgs.amount),
+            /* fee */ 0n,
+            /* validityStartHeight */ getValidityStartHeight(),
+            /* networkId */ networkId.value,
+          )
+          tx.sign(useLocalWallet().localWallet, undefined)
+          return { data: { signedTx: tx }, error: undefined }
+        }
+      }
+    }
+    catch (e) {
+      logger.error('Error creating staking transaction', e)
+      return { data: undefined, error: e instanceof Error ? e.message : String(e) }
+    }
+
+    const tx = new Nimiq.Transaction(
+      /* sender */ useRemoteSigner().remoteAddress!,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ Nimiq.Address.fromString(Nimiq.Policy.STAKING_CONTRACT_ADDRESS),
+      /* recipientType */ Nimiq.AccountType.Staking,
+      /* recipientData */ data,
+      /* value */ value,
+      /* fee */ 0n,
+      // If value > 0, it's a create or add stake transaction, otherwise it's a signaling transaction.
+      /* flags */ value > 0n ? 0b00 : 0b10,
+      /* validityStartHeight */ getValidityStartHeight(),
+      /* networkId */ networkId.value,
+    )
+
+    // Next, we create the inner signature and set it on the recipient data field.
+    // Add-stake transactions do not have an inner signature.
+    if (partialArgs.stakingData.type !== 'add-stake') {
+      const { privateKey, publicKey } = useLocalWallet().localWallet
+      const innerSig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
+      const innerSigProof = Nimiq.SignatureProof.singleSig(publicKey, innerSig)
+      tx.data = Nimiq.StakingDataBuilder.setProof(tx.data, innerSigProof)
+    }
+
+    // Now we create the HTLC early resolve proof
+    tx.proof = createResolveProof({ mode: 'early', tx })
+    // Finally, we get the cosigner to sign the transaction
+    const res = await getSignedTxByRemote(tx)
+    if (res.error)
+      return res
+    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     let tx = new Nimiq.Transaction(
@@ -164,7 +249,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       tx.validityStartHeight,
       tx.networkId,
     )
-    tx.sign(useLocalWallet().localWallet)
+    tx.sign(useLocalWallet().localWallet, undefined)
     return { data: { signedTx: tx }, error: undefined }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
@@ -274,7 +359,7 @@ interface GetSignedTxByRemoteArgs {
   address?: Address
 }
 
-async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
+export async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   logger.log('Signing transaction by remote')
   if (!useRemoteSigner().remoteAddress)
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }

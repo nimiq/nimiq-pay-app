@@ -12,6 +12,7 @@ import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-setup'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
@@ -23,7 +24,15 @@ const logger = useLogger('SettingsModal')
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
 const { getAllRemoteSigners } = useRemoteSigner()
-const { language, selectedFiat, pushNotificationsStatus, phoneNumberVerified, showAnimations, decimalsAmount } = storeToRefs(useApp())
+const {
+  language,
+  selectedFiat,
+  pushNotificationsStatus,
+  phoneNumberVerified,
+  showAnimations,
+  decimalsAmount,
+  reopenMiniAppWebviewAfterResume,
+} = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const { unregisterNotifications, registerNotifications } = useNotifications()
@@ -159,6 +168,12 @@ onBeforeMount(updateBiometryInfo)
         <IonItem>
           <IonToggle :checked="!showAnimations" @ion-change="showAnimations = !$event.detail.checked">
             {{ $t('Reduce Animations') }}
+          </IonToggle>
+        </IonItem>
+
+        <IonItem v-if="isMiniAppsEnabled">
+          <IonToggle :checked="reopenMiniAppWebviewAfterResume" @ion-change="reopenMiniAppWebviewAfterResume = $event.detail.checked">
+            {{ $t('Reopen Mini App on unlock') }}
           </IonToggle>
         </IonItem>
 

@@ -327,7 +327,8 @@ function blur() {
 
 watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
   // If going from full to max, wait for scrolling to finish to prevent popping
-  if ((oldHeight === 'h-full' && newHeight === 'h-max')
+  if (
+    (oldHeight === 'h-full' && newHeight === 'h-max')
     || (oldHeight === 'h-full' && newHeight === undefined)
     || (oldHeight === undefined && newHeight === 'h-max')
   ) {

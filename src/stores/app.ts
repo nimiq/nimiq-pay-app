@@ -74,6 +74,7 @@ export const useApp = defineStore('app', () => {
   const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
   const showAnimations = useStorageAsync('showAnimations', !useReducedMotion().value, kvPreferences(), sharedOptions)
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
+  const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -165,5 +166,6 @@ export const useApp = defineStore('app', () => {
     displayedPaymentRequests,
     showAnimations,
     decimalsAmount,
+    reopenMiniAppWebviewAfterResume,
   }
 })

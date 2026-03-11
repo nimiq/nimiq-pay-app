@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { URLOpenListenerEvent } from '@capacitor/app'
 import { App } from '@capacitor/app'
+import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
-import { OrientationType, ScreenOrientation } from '@capawesome/capacitor-screen-orientation'
 import { CameraPreview } from '@capgo/camera-preview'
+import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
 import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
@@ -14,24 +15,17 @@ import { useRouter } from 'vue-router'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
+import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
+import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
 
 onMounted(async () => {
-  if (!useDevice().isWeb) {
-    try {
-      await ScreenOrientation.lock({ type: OrientationType.PORTRAIT_PRIMARY })
-    }
-    catch (error) {
-      logger.error('Failed to lock screen orientation', error)
-    }
-  }
-
   // Stop scanning in case it was still active
   document.body.classList.remove('native-qr-scanner-modal-open')
   try {
@@ -48,6 +42,16 @@ onMounted(async () => {
     }
     catch (error) {
       logger.error('Failed to set status bar style', error)
+    }
+  }
+
+  // Moved here because it was not locking if calling lock too early
+  if (!useDevice().isWeb) {
+    try {
+      await ScreenOrientation.lock({ orientation: 'portrait' })
+    }
+    catch (error) {
+      logger.error('Failed to lock screen orientation', error)
     }
   }
 })
@@ -73,12 +77,49 @@ App.addListener('pause', () => {
 })
 
 App.addListener('resume', async () => {
-  const timeInBackground = Date.now() - lastPauseTimestamp
+  const { reopenMiniAppWebviewAfterResume } = storeToRefs(useApp())
+  const now = Date.now()
+  const timeInBackground = now - lastPauseTimestamp
   logger.log(`App resumed, time in background: ${timeInBackground / 1000}s`)
   // To prevent unexpected behavior (consensus stuck, etc.) we reload the app if it was in background for more than 2 minutes
-  if (lastPauseTimestamp !== 0 && timeInBackground > 2 * 60 * 1000) {
+  if (shouldReloadAppAfterBackground(lastPauseTimestamp, now)) {
     logger.log('Reloading app after being in background for more than 2 minutes')
     await logger.forceSaveToFile()
+
+    // If a mini-app webview is open, keep it only when auto-reopen is enabled
+    const { getActiveMiniAppSession } = await import('@/composables/useMiniAppHost')
+    const { clearSession, saveSession } = await import('@/composables/useMiniAppSession')
+    const activeSession = getActiveMiniAppSession()
+    const preserveSession = shouldPreserveMiniAppSession({
+      hasActiveMiniAppSession: !!activeSession,
+      reopenMiniAppWebviewAfterResume: reopenMiniAppWebviewAfterResume.value,
+    })
+
+    if (preserveSession && activeSession) {
+      try {
+        await InAppBrowser.hide()
+        saveSession(activeSession)
+        logger.log('Mini-app webview hidden, session saved for reconnection after PIN')
+      }
+      catch (err) {
+        logger.error('Failed to hide webview, falling back to close:', err)
+        await clearSession()
+        try {
+          await InAppBrowser.close()
+        }
+        catch {}
+      }
+    }
+    else {
+      await clearSession()
+      if (activeSession && !reopenMiniAppWebviewAfterResume.value)
+        logger.log('Mini-app webview auto-reopen disabled, closing webview on app reload')
+      try {
+        await InAppBrowser.close()
+      }
+      catch {}
+    }
+
     lastPauseTimestamp = 0
     router.go(0)
   }

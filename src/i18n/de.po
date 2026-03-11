@@ -43,6 +43,9 @@ msgstr "NIM-Adresse hinzufügen"
 msgid "Add new card"
 msgstr ""
 
+msgid "Add Stake"
+msgstr ""
+
 msgid "Address copied to clipboard"
 msgstr "Adresse kopiert"
 
@@ -257,6 +260,9 @@ msgstr "Erstelle ein Backup. Es ist der einzige Weg, dein Konto wiederherzustell
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr "Erstelle einen Bluecode-Barcode und zeige ihn zum Bezahlen an der Kasse vor."
 
+msgid "Create Staker"
+msgstr ""
+
 msgid "Cryptocity Points"
 msgstr "Kryptostadt-Punkte"
 
@@ -292,6 +298,11 @@ msgstr "Kryptostadt-Punkte-Konto löschen"
 
 msgid "Delete Points Account"
 msgstr "Punkte-Konto löschen"
+
+#, fuzzy
+#| msgid "Select an address…"
+msgid "Delete Validator"
+msgstr "Eine Adresse auswählen…"
 
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr "Die Löschung deiner Telefonnummer aus dem Kryptostadt-Punkte-System führt zum unwiderruflichen Verlust deiner aktuell gehaltenen Punkte."
@@ -415,6 +426,11 @@ msgid "Failed to set app as preferred NFC service: {error}"
 msgstr ""
 
 msgid "Featured"
+msgstr "Empfohlen"
+
+#, fuzzy
+#| msgid "Featured"
+msgid "Features"
 msgstr "Empfohlen"
 
 msgid "Fees may apply {fee}"
@@ -640,6 +656,9 @@ msgstr "Ausloggen"
 msgid "Login"
 msgstr "Einloggen"
 
+msgid "Mini Apps"
+msgstr ""
+
 msgid "Minimum NIM Decimals"
 msgstr ""
 
@@ -672,6 +691,9 @@ msgstr ""
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "Nimiq Pay und die Nimiq Wallet verwenden unterschiedliche Wiederherstellungswörter."
+
+msgid "No"
+msgstr ""
 
 msgid "No account found"
 msgstr "Kein Konto gefunden"
@@ -914,6 +936,12 @@ msgstr ""
 msgid "Refunded"
 msgstr "Zurückgezahlt"
 
+msgid "Remove Stake"
+msgstr ""
+
+msgid "Reopen Mini App on unlock"
+msgstr ""
+
 #, fuzzy
 #| msgid "Verify your phone number"
 msgid "Requires Phone Number"
@@ -921,6 +949,11 @@ msgstr "Telefonnummer bestätigen"
 
 msgid "Resend"
 msgstr "Erneut senden"
+
+#, fuzzy
+#| msgid "Get Started"
+msgid "Retire Stake"
+msgstr "Los geht's"
 
 msgid "Rewards Notifications"
 msgstr "Boni-Benachrichtigungen"
@@ -986,6 +1019,9 @@ msgstr "Schicke NIM zum Aufladen"
 msgid "Server not available"
 msgstr ""
 
+msgid "Set Active Stake"
+msgstr ""
+
 msgid "Settings"
 msgstr "Einstellungen"
 
@@ -1041,6 +1077,9 @@ msgstr "Etwas ist bei der Verifizierung der Telefonnummer schiefgelaufen"
 msgid "Something went wrong while starting the camera"
 msgstr "Etwas ist bei der Gutschrift des Cashbacks schiefgelaufen"
 
+msgid "Staking Contract"
+msgstr ""
+
 msgid "Standard rates may apply."
 msgstr "Dein Mobilfunkanbieter könnte Kosten erheben."
 
@@ -1051,6 +1090,9 @@ msgid "Store screenshot safely"
 msgstr ""
 
 msgid "Support"
+msgstr ""
+
+msgid "Switched to {chain}"
 msgstr ""
 
 msgid "Syncing with network."
@@ -1114,6 +1156,9 @@ msgstr ""
 
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Dieser Händler ist nicht registriert, um Punkte-Zahlungen entgegenzunehmen."
+
+msgid "This network is not supported by Nimiq Pay"
+msgstr ""
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Bei dieser Zahlung kannst du weder Kryptostadt-Punkte erhalten noch einsetzen."
@@ -1186,6 +1231,9 @@ msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr ""
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
+msgstr ""
+
+msgid "Update Staker"
 msgstr ""
 
 msgid "Updating connection"
@@ -1296,6 +1344,9 @@ msgstr "Die Bitcoin-Lightning-Rechnung (Invoice) bezieht sich auf ein anderes Ne
 
 msgid "Wrong number of recovery words"
 msgstr "Ungültige Zahl an Wiederherstellungswörtern"
+
+msgid "Yes"
+msgstr ""
 
 msgid "You can not use this address"
 msgstr "Du kannst diese Adresse nicht verwenden"
