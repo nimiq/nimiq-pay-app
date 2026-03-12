@@ -54,7 +54,6 @@ export const useConn = defineStore('conn', () => {
     }
 
     if (import.meta.env.DEV)
-
       logger.log(`📚 Initializing database`, migrations)
 
     await sqlite.addUpgradeStatement(DB_NAME, migrations)

@@ -1,137 +1,114 @@
 <script setup lang="ts">
+import { getHistory, getStatus } from '@/lib/walkie-talkie'
 import { storeToRefs } from 'pinia'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, watch } from 'vue'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useNaka } from '@/stores/naka'
 import LiveChatIcon from './icons/live-chat.vue'
 
-const { registration, card } = storeToRefs(useNaka())
-const { shown, loading, pendingMessageCount } = storeToRefs(useLiveChat())
+const livechat = useLiveChat()
+const { shown, loading, pendingMessageCount, sessionId, messages, lastMessageId, online, conversationEnded } = storeToRefs(livechat)
+
+const userId = useLocalWallet().localAddress.toUserFriendlyAddress()
+
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+function startPolling() {
+  stopPolling()
+  if (!sessionId.value) return
+  const interval = shown.value ? 3000 : 15000
+  pollInterval = setInterval(pollMessages, interval)
+}
+
+function stopPolling() {
+  if (pollInterval !== null) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
+async function pollMessages() {
+  if (!sessionId.value) {
+    stopPolling()
+    return
+  }
+  try {
+    const newMessages = await getHistory(userId, sessionId.value, lastMessageId.value)
+    if (newMessages.length === 0) return
+
+    if (!shown.value) {
+      const agentCount = newMessages.filter(m => m.sender.startsWith('agent:')).length
+      pendingMessageCount.value += agentCount
+    }
+
+    messages.value = [...messages.value, ...newMessages]
+    lastMessageId.value = newMessages[newMessages.length - 1].id
+  }
+  catch {
+    // Silently ignore polling errors
+  }
+}
 
 onMounted(async () => {
-  shown.value = true
-  await loadScript()
+  try {
+    const status = await getStatus(userId)
+    online.value = status.online
+    sessionId.value = status.session_id
 
-  const readyPromise = new Promise((resolve) => {
-    function onReady() {
-      document.removeEventListener('chatlio.ready', onReady)
-      resolve(true)
-    }
-    document.addEventListener('chatlio.ready', onReady)
-  })
-
-  await new Promise((resolve) => {
-    function check() {
-      if (window._chatlio) {
-        resolve(true)
-      }
-      else {
-        loading.value = true
-        setTimeout(check, 50)
+    if (status.session_id) {
+      const history = await getHistory(userId, status.session_id, '0')
+      messages.value = history
+      if (history.length > 0) {
+        lastMessageId.value = history[history.length - 1].id
+        conversationEnded.value = false
       }
     }
-    check()
-  })
+  }
+  finally {
+    loading.value = false
+  }
 
-  await readyPromise
-  loading.value = false
-
-  await identify()
-
-  document.addEventListener('chatlio.firstMessageSent', onFirstMessageSent)
-  document.addEventListener('chatlio.messageReceived', onMessageReceived)
-  document.addEventListener('chatlio.conversationEnded', onConversationEnded)
+  if (sessionId.value) {
+    startPolling()
+  }
 })
 
 onUnmounted(() => {
-  document.removeEventListener('chatlio.firstMessageSent', onFirstMessageSent)
-  document.removeEventListener('chatlio.messageReceived', onMessageReceived)
-  document.removeEventListener('chatlio.conversationEnded', onConversationEnded)
+  stopPolling()
 })
 
-async function loadScript() {
-  if (document.getElementById('chatlio-widget-script')) {
-    return
-  }
-
-  const script = document.createElement('script')
-  script.id = 'chatlio-widget-script'
-  script.src = 'https://js.chatlio.com/widget.js'
-  script.async = true
-  const loadPromise = new Promise((resolve) => {
-    script.onload = () => resolve(true)
-  })
-  document.body.appendChild(script)
-  return loadPromise
-}
-
-async function identify() {
-  window._chatlio.identify(useLocalWallet().localAddress.toUserFriendlyAddress(), {
-    'name': registration.value?.nakaIdentification?.firstName?.split(' ')[0],
-    'KYC Status': registration.value?.nakaIdentification?.status || '-',
-    'Card PAN': card.value?.maskedPan || '-',
-    'Card Status': card.value?.statusId || '-',
-    'Card Lock': card.value?.lockLevel || 'no',
-  })
-}
-
-/**
- * If this is true, the chat badge is removed when the chat overlay is closed (shown = false).
- * We set this to true initially, to remove the badge if the user never sends a message.
- * Once the user sends their first message (onFirstMessageSent), we set this to false.
- * Then again to true when the conversation ends (onConversationEnded).
- */
-const conversationEnded = ref(true)
-
-function onFirstMessageSent() {
-  conversationEnded.value = false
-}
-
-// Pending message count logic
-function onMessageReceived() {
-  if (shown.value)
-    return
-  pendingMessageCount.value += 1
-}
-
-// Reset pending message count when chat is opened
+// Adjust polling interval and clear pending count when shown changes
 watch(shown, (isShown) => {
   if (isShown) {
     pendingMessageCount.value = 0
   }
+  if (sessionId.value) {
+    startPolling()
+  }
 })
-
-function onConversationEnded() {
-  conversationEnded.value = true
-}
 
 // Reset state when chat is closed after conversation ended
 watch(shown, (isShown) => {
   if (!isShown && conversationEnded.value) {
-    // This unmounts this badge component by setting enabled = false
-    useLiveChat().reset()
+    livechat.reset()
   }
 })
 
-declare global {
-  interface Window {
-    _chatlio: {
-      identify: (userId: string, traits: Record<string, any>) => void
-      isShown: () => boolean | undefined
-      show: (options?: { expanded: boolean }) => void
-      open: () => void
-      reset: () => void
-    }
+// Start/stop polling when session changes
+watch(sessionId, (newId) => {
+  if (newId) {
+    startPolling()
   }
-}
+  else {
+    stopPolling()
+  }
+})
 </script>
 
 <template>
   <button class="badge flex flex-row items-center gap-1 rounded-full text-white px-3 py-1.5 font-semibold bg-space" @click="shown = !shown">
     <LiveChatIcon class="size-5 text-white" />
     Chat
-    <chatlio-widget widgetid="7aa22465-fd98-4f3a-7621-c7a124a3a8cf" widgettype="inline" />
     <template v-if="pendingMessageCount">
       <div class="absolute top-1 -right-1 rounded-full bg-fire size-3" />
       <div class="absolute top-1 -right-1 rounded-full bg-fire size-3 animate-ping" />
