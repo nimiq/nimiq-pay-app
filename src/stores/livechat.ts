@@ -9,6 +9,7 @@ export const useLiveChat = defineStore('livechat', () => {
   const enabled = ref(false)
   const shown = ref(false)
   const loading = ref(true)
+  const error = ref(false)
   const pendingMessageCount = ref(0)
 
   // Walkie-Talkie session state
@@ -27,6 +28,7 @@ export const useLiveChat = defineStore('livechat', () => {
     enabled.value = false
     shown.value = false
     loading.value = true
+    error.value = false
     pendingMessageCount.value = 0
     sessionId.value = null
     messages.value = []
@@ -49,31 +51,34 @@ export const useLiveChat = defineStore('livechat', () => {
     const trimmed = text.trim()
     if (!trimmed) return
 
-    const userId = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
     // Optimistically append user message
-    messages.value = [...messages.value, {
-      id: `local-${Date.now()}`,
+    const message = {
+      id: '',
       sender: 'user',
       content: trimmed,
-      timestamp: new Date().toISOString(),
-    }]
+      timestamp: new Date().toISOString().substring(0, 19).replace('T', ' '), // Walkie-Talkie format is "YYYY-MM-DD HH:MM:SS"
+    }
+    messages.value.push(message)
 
     if (!sessionId.value) {
       const preamble = buildTraitsPreamble()
-      const firstMessage = `${preamble}\n\n${trimmed}`
-      const result = await apiStartSession(userId, firstMessage)
+      const result = await apiStartSession(userId, preamble)
       sessionId.value = result.session_id
       conversationEnded.value = false
+      const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
+      messages.value.find(m => !m.id && m.timestamp === message.timestamp)!.id = message_id
     }
     else {
-      await apiSendMessage(userId, sessionId.value, trimmed)
+      const { message_id } = await apiSendMessage(userId, sessionId.value, trimmed)
+      messages.value.find(m => !m.id && m.timestamp === message.timestamp)!.id = message_id
     }
   }
 
   async function closeSession() {
     if (!sessionId.value) return
-    const userId = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
     await apiCloseSession(userId, sessionId.value)
     sessionId.value = null
     conversationEnded.value = true
@@ -83,6 +88,7 @@ export const useLiveChat = defineStore('livechat', () => {
     enabled,
     shown,
     loading,
+    error,
     pendingMessageCount,
     sessionId,
     messages,

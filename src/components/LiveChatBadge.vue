@@ -7,9 +7,9 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import LiveChatIcon from './icons/live-chat.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, pendingMessageCount, sessionId, messages, lastMessageId, online, conversationEnded } = storeToRefs(livechat)
+const { shown, loading, error, pendingMessageCount, sessionId, messages, lastMessageId, online, conversationEnded } = storeToRefs(livechat)
 
-const userId = useLocalWallet().localAddress.toUserFriendlyAddress()
+const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
 
@@ -34,15 +34,21 @@ async function pollMessages() {
   }
   try {
     const newMessages = await getHistory(userId, sessionId.value, lastMessageId.value)
-    if (newMessages.length === 0) return
+    if (!newMessages.length) return
+    lastMessageId.value = newMessages.at(-1)!.id
+
+    // Filter out messages we already have (in case of out-of-order delivery)
+    const existingIds = new Set(messages.value.map(m => m.id))
+    const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
+    if (!uniqueNewMessages.length) return
 
     if (!shown.value) {
-      const agentCount = newMessages.filter(m => m.sender.startsWith('agent:')).length
+      const agentCount = uniqueNewMessages.filter(m => m.sender.startsWith('agent:')).length
       pendingMessageCount.value += agentCount
     }
 
-    messages.value = [...messages.value, ...newMessages]
-    lastMessageId.value = newMessages[newMessages.length - 1].id
+    messages.value = [...messages.value, ...uniqueNewMessages]
+      .sort((a, b) => a.timestamp === b.timestamp ? 0 : a.timestamp > b.timestamp ? 1 : -1)
   }
   catch {
     // Silently ignore polling errors
@@ -56,13 +62,16 @@ onMounted(async () => {
     sessionId.value = status.session_id
 
     if (status.session_id) {
+      conversationEnded.value = false
       const history = await getHistory(userId, status.session_id, '0')
       messages.value = history
       if (history.length > 0) {
-        lastMessageId.value = history[history.length - 1].id
-        conversationEnded.value = false
+        lastMessageId.value = history.at(-1)!.id
       }
     }
+  }
+  catch {
+    error.value = true
   }
   finally {
     loading.value = false

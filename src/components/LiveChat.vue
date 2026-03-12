@@ -7,7 +7,7 @@ import { useLiveChat } from '@/stores/livechat'
 import LoadingSpinnerIcon from './icons/loading-spinner.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, messages, online } = storeToRefs(livechat)
+const { shown, loading, error, messages, online } = storeToRefs(livechat)
 
 const inputText = ref('')
 const messageListRef = ref<HTMLElement | null>(null)
@@ -51,7 +51,7 @@ function agentName(sender: string): string {
 }
 
 function formatTime(timestamp: string): string {
-  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(timestamp.replace(' ', 'T') + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
@@ -85,6 +85,11 @@ function formatTime(timestamp: string): string {
         <span class="text-space/50 text-xl font-semibold">{{ $t('Loading...') }}</span>
       </div>
 
+      <!-- Error state -->
+      <div v-else-if="error" class="flex-grow flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <span class="text-space/50 text-sm">{{ $t('Could not connect to support. Please try again later.') }}</span>
+      </div>
+
       <template v-else>
         <!-- Message list -->
         <div ref="messageListRef" class="flex-grow overflow-y-auto p-4 flex flex-col gap-3">
@@ -96,7 +101,7 @@ function formatTime(timestamp: string): string {
           <!-- Messages -->
           <div
             v-for="msg in messages"
-            :key="msg.id"
+            :key="msg.id || 'pending-' + msg.timestamp"
             class="flex flex-col max-w-[80%]"
             :class="msg.sender === 'user' ? 'self-end items-end' : 'self-start items-start'"
           >
@@ -106,12 +111,12 @@ function formatTime(timestamp: string): string {
             <div
               class="rounded-2xl px-3 py-2 text-sm leading-relaxed"
               :class="msg.sender === 'user'
-                ? 'bg-blue text-white rounded-br-sm'
+                ? 'bg-sky text-white rounded-br-sm'
                 : 'bg-neutral-100 text-space rounded-bl-sm'"
             >
               {{ msg.content }}
             </div>
-            <span class="text-xs text-space/40 mt-1 px-1">{{ formatTime(msg.timestamp) }}</span>
+            <span class="text-xs text-space/40 mt-1 px-1">{{ msg.id ? formatTime(msg.timestamp) : 'Sending...' }}</span>
           </div>
         </div>
 
@@ -120,7 +125,7 @@ function formatTime(timestamp: string): string {
           <textarea
             v-model="inputText"
             rows="1"
-            class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-blue transition-colors max-h-32"
+            class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32"
             :placeholder="$t('Type a message...')"
             @keydown="onKeydown"
           />
