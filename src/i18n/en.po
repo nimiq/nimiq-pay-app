@@ -19,7 +19,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:52
-#: src/views/HomeView.vue:106
+#: src/views/HomeView.vue:108
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -27,7 +27,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:99
+#: src/views/HomeView.vue:101
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -1134,7 +1134,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:83
+#: src/views/MainView.vue:81
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1192,7 +1192,7 @@ msgstr ""
 msgid "Reopen Mini App on unlock"
 msgstr ""
 
-#: src/views/HomeView.vue:107
+#: src/views/HomeView.vue:109
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1278,7 +1278,7 @@ msgid "Send NIM to top up"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:102
-#: src/views/MainView.vue:74
+#: src/views/MainView.vue:72
 msgid "Server not available"
 msgstr ""
 
@@ -1398,7 +1398,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:98
+#: src/views/HomeView.vue:100
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1742,7 +1742,7 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/views/HomeView.vue:112
+#: src/views/HomeView.vue:114
 msgid "You have a reward to claim!"
 msgstr ""
 
