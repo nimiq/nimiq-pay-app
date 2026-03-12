@@ -27,12 +27,17 @@ async function handleConfirm() {
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
     if (hasCard.value) {
-      await HCESdk.initialize({ storageName: 'naka-card' })
-      const { cards } = await HCESdk.getAllSucceededCards()
-      logger.log('Cards: in SDK storage', cards)
-      for (const card of cards) {
-        logger.log('Deactivating card', card)
-        await HCESdk.deactivateCard({ cardId: card.id })
+      try {
+        await HCESdk.initialize({ storageName: 'naka-card' })
+        const { cards } = await HCESdk.getAllSucceededCards()
+        logger.log('Cards: in SDK storage', cards)
+        for (const card of cards) {
+          logger.log('Deactivating card', card)
+          await HCESdk.deactivateCard({ cardId: card.id })
+        }
+      }
+      catch (error) {
+        logger.error('Error deactivating NAKA card during logout', error)
       }
     }
     await deleteDatabase()
