@@ -13,6 +13,7 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 
 const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
+const { homeBalanceState } = storeToRefs(useRemoteSigner())
 const { isTransactionPending } = storeToRefs(useSync())
 const { showAnimations } = storeToRefs(useApp())
 const { isProcessingRemote } = storeToRefs(useLocks())
@@ -20,12 +21,11 @@ const { fiat, crypto } = usePrice(balance)
 
 /**
  * Show skeleton if:
- *  - Balance is not set (fetching)
- *  - The nodes are not synced (we don't know the balance yet)
- *  - The HTLC is being created and the tx is not mined yet (balance -1)
- *  - The balance is 0 and the HTLC is not active yet (could be because there is an extension or the HTLC was not found when previously there was an active HTLC)
+ *  - The home balance is still unresolved
+ *  - There is a pending HTLC-related transaction
+ *  - The remote wallet is currently being processed
  */
-const showSkeleton = computed(() => balance.value < 0 || (balance.value === 0 && isTransactionPending.value) || isProcessingRemote.value)
+const showSkeleton = computed(() => homeBalanceState.value === 'loading' || (balance.value === 0 && isTransactionPending.value) || isProcessingRemote.value)
 
 const animatedAmount = ref(0)
 const countMotionValue = useMotionValue(0)

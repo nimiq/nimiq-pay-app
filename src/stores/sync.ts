@@ -40,7 +40,7 @@ export const useSync = defineStore('sync', () => {
   const { query } = useConn()
   const { client, height: localHeight, lastMacroBlockHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
-  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey, remoteSigner } = storeToRefs(useRemoteSigner())
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey, remoteSigner, homeBalanceState } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, addStakingtransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
@@ -273,6 +273,7 @@ export const useSync = defineStore('sync', () => {
     await until(client).toBeTruthy()
     logger.log('Waiting for consensus to be established')
     await client.value!.waitForConsensusEstablished()
+    await useRemoteSigner().resolveHomeBalanceState()
 
     logger.log('Verifying remote signers in DB')
     await verifyRemoteSignersDb()
@@ -1057,7 +1058,13 @@ export const useSync = defineStore('sync', () => {
       checkExpiredSwapHtlcs()
   })
 
-  watch([remoteBalance, isHtlcActive], async ([newBalance], [oldBalance]) => {
+  watch([remoteBalance, isHtlcActive, homeBalanceState], async ([newBalance, , balanceState], [oldBalance]) => {
+    if (balanceState === 'resolved-empty') {
+      logger.log('Home balance resolved as empty. Show 0 balance instead of skeleton')
+      isProcessingRemote.value = false
+      return
+    }
+
     if (newBalance > 0 && isHtlcActive.value) {
       logger.log('Remote signer has funds. Show balance instead of skeleton', { newBalance, oldBalance })
       isProcessingRemote.value = false
