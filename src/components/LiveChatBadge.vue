@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { getHistory, getStatus } from '@/lib/walkie-talkie'
 import { storeToRefs } from 'pinia'
 import { onMounted, onUnmounted, watch } from 'vue'
+import { getHistory, getStatus } from '@/lib/walkie-talkie'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocalWallet } from '@/stores/local-wallet'
 import LiveChatIcon from './icons/live-chat.vue'
@@ -15,7 +15,8 @@ let pollInterval: ReturnType<typeof setInterval> | null = null
 
 function startPolling() {
   stopPolling()
-  if (!sessionId.value) return
+  if (!sessionId.value)
+    return
   const interval = shown.value ? 3000 : 15000
   pollInterval = setInterval(pollMessages, interval)
 }
@@ -34,13 +35,15 @@ async function pollMessages() {
   }
   try {
     const newMessages = await getHistory(userId, sessionId.value, lastMessageId.value)
-    if (!newMessages.length) return
+    if (!newMessages.length)
+      return
     lastMessageId.value = newMessages.at(-1)!.id
 
     // Filter out messages we already have (in case of out-of-order delivery)
     const existingIds = new Set(messages.value.map(m => m.id))
     const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
-    if (!uniqueNewMessages.length) return
+    if (!uniqueNewMessages.length)
+      return
 
     if (!shown.value) {
       const agentCount = uniqueNewMessages.filter(m => m.sender.startsWith('agent:')).length

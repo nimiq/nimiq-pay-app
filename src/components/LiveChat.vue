@@ -23,12 +23,14 @@ function scrollToBottom() {
 
 watch(messages, scrollToBottom, { deep: true })
 watch(shown, (isShown) => {
-  if (isShown) scrollToBottom()
+  if (isShown)
+    scrollToBottom()
 })
 
 async function handleSend() {
   const text = inputText.value.trim()
-  if (!text || sending.value) return
+  if (!text || sending.value)
+    return
   inputText.value = ''
   sending.value = true
   try {
@@ -51,7 +53,7 @@ function agentName(sender: string): string {
 }
 
 function formatTime(timestamp: string): string {
-  return new Date(timestamp.replace(' ', 'T') + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(`${timestamp.replace(' ', 'T')}Z`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 
@@ -101,7 +103,7 @@ function formatTime(timestamp: string): string {
           <!-- Messages -->
           <div
             v-for="msg in messages"
-            :key="msg.id || 'pending-' + msg.timestamp"
+            :key="msg.id || `pending-${msg.timestamp}`"
             class="flex flex-col max-w-[80%]"
             :class="msg.sender === 'user' ? 'self-end items-end' : 'self-start items-start'"
           >
@@ -136,7 +138,7 @@ function formatTime(timestamp: string): string {
             class="shrink-0"
             @click="handleSend"
           >
-            <IonIcon :icon="send" slot="icon-only" />
+            <IonIcon slot="icon-only" :icon="send" />
           </IonButton>
         </div>
       </template>

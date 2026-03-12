@@ -1,7 +1,7 @@
 import type { WtMessage } from '@/lib/walkie-talkie'
-import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession } from '@/lib/walkie-talkie'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession } from '@/lib/walkie-talkie'
 import { useLocalWallet } from './local-wallet'
 import { useNaka } from './naka'
 
@@ -49,7 +49,8 @@ export const useLiveChat = defineStore('livechat', () => {
 
   async function sendMessage(text: string) {
     const trimmed = text.trim()
-    if (!trimmed) return
+    if (!trimmed)
+      return
 
     const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
@@ -77,7 +78,8 @@ export const useLiveChat = defineStore('livechat', () => {
   }
 
   async function closeSession() {
-    if (!sessionId.value) return
+    if (!sessionId.value)
+      return
     const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
     await apiCloseSession(userId, sessionId.value)
     sessionId.value = null
