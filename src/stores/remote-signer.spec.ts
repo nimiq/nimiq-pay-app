@@ -211,7 +211,7 @@ describe('useRemoteSigner', () => {
   it('resolves as remote without consensus when an HTLC signer is already known', async () => {
     state.consensus = 'connecting'
     state.query.mockImplementation(((sql: string, _params?: unknown[], options?: { single?: boolean }) => {
-      if (options?.single)
+      if (options?.single) {
         return Promise.resolve({
           active: true,
           balance: 25,
@@ -221,6 +221,7 @@ describe('useRemoteSigner', () => {
           start: 123_000,
           address: 'NQ11 TEST REMOTE ADDRESS',
         })
+      }
       return Promise.resolve([])
     }) as any)
 
