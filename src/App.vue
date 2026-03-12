@@ -4,6 +4,7 @@ import { App } from '@capacitor/app'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
+import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
@@ -143,6 +144,12 @@ App.addListener('resume', async () => {
     logger.log('Local height is behind remote height, reconnecting...')
     useNimiqNetwork().reconnect()
   }
+
+  try {
+  // Reload feature flags, it may have changed but not updated until app is closed and reopened
+    await Posthog.reloadFeatureFlags()
+  }
+  catch {}
 })
 </script>
 

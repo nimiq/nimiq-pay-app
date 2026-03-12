@@ -22,7 +22,6 @@ import { debounceDelay, debounceMaxWait } from '@/lib'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
-import { useGeoIp } from '@/stores/geoip'
 import { useKyc } from '@/stores/kyc'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -45,8 +44,7 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
-const { updateUser: updateNakaUser, isCountryNakaSupported } = useNaka()
-const { isNakaAvailable } = storeToRefs(useNaka())
+const { updateUser: updateNakaUser } = useNaka()
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { checkKycInBackground } = useKyc()
 
@@ -196,23 +194,11 @@ onMounted(async () => {
     return
   }
 
-  // Check if NAKA is available in this region
-  // const { country } = await useGeoIp().locate(ip)
-  // if (country)
-  //   isNakaAvailable.value = isCountryNakaSupported(country)
-  // Getting IP first to store it in cache
   try {
-    const ip = await useGeoIp().getIp()
-    const response = await useGeoIp().locate(ip)
-    logger.log('Geo IP response for NAKA availability', response)
-
-    if ('country_code' in response)
-      isNakaAvailable.value = isCountryNakaSupported(response.country_code)
-
     updateNakaUser() // Fire and forget
   }
   catch (error) {
-    logger.error('Error determining geo IP for NAKA availability:', error)
+    logger.error('Error updating NAKA user:', error)
   }
 
   try {

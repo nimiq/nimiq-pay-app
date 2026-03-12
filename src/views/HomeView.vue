@@ -26,6 +26,7 @@ import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useKyc } from '@/stores/kyc'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
@@ -45,7 +46,8 @@ const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
-const { hasCard: hasNakaCard, isNakaAvailable } = storeToRefs(useNaka())
+const { hasCard: hasNakaCard } = storeToRefs(useNaka())
+const { isNakaAvailable } = storeToRefs(useFeatureFlags())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 

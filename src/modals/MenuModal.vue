@@ -21,6 +21,7 @@ import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLiveChat } from '@/stores/livechat'
 import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
@@ -35,7 +36,8 @@ function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
 
-const { hasCard, registration, isNakaAvailable } = storeToRefs(useNaka())
+const { hasCard, registration } = storeToRefs(useNaka())
+const { isNakaAvailable } = storeToRefs(useFeatureFlags())
 
 function openLiveChat() {
   liveChatEnabled.value = true

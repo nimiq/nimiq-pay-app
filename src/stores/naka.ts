@@ -126,7 +126,6 @@ export interface NakaRegistration {
 }
 
 export const useNaka = defineStore('naka', () => {
-  const isNakaAvailable = ref(false)
   const { isAppStarting } = storeToRefs(useLocks())
   const { getAllNakaCards, insertNakaCard, purgeNakaCards } = useNakaDb()
 
@@ -455,7 +454,6 @@ export const useNaka = defineStore('naka', () => {
   }
 
   return {
-    isNakaAvailable,
     isCountryNakaSupported,
 
     registration,

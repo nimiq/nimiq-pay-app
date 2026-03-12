@@ -7,12 +7,12 @@ import { hash } from '@/composables/useDecrypt'
 import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
-import { useNaka } from '@/stores/naka'
+import { useFeatureFlags } from '@/stores/feature-flags'
 
 const logger = useLogger('SecretFeaturesModal')
 const { closeAllModals } = useModal()
 
-const { isNakaAvailable } = storeToRefs(useNaka())
+const { isNakaAvailable } = storeToRefs(useFeatureFlags())
 
 const featureString = ref('')
 
