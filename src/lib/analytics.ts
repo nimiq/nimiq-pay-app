@@ -1,5 +1,9 @@
+import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
+import { useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
+
+const logger = useLogger('Analytics')
 
 export type DAppOpenSource = 'featured' | 'recent' | 'search'
 
@@ -59,4 +63,14 @@ export function trackChainSwitched(dappUrl: string, fromChainId: string, toChain
     event: 'miniapp_chain_switched',
     properties: { dapp_url: dappUrl, from_chain_id: fromChainId, to_chain_id: toChainId },
   })
+}
+
+export async function identifyUser() {
+  try {
+    const { identifier } = await Device.getId()
+    Posthog.identify({ distinctId: identifier, userProperties: { isDev } })
+  }
+  catch (error) {
+    logger.error('Failed to identify user in Posthog', error)
+  }
 }

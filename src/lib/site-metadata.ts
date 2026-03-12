@@ -64,6 +64,7 @@ export async function fetchPageDescription(url: string): Promise<string | undefi
       || undefined
   }
   catch {
+    console.warn('Error fetching page metadata for', url)
     return undefined
   }
 }
