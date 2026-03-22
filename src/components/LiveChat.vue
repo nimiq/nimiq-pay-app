@@ -13,6 +13,7 @@ const inputText = ref('')
 const showEndConfirm = ref(false)
 const chatEnded = computed(() => conversationEnded.value && messages.value.length > 0)
 const messageListRef = ref<HTMLElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const sending = ref(false)
 
 function scrollToBottom() {
@@ -29,11 +30,20 @@ watch(shown, (isShown) => {
     scrollToBottom()
 })
 
+function autoResize() {
+  if (!textareaRef.value)
+    return
+  textareaRef.value.style.height = 'auto'
+  textareaRef.value.style.height = `${textareaRef.value.scrollHeight}px`
+}
+
 async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value)
     return
   inputText.value = ''
+  if (textareaRef.value)
+    textareaRef.value.style.height = 'auto'
   sending.value = true
   try {
     await livechat.sendMessage(text)
@@ -70,13 +80,15 @@ function formatTime(timestamp: string): string {
     <div class="bg-white rounded-2xl overflow-hidden flex flex-col h-full relative">
       <!-- Toolbar -->
       <IonToolbar>
-        <IonTitle slot="start" class="font-bold text-2xl tracking-normal flex items-center gap-2">
-          Live Chat
-          <span
-            class="inline-block size-2 rounded-full ml-1"
-            :class="online ? 'bg-green' : 'bg-neutral-300'"
-            :title="online ? $t('Agent online') : $t('Agent offline')"
-          />
+        <IonTitle slot="start" class="font-bold text-2xl tracking-normal">
+          <span class="flex items-center gap-2">
+            Live Chat
+            <span
+              class="inline-block size-2 rounded-full"
+              :class="online ? 'bg-green-500' : 'bg-neutral-300'"
+              :title="online ? $t('Agent online') : $t('Agent offline')"
+            />
+          </span>
         </IonTitle>
         <IonButtons slot="end">
           <IonButton v-if="!chatEnded" @click.stop="showEndConfirm = true">
@@ -116,7 +128,7 @@ function formatTime(timestamp: string): string {
 
       <!-- Chat ended thank-you screen -->
       <div v-else-if="chatEnded" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <div class="size-14 rounded-full bg-green/10 flex items-center justify-center">
+        <div class="size-14 rounded-full bg-green-500/10 flex items-center justify-center">
           <IonIcon :icon="checkmarkCircle" class="text-green text-4xl" />
         </div>
         <p class="text-space font-semibold text-base">{{ $t('Thanks for reaching out!') }}</p>
@@ -145,7 +157,7 @@ function formatTime(timestamp: string): string {
               {{ agentName(msg.sender) }}
             </span>
             <div
-              class="rounded-2xl px-3 py-2 text-sm leading-relaxed"
+              class="rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
               :class="msg.sender === 'user'
                 ? 'bg-sky text-white rounded-br-sm'
                 : 'bg-neutral-100 text-space rounded-bl-sm'"
@@ -159,10 +171,12 @@ function formatTime(timestamp: string): string {
         <!-- Input area -->
         <div class="border-t border-neutral-100 p-3 flex gap-2 items-end">
           <textarea
+            ref="textareaRef"
             v-model="inputText"
             rows="1"
             class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32"
             :placeholder="$t('Type a message...')"
+            @input="autoResize"
             @keydown="onKeydown"
           />
           <IonButton

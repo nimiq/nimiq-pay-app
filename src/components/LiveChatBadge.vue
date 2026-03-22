@@ -12,6 +12,30 @@ const { shown, loading, error, pendingMessageCount, sessionId, messages, lastMes
 const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
 let pollInterval: ReturnType<typeof setInterval> | null = null
+let statusPollInterval: ReturnType<typeof setInterval> | null = null
+
+async function pollStatus() {
+  try {
+    const status = await getStatus(userId)
+    online.value = status.online
+  }
+  catch {
+    // Silently ignore polling errors
+  }
+}
+
+function startStatusPolling() {
+  if (statusPollInterval !== null)
+    return
+  statusPollInterval = setInterval(pollStatus, 60_000)
+}
+
+function stopStatusPolling() {
+  if (statusPollInterval !== null) {
+    clearInterval(statusPollInterval)
+    statusPollInterval = null
+  }
+}
 
 function startPolling() {
   stopPolling()
@@ -44,6 +68,10 @@ async function pollMessages() {
     const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.id))
     if (!uniqueNewMessages.length)
       return
+
+    if (uniqueNewMessages.some(m => m.sender.startsWith('agent:'))) {
+      online.value = true
+    }
 
     if (!shown.value) {
       const agentCount = uniqueNewMessages.filter(m => m.sender.startsWith('agent:')).length
@@ -80,6 +108,8 @@ onMounted(async () => {
     loading.value = false
   }
 
+  startStatusPolling()
+
   if (sessionId.value) {
     startPolling()
   }
@@ -87,6 +117,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   stopPolling()
+  stopStatusPolling()
 })
 
 // Adjust polling interval and clear pending count when shown changes
