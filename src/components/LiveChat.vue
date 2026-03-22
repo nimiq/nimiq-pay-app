@@ -92,7 +92,7 @@ function formatTime(timestamp: string): string {
         </IonTitle>
         <IonButtons slot="end">
           <IonButton v-if="!chatEnded" @click.stop="showEndConfirm = true">
-            <span class="text-space/60 text-sm font-medium mr-1">{{ $t('End') }}</span>
+            <span class="text-space/60 text-sm font-medium mr-1">{{ $t('End Chat') }}</span>
           </IonButton>
           <IonButton @click.stop="shown = false">
             <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
@@ -105,10 +105,10 @@ function formatTime(timestamp: string): string {
         <div class="bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg w-full max-w-xs">
           <p class="text-space font-semibold text-base text-center">{{ $t('End this chat?') }}</p>
           <div class="flex gap-3">
-            <IonButton fill="outline" expand="block" class="flex-1" @click.stop="showEndConfirm = false">
+            <IonButton fill="clear" expand="block" class="flex-1 h-0" @click.stop="showEndConfirm = false">
               {{ $t('Cancel') }}
             </IonButton>
-            <IonButton fill="solid" expand="block" class="flex-1" color="danger" @click.stop="confirmEnd">
+            <IonButton fill="solid" expand="block" class="flex-1 h-0" color="danger" @click.stop="confirmEnd">
               {{ $t('End Chat') }}
             </IonButton>
           </div>
@@ -128,8 +128,8 @@ function formatTime(timestamp: string): string {
 
       <!-- Chat ended thank-you screen -->
       <div v-else-if="chatEnded" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <div class="size-14 rounded-full bg-green-500/10 flex items-center justify-center">
-          <IonIcon :icon="checkmarkCircle" class="text-green text-4xl" />
+        <div class="size-14 rounded-full bg-green-500 flex items-center justify-center">
+          <IonIcon :icon="checkmarkCircle" class="text-white text-4xl" />
         </div>
         <p class="text-space font-semibold text-base">{{ $t('Thanks for reaching out!') }}</p>
         <p class="text-space/60 text-sm leading-relaxed">
@@ -174,7 +174,7 @@ function formatTime(timestamp: string): string {
             ref="textareaRef"
             v-model="inputText"
             rows="1"
-            class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32"
+            class="flex-grow resize-none rounded-xl border border-neutral-200 px-3 py-2 text-sm outline-none focus:border-sky transition-colors max-h-32 min-h-12"
             :placeholder="$t('Type a message...')"
             @input="autoResize"
             @keydown="onKeydown"
@@ -183,7 +183,7 @@ function formatTime(timestamp: string): string {
             fill="solid"
             shape="round"
             :disabled="!inputText.trim() || sending"
-            class="shrink-0"
+            class="shrink-0 h-0"
             @click="handleSend"
           >
             <IonIcon slot="icon-only" :icon="send" />
