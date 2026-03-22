@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { IonButton, IonButtons, IonIcon, IonTitle, IonToolbar } from '@ionic/vue'
-import { close, send } from 'ionicons/icons'
+import { checkmarkCircle, close, send } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useLiveChat } from '@/stores/livechat'
 import LoadingSpinnerIcon from './icons/loading-spinner.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, error, messages, online } = storeToRefs(livechat)
+const { shown, loading, error, messages, online, conversationEnded } = storeToRefs(livechat)
 
 const inputText = ref('')
+const showEndConfirm = ref(false)
+const chatEnded = computed(() => conversationEnded.value && messages.value.length > 0)
 const messageListRef = ref<HTMLElement | null>(null)
 const sending = ref(false)
 
@@ -48,6 +50,11 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 
+async function confirmEnd() {
+  showEndConfirm.value = false
+  await livechat.closeSession()
+}
+
 function agentName(sender: string): string {
   return sender.startsWith('agent:') ? sender.slice('agent:'.length) : sender
 }
@@ -60,7 +67,7 @@ function formatTime(timestamp: string): string {
 <template>
   <div class="overlay" :class="{ visible: shown }">
     <div class="w-6 h-6 -mt-6 ml-24 border-[12px] border-l-transparent border-r-transparent border-t-transparent border-b-white" />
-    <div class="bg-white rounded-2xl overflow-hidden flex flex-col h-full">
+    <div class="bg-white rounded-2xl overflow-hidden flex flex-col h-full relative">
       <!-- Toolbar -->
       <IonToolbar>
         <IonTitle slot="start" class="font-bold text-2xl tracking-normal flex items-center gap-2">
@@ -72,7 +79,7 @@ function formatTime(timestamp: string): string {
           />
         </IonTitle>
         <IonButtons slot="end">
-          <IonButton @click.stop="livechat.closeSession()">
+          <IonButton v-if="!chatEnded" @click.stop="showEndConfirm = true">
             <span class="text-space/60 text-sm font-medium mr-1">{{ $t('End') }}</span>
           </IonButton>
           <IonButton @click.stop="shown = false">
@@ -80,6 +87,21 @@ function formatTime(timestamp: string): string {
           </IonButton>
         </IonButtons>
       </IonToolbar>
+
+      <!-- Confirmation dialog overlay (absolute, always on top) -->
+      <div v-if="showEndConfirm" class="absolute inset-0 bg-black/30 flex items-center justify-center z-10 rounded-2xl p-6">
+        <div class="bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg w-full max-w-xs">
+          <p class="text-space font-semibold text-base text-center">{{ $t('End this chat?') }}</p>
+          <div class="flex gap-3">
+            <IonButton fill="outline" expand="block" class="flex-1" @click.stop="showEndConfirm = false">
+              {{ $t('Cancel') }}
+            </IonButton>
+            <IonButton fill="solid" expand="block" class="flex-1" color="danger" @click.stop="confirmEnd">
+              {{ $t('End Chat') }}
+            </IonButton>
+          </div>
+        </div>
+      </div>
 
       <!-- Loading state -->
       <div v-if="loading" class="text-center mb-10 flex flex-row gap-2 h-full items-center justify-center">
@@ -92,6 +114,18 @@ function formatTime(timestamp: string): string {
         <span class="text-space/50 text-sm">{{ $t('Could not connect to support. Please try again later.') }}</span>
       </div>
 
+      <!-- Chat ended thank-you screen -->
+      <div v-else-if="chatEnded" class="flex-grow flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <div class="size-14 rounded-full bg-green/10 flex items-center justify-center">
+          <IonIcon :icon="checkmarkCircle" class="text-green text-4xl" />
+        </div>
+        <p class="text-space font-semibold text-base">{{ $t('Thanks for reaching out!') }}</p>
+        <p class="text-space/60 text-sm leading-relaxed">
+          {{ $t('We hope your issue was resolved. Close and reopen this chat to start a new conversation.') }}
+        </p>
+      </div>
+
+      <!-- Normal message list + input (chat in progress) -->
       <template v-else>
         <!-- Message list -->
         <div ref="messageListRef" class="flex-grow overflow-y-auto p-4 flex flex-col gap-3">
