@@ -1,3 +1,5 @@
+import { nativeFetch } from "./nativeFetch"
+
 export interface WtMessage {
   id: string
   sender: string // "user" | "agent:<name>"
@@ -15,7 +17,7 @@ const API_KEY = __WALKIE_TALKIE_API_KEY__
 const headers = () => ({ 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' })
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, { headers: headers(), ...options })
+  const res = await nativeFetch(url, { headers: headers(), ...options })
   if (!res.ok) {
     throw new Error(`Walkie-Talkie API error ${res.status}: ${await res.text()}`)
   }
