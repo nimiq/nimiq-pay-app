@@ -17,6 +17,11 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
+import {
+  USER_REJECTED_REQUEST_CODE,
+  USER_REJECTED_REQUEST_MESSAGE,
+} from '../../web3-provider/src/provider-errors'
+import { generateUUID } from '../../web3-provider/src/utils'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
@@ -46,6 +51,17 @@ export function getActiveMiniAppSession(): MiniAppSessionState | null {
 export interface SignatureResult {
   publicKey: string
   signature: string
+}
+
+interface EthAccountsPermission {
+  caveats: Array<{
+    type: 'restrictReturnedAccounts'
+    value: string[]
+  }>
+  date: number
+  id: string
+  invoker: string
+  parentCapability: 'eth_accounts'
 }
 
 /** Type for Nimiq message signing params */
@@ -132,6 +148,7 @@ export class MiniAppHost {
   private messageFromWebviewListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
+  private ethAccountsPermission: EthAccountsPermission | null = null
 
   /** Resolve the RPC URL for the given chain (or current chain if not specified) */
   private getRpcUrlForChain(chainId?: string): string | undefined {
@@ -215,16 +232,11 @@ export class MiniAppHost {
             if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
               this.showErrorToast(error.message)
             }
-            // Re-throw as serializable error for birpc transport
-            const rpcError = new Error(error.message)
-            Object.assign(rpcError, { code: this.errorCode(error) })
-            throw rpcError
+            throw this.createRpcError(this.errorCode(error), error.message)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
           this.showErrorToast(message)
-          const rpcError = new Error(message)
-          Object.assign(rpcError, { code: -32603 })
-          throw rpcError
+          throw this.createRpcError(-32603, message)
         }
       },
       requestChainApproval: async (request: ChainApprovalRequest): Promise<boolean> => {
@@ -337,7 +349,7 @@ export class MiniAppHost {
 
   private errorCode(error: MiniAppError): number {
     if (error instanceof PermissionDeniedError)
-      return 4001
+      return USER_REJECTED_REQUEST_CODE
     if (error instanceof UnknownRequestError)
       return 4200
     if (error instanceof InvalidTransactionError)
@@ -347,6 +359,77 @@ export class MiniAppHost {
     return -32603 // InternalError / default
   }
 
+  // Plain object — Error objects don't serialize correctly over birpc
+  private createRpcError(code: number, message: string): { code: number, message: string } {
+    return { code, message }
+  }
+
+  private getEthPermissions(): EthAccountsPermission[] {
+    return this.ethAccountsPermission ? [this.ethAccountsPermission] : []
+  }
+
+  private ensureEthAccountsPermission(address: string): EthAccountsPermission {
+    if (this.ethAccountsPermission) {
+      return this.ethAccountsPermission
+    }
+
+    const permission: EthAccountsPermission = {
+      caveats: [
+        {
+          type: 'restrictReturnedAccounts',
+          value: [address],
+        },
+      ],
+      date: Date.now(),
+      id: generateUUID(),
+      invoker: this.config.url,
+      parentCapability: 'eth_accounts',
+    }
+
+    this.ethAccountsPermission = permission
+    return permission
+  }
+
+  private validateWalletRequestPermissions(params: unknown): void {
+    if (!Array.isArray(params) || params.length !== 1) {
+      throw new InvalidTransactionError('Invalid wallet_requestPermissions parameters')
+    }
+
+    const [request] = params
+    if (typeof request !== 'object' || request === null || Array.isArray(request)) {
+      throw new InvalidTransactionError('Invalid wallet_requestPermissions parameters')
+    }
+
+    const entries = Object.entries(request as Record<string, unknown>)
+    if (entries.length !== 1) {
+      throw new InvalidTransactionError('Invalid wallet_requestPermissions parameters')
+    }
+
+    const [capability, capabilityParams] = entries[0]
+    if (capability !== 'eth_accounts') {
+      throw new UnknownRequestError(`Unsupported permission capability: ${capability}`)
+    }
+
+    if (
+      typeof capabilityParams !== 'object'
+      || capabilityParams === null
+      || Array.isArray(capabilityParams)
+    ) {
+      throw new InvalidTransactionError('Invalid wallet_requestPermissions parameters')
+    }
+  }
+
+  private async requestWalletPermissions(params: unknown): Promise<EthAccountsPermission[]> {
+    this.validateWalletRequestPermissions(params)
+
+    if (this.ethAccountsPermission) {
+      return this.getEthPermissions()
+    }
+
+    await this.listEthAccounts()
+    return this.getEthPermissions()
+  }
+
   private async _handleEthereumMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling Ethereum message:', message)
     const params = message.params ?? message.object
@@ -354,6 +437,10 @@ export class MiniAppHost {
     switch (message.name) {
       case 'requestAccounts':
         return this.listEthAccounts()
+      case 'wallet_requestPermissions':
+        return this.requestWalletPermissions(params)
+      case 'wallet_getPermissions':
+        return this.getEthPermissions()
       case 'signMessage':
       case 'signPersonalMessage':
         return this.signPersonalMessage(params)
@@ -434,7 +521,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User denied account access.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     // Get Ethereum address from local wallet
@@ -442,9 +529,13 @@ export class MiniAppHost {
     if (error) {
       throw new InternalError(`Failed to get Ethereum address: ${error}`)
     }
+    if (!ethAddress) {
+      throw new InternalError('Failed to get Ethereum address: wallet address not available')
+    }
 
+    this.ensureEthAccountsPermission(ethAddress)
     trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
-    return [ethAddress!]
+    return [ethAddress]
   }
 
   private async signPersonalMessage(params: unknown): Promise<string> {
@@ -490,7 +581,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_message', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User rejected message signing.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     // Get Ethereum wallet and verify address
@@ -579,7 +670,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_typed_data', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User rejected typed data signing.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     // Get Ethereum wallet and verify address
@@ -833,7 +924,7 @@ export class MiniAppHost {
 
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
-      throw new PermissionDeniedError('User rejected transaction signing.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     // Build transaction object for ethers.js
@@ -1025,7 +1116,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'nimiq_list_accounts', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User said no.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     const accounts = [
@@ -1072,7 +1163,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: 'nimiq_sign', blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User said no.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     let messageBuffer: Uint8Array
@@ -1364,7 +1455,7 @@ export class MiniAppHost {
     })
     if (!confirmed) {
       trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
-      throw new PermissionDeniedError('User said no.')
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
     }
 
     let partialTx: PartialSendTxArgs
@@ -1422,7 +1513,7 @@ export class MiniAppHost {
   //     plain: tx.toPlain(),
   //   });
   //   if (!confirmed) {
-  //     throw new PermissionDeniedError('User said no.');
+  //     throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE);
   //   }
 
   //   // Handle claiming transactions

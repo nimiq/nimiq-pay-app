@@ -36,7 +36,31 @@ describe('chain request handler', () => {
     expect(deps.sendResponse).not.toHaveBeenCalled()
     expect(deps.sendError).toHaveBeenCalledWith(7, {
       code: 4001,
-      message: 'User rejected chain request',
+      message: 'User rejected the request.',
+    })
+  })
+
+  it('returns the standard user rejection message when adding a chain is rejected', async () => {
+    const deps = createDeps()
+    deps.isChainAvailable.mockReturnValue(false)
+    deps.requestChainApproval.mockResolvedValue(false)
+
+    await handleAddEthereumChain({
+      id: 12,
+      object: {
+        chainId: '0x1234',
+        chainName: 'Example Chain',
+        rpcUrls: ['https://rpc.example'],
+      },
+    }, deps)
+
+    expect(deps.addDynamicChain).not.toHaveBeenCalled()
+    expect(deps.emitChainAdded).not.toHaveBeenCalled()
+    expect(deps.setChainId).not.toHaveBeenCalled()
+    expect(deps.sendResponse).not.toHaveBeenCalled()
+    expect(deps.sendError).toHaveBeenCalledWith(12, {
+      code: 4001,
+      message: 'User rejected the request.',
     })
   })
 

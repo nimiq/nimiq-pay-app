@@ -1,4 +1,8 @@
 import type { ChainApprovalRequest, RequestParams } from './birpc-types'
+import {
+  USER_REJECTED_REQUEST_CODE,
+  USER_REJECTED_REQUEST_MESSAGE,
+} from './provider-errors'
 
 interface ProviderChainDependencies {
   requestChainApproval: (request: ChainApprovalRequest) => Promise<boolean>
@@ -35,9 +39,9 @@ export function normalizeChainId(chainId: unknown): number | null {
 function rejectChainRequest(
   id: number | undefined,
   deps: Pick<ProviderChainDependencies, 'sendError'>,
-  message = 'User rejected chain request',
+  message = USER_REJECTED_REQUEST_MESSAGE,
 ) {
-  deps.sendError(id, { code: 4001, message })
+  deps.sendError(id, { code: USER_REJECTED_REQUEST_CODE, message })
 }
 
 export async function handleSwitchEthereumChain(
