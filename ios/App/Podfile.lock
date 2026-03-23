@@ -54,7 +54,7 @@ PODS:
     - PostHog (~> 3.19.1)
   - CapgoCameraPreview (7.20.0):
     - Capacitor
-  - CapgoInappbrowser (8.1.19):
+  - CapgoInappbrowser (8.3.0):
     - Capacitor
   - Firebase/CoreOnly (10.21.0):
     - FirebaseCore (= 10.21.0)
@@ -151,7 +151,7 @@ DEPENDENCIES:
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.0_@capacitor+core@7.4.3/node_modules/@capacitor/toast`)"
   - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.2.1_@capacitor+core@7.4.3_posthog-js@1.352.0/node_modules/@capawesome/capacitor-posthog`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview`)"
-  - "CapgoInappbrowser (from `../../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser`)"
+  - "CapgoInappbrowser (from `../../node_modules/.pnpm/@capgo+inappbrowser@8.3.0_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser`)"
   - Firebase/Messaging
   - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
@@ -226,7 +226,7 @@ EXTERNAL SOURCES:
   CapgoCameraPreview:
     :path: "../../node_modules/.pnpm/@capgo+camera-preview@7.20.0_@capacitor+core@7.4.3/node_modules/@capgo/camera-preview"
   CapgoInappbrowser:
-    :path: "../../node_modules/.pnpm/@capgo+inappbrowser@8.1.19_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser"
+    :path: "../../node_modules/.pnpm/@capgo+inappbrowser@8.3.0_@capacitor+core@7.4.3/node_modules/@capgo/inappbrowser"
   RdlaboCapacitorScreenshotEvent:
     :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@7.0.0_@capacitor+core@7.4.3/node_modules/@rdlabo/capacitor-screenshot-event"
 
@@ -256,7 +256,7 @@ SPEC CHECKSUMS:
   CapacitorToast: aefebcd4cead9f44a04ace80c66a7eb4031751e7
   CapawesomeCapacitorPosthog: a081a8101ef38508c73e272da33bc1c3fbc52af4
   CapgoCameraPreview: 8e48300969673baeffac368a42d9f0487497ac79
-  CapgoInappbrowser: 50ed6c108f0c6ea5915d8ea44444fbf2b224cd0a
+  CapgoInappbrowser: 814d531ad818c12c0bf7a0d21825588e9c5d3438
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
   FirebaseCoreInternal: 43c1788eaeee9d1b97caaa751af567ce11010d00
@@ -274,6 +274,6 @@ SPEC CHECKSUMS:
   SQLCipher: 77fbe633cd84db04b07876dd50766b4924b57d61
   ZIPFoundation: b8c29ea7ae353b309bc810586181fd073cb3312c
 
-PODFILE CHECKSUM: 1d3f0bdc0bb3a56900354acde0f322d360e39362
+PODFILE CHECKSUM: 3bc61f3a75dc2fb4a04ec19ff196d61b23c48ebd
 
 COCOAPODS: 1.15.2
