@@ -103,7 +103,9 @@ function formatTime(timestamp: string): string {
       <!-- Confirmation dialog overlay (absolute, always on top) -->
       <div v-if="showEndConfirm" class="absolute inset-0 bg-black/30 flex items-center justify-center z-10 rounded-2xl p-6">
         <div class="bg-white rounded-2xl p-6 flex flex-col gap-4 shadow-lg w-full max-w-xs">
-          <p class="text-space font-semibold text-base text-center">{{ $t('End this chat?') }}</p>
+          <p class="text-space font-semibold text-base text-center">
+            {{ $t('End this chat?') }}
+          </p>
           <div class="flex gap-3">
             <IonButton fill="clear" expand="block" class="flex-1 h-0" @click.stop="showEndConfirm = false">
               {{ $t('Cancel') }}
@@ -131,7 +133,9 @@ function formatTime(timestamp: string): string {
         <div class="size-14 rounded-full bg-green-500 flex items-center justify-center">
           <IonIcon :icon="checkmarkCircle" class="text-white text-4xl" />
         </div>
-        <p class="text-space font-semibold text-base">{{ $t('Thanks for reaching out!') }}</p>
+        <p class="text-space font-semibold text-base">
+          {{ $t('Thanks for reaching out!') }}
+        </p>
         <p class="text-space/60 text-sm leading-relaxed">
           {{ $t('We hope your issue was resolved. Close and reopen this chat to start a new conversation.') }}
         </p>

@@ -7,7 +7,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import LiveChatIcon from './icons/live-chat.vue'
 
 const livechat = useLiveChat()
-const { shown, loading, error, pendingMessageCount, sessionId, messages, lastMessageId, online, conversationEnded } = storeToRefs(livechat)
+const { shown, loading, error, pendingMessageCount, sessionId, lastReadMessageId, messages, lastMessageId, online, conversationEnded } = storeToRefs(livechat)
 
 const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
@@ -88,16 +88,29 @@ async function pollMessages() {
 
 onMounted(async () => {
   try {
-    const status = await getStatus(userId)
-    online.value = status.online
-    sessionId.value = status.session_id
+    // Only query for active session when sessionId is not already set (if it is set, then the badge was
+    // loaded from the startup-init function and getStatus was already called there)
+    if (!sessionId.value) {
+      const status = await getStatus(userId)
+      online.value = status.online
+      sessionId.value = status.session_id
+    }
 
-    if (status.session_id) {
+    if (sessionId.value) {
       conversationEnded.value = false
-      const history = await getHistory(userId, status.session_id, '0')
+      const history = await getHistory(userId, sessionId.value, '0')
       messages.value = history
       if (history.length > 0) {
         lastMessageId.value = history.at(-1)!.id
+
+        // Count unread agent messages (those received after the user last viewed the chat)
+        if (lastReadMessageId.value !== '0') {
+          const cutoffIdx = history.findIndex(m => m.id === lastReadMessageId.value)
+          if (cutoffIdx >= 0) {
+            const unread = history.slice(cutoffIdx + 1).filter(m => m.sender.startsWith('agent:'))
+            pendingMessageCount.value = unread.length
+          }
+        }
       }
     }
   }
@@ -124,6 +137,7 @@ onUnmounted(() => {
 watch(shown, (isShown) => {
   if (isShown) {
     pendingMessageCount.value = 0
+    lastReadMessageId.value = lastMessageId.value // mark messages as read
   }
   if (sessionId.value) {
     startPolling()

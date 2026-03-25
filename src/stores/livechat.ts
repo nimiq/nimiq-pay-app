@@ -1,7 +1,9 @@
 import type { WtMessage } from '@/lib/walkie-talkie'
+import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession } from '@/lib/walkie-talkie'
+import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, getStatus } from '@/lib/walkie-talkie'
+import { kvPreferences } from './app'
 import { useLocalWallet } from './local-wallet'
 import { useNaka } from './naka'
 
@@ -13,7 +15,10 @@ export const useLiveChat = defineStore('livechat', () => {
   const pendingMessageCount = ref(0)
 
   // Walkie-Talkie session state
-  const sessionId = ref<string | null>(null)
+  // sessionId is persisted so we know on restart whether to check for an active session
+  const sessionId = useStorageAsync('livechat-sessionId', '', kvPreferences())
+  // lastReadMessageId tracks the last message the user saw, for unread count on restart
+  const lastReadMessageId = useStorageAsync('livechat-lastReadMessageId', '0', kvPreferences())
   const messages = ref<WtMessage[]>([])
   const lastMessageId = ref('0')
   const online = ref(false)
@@ -30,11 +35,41 @@ export const useLiveChat = defineStore('livechat', () => {
     loading.value = true
     error.value = false
     pendingMessageCount.value = 0
-    sessionId.value = null
+    sessionId.value = ''
+    lastReadMessageId.value = '0'
     messages.value = []
     lastMessageId.value = '0'
     online.value = false
     conversationEnded.value = true
+  }
+
+  /**
+   * Called on app startup. If a session was persisted, verify it still exists on the backend
+   * and restore the enabled state so the badge appears. Does nothing if no session was persisted.
+   */
+  async function initFromBackground() {
+    await new Promise(resolve => setTimeout(resolve, 500)) // Wait a bit for the async storage to have been read
+    console.warn('Initializing live chat from background', sessionId)
+    if (!sessionId.value)
+      return
+
+    const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
+    try {
+      const status = await getStatus(userId)
+      online.value = status.online
+      if (status.session_id) {
+        enabled.value = true
+        sessionId.value = status.session_id
+        conversationEnded.value = false
+      }
+      else {
+        // Session no longer exists on the backend — clean up
+        sessionId.value = ''
+      }
+    }
+    catch {
+      // Silently ignore — badge stays hidden
+    }
   }
 
   function buildTraitsPreamble(): string {
@@ -82,7 +117,7 @@ export const useLiveChat = defineStore('livechat', () => {
       return
     const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
     await apiCloseSession(userId, sessionId.value)
-    sessionId.value = null
+    sessionId.value = ''
     conversationEnded.value = true
   }
 
@@ -93,6 +128,7 @@ export const useLiveChat = defineStore('livechat', () => {
     error,
     pendingMessageCount,
     sessionId,
+    lastReadMessageId,
     messages,
     lastMessageId,
     online,
@@ -100,5 +136,6 @@ export const useLiveChat = defineStore('livechat', () => {
     reset,
     sendMessage,
     closeSession,
+    initFromBackground,
   }
 })

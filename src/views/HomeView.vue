@@ -148,6 +148,7 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], ([expired, remoteOk,
 
 onMounted(() => {
   scrollToFirstNotification()
+  useLiveChat().initFromBackground()
 })
 </script>
 

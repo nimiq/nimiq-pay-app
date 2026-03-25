@@ -1,4 +1,4 @@
-import { nativeFetch } from "./nativeFetch"
+import { nativeFetch } from './nativeFetch'
 
 export interface WtMessage {
   id: string
