@@ -62,12 +62,12 @@ export const useLiveChat = defineStore('livechat', () => {
       timestamp: new Date().toISOString().substring(0, 19).replace('T', ' '), // Walkie-Talkie format is "YYYY-MM-DD HH:MM:SS"
     }
     messages.value.push(message)
+    conversationEnded.value = false
 
     if (!sessionId.value) {
       const preamble = buildTraitsPreamble()
       const result = await apiStartSession(userId, preamble)
       sessionId.value = result.session_id
-      conversationEnded.value = false
       const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
       messages.value.find(m => !m.id && m.timestamp === message.timestamp)!.id = message_id
     }
