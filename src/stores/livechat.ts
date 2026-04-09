@@ -90,7 +90,7 @@ export const useLiveChat = defineStore('livechat', () => {
     const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
 
     // Optimistically append user message
-    const message = {
+    const message: WtMessage = {
       id: '',
       sender: 'user',
       content: trimmed,
@@ -99,16 +99,26 @@ export const useLiveChat = defineStore('livechat', () => {
     messages.value.push(message)
     conversationEnded.value = false
 
-    if (!sessionId.value) {
-      const preamble = buildTraitsPreamble()
-      const result = await apiStartSession(userId, preamble)
-      sessionId.value = result.session_id
-      const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
-      messages.value.find(m => !m.id && m.timestamp === message.timestamp)!.id = message_id
+    // Note: we cannot mutate `message` directly — Vue wraps the object in a reactive
+    // proxy on push, so the local reference is stale. Look it up from the array instead.
+    const findPending = () => messages.value.find(m => !m.id && !m.failed && m.timestamp === message.timestamp)!
+
+    try {
+      if (!sessionId.value) {
+        const preamble = buildTraitsPreamble()
+        const result = await apiStartSession(userId, preamble)
+        sessionId.value = result.session_id
+        const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
+        findPending().id = message_id
+      }
+      else {
+        const { message_id } = await apiSendMessage(userId, sessionId.value, trimmed)
+        findPending().id = message_id
+      }
     }
-    else {
-      const { message_id } = await apiSendMessage(userId, sessionId.value, trimmed)
-      messages.value.find(m => !m.id && m.timestamp === message.timestamp)!.id = message_id
+    catch (e) {
+      console.error('Failed to send live chat message', e)
+      findPending().failed = true
     }
   }
 

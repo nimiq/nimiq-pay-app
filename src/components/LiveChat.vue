@@ -168,7 +168,14 @@ function formatTime(timestamp: string): string {
             >
               {{ msg.content }}
             </div>
-            <span class="text-xs text-space/40 mt-1 px-1">{{ msg.id ? formatTime(msg.timestamp) : 'Sending...' }}</span>
+            <span
+              class="text-xs mt-1 px-1"
+              :class="msg.failed ? 'text-cherry font-medium' : 'text-space/40'"
+            >
+              <template v-if="msg.id">{{ formatTime(msg.timestamp) }}</template>
+              <template v-else-if="msg.failed">{{ $t('Failed to send') }}</template>
+              <template v-else>Sending...</template>
+            </span>
           </div>
         </div>
 

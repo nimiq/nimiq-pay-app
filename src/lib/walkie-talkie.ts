@@ -5,6 +5,7 @@ export interface WtMessage {
   sender: string // "user" | "agent:<name>"
   content: string
   timestamp: string
+  failed?: boolean // Client-side only: true if the message failed to send
 }
 
 export interface UserStatus {
