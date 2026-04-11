@@ -1390,7 +1390,7 @@ msgstr ""
 msgid "Support"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:300
+#: src/composables/useMiniAppHost.ts:312
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1476,7 +1476,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:264
+#: src/composables/useMiniAppHost.ts:276
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 

@@ -7,7 +7,7 @@ lint:
   image: node:lts
   before_script:
     - corepack enable
-    - corepack prepare pnpm@latest-8 --activate
+    - corepack prepare pnpm@latest-10 --activate
     - pnpm config set store-dir .pnpm-store
     - echo "@apps:registry=https://scm.nim.team/api/v4/projects/269/packages/npm/" > .npmrc
     - echo "//scm.nim.team/api/v4/projects/269/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
@@ -18,7 +18,7 @@ lint:
     paths:
       - .pnpm-store
   script:
-    - pnpm install
+    - pnpm install --frozen-lockfile
     - pnpm lint
 
 build-web:
@@ -26,7 +26,7 @@ build-web:
   image: node:lts
   before_script:
     - corepack enable
-    - corepack prepare pnpm@latest-8 --activate
+    - corepack prepare pnpm@latest-10 --activate
     - pnpm config set store-dir .pnpm-store
     - echo "@apps:registry=https://scm.nim.team/api/v4/projects/269/packages/npm/" > .npmrc
     - echo "//scm.nim.team/api/v4/projects/269/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
@@ -37,5 +37,5 @@ build-web:
     paths:
       - .pnpm-store
   script:
-    - pnpm install
+    - pnpm install --frozen-lockfile
     - pnpm build:web
