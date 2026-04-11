@@ -114,7 +114,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
       url: 'https://app.example',
     })
 
-    const [handlers] = createBirpc.mock.calls.at(-1)!
+    const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
 
     return {
       browser,
