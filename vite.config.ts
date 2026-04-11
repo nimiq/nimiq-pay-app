@@ -16,13 +16,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       wasm(),
       topLevelAwait(),
-      vue({
-        template: {
-          compilerOptions: {
-            isCustomElement: tag => tag.startsWith('chatlio-'),
-          },
-        },
-      }),
+      vue(),
       poLoader(),
       poOptimizer(),
       // legacy(),
@@ -80,6 +74,8 @@ export default defineConfig(({ mode }) => {
       __ENABLE_NAKA__: env.VITE_ENABLE_NAKA === 'true',
       __ENABLE_BLUECODE__: env.VITE_ENABLE_BLUECODE === 'true',
       __ENABLE_MINI_APPS__: env.VITE_ENABLE_MINI_APPS === 'true',
+      __WALKIE_TALKIE_URL__: JSON.stringify(env.VITE_WALKIE_TALKIE_URL),
+      __WALKIE_TALKIE_API_KEY__: JSON.stringify(env.VITE_WALKIE_TALKIE_API_KEY),
     },
   }
 })
