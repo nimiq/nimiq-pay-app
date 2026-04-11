@@ -90,7 +90,7 @@ vi.mock('./useLogger', () => ({
   }),
 }))
 
-describe('MiniAppHost Ethereum rejection messages', () => {
+describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
   const ethAddress = '0x0000000000000000000000000000000000000001'
 
   function createBrowser() {
@@ -108,7 +108,7 @@ describe('MiniAppHost Ethereum rejection messages', () => {
     const browser = createBrowser()
     const requestUserConfirmation = vi.fn().mockResolvedValue(options.confirmed ?? true)
 
-    new MiniAppHost(browser as never, {
+    const _host = new MiniAppHost(browser as never, {
       requestUserConfirmation,
       title: 'Example',
       url: 'https://app.example',
