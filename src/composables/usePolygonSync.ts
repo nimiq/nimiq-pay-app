@@ -42,7 +42,7 @@ async function pollCallback() {
   catch (error) {
     logger.error('Error syncing Polygon transaction history', error)
   }
-  logger.log('Finished Polygon transaction history sync')
+  logger.log('Finished Polygon transaction history sync pass', { hasLoadedHistory: polygonUsdt.hasLoadedHistory })
 
   try {
     const { query } = useConn()

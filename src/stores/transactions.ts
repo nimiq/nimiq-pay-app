@@ -129,6 +129,9 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function clearTxHistory() {
     await run(SQLQuery.ClearTxHistory)
+    // Also reset Polygon history scan state so the next sync re-scans all blocks
+    const { usePolygonUsdt } = await import('@/stores/polygon-usdt')
+    await usePolygonUsdt().resetHistoryState()
   }
 
   async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {

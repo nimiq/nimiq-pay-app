@@ -118,7 +118,7 @@ let htlcAcceptanceBudgetPromise: Promise<bigint> | null = null
 
 export const POLYGON_TRANSFER_QUOTE_TTL_MS = 20_000
 const CACHED_RELAY_TTL_MS = 5 * 60_000
-const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 4
+const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 20
 
 const INSUFFICIENT_USDT_POLYGON_FEE_ERROR = 'You don\'t have enough USDT to cover this payment plus Polygon fees.'
 
@@ -1716,6 +1716,19 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
+  async function resetHistoryState() {
+    const { data: address } = useLocalWallet().getEthAddress()
+    if (address) {
+      const key = getPolygonHistoryStateKey(address)
+      await run(SQLQuery.DeleteKv, [key])
+    }
+    hasLoadedHistory.value = false
+    lastHistorySyncBlock.value = 0
+    initialHistoryScanSession.value = null
+    hydratedHistoryAddress.value = null
+    historySyncPromise = null
+  }
+
   return {
     balance,
     consensus,
@@ -1725,6 +1738,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     updateBalance,
     syncTransactionHistory,
     updateSingleTransaction,
+    resetHistoryState,
     transferFeeSnapshot: readonly(transferFeeSnapshot),
     getCachedTransferQuote,
     primeTransferFee,
