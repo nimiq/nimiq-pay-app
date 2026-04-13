@@ -14,7 +14,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:137
+#: src/stores/transactions.ts:140
 msgid "A transaction is already in progress"
 msgstr ""
 
@@ -83,7 +83,7 @@ msgstr ""
 msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:31
+#: src/components/PaymentAmountInput.vue:33
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
@@ -193,7 +193,6 @@ msgstr ""
 msgid "By tapping “verify”, you agree to our data management practices."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:20
 #: src/composables/useUsdtQuoteRefresh.ts:197
 msgid "Calculating fees..."
 msgstr ""
@@ -247,7 +246,7 @@ msgstr ""
 msgid "Card unlocked"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:108
+#: src/composables/useQRScanner.ts:129
 msgid "Cashlink claimed successfully"
 msgstr ""
 
@@ -307,7 +306,7 @@ msgid "Connecting to network."
 msgstr ""
 
 #: src/components/NimWithdraw.vue:159
-#: src/components/PaymentAmountInput.vue:133
+#: src/components/PaymentAmountInput.vue:129
 #: src/views/MainView.vue:78
 msgid "Connecting to Polygon"
 msgstr ""
@@ -321,7 +320,7 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:44
+#: src/components/PaymentAmountInput.vue:46
 msgid "Continue and Pay"
 msgstr ""
 
@@ -658,7 +657,7 @@ msgid "Insufficient balance for this payment"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:173
-#: src/components/PaymentAmountInput.vue:140
+#: src/components/PaymentAmountInput.vue:136
 msgid "Insufficient funds"
 msgstr ""
 
@@ -774,7 +773,7 @@ msgstr ""
 msgid "Invalid PIN length {length}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:117
+#: src/composables/useQRScanner.ts:138
 msgid "Invalid QR code"
 msgstr ""
 
@@ -799,7 +798,7 @@ msgstr ""
 msgid "Invalid URL: {url}"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:68
+#: src/composables/useQRScanner.ts:89
 #: src/composables/useStringParser.ts:39
 #: src/lib/flows/steps.ts:615
 msgid "Invalid USDT address"
@@ -825,7 +824,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:52
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:97
+#: src/views/HomeView.vue:98
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -1007,7 +1006,7 @@ msgstr ""
 msgid "No payment request found"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:139
+#: src/composables/useQRScanner.ts:161
 msgid "No permission to use the camera"
 msgstr ""
 
@@ -1519,7 +1518,7 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:270
+#: src/composables/useQRScanner.ts:292
 msgid "Something went wrong while starting the camera"
 msgstr ""
 
@@ -1593,7 +1592,7 @@ msgstr ""
 msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:32
+#: src/components/PaymentAmountInput.vue:34
 #: src/components/PaymentPreview.vue:218
 msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
 msgstr ""
@@ -1606,8 +1605,8 @@ msgstr ""
 msgid "The PINs do not match"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:220
-#: src/composables/useQRScanner.ts:278
+#: src/composables/useQRScanner.ts:242
+#: src/composables/useQRScanner.ts:300
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
@@ -1679,7 +1678,7 @@ msgstr ""
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr ""
 
-#: src/views/HomeView.vue:45
+#: src/views/HomeView.vue:41
 msgid "Top Up"
 msgstr ""
 
@@ -1699,7 +1698,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:196
+#: src/stores/transactions.ts:199
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1707,11 +1706,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:215
+#: src/stores/transactions.ts:218
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:250
+#: src/stores/transactions.ts:253
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
@@ -1875,7 +1874,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:53
 #: src/lib/flows/steps.ts:540
-#: src/views/HomeView.vue:48
+#: src/views/HomeView.vue:44
 msgid "Withdraw"
 msgstr ""
 
@@ -1937,7 +1936,7 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:141
+#: src/components/PaymentAmountInput.vue:137
 #: src/components/PaymentPreview.vue:205
 #: src/composables/useUsdtQuoteRefresh.ts:45
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
