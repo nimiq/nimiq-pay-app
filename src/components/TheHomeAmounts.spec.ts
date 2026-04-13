@@ -1,18 +1,29 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, defineComponent, ref } from 'vue'
+import { computed, defineComponent, reactive, ref } from 'vue'
+import { Asset } from '@/lib/assets'
 
 const remoteBalance = ref(0)
 const homeBalanceState = ref<'loading' | 'resolved-empty' | 'resolved-remote'>('loading')
+const usdtBalance = ref(0)
+const usdtHomeBalanceState = ref<'loading' | 'resolved-empty' | 'resolved-balance'>('loading')
 const isTransactionPending = ref(false)
 const showAnimations = ref(false)
 const isProcessingRemote = ref(false)
+const activeAsset = ref<Asset>(Asset.NIM)
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
     remoteBalance,
     homeBalanceState,
+  }),
+}))
+
+vi.mock('@/stores/polygon-usdt', () => ({
+  usePolygonUsdt: () => ({
+    balance: usdtBalance,
+    homeBalanceState: usdtHomeBalanceState,
   }),
 }))
 
@@ -23,8 +34,13 @@ vi.mock('@/stores/sync', () => ({
 }))
 
 vi.mock('@/stores/app', () => ({
+  Crypto: {
+    NIM: 'NIM',
+    USDT: 'USDT',
+  },
   useApp: () => ({
     showAnimations,
+    activeAsset,
   }),
 }))
 
@@ -36,7 +52,14 @@ vi.mock('@/stores/locks', () => ({
 
 vi.mock('@/components/CryptoAmount.vue', () => ({
   default: defineComponent({
-    template: '<div data-testid="crypto-amount" />',
+    props: {
+      minDecimals: {
+        type: Number,
+        required: false,
+        default: 0,
+      },
+    },
+    template: '<div data-testid="crypto-amount" :data-min-decimals="minDecimals" />',
   }),
 }))
 
@@ -59,15 +82,15 @@ vi.mock('@nimiq/vue3-components', () => ({
 }))
 
 vi.mock('@/composables/usePrice', () => ({
-  usePrice: (balance: { value: number }) => ({
-    fiat: computed(() => ({
-      total: balance.value,
+  usePrice: (balance: { value: number }, options?: { cryptoCurrency?: string }) => ({
+    fiat: reactive({
+      total: computed(() => balance.value),
       currency: 'USD',
-    })),
-    crypto: computed(() => ({
-      totalUnits: balance.value,
-      currency: 'NIM',
-    })),
+    }),
+    crypto: reactive({
+      totalUnits: computed(() => balance.value),
+      currency: options?.cryptoCurrency || 'NIM',
+    }),
   }),
 }))
 
@@ -89,9 +112,12 @@ describe('theHomeAmounts', () => {
   beforeEach(() => {
     remoteBalance.value = 0
     homeBalanceState.value = 'loading'
+    usdtBalance.value = 0
+    usdtHomeBalanceState.value = 'loading'
     isTransactionPending.value = false
     showAnimations.value = false
     isProcessingRemote.value = false
+    activeAsset.value = Asset.NIM
   })
 
   it('shows the skeleton while the home balance state is still loading', async () => {
@@ -119,5 +145,30 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+  })
+
+  it('switches to the USDT balance when the active asset is USDT', async () => {
+    activeAsset.value = Asset.USDT
+    remoteBalance.value = 25
+    homeBalanceState.value = 'resolved-remote'
+    usdtBalance.value = 99
+    usdtHomeBalanceState.value = 'resolved-balance'
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('99')
+  })
+
+  it('requests at least two decimals for the home crypto amount when showing USDT', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 2_000_000
+    usdtHomeBalanceState.value = 'resolved-balance'
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="crypto-amount"]').attributes('data-min-decimals')).toBe('2')
   })
 })

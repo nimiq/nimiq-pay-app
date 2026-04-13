@@ -1,0 +1,22 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Open hamburger menu
+- tapOn: Open menu
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: Settings
+    timeout: 5000
+
+# Verify About menu item exists alongside other items
+- assertVisible: About
+- assertVisible: Settings
+- assertVisible: Backup Account
+- assertVisible: Log Out
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/about_menu_item
+
+# Close menu
+- back
+- waitForAnimationToEnd

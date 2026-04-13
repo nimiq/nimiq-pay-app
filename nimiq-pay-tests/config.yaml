@@ -1,0 +1,5 @@
+# Default environment variables for Maestro tests
+# Android: com.nimiq.pay.debug (default)
+# iOS: override with: maestro test -e APP_ID=com.nimiq.pay
+env:
+  APP_ID: com.nimiq.pay.debug

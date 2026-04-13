@@ -1,38 +1,41 @@
 import type { ExternalTransaction } from '@/types/transactions'
-import { watchOnce } from '@vueuse/core'
-import { useFuse } from '@vueuse/integrations/useFuse'
 import { computed, ref } from 'vue'
-import { SQLQuery } from '@/lib/sql-queries'
-import { useConn } from '@/stores/conn'
 import { translateTransactionTitle } from '@/types/transactions'
 
-export function useTransactionSearch() {
+export function useTransactionSearch(transactions: { value: ExternalTransaction[] }) {
   const searchQuery = ref('')
-  const { query } = useConn()
 
-  const allTransactions = ref<ExternalTransaction[]>([])
+  const filteredTransactions = computed(() => {
+    const query = searchQuery.value.trim()
+    if (!query)
+      return [] as ExternalTransaction[]
 
-  watchOnce(searchQuery, async () => {
-    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
-    // Convert JSON strings to objects
-    txs.forEach((tx) => {
-      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
-      tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
-    })
-    allTransactions.value = txs
+    const normalizedQuery = query.toLowerCase()
+
+    return transactions.value
+      .filter((tx) => {
+        const searchableText = [
+          translateTransactionTitle(tx.title),
+          tx.title,
+          tx.message,
+          tx.merchantName,
+          tx.merchantCategory,
+          tx.amount,
+          tx.asset,
+          tx.chain,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(normalizedQuery)
+      })
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
   })
-
-  const { results: filteredTransactions } = useFuse(searchQuery, allTransactions, { fuseOptions: {
-    keys: [{
-      name: 'title',
-      getFn: (tx: ExternalTransaction) => translateTransactionTitle(tx.title),
-    }, /* untranslated title */ 'title', 'message', 'merchantName', 'merchantCategory', 'amount'],
-    ignoreLocation: true,
-  } })
 
   return {
     searchQuery,
-    filteredTransactions: computed(() => filteredTransactions.value.map(res => res.item).sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0))),
-    allTransactions,
+    filteredTransactions,
+    allTransactions: transactions,
   }
 }

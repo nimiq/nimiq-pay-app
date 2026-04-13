@@ -27,6 +27,11 @@ const baseDApps: BaseDApp[] = [
       }]
     : []),
   {
+    name: 'EVM Mini Wallet',
+    url: 'https://evm-mini-wallet.vercel.app/',
+    icon: getFaviconUrl('https://evm-mini-wallet.vercel.app/'),
+  },
+  {
     name: '1inch',
     url: 'https://1inch.com/',
     icon: getFaviconUrl('https://1inch.com/'),

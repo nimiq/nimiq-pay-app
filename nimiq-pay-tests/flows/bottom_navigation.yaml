@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify footer asset switcher is visible
+- assertVisible: Switch asset
+
+# Verify PAY button is visible
+- assertVisible: Pay
+
+# Switch asset via footer switcher
+- runFlow: ../subflows/switch_to_usdt.yaml
+- assertVisible: USDT
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/footer_usdt_active
+
+# Switch back
+- runFlow: ../subflows/switch_to_nim.yaml
+- assertVisible: NIM
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/footer_nim_active

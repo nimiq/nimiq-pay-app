@@ -1,0 +1,11 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify PAY button visible on NIM
+- runFlow: ../subflows/switch_to_nim.yaml
+- assertVisible: Pay
+
+# Verify PAY button visible on USDT
+- runFlow: ../subflows/switch_to_usdt.yaml
+- assertVisible: Pay

@@ -28,6 +28,7 @@ import { useLocks } from '@/stores/locks'
 import { useNaka } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 
@@ -36,11 +37,12 @@ const logger = useLogger('HomeView')
 const router = useRouter()
 
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, displayedPaymentRequests } = storeToRefs(useApp())
+const { phoneNumberVerified, displayedPaymentRequests, isNimiqAsset } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
 const { consensus } = storeToRefs(useNimiqNetwork())
+const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(usePolygonUsdt())
 const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
@@ -50,9 +52,15 @@ const { checkKycInBackground } = useKyc()
 
 const isFirstRender = ref(true)
 
-const isPaymentDisabled = computed(() => (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value)
+const isPaymentDisabled = computed(() =>
+  isNimiqAsset.value
+    ? (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value
+    : polygonBalance.value === 0 || isProcessingRemote.value || isTransactionPending.value,
+)
 
-const isConsensusMessageShown = computed(() => consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value))
+const isConsensusMessageShown = computed(() =>
+  isNimiqAsset.value && consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value),
+)
 const isConsensusMessageShownDebounced = refThrottled(isConsensusMessageShown, debounceDelay)
 
 const statusMessageText = ref('')
@@ -64,6 +72,21 @@ const isStatusMessageShown = ref(false)
 watchEffect(async () => {
   if (isFirstRender.value)
     return
+
+  if (!isNimiqAsset.value) {
+    if (polygonConsensus.value !== 'established') {
+      statusMessageText.value = i18n.t('Connecting to Polygon')
+      statusMessageBgColor.value = 'bg-[#F9EDE1]'
+      statusMessageTextColor.value = 'text-pumpkin'
+      statusMessageIconColor.value = 'text-pumpkin/60'
+      statusMessageIcon.value = markRaw(InfoIcon)
+      isStatusMessageShown.value = true
+    }
+    else {
+      isStatusMessageShown.value = false
+    }
+    return
+  }
 
   if (!isRemoteOk.value) {
     // Give it some time to really check if the server is down or if it's just fetching the status
@@ -284,7 +307,7 @@ App.addListener('resume', detectPaymentRequest)
         </Transition>
       </div>
 
-      <TheHomeFooter :is-first-render="isFirstRender" :is-payment-disabled="isPaymentDisabled" />
+      <TheHomeFooter :is-payment-disabled="isPaymentDisabled" />
     </IonTabs>
   </IonPage>
 </template>

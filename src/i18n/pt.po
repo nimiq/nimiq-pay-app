@@ -464,6 +464,9 @@ msgstr "Taxas incluídas"
 msgid "Includes {fee} in fees"
 msgstr "Incluí {fee} em taxas"
 
+msgid "incl. {fee} fees"
+msgstr "incl. {fee} em taxas"
+
 msgid "Insert PIN to confirm"
 msgstr "Inserir o PIN para confirmar"
 

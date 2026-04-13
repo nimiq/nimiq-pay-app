@@ -8,11 +8,12 @@ import { ready, scan } from 'qr-scanner-wechat'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
+import { Asset, Chain } from '@/lib/assets'
 import { base64ToImageData } from '@/lib/utils'
+import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { Rail, Transfer } from '@/types/transactions'
 import { isDev } from '../lib'
 import { useCameraFeed } from './useCameraFeed'
 import { useDevice } from './useDevice'
@@ -47,30 +48,54 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
         return
       isParsingString = true
       try {
-        const { getCashlink, getNimAddress, getPaymentRequestData } = useStringParser()
+        const { getCashlink, getNimAddress, getPaymentRequestData, getPolygonAddress } = useStringParser()
         if (expect === QRDataFormat.NimiqAddress) {
           const { data, error } = getNimAddress(raw)
           if (error || !data)
             throw new Error(error)
           onData(data)
         }
+        else if (expect === QRDataFormat.AssetAddress) {
+          if (!useApp().isNimiqAsset) {
+            const { data: polygonAddress } = getPolygonAddress(raw)
+            if (polygonAddress) {
+              onData(polygonAddress)
+              return
+            }
+
+            const { data, error } = await getPaymentRequestData(raw)
+            if (error || !data || data.asset !== Asset.USDT)
+              throw new Error(error || i18n.t('Invalid USDT address'))
+
+            onData(data.recipient)
+          }
+          else {
+            const { data, error } = getNimAddress(raw)
+            if (error || !data)
+              throw new Error(error)
+            onData(data)
+          }
+        }
         else if (expect === QRDataFormat.PaymentRequest) {
-          // Some users might scan an address QR code wanting to withdraw, if this is the case, redirect to the withdraw flow
+          // If a plain address is scanned, treat it as a payment request with amount=0
+          // so the payment flow routes to the amount input step
           const { data: nimAddress } = getNimAddress(raw)
           if (nimAddress) {
-            initializeFlow(FlowName.NimWithdraw, { initialState: { nimAddressInput: nimAddress } })
+            useApp().activeAsset = Asset.NIM
+            onData({ recipient: nimAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.NIM } as PaymentRequestData)
+            return
+          }
+
+          const { data: polygonAddress } = getPolygonAddress(raw)
+          if (polygonAddress) {
+            useApp().activeAsset = Asset.USDT
+            onData({ recipient: polygonAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.USDT, chain: Chain.Polygon } as PaymentRequestData)
             return
           }
 
           const { data, error } = await getPaymentRequestData(raw)
           if (error || !data)
             throw new Error(error)
-
-          // Redirect to withdraw if amount is 0
-          if (data.amount === 0) {
-            initializeFlow(FlowName.NimWithdraw, { initialState: { nimAddressInput: data.recipient } })
-            return
-          }
 
           onData(data)
         }
@@ -131,9 +156,14 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   let setDummyData = () => {}
   if (isDev) {
     setDummyData = () => {
+      const dummyPaymentRequest = !useApp().isNimiqAsset
+        ? 'ethereum:0xc2132D05D31c914a87C6611C10748AEb04B58e8F@137/transfer?address=0xf569f89F3A5FDA94e4fCBBe7B7Baa16C29f4B134&uint256=140000'
+        : 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=1&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y'
+
       const dummyData = {
         [QRDataFormat.NimiqAddress]: 'NQ23UAHEYH2K7B9KS9E6A0HFXA5H8H8SDQ7L',
-        [QRDataFormat.PaymentRequest]: 'nimiq:NQ048XAKRA3761CA0CE5GKB670MDBJ8VN7FQ?amount=1&message=Ref%20%23YF8p&label=Maxiii&cpl_id=YF8pjO1y',
+        [QRDataFormat.AssetAddress]: '0x1111111111111111111111111111111111111111',
+        [QRDataFormat.PaymentRequest]: dummyPaymentRequest,
         [QRDataFormat.NimCashlink]: 'NOT_IMPLEMENTED___IT_WILL_RAISE_AN_ERROR',
       }[expect]
 

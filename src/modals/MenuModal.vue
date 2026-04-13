@@ -4,7 +4,7 @@ import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vu
 import { onLongPress } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import AppsIcon from '@/components/icons/apps.vue'
 import BackupIcon from '@/components/icons/backup.vue'
 import CreditCardIcon from '@/components/icons/credit-card.vue'
@@ -13,8 +13,6 @@ import LiveChatIcon from '@/components/icons/live-chat.vue'
 import LogoutIcon from '@/components/icons/log-out.vue'
 import NimiqOutlineLogo from '@/components/icons/nimiq-outline.vue'
 import SettingsIcon from '@/components/icons/settings.vue'
-import TopUpIcon from '@/components/icons/top-up.vue'
-import WithdrawIcon from '@/components/icons/withdraw.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
@@ -38,6 +36,10 @@ function onLongPressCallback() {
 
 const { hasCard, registration } = storeToRefs(useNaka())
 const { isNakaAvailable } = storeToRefs(useFeatureFlags())
+const showNakaSupport = computed(() => isNakaEnabled && !!registration.value?.nakaIdentification)
+const showNakaMenuItem = computed(() => isNakaEnabled && hasCard.value)
+const showActivateNakaMenuItem = computed(() => isNakaEnabled && !hasCard.value && isNakaAvailable.value)
+const showPaymentsSection = computed(() => showNakaMenuItem.value || showActivateNakaMenuItem.value || showNakaSupport.value || (!phoneNumberVerified.value && isCampaignActive.value))
 
 function openLiveChat() {
   liveChatEnabled.value = true
@@ -64,37 +66,25 @@ onLongPress(
   </IonHeader>
 
   <div class="flex flex-col gap-y-6 px-4 pt-4 pb-8">
-    <MenuItem
-      :icon="TopUpIcon"
-      :title="$t('Top Up')"
-      @click="initializeFlow(FlowName.NimTopUp)"
-    />
-    <MenuItem
-      :icon="WithdrawIcon"
-      :title="$t('Withdraw')"
-      @click="initializeFlow(FlowName.NimWithdraw)"
-    />
-
-    <!-- TODO: Remove this when not needed anymore -->
-    <span v-if="(isNakaEnabled && (isNakaAvailable || registration?.nakaIdentification)) || (!phoneNumberVerified && isCampaignActive)" class="uppercase text-space/60 font-bold text-sm mt-6">
+    <span v-if="showPaymentsSection" class="uppercase text-space/60 font-bold text-sm">
       {{ $t('Payments') }}
     </span>
 
     <MenuItem
-      v-if="hasCard && isNakaEnabled"
+      v-if="showNakaMenuItem"
       :icon="CreditCardIcon"
       :title="$t('NAKA Card')"
       @click="initializeFlow(FlowName.NakaCardManagement)"
     />
     <MenuItem
-      v-else-if="isNakaEnabled && isNakaAvailable"
+      v-else-if="showActivateNakaMenuItem"
       :icon="CreditCardIcon"
       :title="$t('Activate NAKA Card')"
       @click="initializeFlow(FlowName.NakaOnboarding)"
     />
     <!-- Show Support only if KYC has been started -->
     <MenuItem
-      v-if="registration?.nakaIdentification"
+      v-if="showNakaSupport"
       :icon="LiveChatIcon"
       :title="$t('NAKA Support')"
       @click="openLiveChat"
@@ -129,22 +119,26 @@ onLongPress(
       ref="htmlRefHook"
       :icon="SettingsIcon"
       :title="$t('Settings')"
+      aria-label="Settings"
       @click="showModal(Modal.Settings, { isOnTop: true })"
     />
     <MenuItem
       :icon="BackupIcon"
       :title="$t('Backup Account')"
+      aria-label="Backup Account"
       @click="initializeFlow(FlowName.Backup)"
     />
     <MenuItem
       :icon="NimiqOutlineLogo"
       :title="$t('About')"
+      aria-label="About"
       external
       @click="Browser.open({ url: 'https://www.nimiq.com/nimiq-pay/', toolbarColor: '#F4F4F4' })"
     />
     <MenuItem
       :icon="LogoutIcon"
       :title="$t('Log Out')"
+      aria-label="Log Out"
       @click="showModal(Modal.LogoutConfirm, { isSmall: true })"
     />
   </div>

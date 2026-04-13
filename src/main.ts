@@ -13,6 +13,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { identifyUser } from '@/lib/analytics'
+import { installNodeGlobals } from '@/lib/node-globals'
 import { useApp } from '@/stores/app'
 /* Libs */
 import { useConn } from '@/stores/conn'
@@ -45,6 +46,7 @@ if (import.meta.env.DEV)
 
 // applyPolyfills().then(() => jeepSqlite(window))
 customElements.define('jeep-sqlite', JeepSqlite)
+installNodeGlobals()
 
 const isAlertRoute = window.location.pathname.startsWith('/alert')
 

@@ -175,11 +175,14 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
     })
   }
 
-  // Update if the fiat changes
-  watch(selectedFiat, () => {
-    priceDb.value = 0
-    getFiatPrice()
-  })
+  watch(
+    [() => toValue(fiatCurrency), () => toValue(cryptoCurrency)],
+    () => {
+      priceDb.value = undefined
+      closestPreviousPrice.value = undefined
+      getFiatPrice()
+    },
+  )
 
   if (immediate)
     getFiatPrice()

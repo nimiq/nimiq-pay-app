@@ -1,27 +1,28 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRippleEffect, IonRow, IonToolbar } from '@ionic/vue'
+import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
 import { computedAsync, until } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import BackupNotification from '@/components/BackupNotification.vue'
+import MapIcon from '@/components/icons/crypto-map.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import LiveChat from '@/components/LiveChat.vue'
 import LiveChatBadge from '@/components/LiveChatBadge.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
-import QuickButton from '@/components/QuickButton.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
-import TransactionList from '@/components/TransactionList.vue'
+import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
+import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev, isMiniAppsEnabled, isNakaEnabled } from '@/lib'
+import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
@@ -30,18 +31,18 @@ import { useFeatureFlags } from '@/stores/feature-flags'
 import { useKyc } from '@/stores/kyc'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
-import { useMiniApps } from '@/stores/mini-apps'
 import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
+import { useTransactions } from '@/stores/transactions'
 
 const logger = useLogger('HomeView')
 
 const { showModal } = useModal()
 
 const { isRemoteOk, hasHtlcExpired } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, referralCode, hasDoneBackup, showAnimations } = storeToRefs(useApp())
+const { phoneNumberVerified, referralCode, hasDoneBackup, showAnimations, isNimiqAsset } = storeToRefs(useApp())
 const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
@@ -50,9 +51,6 @@ const { hasCard: hasNakaCard } = storeToRefs(useNaka())
 const { isNakaAvailable } = storeToRefs(useFeatureFlags())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
-
-const { popularDApps } = storeToRefs(useMiniApps())
-const topDAppIcons = computed(() => popularDApps.value.slice(isDev ? 1 : 0, isDev ? 4 : 3).map(d => d.icon))
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -88,13 +86,15 @@ async function handleRefresh(event: CustomEvent) {
     updatePointsStatus(),
     useSync().updateBalances(),
     useSync().updateTransactionHistory(),
+    usePolygonSync().triggerNow(),
   ])
   await useSync().verifyRemoteSignersDb()
   await until(isUpdatingTransactions).toBe(false)
+  await useTransactions().refreshFromDb()
   event.detail.complete()
 }
 
-watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus, isNakaAvailable], () => {
+watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus, isNakaAvailable, isNimiqAsset], () => {
   const nakaCardActivationNotification = {
     id: 'activate-naka-card',
     get title() { return i18n.t('Tap to pay with NAKA!') },
@@ -122,7 +122,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
   }
 
   // Remove notification if user already has a Naka card
-  if (hasNakaCard.value) {
+  if (hasNakaCard.value || !isNimiqAsset.value) {
     removeLocalNotification(nakaCardActivationNotification.id, false)
   }
 
@@ -132,7 +132,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled && isNakaAvailable.value)
+  if (!hasNakaCard.value && isNimiqAsset.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled && isNakaAvailable.value)
     addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
@@ -158,7 +158,7 @@ onMounted(() => {
       <BackupNotification v-if="isRecoveryWordsShown" />
       <IonToolbar class="px-2">
         <IonButtons slot="start">
-          <IonButton @click="showModal(Modal.Menu, { isSmall: true })">
+          <IonButton aria-label="Open menu" @click="showModal(Modal.Menu, { isSmall: true })">
             <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>
         </IonButtons>
@@ -176,24 +176,9 @@ onMounted(() => {
             </span>
           </IonButton>
 
-          <button
-            v-if="isMiniAppsEnabled"
-            aria-label="Mini Apps"
-            class="p-2 ion-activatable relative overflow-hidden rounded-3xl"
-            @click="showModal(Modal.MiniApps)"
-          >
-            <div slot="icon-only" class="relative h-[30px] w-16">
-              <img
-                v-for="(icon, i) in topDAppIcons"
-                :key="i"
-                :src="icon"
-                class="size-[30px] rounded-full ring-2 ring-white object-cover absolute top-0"
-                :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
-                alt=""
-              >
-            </div>
-            <IonRippleEffect />
-          </button>
+          <IonButton aria-label="Crypto Map" fill="clear" @click="showModal(Modal.Map, { showHandle: true })">
+            <MapIcon class="h-6 opacity-40" />
+          </IonButton>
         </IonButtons>
       </IonToolbar>
     </IonHeader>
@@ -209,13 +194,19 @@ onMounted(() => {
       >
         <TheHomeAmounts class="mt-[72px] mb-4" />
 
-        <QuickButton show-chevron center @click="initializeFlow(FlowName.NimTopUp)">
-          {{ $t('Top Up') }}
-        </QuickButton>
+        <div class="flex justify-center gap-x-3 mt-2">
+          <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="initializeFlow(FlowName.NimTopUp)">
+            {{ $t('Top Up') }}
+          </button>
+          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="initializeFlow(FlowName.NimWithdraw)">
+            {{ $t('Withdraw') }}
+          </button>
+        </div>
       </motion.div>
 
       <!-- Notification Horizontal Scroll -->
-      <IonGrid class="flex flex-col gap-y-2 pb-0" :class="{ 'mt-6': localNotifications.length > 0 || isReferralCardShown && referralClaimsRemaining > 0 }">
+      <!-- my-8 to have some space even when no notifications -->
+      <IonGrid class="flex flex-col gap-y-2 pb-0 my-8" :class="{ 'mt-6': localNotifications.length > 0 || isReferralCardShown && referralClaimsRemaining > 0 }">
         <IonRow v-if="localNotifications.length" class="ml-[-21px] w-screen">
           <motion.ul
             ref="notificationList"
@@ -264,7 +255,7 @@ onMounted(() => {
         </IonRow>
       </IonGrid>
 
-      <TransactionList class="mt-4" />
+      <TheHomeTransactions class="mt-10" />
     </IonContent>
 
     <!-- Live Chat -->

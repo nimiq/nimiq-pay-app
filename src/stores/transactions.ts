@@ -1,19 +1,21 @@
-import type { PlainTransactionDetails, TransactionState } from '@nimiq/core'
+import type { PlainTransactionDetails } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
 import type { AsyncResult } from '@/types'
-import type { ExternalTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, onMounted, readonly, shallowRef } from 'vue'
+import { computed, readonly, shallowRef, watch } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
 import { useLogger } from '@/composables/useLogger'
 
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
+import { Asset, Chain } from '@/lib/assets'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -24,6 +26,10 @@ import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@
 
 const logger = useLogger('transactions.ts')
 const { isSendingTx } = storeToRefs(useLocks())
+
+export function getSwapHtlcKey(tx: Pick<ExternalTransaction, 'chain' | 'hash' | 'recipient'>) {
+  return tx.chain === Chain.Polygon ? tx.hash : tx.recipient
+}
 
 export enum TransactionListState {
   // There are no transactions to show
@@ -42,6 +48,7 @@ export enum TransactionListState {
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
+  const { activeAsset } = storeToRefs(useApp())
 
   const { updateActiveRemoteBalance } = useRemoteSigner()
   const { remoteBalance } = storeToRefs(useRemoteSigner())
@@ -53,7 +60,7 @@ export const useTransactions = defineStore('transactions', () => {
    * If you need to load more transactions, use loadMoreTxs.
    */
   async function selectTxs(options?: DbPagination) {
-    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactions, [options?.limit || DEFAULT_LIMIT, options?.offset || 0])
+    const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactionsByAsset, [activeAsset.value, options?.limit || DEFAULT_LIMIT, options?.offset || 0])
     // TODO: Temporary, don't handle tx from HTLCs if tx is UserReceiptTransaction
     const filteredTxs = txs.filter((tx) => {
       if (tx.transfer === Transfer.UserReceipt)
@@ -106,6 +113,8 @@ export const useTransactions = defineStore('transactions', () => {
         tx.fiatFeeAmount,
         tx.fiatCurrency,
         tx.isCashbackClaimed,
+        tx.asset || Asset.NIM,
+        tx.chain || Chain.Nimiq,
         tx.invoiced
           ? JSON.stringify(tx.invoiced)
           : null,
@@ -246,7 +255,7 @@ export const useTransactions = defineStore('transactions', () => {
     const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
     const status = 'pending'
 
-    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length } as TransactionSentByUser
+    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length, asset: Asset.NIM, chain: Chain.Nimiq } as TransactionSentByUser
     if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
       tx.paymentMethod = PaymentMethod.NIM
 
@@ -306,11 +315,31 @@ export const useTransactions = defineStore('transactions', () => {
     return { data: { tx, serialized: signedTx.toHex() }, error: undefined }
   }
 
-  const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch()
+  const activeAssetTransactions = computed(() => transactions.value.filter(tx => (tx.asset || Asset.NIM) === activeAsset.value))
+  const { filteredTransactions, searchQuery, allTransactions } = useTransactionSearch(activeAssetTransactions)
 
-  onMounted(async () => {
-    transactions.value = await selectTxs()
-  })
+  /**
+   * Reload transactions from DB, merging with any in-memory transactions
+   * that might not have been persisted yet (e.g. pending transactions).
+   * This ensures the in-memory list stays in sync with the database.
+   */
+  async function refreshFromDb() {
+    const dbTxs = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [activeAsset.value])
+    dbTxs.forEach((tx) => {
+      tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
+      tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
+    })
+    const knownHashes = new Set(dbTxs.map(tx => tx.hash))
+    // Keep any in-memory transactions not yet in DB (e.g. just-added pending txs)
+    const memoryOnlyTxs = activeAssetTransactions.value.filter(tx => !knownHashes.has(tx.hash))
+    transactions.value = [...dbTxs, ...memoryOnlyTxs].sort(
+      (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+    )
+  }
+
+  watch(activeAsset, async () => {
+    await refreshFromDb()
+  }, { immediate: true })
 
   async function addReceiptTransaction(tx: UserReceiptTransaction) {
     await upsertTx(tx)
@@ -361,9 +390,16 @@ export const useTransactions = defineStore('transactions', () => {
       rail,
       invoiced,
       meta,
+      asset: Asset.NIM,
+      chain: Chain.Nimiq,
     } as MerchantTransaction
     await upsertTx(newTx)
     addTransaction(newTx)
+  }
+
+  async function addPaymentTransaction(tx: UserTransaction) {
+    await upsertTx(tx)
+    addTransaction(tx)
   }
 
   async function addWithdrawalTransaction(tx: UserTransaction) {
@@ -376,18 +412,53 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
+  async function replaceTransaction(tx: ExternalTransaction) {
+    await upsertTx(tx)
+    const index = transactions.value.findIndex(existingTx => existingTx.hash === tx.hash)
+    if (index >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[index] = tx
+      transactions.value = nextTransactions.sort(
+        (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+      )
+      return
+    }
+
+    addTransaction(tx)
+  }
+
   function addTransaction(tx: ExternalTransaction) {
     transactions.value = [tx, ...transactions.value].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: TransactionState, timestamp: number | undefined }) {
+  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: AppTransactionState, timestamp: number | undefined }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
-    const tx = transactions.value.find(tx => tx.hash === hash)
-    if (tx) {
-      tx.status = status
-      tx.timestamp = timestamp
+    const index = transactions.value.findIndex(tx => tx.hash === hash)
+    if (index >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[index] = {
+        ...nextTransactions[index],
+        status,
+        timestamp,
+      }
+      transactions.value = nextTransactions.sort(
+        (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+      )
+    }
+  }
+
+  async function updateTransactionTitle({ hash, title }: { hash: string, title: TransactionTitle }) {
+    await run(SQLQuery.UpdateTxTitle, [title, hash])
+    const index = transactions.value.findIndex(tx => tx.hash === hash)
+    if (index >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[index] = {
+        ...nextTransactions[index],
+        title,
+      }
+      transactions.value = nextTransactions
     }
   }
 
@@ -421,7 +492,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   const status = computed(() => {
-    if (transactions.value.length === 0)
+    if (activeAssetTransactions.value.length === 0)
       return TransactionListState.Empty
     else if (searchQuery.value && filteredTransactions.value.length === 0)
       return TransactionListState.NoResults
@@ -437,16 +508,21 @@ export const useTransactions = defineStore('transactions', () => {
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
     addUnknownPaymentToMerchantTransaction,
+    addPaymentTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    replaceTransaction,
     updateTransactionStatus,
+    updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
     setNakaTxRefunded,
     clearTxHistory,
+    refreshFromDb,
 
     // Search for transactions
-    transactionsToShow: computed(() => searchQuery.value ? filteredTransactions.value : transactions.value),
+    transactionsToShow: computed(() => searchQuery.value ? filteredTransactions.value : activeAssetTransactions.value),
+    activeAssetTransactions,
     allTransactions,
     filteredTransactions,
     searchQuery,
@@ -454,10 +530,16 @@ export const useTransactions = defineStore('transactions', () => {
     status,
 
     // Function to run when the user scrolls to the bottom of the list
-    loadMoreTxs: () => { selectTxs({ offset: transactions.value.length }) },
+    loadMoreTxs: async () => {
+      const nextTransactions = await selectTxs({ offset: activeAssetTransactions.value.length })
+      const knownHashes = new Set(activeAssetTransactions.value.map(tx => tx.hash))
+      const newTransactions = nextTransactions.filter(tx => !knownHashes.has(tx.hash))
+      if (newTransactions.length)
+        transactions.value = [...transactions.value, ...newTransactions]
+    },
 
     // A function that returns true if there are more transactions to load
     // FIXME: This is not exactly true, because if there is exactly DEFAULT_LIMIT transactions, it will return true, but there are no more transactions to load
-    canLoadMore: () => searchQuery.value ? false : transactions.value.length % DEFAULT_LIMIT === 0,
+    canLoadMore: () => searchQuery.value ? false : activeAssetTransactions.value.length % DEFAULT_LIMIT === 0,
   }
 })

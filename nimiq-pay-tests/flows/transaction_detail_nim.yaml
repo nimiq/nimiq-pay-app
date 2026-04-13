@@ -1,0 +1,20 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_nim.yaml
+
+# Tap the first NIM transaction (aria-label="Transaction NIM" on item)
+- tapOn:
+    text: 'Transaction NIM'
+    index: 0
+- waitForAnimationToEnd
+
+# Verify transaction detail fields
+- assertVisible: Asset
+- assertVisible: NIM
+- assertVisible: Network
+- assertVisible: Nimiq
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/nim_transaction_detail
+
+- back

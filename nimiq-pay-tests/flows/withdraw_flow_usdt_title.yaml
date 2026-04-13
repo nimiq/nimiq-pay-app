@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Tap Withdraw button on home screen
+- tapOn: Withdraw
+- waitForAnimationToEnd
+
+# For USDT, the flow step title should also be "Withdraw"
+- assertVisible: Withdraw
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/withdraw_flow_usdt
+
+- back
+- waitForAnimationToEnd

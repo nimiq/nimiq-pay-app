@@ -1,0 +1,27 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Open top-up modal
+- tapOn: Top Up
+- waitForAnimationToEnd
+
+# Verify USDT top-up screen content (aria-label on step title)
+- assertVisible: Top up address
+- assertVisible: Polygon USDT
+
+# Verify Polygon address is displayed (starts with 0x)
+- assertVisible:
+    text: '0x.*'
+
+# Verify Copy address button
+- assertVisible: Copy address
+
+# Tap Copy address
+- tapOn: Copy address
+- waitForAnimationToEnd
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/top_up_address_usdt
+
+- back

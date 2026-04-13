@@ -1,13 +1,34 @@
+import { Buffer } from 'node:buffer'
+import { Interface, parseUnits } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { MiniAppHost } from './useMiniAppHost'
+
+const erc20Interface = new Interface([
+  'function transfer(address to, uint256 amount) returns (bool)',
+])
 
 const {
+  addressesEqual,
   createBirpc,
-  trackWeb3Request,
+  hexToBytes,
+  isValidEthAddress,
   loggerError,
   loggerLog,
   loggerWarn,
+  parseChainId,
+  requestUserConfirmation,
+  signTransaction,
+  syncTransactionHistory,
+  trackWeb3Request,
+  updateBalance,
   useLocalWallet,
+  useNimiqNetwork,
+  usePolygonUsdt,
+  useRemoteSigner,
+  useTransactions,
 } = vi.hoisted(() => ({
+  addressesEqual: vi.fn(),
   createBirpc: vi.fn(() => ({
     $close: vi.fn(),
     onChainAdded: { asEvent: vi.fn() },
@@ -15,12 +36,25 @@ const {
     onUnsupportedChain: { asEvent: vi.fn() },
     updateRpcUrl: vi.fn(),
   })),
-  trackWeb3Request: vi.fn(),
+  hexToBytes: vi.fn(),
+  isValidEthAddress: vi.fn(),
   loggerError: vi.fn(),
   loggerLog: vi.fn(),
   loggerWarn: vi.fn(),
+  parseChainId: vi.fn(),
+  requestUserConfirmation: vi.fn(async () => true),
+  signTransaction: vi.fn(async () => '0xsigned'),
+  syncTransactionHistory: vi.fn(async () => {}),
+  trackWeb3Request: vi.fn(),
+  updateBalance: vi.fn(async () => {}),
   useLocalWallet: vi.fn(),
+  useNimiqNetwork: vi.fn(),
+  usePolygonUsdt: vi.fn(),
+  useRemoteSigner: vi.fn(),
+  useTransactions: vi.fn(),
 }))
+
+const ethAddress = '0x1111111111111111111111111111111111111111'
 
 vi.mock('@capacitor/toast', () => ({
   Toast: {
@@ -44,17 +78,13 @@ vi.mock('@/lib/analytics', () => ({
 }))
 
 vi.mock('@/lib/ethereum/hex-utils', () => ({
-  hexToBytes: vi.fn(),
+  hexToBytes,
 }))
 
 vi.mock('@/lib/ethereum/validation', () => ({
-  addressesEqual: vi.fn(),
-  isValidEthAddress: vi.fn(),
-  parseChainId: vi.fn(),
-}))
-
-vi.mock('@/lib/polygon/config', () => ({
-  polygonUsdtConfig: {},
+  addressesEqual,
+  isValidEthAddress,
+  parseChainId,
 }))
 
 vi.mock('@/stores/local-wallet', () => ({
@@ -63,19 +93,19 @@ vi.mock('@/stores/local-wallet', () => ({
 
 vi.mock('@/stores/nimiq-network', () => ({
   STAKING_CONTRACT_ADDRESS: 'NQ00 TEST',
-  useNimiqNetwork: vi.fn(),
+  useNimiqNetwork,
 }))
 
 vi.mock('@/stores/polygon-usdt', () => ({
-  usePolygonUsdt: vi.fn(),
+  usePolygonUsdt,
 }))
 
 vi.mock('@/stores/remote-signer', () => ({
-  useRemoteSigner: vi.fn(),
+  useRemoteSigner,
 }))
 
 vi.mock('@/stores/transactions', () => ({
-  useTransactions: vi.fn(),
+  useTransactions,
 }))
 
 vi.mock('../../web3-provider/src/utils', () => ({
@@ -90,59 +120,110 @@ vi.mock('./useLogger', () => ({
   }),
 }))
 
-describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
-  const ethAddress = '0x0000000000000000000000000000000000000001'
-
-  function createBrowser() {
-    return {
-      addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
-      clearAllCookies: vi.fn(() => Promise.resolve()),
-      postMessage: vi.fn(),
-      removeAllListeners: vi.fn(() => Promise.resolve()),
-    }
+function createBrowser() {
+  return {
+    addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+    clearAllCookies: vi.fn(() => Promise.resolve()),
+    postMessage: vi.fn(),
+    removeAllListeners: vi.fn(() => Promise.resolve()),
   }
+}
 
-  async function createHost(options: { confirmed?: boolean } = {}) {
-    const { MiniAppHost } = await import('./useMiniAppHost')
+async function createPermissionHost(options: { confirmed?: boolean } = {}) {
+  const browser = createBrowser()
+  const confirmationPrompt = vi.fn().mockResolvedValue(options.confirmed ?? true)
 
-    const browser = createBrowser()
-    const requestUserConfirmation = vi.fn().mockResolvedValue(options.confirmed ?? true)
-
-    const _host = new MiniAppHost(browser as never, {
-      requestUserConfirmation,
-      title: 'Example',
-      url: 'https://app.example',
-    })
-
-    const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
-
-    return {
-      browser,
-      handleRequest: handlers.handleRequest as (params: {
-        network: string
-        name: string
-        params?: unknown
-        object?: unknown
-      }) => Promise<unknown>,
-      requestUserConfirmation,
-    }
-  }
-
-  beforeEach(() => {
-    createBirpc.mockClear()
-    trackWeb3Request.mockReset()
-    loggerError.mockReset()
-    loggerLog.mockReset()
-    loggerWarn.mockReset()
-    useLocalWallet.mockReset()
-    useLocalWallet.mockReturnValue({
-      getEthAddress: vi.fn(() => ({ data: ethAddress, error: undefined })),
-      getEthWallet: vi.fn(),
-    })
+  const _host = new MiniAppHost(browser as never, {
+    requestUserConfirmation: confirmationPrompt,
+    title: 'Example',
+    url: 'https://app.example',
   })
 
+  const [handlers] = createBirpc.mock.calls.at(-1)! as any[]
+
+  return {
+    browser,
+    handleRequest: handlers.handleRequest as (params: {
+      network: string
+      name: string
+      params?: unknown
+      object?: unknown
+    }) => Promise<unknown>,
+    requestUserConfirmation: confirmationPrompt,
+  }
+}
+
+function jsonRpcResponse(body: unknown) {
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    json: async () => body,
+  } satisfies Partial<Response>
+}
+
+function createReconnectHost(chainId = '0x89') {
+  return MiniAppHost.reconnect(createBrowser() as never, {
+    url: 'https://app.uniswap.org',
+    title: 'Uniswap',
+    evmRpcUrls: {
+      [chainId]: 'https://polygon-rpc.test',
+    },
+    requestUserConfirmation,
+  }, chainId)
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.unstubAllGlobals()
+
+  addressesEqual.mockImplementation((left?: string, right?: string) =>
+    left?.toLowerCase() === right?.toLowerCase())
+  hexToBytes.mockImplementation((value: string) =>
+    Uint8Array.from(Buffer.from(value.replace(/^0x/, ''), 'hex')))
+  isValidEthAddress.mockImplementation((value?: string) =>
+    !!value && /^0x[a-fA-F0-9]{40}$/.test(value))
+  parseChainId.mockImplementation((value?: string | number) => {
+    if (typeof value === 'number') {
+      return value
+    }
+    if (typeof value !== 'string' || value.length === 0) {
+      return undefined
+    }
+    return value.startsWith('0x')
+      ? Number.parseInt(value, 16)
+      : Number.parseInt(value, 10)
+  })
+  useLocalWallet.mockReturnValue({
+    getEthAddress: vi.fn(() => ({ data: ethAddress, error: undefined })),
+    getEthWallet: vi.fn(() => ({
+      data: {
+        address: ethAddress,
+        signTransaction,
+      },
+      error: undefined,
+    })),
+  })
+  useNimiqNetwork.mockReturnValue({
+    consensus: 'established',
+    height: 0,
+  })
+  usePolygonUsdt.mockReturnValue({
+    updateBalance,
+    syncTransactionHistory,
+  })
+  useRemoteSigner.mockReturnValue({
+    remoteHeight: 0,
+    remoteAddress: undefined,
+  })
+  useTransactions.mockReturnValue({
+    sendTx: vi.fn(),
+  })
+})
+
+describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
   it('preserves the rejection message after bridge-safe serialization', async () => {
-    const { handleRequest } = await createHost({ confirmed: false })
+    const { handleRequest } = await createPermissionHost({ confirmed: false })
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -156,7 +237,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('returns no permissions before eth_accounts access is granted', async () => {
-    const { handleRequest } = await createHost()
+    const { handleRequest } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -167,7 +248,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('returns a serializable eth_accounts permission after wallet_requestPermissions', async () => {
-    const { handleRequest, requestUserConfirmation } = await createHost()
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -189,11 +270,11 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
       },
     ])
 
-    expect(requestUserConfirmation).toHaveBeenCalledTimes(1)
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
   })
 
   it('returns the stored permission without prompting again when already granted', async () => {
-    const { handleRequest, requestUserConfirmation } = await createHost()
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
 
     const firstResponse = await handleRequest({
       network: 'ethereum',
@@ -210,11 +291,11 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
     })
 
     expect(secondResponse).toEqual(firstResponse)
-    expect(requestUserConfirmation).toHaveBeenCalledTimes(1)
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
   })
 
   it('exposes the stored permission through wallet_getPermissions after wallet_requestPermissions', async () => {
-    const { handleRequest } = await createHost()
+    const { handleRequest } = await createPermissionHost()
 
     const permission = await handleRequest({
       network: 'ethereum',
@@ -232,7 +313,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('populates wallet_getPermissions after requestAccounts succeeds', async () => {
-    const { handleRequest } = await createHost()
+    const { handleRequest } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -261,7 +342,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('returns the standard rejection error for wallet_requestPermissions cancellations', async () => {
-    const { handleRequest } = await createHost({ confirmed: false })
+    const { handleRequest } = await createPermissionHost({ confirmed: false })
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -275,7 +356,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('rejects malformed wallet_requestPermissions params with -32602', async () => {
-    const { handleRequest } = await createHost()
+    const { handleRequest } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -288,7 +369,7 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
   })
 
   it('rejects unsupported wallet_requestPermissions capabilities with 4200', async () => {
-    const { handleRequest } = await createHost()
+    const { handleRequest } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'ethereum',
@@ -298,5 +379,172 @@ describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-li
     }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
       code: 4200,
     })
+  })
+})
+
+describe('miniAppHost', () => {
+  it('refreshes Polygon USDT history after broadcasting a Polygon dApp transaction', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0xabc123' })
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({
+            jsonrpc: '2.0',
+            id: 3,
+            result: {
+              status: '0x1',
+              blockNumber: '0x10',
+            },
+          })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createReconnectHost()
+
+    const txHash = await (host as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      data: '0x',
+      nonce: '0x7',
+      chainId: '0x89',
+    })
+
+    expect(txHash).toBe('0xabc123')
+    expect(trackWeb3Request).toHaveBeenCalled()
+
+    await vi.waitFor(() => {
+      expect(updateBalance).toHaveBeenCalledOnce()
+      expect(syncTransactionHistory).toHaveBeenCalledOnce()
+    })
+  })
+
+  it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0xabc123' })
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 3, result: null })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createReconnectHost()
+
+    await (host as any).signEthTransaction({
+      to: polygonUsdtConfig.tokenContract,
+      from: ethAddress,
+      gas: '0x11170',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      data: erc20Interface.encodeFunctionData('transfer', [
+        '0x2222222222222222222222222222222222222222',
+        parseUnits('123.45', 6),
+      ]),
+      nonce: '0x7',
+      chainId: '0x89',
+    })
+
+    expect(requestUserConfirmation).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'eth-transaction',
+      data: expect.objectContaining({
+        decodedAssetTransfer: expect.objectContaining({
+          assetSymbol: 'USDT',
+          network: 'Polygon',
+          recipient: '0x2222222222222222222222222222222222222222',
+          amount: '123.45 USDT',
+        }),
+      }),
+    }))
+  })
+
+  it('rejects decoded Polygon USDT transfers that include a native token value', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createReconnectHost()
+
+    await expect((host as any).signEthTransaction({
+      to: polygonUsdtConfig.tokenContract,
+      from: ethAddress,
+      gas: '0x11170',
+      gasPrice: '0x3b9aca00',
+      value: '0x1',
+      data: erc20Interface.encodeFunctionData('transfer', [
+        '0x2222222222222222222222222222222222222222',
+        parseUnits('1', 6),
+      ]),
+      nonce: '0x7',
+      chainId: '0x89',
+    })).rejects.toThrow('Polygon USDT transfers must not include a native token value')
+
+    expect(requestUserConfirmation).not.toHaveBeenCalled()
+  })
+
+  it('allows generic ERC-20 transfers without attaching Polygon USDT metadata', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0xabc123' })
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 3, result: null })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createReconnectHost()
+
+    await (host as any).signEthTransaction({
+      to: '0x9999999999999999999999999999999999999999',
+      from: ethAddress,
+      gas: '0x11170',
+      gasPrice: '0x3b9aca00',
+      value: '0x0',
+      data: erc20Interface.encodeFunctionData('transfer', [
+        '0x2222222222222222222222222222222222222222',
+        parseUnits('1', 6),
+      ]),
+      nonce: '0x7',
+      chainId: '0x89',
+    })
+
+    expect(requestUserConfirmation).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'eth-transaction',
+      data: expect.not.objectContaining({
+        decodedAssetTransfer: expect.anything(),
+      }),
+    }))
   })
 })

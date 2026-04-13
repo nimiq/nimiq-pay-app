@@ -1,0 +1,7 @@
+appId: ${APP_ID}
+---
+- tapOn:
+    id: tab-button-home
+- extendedWaitUntil:
+    visible: Top Up
+    timeout: 5000

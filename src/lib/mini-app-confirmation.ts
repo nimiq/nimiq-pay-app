@@ -4,6 +4,7 @@ import { formatEther } from 'ethers'
 import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { Crypto } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -130,9 +131,17 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         gasPrice?: string
         nonce?: number
         chainId?: string
+        chainName?: string
+        decodedAssetTransfer?: {
+          assetSymbol: string
+          network: string
+          recipient: string
+          amount: string
+        }
       }
       const valueEth = formatEther(BigInt(txParams.value || '0x0'))
       const gasLimit = txParams.gas ? Number.parseInt(txParams.gas, 16) : 0
+      const nativeAssetSymbol = txParams.chainName === 'Polygon' || txParams.chainId === `0x${polygonUsdtConfig.networkId.toString(16)}` ? 'MATIC' : 'ETH'
 
       // Convert wei hex to Gwei for readable gas prices
       const toGwei = (hex?: string) => {
@@ -150,11 +159,28 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         ? formatEther(BigInt(feePerGasHex) * BigInt(gasLimit))
         : null
 
-      const rows: { title: string, value: string }[] = [
-        { title: 'To', value: txParams.to },
-        { title: 'Value', value: `${valueEth} ETH` },
-        { title: 'Gas Limit', value: String(gasLimit) },
-      ]
+      const rows: { title: string, value: string }[] = []
+
+      if (txParams.decodedAssetTransfer) {
+        rows.push(
+          { title: 'Network', value: txParams.decodedAssetTransfer.network },
+          { title: 'Asset', value: txParams.decodedAssetTransfer.assetSymbol },
+          { title: 'Recipient', value: txParams.decodedAssetTransfer.recipient },
+          { title: 'Amount', value: txParams.decodedAssetTransfer.amount },
+          { title: 'Contract', value: txParams.to },
+          { title: 'Gas Limit', value: String(gasLimit) },
+        )
+      }
+      else {
+        if (txParams.chainName)
+          rows.push({ title: 'Network', value: txParams.chainName })
+
+        rows.push(
+          { title: 'To', value: txParams.to },
+          { title: 'Value', value: `${valueEth} ${nativeAssetSymbol}` },
+          { title: 'Gas Limit', value: String(gasLimit) },
+        )
+      }
 
       if (txParams.maxFeePerGas) {
         const gwei = toGwei(txParams.maxFeePerGas)
@@ -172,10 +198,10 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
           rows.push({ title: 'Gas Price', value: gwei })
       }
       if (maxTotalFee)
-        rows.push({ title: 'Max Total Fee', value: `${maxTotalFee} ETH` })
+        rows.push({ title: 'Max Total Fee', value: `${maxTotalFee} ${nativeAssetSymbol}` })
       if (txParams.nonce !== undefined)
         rows.push({ title: 'Nonce', value: String(txParams.nonce) })
-      if (txParams.data && txParams.data !== '0x')
+      if (!txParams.decodedAssetTransfer && txParams.data && txParams.data !== '0x')
         rows.push({ title: 'Contract Interaction', value: 'Yes' })
 
       const result = await ExtendedDialog.sheet({

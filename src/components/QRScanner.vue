@@ -88,7 +88,11 @@ function handleManualInput() {
 <template>
   <div class="mt-8 px-0.5">
     <div v-if="isDev && expect !== QRDataFormat.NimCashlink" class="flex flex-col items-center mb-6" :class="{ 'absolute z-10  -translate-x-1/2 left-1/2 bottom-0': !isWeb }">
-      <button class="block w-full text-sm font-normal text-center underline text-space/80" @click="setDummyData">
+      <button
+        aria-label="Use mockup data"
+        class="block w-full text-sm font-normal text-center underline text-space/80"
+        @click="setDummyData"
+      >
         Click here to use mockup data.<br>
       </button>
       <span class="mt-2 text-xs text-center opacity-70">
@@ -105,11 +109,14 @@ function handleManualInput() {
       <p v-if="state !== QRScannerState.NoPermission" class="absolute w-full text-center text-space/60 small:leading-5 -bottom-16">
         <span v-if="expect === QRDataFormat.PaymentRequest">
           <template v-if="isBtcLightningEnabled">
-            {{ $t('Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay.') }}
+            {{ $t('Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay.') }}
           </template>
           <template v-else>
-            {{ $t('Scan any Nimiq or NAKA QR code to pay.') }}
+            {{ $t('Scan any Nimiq, USDT or NAKA QR code to pay.') }}
           </template>
+        </span>
+        <span v-else-if="expect === QRDataFormat.AssetAddress">
+          {{ $t('Scan an address QR code.') }}
         </span>
       </p>
     </div>
@@ -130,11 +137,14 @@ function handleManualInput() {
           <p v-if="state !== QRScannerState.NoPermission" class="w-full mt-5 text-center text-space/60 small:leading-5">
             <span v-if="expect === QRDataFormat.PaymentRequest">
               <template v-if="isBtcLightningEnabled">
-                {{ $t('Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay.') }}
+                {{ $t('Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay.') }}
               </template>
               <template v-else>
-                {{ $t('Scan any Nimiq or NAKA QR code to pay.') }}
+                {{ $t('Scan any supported Nimiq, USDT or NAKA QR code to pay.') }}
               </template>
+            </span>
+            <span v-else-if="expect === QRDataFormat.AssetAddress">
+              {{ $t('Scan an address QR code.') }}
             </span>
           </p>
           <button

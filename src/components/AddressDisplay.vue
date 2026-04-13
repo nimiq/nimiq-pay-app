@@ -11,6 +11,10 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  format: {
+    type: String as () => 'nimiq' | 'ethereum',
+    default: 'nimiq',
+  },
   isCopyable: {
     type: Boolean,
     default: true,
@@ -21,10 +25,20 @@ const logger = useLogger('AddressDisplay')
 const { setToast } = useToast()
 
 const chunks = computed(() => {
-  if (!props.address)
-    return Array.from({ length: 9 }).fill('-') as string[]
-  return props.address.replace(/[+ ]/g, '').match(/.{4}/g)!
+  switch (props.format) {
+    case 'ethereum':
+      if (!props.address)
+        return Array.from({ length: 3 }).fill('-') as string[]
+      return props.address.replace(/[+ ]/g, '').match(/.{14}/g)!
+    case 'nimiq':
+    default:
+      if (!props.address)
+        return Array.from({ length: 9 }).fill('-') as string[]
+      return props.address.replace(/[+ ]/g, '').match(/.{4}/g)!
+  }
 })
+
+const isNimiq = computed(() => props.format === 'nimiq')
 
 async function handleCopy() {
   if (!props.isCopyable)
@@ -43,8 +57,8 @@ async function handleCopy() {
 </script>
 
 <template>
-  <div class="relative overflow-hidden text-2xl rounded text-space/50 address-display ion-activatable ripple-parent" @click="handleCopy">
-    <span v-for="(chunk, index) in chunks" :key="chunk + index" class="chunk">{{ chunk }}<span class="space">&nbsp;</span></span>
+  <div class="relative overflow-hidden text-2xl rounded-md text-space bg-space/5 address-display ion-activatable ripple-parent" :class="`format-${format}`" @click="handleCopy">
+    <span v-for="(chunk, index) in chunks" :key="chunk + index" class="chunk">{{ chunk }}<span v-if="isNimiq" class="space">&nbsp;</span></span>
     <IonRippleEffect />
   </div>
 </template>
@@ -55,9 +69,8 @@ async function handleCopy() {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  max-width: 28.25rem;
-  font-weight: 400;
-  padding: 0.25rem;
+  font-weight: 500;
+  padding: 6px 10px;
 }
 
 .chunk {
@@ -66,6 +79,9 @@ async function handleCopy() {
   line-height: 1.11;
   text-align: center;
   box-sizing: border-box;
+}
+
+.format-nimiq .chunk {
   width: 33%;
   text-transform: uppercase;
 }

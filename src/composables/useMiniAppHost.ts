@@ -7,12 +7,17 @@ import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
+import { getAddress, Interface } from 'ethers'
 import { i18n } from '@/i18n/i18n-setup'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
+import { formatUsdtAmount } from '@/lib/assets'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
+import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { sleep } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 import { Rail, Transfer } from '@/types/transactions'
@@ -25,6 +30,9 @@ import { generateUUID } from '../../web3-provider/src/utils'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
+const erc20TransferInterface = new Interface([
+  'function transfer(address to, uint256 amount) returns (bool)',
+])
 
 /**
  * Snapshot of an active MiniAppHost session.
@@ -51,6 +59,14 @@ export function getActiveMiniAppSession(): MiniAppSessionState | null {
 export interface SignatureResult {
   publicKey: string
   signature: string
+}
+
+interface DecodedAssetTransfer {
+  assetSymbol: 'USDT'
+  network: 'Polygon'
+  recipient: string
+  amount: string
+  tokenAddress: string
 }
 
 interface EthAccountsPermission {
@@ -101,6 +117,8 @@ export type UserConfirmationRequest = {
     gasPrice?: string // legacy transactions
     nonce?: number
     chainId?: string
+    chainName?: string
+    decodedAssetTransfer?: DecodedAssetTransfer
   }
 } | {
   type: 'message'
@@ -459,6 +477,45 @@ export class MiniAppHost {
     return ALLOWED_EVM_CHAIN_IDS.has(chainId)
   }
 
+  private decodeKnownPolygonUsdtTransfer({
+    to,
+    data,
+    chainId,
+  }: {
+    to: string
+    data?: string
+    chainId?: number
+  }): DecodedAssetTransfer | null {
+    if (!data || data === '0x')
+      return null
+
+    const transferSelector = erc20TransferInterface.getFunction('transfer')?.selector
+    if (!transferSelector || !data.startsWith(transferSelector))
+      return null
+
+    if (chainId !== polygonUsdtConfig.networkId || !addressesEqual(to, polygonUsdtConfig.tokenContract))
+      return null
+
+    let parsed: ReturnType<Interface['parseTransaction']>
+    try {
+      parsed = erc20TransferInterface.parseTransaction({ data })
+    }
+    catch {
+      throw new InvalidTransactionError('Invalid Polygon USDT transfer calldata')
+    }
+
+    if (!parsed || parsed.name !== 'transfer')
+      throw new InvalidTransactionError('Invalid Polygon USDT transfer calldata')
+
+    return {
+      assetSymbol: 'USDT',
+      network: 'Polygon',
+      recipient: getAddress(String(parsed.args[0])),
+      amount: formatUsdtAmount(Number(parsed.args[1]), 'en-US'),
+      tokenAddress: polygonUsdtConfig.tokenContract,
+    }
+  }
+
   /** Default timeout for RPC calls in milliseconds */
   private static readonly RPC_TIMEOUT_MS = 30000
 
@@ -765,6 +822,38 @@ export class MiniAppHost {
       )
     }
 
+    const currentChainNumber = parseChainId(this.currentChainId)
+    let validatedChainIdNumber: number | undefined
+    if (txParams.chainId) {
+      const txChainIdNumber = parseChainId(txParams.chainId)
+      if (!txChainIdNumber) {
+        throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
+      }
+      if (!this.isAllowedChain(txChainIdNumber)) {
+        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${txChainIdNumber}`)
+      }
+      if (currentChainNumber && txChainIdNumber !== currentChainNumber) {
+        throw new InvalidTransactionError(
+          `Transaction chainId (${txChainIdNumber}) doesn't match current chain (${currentChainNumber})`,
+        )
+      }
+      validatedChainIdNumber = txChainIdNumber
+    }
+    else if (currentChainNumber) {
+      validatedChainIdNumber = currentChainNumber
+    }
+
+    const decodedAssetTransfer = this.decodeKnownPolygonUsdtTransfer({
+      to: txParams.to,
+      data: txParams.data,
+      chainId: validatedChainIdNumber,
+    })
+    const nativeValue = BigInt(txParams.value || '0x0')
+    if (decodedAssetTransfer && nativeValue > 0n)
+      throw new InvalidTransactionError('Polygon USDT transfers must not include a native token value')
+
+    const chainName = validatedChainIdNumber ? EVM_CHAIN_NAMES[validatedChainIdNumber] : undefined
+
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
     const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
 
@@ -918,6 +1007,8 @@ export class MiniAppHost {
         gasPrice: finalGasPrice,
         nonce: finalNonce,
         chainId: txParams.chainId,
+        chainName,
+        decodedAssetTransfer: decodedAssetTransfer || undefined,
       },
       network: 'ethereum',
     })
@@ -944,9 +1035,8 @@ export class MiniAppHost {
     }
 
     // Set value (convert from hex wei)
-    if (txParams.value) {
-      tx.value = BigInt(txParams.value)
-    }
+    if (txParams.value)
+      tx.value = nativeValue
 
     // Set data (calldata for contract interactions)
     if (txParams.data && txParams.data !== '0x') {
@@ -982,28 +1072,8 @@ export class MiniAppHost {
       tx.nonce = resolvedNonce
     }
 
-    // Set chainId - use current chain if not provided, validate if provided
-    const currentChainNumber = parseChainId(this.currentChainId)
-    if (txParams.chainId) {
-      const txChainIdNumber = parseChainId(txParams.chainId)
-      if (!txChainIdNumber) {
-        throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
-      }
-      if (!this.isAllowedChain(txChainIdNumber)) {
-        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${txChainIdNumber}`)
-      }
-      // Validate transaction chainId matches current chain
-      if (currentChainNumber && txChainIdNumber !== currentChainNumber) {
-        throw new InvalidTransactionError(
-          `Transaction chainId (${txChainIdNumber}) doesn't match current chain (${currentChainNumber})`,
-        )
-      }
-      tx.chainId = BigInt(txChainIdNumber)
-    }
-    else if (currentChainNumber) {
-      // Use current chain if not specified in transaction
-      tx.chainId = BigInt(currentChainNumber)
-    }
+    if (validatedChainIdNumber)
+      tx.chainId = BigInt(validatedChainIdNumber)
 
     logger.log('[ETH_TX] Step 4 - Built tx object:', {
       to: tx.to,
@@ -1064,8 +1134,60 @@ export class MiniAppHost {
 
     logger.log('[ETH_TX] Step 8 - Transaction broadcast success:', { txHash })
 
+    const effectiveChainId = tx.chainId ? Number(tx.chainId) : validatedChainIdNumber
+    this.refreshPolygonUsdtStateAfterBroadcast({
+      txHash,
+      rpcUrl,
+      chainId: effectiveChainId,
+    })
+
     trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId: this.currentChainId })
     return txHash
+  }
+
+  private refreshPolygonUsdtStateAfterBroadcast({
+    txHash,
+    rpcUrl,
+    chainId,
+  }: {
+    txHash: string
+    rpcUrl: string
+    chainId?: number
+  }): void {
+    if (chainId !== polygonUsdtConfig.networkId) {
+      return
+    }
+
+    void (async () => {
+      for (let attempt = 0; attempt < 15; attempt++) {
+        const receiptResponse = await this.rpcCall({
+          rpcUrl,
+          payload: {
+            jsonrpc: '2.0',
+            id: Date.now() + attempt,
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          },
+        })
+        const receipt = (receiptResponse as { result?: unknown }).result
+
+        if (receipt) {
+          const polygonStore = usePolygonUsdt()
+          await polygonStore.updateBalance()
+          await polygonStore.syncTransactionHistory()
+          return
+        }
+
+        await sleep(2_000)
+      }
+
+      logger.warn('[ETH_TX] Timed out waiting for Polygon receipt, skipping automatic USDT refresh', { txHash })
+    })().catch((error) => {
+      logger.warn('[ETH_TX] Failed to refresh Polygon USDT state after dApp transaction', {
+        txHash,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
   }
 
   /**

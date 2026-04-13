@@ -9,8 +9,10 @@ import { useDevice } from '@/composables/useDevice'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
+import { Asset, assetToCrypto } from '@/lib/assets'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
+import { useApp } from '@/stores/app'
 import { MerchantCategory, Transfer, translateTransactionTitle } from '@/types/transactions'
 
 const BrickInput = defineAsyncComponent(() => import('@/components/BricksInput.vue'))
@@ -26,6 +28,7 @@ const BluecodeNotSupported = defineAsyncComponent(() => import('@/components/blu
 const QRCodeDisplay = defineAsyncComponent(() => import('@/components/QRCodeDisplay.vue'))
 const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPreview.vue'))
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
+const PaymentAmountInput = defineAsyncComponent(() => import('@/components/PaymentAmountInput.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
 const WithdrawalAddressList = defineAsyncComponent(() => import('@/components/WithdrawalAddressList.vue'))
@@ -369,6 +372,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
   return {
     step: StepName.QRCodeScanner,
     get title() { return i18n.t('Scan QR code') },
+    ariaLabel: 'Scan QR code',
     allowGoBack,
     overrideHeight: defaultProps?.overrideHeight,
     main: markRaw(props => h(QRScanner, { ...props, ...defaultProps })),
@@ -385,7 +389,10 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
         // TODO: idk why, but iOS needs to have the modal half open before scrolling works
         if (useDevice().isIOS)
           await sleep(100)
-        navigateTo({ step: StepName.PaymentPreview })
+        if (data.amount === 0)
+          navigateTo({ step: StepName.PaymentAmountInput })
+        else
+          navigateTo({ step: StepName.PaymentPreview })
       }
     },
     beforeNext: async (state, { prev, navigateTo }) => {
@@ -393,6 +400,8 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
       if (defaultProps?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
           navigateTo({ step: StepName.PaymentRequestManualInput })
+        else if (typeof state.qrCodeScanner === 'object' && state.qrCodeScanner.amount === 0)
+          navigateTo({ step: StepName.PaymentAmountInput })
         else
           navigateTo({ step: StepName.PaymentPreview })
       }
@@ -447,9 +456,48 @@ export const paymentRequestManualInputStep: StepInit = async ({ allowGoBack }) =
     get title() { return i18n.t('Enter payment request') },
     main: markRaw(PaymentRequestManualInput),
     allowGoBack,
-    beforeNext: async (state, { next }) => {
-      state.qrCodeScanner = state.paymentRequestManualInput
+    beforeNext: async (state, { next, navigateTo }) => {
+      const request = state.paymentRequestManualInput
+      state.qrCodeScanner = request
+
+      if (request && typeof request !== 'string' && request.amount === 0) {
+        useApp().activeAsset = request.asset || Asset.NIM
+        navigateTo({ step: StepName.PaymentAmountInput })
+        return
+      }
+
       next()
+    },
+  } satisfies Step
+}
+
+export const paymentAmountInputStep: StepInit = async () => {
+  const title = ref(i18n.t('Payment Request'))
+  const merchantCategory = ref<MerchantCategory>()
+  const titleIcon: Component = markRaw(props => h(CategoryIcon, { ...props, category: merchantCategory.value }))
+  return {
+    step: StepName.PaymentAmountInput,
+    title,
+    titleIcon,
+    main: markRaw(PaymentAmountInput),
+    async beforeRender({ qrCodeScanner }) {
+      if (!qrCodeScanner || typeof qrCodeScanner === 'string')
+        return
+      title.value = qrCodeScanner.merchantName || i18n.t('Payment Request')
+      merchantCategory.value = qrCodeScanner.merchantCategory
+    },
+    beforeNext: async (state, { navigateTo }) => {
+      const amountUnits = state[StepName.PaymentAmountInput]
+      if (!amountUnits || amountUnits <= 0)
+        return
+
+      // Update the payment request with the user-entered amount
+      const request = state[StepName.QRCodeScanner]
+      if (request && typeof request !== 'string') {
+        state[StepName.QRCodeScanner] = { ...request, amount: amountUnits }
+      }
+
+      navigateTo({ step: StepName.PaymentPreview })
     },
   } satisfies Step
 }
@@ -462,6 +510,7 @@ export const paymentPreviewStep: StepInit = async () => {
   return {
     step: StepName.PaymentPreview,
     title,
+    ariaLabel: 'Payment preview',
     titleIcon,
     main: markRaw(PaymentPreview),
     autofocus: false, // Don't autofocus on the toggle button
@@ -489,16 +538,21 @@ export const paymentPreviewStep: StepInit = async () => {
 export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
   step: StepName.NimWithdrawalAmountSelectionStep,
   get title() { return i18n.t('Withdraw') },
+  ariaLabel: 'Withdraw',
   main: markRaw(NimWithdraw),
   beforeNext: async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
-    const remoteBalance = (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
+    const app = useApp()
+    const currentBalance = app.isNimiqAsset
+      ? (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
+      : (await import('@/stores/polygon-usdt')).usePolygonUsdt().balance
     const { formatCrypto } = (await import('@/composables/useCurrencyFormatter')).useCurrencyFormatter()
-    const { Crypto } = (await import('@/stores/app'))
 
-    if (amount > remoteBalance) {
+    if (amount > currentBalance) {
       return err(i18n.t(
-        'You don\'t have enough NIM. Your current balance is {balance}.',
-        { balance: formatCrypto(remoteBalance, { currency: Crypto.NIM }) },
+        app.isNimiqAsset
+          ? 'You don\'t have enough NIM. Your current balance is {balance}.'
+          : 'You don\'t have enough USDT. Your current balance is {balance}.',
+        { balance: formatCrypto(currentBalance, { currency: assetToCrypto(app.activeAsset) }) },
       ))
     }
 
@@ -517,6 +571,7 @@ export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
 
 export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
   get title() { return i18n.t('Choose an address') },
+  ariaLabel: 'Choose an address',
   step: StepName.NimWithdrawalAddressSelectionStep,
   main: markRaw(WithdrawalAddressList),
   autofocus: false, // Don't autofocus on the search bar
@@ -541,7 +596,8 @@ export const confirmAddressDeletionStep: StepInit = async () => ({
 
 export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions }> = async ({ props }) => ({
   step: StepName.NimAddressInput,
-  get title() { return i18n.t('Send NIM to this address') },
+  get title() { return useApp().isNimiqAsset ? i18n.t('Send NIM to this address') : i18n.t('Send USDT to this address') },
+  ariaLabel: 'Send to this address',
   get description() { return i18n.t('Copy or scan the address') },
   main: markRaw(NimAddressInput),
   autofocus: false, // Usually the user will scan the QR code
@@ -553,11 +609,20 @@ export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions }
 
     // Once the address is validated, go back to the previous step, which is the payment preview
     if (nimAddressInput) {
-      const { ValidationUtils } = (await import('@nimiq/utils'))
-      if (!ValidationUtils.isValidAddress(nimAddressInput))
-        err(i18n.t('Invalid Nimiq address'))
-      else
-        prev()
+      if (!useApp().isNimiqAsset) {
+        const { isValidEthAddress } = await import('@/lib/ethereum')
+        if (!isValidEthAddress(nimAddressInput))
+          err(i18n.t('Invalid USDT address'))
+        else
+          prev()
+      }
+      else {
+        const { ValidationUtils } = (await import('@nimiq/utils'))
+        if (!ValidationUtils.isValidAddress(nimAddressInput))
+          err(i18n.t('Invalid Nimiq address'))
+        else
+          prev()
+      }
     }
     else { next() }
   },
@@ -565,19 +630,29 @@ export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions }
 
 export const nimAddressDisplay: StepInit = async () => ({
   step: StepName.NimAddressDisplay,
-  get title() { return i18n.t('Send NIM to top up') },
-  get description() { return i18n.t('Send a transaction to the address below. Top up as much as you like.') },
+  get title() { return useApp().isNimiqAsset ? i18n.t('Send NIM to top up') : i18n.t('Receive USDT on Polygon') },
+  ariaLabel: 'Top up address',
+  get description() { return useApp().isNimiqAsset ? i18n.t('Send a transaction to the address below. Top up as much as you like.') : i18n.t('Send USDT on Polygon to the address below.') },
   main: markRaw(NimAddressDisplay),
   beforeNext: async ({ nimAddressDisplay }, { next, navigateTo }) => {
-    const { ValidationUtils } = (await import('@nimiq/utils'))
-    if (nimAddressDisplay && ValidationUtils.isValidAddress(nimAddressDisplay)) {
-      navigateTo({ step: StepName.QRCodeDisplay })
-    }
-    else if (nimAddressDisplay === undefined) {
-      navigateTo({ step: StepName.QRCodeScanner })
+    if (!useApp().isNimiqAsset) {
+      const { isValidEthAddress } = await import('@/lib/ethereum')
+      if (nimAddressDisplay && isValidEthAddress(nimAddressDisplay))
+        navigateTo({ step: StepName.QRCodeDisplay })
+      else
+        next()
     }
     else {
-      next()
+      const { ValidationUtils } = (await import('@nimiq/utils'))
+      if (nimAddressDisplay && ValidationUtils.isValidAddress(nimAddressDisplay)) {
+        navigateTo({ step: StepName.QRCodeDisplay })
+      }
+      else if (nimAddressDisplay === undefined) {
+        navigateTo({ step: StepName.QRCodeScanner })
+      }
+      else {
+        next()
+      }
     }
   },
 } satisfies Step)

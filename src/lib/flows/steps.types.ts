@@ -2,6 +2,7 @@ import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import type { flowHeightOptions } from '@/lib/flows/index'
+import type { PolygonTransferQuote } from '@/lib/polygon/types'
 
 export enum FlowName {
   Setup = 'setup',
@@ -63,6 +64,7 @@ export type FlowInit = (options?: FlowInitOptions) => Promise<Flow>
 export enum StepName {
   EnableBiometric = 'enableBiometric',
   PaymentRequestManualInput = 'paymentRequestManualInput',
+  PaymentAmountInput = 'paymentAmountInput',
   PromoCode = 'promoCode',
   PinCode = 'pinCode',
   PinCodeConfirm = 'pinCodeConfirm',
@@ -102,7 +104,7 @@ export enum StepName {
   NakaCardDelete = 'nakaDeleteCard',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.HoldNakaCardToReader] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
 const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
 export type InfoStepName = typeof infoSteps[number]
@@ -136,7 +138,8 @@ export interface State {
     confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage>
   }
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
-  [StepName.PaymentPreview]: { payWithPuntos: boolean }
+  [StepName.PaymentAmountInput]: number
+  [StepName.PaymentPreview]: { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
   [StepName.NimWithdrawalAddressSelectionStep]: string // User selects a saved address
   [StepName.NimAddressInput]: string
@@ -170,6 +173,12 @@ type BaseStep = {
    * Title of the modal
    */
   title?: string | Ref<string>
+
+  /**
+   * Language-independent label for the step title, used for testing.
+   * When provided, this is set as the aria-label on the title element.
+   */
+  ariaLabel?: string
 
   /**
    * An icon for the title (e.g. ShopIcon when showing the `merchantName`)
@@ -295,25 +304,25 @@ export type StepInitOptions<Props = undefined> = {
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }
 
-export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction
+export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction | NimWithdrawalSelection | { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote }
 
 export const stepEmits: EmitsOptions = {
-  done: (_: OnDoneStepValue) => undefined,
-  select: (_: OnDoneStepValue) => undefined, // Just an alias for done
-  skip: () => undefined,
-  back: () => undefined,
-  focus: () => undefined,
+  done: (_: OnDoneStepValue) => true,
+  select: (_: OnDoneStepValue) => true, // Just an alias for done
+  skip: () => true,
+  back: () => true,
+  focus: () => true,
   navigateTo: (_: NavigateToOptions) => true,
 }
 
 // Complex types for State
 
-export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency' | 'railMerchantId' | 'recipientType' | 'senderType' | 'recipientData' | 'senderData'>
+export type PaymentRequestData = Pick<Transaction, 'recipient' | 'amount' | 'message' | 'merchantName' | 'merchantCategory' | 'rail' | 'paymentRef' | 'fee' | 'invoiced' | 'meta' | 'fiatAmount' | 'fiatFeeAmount' | 'fiatCurrency' | 'railMerchantId' | 'recipientType' | 'senderType' | 'recipientData' | 'senderData' | 'asset' | 'chain'>
   & {
     transfer: Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap | Transfer.Staking
     feeIncludedInAmount?: boolean
     swap?: {
-      fees: { asset: string, amount: number }[]
+      fees: { asset: string, amount: number, included: boolean, source: 'NETWORK' | 'SERVICE', percentage?: number }[]
     }
   }
 
@@ -323,4 +332,5 @@ export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'messag
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
+  polygonQuote?: PolygonTransferQuote
 }

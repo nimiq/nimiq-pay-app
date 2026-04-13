@@ -4,6 +4,7 @@ import type { State } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
 import { ValidationUtils } from '@nimiq/utils'
 import { FiatAmount } from '@nimiq/vue3-components'
+import { getAddress } from 'ethers'
 import { storeToRefs } from 'pinia'
 
 import { computed, ref, toRef, watch } from 'vue'
@@ -12,15 +13,21 @@ import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
+import UsdtLogo from '@/components/icons/usdt-logo.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
+import { isGenericPolygonQuoteErrorMessage, useUsdtQuoteRefresh } from '@/composables/useUsdtQuoteRefresh'
 import { i18n } from '@/i18n/i18n-setup'
+import { assetToCrypto, formatUsdtPreviewAmount } from '@/lib/assets'
+import { isValidEthAddress } from '@/lib/ethereum'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
-import { Crypto, DECIMALS, useApp } from '@/stores/app'
+import { DECIMALS, useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
+import { Transfer } from '@/types/transactions'
 import ShortAddressDisplay from './ShortAddressDisplay.vue'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
@@ -34,11 +41,14 @@ const emit = defineEmits(stepEmits)
 const logger = useLogger('NimWithdraw')
 
 const state = toRef(props, 'state')
-const { withdrawalAddress, selectedFiat } = storeToRefs(useApp())
+const { withdrawalAddress, selectedFiat, isNimiqAsset, activeAsset } = storeToRefs(useApp())
 const address = computed(() => {
   const address = withdrawalAddress.value || state.value[StepName.NimAddressInput]
   if (!address)
     return ''
+
+  if (!isNimiqAsset.value)
+    return isValidEthAddress(address) ? getAddress(address) : ''
 
   try {
     return Nimiq.Address.fromString(address).toUserFriendlyAddress()
@@ -52,9 +62,12 @@ const address = computed(() => {
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 const { isScannerActive } = storeToRefs(useLocks())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
+const polygonUsdt = usePolygonUsdt()
+const { balance: usdtBalance, consensus: polygonConsensus, transferFeeSnapshot } = storeToRefs(polygonUsdt)
 
-const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: Crypto.NIM }))
-watch(height, fetch)
+const cryptoCurrency = computed(() => assetToCrypto(activeAsset.value))
+const { data, fetch } = useFetch(() => useCurrencyPriceApi().getPriceNow({ currency: cryptoCurrency.value }))
+watch([height, cryptoCurrency], fetch)
 const price = computed(() => data.value?.price || 0)
 
 // This component allows the user to either withdraw a specific Fiat amount or all available funds.
@@ -70,11 +83,58 @@ watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fi
 
 // JS and their precision issues...
 // Lunas are integers, so no problem in rounding down to the nearest integer.
-const lunaAmount = computed(() => Math.floor(fiatAmount.value / price.value * 1e5))
-const hasEnoughAmount = computed(() => lunaAmount.value <= remoteBalance.value)
-const remoteBalanceFiat = computed(() => remoteBalance.value / 1e5 * price.value)
-
+const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
+const amountUnits = computed(() => Math.floor(fiatAmount.value / price.value * factor.value))
+const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
+const loading = ref(false)
+const remoteBalanceFiat = computed(() => spendableBalance.value / factor.value * price.value)
 const selected = ref('')
+const hasPositiveAmount = computed(() => amountUnits.value > 0)
+const currentUsdtQuoteRequest = computed<{
+  amount: number
+  recipient: string
+  transfer: Transfer.UserPayment
+} | null>(() => {
+  if (isNimiqAsset.value || polygonConsensus.value !== 'established' || !selected.value || !hasPositiveAmount.value)
+    return null
+
+  return {
+    amount: amountUnits.value,
+    recipient: selected.value,
+    transfer: Transfer.UserPayment,
+  }
+})
+
+const {
+  quote: usdtQuote,
+  error: usdtQuoteError,
+  quoteLoading: usdtQuoteLoading,
+  feeText: usdtFeeText,
+} = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
+
+const displayedAmountUnits = computed(() => !isNimiqAsset.value && usdtQuote.value ? usdtQuote.value.totalDebit : amountUnits.value)
+const formattedUsdtAmount = computed(() => formatUsdtPreviewAmount(displayedAmountUnits.value))
+const hasEnoughAmount = computed(() => {
+  if (!isNimiqAsset.value)
+    return !!usdtQuote.value && usdtQuote.value.totalDebit <= spendableBalance.value
+  return amountUnits.value <= spendableBalance.value
+})
+const quoteHelperMessage = computed(() => {
+  if (isNimiqAsset.value)
+    return ''
+
+  if (!selected.value && hasPositiveAmount.value)
+    return i18n.t('Select an address to calculate Polygon fee.')
+
+  return usdtFeeText.value
+})
+
+const flowErrorMessage = computed(() => {
+  if (usdtQuoteError.value && isGenericPolygonQuoteErrorMessage(props.errorMsg))
+    return usdtQuoteError.value
+
+  return props.errorMsg || ''
+})
 
 watch(address, () => {
   selected.value = address.value
@@ -93,19 +153,36 @@ watch(selected, (value) => {
 })
 
 const errorMessage = computed(() => {
-  if (props.errorMsg)
-    return props.errorMsg
+  if (flowErrorMessage.value)
+    return flowErrorMessage.value
+  if (!isNimiqAsset.value && polygonConsensus.value !== 'established')
+    return i18n.t('Connecting to Polygon')
+  if (!isNimiqAsset.value && !selected.value)
+    return ''
+  if (!isNimiqAsset.value && usdtQuoteError.value)
+    return usdtQuoteError.value
   // If the HTLC has expired, we need to wait for consensus before withdrawing because the server cannot access to the funds anymore, only the user.
   if (hasHtlcExpired.value && consensus.value !== 'established')
     return i18n.t('Wait for consensus before withdrawing')
   if (!isRemoteOk.value && !hasHtlcExpired.value)
     return i18n.t('Server not available')
-  if (!hasEnoughAmount.value && lunaAmount.value > 0)
-    return i18n.t('Insufficient funds')
+  if (!hasEnoughAmount.value && amountUnits.value > 0) {
+    if (!isNimiqAsset.value && usdtQuoteLoading.value)
+      return ''
+    return isNimiqAsset.value
+      ? i18n.t('Insufficient funds')
+      : i18n.t('You don\'t have enough USDT to cover this withdrawal plus Polygon fees.')
+  }
   return ''
 })
-const disabled = computed(() => !selected.value || lunaAmount.value <= 0 || !hasEnoughAmount.value || (!isRemoteOk.value && !isHtlcActive.value) || (hasHtlcExpired.value && consensus.value !== 'established'))
-const loading = ref(false)
+const disabled = computed(() => {
+  const baseDisabled = !selected.value || amountUnits.value <= 0 || !hasEnoughAmount.value
+
+  if (!isNimiqAsset.value)
+    return baseDisabled || polygonConsensus.value !== 'established'
+
+  return baseDisabled || (!isRemoteOk.value && !isHtlcActive.value) || (hasHtlcExpired.value && consensus.value !== 'established')
+})
 
 function withdraw() {
   if (loading.value)
@@ -113,7 +190,31 @@ function withdraw() {
 
   loading.value = true
   useApp().addNewWithdrawalAddress(selected.value)
-  emit('done', { amount: lunaAmount.value, recipient: selected.value })
+  emit('done', { amount: amountUnits.value, recipient: selected.value, polygonQuote: usdtQuote.value || undefined })
+}
+
+async function fillMaxAmount() {
+  if (isNimiqAsset.value) {
+    fiatAmount.value = remoteBalanceFiat.value
+    return
+  }
+
+  if (polygonConsensus.value !== 'established')
+    return
+
+  try {
+    const maxSendableUnits = usdtQuote.value?.maxSendable
+      ?? Math.max(
+        usdtBalance.value - ((transferFeeSnapshot.value ?? await polygonUsdt.primeTransferFee()).fee || 0),
+        0,
+      )
+
+    fiatAmount.value = maxSendableUnits / factor.value * price.value
+  }
+  catch (error) {
+    logger.error('Failed to calculate max Polygon withdrawal amount', error)
+    fiatAmount.value = remoteBalanceFiat.value
+  }
 }
 
 watch(errorMessage, (value) => {
@@ -128,18 +229,22 @@ watch(errorMessage, (value) => {
     <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
       <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
       <p class="max-w-full text-base font-semibold text-space/60">
-        <CryptoAmount :amount="lunaAmount" :currency="Crypto.NIM" :min-decimals="DECIMALS.NIM" />
+        <CryptoAmount v-if="isNimiqAsset" :amount="displayedAmountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
+        <span v-else data-testid="nim-withdraw-usdt-amount">{{ formattedUsdtAmount }}</span>
+      </p>
+      <p v-if="quoteHelperMessage" data-testid="nim-withdraw-quote-helper" class="text-sm font-medium text-space/50">
+        {{ quoteHelperMessage }}
       </p>
     </div>
 
     <div
       class="grid grid-cols-[auto_1fr_auto] items-center w-max mx-auto p-3 px-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
-      :aria-label="$t('Select withdrawal address')"
+      aria-label="Select withdrawal address"
       @click="initializeFlow(FlowName.AddressSelection, { height: 'h-max', isOnTop: true })"
     >
       <ShortAddressDisplay v-if="selected" :address="selected" class="text-lg" />
       <div v-else class="text-lg text-space flex items-center gap-x-4">
-        <NimiqLogo class="w-8" />
+        <component :is="isNimiqAsset ? NimiqLogo : UsdtLogo" :class="isNimiqAsset ? 'w-8' : 'w-9'" />
         <span>
           {{ $t('Select an address…') }}
         </span>
@@ -159,19 +264,19 @@ watch(errorMessage, (value) => {
       <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
         <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = remoteBalanceFiat">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="fillMaxAmount">
         {{ $t('All') }}
       </button>
     </div>
 
     <div class="flex flex-col justify-center w-full pb-6">
-      <IonButton size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
+      <IonButton data-testid="nim-withdraw-submit" aria-label="Withdraw" size="small" class="text-base font-bold [&_ion-spinner]:h-4" :disabled="disabled" @click="withdraw">
         <Transition
           mode="out-in"
           name="slide-fade"
         >
           <LoadingSpinner v-if="loading" class="w-4 h-4 m-auto text-white" />
-          <span v-else>{{ $t('Send') }}</span>
+          <span v-else>{{ $t('Withdraw') }}</span>
         </Transition>
       </IonButton>
     </div>

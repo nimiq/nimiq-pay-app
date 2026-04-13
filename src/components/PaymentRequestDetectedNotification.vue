@@ -6,8 +6,10 @@ import QuickButton from '@/components/QuickButton.vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useStringParser } from '@/composables/useStringParser'
+import { Asset, assetToCrypto } from '@/lib/assets'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { useApp } from '@/stores/app'
 
 const props = defineProps({
   invoice: {
@@ -40,17 +42,15 @@ watch(payment, async () => {
   if (!payment.value)
     return null
   // Otherwise, use the API to get the fiat values
-  const fiatAmount = usePrice(payment.value.amount)
-  const fiatFeeAmount = usePrice(payment.value.fee)
-  // Force update the fiat values, we are not doing it in parallel because
-  // we want to get the fee amount from the db instead of API
-  await fiatAmount.getFiatPrice()
-  await fiatFeeAmount.getFiatPrice()
+  const cryptoCurrency = assetToCrypto(payment.value.asset ?? Asset.NIM)
+  const fiatAmount = usePrice(payment.value.amount, { cryptoCurrency })
+  const fiatFeeAmount = usePrice(payment.value.fee, { cryptoCurrency })
+  await Promise.all([fiatAmount.getFiatPrice(), fiatFeeAmount.getFiatPrice()])
   amounts.value = { formattedFiat: fiatAmount.fiat.formatted, formattedFee: fiatFeeAmount.fiat.formatted }
 }, { immediate: true })
 
 const shortInvoice = computed(() => {
-  const { invoice } = props
+  const invoice = props.invoice || ''
   if (invoice.toLowerCase().startsWith('http')) {
     return (new URL(invoice)).hostname
   }
@@ -60,7 +60,15 @@ const shortInvoice = computed(() => {
 async function handleContinue() {
   if (props.disabled)
     return
-  await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: props.invoice } })
+
+  if (payment.value?.amount === 0) {
+    useApp().activeAsset = payment.value.asset || Asset.NIM
+    await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: payment.value } })
+  }
+  else {
+    await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: props.invoice } })
+  }
+
   emit('onContinue')
 }
 </script>

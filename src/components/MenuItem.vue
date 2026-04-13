@@ -6,6 +6,7 @@ defineProps<{
   icon: any
   title: string
   external?: boolean
+  ariaLabel?: string
 }>()
 
 const emit = defineEmits<{
@@ -18,7 +19,7 @@ function onClick() {
 </script>
 
 <template>
-  <button class="flex gap-x-2 items-center" @click="onClick">
+  <button class="flex gap-x-2 items-center" :aria-label="ariaLabel" @click="onClick">
     <component :is="icon" class="w-7 text-space" />
     <span class="w-full font-semibold text-lg text-left">
       {{ title }}

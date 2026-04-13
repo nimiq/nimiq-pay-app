@@ -5,24 +5,30 @@ import { computed, useTemplateRef } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
+import { useApp } from '@/stores/app'
 import { useNaka } from '@/stores/naka'
 
 const { activeStep } = defineProps<{ activeStep?: Step }>()
 
 const emit = defineEmits(stepEmits)
 
+const { isNimiqAsset } = storeToRefs(useApp())
 const { isCardActive, isCardLocked } = storeToRefs(useNaka())
 
-const options = [
-  ...(isCardActive.value && !isCardLocked.value && isNakaEnabled ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
+const showNakaOption = computed(() => isNakaEnabled && isNimiqAsset.value && isCardActive.value && !isCardLocked.value)
+const options = computed(() => [
+  ...(showNakaOption.value ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
   { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
-].filter(Boolean) as { label: string, value: StepName }[]
-const stepNames = options.map(o => o.value)
+])
+const stepNames = computed(() => options.value.map(option => option.value))
 
-const shouldBeDisplayed = computed(() => options.length > 1 && activeStep && stepNames.includes(activeStep.step))
+const shouldBeDisplayed = computed(() => options.value.length > 1 && activeStep && stepNames.value.includes(activeStep.step))
 
 const pillSlider = useTemplateRef<HTMLSpanElement>('pillSlider')
-const activeOptionIndex = computed(() => options.findIndex(o => o.value === activeStep?.step) || 0)
+const activeOptionIndex = computed(() => {
+  const index = options.value.findIndex(option => option.value === activeStep?.step)
+  return index >= 0 ? index : 0
+})
 
 function onClick(optionValue: StepName, e: PointerEvent) {
   const button = e.currentTarget as HTMLButtonElement
