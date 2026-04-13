@@ -1,0 +1,73 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Wait for Pay button to become enabled (Polygon connection may take time)
+- extendedWaitUntil:
+    visible:
+      text: "Pay"
+      enabled: true
+    timeout: 30000
+
+# Swipe left to dismiss payment request notification if present
+- swipe:
+    start: "80%,80%"
+    end: "10%,80%"
+- waitForAnimationToEnd
+
+- tapOn: Pay
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: Scan QR code
+    timeout: 10000
+
+- extendedWaitUntil:
+    visible: Enter manually
+    timeout: 10000
+- tapOn: Enter manually
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Paste or type the invoice here
+    timeout: 10000
+- tapOn: Paste or type the invoice here
+- inputText: '0x1111111111111111111111111111111111111111'
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn: Continue and Pay
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Set an amount
+    timeout: 10000
+- assertVisible: Set an amount
+- assertVisible: USDT
+
+- tapOn: '0'
+- inputText: '1'
+- hideKeyboard
+- waitForAnimationToEnd
+
+# Verify fiat helper is shown under the crypto input
+- assertVisible:
+    text: '\$.*'
+    enabled: true
+
+- extendedWaitUntil:
+    visible:
+      text: "Continue and Pay"
+      enabled: true
+    timeout: 30000
+- tapOn: Continue and Pay
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Payment preview
+    timeout: 10000
+- assertVisible: Payment preview
+- assertVisible: Fee included
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/usdt_payment_amount_manual
+- tapOn: close flow modal
+- waitForAnimationToEnd

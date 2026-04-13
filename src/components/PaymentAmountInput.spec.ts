@@ -11,6 +11,12 @@ const isRemoteOk = ref(true)
 const usdtBalance = ref(0)
 const polygonConsensus = ref<'connecting' | 'established'>('established')
 const height = ref(100)
+const cryptoUsdPrice = ref({ price: 1, currency: 'USD' })
+const fiatUsdPrice = ref({ price: 1, currency: 'USD' })
+const usdtQuote = ref<{ fee: number, totalDebit: number } | null>(null)
+const usdtQuoteError = ref('')
+const usdtQuoteLoading = ref(false)
+let useFetchCall = 0
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
@@ -46,7 +52,7 @@ vi.mock('@/stores/app', () => ({
     USDT: 6,
   },
   useApp: () => ({
-    selectedFiat: ref('usd'),
+    selectedFiat: ref('USD'),
     activeAsset: ref(Asset.NIM),
     isNimiqAsset: ref(true),
   }),
@@ -54,7 +60,7 @@ vi.mock('@/stores/app', () => ({
 
 vi.mock('@/composables/useApi', () => ({
   useFetch: () => ({
-    data: ref({ price: 1, currency: 'USD' }),
+    data: useFetchCall++ === 0 ? cryptoUsdPrice : fiatUsdPrice,
     fetch: vi.fn(),
     state: ref('idle'),
     error: ref(undefined),
@@ -66,9 +72,9 @@ vi.mock('@/composables/useApi', () => ({
 
 vi.mock('@/composables/useUsdtQuoteRefresh', () => ({
   useUsdtQuoteRefresh: () => ({
-    quote: ref(null),
-    error: ref(''),
-    quoteLoading: ref(false),
+    quote: usdtQuote,
+    error: usdtQuoteError,
+    quoteLoading: usdtQuoteLoading,
     feeText: ref(''),
     refresh: vi.fn(),
     scheduleRefresh: vi.fn(),
@@ -84,17 +90,35 @@ vi.mock('@/composables/useLogger', () => ({
   }),
 }))
 
+vi.mock('@nimiq/vue3-components', () => ({
+  FiatAmount: defineComponent({
+    props: {
+      amount: { type: Number, default: 0 },
+      currency: { type: String, default: 'USD' },
+    },
+    template: '<span data-testid="fiat-amount">{{ currency }} {{ amount }}</span>',
+  }),
+}))
+
 vi.mock('@/components/AmountInput.vue', () => ({
   default: defineComponent({
-    props: { modelValue: { type: Number, default: 0 }, decimals: { type: Number, default: 6 } },
+    props: {
+      modelValue: { type: Number, default: 0 },
+      decimals: { type: Number, default: 6 },
+      suffix: { type: String, default: '' },
+    },
     emits: ['update:modelValue'],
-    template: '<button data-testid="amount-input" @click="$emit(\'update:modelValue\', 1000000)" />',
+    template: '<button data-testid="amount-input" :data-decimals="decimals" :data-suffix="suffix" @click="$emit(\'update:modelValue\', 1000000)" />',
   }),
 }))
 
 vi.mock('@/components/CryptoAmount.vue', () => ({
   default: defineComponent({
-    template: '<div data-testid="crypto-amount" />',
+    props: {
+      amount: { type: Number, default: 0 },
+      currency: { type: String, default: 'NIM' },
+    },
+    template: '<div data-testid="crypto-amount">{{ currency }} {{ amount }}</div>',
   }),
 }))
 
@@ -118,6 +142,7 @@ interface MountOptions {
 
 async function mountComponent(options: MountOptions = {}) {
   const { merchantName, asset } = options
+  useFetchCall = 0
   const state = {
     [StepName.QRCodeScanner]: {
       amount: 0,
@@ -138,9 +163,13 @@ async function mountComponent(options: MountOptions = {}) {
         $t: (key: string) => key,
       },
       stubs: {
-        IonButton: defineComponent({
+        'IonButton': defineComponent({
           props: { expand: String, disabled: { type: Boolean, default: false } },
           template: '<button data-testid="payment-amount-input-pay" :disabled="disabled"><slot /></button>',
+        }),
+        'i18n-t': defineComponent({
+          props: { keypath: { type: String, default: '' } },
+          template: '<span data-testid="i18n-t">{{ keypath }}<slot name="fee" /></span>',
         }),
       },
     },
@@ -154,6 +183,11 @@ describe('paymentAmountInput', () => {
     usdtBalance.value = 0
     polygonConsensus.value = 'established'
     height.value = 100
+    cryptoUsdPrice.value = { price: 1, currency: 'USD' }
+    fiatUsdPrice.value = { price: 1, currency: 'USD' }
+    usdtQuote.value = null
+    usdtQuoteError.value = ''
+    usdtQuoteLoading.value = false
   })
 
   it('does not render merchant name in component body (shown in flow header instead)', async () => {
@@ -193,6 +227,27 @@ describe('paymentAmountInput', () => {
     expect(wrapper.find('[data-testid="polygon-warning"]').exists()).toBe(true)
   })
 
+  it('uses the active crypto ticker as the input suffix for NIM requests', async () => {
+    const wrapper = await mountComponent({ asset: Asset.NIM })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="amount-input"]').attributes('data-suffix')).toBe('NIM')
+    expect(wrapper.get('[data-testid="amount-input"]').attributes('data-decimals')).toBe('5')
+  })
+
+  it('shows fiat equivalence instead of the crypto helper for NIM requests', async () => {
+    remoteBalance.value = 2_000_000
+    cryptoUsdPrice.value = { price: 2, currency: 'USD' }
+
+    const wrapper = await mountComponent({ asset: Asset.NIM })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="crypto-amount"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('USD 20')
+  })
+
   it('allows continuing for NIM amount entry even when the remote signer is unavailable', async () => {
     remoteBalance.value = 1_000_000
     isRemoteOk.value = false
@@ -203,5 +258,46 @@ describe('paymentAmountInput', () => {
     await flushPromises()
 
     expect((wrapper.get('[data-testid="payment-amount-input-pay"]').element as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('keeps the entered USDT transfer amount as the emitted base-unit value', async () => {
+    usdtBalance.value = 10_000_000
+    cryptoUsdPrice.value = { price: 2.0001, currency: 'USD' }
+    usdtQuote.value = { fee: 250_000, totalDebit: 1_250_000 }
+
+    const wrapper = await mountComponent({ asset: Asset.USDT })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
+
+    expect(wrapper.emitted('done')?.[0]).toEqual([1_000_000])
+    expect(wrapper.text()).toContain('USD 2.51')
+    expect(wrapper.text()).toContain('USD 0.51')
+  })
+
+  it('does not block valid crypto entry when price data is missing', async () => {
+    remoteBalance.value = 2_000_000
+    cryptoUsdPrice.value = { price: 0, currency: 'USD' }
+
+    const wrapper = await mountComponent({ asset: Asset.NIM })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="payment-amount-input-pay"]').element as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('still compares USDT balance against the quoted total debit', async () => {
+    usdtBalance.value = 1_100_000
+    usdtQuote.value = { fee: 250_000, totalDebit: 1_250_000 }
+
+    const wrapper = await mountComponent({ asset: Asset.USDT })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click')
+    await flushPromises()
+
+    expect((wrapper.get('[data-testid="payment-amount-input-pay"]').element as HTMLButtonElement).disabled).toBe(true)
+    expect(wrapper.text()).toContain('You don\'t have enough USDT to cover this payment plus Polygon fees.')
   })
 })

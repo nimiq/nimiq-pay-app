@@ -17,6 +17,7 @@ appId: ${APP_ID}
 - runFlow: flows/hamburger_menu.yaml
 - runFlow: flows/pay_button_visible.yaml
 - runFlow: flows/payment_preview_usdt_mockup.yaml
+- runFlow: flows/payment_amount_input_usdt_manual.yaml
 - runFlow: flows/withdraw_flow_nim_title.yaml
 - runFlow: flows/withdraw_flow_usdt_title.yaml
 - runFlow: flows/withdraw_button_home.yaml

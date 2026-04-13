@@ -12,6 +12,10 @@ const props = defineProps({
     type: Number,
     default: 2,
   },
+  suffix: {
+    type: String,
+    default: undefined,
+  },
 })
 
 const emit = defineEmits({
@@ -19,6 +23,7 @@ const emit = defineEmits({
 })
 
 const { selectedFiat } = storeToRefs(useApp())
+const suffixText = computed(() => props.suffix || selectedFiat.value)
 
 const fullWidth = ref<HTMLDivElement | null>(null)
 const input = ref<HTMLInputElement | null>(null)
@@ -118,7 +123,7 @@ watch(
         @blur="isFocussed = false"
       >
     </form>
-    <span class="ml-4 text-3xl font-bold leading-10">{{ selectedFiat }}</span>
+    <span class="ml-4 text-3xl font-bold leading-10">{{ suffixText }}</span>
   </div>
 </template>
 

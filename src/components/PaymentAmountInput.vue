@@ -6,13 +6,12 @@ import { FiatAmount } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
 import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
-import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { useUsdtQuoteRefresh } from '@/composables/useUsdtQuoteRefresh'
 import { i18n } from '@/i18n/i18n-setup'
-import { Asset, assetToCrypto, formatUsdtPreviewAmount } from '@/lib/assets'
+import { Asset, assetToCrypto } from '@/lib/assets'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { roundUpToTwoDecimals } from '@/lib/utils'
 import { DECIMALS, Fiat, useApp } from '@/stores/app'
@@ -72,16 +71,8 @@ watch(height, () => {
 })
 const price = computed(() => (cryptoUsdPrice.value?.price || 0) * (fiatUsdPrice.value?.price || 0))
 
-// Fiat amount input
-const fiatDecimals = 6
-const fiatAmount = ref(0)
-const fiatAmountModel = ref(0)
-watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
-watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fiatDecimals)
-
-// Crypto conversion
+const amountUnits = ref(0)
 const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
-const amountUnits = computed(() => price.value > 0 ? Math.floor(fiatAmount.value / price.value * factor.value) : 0)
 const hasPositiveAmount = computed(() => amountUnits.value > 0)
 
 // USDT quote
@@ -104,11 +95,16 @@ const {
   quote: usdtQuote,
   error: usdtQuoteError,
   quoteLoading: usdtQuoteLoading,
+  feeText: usdtFeeText,
 } = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
 
-// Displayed amount (in crypto units). For Nimiq, this is just the input amount. For USDT, this is the total debit amount from the quote (payment amount + fee).
-const displayedAmountUnits = computed(() => !isNimiqAsset.value && usdtQuote.value ? usdtQuote.value.totalDebit : amountUnits.value)
-const formattedUsdtAmount = computed(() => formatUsdtPreviewAmount(displayedAmountUnits.value))
+// When Polygon fees are known, the helper amount should match the fee-inclusive total it describes.
+const fiatEquivalent = computed(() => {
+  if (price.value <= 0)
+    return null
+  const units = !isNimiqAsset.value && usdtQuote.value ? usdtQuote.value.totalDebit : amountUnits.value
+  return roundUpToTwoDecimals(units / factor.value * price.value)
+})
 
 // Balance check
 const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
@@ -173,19 +169,21 @@ watch(errorMessage, (value) => {
     </p>
 
     <div class="flex flex-col items-center justify-center w-full mb-16 gap-y-2">
-      <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
+      <AmountInput v-model="amountUnits" :decimals="DECIMALS[cryptoCurrency]" :suffix="cryptoCurrency" />
       <p class="max-w-full text-base font-semibold text-space/60">
         <template v-if="hasPositiveAmount">
-          <CryptoAmount v-if="isNimiqAsset" :amount="displayedAmountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
-          <span v-else>{{ formattedUsdtAmount }}</span>
-          <span v-if="feeInFiat != null"> &middot;
+          <FiatAmount v-if="fiatEquivalent != null" :amount="fiatEquivalent" :currency="selectedFiat" />
+          <span v-if="feeInFiat != null">
+            <span v-if="fiatEquivalent != null"> &middot; </span>
             <i18n-t keypath="incl. {fee} fees">
               <template #fee>
                 <FiatAmount :amount="feeInFiat" :currency="selectedFiat" />
               </template>
             </i18n-t>
           </span>
-          <span v-else-if="usdtQuoteLoading && !usdtQuote"> &middot; {{ $t('Calculating fees...') }}</span>
+          <span v-else-if="usdtFeeText">
+            <span v-if="fiatEquivalent != null"> &middot; </span>{{ usdtFeeText }}
+          </span>
         </template>
       </p>
     </div>
