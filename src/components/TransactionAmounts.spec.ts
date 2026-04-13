@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
+import { Crypto } from '@/stores/app'
 
 vi.mock('@nimiq/vue3-components', () => ({
   FiatAmount: defineComponent({
@@ -42,7 +43,7 @@ describe('transactionAmounts', () => {
     const wrapper = mount(TransactionAmounts, {
       props: {
         cryptoTotal: 123_000,
-        cryptoCurrency: 'NIM',
+        cryptoCurrency: Crypto.NIM,
         fiatAmount: 12.34,
         fiatCurrency: 'EUR',
       },
