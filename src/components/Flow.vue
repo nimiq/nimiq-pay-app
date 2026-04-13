@@ -130,13 +130,39 @@ type Errors = Record<InputStepName, string>
 const errors = ref<Errors>(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors)
 watchEffect(() => errors.value = reactive(Object.fromEntries(historyStack.value.filter(isInputStep).map(s => [s.step, ''])) as Errors))
 
-const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next: navigateTo, prev: () => navigateTo(-1) }))
+const stepCallbacks = computed(() => ({ err: defaultErrorHandler, finalizeFlow: onFlowDone, navigateTo, next: () => navigateTo(1), prev: () => navigateTo(-1) }))
+const stepCompletionInProgress = ref<StepName | null>(null)
 
 function getInputStepError(stepName: StepName) {
   return isInputStep(stepName) ? errors.value[stepName] : null
 }
 
+function isCurrentStepEmitter(stepName: StepName, eventName: string) {
+  if (stepName === activeStep.value.step)
+    return true
+
+  logger.warn(`Ignoring ${eventName} from inactive step`, { emittedBy: stepName, activeStep: activeStep.value.step })
+  return false
+}
+
+function getVisitedStepIndex(stepName: StepName) {
+  return historyStack.value.findIndex(step => step.step === stepName)
+}
+
+function canHandleInactiveBackEvent(stepName: StepName, targetStep: StepName) {
+  const stepVisitedIndex = getVisitedStepIndex(stepName)
+  const targetVisitedIndex = getVisitedStepIndex(targetStep)
+
+  // Some steps intentionally stay mounted to monitor state after navigation and may still need to force
+  // an explicit rollback. Only allow those inactive emits to navigate backwards within the visited history.
+  return stepVisitedIndex !== -1
+    && targetVisitedIndex !== -1
+    && targetVisitedIndex <= stepVisitedIndex
+}
+
 function defaultErrorHandler(errorMessage: string) {
+  // Allow retry after a beforeNext error that doesn't navigate
+  stepCompletionInProgress.value = null
   const activeStepName = activeStep.value.step
   if (isInputStep(activeStepName) && !props.isClosing) {
     errors.value[activeStepName] = errorMessage
@@ -150,105 +176,197 @@ function defaultErrorHandler(errorMessage: string) {
   catch (error) {
     logger.error('Failed to trigger haptic feedback', error)
   }
-} // make sure you import until
+}
 
-async function navigateTo(options: NavigateToOptions = 1) {
-  if (props.isClosing)
+function shouldBlockNavigation(source: string) {
+  if (!stepCompletionInProgress.value)
+    return false
+
+  logger.warn(`Ignoring ${source} while step completion is in progress`, {
+    inProgress: stepCompletionInProgress.value,
+    activeStep: activeStep.value.step,
+  })
+  return true
+}
+
+async function performNavigation(options: NavigateToOptions = 1, { allowDuringStepCompletion = false, source = 'navigateTo' }: { allowDuringStepCompletion?: boolean, source?: string } = {}) {
+  if (!allowDuringStepCompletion && shouldBlockNavigation(source))
     return
 
-  const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
-  let newIndex: number = currentIndex + 1
-
-  if (typeof options === 'number') {
-    newIndex = currentIndex + options
-  }
-  else if ('step' in options) {
-    const stepIndex = stepsInFlow.findIndex(s => s.step === options.step)
-    if (stepIndex === -1) {
-      logger.warn(`Step ${options.step} not found in flow`)
+  try {
+    if (props.isClosing)
       return
+
+    const currentIndex = stepsInFlow.findIndex(s => s.step === activeStep.value?.step)
+    let newIndex: number = currentIndex + 1
+
+    if (typeof options === 'number') {
+      newIndex = currentIndex + options
     }
-    newIndex = stepIndex
-  }
-  else if ('goBackBy' in options && options.goBackBy) {
-    newIndex = activeIndex.value - options.goBackBy
-  }
-  else if ('skipAheadBy' in options && options.skipAheadBy) {
-    newIndex = currentIndex + options.skipAheadBy
-  }
+    else if ('step' in options) {
+      const stepIndex = stepsInFlow.findIndex(s => s.step === options.step)
+      if (stepIndex === -1) {
+        logger.warn(`Step ${options.step} not found in flow`)
+        return
+      }
+      newIndex = stepIndex
+    }
+    else if ('goBackBy' in options && options.goBackBy) {
+      newIndex = activeIndex.value - options.goBackBy
+    }
+    else if ('skipAheadBy' in options && options.skipAheadBy) {
+      newIndex = currentIndex + options.skipAheadBy
+    }
 
-  if (!Number.isInteger(newIndex) || newIndex < 0)
-    throw new Error(`Cannot navigate to index ${newIndex}`)
-  else if (newIndex >= stepsInFlow.length)
-    return await onFlowDone()
+    if (!Number.isInteger(newIndex) || newIndex < 0)
+      throw new Error(`Cannot navigate to index ${newIndex}`)
+    else if (newIndex >= stepsInFlow.length)
+      return await onFlowDone()
 
-  // For goBackBy, newIndex is a historyStack position — look up the step from historyStack
-  // (not stepsInFlow) so we navigate to the step the user actually visited, even when
-  // steps were skipped via navigateTo({ step }).
-  const isGoBackBy = typeof options === 'object' && 'goBackBy' in options
-  const newActiveStep = isGoBackBy
-    ? historyStack.value[newIndex] ?? stepsInFlow.at(newIndex)
-    : stepsInFlow.at(newIndex)
-  if (!newActiveStep)
-    return
+    // For goBackBy, newIndex is a historyStack position — look up the step from historyStack
+    // (not stepsInFlow) so we navigate to the step the user actually visited, even when
+    // steps were skipped via navigateTo({ step }).
+    const isGoBackBy = typeof options === 'object' && 'goBackBy' in options
+    const newActiveStep = isGoBackBy
+      ? historyStack.value[newIndex] ?? stepsInFlow.at(newIndex)
+      : stepsInFlow.at(newIndex)
+    if (!newActiveStep)
+      return
 
-  const isGoingForward = newIndex > activeIndex.value
-  if (!isGoingForward && activeStep.value.beforePrev)
-    await activeStep.value.beforePrev(state.value, stepCallbacks.value)
+    const isGoingForward = newIndex > activeIndex.value
+    if (!isGoingForward && activeStep.value.beforePrev)
+      await activeStep.value.beforePrev(state.value, stepCallbacks.value)
 
-  await newActiveStep.beforeRender?.(state.value, stepCallbacks.value)
+    await newActiveStep.beforeRender?.(state.value, stepCallbacks.value)
 
-  if (isGoingForward) {
-    historyStack.value.push(newActiveStep)
-    activeIndex.value = historyStack.value.length - 1
-    await nextTick()
-    goToSlide(activeIndex.value)
-  }
-  else {
-    // If the jump is more than one step, we remove the middle slides from the animation.
-    if (activeIndex.value - newIndex > 1) {
-      // Save the current step.
-      const currentStep = historyStack.value[activeIndex.value]
-      // Temporarily set history to only include the target and the current step.
-      historyStack.value = [historyStack.value[newIndex], currentStep]
-      // The current slide is now at index 1.
-      activeIndex.value = 1
+    if (isGoingForward) {
+      historyStack.value.push(newActiveStep)
+      activeIndex.value = historyStack.value.length - 1
       await nextTick()
-      // Animate from slide 1 (current) to slide 0 (target).
-      goToSlide(0)
-      // Wait for the scroll to start and finish.
-      await until(isScrolling).toBe(true, { timeout: 1000 })
-      await until(isScrolling).toBe(false, { timeout: 1000 })
-      // Once finished, update historyStack to only contain the target.
-      historyStack.value = [historyStack.value[0]]
-      activeIndex.value = 0
+      goToSlide(activeIndex.value)
     }
     else {
-      // For adjacent navigation, ensure the target is in the history.
-      const exists = historyStack.value.find(s => s.step === newActiveStep.step)
-      if (!exists) {
-        historyStack.value.splice(newIndex, 0, newActiveStep)
+      // If the jump is more than one step, we remove the middle slides from the animation.
+      if (activeIndex.value - newIndex > 1) {
+        // Save the current step.
+        const currentStep = historyStack.value[activeIndex.value]
+        // Temporarily set history to only include the target and the current step.
+        historyStack.value = [historyStack.value[newIndex], currentStep]
+        // The current slide is now at index 1.
+        activeIndex.value = 1
+        await nextTick()
+        // Animate from slide 1 (current) to slide 0 (target).
+        goToSlide(0)
+        // Wait for the scroll to start and finish.
+        await until(isScrolling).toBe(true, { timeout: 1000 })
+        await until(isScrolling).toBe(false, { timeout: 1000 })
+        // Once finished, update historyStack to only contain the target.
+        historyStack.value = [historyStack.value[0]]
+        activeIndex.value = 0
       }
-      await nextTick()
-      goToSlide(newIndex)
-      await until(isScrolling).toBe(true, { timeout: 1000 })
-      await until(isScrolling).toBe(false, { timeout: 1000 })
-      historyStack.value = historyStack.value.slice(0, newIndex + 1)
-      activeIndex.value = newIndex
+      else {
+        // For adjacent navigation, ensure the target is in the history.
+        const exists = historyStack.value.find(s => s.step === newActiveStep.step)
+        if (!exists) {
+          historyStack.value.splice(newIndex, 0, newActiveStep)
+        }
+        await nextTick()
+        goToSlide(newIndex)
+        await until(isScrolling).toBe(true, { timeout: 1000 })
+        await until(isScrolling).toBe(false, { timeout: 1000 })
+        historyStack.value = historyStack.value.slice(0, newIndex + 1)
+        activeIndex.value = newIndex
+      }
     }
+  }
+  finally {
+    stepCompletionInProgress.value = null
   }
 }
 
-function makeSkipOrBackHandler(defaultNavigation: Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>) {
+async function navigateTo(options: NavigateToOptions = 1) {
+  await performNavigation(options)
+}
+
+async function navigateToVisitedStep(stepName: StepName, source = 'back') {
+  const targetVisitedIndex = getVisitedStepIndex(stepName)
+  if (targetVisitedIndex === -1) {
+    logger.warn(`Ignoring ${source} to unvisited step`, { step: stepName, activeStep: activeStep.value.step })
+    return
+  }
+
+  const goBackBy = activeIndex.value - targetVisitedIndex
+  if (goBackBy <= 0)
+    return
+
+  await performNavigation({ goBackBy }, { source })
+}
+
+function makeSkipOrBackHandler(stepName: StepName, defaultNavigation: Pick<NavigationControl, 'goBackBy'> | Pick<NavigationControl, 'skipAheadBy'>) {
   return (stepCountOrName?: number | StepName) => {
+    const isBackEvent = 'goBackBy' in defaultNavigation
+    if (!isCurrentStepEmitter(stepName, isBackEvent ? 'back' : 'navigation')) {
+      if (isBackEvent && typeof stepCountOrName === 'string' && canHandleInactiveBackEvent(stepName, stepCountOrName))
+        navigateToVisitedStep(stepCountOrName, 'inactive back')
+      return
+    }
+
     if (!stepCountOrName)
       navigateTo(defaultNavigation)
     else if (typeof stepCountOrName === 'number')
       navigateTo(('skipAheadBy' in defaultNavigation ? 1 : -1) * stepCountOrName)
+    else if (isBackEvent)
+      navigateToVisitedStep(stepCountOrName)
     else
       navigateTo({ step: stepCountOrName }) // note that this does not guarantee navigation in the desired direction
   }
 }
+
+function makeStepDoneHandler(stepName: StepName) {
+  return (value: OnDoneStepValue) => onStepDone(stepName, value)
+}
+
+function makeStepNavigateHandler(stepName: StepName) {
+  return (value: NavigateToOptions) => {
+    if (!isCurrentStepEmitter(stepName, 'navigateTo'))
+      return
+
+    navigateTo(value)
+  }
+}
+
+function createStepDoneCallbacks(onCompletionStarted: () => void) {
+  const nav = async (value: NavigateToOptions) => {
+    onCompletionStarted()
+    await performNavigation(value, { allowDuringStepCompletion: true, source: 'beforeNext' })
+  }
+  return {
+    err: (errorMessage: string) => {
+      onCompletionStarted()
+      defaultErrorHandler(errorMessage)
+    },
+    finalizeFlow: async () => {
+      onCompletionStarted()
+      try {
+        await onFlowDone()
+      }
+      finally {
+        stepCompletionInProgress.value = null
+      }
+    },
+    navigateTo: nav,
+    next: () => nav(1),
+    prev: () => nav(-1),
+  }
+}
+
+const activeStepHandlers = computed(() => ({
+  focus,
+  done: makeStepDoneHandler(activeStep.value.step),
+  select: makeStepDoneHandler(activeStep.value.step),
+  blur,
+  navigateTo: makeStepNavigateHandler(activeStep.value.step),
+}))
 
 // TODO revise this
 const shouldAutofocus = computed(() => activeStep.value.autofocus || activeStep.value.autofocus === undefined)
@@ -260,21 +378,49 @@ onMounted(async () => {
     focus()
 })
 
-async function onStepDone(value: OnDoneStepValue) {
+async function onStepDone(stepName: StepName, value: OnDoneStepValue) {
   if (props.isClosing)
     return
-  const activeStepName = activeStep.value.step
-
-  if (isInputStep(activeStepName)) {
-    // @ts-expect-error If the emit value is well typed, this should work
-    state.value[activeStepName] = value
-    errors.value[activeStepName] = '' // Clear error message
+  if (!isCurrentStepEmitter(stepName, 'done'))
+    return
+  if (stepCompletionInProgress.value) {
+    logger.warn('Ignoring duplicate step completion while navigation is in progress', {
+      emittedBy: stepName,
+      inProgress: stepCompletionInProgress.value,
+    })
+    return
   }
-  if (activeStep.value.beforeNext)
-    await activeStep.value.beforeNext(state.value, stepCallbacks.value)
-  else
-    // Next step
-    navigateTo(1)
+
+  stepCompletionInProgress.value = stepName
+  const activeStepName = activeStep.value.step
+  let completionStarted = false
+  const stepDoneCallbacks = createStepDoneCallbacks(() => {
+    completionStarted = true
+  })
+
+  try {
+    if (isInputStep(activeStepName)) {
+      // @ts-expect-error If the emit value is well typed, this should work
+      state.value[activeStepName] = value
+      errors.value[activeStepName] = '' // Clear error message
+    }
+    if (activeStep.value.beforeNext)
+      await activeStep.value.beforeNext(state.value, stepDoneCallbacks)
+    else
+      // Next step
+      await stepDoneCallbacks.next()
+  }
+  catch (error) {
+    logger.error(`Unhandled error while completing step ${stepName}`, error)
+    stepCompletionInProgress.value = null
+    throw error
+  }
+  finally {
+    // Some steps intentionally no-op from beforeNext until input becomes valid. Release the guard if no
+    // navigation, error, or flow-finalization path was started so the user can retry.
+    if (!completionStarted && stepCompletionInProgress.value === stepName)
+      stepCompletionInProgress.value = null
+  }
 }
 
 async function onCancel() {
@@ -384,18 +530,18 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
         <component
           :is="main"
           v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
-          v-on="{ focus, done: onStepDone, select: onStepDone, skip: makeSkipOrBackHandler({ skipAheadBy }), back: makeSkipOrBackHandler({ goBackBy }), blur, navigateTo, overrideHeight: (value: flowHeightOptions) => { console.log('Override height for step:', { step, value }) } }"
+          v-on="{ focus, done: makeStepDoneHandler(step), select: makeStepDoneHandler(step), skip: makeSkipOrBackHandler(step, { skipAheadBy }), back: makeSkipOrBackHandler(step, { goBackBy }), blur, navigateTo: makeStepNavigateHandler(step), overrideHeight: (value: flowHeightOptions) => { logger.log('Override height for step:', { step, value }) } }"
         />
       </div>
     </li>
     <div class="absolute inset-x-0 bottom-0">
       <div class="z-[10000] relative">
-        <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
+        <slot name="default" v-bind="{ activeStep }" v-on="activeStepHandlers" />
       </div>
     </div>
   </ul>
 
-  <slot name="default" v-bind="{ activeStep }" v-on="{ focus, done: onStepDone, select: onStepDone, blur, navigateTo }" />
+  <slot name="default" v-bind="{ activeStep }" v-on="activeStepHandlers" />
 </template>
 
 <style scoped>

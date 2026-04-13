@@ -42,9 +42,30 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
   // called multiple times, which can lead to problems for example in Flow.vue where goToNext would be called multiple
   // times. Additionally also add throttling to avoid spamming the apis also on failing api calls.
   let isParsingString = false
+  let hasSuccessfulScan = false
+  let isEmittingSuccessfulScan = false
+  const state = ref(QRScannerState.Idle)
+
+  async function emitSuccessfulScan(data: QRData) {
+    if (hasSuccessfulScan || isEmittingSuccessfulScan)
+      return
+
+    isEmittingSuccessfulScan = true
+    try {
+      await onData(data)
+      hasSuccessfulScan = true
+      // Stop scanner after the success callback settles so failed callbacks can still retry within the same session.
+      if (state.value === QRScannerState.Scanning)
+        stop().catch(e => logger.error('Scanner cleanup failed', e))
+    }
+    finally {
+      isEmittingSuccessfulScan = false
+    }
+  }
+
   const parseString = useThrottleFn(
     async (raw: string) => {
-      if (isParsingString)
+      if (isParsingString || hasSuccessfulScan || isEmittingSuccessfulScan)
         return
       isParsingString = true
       try {
@@ -53,13 +74,13 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           const { data, error } = getNimAddress(raw)
           if (error || !data)
             throw new Error(error)
-          onData(data)
+          await emitSuccessfulScan(data)
         }
         else if (expect === QRDataFormat.AssetAddress) {
           if (!useApp().isNimiqAsset) {
             const { data: polygonAddress } = getPolygonAddress(raw)
             if (polygonAddress) {
-              onData(polygonAddress)
+              await emitSuccessfulScan(polygonAddress)
               return
             }
 
@@ -67,13 +88,13 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
             if (error || !data || data.asset !== Asset.USDT)
               throw new Error(error || i18n.t('Invalid USDT address'))
 
-            onData(data.recipient)
+            await emitSuccessfulScan(data.recipient)
           }
           else {
             const { data, error } = getNimAddress(raw)
             if (error || !data)
               throw new Error(error)
-            onData(data)
+            await emitSuccessfulScan(data)
           }
         }
         else if (expect === QRDataFormat.PaymentRequest) {
@@ -82,14 +103,14 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           const { data: nimAddress } = getNimAddress(raw)
           if (nimAddress) {
             useApp().activeAsset = Asset.NIM
-            onData({ recipient: nimAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.NIM } as PaymentRequestData)
+            await emitSuccessfulScan({ recipient: nimAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.NIM } as PaymentRequestData)
             return
           }
 
           const { data: polygonAddress } = getPolygonAddress(raw)
           if (polygonAddress) {
             useApp().activeAsset = Asset.USDT
-            onData({ recipient: polygonAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.USDT, chain: Chain.Polygon } as PaymentRequestData)
+            await emitSuccessfulScan({ recipient: polygonAddress, amount: 0, fee: 0, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.USDT, chain: Chain.Polygon } as PaymentRequestData)
             return
           }
 
@@ -97,7 +118,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           if (error || !data)
             throw new Error(error)
 
-          onData(data)
+          await emitSuccessfulScan(data)
         }
         else if (expect === QRDataFormat.NimCashlink) {
           const { data, error } = getCashlink(raw)
@@ -106,7 +127,7 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
           // TODO: move this to step
           await useNimiqNetwork().claimCashlink(data, useLocalWallet().localAddress)
           useToast().setToast({ message: i18n.t('Cashlink claimed successfully') })
-          onData('')
+          await emitSuccessfulScan('')
         }
         // No translation as not user-facing. It's a dev error, which shouldn't occur in production.
         else {
@@ -127,12 +148,13 @@ export function useQRScanner({ expect, onError, onData, cameraFeedContainer }: U
 
   const { setUpCameraFeed, tearDownCameraFeed, hasPermission } = useCameraFeed(cameraFeedContainer)
   const { startScan, stopScan } = (useDevice().isWeb ? useQRScannerWeb : useQRScannerMobile)({ parseString, onError })
-  const state = ref(QRScannerState.Idle)
 
   async function start() {
     if (state.value === QRScannerState.Scanning)
       return
 
+    hasSuccessfulScan = false
+    isEmittingSuccessfulScan = false
     const video = await setUpCameraFeed()
     if (!hasPermission.value) {
       state.value = QRScannerState.NoPermission

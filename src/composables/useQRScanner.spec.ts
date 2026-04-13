@@ -204,4 +204,66 @@ describe('useQRScanner', () => {
     expect(mockPaymentRequest.feeIncludedInAmount).toBeUndefined()
     expect(onError).not.toHaveBeenCalled()
   })
+
+  it('emits at most one successful scan result per scanner session', async () => {
+    vi.useFakeTimers()
+
+    const onData = vi.fn()
+    const onError = vi.fn()
+    const cameraFeedContainer = ref(document.createElement('div'))
+
+    const { setDummyData } = useQRScanner({
+      expect: 'paymentRequest' as any,
+      onData,
+      onError,
+      cameraFeedContainer,
+    })
+
+    setDummyData()
+    await vi.waitFor(() => {
+      expect(onData).toHaveBeenCalledTimes(1)
+    })
+
+    await vi.advanceTimersByTimeAsync(1600)
+    setDummyData()
+
+    expect(state.getPaymentRequestData).toHaveBeenCalledTimes(1)
+    expect(onData).toHaveBeenCalledTimes(1)
+    expect(onError).not.toHaveBeenCalled()
+
+    vi.useRealTimers()
+  })
+
+  it('retries scans after the success callback rejects', async () => {
+    vi.useFakeTimers()
+
+    const onData = vi.fn()
+      .mockRejectedValueOnce(new Error('Consumer failed'))
+      .mockResolvedValueOnce(undefined)
+    const onError = vi.fn()
+    const cameraFeedContainer = ref(document.createElement('div'))
+
+    const { setDummyData } = useQRScanner({
+      expect: 'paymentRequest' as any,
+      onData,
+      onError,
+      cameraFeedContainer,
+    })
+
+    setDummyData()
+    await vi.waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Consumer failed')
+    })
+
+    await vi.advanceTimersByTimeAsync(1600)
+    setDummyData()
+    await vi.waitFor(() => {
+      expect(onData).toHaveBeenCalledTimes(2)
+    })
+
+    expect(state.getPaymentRequestData).toHaveBeenCalledTimes(2)
+    expect(onError).toHaveBeenCalledTimes(1)
+
+    vi.useRealTimers()
+  })
 })

@@ -12,3 +12,4 @@ In Vue templates, if multiple sibling blocks belong to the same currency, wrap t
 If implementing a new feature, check if there are existing components that can be reused before creating new ones.
 if implementing a new feature or making big UI changes, check if there are existing tests, if not, add new tests to cover the new feature or changes. Use maestro for e2e tests. You can find them in `nimiq-pay-tests`.
 Add comments to code that is complex or not immediately obvious; keep them concise and focused on explaining *why*, not *what*.
+`Flow.vue` keeps previously visited steps mounted in `historyStack`. When wiring step event handlers (`done`, `select`, `skip`, `back`, or `navigateTo`), always validate that the emitting step is still the active step before changing flow state.
