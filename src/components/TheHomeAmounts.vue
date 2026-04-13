@@ -7,17 +7,25 @@ import { computed, ref, watch } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import PriceChange from '@/components/PriceChange.vue'
 import { usePrice } from '@/composables/usePrice'
+import { Asset, assetToCrypto } from '@/lib/assets'
 import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 
 const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
 const { homeBalanceState } = storeToRefs(useRemoteSigner())
+const { balance: usdtBalance, homeBalanceState: usdtHomeBalanceState } = storeToRefs(usePolygonUsdt())
 const { isTransactionPending } = storeToRefs(useSync())
-const { showAnimations } = storeToRefs(useApp())
+const { showAnimations, activeAsset } = storeToRefs(useApp())
 const { isProcessingRemote } = storeToRefs(useLocks())
-const { fiat, crypto } = usePrice(balance)
+const displayedBalance = computed(() => activeAsset.value === Asset.USDT ? usdtBalance.value : balance.value)
+const displayedBalanceState = computed(() => activeAsset.value === Asset.USDT ? usdtHomeBalanceState.value : homeBalanceState.value)
+const minimumCryptoDecimals = computed(() => activeAsset.value === Asset.USDT ? 2 : 0)
+const { fiat, crypto } = usePrice(displayedBalance, {
+  cryptoCurrency: computed(() => assetToCrypto(activeAsset.value)),
+})
 
 /**
  * Show skeleton if:
@@ -25,7 +33,11 @@ const { fiat, crypto } = usePrice(balance)
  *  - There is a pending HTLC-related transaction
  *  - The remote wallet is currently being processed
  */
-const showSkeleton = computed(() => homeBalanceState.value === 'loading' || (balance.value === 0 && isTransactionPending.value) || isProcessingRemote.value)
+const showSkeleton = computed(() =>
+  displayedBalanceState.value === 'loading'
+  || (displayedBalance.value === 0 && isTransactionPending.value)
+  || isProcessingRemote.value,
+)
 
 const animatedAmount = ref(0)
 const countMotionValue = useMotionValue(0)
@@ -70,8 +82,8 @@ watch(showSkeleton, (isShowing) => {
     <div v-else class="flex flex-col items-center gap-y-2">
       <FiatAmount class="text-5xl font-normal text-space" :amount="animatedAmount" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
-        <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" />
-        <PriceChange />
+        <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" :min-decimals="minimumCryptoDecimals" />
+        <PriceChange :currency="crypto.currency" />
       </div>
     </div>
   </div>

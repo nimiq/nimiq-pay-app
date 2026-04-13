@@ -7,6 +7,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { guessUserLanguage } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
+import { Asset, DEFAULT_ASSET } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from './conn'
 
@@ -20,11 +21,13 @@ export enum Fiat {
 export enum Crypto {
   NIM = 'NIM',
   BTC = 'BTC',
+  USDT = 'USDT',
 }
 
 export const DECIMALS: Record<Crypto, number> = {
   [Crypto.NIM]: 5,
   [Crypto.BTC]: 8,
+  [Crypto.USDT]: 6,
 }
 
 export enum PushNotificationsStatus {
@@ -62,9 +65,23 @@ export const useApp = defineStore('app', () => {
   const referralCode = useStorageAsync('referralCode', '', kv(), sharedOptions)
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync<Fiat>('selectedFiat', Fiat.USD, kv(), sharedOptions)
+  const activeAsset = useStorageAsync<Asset>('activeAsset', DEFAULT_ASSET, kv(), sharedOptions)
+  const isNimiqAsset = computed(() => activeAsset.value === Asset.NIM)
+  const withdrawalAddressByAsset = useStorageAsync<Record<Asset, string>>('withdrawalAddressByAsset', {
+    [Asset.NIM]: '',
+    [Asset.USDT]: '',
+  }, kv(), sharedOptions)
   const language = useStorageAsync<SupportedLanguage>('language', guessUserLanguage(), kv(), sharedOptions)
   const pointsToken = useStorageAsync('pointsToken', '', kv(), sharedOptions)
-  const withdrawalAddress = useStorageAsync('withdrawalAddress', '', kv(), sharedOptions)
+  const withdrawalAddress = computed({
+    get: () => withdrawalAddressByAsset.value[activeAsset.value] || '',
+    set: (value: string) => {
+      withdrawalAddressByAsset.value = {
+        ...withdrawalAddressByAsset.value,
+        [activeAsset.value]: value,
+      }
+    },
+  })
   const withdrawalAddressesHistory = useStorageAsync<string[]>('withdrawalAddressesHistory', [], kv(), sharedOptions)
   const topUpAddresses = useStorageAsync<string[]>('topUpAddresses', [], kv(), sharedOptions)
   const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
@@ -132,12 +149,9 @@ export const useApp = defineStore('app', () => {
   }
 
   function addNewWithdrawalAddress(address: string) {
-    const addresses = withdrawalAddressesHistory.value
+    const addresses = withdrawalAddressesHistory.value.filter(existingAddress => existingAddress !== address)
     addresses.push(address)
     withdrawalAddressesHistory.value = addresses
-    // Limit the number of addresses to 3
-    if (addresses.length > 3)
-      withdrawalAddressesHistory.value = addresses.slice(addresses.length - 3)
   }
 
   return {
@@ -149,6 +163,8 @@ export const useApp = defineStore('app', () => {
     entropy,
     hasDoneBackup,
     selectedFiat,
+    activeAsset,
+    isNimiqAsset,
     language,
     pointsToken,
     setEntropy,

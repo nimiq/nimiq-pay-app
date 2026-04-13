@@ -2,11 +2,16 @@ import type { Quote } from '@nimiq/fastspot-api-v2'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import type { Result } from '@/types'
 import { AssetId } from '@nimiq/fastspot-api-v2'
-import { ValidationUtils } from '@nimiq/utils'
+import { Currency, EthereumChain, parseRequestLink, ValidationUtils } from '@nimiq/utils'
+import { getAddress } from 'ethers'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, nimiqDomainUrl } from '@/lib'
+import { Asset, Chain } from '@/lib/assets'
+import { addressesEqual, isValidEthAddress } from '@/lib/ethereum'
+import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { MerchantCategory, Rail, Transfer } from '@/types/transactions'
 import { useCplApi } from './useApi'
@@ -23,11 +28,19 @@ const LN_URL_PARAM = 'lightning'
 
 export enum QRDataFormat {
   NimiqAddress = 'nimiqAddress',
+  AssetAddress = 'assetAddress',
   PaymentRequest = 'paymentRequest',
   NimCashlink = 'nimCashlink',
 }
 
 export function useStringParser() {
+  function getPolygonAddress(maybePolygonAddress: string): Result<string, string> {
+    if (!isValidEthAddress(maybePolygonAddress))
+      return { error: i18n.t('Invalid USDT address'), data: undefined }
+
+    return { data: getAddress(maybePolygonAddress), error: undefined }
+  }
+
   function getNimAddress(maybeNimAddress: string): Result<string, string> {
     if (!ValidationUtils.isValidAddress(maybeNimAddress))
       return { error: i18n.t('Invalid Nimiq address'), data: undefined }
@@ -49,10 +62,19 @@ export function useStringParser() {
 
   function isPaymentRequest(content: string): boolean {
     try {
-      if (content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)) {
-        content = content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
-      }
-      return isLightningInvoice(content) || getRailFromUrl(new URL(content)) !== undefined
+      if (isValidEthAddress(content))
+        return true
+      const normalizedContent = content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)
+        ? content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
+        : content
+      if (isLightningInvoice(normalizedContent))
+        return true
+
+      if (parsePolygonRequestLink(normalizedContent).data)
+        return true
+
+      const url = new URL(normalizedContent)
+      return getRailFromUrl(url) !== undefined
     }
     catch {
       return false
@@ -66,6 +88,9 @@ export function useStringParser() {
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
   async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
+    if (isValidEthAddress(content))
+      return parsePolygonAddress(content)
+
     // Add a protocol to Bitcoin Lightning invoices if it's missing, to pass URL parsing
     if (isLightningInvoice(content))
       content = `lightning:${content}`
@@ -79,8 +104,13 @@ export function useStringParser() {
     }
     catch (e) {
       logger.error(`Error invalid URL: ${content}`, e)
-      return { error: i18n.t('Invalid URL: {url}', { url: content }), data: undefined }
+      // Truncate the URL in the error message if it's too long, to avoid overwhelming the user with a long string
+      const truncatedUrl = content.length > 100 ? `${content.substring(0, 100)}...` : content
+      return { error: i18n.t('Invalid URL: {url}', { url: truncatedUrl }), data: undefined }
     }
+
+    if (url.protocol === 'ethereum:' || url.protocol === 'polygon:')
+      return parsePolygonRequestLink(content)
 
     const rail = getRailFromUrl(url)
     let result: Result<PaymentRequestData, string>
@@ -166,7 +196,7 @@ export function useStringParser() {
     const fiatFeeAmount = 0 // There is no fee in NIM (yay)
     const message = searchParams.get('message') || itemDescription
 
-    const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount }
+    const data: PaymentRequestData = { recipient, amount: lunaAmount, message, fee, merchantName, merchantCategory, rail, paymentRef, transfer, fiatAmount, fiatCurrency, fiatFeeAmount, asset: Asset.NIM, chain: Chain.Nimiq }
 
     return { data, error: undefined }
   }
@@ -211,8 +241,12 @@ export function useStringParser() {
     // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
     const amountBtc = Number.parseInt(amountSection.value) / 1e11
 
+    const isUsdt = useApp().activeAsset === Asset.USDT
+    const sellAssetId = isUsdt ? AssetId.USDT_MATIC : AssetId.NIM
+    const swapQuoteCacheKey = `${sellAssetId}:${decoded.paymentRequest}`
+
     let quote: Quote
-    const existingQuote = await query<{ ln_invoice: string, swap_id: string } | undefined>(SQLQuery.GetSwapQuote, [decoded.paymentRequest], { single: true })
+    const existingQuote = await query<{ ln_invoice: string, swap_id: string } | undefined>(SQLQuery.GetSwapQuote, [swapQuoteCacheKey], { single: true })
     if (existingQuote) {
       try {
         // TODO: I don't know what could happen if the swap was already created
@@ -225,26 +259,49 @@ export function useStringParser() {
         quote = await useFastspotApiV2().then(({ getSwap }) => getSwap(existingQuote.swap_id))
       }
       catch (e) {
-        logger.error('Error fetching existing NIM/BTC_LN swap:', { error: e, decoded })
-        return { error: i18n.t('Cannot fetch existing NIM/BTC_LN swap'), data: undefined }
+        logger.error('Error fetching existing swap:', { error: e, decoded })
+        return { error: i18n.t('Cannot fetch existing swap'), data: undefined }
       }
     }
     else {
       try {
         quote = await useFastspotApiV2().then(({ createSwap }) => createSwap(
-          { asset: AssetId.NIM },
+          { asset: sellAssetId },
           { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
         ))
-        await run(SQLQuery.InsertSwapQuote, [decoded.paymentRequest, quote.id, Date.now() + decoded.expiry * 1e3])
+        await run(SQLQuery.InsertSwapQuote, [swapQuoteCacheKey, quote.id, Date.now() + decoded.expiry * 1e3])
       }
       catch (e) {
-        logger.error('Error creating NIM/BTC_LN swap:', { error: e, amountBtc, decoded })
-        return { error: i18n.t('Cannot create NIM/BTC_LN swap'), data: undefined }
+        logger.error('Error creating swap:', { error: e, amountBtc, decoded, sellAssetId })
+        return { error: i18n.t('Cannot create swap'), data: undefined }
       }
     }
 
-    if (quote.sell.asset !== AssetId.NIM)
-      return { error: i18n.t('Could not fetch NIM amount for Bitcoin Lightning swap.'), data: undefined }
+    if (quote.sell.asset !== sellAssetId)
+      return { error: i18n.t('Could not fetch amount for Bitcoin Lightning swap.'), data: undefined }
+
+    // Aggregate fees by (asset, included, source):
+    // - Included fees with same key: sum amounts
+    // - Non-included fees with same key: take max (e.g. redemption/refund are alternatives)
+    const feeMap = new Map<string, { asset: string, amount: number, included: boolean, source: 'NETWORK' | 'SERVICE', percentage?: number }>()
+    for (const fee of quote.fees) {
+      const key = `${fee.asset}-${fee.included}-${fee.source}`
+      const existing = feeMap.get(key)
+      if (existing) {
+        existing.amount = fee.included
+          ? existing.amount + fee.amount
+          : Math.max(existing.amount, fee.amount)
+      }
+      else {
+        feeMap.set(key, {
+          asset: fee.asset,
+          amount: fee.amount,
+          included: fee.included,
+          source: fee.source as 'NETWORK' | 'SERVICE',
+          ...('percentage' in fee && fee.percentage != null ? { percentage: Number(fee.percentage) } : {}),
+        })
+      }
+    }
 
     const data: PaymentRequestData = {
       recipient: decoded.paymentRequest,
@@ -264,12 +321,10 @@ export function useStringParser() {
       },
 
       swap: {
-        fees: [...quote.fees.reduce((map, fee) => {
-          const entry = map.get(fee.asset) || 0
-          map.set(fee.asset, entry + fee.amount)
-          return map
-        }, new Map<string, number>()).entries()].map(([asset, amount]) => ({ asset, amount })),
+        fees: [...feeMap.values()],
       },
+      asset: isUsdt ? Asset.USDT : Asset.NIM,
+      chain: isUsdt ? Chain.Polygon : Chain.Nimiq,
     }
 
     return { data, error: undefined }
@@ -294,6 +349,8 @@ export function useStringParser() {
       paymentRef: '',
       transfer: Transfer.UserPaymentToMerchant,
       message: undefined,
+      asset: Asset.NIM,
+      chain: Chain.Nimiq,
     }
 
     return {
@@ -304,9 +361,61 @@ export function useStringParser() {
 
   return {
     getNimAddress,
+    getPolygonAddress,
     getPaymentRequestData,
     getCashlink,
     isPaymentRequest,
     isLightningInvoice,
+  }
+}
+
+function buildPolygonUsdtPaymentData(recipient: string, amount = 0): PaymentRequestData {
+  return { recipient, amount, fee: 0, merchantCategory: MerchantCategory.Shop, rail: Rail.Unknown, paymentRef: '', transfer: Transfer.UserPayment, asset: Asset.USDT, chain: Chain.Polygon }
+}
+
+function parsePolygonAddress(address: string): Result<PaymentRequestData, string> {
+  return {
+    data: buildPolygonUsdtPaymentData(getAddress(address)),
+    error: undefined,
+  }
+}
+
+function parsePolygonRequestLink(content: string): Result<PaymentRequestData, string> {
+  const parsed = parseRequestLink(content, {
+    currencies: [Currency.USDT, Currency.MATIC],
+    isValidAddress: {
+      [Currency.ETH]: isValidEthAddress,
+      [Currency.USDT]: isValidEthAddress,
+    },
+    normalizeAddress: {
+      [Currency.ETH]: getAddress,
+      [Currency.USDT]: getAddress,
+    },
+  } as any) as any
+
+  if (!parsed)
+    return { error: i18n.t('Invalid USDT Wallet request. Only USDT Wallet requests are supported.'), data: undefined }
+
+  if (parsed.chainId !== EthereumChain.POLYGON_MAINNET)
+    return { error: i18n.t('Invalid USDT Wallet request. Only Polygon network requests are supported.'), data: undefined }
+
+  if (parsed.currency !== Currency.USDT) {
+    return { error: i18n.t('Invalid USDT Wallet request. Only USDT Wallet requests are supported.'), data: undefined }
+  }
+
+  if (!parsed.contractAddress || !addressesEqual(parsed.contractAddress, polygonUsdtConfig.tokenContract)) {
+    return { error: i18n.t('Invalid USDT Wallet request. Only USDT Wallet requests are supported.'), data: undefined }
+  }
+
+  const amount = parsed.amount === undefined
+    ? 0
+    : Number(parsed.amount)
+
+  if (!Number.isFinite(amount) || amount < 0)
+    return { error: i18n.t('Invalid USDT Wallet request. Missing amount or recipient.'), data: undefined }
+
+  return {
+    data: buildPolygonUsdtPaymentData(getAddress(parsed.recipient), Math.trunc(amount)),
+    error: undefined,
   }
 }

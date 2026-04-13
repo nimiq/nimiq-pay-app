@@ -1,0 +1,51 @@
+appId: ${APP_ID}
+---
+# Smart launch: reuse running app when possible, only cold-start if needed.
+
+# 1. Already on home screen - just ensure home tab is selected
+- runFlow:
+    when:
+      visible: Top Up
+    commands:
+      - waitForAnimationToEnd
+
+# 2. PIN screen showing - enter PIN (matched via aria-label="Enter PIN")
+- runFlow:
+    when:
+      visible: Enter PIN
+    commands:
+      - inputText: '1111'
+      - extendedWaitUntil:
+          visible: Top Up
+          timeout: 45000
+      - waitForAnimationToEnd
+
+# 3. A modal is open - close it and go home
+- runFlow:
+    when:
+      visible: close flow modal
+    commands:
+      - tapOn: close flow modal
+      - waitForAnimationToEnd
+
+# 4. Still not on home - app is not running, do full cold start
+- runFlow:
+    when:
+      notVisible: Top Up
+    commands:
+      - launchApp:
+          clearState: false
+      - runFlow:
+          when:
+            visible: Enter PIN
+          commands:
+            - inputText: '1111'
+      - extendedWaitUntil:
+          visible: Top Up
+          timeout: 45000
+      - waitForAnimationToEnd
+
+# Final: ensure we're on the home screen
+- extendedWaitUntil:
+    visible: Top Up
+    timeout: 5000

@@ -1,0 +1,13 @@
+diff --git a/browser.js b/browser.js
+index 0fb0b7153f8ae86217ceca06b2385795ca669877..d7d8b7c748c3ac00432d7e893df1315f1577d454 100644
+--- a/browser.js
++++ b/browser.js
+@@ -13,7 +13,7 @@ function oldBrowser () {
+ }
+ 
+ var Buffer = require('safe-buffer').Buffer
+-var crypto = global.crypto || global.msCrypto
++var crypto = globalThis.crypto || globalThis.msCrypto
+ 
+ if (crypto && crypto.getRandomValues) {
+   module.exports = randomBytes

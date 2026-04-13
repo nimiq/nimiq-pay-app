@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify asset switcher button
+- assertVisible: Switch asset
+
+# Verify core action buttons
+- assertVisible: Top Up
+- assertVisible: Withdraw
+- assertVisible: Pay
+
+# Verify header buttons
+- assertVisible: Open menu
+- assertVisible: Earn Points
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/home_tab

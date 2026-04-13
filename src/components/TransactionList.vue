@@ -12,7 +12,7 @@ import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 defineEmits(stepEmits)
 
 const { loadMoreTxs, canLoadMore } = useTransactions()
-const { transactions: storeTransactions } = storeToRefs(useTransactions())
+const { transactionsToShow: storeTransactions } = storeToRefs(useTransactions())
 const { showAnimations } = storeToRefs(useApp())
 
 // Need to use computed to force reactivity with RecycleScroller

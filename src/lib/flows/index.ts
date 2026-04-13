@@ -13,8 +13,9 @@ import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
+import { Asset, assetToPaymentMethod } from '@/lib/assets'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
-import { PaymentMethod } from '@/types/transactions'
+import { isPaymentTransferType, PaymentMethod, Transfer } from '@/types/transactions'
 
 const logger = useLogger('flows/index.ts')
 
@@ -188,25 +189,41 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
  */
 const paymentFlow: FlowInit = async () => {
   const [
-    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentPreviewStep, pinCodeStep },
+    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentAmountInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
+    { useApp },
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/app')])
+  const isNakaAvailableForActiveAsset = isNakaEnabled && useApp().isNimiqAsset
 
   const { useNaka } = isNakaEnabled
     ? await import('@/stores/naka')
     : { useNaka: () => ({ isCardActive: false, isCardLocked: false }) }
 
-  const hasActiveNakaCard = useNaka().isCardActive && !useNaka().isCardLocked
+  const hasActiveNakaCard = isNakaAvailableForActiveAsset && useNaka().isCardActive && !useNaka().isCardLocked
   const initialStep = hasActiveNakaCard ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
 
   const slotComponent = hasActiveNakaCard ? defineAsyncComponent(() => import('@/components/PaymentSelector.vue')) : undefined
+  if (!useApp().isNimiqAsset) {
+    const { usePolygonUsdt } = await import('@/stores/polygon-usdt')
+    const polygonUsdt = usePolygonUsdt()
+    void Promise.allSettled([
+      polygonUsdt.primeTransferFee(),
+      polygonUsdt.primeHtlcFee(),
+    ]).then((results) => {
+      if (results[0].status === 'rejected')
+        logger.error('Failed to warm Polygon transfer fee snapshot', results[0].reason)
+      if (results[1].status === 'rejected')
+        logger.error('Failed to warm Polygon HTLC fee snapshot', results[1].reason)
+    })
+  }
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    isNakaEnabled && hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
+    hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
     __ENABLE_BLUECODE__ ? (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }) : undefined,
     paymentRequestManualInputStep,
+    paymentAmountInputStep,
     paymentPreviewStep,
     pinCodeStep,
   ].filter(s => s !== undefined).map(s => s({ flowName }))))
@@ -235,7 +252,7 @@ const paymentFlow: FlowInit = async () => {
       throw new Error('User can only pay with puntos if they have scanned a payment request')
     if (isBluecodePaymentRequest)
       throw new Error('Bluecode payments are not supported yet')
-    if (isNakaPaymentRequest && !isNakaEnabled)
+    if (isNakaPaymentRequest && !isNakaAvailableForActiveAsset)
       throw new Error('Naka payments are not supported yet')
 
     // Only one of the state can be true, otherwise the flow is not as expected
@@ -245,11 +262,11 @@ const paymentFlow: FlowInit = async () => {
     // 2. Parse the payments parameters
 
     let payment:
-      | { method: PaymentMethod.NIM | PaymentMethod.Points, request: PaymentRequestData }
+      | { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
       | { method: PaymentMethod.NakaCard, request: PaymentRequestData, confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage> }
       | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
     if (isNimPaymentRequest)
-      payment = { method: payWithPuntos ? PaymentMethod.Points : PaymentMethod.NIM, request: nimPaymentRequest }
+      payment = { method: (payWithPuntos ? PaymentMethod.Points : assetToPaymentMethod(nimPaymentRequest.asset || Asset.NIM)) as PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: nimPaymentRequest }
     else if (isNakaPaymentRequest)
       payment = { method: PaymentMethod.NakaCard, ...nakaPaymentRequest }
     else if (isBluecodePaymentRequest)
@@ -283,6 +300,42 @@ const paymentFlow: FlowInit = async () => {
           return err(error)
         if (payment.method === PaymentMethod.NakaCard && data) {
           await payment.confirmPayment(data.serialized)
+        }
+        break
+      }
+      case PaymentMethod.USDT: {
+        const request = payment.request
+        const polygonQuote = state[StepName.PaymentPreview]?.polygonQuote
+        if (!isPaymentTransferType(request.transfer)) {
+          return err(i18n.t('USDT staking requests are not supported'))
+        }
+
+        const polygonRequest = {
+          ...request,
+          transfer: request.transfer,
+        }
+
+        const { usePolygonUsdt } = await import('@/stores/polygon-usdt')
+        const polygonTitle = request.merchantName
+          ? markAsUnknownTransactionTitle(request.merchantName)
+          : 'Payment'
+
+        if (request.transfer === Transfer.UserPaymentToAtomicSwap) {
+          const { error } = await usePolygonUsdt().sendSwapPayment(
+            polygonRequest,
+            polygonTitle,
+          )
+          if (error)
+            return err(error)
+        }
+        else {
+          const { error } = await usePolygonUsdt().sendPayment(
+            polygonRequest,
+            polygonTitle,
+            { quote: polygonQuote },
+          )
+          if (error)
+            return err(error)
         }
         break
       }
@@ -350,14 +403,18 @@ selectionStep ◄────┘
   ] = await Promise.all([import('./steps')])
   const flowName = FlowName.NimWithdraw
   const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, pinCodeStep].map(s => s({ flowName }))))
-  const onDone: Flow['onDone'] = async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { err, setToast }) => {
-    const [{ Transfer }, { sendTx }] = await Promise.all([
+  const onDone: Flow['onDone'] = async ({ nimWithdrawalAmountSelectionStep: { amount, recipient, polygonQuote } }, { err, setToast }) => {
+    const [{ Transfer }, { useApp }, { usePolygonUsdt }, { sendTx }] = await Promise.all([
       import('@/types/transactions'),
+      import('@/stores/app'),
+      import('@/stores/polygon-usdt'),
       import('@/stores/transactions').then(t => t.useTransactions()),
     ])
 
     const title = 'Withdrawal' // translated at display time
-    const { error } = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
+    const { error } = useApp().isNimiqAsset
+      ? await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
+      : await usePolygonUsdt().sendPayment({ transfer: Transfer.UserPayment, recipient, amount, fee: 0 }, title, { quote: polygonQuote })
     if (error)
       return err(`${i18n.t('Something went wrong')}.\n${error}`)
 
@@ -375,7 +432,7 @@ const addressSelectionFlow: FlowInit = async () => {
   const steps = (await Promise.all([
     nimWithdrawalAddressSelectionStep,
     (options: StepInitOptions) => nimAddressInputStep({ ...options, props: { overrideHeight: 'h-full' } }),
-    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimiqAddress, overrideHeight: 'h-full' } }),
+    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.AssetAddress, overrideHeight: 'h-full' } }),
   ].map(s => s({ flowName }))))
 
   const onCancel: Flow['onCancel'] = async () => {
@@ -397,13 +454,19 @@ const nimTopUpFlow: FlowInit = async () => {
   const [
     { nimAddressDisplay, qrCodeDisplayStep, qrCodeScannerStep },
     { QRDataFormat },
-  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser')])
+    { useApp },
+  ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/app')])
   const flowName = FlowName.NimTopUp
-  const steps = (await Promise.all([
-    nimAddressDisplay,
-    qrCodeDisplayStep,
-    (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } }),
-  ].map(s => s({ flowName }))))
+  const steps = !useApp().isNimiqAsset
+    ? (await Promise.all([
+        nimAddressDisplay,
+        qrCodeDisplayStep,
+      ].map(s => s({ flowName }))))
+    : (await Promise.all([
+        nimAddressDisplay,
+        qrCodeDisplayStep,
+        (options: StepInitOptions) => qrCodeScannerStep({ ...options, props: { expect: QRDataFormat.NimCashlink } }),
+      ].map(s => s({ flowName }))))
 
   const onCancel: Flow['onCancel'] = async () => {
     // Remove transparency before closing to prevent the camera view to be visible behind the modal

@@ -71,12 +71,17 @@ export function translateConsensus(consensusState: ConsensusState) {
 
 export const sleep = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms))
 
+export function roundUpToTwoDecimals(amount: number) {
+  return Math.ceil(amount * 100) / 100
+}
+
 export function calculateDisplayedDecimals(amount: number | null, currency: Crypto) {
   if (amount === null)
     return 0
 
   const decimals = useApp().decimalsAmount
   const btcDecimals = DECIMALS.BTC
+  const usdtDecimals = 2
 
   if (currency === Crypto.BTC) {
     const maxDecimals = btcDecimals
@@ -118,24 +123,24 @@ export function calculateDisplayedDecimals(amount: number | null, currency: Cryp
     return maxDecimals
   }
 
-  // if (currency === Crypto.USDC || currency === 'usdc.e' || currency === Crypto.USDT) {
-  //   // For USDC, make sure that 2 significant digits are always displayed
-  //   if (amount === 0)
-  //     return usdcDecimals.value
-  //   if (amount < 0.0001 * 1e6)
-  //     return 6
-  //   if (amount < 0.001 * 1e6)
-  //     return Math.max(usdcDecimals.value, 5)
-  //   if (amount < 0.01 * 1e6)
-  //     return Math.max(usdcDecimals.value, 4)
-  //   if (amount < 0.1 * 1e6)
-  //     return Math.max(usdcDecimals.value, 3)
-  //   if (amount < 1 * 1e6)
-  //     return Math.max(usdcDecimals.value, 2)
-  //   if (amount < 10 * 1e6)
-  //     return Math.max(usdcDecimals.value, 1)
-  //   return usdcDecimals.value
-  // }
+  if (currency === Crypto.USDT) {
+    const maxDecimals = Math.max(usdtDecimals, decimals)
+    if (amount === 0)
+      return maxDecimals
+    if (amount < 0.0001 * 1e6)
+      return 6
+    if (amount < 0.001 * 1e6)
+      return Math.max(maxDecimals, 5)
+    if (amount < 0.01 * 1e6)
+      return Math.max(maxDecimals, 4)
+    if (amount < 0.1 * 1e6)
+      return Math.max(maxDecimals, 3)
+    if (amount < 1 * 1e6)
+      return Math.max(maxDecimals, 2)
+    if (amount < 10 * 1e6)
+      return Math.max(maxDecimals, 1)
+    return maxDecimals
+  }
 
   // For NIM, make sure that 2 significant digits are always displayed
   if (amount === 0)

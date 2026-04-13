@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_nim.yaml
+
+# Verify NIM label is visible in balance area
+- assertVisible: NIM
+
+# Verify fiat amount with dollar sign
+- assertVisible:
+    text: '\$.*'
+    enabled: true

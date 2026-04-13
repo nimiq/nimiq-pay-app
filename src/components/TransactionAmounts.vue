@@ -10,6 +10,7 @@ import InvoiceIcon from './icons/invoice.vue'
 
 defineProps<{
   cryptoTotal: number
+  cryptoCurrency?: Crypto
   fiatAmount?: number
   fiatCurrency?: string
   paymentMethod?: PaymentMethod
@@ -36,7 +37,7 @@ const { formatCrypto } = useCurrencyFormatter()
     <Transition name="slide-down-fade">
       <span v-if="fiatAmount && fiatCurrency" class="flex items-center gap-2 text-center uppercase">
         <FiatAmount
-          class="text-5xl" :class="{ 'line-through': refunded }" :amount="fiatAmount"
+          class="text-5xl font-bold" :class="{ 'line-through': refunded }" :amount="fiatAmount"
           :currency="fiatCurrency"
         />
         <slot name="amount-after" />
@@ -44,7 +45,7 @@ const { formatCrypto } = useCurrencyFormatter()
     </Transition>
 
     <div
-      class="text-space/60 flex justify-center items-center gap-x-2.5 text-lg font-semibold leading-8"
+      class="text-space/60 flex flex-wrap justify-center items-center gap-x-2.5 gap-y-1 text-lg font-semibold leading-8"
       :class="{ 'line-through': refunded }"
     >
       <span v-if="slots.fee">
@@ -59,10 +60,14 @@ const { formatCrypto } = useCurrencyFormatter()
           {{ formatCrypto(cryptoTotal) }}
         </span>
         <span v-else>
-          <!-- paymentMethod should only be 'nim' here, and does thus not need to be translated -->
-          <CryptoAmount :amount="cryptoTotal" :currency="Crypto.NIM" />
+          <CryptoAmount :amount="cryptoTotal" :currency="cryptoCurrency || Crypto.NIM" />
         </span>
       </div>
+
+      <div v-if="slots['crypto-after']" class="bg-space/50 w-1 h-1 rounded-full" />
+      <span v-if="slots['crypto-after']">
+        <slot name="crypto-after" />
+      </span>
     </div>
   </div>
 </template>

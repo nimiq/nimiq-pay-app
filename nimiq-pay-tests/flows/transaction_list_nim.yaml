@@ -1,0 +1,8 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_nim.yaml
+
+# Verify a NIM transaction item is visible with NIM amount
+- assertVisible:
+    text: '.*NIM'

@@ -1,0 +1,85 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Tap Withdraw button on home screen
+- tapOn: Withdraw
+- waitForAnimationToEnd
+
+# Verify withdraw screen
+- assertVisible: Withdraw
+
+# Open address selection
+- tapOn: Select withdrawal address
+- waitForAnimationToEnd
+- assertVisible: Choose an address
+
+# Clean up: delete any existing address from previous test runs
+- runFlow:
+    when:
+      visible: Delete address
+    commands:
+      - tapOn: Delete address
+      - waitForAnimationToEnd
+      - tapOn: Delete Address
+      - waitForAnimationToEnd
+      - assertVisible: No saved addresses
+
+# Add new address
+- tapOn: Add another address
+- waitForAnimationToEnd
+# Wait for address input step (aria-label on step title)
+- extendedWaitUntil:
+    visible: Send to this address
+    timeout: 5000
+
+# Input Polygon address
+- tapOn: Address input
+- inputText: '0x0000000000000000000000000000000000000001'
+- pressKey: enter
+
+# Tap SAVE
+- extendedWaitUntil:
+    visible: Save
+    timeout: 5000
+- tapOn: Save
+- waitForAnimationToEnd
+
+# Verify address appears in list
+- extendedWaitUntil:
+    visible: Choose an address
+    timeout: 5000
+- assertVisible:
+    text: '0x0000.*'
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/withdraw_address_usdt_saved
+
+# Select the address by tapping on it
+- tapOn:
+    text: '0x0000.*'
+- waitForAnimationToEnd
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/withdraw_address_usdt_selected
+
+# Reopen address selection to delete the address
+- tapOn: Select withdrawal address
+- waitForAnimationToEnd
+- assertVisible: Choose an address
+
+# Delete the address
+- tapOn: Delete address
+- waitForAnimationToEnd
+
+# Confirm deletion
+- assertVisible: Delete Address
+- tapOn: Delete Address
+- waitForAnimationToEnd
+
+# Verify address was removed
+- assertVisible: No saved addresses
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/withdraw_address_usdt_deleted
+
+# Close flow
+- tapOn: close flow modal

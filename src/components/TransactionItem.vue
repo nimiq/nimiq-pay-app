@@ -8,7 +8,8 @@ import { computed } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import { usePrice } from '@/composables/usePrice'
 import { useRelativeTime } from '@/composables/useRelativeTime'
-import { isPaymentTx, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
+import { Asset, assetToCrypto, assetToPaymentMethod } from '@/lib/assets'
+import { isPaymentTx, isPendingAtomicSwapTransaction, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 
@@ -21,13 +22,18 @@ const props = defineProps({
 
 const timestamp = computed(() => props.tx.timestamp)
 const { formatted: relativeTime } = useRelativeTime({ timestamp })
-const { fiat, crypto } = usePrice(props.tx.amount, { timestamp: timestamp.value, formatter: { isPayment: isPaymentTx(props.tx) } })
+const asset = computed(() => props.tx.asset || Asset.NIM)
+const { fiat, crypto } = usePrice(props.tx.amount, {
+  timestamp: timestamp.value,
+  cryptoCurrency: computed(() => assetToCrypto(asset.value)),
+  formatter: { isPayment: isPaymentTx(props.tx) },
+})
 const paymentMethod = computed(() => {
   const { tx } = props
   if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-    return tx.paymentMethod || PaymentMethod.NIM
+    return tx.paymentMethod || assetToPaymentMethod(asset.value)
 
-  return PaymentMethod.NIM
+  return assetToPaymentMethod(asset.value)
 })
 
 const category = computed(() => {
@@ -41,10 +47,13 @@ const category = computed(() => {
 
   return MerchantCategory.Shop
 })
+
+const hasSettledListAppearance = computed(() => ['included', 'mined', 'confirmed'].includes(props.tx.status))
+const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 </script>
 
 <template>
-  <button class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': tx.status !== 'included' && tx.status !== 'confirmed', 'line-through': tx.meta?.refunded }">
+  <button :aria-label="`Transaction ${asset}`" class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': !hasSettledListAppearance, 'line-through': tx.meta?.refunded }">
     <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">
@@ -52,10 +61,10 @@ const category = computed(() => {
       </h3>
       <div class="flex items-center text-sm font-semibold leading-none gap-x-2">
         <time v-if="timestamp" class="text-space/50 tabular-nums text-nowrap">{{ relativeTime }} </time>
-        <span v-if="tx.transfer === Transfer.UserPaymentToAtomicSwap && !tx.meta?.secret && !tx.meta?.refunded && !tx.meta?.imported" class="italic text-pumpkin/90">
+        <span v-if="isSwapPending" class="italic text-pumpkin/90">
           {{ $t('Pending') }}
         </span>
-        <span v-else-if="tx.status !== 'included' && tx.status !== 'confirmed'" class="italic text-pumpkin/90">
+        <span v-else-if="!hasSettledListAppearance" class="italic text-pumpkin/90">
           {{ translateTransactionState(tx.status) }}
         </span>
       </div>

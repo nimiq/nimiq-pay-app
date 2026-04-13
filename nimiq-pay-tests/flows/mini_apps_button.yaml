@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify Mini Apps button is visible in footer
+- assertVisible: Mini Apps
+
+# Tap Mini Apps button
+- tapOn: Mini Apps
+- waitForAnimationToEnd
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/mini_apps
+
+# Go back
+- back
+- waitForAnimationToEnd

@@ -1,31 +1,32 @@
 <script setup lang="ts">
-import { IonButton, IonTabBar, IonTabButton } from '@ionic/vue'
+import { IonButton } from '@ionic/vue'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed } from 'vue'
-import MapIcon from '@/components/icons/crypto-map.vue'
-import HomeIcon from '@/components/icons/home.vue'
+import AssetSwitcher from '@/components/AssetSwitcher.vue'
 import { useDevice } from '@/composables/useDevice'
+import { Modal, useModal } from '@/composables/useModal'
+import { isDev, isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
+import { useMiniApps } from '@/stores/mini-apps'
 
-const props = defineProps<{
-  isFirstRender: boolean
+defineProps<{
   isPaymentDisabled: boolean
 }>()
 
 const { isIOS } = useDevice()
-const { showAnimations } = storeToRefs(useApp())
-
-const isPaymentDisabled = computed(() => props.isPaymentDisabled)
+const { showAnimations, isNimiqAsset } = storeToRefs(useApp())
+const { showModal } = useModal()
+const { popularDApps } = storeToRefs(useMiniApps())
+const topDAppIcons = computed(() => popularDApps.value.slice(isDev ? 1 : 0, isDev ? 4 : 3).map(d => d.icon))
 </script>
 
 <template>
-  <IonTabBar slot="bottom" class="pt-1 grid grid-cols-[1fr_2fr_1fr] px-4 relative" mode="md">
-    <IonTabButton tab="home" href="/app/home">
-      <HomeIcon class="h-6" />
-    </IonTabButton>
+  <div slot="bottom" class="footer grid grid-cols-[1fr_2fr_1fr] items-center px-4 pt-1 bg-white relative">
+    <AssetSwitcher />
+
     <motion.div
       class="w-full"
       :initial="{ opacity: 0, y: 50 }"
@@ -34,8 +35,9 @@ const isPaymentDisabled = computed(() => props.isPaymentDisabled)
     >
       <div>
         <IonButton
+          aria-label="Pay"
           class="w-3/4 py-2 mx-auto text-base" expand="block"
-          :class="{ 'pb-0': isIOS }"
+          :class="{ 'pb-0': isIOS, 'usdt-button': !isNimiqAsset }"
           :disabled="isPaymentDisabled"
           @click="initializeFlow(FlowName.Payment, { isFullscreen: true })"
         >
@@ -43,23 +45,39 @@ const isPaymentDisabled = computed(() => props.isPaymentDisabled)
         </IonButton>
       </div>
     </motion.div>
-    <IonTabButton tab="map" href="/app/map">
-      <MapIcon class="h-6" />
-    </IonTabButton>
-  </IonTabBar>
+
+    <div class="flex justify-end">
+      <button
+        v-if="isMiniAppsEnabled"
+        aria-label="Mini Apps"
+        class="p-2 relative overflow-hidden rounded-3xl"
+        @click="showModal(Modal.MiniApps)"
+      >
+        <div class="relative h-7 w-16">
+          <img
+            v-for="(icon, i) in topDAppIcons"
+            :key="i"
+            :src="icon"
+            class="size-7 rounded-full ring-2 ring-white object-cover absolute top-0"
+            :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
+            alt=""
+          >
+        </div>
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
-ion-tab-bar {
-  padding-bottom: calc(max(var(--ion-safe-area-bottom, 0px), 28px) + 8px);
+.footer {
+  padding-bottom: var(--ion-safe-area-bottom, 0px);
 }
 
 ion-button {
   --box-shadow: 0px 6px 14px 0px #1F234826;
 }
 
-ion-tab-button {
-  --color-selected: theme(colors.sky.DEFAULT);
-  --color: #BCBDC8;
+ion-button.usdt-button {
+  --background: var(--radial-gradient-green-usdt);
 }
 </style>

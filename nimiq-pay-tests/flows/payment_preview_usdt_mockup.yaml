@@ -1,0 +1,52 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Wait for Pay button to become enabled (Polygon connection may take time)
+- extendedWaitUntil:
+    visible:
+      text: "Pay"
+      enabled: true
+    timeout: 30000
+
+# Swipe left to dismiss payment request notification if present
+- swipe:
+    start: "80%,80%"
+    end: "10%,80%"
+- waitForAnimationToEnd
+
+- tapOn: Pay
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: Scan QR code
+    timeout: 10000
+
+- extendedWaitUntil:
+    visible: Use mockup data
+    timeout: 5000
+- tapOn: Use mockup data
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: Payment preview
+    timeout: 10000
+
+# Verify USDT payment preview content (aria-label on step title)
+- assertVisible: Payment preview
+
+# Verify USDT amount is shown (dynamic amount due to fees)
+- assertVisible:
+    text: '.*USDT'
+
+# Verify fee text is shown (aria-label="Fee included")
+- assertVisible: Fee included
+
+# Verify Polygon warning (aria-label="Polygon warning")
+- assertVisible: Polygon warning
+
+# Verify PAY button (aria-label="Pay")
+- assertVisible: Pay
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/usdt_payment_preview_mockup
+- tapOn: close flow modal
+- waitForAnimationToEnd

@@ -24,13 +24,14 @@ export enum Modal {
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
+  Map = '@/modals/MapModal.vue',
 }
 
 function _useModal() {
   const allModals: HTMLIonModalElement[] = []
 
-  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean }) {
-    const { isOnTop, isFullscreen, isSmall, componentProps, canDismiss = true } = options || {}
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, showHandle?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean }) {
+    const { isOnTop, isFullscreen, isSmall, showHandle, componentProps, canDismiss = true } = options || {}
     if (import.meta.env.MODE === 'development')
       logger.log('showModal', modal)
 
@@ -85,11 +86,15 @@ function _useModal() {
       case Modal.SecretFeatures:
         component = defineAsyncComponent(() => import(Modal.SecretFeatures))
         break
+      case Modal.Map:
+        component = defineAsyncComponent(() => import(Modal.Map))
+        break
     }
 
     const modalToShow = await modalController.create({
       component,
-      handle: false,
+      handle: showHandle ?? false,
+      handleBehavior: showHandle ? 'cycle' : undefined,
       canDismiss,
       initialBreakpoint: isFullscreen ? undefined : 1,
       breakpoints: isFullscreen ? undefined : [0, 1],

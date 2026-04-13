@@ -1,4 +1,5 @@
 import type * as Nimiq from '@nimiq/core'
+import type { Asset, Chain } from '@/lib/assets'
 import { i18n } from '@/i18n/i18n-setup'
 
 export enum Transfer {
@@ -94,12 +95,14 @@ export interface BaseTransaction {
   senderType?: Nimiq.AccountType
   recipient: string
   recipientType?: Nimiq.AccountType
-  status: Nimiq.TransactionState
+  status: AppTransactionState
   timestamp: number | undefined
   amount: number
   fee: number
   hash: string
   proofSize: number
+  asset?: Asset
+  chain?: Chain
   message?: string
   invoiced?: {
     amount: number
@@ -150,13 +153,15 @@ export function translateTransactionTitle(title: TransactionTitle) {
     : title
 }
 
-export function translateTransactionState(state: Nimiq.TransactionState) {
+export function translateTransactionState(state: AppTransactionState) {
   // Define translations as record such that ts warns us if a translation for a transaction state is missing
-  const transactionStateTranslations: Record<Nimiq.TransactionState, string> = {
+  const transactionStateTranslations: Record<AppTransactionState, string> = {
     new: i18n.t('New'),
     pending: i18n.t('Pending'),
+    mined: i18n.t('Confirming'),
     included: i18n.t('Confirming'), // We display just included, but not yet confirmed transactions as confirming.
     invalidated: i18n.t('Invalid'), // For transactions that got rejected by the mempool.
+    failed: i18n.t('Invalid'),
     expired: i18n.t('Expired'),
     confirmed: i18n.t('Confirmed'),
   }
@@ -165,9 +170,19 @@ export function translateTransactionState(state: Nimiq.TransactionState) {
     : i18n.t('Unknown')
 }
 
+export function isPendingAtomicSwapTransaction(tx: Pick<BaseTransaction, 'status' | 'meta'> & { transfer: Transfer }) {
+  return tx.transfer === Transfer.UserPaymentToAtomicSwap
+    && tx.status !== 'expired'
+    && tx.status !== 'failed'
+    && tx.status !== 'invalidated'
+    && !tx.meta?.secret
+    && !tx.meta?.refunded
+    && !tx.meta?.imported
+}
+
 export type UserTransaction = BaseTransaction & {
   transfer: Transfer.UserPayment
-  rail?: Rail.MiniApp
+  rail?: Rail.MiniApp | Rail.Unknown
   railMerchantId?: undefined
   paymentRef?: undefined
   merchantName?: undefined
@@ -324,11 +339,17 @@ export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
   return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking].includes(tx.transfer)
 }
 
+const PAYMENT_TRANSFERS = [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap] as const
+
+export function isPaymentTransferType(transfer: Transfer): transfer is Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap {
+  return (PAYMENT_TRANSFERS as readonly Transfer[]).includes(transfer)
+}
+
 /**
  * Outgoing transactions to an external recipient
  */
 export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUser {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap].includes(tx.transfer)
+  return isPaymentTransferType(tx.transfer)
 }
 
 export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'fee' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
@@ -345,7 +366,10 @@ export type PartialSendTxArgs
 
 export enum PaymentMethod {
   NIM = 'nim',
+  USDT = 'usdt',
   Points = 'points',
   NakaCard = 'nakaCard',
   Bluecode = 'bluecode',
 }
+
+export type AppTransactionState = Nimiq.TransactionState | 'mined' | 'failed'

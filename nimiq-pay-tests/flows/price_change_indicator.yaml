@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify price change indicator is displayed for NIM
+- runFlow: ../subflows/switch_to_nim.yaml
+- assertVisible:
+    text: '.*%'
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/price_change_nim
+
+# Verify price change indicator is displayed for USDT
+- runFlow: ../subflows/switch_to_usdt.yaml
+- assertVisible:
+    text: '.*%'
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/price_change_usdt

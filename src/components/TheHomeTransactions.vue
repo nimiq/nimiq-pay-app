@@ -11,17 +11,20 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useTransactions } from '@/stores/transactions'
 
 const { isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
-const { showAnimations } = storeToRefs(useApp())
-const { transactions } = storeToRefs(useTransactions())
+const { showAnimations, isNimiqAsset } = storeToRefs(useApp())
+const { activeAssetTransactions: transactions } = storeToRefs(useTransactions())
 const { consensus } = storeToRefs(useNimiqNetwork())
+const { hasLoadedHistory: hasLoadedPolygonHistory } = storeToRefs(usePolygonUsdt())
 
 const MAX_TRANSACTIONS = 4
 const showSingleTxSkeleton = computed(() => isConsensusNeeded.value && consensus.value !== 'established')
 const showSingleTxSkeletonDebounced = refDebounced(showSingleTxSkeleton, debounceDelay, { maxWait: debounceMaxWait })
 const maxTransactions = computed(() => showSingleTxSkeletonDebounced.value ? MAX_TRANSACTIONS - 1 : MAX_TRANSACTIONS)
+const showTransactionsSkeleton = computed(() => isUpdatingTransactions.value && (isNimiqAsset.value || !hasLoadedPolygonHistory.value))
 </script>
 
 <template>
@@ -54,7 +57,7 @@ const maxTransactions = computed(() => showSingleTxSkeletonDebounced.value ? MAX
     </motion.li>
   </motion.ol>
 
-  <ol v-else-if="isUpdatingTransactions" class="mt-8">
+  <ol v-else-if="showTransactionsSkeleton" class="mt-8">
     <li v-for="i in maxTransactions" :key="i">
       <button class="ion-activatable ripple-parent text-[15px] w-full overflow-hidden relative flex items-center gap-x-3 py-3 font-semibold rounded">
         <IonSkeletonText animated class="w-8 h-8 rounded-full" />

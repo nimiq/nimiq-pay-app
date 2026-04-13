@@ -1,0 +1,30 @@
+appId: ${APP_ID}
+---
+- runFlow: flows/home_screen_loads.yaml
+- runFlow: flows/asset_switcher_to_usdt.yaml
+- runFlow: flows/asset_switcher_to_nim.yaml
+- runFlow: flows/balance_display_usdt.yaml
+- runFlow: flows/balance_display_nim.yaml
+- runFlow: flows/transaction_list_usdt.yaml
+- runFlow: flows/transaction_list_nim.yaml
+- runFlow: flows/transaction_detail_usdt.yaml
+- runFlow: flows/transaction_detail_nim.yaml
+- runFlow: flows/bottom_navigation.yaml
+- runFlow: flows/top_up_button.yaml
+- runFlow: flows/top_up_address_nim.yaml
+- runFlow: flows/top_up_address_usdt.yaml
+- runFlow: flows/header_buttons.yaml
+- runFlow: flows/hamburger_menu.yaml
+- runFlow: flows/pay_button_visible.yaml
+- runFlow: flows/payment_preview_usdt_mockup.yaml
+- runFlow: flows/withdraw_flow_nim_title.yaml
+- runFlow: flows/withdraw_flow_usdt_title.yaml
+- runFlow: flows/withdraw_button_home.yaml
+- runFlow: flows/withdraw_screen_nim.yaml
+- runFlow: flows/withdraw_screen_usdt.yaml
+- runFlow: flows/withdraw_address_nim.yaml
+- runFlow: flows/withdraw_address_usdt.yaml
+- runFlow: flows/crypto_map.yaml
+- runFlow: flows/about_menu_item.yaml
+- runFlow: flows/price_change_indicator.yaml
+- runFlow: flows/mini_apps_button.yaml

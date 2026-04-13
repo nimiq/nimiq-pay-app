@@ -1,0 +1,20 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_usdt.yaml
+
+# Tap the first USDT transaction (aria-label="Transaction USDT" on item)
+- tapOn:
+    text: 'Transaction USDT'
+    index: 0
+- waitForAnimationToEnd
+
+# Verify transaction detail fields
+- assertVisible: Asset
+- assertVisible: USDT
+- assertVisible: Network
+- assertVisible: Polygon
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/usdt_transaction_detail
+
+- back

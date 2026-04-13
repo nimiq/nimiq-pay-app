@@ -95,7 +95,7 @@ onMounted(async () => {
       <IonToolbar />
     </IonHeader>
     <IonContent class="ion-padding text-center" style="--background: #F8F8F8">
-      <IonGrid class="h-full flex flex-col">
+      <IonGrid class="h-full flex flex-col" aria-label="Enter PIN">
         <h1 class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>

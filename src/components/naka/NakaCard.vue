@@ -91,7 +91,7 @@ function formatExpiry(expiry: string) {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative overflow-hidden rounded-[14px]">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 310 196" class="w-full">
       <g clip-path="url(#a)">
         <!-- <rect width="310" height="195.9" :fill="colors[color][0]" rx="13.6"/> -->

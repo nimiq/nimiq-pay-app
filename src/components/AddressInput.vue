@@ -101,6 +101,7 @@ function handleKeydown(event: KeyboardEvent) {
       <div v-if="i % 3 === 1" class="xs:w-2 h-[1.5px] my-auto bg-space/20" />
       <input
         :id="i.toString()"
+        :aria-label="`Address segment ${i}`"
         :value="inputAddress[i]"
         name="address"
         autocapitalize="characters"

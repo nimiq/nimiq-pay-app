@@ -1,0 +1,28 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+- runFlow: ../subflows/switch_to_nim.yaml
+
+# Open NIM withdraw screen
+- tapOn: Withdraw
+- waitForAnimationToEnd
+
+# Verify NIM withdraw screen elements
+- assertVisible: Withdraw
+- assertVisible: USD
+- assertVisible:
+    text: '.*NIM'
+
+# Verify address selector is present
+- assertVisible: Select withdrawal address
+
+# Verify quick amount buttons
+- assertVisible: $25
+- assertVisible: $50
+- assertVisible: $100
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/withdraw_screen_nim
+
+# Close flow
+- tapOn: close flow modal
+- waitForAnimationToEnd

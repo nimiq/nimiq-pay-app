@@ -6,16 +6,18 @@ import type { RemoteSigner } from '@/lib/sql-queries'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, StakingTransaction, Transaction, TransactionSentByUser, UserReceiptTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
-import { computedAsync, until, useTimeoutFn } from '@vueuse/core'
+import { computedAsync, until, useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
+import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
+import { Asset } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
 import { toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
@@ -66,6 +68,26 @@ export const useSync = defineStore('sync', () => {
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
   const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
+  const { resume: startPeriodicTransactionRefresh } = useTimeoutPoll(async () => {
+    if (!hasLocalWallet.value)
+      return
+
+    await updateTransactionHistory()
+    await updateTransactionsInDb()
+  }, 30_000, { immediate: false })
+
+  // Independent periodic refresh that reloads the in-memory transaction list from DB
+  // and updates the balance. This catches any transactions saved to DB but missed by
+  // the in-memory list, and ensures the balance stays up to date even if the head
+  // change listener is not firing (e.g. after returning from background).
+  const { resume: startPeriodicDbRefresh } = useTimeoutPoll(async () => {
+    if (!hasLocalWallet.value)
+      return
+    await Promise.all([
+      useTransactions().refreshFromDb(),
+      updateBalances(),
+    ])
+  }, 30_000, { immediate: false })
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -264,10 +286,16 @@ export const useSync = defineStore('sync', () => {
     isSyncingWallets.value = true
     logger.log('🔄 Remote Signer initialization')
     await useRemoteSigner().init()
+    // Initialize Polygon sync in the background to avoid blocking NIM sync
+    usePolygonSync().init().catch(error => logger.error('Failed to initialize Polygon sync', error))
     logger.log('Updating balances')
     await updateBalances()
     logger.log('Checking HTLC state and updating transactions in DB')
     await Promise.all([checkHtlcState(), updateTransactionsInDb()])
+
+    // Start periodic DB refresh early - it doesn't need blockchain consensus
+    // and ensures the in-memory transaction list stays in sync with the database
+    startPeriodicDbRefresh()
 
     logger.log('Waiting for client to be ready')
     await until(client).toBeTruthy()
@@ -281,6 +309,7 @@ export const useSync = defineStore('sync', () => {
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
     updateTransactionHistory()
+    startPeriodicTransactionRefresh()
 
     client.value?.addHeadChangedListener(async () => {
       if (headChangePendingDrainLock.value)
@@ -486,7 +515,14 @@ export const useSync = defineStore('sync', () => {
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
-    await until(isTransactionPending).toBe(false)
+    try {
+      await until(isTransactionPending).toBe(false, { timeout: 60_000 })
+    }
+    catch {
+      logger.log('Skipping transaction history refresh while transactions are still pending')
+      return
+    }
+
     if (isUpdatingTransactions.value) {
       logger.log('📬 Transactions are already being updated')
       return
@@ -775,6 +811,9 @@ export const useSync = defineStore('sync', () => {
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
 
     await Promise.all(dbTxs.map(async (dbTx) => {
+      if ((dbTx.asset || Asset.NIM) === Asset.USDT)
+        return // Handled by usePolygonSync
+
       // Checking for tx with cashback to claim
       // We need to check this if it's included or confirmed just in case the user closes the app
       // before the tx is included and opened again after it's confirmed
@@ -1000,6 +1039,13 @@ export const useSync = defineStore('sync', () => {
     logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
 
     for (const htlc of expiredSwapHtlcs) {
+      // Polygon swap entries reuse this table but are keyed by tx hash, not by a Nimiq HTLC address.
+      if (htlc.address.startsWith('0x')) {
+        await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+        await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'expired', timestamp: undefined })
+        continue
+      }
+
       try {
         const account = await client.value!.getAccount(htlc.address) as PlainAccount
         if (!account.balance) {

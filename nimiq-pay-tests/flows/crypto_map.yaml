@@ -1,0 +1,18 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Tap Crypto Map button in header
+- tapOn: Crypto Map
+- waitForAnimationToEnd
+
+# Wait for map view to load (external iframe content)
+- extendedWaitUntil:
+    visible: Search here
+    timeout: 10000
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/map_tab
+
+# Go back to home
+- back
+- waitForAnimationToEnd

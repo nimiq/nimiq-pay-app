@@ -182,7 +182,13 @@ async function navigateTo(options: NavigateToOptions = 1) {
   else if (newIndex >= stepsInFlow.length)
     return await onFlowDone()
 
-  const newActiveStep = stepsInFlow.at(newIndex)
+  // For goBackBy, newIndex is a historyStack position — look up the step from historyStack
+  // (not stepsInFlow) so we navigate to the step the user actually visited, even when
+  // steps were skipped via navigateTo({ step }).
+  const isGoBackBy = typeof options === 'object' && 'goBackBy' in options
+  const newActiveStep = isGoBackBy
+    ? historyStack.value[newIndex] ?? stepsInFlow.at(newIndex)
+    : stepsInFlow.at(newIndex)
   if (!newActiveStep)
     return
 
@@ -366,8 +372,8 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
   </IonHeader>
 
   <ul ref="scroller" class="hide-scrollbar mb-auto h-full overflow-x-hidden flex snap-x snap-mandatory">
-    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy }) in historyStack" ref="scrollerItems" :key="step" class="max-w-[100vw] w-full h-full flex flex-col relative shrink-0 snap-center snap-always px-8 overflow-y-auto">
-      <h2 v-if="title" class="z-10 flex justify-center items-center gap-x-3 mt-3 text-2xl font-bold text-balance text-center small:mt-0">
+    <li v-for="({ main, step, title, titleIcon, description, skipAheadBy, goBackBy, ariaLabel }) in historyStack" ref="scrollerItems" :key="step" class="max-w-[100vw] w-full h-full flex flex-col relative shrink-0 snap-center snap-always px-8 overflow-y-auto">
+      <h2 v-if="title" class="z-10 flex justify-center items-center gap-x-3 mt-3 text-2xl font-bold text-balance text-center small:mt-0" :aria-label="ariaLabel">
         <component :is="titleIcon" v-if="titleIcon" class="!w-10" />
         {{ title }}
       </h2>

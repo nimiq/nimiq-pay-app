@@ -26,8 +26,13 @@ export function addressesEqual(address1: string, address2: string): boolean {
     return getAddress(address1) === getAddress(address2)
   }
   catch {
-    // If either address is invalid, they can't be equal
-    return false
+    const isHexAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address)
+
+    if (!isHexAddress(address1) || !isHexAddress(address2))
+      return false
+
+    // Older locally stored addresses might not be EIP-55-normalized.
+    return address1.toLowerCase() === address2.toLowerCase()
   }
 }
 

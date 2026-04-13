@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+- runFlow:
+    when:
+      visible: NIM
+    commands:
+      - tapOn: Switch asset
+      - waitForAnimationToEnd
+
+- assertVisible: USDT

@@ -10,11 +10,14 @@ import { usePrice } from '@/composables/usePrice'
 import { useFormatTime } from '@/composables/useTime'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { Asset, assetToCrypto, assetToPaymentMethod, Chain } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useSync } from '@/stores/sync'
-import { PaymentMethod, Transfer, translateTransactionState } from '@/types/transactions'
+import { getSwapHtlcKey } from '@/stores/transactions'
+import { isPendingAtomicSwapTransaction, translateTransactionState } from '@/types/transactions'
 import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
 
@@ -22,16 +25,22 @@ const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean
 
 const logger = useLogger('TransactionDetails')
 const { consensus, height } = storeToRefs(useNimiqNetwork())
-const { crypto, fiat } = usePrice(props.tx.amount, { timestamp: props.tx.timestamp })
+const asset = computed(() => props.tx.asset || Asset.NIM)
+const chain = computed(() => props.tx.chain || Chain.Nimiq)
+const paymentMethod = computed(() => props.tx.paymentMethod || assetToPaymentMethod(asset.value))
+const { crypto, fiat } = usePrice(props.tx.amount, {
+  timestamp: props.tx.timestamp,
+  cryptoCurrency: computed(() => assetToCrypto(asset.value)),
+})
 const { setToast } = useToast()
 const { query } = useConn()
 const { updateSingleTransaction } = useSync()
 
 const datetime = computed(() => props.tx.timestamp ? useFormatTime(props.tx.timestamp) : '')
-const isSwapPending = computed(() => props.tx.transfer === Transfer.UserPaymentToAtomicSwap && !props.tx.meta?.secret && !props.tx.meta?.refunded && !props.tx.meta?.imported)
+const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 const swapTimeoutTime = computedAsync(async () => {
   if (isSwapPending.value) {
-    return await query<number>(SQLQuery.GetSwapTimeoutTime, [props.tx.recipient], { single: true })
+    return await query<number>(SQLQuery.GetSwapTimeoutTime, [getSwapHtlcKey(props.tx)], { single: true })
   }
 })
 const timeUntilTimeout = computed(() => {
@@ -75,16 +84,24 @@ function formatInvoiced({ currency, amount }: { currency: string, amount: number
   }
 }
 
-onBeforeMount(() => updateSingleTransaction(props.tx.hash))
+onBeforeMount(() => {
+  if (asset.value === Asset.USDT || chain.value === Chain.Polygon) {
+    usePolygonUsdt().updateSingleTransaction(props.tx.hash)
+    return
+  }
+
+  updateSingleTransaction(props.tx.hash)
+})
 </script>
 
 <template>
   <div class="flex flex-col w-full h-full gap-10 py-8">
     <TransactionAmounts
       :crypto-total="crypto.totalUnits"
+      :crypto-currency="crypto.currency"
       :fiat-amount="fiat.total"
       :fiat-currency="fiat.currency"
-      :payment-method="tx.paymentMethod || PaymentMethod.NIM"
+      :payment-method="paymentMethod"
       :refunded="tx.meta?.refunded"
     >
       <template v-if="tx.invoiced" #invoiced>
@@ -123,11 +140,21 @@ onBeforeMount(() => updateSingleTransaction(props.tx.hash))
         {{ datetime }}
       </div>
 
+      <div aria-label="Asset">
+        {{ $t('Asset') }}
+      </div>
+      <div>{{ asset }}</div>
+
+      <div aria-label="Network">
+        {{ $t('Network') }}
+      </div>
+      <div>{{ chain }}</div>
+
       <!-- Only display first 4 and last 4 characters -->
-      <div v-if="tx.title === 'Withdrawal'">
+      <div v-if="tx.recipient">
         {{ $t('Recipient') }}
       </div>
-      <div v-if="tx.title === 'Withdrawal'" @click="() => handleCopy(tx.recipient)">
+      <div v-if="tx.recipient" @click="() => handleCopy(tx.recipient)">
         {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
       </div>
 

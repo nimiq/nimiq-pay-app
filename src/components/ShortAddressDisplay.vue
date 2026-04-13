@@ -1,24 +1,31 @@
 <script setup lang="ts">
 import { Identicon } from '@nimiq/vue3-components'
+import { computed } from 'vue'
 import IconHorizontalEllipsis from '@/components/icons/horizontal-ellipsis.vue'
+import UsdtLogo from '@/components/icons/usdt-logo.vue'
 
-defineProps({
+const props = defineProps({
   address: { type: String, required: true },
   identiconWidth: { type: String, default: 'w-10' },
   hideIdenticon: { type: Boolean, default: false },
 })
+
+const isNimiq = computed(() => props.address.startsWith('NQ'))
+const isPolygonUsdtAddress = computed(() => props.address.startsWith('0x'))
+const sliceLength = computed(() => isNimiq.value ? 4 : 6)
+const showNimiqIdenticon = computed(() => !props.hideIdenticon && isNimiq.value)
+const showUsdtLogo = computed(() => !props.hideIdenticon && isPolygonUsdtAddress.value)
+const usdtLogoWidth = computed(() => props.identiconWidth === 'w-10' ? 'w-8' : props.identiconWidth)
 </script>
 
 <template>
   <div class="flex items-center gap-x-4">
-    <Identicon v-if="!hideIdenticon" :address="address" :class="identiconWidth" />
-    <div class="uppercase address flex items-center gap-x-2">
-      <!-- First 4 characters -->
-      <span>{{ address.slice(0, 4) }}</span>
-      <!-- Ellipsis -->
+    <Identicon v-if="showNimiqIdenticon" :address="address" :class="identiconWidth" />
+    <UsdtLogo v-else-if="showUsdtLogo" :class="usdtLogoWidth" />
+    <div class="address flex items-center gap-x-2" :class="{ uppercase: isNimiq }">
+      <span>{{ address.slice(0, sliceLength) }}</span>
       <IconHorizontalEllipsis class="w-6 text-space/30" />
-      <!-- Last 4 characters -->
-      <span>{{ address.slice(-4) }}</span>
+      <span>{{ address.slice(-sliceLength) }}</span>
     </div>
   </div>
 </template>

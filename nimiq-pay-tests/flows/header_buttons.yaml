@@ -1,0 +1,15 @@
+appId: ${APP_ID}
+---
+- runFlow: ../subflows/launch_app.yaml
+
+# Verify Earn Points button is visible
+- assertVisible: Earn Points
+
+# Tap Earn Points and verify modal opens
+- tapOn: Earn Points
+- waitForAnimationToEnd
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/earn_points_modal
+
+- back
+- waitForAnimationToEnd

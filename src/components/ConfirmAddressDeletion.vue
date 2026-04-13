@@ -43,7 +43,7 @@ function handleConfirmRemove() {
     <p class="font-normal text-base text-space/60">
       {{ $t('This action cannot be undone') }}
     </p>
-    <IonButton class="w-full uppercase font-bold text-base pb-8 pt-6" style="--background: var(--radial-gradient-red);" @click="handleConfirmRemove">
+    <IonButton aria-label="Delete Address" class="w-full uppercase font-bold text-base pb-8 pt-6" style="--background: var(--radial-gradient-red);" @click="handleConfirmRemove">
       {{ $t('Delete Address') }}
     </IonButton>
   </div>
