@@ -153,7 +153,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <IonPage class="bg-[#F8F8F8]">
+  <IonPage class="bg-[var(--colors-gray)]">
     <IonHeader class="ion-no-border">
       <BackupNotification v-if="isRecoveryWordsShown" />
       <IonToolbar class="px-2">
@@ -181,18 +181,14 @@ onMounted(() => {
           </IonButton>
         </IonButtons>
       </IonToolbar>
-    </IonHeader>
-    <IonContent class="ion-padding scroll-smooth">
-      <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
-        <IonRefresherContent />
-      </IonRefresher>
 
       <motion.div
+        class="pt-16 pb-4 px-4"
         :initial="{ opacity: 0, y: 50 }"
         :animate="{ opacity: 1, y: 0 }"
         :transition="{ duration: showAnimations ? 0.4 : 0, ease: 'easeOut' }"
       >
-        <TheHomeAmounts class="mt-[72px] mb-4" />
+        <TheHomeAmounts class="mb-4" />
 
         <div class="flex justify-center gap-x-3 mt-2">
           <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="initializeFlow(FlowName.NimTopUp)">
@@ -203,6 +199,11 @@ onMounted(() => {
           </button>
         </div>
       </motion.div>
+    </IonHeader>
+    <IonContent class="ion-padding scroll-smooth">
+      <IonRefresher slot="fixed" @ion-refresh="handleRefresh($event)">
+        <IonRefresherContent />
+      </IonRefresher>
 
       <!-- Notification Horizontal Scroll -->
       <!-- my-8 to have some space even when no notifications -->
@@ -266,14 +267,24 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Disable scrollbar */
-ion-content {
-  --offset-bottom: auto !important;
-  --overflow: hidden;
-  overflow: auto;
+ion-header {
+  background: var(--colors-gray);
 
-  &::-webkit-scrollbar {
-    display: none;
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 24px;
+    background: linear-gradient(to bottom, var(--colors-gray), transparent);
+    transform: translateY(100%);
+    pointer-events: none;
+    z-index: 1;
   }
+}
+
+ion-content {
+  --background: var(--colors-gray);
 }
 </style>

@@ -539,6 +539,7 @@ export const useTransactions = defineStore('transactions', () => {
       const newTransactions = nextTransactions.filter(tx => !knownHashes.has(tx.hash))
       if (newTransactions.length)
         transactions.value = [...transactions.value, ...newTransactions]
+      return newTransactions.length
     },
 
     // A function that returns true if there are more transactions to load
