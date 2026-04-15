@@ -108,15 +108,15 @@ watch(
     <form ref="fullWidth" class="relative flex h-full max-w-full p-1 overflow-hidden" @submit.prevent="">
       <span ref="widthPlaceholder" class="width-finder"> 0 </span>
       <span ref="widthValue" class="width-finder">{{ formattedValue || '' }}</span>
+      <!-- Keep this as text so iOS decimal keyboards can pass through locale commas for normalization. -->
       <input
         ref="input"
         :value="formattedValue"
-        type="number"
+        type="text"
         name="amount"
         inputmode="decimal"
         class="max-w-full px-1 py-0 text-center transition-all border-none rounded-lg duration-[50ms] border-space/10 outline-0 bg-clip-padding"
         placeholder="0"
-        pattern="[0-9]*"
         :style="{ 'width': `${width}px`, 'box-shadow': `inset 0 0 0 .15rem ${isFocussed ? 'var(--border-color-focus)' : 'var(--border-color)'}` }"
         @input="formattedValue = ($event.target as HTMLTextAreaElement).value"
         @focus="isFocussed = true"

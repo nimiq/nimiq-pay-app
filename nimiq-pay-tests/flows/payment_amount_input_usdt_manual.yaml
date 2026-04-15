@@ -45,7 +45,7 @@ appId: ${APP_ID}
 - assertVisible: USDT
 
 - tapOn: '0'
-- inputText: '1'
+- inputText: '1,5'
 - hideKeyboard
 - waitForAnimationToEnd
 
