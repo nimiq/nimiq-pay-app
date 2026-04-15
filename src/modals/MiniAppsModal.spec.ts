@@ -18,6 +18,7 @@ function createDeferred<T = void>() {
 
 const {
   addListener,
+  capacitorHttpGet,
   clearAllCookies,
   fetchPageDescription,
   getFaviconUrl,
@@ -42,6 +43,35 @@ const {
   screenOrientationUnlock: vi.fn(() => Promise.resolve()),
   screenOrientationLock: vi.fn(() => Promise.resolve()),
   isDevState: { value: false },
+  capacitorHttpGet: vi.fn(() => Promise.resolve({
+    status: 200,
+    data: {
+      nimiq: [],
+      evm: [
+        { name: 'EVM Mini Wallet', url: 'https://evm-mini-wallet.vercel.app/', type: 'evm', description: 'Test wallet', logo: '', source: null, developer: null, featured: true, slug: 'evm-mini-wallet' },
+        { name: '1inch', url: 'https://1inch.com/', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: '1inch' },
+        { name: 'Uniswap', url: 'https://app.uniswap.org', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'uniswap' },
+        { name: 'Polymarket', url: 'https://polymarket.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'polymarket' },
+        { name: 'OpenSea', url: 'https://opensea.io', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'opensea' },
+        { name: 'Aave', url: 'https://app.aave.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'aave' },
+        { name: 'DappRadar', url: 'https://dappradar.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'dappradar' },
+      ],
+    },
+  })),
+}))
+
+vi.mock('@capacitor/core', () => ({
+  CapacitorHttp: {
+    get: capacitorHttpGet,
+  },
+}))
+
+vi.mock('@capacitor/preferences', () => ({
+  Preferences: {
+    get: vi.fn(() => Promise.resolve({ value: null })),
+    set: vi.fn(() => Promise.resolve()),
+    remove: vi.fn(() => Promise.resolve()),
+  },
 }))
 
 vi.mock('@capacitor/screen-orientation', () => ({
@@ -122,7 +152,7 @@ function mountModal(component: Component = MiniAppsModal) {
         },
         IonSearchbar: IonSearchbarStub,
         IonSkeletonText: {
-          template: '<div />',
+          template: '<div class="skeleton" />',
         },
       },
     },
@@ -155,6 +185,22 @@ describe('mini apps modal', () => {
     screenOrientationLock.mockReset()
     screenOrientationLock.mockImplementation(() => Promise.resolve())
     isDevState.value = false
+    capacitorHttpGet.mockReset()
+    capacitorHttpGet.mockImplementation(() => Promise.resolve({
+      status: 200,
+      data: {
+        nimiq: [],
+        evm: [
+          { name: 'EVM Mini Wallet', url: 'https://evm-mini-wallet.vercel.app/', type: 'evm', description: 'Test wallet', logo: '', source: null, developer: null, featured: true, slug: 'evm-mini-wallet' },
+          { name: '1inch', url: 'https://1inch.com/', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: '1inch' },
+          { name: 'Uniswap', url: 'https://app.uniswap.org', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'uniswap' },
+          { name: 'Polymarket', url: 'https://polymarket.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'polymarket' },
+          { name: 'OpenSea', url: 'https://opensea.io', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'opensea' },
+          { name: 'Aave', url: 'https://app.aave.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'aave' },
+          { name: 'DappRadar', url: 'https://dappradar.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'dappradar' },
+        ],
+      },
+    }))
 
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('window.__provider = true') })))
   })
@@ -164,7 +210,9 @@ describe('mini apps modal', () => {
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
-    const targetButton = wrapper.find('[data-testid="featured-dapp-button-https-app-uniswap-org"]')
+    await flushPromises()
+
+    const targetButton = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]')
 
     await targetButton.trigger('click')
     await flushPromises()
@@ -182,13 +230,15 @@ describe('mini apps modal', () => {
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
-    const featuredButtons = wrapper.findAll('[data-testid^="featured-dapp-button-"]')
-
-    await featuredButtons[0].trigger('click')
     await flushPromises()
 
-    for (const featuredButton of featuredButtons) {
-      expect(featuredButton.attributes('disabled')).toBeDefined()
+    const allButtons = wrapper.findAll('[data-testid^="dapp-button-"], [data-testid^="featured-dapp-button-"]')
+
+    await allButtons[0].trigger('click')
+    await flushPromises()
+
+    for (const button of allButtons) {
+      expect(button.attributes('disabled')).toBeDefined()
     }
 
     deferred.resolve()
@@ -200,7 +250,9 @@ describe('mini apps modal', () => {
     openWebView.mockImplementationOnce(() => deferred.promise)
 
     const wrapper = mountModal()
-    const targetButton = wrapper.find('[data-testid="featured-dapp-button-https-app-uniswap-org"]')
+    await flushPromises()
+
+    const targetButton = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]')
 
     await targetButton.trigger('click')
     await flushPromises()
@@ -216,7 +268,9 @@ describe('mini apps modal', () => {
     openWebView.mockRejectedValueOnce(new Error('open failed'))
 
     const wrapper = mountModal()
-    const targetButton = wrapper.find('[data-testid="featured-dapp-button-https-app-uniswap-org"]')
+    await flushPromises()
+
+    const targetButton = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]')
 
     await targetButton.trigger('click')
     await flushPromises()
@@ -236,14 +290,14 @@ describe('mini apps modal', () => {
 
     await flushPromises()
 
-    expect(wrapper.find(`[data-testid="featured-dapp-button-${toUrlTestId(demoUrl)}"]`).exists()).toBe(true)
+    expect(wrapper.find(`[data-testid="dapp-button-${toUrlTestId(demoUrl)}"]`).exists()).toBe(true)
   })
 
   it('falls back to fallback icon when image loading fails', async () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    const uniswapIcon = wrapper.find('[data-testid="featured-dapp-button-https-app-uniswap-org"] img')
+    const uniswapIcon = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"] img')
     await uniswapIcon.trigger('error')
 
     expect((uniswapIcon.element as HTMLImageElement).src).toContain('data:image/svg+xml')
@@ -253,10 +307,34 @@ describe('mini apps modal', () => {
     const wrapper = mountModal()
     await flushPromises()
 
-    const uniswapRow = wrapper.find('[data-testid="featured-dapp-button-https-app-uniswap-org"]')
-    const subtitle = uniswapRow.find('[data-testid="featured-dapp-subtitle-https-app-uniswap-org"]')
+    const uniswapRow = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]')
+    expect(uniswapRow.exists()).toBe(true)
+    expect(uniswapRow.text()).toContain('https://app.uniswap.org')
+  })
 
-    expect(subtitle.exists()).toBe(true)
-    expect(subtitle.text()).toBe('https://app.uniswap.org')
+  it('separates featured and non-featured apps into distinct sections', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    // Featured section should show EVM Mini Wallet (featured: true)
+    expect(wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
+
+    // Non-featured section should show Uniswap (featured: false)
+    expect(wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]').exists()).toBe(true)
+
+    // Section labels
+    const headings = wrapper.findAll('p.text-lg.font-bold')
+    const headingTexts = headings.map(h => h.text())
+    expect(headingTexts).toContain('Featured Apps')
+    expect(headingTexts).toContain('All Apps')
+  })
+
+  it('uses description from remote JSON when available', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    // EVM Mini Wallet has description 'Test wallet' in mock data
+    const featuredButton = wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]')
+    expect(featuredButton.text()).toContain('Test wallet')
   })
 })

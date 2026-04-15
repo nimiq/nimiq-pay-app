@@ -36,13 +36,15 @@ const web3ProviderScript = computedAsync(
 
 const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZjIzNDgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1nbG9iZS1pY29uIGx1Y2lkZS1nbG9iZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMmExNC41IDE0LjUgMCAwIDAgMCAyMCAxNC41IDE0LjUgMCAwIDAgMC0yMCIvPjxwYXRoIGQ9Ik0yIDEyaDIwIi8+PC9zdmc+'
 
-const { popularDApps, searchedDescriptions, descriptionTexts, ensureDescription, addRecentlyViewed } = useMiniApps()
-const { recentDAppsWithDescriptions } = storeToRefs(useMiniApps())
+const store = useMiniApps()
+const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
+const { searchedDescriptions, ensureDescription, addRecentlyViewed } = store
 
 const searchQuery = ref('')
+const isSearching = computed(() => !!searchQuery.value.trim())
 const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
 const normalizedSearchUrl = computed(() => normalizeMiniAppUrl(searchQuery.value))
-const featuredLabel = computed(() => searchQuery.value.trim() ? 'Matching Apps' : 'Featured Apps')
+const featuredLabel = computed(() => isSearching.value ? 'Matching Apps' : 'Featured Apps')
 const openingUrl = ref<string | null>(null)
 const isOpeningAny = computed(() => openingUrl.value !== null)
 
@@ -51,7 +53,7 @@ const searchedUrlApp = computed(() => {
   if (!url)
     return undefined
 
-  const matchedFeaturedApp = popularDApps.find(dapp => normalizeMiniAppUrl(dapp.url) === url)
+  const matchedFeaturedApp = popularDApps.value.find(dapp => normalizeMiniAppUrl(dapp.url) === url)
   const fallbackTitle = new URL(url).hostname
 
   return {
@@ -264,60 +266,182 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
         </div>
       </template>
 
-      <!-- Featured Apps -->
-      <p class="text-lg font-bold text-space text-left">
-        {{ featuredLabel }}
-      </p>
-      <div class="flex flex-col gap-4 text-left">
-        <button
-          v-for="dapp in filteredDApps"
-          :key="dapp.url"
-          :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
-          class="flex items-center gap-3 text-left transition-opacity"
-          :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
-          :disabled="isOpeningAny"
-          @click="openMiniApp(dapp.url, dapp.name, 'featured')"
-        >
-          <div class="relative w-14 h-14 shrink-0">
-            <img
-              :src="dapp.icon"
-              :alt="dapp.name"
-              class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-              :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-              @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-            >
-            <motion.div
-              v-if="isOpeningUrl(dapp.url)"
-              :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
-              class="absolute inset-0 flex items-center justify-center"
-              :initial="{ opacity: 0, scale: 0.85 }"
-              :animate="{ opacity: 1, scale: 1 }"
-              :transition="{ duration: 0.16, ease: 'easeOut' }"
-            >
-              <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-            </motion.div>
-          </div>
-          <div class="flex flex-col min-w-0">
-            <span class="font-bold text-base">{{ dapp.name }}</span>
-            <motion.span
-              :key="dapp.description || dapp.url"
-              :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
-              class="text-sm text-space/50 truncate"
-              :initial="{ opacity: 0, y: 4 }"
-              :animate="{ opacity: 1, y: 0 }"
-              :transition="{ duration: 0.16, ease: 'easeOut' }"
-            >
-              {{ dapp.description || dapp.url }}
-            </motion.span>
-          </div>
-        </button>
-        <p
-          v-if="filteredDApps.length === 0"
-          class="text-sm text-space/60"
-        >
-          No apps found.
+      <!-- Loading skeleton (first launch with no cache) -->
+      <template v-if="isLoading">
+        <p class="text-lg font-bold text-space text-left">
+          Featured Apps
         </p>
-      </div>
+        <div class="flex flex-col gap-4">
+          <div v-for="i in 3" :key="i" class="flex items-center gap-3">
+            <IonSkeletonText :animated="true" class="w-14 h-14 rounded-full shrink-0" />
+            <div class="flex flex-col gap-1 flex-1">
+              <IonSkeletonText :animated="true" class="h-4 w-1/3 rounded" />
+              <IonSkeletonText :animated="true" class="h-3 w-2/3 rounded" />
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- When searching: single "Matching Apps" list -->
+      <template v-else-if="isSearching">
+        <p class="text-lg font-bold text-space text-left">
+          {{ featuredLabel }}
+        </p>
+        <div class="flex flex-col gap-4 text-left">
+          <button
+            v-for="dapp in filteredDApps"
+            :key="dapp.url"
+            :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
+            class="flex items-center gap-3 text-left transition-opacity"
+            :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+            :disabled="isOpeningAny"
+            @click="openMiniApp(dapp.url, dapp.name, 'featured')"
+          >
+            <div class="relative w-14 h-14 shrink-0">
+              <img
+                :src="dapp.icon"
+                :alt="dapp.name"
+                class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+                :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+                @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+              >
+              <motion.div
+                v-if="isOpeningUrl(dapp.url)"
+                :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+                class="absolute inset-0 flex items-center justify-center"
+                :initial="{ opacity: 0, scale: 0.85 }"
+                :animate="{ opacity: 1, scale: 1 }"
+                :transition="{ duration: 0.16, ease: 'easeOut' }"
+              >
+                <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+              </motion.div>
+            </div>
+            <div class="flex flex-col min-w-0">
+              <span class="font-bold text-base">{{ dapp.name }}</span>
+              <motion.span
+                :key="dapp.description || dapp.url"
+                :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
+                class="text-sm text-space/50 truncate"
+                :initial="{ opacity: 0, y: 4 }"
+                :animate="{ opacity: 1, y: 0 }"
+                :transition="{ duration: 0.16, ease: 'easeOut' }"
+              >
+                {{ dapp.description || dapp.url }}
+              </motion.span>
+            </div>
+          </button>
+          <p
+            v-if="filteredDApps.length === 0"
+            class="text-sm text-space/60"
+          >
+            No apps found.
+          </p>
+        </div>
+      </template>
+
+      <!-- When not searching: Featured Apps + All Apps sections -->
+      <template v-else>
+        <!-- Featured Apps -->
+        <template v-if="featuredDApps.length > 0">
+          <p class="text-lg font-bold text-space text-left">
+            Featured Apps
+          </p>
+          <div class="flex flex-col gap-4 text-left">
+            <button
+              v-for="dapp in featuredDApps"
+              :key="dapp.url"
+              :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
+              class="flex items-center gap-3 text-left transition-opacity"
+              :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+              :disabled="isOpeningAny"
+              @click="openMiniApp(dapp.url, dapp.name, 'featured')"
+            >
+              <div class="relative w-14 h-14 shrink-0">
+                <img
+                  :src="dapp.icon"
+                  :alt="dapp.name"
+                  class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+                  :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+                  @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+                >
+                <motion.div
+                  v-if="isOpeningUrl(dapp.url)"
+                  :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+                  class="absolute inset-0 flex items-center justify-center"
+                  :initial="{ opacity: 0, scale: 0.85 }"
+                  :animate="{ opacity: 1, scale: 1 }"
+                  :transition="{ duration: 0.16, ease: 'easeOut' }"
+                >
+                  <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+                </motion.div>
+              </div>
+              <div class="flex flex-col min-w-0">
+                <span class="font-bold text-base">{{ dapp.name }}</span>
+                <motion.span
+                  :key="dapp.description || dapp.url"
+                  :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
+                  class="text-sm text-space/50 truncate"
+                  :initial="{ opacity: 0, y: 4 }"
+                  :animate="{ opacity: 1, y: 0 }"
+                  :transition="{ duration: 0.16, ease: 'easeOut' }"
+                >
+                  {{ dapp.description || dapp.url }}
+                </motion.span>
+              </div>
+            </button>
+          </div>
+        </template>
+
+        <!-- All Apps -->
+        <template v-if="nonFeaturedDApps.length > 0">
+          <p class="text-lg font-bold text-space text-left">
+            All Apps
+          </p>
+          <div class="flex flex-col gap-4 text-left">
+            <button
+              v-for="dapp in nonFeaturedDApps"
+              :key="dapp.url"
+              :data-testid="`dapp-button-${toUrlTestId(dapp.url)}`"
+              class="flex items-center gap-3 text-left transition-opacity"
+              :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+              :disabled="isOpeningAny"
+              @click="openMiniApp(dapp.url, dapp.name, 'featured')"
+            >
+              <div class="relative w-14 h-14 shrink-0">
+                <img
+                  :src="dapp.icon"
+                  :alt="dapp.name"
+                  class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
+                  :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+                  @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+                >
+                <motion.div
+                  v-if="isOpeningUrl(dapp.url)"
+                  :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+                  class="absolute inset-0 flex items-center justify-center"
+                  :initial="{ opacity: 0, scale: 0.85 }"
+                  :animate="{ opacity: 1, scale: 1 }"
+                  :transition="{ duration: 0.16, ease: 'easeOut' }"
+                >
+                  <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+                </motion.div>
+              </div>
+              <div class="flex flex-col min-w-0">
+                <span class="font-bold text-base">{{ dapp.name }}</span>
+                <motion.span
+                  :key="dapp.description || dapp.url"
+                  class="text-sm text-space/50 truncate"
+                  :initial="{ opacity: 0, y: 4 }"
+                  :animate="{ opacity: 1, y: 0 }"
+                  :transition="{ duration: 0.16, ease: 'easeOut' }"
+                >
+                  {{ dapp.description || dapp.url }}
+                </motion.span>
+              </div>
+            </button>
+          </div>
+        </template>
+      </template>
     </div>
   </ModalTemplate>
 </template>

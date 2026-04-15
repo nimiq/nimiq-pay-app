@@ -6,7 +6,7 @@ import { computed } from 'vue'
 import AssetSwitcher from '@/components/AssetSwitcher.vue'
 import { useDevice } from '@/composables/useDevice'
 import { Modal, useModal } from '@/composables/useModal'
-import { isDev, isMiniAppsEnabled } from '@/lib'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
@@ -19,8 +19,12 @@ defineProps<{
 const { isIOS } = useDevice()
 const { showAnimations, isNimiqAsset } = storeToRefs(useApp())
 const { showModal } = useModal()
-const { popularDApps } = storeToRefs(useMiniApps())
-const topDAppIcons = computed(() => popularDApps.value.slice(isDev ? 1 : 0, isDev ? 4 : 3).map(d => d.icon))
+const { featuredDApps, nonFeaturedDApps } = storeToRefs(useMiniApps())
+const topDAppIcons = computed(() => {
+  const featured = featuredDApps.value.map(d => d.icon)
+  const rest = nonFeaturedDApps.value.map(d => d.icon)
+  return [...featured, ...rest].slice(0, 3)
+})
 </script>
 
 <template>
