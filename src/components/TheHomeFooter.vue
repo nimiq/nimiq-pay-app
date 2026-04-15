@@ -19,11 +19,36 @@ defineProps<{
 const { isIOS } = useDevice()
 const { showAnimations, isNimiqAsset } = storeToRefs(useApp())
 const { showModal } = useModal()
-const { featuredDApps, nonFeaturedDApps } = storeToRefs(useMiniApps())
+const { featuredDApps, nonFeaturedDApps, recentlyViewedDApps } = storeToRefs(useMiniApps())
+
+function getDAppKey(url: string) {
+  // Recent entries can differ only by a trailing slash, so normalize before deduping buckets.
+  return url.replace(/\/$/, '')
+}
+
 const topDAppIcons = computed(() => {
-  const featured = featuredDApps.value.map(d => d.icon)
-  const rest = nonFeaturedDApps.value.map(d => d.icon)
-  return [...featured, ...rest].slice(0, 3)
+  const selectedDApps = new Set<string>()
+  const icons: string[] = []
+
+  const appendIcons = (dapps: Array<{ url: string, icon: string }>) => {
+    for (const dapp of dapps) {
+      if (icons.length >= 3)
+        return
+
+      const key = getDAppKey(dapp.url)
+      if (selectedDApps.has(key))
+        continue
+
+      selectedDApps.add(key)
+      icons.push(dapp.icon)
+    }
+  }
+
+  appendIcons(featuredDApps.value)
+  appendIcons(recentlyViewedDApps.value)
+  appendIcons([...nonFeaturedDApps.value].sort((a, b) => a.name.localeCompare(b.name)))
+
+  return icons
 })
 </script>
 

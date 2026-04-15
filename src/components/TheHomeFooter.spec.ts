@@ -1,0 +1,153 @@
+import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, ref } from 'vue'
+
+const showAnimations = ref(false)
+const isNimiqAsset = ref(true)
+const featuredDApps = ref([
+  { name: 'Featured', url: 'https://featured.app', icon: 'featured.png', featured: true },
+])
+const nonFeaturedDApps = ref([
+  { name: 'Alpha', url: 'https://alpha.app', icon: 'alpha.png', featured: false },
+  { name: 'Beta', url: 'https://beta.app', icon: 'beta.png', featured: false },
+  { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png', featured: false },
+])
+const recentlyViewedDApps = ref([
+  { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png' },
+  { name: 'Beta', url: 'https://beta.app', icon: 'beta.png' },
+])
+
+const showModal = vi.fn()
+const initializeFlow = vi.fn()
+
+vi.mock('@ionic/vue', () => ({
+  IonButton: defineComponent({
+    template: '<button><slot /></button>',
+  }),
+}))
+
+vi.mock('motion-v', () => ({
+  motion: {
+    div: defineComponent({
+      template: '<div><slot /></div>',
+    }),
+  },
+}))
+
+vi.mock('pinia', () => ({
+  storeToRefs: (store: unknown) => store,
+}))
+
+vi.mock('@/components/AssetSwitcher.vue', () => ({
+  default: defineComponent({
+    template: '<div class="asset-switcher" />',
+  }),
+}))
+
+vi.mock('@/composables/useDevice', () => ({
+  useDevice: () => ({
+    isIOS: false,
+  }),
+}))
+
+vi.mock('@/composables/useModal', () => ({
+  Modal: {
+    MiniApps: 'MiniApps',
+  },
+  useModal: () => ({
+    showModal,
+  }),
+}))
+
+vi.mock('@/lib', () => ({
+  isMiniAppsEnabled: true,
+}))
+
+vi.mock('@/lib/flows', () => ({
+  initializeFlow,
+}))
+
+vi.mock('@/lib/flows/steps.types', () => ({
+  FlowName: {
+    Payment: 'payment',
+  },
+}))
+
+vi.mock('@/stores/app', () => ({
+  useApp: () => ({
+    showAnimations,
+    isNimiqAsset,
+  }),
+}))
+
+vi.mock('@/stores/mini-apps', () => ({
+  useMiniApps: () => ({
+    featuredDApps,
+    nonFeaturedDApps,
+    recentlyViewedDApps,
+  }),
+}))
+
+describe('theHomeFooter', () => {
+  beforeEach(() => {
+    showAnimations.value = false
+    isNimiqAsset.value = true
+    featuredDApps.value = [
+      { name: 'Featured', url: 'https://featured.app', icon: 'featured.png', featured: true },
+    ]
+    nonFeaturedDApps.value = [
+      { name: 'Alpha', url: 'https://alpha.app', icon: 'alpha.png', featured: false },
+      { name: 'Beta', url: 'https://beta.app', icon: 'beta.png', featured: false },
+      { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png', featured: false },
+    ]
+    recentlyViewedDApps.value = [
+      { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png' },
+      { name: 'Beta', url: 'https://beta.app', icon: 'beta.png' },
+    ]
+    showModal.mockReset()
+    initializeFlow.mockReset()
+  })
+
+  it('fills remaining footer slots with recent apps before the rest', async () => {
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    const icons = wrapper.findAll('img').map(img => img.attributes('src'))
+
+    expect(icons).toEqual(['featured.png', 'zeta.png', 'beta.png'])
+  })
+
+  it('sorts the remaining non-featured apps alphabetically when featured and recent buckets are exhausted', async () => {
+    recentlyViewedDApps.value = []
+    nonFeaturedDApps.value = [
+      { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png', featured: false },
+      { name: 'Alpha', url: 'https://alpha.app', icon: 'alpha.png', featured: false },
+      { name: 'Beta', url: 'https://beta.app', icon: 'beta.png', featured: false },
+    ]
+
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    const icons = wrapper.findAll('img').map(img => img.attributes('src'))
+
+    expect(icons).toEqual(['featured.png', 'alpha.png', 'beta.png'])
+  })
+})
