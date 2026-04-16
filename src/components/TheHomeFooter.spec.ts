@@ -150,4 +150,48 @@ describe('theHomeFooter', () => {
 
     expect(icons).toEqual(['featured.png', 'alpha.png', 'beta.png'])
   })
+
+  it('passes the analytics source when opening the payment flow', async () => {
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await wrapper.findAll('button').find(button => button.text() === 'Pay')!.trigger('click')
+
+    expect(initializeFlow).toHaveBeenCalledWith('payment', {
+      isFullscreen: true,
+      analyticsSource: 'footer_pay_button',
+    })
+  })
+
+  it('passes modal analytics metadata when opening mini apps', async () => {
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await wrapper.find('[aria-label="Mini Apps"]').trigger('click')
+
+    expect(showModal).toHaveBeenCalledWith('MiniApps', {
+      analytics: {
+        featureName: 'mini_apps',
+        source: 'footer',
+      },
+    })
+  })
 })

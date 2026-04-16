@@ -63,10 +63,16 @@ async function handleContinue() {
 
   if (payment.value?.amount === 0) {
     useApp().activeAsset = payment.value.asset || Asset.NIM
-    await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: payment.value } })
+    await initializeFlow(FlowName.Payment, {
+      initialState: { qrCodeScanner: payment.value },
+      analyticsSource: 'detected_payment_request',
+    })
   }
   else {
-    await initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: props.invoice } })
+    await initializeFlow(FlowName.Payment, {
+      initialState: { qrCodeScanner: props.invoice },
+      analyticsSource: 'detected_payment_request',
+    })
   }
 
   emit('onContinue')

@@ -12,6 +12,17 @@ const state = vi.hoisted(() => ({
   primeTransferFee: vi.fn(() => new Promise(() => {})),
   primeHtlcFee: vi.fn(() => new Promise(() => {})),
   isNimiqAsset: false,
+  activeAsset: 'NIM',
+  trackFeatureOpened: vi.fn(),
+  trackWalletCreated: vi.fn(),
+  trackWalletImported: vi.fn(),
+  routerReplace: vi.fn(async () => {}),
+  decrypt: vi.fn(async () => undefined),
+  phoneNumberVerified: false,
+  showModal: vi.fn(async () => {}),
+  clearPinInputTs: vi.fn(),
+  updatePinInputTs: vi.fn(),
+  setEntropy: vi.fn(async () => {}),
 }))
 
 vi.mock('@ionic/vue', () => ({
@@ -37,6 +48,7 @@ vi.mock('@/composables/useLogger', () => ({
 vi.mock('@/composables/useModal', () => ({
   useModal: () => ({
     closeModal: state.closeModal,
+    showModal: state.showModal,
   }),
   Modal: {},
 }))
@@ -47,9 +59,22 @@ vi.mock('@/composables/useStringParser', () => ({
   },
 }))
 
+vi.mock('@/composables/useDecrypt', () => ({
+  useDecrypt: () => ({
+    decrypt: state.decrypt,
+    clearPinInputTs: state.clearPinInputTs,
+  }),
+}))
+
 vi.mock('@/stores/app', () => ({
   useApp: () => ({
     isNimiqAsset: state.isNimiqAsset,
+    activeAsset: state.activeAsset,
+    phoneNumberVerified: state.phoneNumberVerified,
+    clearPinInputTs: state.clearPinInputTs,
+    updatePinInputTs: state.updatePinInputTs,
+    setEntropy: state.setEntropy,
+    entropy: '',
   }),
 }))
 
@@ -64,6 +89,23 @@ vi.mock('@/lib', () => ({
   isNakaEnabled: false,
 }))
 
+vi.mock('@/lib/analytics', () => ({
+  buildPaymentAnalyticsProps: vi.fn(() => ({})),
+  finishPaymentAnalytics: vi.fn(analyticsState => analyticsState),
+  trackPaymentCancelled: vi.fn(),
+  trackPaymentCompleted: vi.fn(),
+  trackPaymentFailed: vi.fn(),
+  trackFeatureOpened: state.trackFeatureOpened,
+  trackWalletCreated: state.trackWalletCreated,
+  trackWalletImported: state.trackWalletImported,
+}))
+
+vi.mock('@/router', () => ({
+  default: {
+    replace: state.routerReplace,
+  },
+}))
+
 vi.mock('./steps', () => {
   const step = {
     step: StepName.QRCodeScanner,
@@ -73,17 +115,40 @@ vi.mock('./steps', () => {
   }
 
   return {
+    recoveryWordsStep: vi.fn(async () => step),
     qrCodeScannerStep: vi.fn(async () => step),
     paymentRequestManualInputStep: vi.fn(async () => step),
     paymentPreviewStep: vi.fn(async () => step),
     pinCodeStep: vi.fn(async () => step),
+    pinCodeConfirmStep: vi.fn(async () => step),
+    enableBiometricStep: vi.fn(async () => step),
+    getNotifiedStep: vi.fn(async () => step),
+    promoCodeStep: vi.fn(async () => step),
+    phoneNumberStep: vi.fn(async () => step),
+    phoneNumberConfirmStep: vi.fn(async () => step),
     holdNakaCardToReaderStep: vi.fn(async () => step),
     bluecodeNotAvailableStep: vi.fn(async () => step),
     paymentAmountInputStep: vi.fn(async () => step),
   }
 })
 
-describe('initializeFlow payment prewarm', () => {
+interface CapturedFlow {
+  onDone: (result: Record<string, unknown>, context: { err: ReturnType<typeof vi.fn>, setToast: ReturnType<typeof vi.fn> }) => Promise<void> | void
+}
+
+function getLastCreatedFlow(): CapturedFlow {
+  const lastCall = (state.create.mock.calls as unknown[][]).at(-1)
+  const config = lastCall?.[0] as { component: () => { props?: { flow?: CapturedFlow } } | undefined } | undefined
+  const flow = config?.component()?.props?.flow
+
+  if (!flow) {
+    throw new Error('No flow captured')
+  }
+
+  return flow
+}
+
+describe('initializeFlow analytics and setup hooks', () => {
   beforeEach(() => {
     vi.resetModules()
     state.closeModal.mockClear()
@@ -91,6 +156,14 @@ describe('initializeFlow payment prewarm', () => {
     state.primeTransferFee.mockClear()
     state.primeHtlcFee.mockClear()
     state.isNimiqAsset = false
+    state.activeAsset = 'NIM'
+    state.trackFeatureOpened.mockClear()
+    state.trackWalletCreated.mockClear()
+    state.trackWalletImported.mockClear()
+    state.routerReplace.mockClear()
+    state.decrypt.mockClear()
+    state.phoneNumberVerified = false
+    state.showModal.mockClear()
   })
 
   it('warms the Polygon transfer fee snapshot without blocking payment flow initialization for USDT', async () => {
@@ -102,5 +175,68 @@ describe('initializeFlow payment prewarm', () => {
     expect(state.primeTransferFee).toHaveBeenCalledTimes(1)
     expect(state.primeHtlcFee).toHaveBeenCalledTimes(1)
     expect(state.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('tracks feature_opened for mapped flows when an analytics source is provided', async () => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(FlowName.Payment, { analyticsSource: 'footer_pay_button' })
+
+    expect(state.trackFeatureOpened).toHaveBeenCalledWith({
+      featureName: 'pay',
+      source: 'footer_pay_button',
+      channel: 'flow',
+      activeAsset: 'NIM',
+    })
+  })
+
+  it('does not track feature_opened for unmapped flows', async () => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(FlowName.Login, { analyticsSource: 'setup_entry' })
+
+    expect(state.trackFeatureOpened).not.toHaveBeenCalled()
+  })
+
+  it('tracks wallet_created after successful setup completion', async () => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(FlowName.Setup)
+    const flow = getLastCreatedFlow()
+
+    await flow.onDone({ [StepName.PinCode]: '1234' }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.routerReplace).toHaveBeenCalledWith('/app')
+    expect(state.trackWalletCreated).toHaveBeenCalledWith({
+      entryMethod: 'create',
+      hasReferralCode: false,
+    })
+  })
+
+  it('tracks wallet_created for promo-code setup completion', async () => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(FlowName.SetupWithPromoCode)
+    const flow = getLastCreatedFlow()
+
+    await flow.onDone({ [StepName.PinCode]: '1234' }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.trackWalletCreated).toHaveBeenCalledWith({
+      entryMethod: 'create_with_promo_code',
+      hasReferralCode: true,
+    })
+  })
+
+  it('tracks wallet_imported after successful login completion', async () => {
+    const { initializeFlow } = await import('./index')
+
+    await initializeFlow(FlowName.Login)
+    const flow = getLastCreatedFlow()
+
+    await flow.onDone({ [StepName.PinCode]: '1234' }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.routerReplace).toHaveBeenCalledWith('/app')
+    expect(state.trackWalletImported).toHaveBeenCalled()
+    expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
   })
 })

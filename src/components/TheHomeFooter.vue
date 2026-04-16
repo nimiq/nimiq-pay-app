@@ -68,7 +68,7 @@ const topDAppIcons = computed(() => {
           class="w-3/4 py-2 mx-auto text-base" expand="block"
           :class="{ 'pb-0': isIOS, 'usdt-button': !isNimiqAsset }"
           :disabled="isPaymentDisabled"
-          @click="initializeFlow(FlowName.Payment, { isFullscreen: true })"
+          @click="initializeFlow(FlowName.Payment, { isFullscreen: true, analyticsSource: 'footer_pay_button' })"
         >
           {{ $t('Pay') }}
         </IonButton>
@@ -80,7 +80,7 @@ const topDAppIcons = computed(() => {
         v-if="isMiniAppsEnabled"
         aria-label="Mini Apps"
         class="p-2 relative overflow-hidden rounded-3xl"
-        @click="showModal(Modal.MiniApps)"
+        @click="showModal(Modal.MiniApps, { analytics: { featureName: 'mini_apps', source: 'footer' } })"
       >
         <div class="relative h-7 w-16">
           <img

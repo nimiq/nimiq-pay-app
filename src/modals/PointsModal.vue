@@ -108,7 +108,12 @@ onMounted(async () => {
 
         <!-- Referral -->
         <IonRow class="mb-8">
-          <TaskCard large class="text-white" style="background: var(--radial-gradient-orange);" @click="showModal(Modal.Referral, { isOnTop: true })">
+          <TaskCard
+            large
+            class="text-white"
+            style="background: var(--radial-gradient-orange);"
+            @click="showModal(Modal.Referral, { isOnTop: true, analytics: { featureName: 'referral', source: 'points_modal' } })"
+          >
             {{ $tc('Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!', referralRewardAmount, { amount: referralRewardAmount.toLocaleString() }) }}
           </TaskCard>
         </IonRow>

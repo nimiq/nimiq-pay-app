@@ -1,14 +1,73 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
   getAmountRange,
   startPaymentAnalytics,
+  trackAppOpened,
+  trackFeatureOpened,
+  trackWalletCreated,
+  trackWalletEntrySelected,
+  trackWalletImported,
 } from './analytics'
+
+const state = vi.hoisted(() => ({
+  capture: vi.fn(),
+  identify: vi.fn(),
+  isDev: false,
+}))
+
+vi.mock('@capawesome/capacitor-posthog', () => ({
+  Posthog: {
+    capture: state.capture,
+    identify: state.identify,
+  },
+}))
+
+vi.mock('@/lib', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib')>()
+  return {
+    ...actual,
+    get isDev() {
+      return state.isDev
+    },
+  }
+})
+
+vi.mock('@/composables/useDecrypt', () => ({
+  useDecrypt: () => ({
+    hasPin: () => true,
+    decrypted: { value: false },
+  }),
+}))
+
+vi.mock('@/composables/useDevice', () => ({
+  useDevice: () => ({
+    isWeb: false,
+  }),
+}))
+
+vi.mock('@/stores/app', () => ({
+  useApp: () => ({
+    activeAsset: 'NIM',
+  }),
+}))
+
+vi.mock('@/stores/conn', () => ({
+  useConn: () => ({
+    dbExists: true,
+  }),
+}))
 
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: { t: (value: string) => value },
 }))
+
+beforeEach(() => {
+  state.capture.mockReset()
+  state.identify.mockReset()
+  state.isDev = false
+})
 
 describe('getAmountRange', () => {
   it('returns <1 for amounts below 1', () => {
@@ -67,7 +126,6 @@ describe('buildPaymentAnalyticsProps', () => {
   it('converts NIM amount from luna to human-readable before bucketing', async () => {
     const { Asset } = await import('@/lib/assets')
     const { PaymentMethod, Rail, Transfer } = await import('@/types/transactions')
-    // 10 NIM = 1_000_000 luna (5 decimals)
     const props = buildPaymentAnalyticsProps({
       asset: Asset.NIM,
       paymentMethod: PaymentMethod.NIM,
@@ -82,7 +140,6 @@ describe('buildPaymentAnalyticsProps', () => {
   it('converts USDT amount from smallest units to human-readable before bucketing', async () => {
     const { Asset } = await import('@/lib/assets')
     const { PaymentMethod, Rail, Transfer } = await import('@/types/transactions')
-    // 50 USDT = 50_000_000 (6 decimals)
     const props = buildPaymentAnalyticsProps({
       asset: Asset.USDT,
       paymentMethod: PaymentMethod.USDT,
@@ -97,13 +154,12 @@ describe('buildPaymentAnalyticsProps', () => {
 
 describe('payment analytics state', () => {
   it('starts a pending payment attempt with the provided timestamp', () => {
-    const state = startPaymentAnalytics(123)
+    const analyticsState = startPaymentAnalytics(123)
 
-    expect(state).toEqual({
+    expect(analyticsState).toEqual({
       startedAt: 123,
       status: 'started',
     })
-    expect(state.status).toBe('started')
   })
 
   it('keeps the original start timestamp when marking a terminal state', () => {
@@ -121,5 +177,80 @@ describe('payment analytics state', () => {
 
     expect(finishPaymentAnalytics(started, 'failed').status).toBe('failed')
     expect(finishPaymentAnalytics(started, 'completed').status).toBe('completed')
+  })
+})
+
+describe('core analytics events', () => {
+  it('captures app_opened with snake_case properties', async () => {
+    const { Asset } = await import('@/lib/assets')
+
+    trackAppOpened({
+      openSource: 'cold_start',
+      hasWallet: true,
+      isUnlocked: false,
+      activeAsset: Asset.USDT,
+    })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'app_opened',
+      properties: {
+        open_source: 'cold_start',
+        has_wallet: true,
+        is_unlocked: false,
+        active_asset: Asset.USDT,
+      },
+    })
+  })
+
+  it('omits optional active_asset for feature events when not provided', () => {
+    trackFeatureOpened({
+      featureName: 'mini_apps',
+      source: 'menu',
+      channel: 'modal',
+    })
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'feature_opened',
+      properties: {
+        feature_name: 'mini_apps',
+        source: 'menu',
+        channel: 'modal',
+      },
+    })
+  })
+
+  it('captures wallet lifecycle events with the expected payloads', () => {
+    trackWalletEntrySelected('create_with_promo_code')
+    trackWalletCreated({ entryMethod: 'create_with_promo_code', hasReferralCode: true })
+    trackWalletImported()
+
+    expect(state.capture).toHaveBeenNthCalledWith(1, {
+      event: 'wallet_entry_selected',
+      properties: { entry_method: 'create_with_promo_code' },
+    })
+    expect(state.capture).toHaveBeenNthCalledWith(2, {
+      event: 'wallet_created',
+      properties: {
+        entry_method: 'create_with_promo_code',
+        has_referral_code: true,
+      },
+    })
+    expect(state.capture).toHaveBeenNthCalledWith(3, {
+      event: 'wallet_imported',
+      properties: { entry_method: 'import' },
+    })
+  })
+
+  it('does not emit capture events in development mode', () => {
+    state.isDev = true
+
+    trackWalletEntrySelected('create')
+    trackFeatureOpened({
+      featureName: 'pay',
+      source: 'footer_pay_button',
+      channel: 'flow',
+    })
+
+    expect(state.capture).not.toHaveBeenCalled()
   })
 })

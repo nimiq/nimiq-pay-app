@@ -12,7 +12,7 @@ import { useDevice } from '@/composables/useDevice'
 
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
-import { identifyUser } from '@/lib/analytics'
+import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
 import { installNodeGlobals } from '@/lib/node-globals'
 import { useApp } from '@/stores/app'
 /* Libs */
@@ -74,6 +74,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute })
   useLogger().init()
   identifyUser() // Identify user as early as possible to capture all analytics events, including those during app initialization
+  if (!isAlertRoute)
+    trackCurrentAppOpen('cold_start')
   if (!isAlertRoute) {
     useNaka().init()
     useMiniApps() // computedAsync triggers description fetching on store creation

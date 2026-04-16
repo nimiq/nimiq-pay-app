@@ -1,6 +1,7 @@
 import type { Slots } from 'vue'
 import type { Result } from '../../types'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
+import type { FeatureName } from '@/lib/analytics'
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
@@ -16,15 +17,59 @@ import { isNakaEnabled } from '@/lib'
 import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
+  trackFeatureOpened,
   trackPaymentCancelled,
   trackPaymentCompleted,
   trackPaymentFailed,
+  trackWalletCreated,
+  trackWalletImported,
 } from '@/lib/analytics'
 import { Asset, assetToPaymentMethod } from '@/lib/assets'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { isPaymentTransferType, PaymentMethod, Transfer } from '@/types/transactions'
 
 const logger = useLogger('flows/index.ts')
+
+const FEATURE_FLOW_MAP: Partial<Record<FlowName, FeatureName>> = {
+  [FlowName.Payment]: 'pay',
+  [FlowName.NimTopUp]: 'top_up',
+  [FlowName.NimWithdraw]: 'withdraw',
+  [FlowName.Backup]: 'backup',
+  [FlowName.VerifyPhone]: 'verify_phone',
+  [FlowName.NakaOnboarding]: 'naka_onboarding',
+  [FlowName.NakaCardManagement]: 'naka_management',
+}
+
+async function completeWalletSetup(
+  state: State,
+  entryMethod: 'create' | 'create_with_promo_code',
+  { err }: Parameters<NonNullable<Flow['onDone']>>[1],
+) {
+  const [
+    { default: router },
+    { useDecrypt },
+    { useApp },
+  ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
+  const error = await useDecrypt().decrypt(state[StepName.PinCode])
+  if (error)
+    return err(error)
+
+  // Clear the setup PIN from memory after it has been persisted.
+  state[StepName.PinCode] = ''
+  state[StepName.PinCodeConfirm] = ''
+
+  await router.replace('/app')
+  trackWalletCreated({
+    entryMethod,
+    hasReferralCode: entryMethod === 'create_with_promo_code',
+  })
+
+  const { phoneNumberVerified } = useApp()
+  if (phoneNumberVerified) {
+    await useModal().showModal(Modal.Points)
+    return { prevent: true }
+  }
+}
 
 const loginFlow: FlowInit = async () => {
   const { recoveryWordsStep, pinCodeStep, pinCodeConfirmStep, enableBiometricStep, getNotifiedStep /* onBoardingPoints */ } = await import('./steps')
@@ -54,6 +99,7 @@ const loginFlow: FlowInit = async () => {
     state[StepName.PinCode] = ''
 
     await router.replace('/app')
+    trackWalletImported()
     const { phoneNumberVerified } = useApp()
     if (phoneNumberVerified) {
       await useModal().showModal(Modal.Points)
@@ -82,23 +128,7 @@ const setupFlow: FlowInit = async () => {
     getNotifiedStep,
     /* onBoardingPoints */
   ].map(s => s({ flowName })))
-  const onDone: FlowHookCb = async (state, { err }) => {
-    const [
-      { default: router },
-      { useDecrypt },
-      { useApp },
-    ] = await Promise.all([import('@/router'), import('@/composables/useDecrypt'), import('@/stores/app')])
-    const error = await useDecrypt().decrypt(state[StepName.PinCode])
-    if (error)
-      return err(error)
-
-    await router.replace('/app')
-    const { phoneNumberVerified } = useApp()
-    if (phoneNumberVerified) {
-      await useModal().showModal(Modal.Points)
-      return { prevent: true }
-    }
-  }
+  const onDone: FlowHookCb = async (state, options) => completeWalletSetup(state, 'create', options)
   const onCancel: Flow['onCancel'] = async () => {
     const [
       { default: router },
@@ -141,6 +171,7 @@ const setupWithPromoCodeFlow: FlowInit = async () => {
     // TODO: Re-enable when cc points are back
     // onBoardingPoints,
   ].map(s => s({ flowName })))
+  const onDone: FlowHookCb = async (state, options) => completeWalletSetup(state, 'create_with_promo_code', options)
   const onCancel: Flow['onCancel'] = async () => {
     const [
       { default: router },
@@ -150,7 +181,7 @@ const setupWithPromoCodeFlow: FlowInit = async () => {
     if (hasLocalWallet)
       await router.replace('/app')
   }
-  return { flowName, steps, onCancel }
+  return { flowName, steps, onDone, onCancel }
 }
 
 const onBoardingPointsFlow: FlowInit = async () => {
@@ -694,6 +725,7 @@ interface InitializeFlowOptions {
   isFullscreen?: boolean
   preventSwipe?: boolean
   isOnTop?: boolean
+  analyticsSource?: string
 }
 
 /**
@@ -701,7 +733,7 @@ interface InitializeFlowOptions {
  * which handles the carousel of steps.
  */
 export async function initializeFlow(name: FlowName, options: InitializeFlowOptions = {}) {
-  const { initialState, height = 'h-full', isFullscreen = false, preventSwipe = false, isOnTop = false } = options
+  const { initialState, height = 'h-full', isFullscreen = false, preventSwipe = false, isOnTop = false, analyticsSource } = options
 
   // Close previous modal or flow, potentially invoking its cancel handler via canDismiss.
   if (!isOnTop)
@@ -781,5 +813,17 @@ export async function initializeFlow(name: FlowName, options: InitializeFlowOpti
   }
 
   await modal.present()
+
+  const featureName = FEATURE_FLOW_MAP[name]
+  if (analyticsSource && featureName) {
+    const { useApp } = await import('@/stores/app')
+    trackFeatureOpened({
+      featureName,
+      source: analyticsSource,
+      channel: 'flow',
+      activeAsset: useApp().activeAsset,
+    })
+  }
+
   return modal
 }

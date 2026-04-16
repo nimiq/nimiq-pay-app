@@ -28,7 +28,7 @@ const { closeAllModals } = useModal()
       <span>{{ $t('Your account, funds and data will be lost if you log out without a backup.') }}</span>
     </div>
 
-    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="initializeFlow(FlowName.Backup)">
+    <IonButton class="self-end w-11/12 mx-auto mt-32 text-base" @click="initializeFlow(FlowName.Backup, { analyticsSource: 'logout_warning' })">
       {{ $t('Backup Account') }}
     </IonButton>
   </div>

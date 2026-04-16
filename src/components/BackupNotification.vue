@@ -17,7 +17,7 @@ import { FlowName } from '@/lib/flows/steps.types'
       <IonButtons>
         <IonButton
           fill="solid" class="font-bold text-white normal-case"
-          size="small" @click="initializeFlow(FlowName.Backup)"
+          size="small" @click="initializeFlow(FlowName.Backup, { analyticsSource: 'backup_banner' })"
         >
           <span class="text-nowrap">
             {{ $t('Recovery Words') }}

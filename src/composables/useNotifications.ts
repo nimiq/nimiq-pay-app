@@ -176,6 +176,8 @@ export function useNotifications() {
     logger.log('🔔 Delivered notifications', notificationList)
   }
 
+  const POINTS_PUSH_ANALYTICS = { featureName: 'points', source: 'push_notification' } as const
+
   async function performAction(notification: ActionPerformed) {
     const { actionId, notification: { data } } = notification
     const { action, task_id } = data as NotificationData
@@ -188,13 +190,13 @@ export function useNotifications() {
     const { phoneNumberVerified } = (await import('@/stores/app')).useApp()
 
     if (action === 'openPoints') {
-      useModal().showModal(Modal.Points)
+      useModal().showModal(Modal.Points, { analytics: POINTS_PUSH_ANALYTICS })
     }
     else if (action === 'openTask' && task_id) {
       if (phoneNumberVerified)
         openTask(task_id)
       else
-        initializeFlow(FlowName.VerifyPhone)
+        initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'push_notification_task' })
     }
   }
 
@@ -214,8 +216,9 @@ export function useNotifications() {
       return
 
     const { action, actionExtra } = notification
-    if (action === 'openPoints')
-      return () => useModal().showModal(Modal.Points)
+    if (action === 'openPoints') {
+      return () => useModal().showModal(Modal.Points, { analytics: POINTS_PUSH_ANALYTICS })
+    }
     if (action === 'openTask' && actionExtra)
       return () => openTask(actionExtra)
     if (action === 'initializeFlow' && actionExtra)

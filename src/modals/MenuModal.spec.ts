@@ -13,6 +13,7 @@ const liveChatShown = ref(false)
 const hasCard = ref(true)
 const registration = ref<{ nakaIdentification?: string } | null>({ nakaIdentification: 'kyc-started' })
 const isNakaAvailable = ref(true)
+const miniAppsEnabled = ref(false)
 
 vi.mock('@capacitor/browser', () => ({
   Browser: {
@@ -89,12 +90,25 @@ vi.mock('@/composables/useModal', () => ({
 }))
 
 vi.mock('@/lib', () => ({
-  isMiniAppsEnabled: false,
-  isNakaEnabled: true,
+  get isMiniAppsEnabled() {
+    return miniAppsEnabled.value
+  },
+  get isNakaEnabled() {
+    return true
+  },
 }))
 
 vi.mock('@/lib/flows', () => ({
   initializeFlow,
+}))
+
+vi.mock('@/lib/flows/steps.types', () => ({
+  FlowName: {
+    NakaCardManagement: 'nakaManagement',
+    NakaOnboarding: 'nakaOnboarding',
+    VerifyPhone: 'verifyPhone',
+    Backup: 'backup',
+  },
 }))
 
 vi.mock('@/stores/app', () => ({
@@ -142,6 +156,7 @@ describe('menuModal', () => {
     hasCard.value = true
     registration.value = { nakaIdentification: 'kyc-started' }
     isNakaAvailable.value = true
+    miniAppsEnabled.value = false
     showModal.mockReset()
     closeModal.mockReset()
     initializeFlow.mockReset()
@@ -167,5 +182,89 @@ describe('menuModal', () => {
     expect(wrapper.text()).toContain('NAKA Support')
     expect(wrapper.text()).toContain('Payments')
     expect(wrapper.text()).not.toContain('Activate NAKA Card')
+  })
+
+  it('passes analytics metadata when opening mini apps from the menu', async () => {
+    miniAppsEnabled.value = true
+
+    const { default: MenuModal } = await import('./MenuModal.vue')
+    const wrapper = mount(MenuModal, {
+      global: {
+        plugins: [createPinia()],
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('.menu-item').find(item => item.text() === 'Mini Apps')!.trigger('click')
+
+    expect(showModal).toHaveBeenCalledWith('MiniApps', {
+      analytics: {
+        featureName: 'mini_apps',
+        source: 'menu',
+      },
+    })
+  })
+
+  it('passes analyticsSource when opening backup from the menu', async () => {
+    const { default: MenuModal } = await import('./MenuModal.vue')
+    const wrapper = mount(MenuModal, {
+      global: {
+        plugins: [createPinia()],
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('.menu-item').find(item => item.text() === 'Backup Account')!.trigger('click')
+
+    expect(initializeFlow).toHaveBeenCalledWith('backup', {
+      analyticsSource: 'menu',
+    })
+  })
+
+  it('passes analyticsSource when opening verify phone from rewards menu', async () => {
+    phoneNumberVerified.value = false
+    isCampaignActive.value = true
+
+    const { default: MenuModal } = await import('./MenuModal.vue')
+    const wrapper = mount(MenuModal, {
+      global: {
+        plugins: [createPinia()],
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('.menu-item').find(item => item.text() === 'Activate Cashback & Rewards')!.trigger('click')
+
+    expect(initializeFlow).toHaveBeenCalledWith('verifyPhone', {
+      analyticsSource: 'menu_rewards',
+    })
+  })
+
+  it('passes analyticsSource when opening NAKA management from the menu', async () => {
+    const { default: MenuModal } = await import('./MenuModal.vue')
+    const wrapper = mount(MenuModal, {
+      global: {
+        plugins: [createPinia()],
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await flushPromises()
+    await wrapper.findAll('.menu-item').find(item => item.text() === 'NAKA Card')!.trigger('click')
+
+    expect(initializeFlow).toHaveBeenCalledWith('nakaManagement', {
+      analyticsSource: 'menu',
+    })
   })
 })

@@ -68,9 +68,13 @@ vi.mock('@ionic/vue', () => ({
   }),
 }))
 
-vi.mock('pinia', () => ({
-  storeToRefs: <T>(store: T) => store,
-}))
+vi.mock('pinia', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('pinia')>()
+  return {
+    ...actual,
+    storeToRefs: <T>(store: T) => store,
+  }
+})
 
 vi.mock('radix-vue', () => {
   const passthrough = defineComponent({

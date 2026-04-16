@@ -30,6 +30,8 @@ const {
   screenOrientationLock,
   screenOrientationUnlock,
   setToast,
+  trackDAppClosed,
+  trackDAppOpened,
 } = vi.hoisted(() => ({
   openWebView: vi.fn(() => Promise.resolve()),
   addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
@@ -42,6 +44,8 @@ const {
   hostDestroy: vi.fn(() => Promise.resolve()),
   screenOrientationUnlock: vi.fn(() => Promise.resolve()),
   screenOrientationLock: vi.fn(() => Promise.resolve()),
+  trackDAppClosed: vi.fn(),
+  trackDAppOpened: vi.fn(),
   isDevState: { value: false },
   capacitorHttpGet: vi.fn(() => Promise.resolve({
     status: 200,
@@ -61,6 +65,9 @@ const {
 }))
 
 vi.mock('@capacitor/core', () => ({
+  Capacitor: {
+    getPlatform: () => 'ios',
+  },
   CapacitorHttp: {
     get: capacitorHttpGet,
   },
@@ -121,14 +128,21 @@ vi.mock('@/lib/site-metadata', () => ({
 }))
 
 vi.mock('@/lib/analytics', () => ({
-  trackDAppClosed: vi.fn(),
-  trackDAppOpened: vi.fn(),
+  trackDAppClosed,
+  trackDAppOpened,
 }))
 
 vi.mock('@/lib', () => ({
   get isDev() {
     return isDevState.value
   },
+}))
+
+vi.mock('@/stores/conn', () => ({
+  useConn: () => ({
+    query: vi.fn(() => Promise.resolve(undefined)),
+    run: vi.fn(() => Promise.resolve()),
+  }),
 }))
 
 const IonSearchbarStub = defineComponent({
@@ -184,6 +198,8 @@ describe('mini apps modal', () => {
     screenOrientationUnlock.mockImplementation(() => Promise.resolve())
     screenOrientationLock.mockReset()
     screenOrientationLock.mockImplementation(() => Promise.resolve())
+    trackDAppClosed.mockReset()
+    trackDAppOpened.mockReset()
     isDevState.value = false
     capacitorHttpGet.mockReset()
     capacitorHttpGet.mockImplementation(() => Promise.resolve({
@@ -336,5 +352,15 @@ describe('mini apps modal', () => {
     // EVM Mini Wallet has description 'Test wallet' in mock data
     const featuredButton = wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]')
     expect(featuredButton.text()).toContain('Test wallet')
+  })
+
+  it('keeps emitting miniapp_opened when opening an app from the marketplace', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="featured-dapp-button-https-evm-mini-wallet-vercel-app"]').trigger('click')
+    await flushPromises()
+
+    expect(trackDAppOpened).toHaveBeenCalledWith('https://evm-mini-wallet.vercel.app/', 'EVM Mini Wallet', 'featured')
   })
 })

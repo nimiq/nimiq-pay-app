@@ -16,6 +16,7 @@ import { useRouter } from 'vue-router'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
+import { trackCurrentAppOpen } from '@/lib/analytics'
 import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -66,7 +67,10 @@ App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
   // TODO: accept also nimiq: scheme?
   if (url.protocol === 'lightning:') {
     // Open the payment request modal
-    initializeFlow(FlowName.Payment, { initialState: { qrCodeScanner: url.toString() } })
+    initializeFlow(FlowName.Payment, {
+      initialState: { qrCodeScanner: url.toString() },
+      analyticsSource: 'lightning_deeplink',
+    })
   }
 })
 
@@ -132,6 +136,8 @@ App.addListener('resume', async () => {
 
   if (isAppStarting.value)
     return
+
+  trackCurrentAppOpen('resume')
 
   const { getStatus } = useRemoteSignerApi()
   const { data, hasError } = await getStatus()

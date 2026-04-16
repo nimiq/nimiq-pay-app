@@ -1,8 +1,10 @@
 import type { ComponentProps, ComponentRef } from '@ionic/core'
+import type { FeatureName } from '@/lib/analytics'
 import { modalController } from '@ionic/vue'
 import { createSharedComposable } from '@vueuse/core'
 import { defineAsyncComponent } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { trackFeatureOpened } from '@/lib/analytics'
 
 const logger = useLogger('useModal')
 
@@ -27,11 +29,16 @@ export enum Modal {
   Map = '@/modals/MapModal.vue',
 }
 
+interface ModalAnalyticsOptions {
+  featureName: FeatureName
+  source: string
+}
+
 function _useModal() {
   const allModals: HTMLIonModalElement[] = []
 
-  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, showHandle?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean }) {
-    const { isOnTop, isFullscreen, isSmall, showHandle, componentProps, canDismiss = true } = options || {}
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, showHandle?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean, analytics?: ModalAnalyticsOptions }) {
+    const { isOnTop, isFullscreen, isSmall, showHandle, componentProps, canDismiss = true, analytics } = options || {}
     if (import.meta.env.MODE === 'development')
       logger.log('showModal', modal)
 
@@ -107,6 +114,16 @@ function _useModal() {
 
     allModals.unshift(modalToShow)
     await modalToShow.present()
+
+    if (analytics) {
+      const { useApp } = await import('@/stores/app')
+      trackFeatureOpened({
+        featureName: analytics.featureName,
+        source: analytics.source,
+        channel: 'modal',
+        activeAsset: useApp().activeAsset,
+      })
+    }
   }
 
   async function closeModal({ modal: modalToClose, data = null, role = 'confirm' }: { modal?: HTMLIonModalElement, data?: any, role?: CloseRole } = {}) {

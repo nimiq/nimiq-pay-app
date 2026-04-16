@@ -74,13 +74,13 @@ onLongPress(
       v-if="showNakaMenuItem"
       :icon="CreditCardIcon"
       :title="$t('NAKA Card')"
-      @click="initializeFlow(FlowName.NakaCardManagement)"
+      @click="initializeFlow(FlowName.NakaCardManagement, { analyticsSource: 'menu' })"
     />
     <MenuItem
       v-else-if="showActivateNakaMenuItem"
       :icon="CreditCardIcon"
       :title="$t('Activate NAKA Card')"
-      @click="initializeFlow(FlowName.NakaOnboarding)"
+      @click="initializeFlow(FlowName.NakaOnboarding, { analyticsSource: 'menu' })"
     />
     <!-- Show Support only if KYC has been started -->
     <MenuItem
@@ -94,7 +94,7 @@ onLongPress(
       v-if="!phoneNumberVerified && isCampaignActive"
       :icon="GiftIcon"
       :title="$t('Activate Cashback & Rewards')"
-      @click="initializeFlow(FlowName.VerifyPhone)"
+      @click="initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'menu_rewards' })"
     />
 
     <span
@@ -108,7 +108,7 @@ onLongPress(
       v-if="isMiniAppsEnabled"
       :icon="AppsIcon"
       :title="$t('Mini Apps')"
-      @click="showModal(Modal.MiniApps)"
+      @click="showModal(Modal.MiniApps, { analytics: { featureName: 'mini_apps', source: 'menu' } })"
     />
 
     <span class="uppercase text-space/60 font-bold text-sm mt-6">
@@ -126,7 +126,7 @@ onLongPress(
       :icon="BackupIcon"
       :title="$t('Backup Account')"
       aria-label="Backup Account"
-      @click="initializeFlow(FlowName.Backup)"
+      @click="initializeFlow(FlowName.Backup, { analyticsSource: 'menu' })"
     />
     <MenuItem
       :icon="NimiqOutlineLogo"

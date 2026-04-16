@@ -1,9 +1,13 @@
 import type { PaymentMethod, Rail } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
+import { useDecrypt } from '@/composables/useDecrypt'
+import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
+import { useApp } from '@/stores/app'
+import { useConn } from '@/stores/conn'
 import { Transfer } from '@/types/transactions'
 
 const logger = useLogger('Analytics')
@@ -15,6 +19,79 @@ function capture(event: string, properties: object): void {
 }
 
 export type DAppOpenSource = 'featured' | 'recent' | 'search'
+
+export type AppOpenSource = 'cold_start' | 'resume'
+
+export interface AppOpenedProperties {
+  openSource: AppOpenSource
+  hasWallet: boolean
+  isUnlocked: boolean
+  activeAsset?: Asset
+}
+
+export type WalletEntryMethod = 'create' | 'create_with_promo_code' | 'import'
+
+export type FeatureName
+  = | 'pay'
+    | 'top_up'
+    | 'withdraw'
+    | 'backup'
+    | 'points'
+    | 'referral'
+    | 'mini_apps'
+    | 'verify_phone'
+    | 'naka_onboarding'
+    | 'naka_management'
+
+export interface FeatureOpenedProperties {
+  featureName: FeatureName
+  source: string
+  channel: 'flow' | 'modal'
+  activeAsset?: Asset
+}
+
+export function trackAppOpened(props: AppOpenedProperties): void {
+  capture('app_opened', {
+    open_source: props.openSource,
+    has_wallet: props.hasWallet,
+    is_unlocked: props.isUnlocked,
+    ...(props.activeAsset ? { active_asset: props.activeAsset } : {}),
+  })
+}
+
+export function trackWalletEntrySelected(entryMethod: WalletEntryMethod): void {
+  capture('wallet_entry_selected', { entry_method: entryMethod })
+}
+
+export function trackWalletCreated(props: { entryMethod: Exclude<WalletEntryMethod, 'import'>, hasReferralCode: boolean }): void {
+  capture('wallet_created', {
+    entry_method: props.entryMethod,
+    has_referral_code: props.hasReferralCode,
+  })
+}
+
+export function trackWalletImported(): void {
+  capture('wallet_imported', { entry_method: 'import' })
+}
+
+export function trackFeatureOpened(props: FeatureOpenedProperties): void {
+  capture('feature_opened', {
+    feature_name: props.featureName,
+    source: props.source,
+    channel: props.channel,
+    ...(props.activeAsset ? { active_asset: props.activeAsset } : {}),
+  })
+}
+
+export function trackCurrentAppOpen(openSource: AppOpenSource): void {
+  const isWeb = useDevice().isWeb
+  trackAppOpened({
+    openSource,
+    hasWallet: isWeb ? useDecrypt().hasPin() : useConn().dbExists,
+    isUnlocked: useDecrypt().decrypted.value,
+    activeAsset: useApp().activeAsset,
+  })
+}
 
 // --- Payment Analytics ---
 

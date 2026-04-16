@@ -67,6 +67,49 @@ const referralInfo = computedAsync(async () => {
 const referralRewardAmount = computed(() => toCoins(referralInfo.value?.reward || 0, Crypto.NIM))
 const referralClaimsRemaining = computed(() => referralInfo.value?.claims_remaining || 0)
 
+function openPointsFromHomeHeader() {
+  if (isCampaignActive.value) {
+    if (phoneNumberVerified.value) {
+      showModal(Modal.Points, {
+        analytics: {
+          featureName: 'points',
+          source: 'home_header',
+        },
+      })
+    }
+    else {
+      initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'home_rewards_cta' })
+    }
+    return
+  }
+
+  initializeFlow(FlowName.ComingSoon, {
+    initialState: { comingSoon: i18n.t('Cryptocity Points are coming soon. Stay tuned!') },
+  })
+}
+
+function openTopUp() {
+  initializeFlow(FlowName.NimTopUp, { analyticsSource: 'home_primary_cta' })
+}
+
+function openWithdraw() {
+  initializeFlow(FlowName.NimWithdraw, { analyticsSource: 'home_primary_cta' })
+}
+
+function openReferralFromHomeCard() {
+  if (phoneNumberVerified.value) {
+    showModal(Modal.Referral, {
+      analytics: {
+        featureName: 'referral',
+        source: 'home_referral_card',
+      },
+    })
+    return
+  }
+
+  initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'home_referral_card' })
+}
+
 function scrollToFirstNotification() {
   window.requestAnimationFrame(() => {
     if (localNotifications.value.length && notificationList.value) {
@@ -99,7 +142,7 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     id: 'activate-naka-card',
     get title() { return i18n.t('Tap to pay with NAKA!') },
     get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
-    action: () => initializeFlow(FlowName.NakaOnboarding),
+    action: () => initializeFlow(FlowName.NakaOnboarding, { analyticsSource: 'home_notification' }),
   }
 
   // Remove number verification and reward notifications and re-add them later if necessary
@@ -107,12 +150,12 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     id: 'verify-phone-number',
     get title() { return i18n.t('Activate Cashback & Rewards') },
     get subtitle() { return i18n.t('Requires Phone Number') },
-    action: () => initializeFlow(FlowName.VerifyPhone),
+    action: () => initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'home_notification' }),
   }
   const claimRewardsNotification = {
     id: 'claim-rewards',
     get title() { return i18n.t('You have a reward to claim!') },
-    action: () => initializeFlow(FlowName.VerifyPhone),
+    action: () => initializeFlow(FlowName.VerifyPhone, { analyticsSource: 'home_notification' }),
   }
 
   // Remove notification if user has just verified their phone number
@@ -167,7 +210,7 @@ onMounted(() => {
             class="text-base normal-case"
             aria-label="Earn Points"
             style="--background: var(--colors-darkblue-6); --color: var(--colors-darkblue); --padding-top: 9px; --padding-bottom: 10px;"
-            @click="isCampaignActive ? (phoneNumberVerified ? showModal(Modal.Points) : initializeFlow(FlowName.VerifyPhone)) : initializeFlow(FlowName.ComingSoon, { initialState: { comingSoon: $t('Cryptocity Points are coming soon. Stay tuned!') } })"
+            @click="openPointsFromHomeHeader"
           >
             <CryptoCityLogo slot="start" class="w-5 h-5" />
 
@@ -191,10 +234,10 @@ onMounted(() => {
         <TheHomeAmounts class="mb-4" />
 
         <div class="flex justify-center gap-x-3 mt-2">
-          <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="initializeFlow(FlowName.NimTopUp)">
+          <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openTopUp">
             {{ $t('Top Up') }}
           </button>
-          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="initializeFlow(FlowName.NimWithdraw)">
+          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openWithdraw">
             {{ $t('Withdraw') }}
           </button>
         </div>
@@ -245,7 +288,7 @@ onMounted(() => {
           >
             <NotificationCard
               class="w-full"
-              @click="phoneNumberVerified ? showModal(Modal.Referral) : initializeFlow(FlowName.VerifyPhone)"
+              @click="openReferralFromHomeCard"
               @close="isReferralCardShown = false"
             >
               <span class="text-lg text-pumpkin">
