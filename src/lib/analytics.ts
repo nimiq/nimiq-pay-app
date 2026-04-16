@@ -1,11 +1,118 @@
+import type { PaymentMethod, Rail } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
+import { Asset, assetRegistry } from '@/lib/assets'
+import { Transfer } from '@/types/transactions'
 
 const logger = useLogger('Analytics')
 
+function capture(event: string, properties: object): void {
+  if (isDev)
+    return
+  void Posthog.capture({ event, properties: properties as Record<string, unknown> })
+}
+
 export type DAppOpenSource = 'featured' | 'recent' | 'search'
+
+// --- Payment Analytics ---
+
+export type AmountRange = '<1' | '1-10' | '10-100' | '100-1000' | '1000-10000' | '10000-50000' | '50000-100000' | '100000+'
+
+export interface PaymentEventProperties {
+  asset: Asset | 'Points'
+  payment_method: PaymentMethod
+  transfer_type: Rail | undefined
+  amount_range: AmountRange
+  is_atomic_swap: boolean
+}
+
+export type PaymentAnalyticsStatus = 'started' | 'completed' | 'failed' | 'cancelled'
+
+export interface PaymentAnalyticsState {
+  startedAt: number
+  status: PaymentAnalyticsStatus
+}
+
+export function startPaymentAnalytics(startedAt = Date.now()): PaymentAnalyticsState {
+  return { startedAt, status: 'started' }
+}
+
+export function finishPaymentAnalytics(
+  state: PaymentAnalyticsState,
+  status: Exclude<PaymentAnalyticsStatus, 'started'>,
+): PaymentAnalyticsState {
+  return { ...state, status }
+}
+
+export function buildPaymentAnalyticsProps(opts: {
+  asset: Asset
+  paymentMethod: PaymentMethod
+  payWithPuntos: boolean
+  rail: Rail | undefined
+  amount: number
+  transfer: Transfer | undefined
+}): PaymentEventProperties {
+  // Convert from smallest units (luna/wei) to human-readable coins
+  const { decimals } = assetRegistry[opts.asset]
+  const humanAmount = opts.amount / (10 ** decimals)
+  return {
+    asset: opts.payWithPuntos ? 'Points' : opts.asset,
+    payment_method: opts.paymentMethod,
+    transfer_type: opts.rail,
+    amount_range: getAmountRange(humanAmount),
+    is_atomic_swap: opts.transfer === Transfer.UserPaymentToAtomicSwap,
+  }
+}
+
+export function getAmountRange(amount: number): AmountRange {
+  if (amount < 1)
+    return '<1'
+  if (amount <= 10)
+    return '1-10'
+  if (amount <= 100)
+    return '10-100'
+  if (amount <= 1000)
+    return '100-1000'
+  if (amount <= 10000)
+    return '1000-10000'
+  if (amount <= 50000)
+    return '10000-50000'
+  if (amount <= 100000)
+    return '50000-100000'
+  return '100000+'
+}
+
+export function trackPaymentStarted(props: PaymentEventProperties): void {
+  capture('payment_started', props)
+}
+
+export function trackPaymentCompleted(props: PaymentEventProperties & { duration_ms: number }): void {
+  capture('payment_completed', props)
+}
+
+export function trackPaymentFailed(props: PaymentEventProperties & { error_reason: string }): void {
+  capture('payment_failed', props)
+}
+
+export function trackPaymentCancelled(props: PaymentEventProperties & { cancelled_at_step: 'pin' }): void {
+  capture('payment_cancelled', props)
+}
+
+const SWAP_PROVIDER = 'fastspot' as const
+
+function assetToSwapPair(asset: Asset): string {
+  return asset === Asset.USDT ? 'USDT_BTC_LN' : 'NIM_BTC_LN'
+}
+
+export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Asset }): void {
+  capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+}
+
+export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
+  capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
+}
 
 export type Web3RequestType
   = | 'request_accounts'
@@ -20,15 +127,11 @@ export type Web3RequestType
     | `nimiq_staking_${string}`
 
 export function trackDAppOpened(url: string, name: string, source: DAppOpenSource): void {
-  if (isDev)
-    return
-  void Posthog.capture({ event: 'miniapp_opened', properties: { dapp_url: url, dapp_name: name, source } })
+  capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })
 }
 
 export function trackDAppClosed(url: string, name: string, durationMs: number): void {
-  if (isDev)
-    return
-  void Posthog.capture({ event: 'miniapp_closed', properties: { dapp_url: url, dapp_name: name, session_duration_ms: durationMs } })
+  capture('miniapp_closed', { dapp_url: url, dapp_name: name, session_duration_ms: durationMs })
 }
 
 export function trackWeb3Request(opts: {
@@ -40,29 +143,19 @@ export function trackWeb3Request(opts: {
   success: boolean
   chainId?: string
 }): void {
-  if (isDev)
-    return
-  void Posthog.capture({
-    event: 'miniapp_web3_request',
-    properties: {
-      request_type: opts.requestType,
-      blockchain: opts.blockchain,
-      dapp_url: opts.dappUrl,
-      dapp_name: opts.dappName,
-      approved: opts.approved,
-      success: opts.success,
-      ...(opts.chainId ? { chain_id: opts.chainId } : {}),
-    },
+  capture('miniapp_web3_request', {
+    request_type: opts.requestType,
+    blockchain: opts.blockchain,
+    dapp_url: opts.dappUrl,
+    dapp_name: opts.dappName,
+    approved: opts.approved,
+    success: opts.success,
+    ...(opts.chainId ? { chain_id: opts.chainId } : {}),
   })
 }
 
 export function trackChainSwitched(dappUrl: string, fromChainId: string, toChainId: string): void {
-  if (isDev)
-    return
-  void Posthog.capture({
-    event: 'miniapp_chain_switched',
-    properties: { dapp_url: dappUrl, from_chain_id: fromChainId, to_chain_id: toChainId },
-  })
+  capture('miniapp_chain_switched', { dapp_url: dappUrl, from_chain_id: fromChainId, to_chain_id: toChainId })
 }
 
 export async function identifyUser() {

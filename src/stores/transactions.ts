@@ -12,6 +12,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
+import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
@@ -170,7 +171,9 @@ export const useTransactions = defineStore('transactions', () => {
     const { signedTx, swap } = res.data!
 
     let patchedSwap: Promise<Swap> | undefined
+    let swapStartedAt = 0
     if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+      swapStartedAt = Date.now()
       // Signal the signed transaction to Fastspot as early as possible
       logger.log('Signaling signed transaction to Fastspot', { swap })
       const { provideFundingProof } = await useFastspotApiV2()
@@ -213,6 +216,10 @@ export const useTransactions = defineStore('transactions', () => {
             // Delete the swap HTLC from the database
             await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
           }
+          trackSwapFailed({
+            error_reason: 'Transaction invalidated by mempool',
+            asset: Asset.NIM,
+          })
         }
 
         return { data: undefined, error: i18n.t('Transaction invalid') }
@@ -309,6 +316,12 @@ export const useTransactions = defineStore('transactions', () => {
       transactions.value[index].meta = {
         secret,
       }
+
+      trackSwapCompleted({
+        swap_duration_ms: Date.now() - swapStartedAt,
+        asset: Asset.NIM,
+      })
+
       // Delete the swap HTLC from the database
       await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
       // Delete the swap quote from the database

@@ -1,6 +1,7 @@
 import type { Component, EmitsOptions, Ref } from 'vue'
 import type { ExternalTransaction, PaymentMethod, Transaction, Transfer } from '../../types/transactions'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
+import type { PaymentAnalyticsState } from '@/lib/analytics'
 import type { flowHeightOptions } from '@/lib/flows/index'
 import type { PolygonTransferQuote } from '@/lib/polygon/types'
 
@@ -139,7 +140,11 @@ export interface State {
   }
   [StepName.PaymentRequestManualInput]: PaymentRequestData | string
   [StepName.PaymentAmountInput]: number
-  [StepName.PaymentPreview]: { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote }
+  [StepName.PaymentPreview]: {
+    payWithPuntos: boolean
+    polygonQuote?: PolygonTransferQuote
+    paymentAnalytics: PaymentAnalyticsState
+  }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
   [StepName.NimWithdrawalAddressSelectionStep]: string // User selects a saved address
   [StepName.NimAddressInput]: string

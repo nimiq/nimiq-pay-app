@@ -9,6 +9,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, getRequiredContractEvent, toAddressTopic } from '@/lib/ethereum'
 import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TOKEN_APPROVAL_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
@@ -1581,6 +1582,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     if (consensus.value !== 'established')
       return { data: undefined, error: i18n.t('Polygon is not ready yet') }
 
+    const swapStartedAt = Date.now()
+
     try {
       // 1. Confirm swap with Fastspot
       const { useFastspotApiV1 } = await import('@/composables/useFastspotv1')
@@ -1694,6 +1697,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const confirmedTx = { ...tx, meta: { secret }, status: 'confirmed' as const }
       await useTransactions().replaceTransaction(confirmedTx as MerchantTransaction)
 
+      trackSwapCompleted({
+        swap_duration_ms: Date.now() - swapStartedAt,
+        asset: Asset.USDT,
+      })
+
       // 11. Cleanup
       await run(SQLQuery.DeleteSwapHtlc, [swapHtlcKey])
       await run(SQLQuery.DeleteSwapQuote, [request.paymentRef])
@@ -1709,6 +1717,10 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
     catch (error) {
       logger.error('Failed to send Polygon USDT swap transaction', error)
+      trackSwapFailed({
+        error_reason: error instanceof Error ? error.message : 'Polygon swap payment failed',
+        asset: Asset.USDT,
+      })
       return {
         data: undefined,
         error: error instanceof Error ? error.message : i18n.t('Polygon swap payment failed'),

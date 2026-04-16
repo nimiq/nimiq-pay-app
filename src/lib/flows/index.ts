@@ -13,6 +13,13 @@ import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
+import {
+  buildPaymentAnalyticsProps,
+  finishPaymentAnalytics,
+  trackPaymentCancelled,
+  trackPaymentCompleted,
+  trackPaymentFailed,
+} from '@/lib/analytics'
 import { Asset, assetToPaymentMethod } from '@/lib/assets'
 import { FlowName, StepName } from '@/lib/flows/steps.types'
 import { isPaymentTransferType, PaymentMethod, Transfer } from '@/types/transactions'
@@ -276,6 +283,26 @@ const paymentFlow: FlowInit = async () => {
 
     // 3. Do the payment
 
+    const request = 'request' in payment ? payment.request : undefined
+    const previewState = state[StepName.PaymentPreview]
+    const analyticsProps = buildPaymentAnalyticsProps({
+      asset: request?.asset || Asset.NIM,
+      paymentMethod: payment.method,
+      payWithPuntos: payment.method === PaymentMethod.Points,
+      rail: request?.rail,
+      amount: request?.amount || 0,
+      transfer: request?.transfer,
+    })
+    const setPaymentAnalyticsStatus = (status: 'completed' | 'failed' | 'cancelled') => {
+      if (previewState?.paymentAnalytics)
+        previewState.paymentAnalytics = finishPaymentAnalytics(previewState.paymentAnalytics, status)
+    }
+    const failPayment = (errorMessage: string) => {
+      setPaymentAnalyticsStatus('failed')
+      trackPaymentFailed({ ...analyticsProps, error_reason: errorMessage })
+      return err(errorMessage)
+    }
+
     logger.log(`🤑  Initializing payment process with ${payment.method}`, payment)
     switch (payment.method) {
       case PaymentMethod.NIM:
@@ -297,7 +324,7 @@ const paymentFlow: FlowInit = async () => {
           } satisfies Result<never, string>
         })
         if (error)
-          return err(error)
+          return failPayment(error)
         if (payment.method === PaymentMethod.NakaCard && data) {
           await payment.confirmPayment(data.serialized)
         }
@@ -307,7 +334,8 @@ const paymentFlow: FlowInit = async () => {
         const request = payment.request
         const polygonQuote = state[StepName.PaymentPreview]?.polygonQuote
         if (!isPaymentTransferType(request.transfer)) {
-          return err(i18n.t('USDT staking requests are not supported'))
+          const errorMsg = i18n.t('USDT staking requests are not supported')
+          return failPayment(errorMsg)
         }
 
         const polygonRequest = {
@@ -326,7 +354,7 @@ const paymentFlow: FlowInit = async () => {
             polygonTitle,
           )
           if (error)
-            return err(error)
+            return failPayment(error)
         }
         else {
           const { error } = await usePolygonUsdt().sendPayment(
@@ -335,7 +363,7 @@ const paymentFlow: FlowInit = async () => {
             { quote: polygonQuote },
           )
           if (error)
-            return err(error)
+            return failPayment(error)
         }
         break
       }
@@ -347,7 +375,7 @@ const paymentFlow: FlowInit = async () => {
         const { usePoints } = await import('@/stores/points')
         const { error } = await usePoints().payWithPoints(payment.request)
         if (error)
-          return err(error)
+          return failPayment(error)
         break
       }
       case PaymentMethod.Bluecode: {
@@ -359,15 +387,44 @@ const paymentFlow: FlowInit = async () => {
       }
     }
 
+    const paymentStartedAt = previewState?.paymentAnalytics?.startedAt || Date.now()
+    setPaymentAnalyticsStatus('completed')
+    trackPaymentCompleted({ ...analyticsProps, duration_ms: Date.now() - paymentStartedAt })
+
     const { useToast } = await import('@/composables/useToast')
     setTimeout(() => {
       useToast().setToast({ message: i18n.t('Payment successful') })
     }, 1000) // Allow the paymentPreview step to animate out before presenting the toast
   }
-  const onCancel: Flow['onCancel'] = async () => {
-    // Remove transparency before closing to prevent the camera view to be visible behind the modal
+  const onCancel: Flow['onCancel'] = async (state) => {
     document.body.classList.remove('native-qr-scanner-modal-open')
     logger.log('🤑  Cancelling payment process')
+
+    // Track cancellation only for attempts that were started and have not reached another terminal state.
+    const previewState = state[StepName.PaymentPreview]
+    if (previewState?.paymentAnalytics.status === 'started') {
+      const qrData = state[StepName.QRCodeScanner]
+      const nakaData = state[StepName.HoldNakaCardToReader]
+      const request = (typeof qrData === 'object' && qrData) || (typeof nakaData === 'object' && nakaData?.request)
+      if (request) {
+        const payWithPuntos = !!previewState.payWithPuntos
+        const method = payWithPuntos
+          ? PaymentMethod.Points
+          : nakaData ? PaymentMethod.NakaCard : assetToPaymentMethod(request.asset || Asset.NIM)
+        trackPaymentCancelled({
+          ...buildPaymentAnalyticsProps({
+            asset: request.asset || Asset.NIM,
+            paymentMethod: method,
+            payWithPuntos,
+            rail: request.rail,
+            amount: request.amount || 0,
+            transfer: request.transfer,
+          }),
+          cancelled_at_step: 'pin',
+        })
+        previewState.paymentAnalytics = finishPaymentAnalytics(previewState.paymentAnalytics, 'cancelled')
+      }
+    }
   }
 
   return { flowName, steps, onDone, onCancel, initialStep, slotComponent } satisfies Flow

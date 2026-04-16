@@ -18,6 +18,7 @@ import { PointsState, usePointsPayment } from '@/composables/usePointsPayment'
 // TODO: async import
 import { useToast } from '@/composables/useToast'
 import { isGenericPolygonQuoteErrorMessage, useUsdtQuoteRefresh } from '@/composables/useUsdtQuoteRefresh'
+import { buildPaymentAnalyticsProps, startPaymentAnalytics, trackPaymentStarted } from '@/lib/analytics'
 import { Asset, assetToCrypto, fastspotFeeTickerToCrypto, formatUsdtAmount } from '@/lib/assets'
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { roundUpToTwoDecimals } from '@/lib/utils'
@@ -408,9 +409,21 @@ function handlePay() {
   if (loading.value)
     return
 
+  const paymentAnalytics = startPaymentAnalytics()
+
+  trackPaymentStarted(buildPaymentAnalyticsProps({
+    asset: asset.value,
+    paymentMethod: paymentMethod.value,
+    payWithPuntos: payWithPuntos.value,
+    rail: payment.value.rail,
+    amount: payment.value.amount,
+    transfer: payment.value.transfer,
+  }))
+
   loading.value = true
   emit('done', {
     payWithPuntos: payWithPuntos.value,
+    paymentAnalytics,
     polygonQuote: usdtQuote.value || undefined,
   })
 }
