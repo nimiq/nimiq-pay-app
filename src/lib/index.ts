@@ -1,8 +1,11 @@
 import { useDevice } from '@/composables/useDevice'
+import { isTestnet } from '@/lib/network'
 
 export const isDev = import.meta.env.DEV
 
-export const nimiqDomainUrl = isDev ? 'nimiq-testnet.com' : 'nimiq.com'
+export { isNetworkOverridden, isTestnet, type NetworkMode, networkOverride, setNetworkOverride } from '@/lib/network'
+
+export const nimiqDomainUrl = isTestnet ? 'nimiq-testnet.com' : 'nimiq.com'
 
 export const walletUrl = new URL(`https://wallet.${nimiqDomainUrl}`)
 

@@ -2,6 +2,7 @@ import { Posthog } from '@capawesome/capacitor-posthog'
 import { computedAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
+import { isTestnet } from '@/lib'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 
 const logger = useLogger('FeatureFlagsStore')
@@ -20,6 +21,11 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   }, false)
 
   const polygonRpcUrl = computedAsync(async () => {
+    // Testnet override supersedes the mainnet PostHog flag.
+    if (isTestnet) {
+      logger.log('Testnet override active — using Polygon testnet RPC', polygonUsdtConfig.rpcUrl)
+      return polygonUsdtConfig.rpcUrl
+    }
     try {
       const { value } = await Posthog.getFeatureFlagPayload({ key: 'polygon-rpc-endpoint' })
       if (typeof value === 'string' && value) {

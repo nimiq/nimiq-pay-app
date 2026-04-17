@@ -16,7 +16,7 @@ import type {
 } from '@/lib/issuer-schemas/rest.schema'
 import { parse } from 'valibot'
 import { useLogger } from '@/composables/useLogger'
-import { isDev } from '@/lib/index'
+import { isTestnet } from '@/lib/index'
 import { useLocalWallet } from '@/stores/local-wallet'
 import {
   AuthCompleteResponseSchema,
@@ -34,7 +34,7 @@ import { signMessage } from './issuer-utils'
 
 const logger = useLogger('NakaRestApi')
 
-const ISSUER_SERVER_REST_ORIGIN = isDev ? 'https://pay-test-issuer.nim.sh' : 'https://rest.issuer.nimpay.app'
+const ISSUER_SERVER_REST_ORIGIN = isTestnet ? 'https://pay-test-issuer.nim.sh' : 'https://rest.issuer.nimpay.app'
 
 interface Token {
   /**

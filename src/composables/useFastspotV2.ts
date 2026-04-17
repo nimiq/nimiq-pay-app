@@ -1,4 +1,4 @@
-import { isDev } from '@/lib/index'
+import { isTestnet } from '@/lib/index'
 import { nativeFetch } from '../lib/nativeFetch'
 import { useDevice } from './useDevice'
 
@@ -13,7 +13,7 @@ export async function useFastspotApiV2() {
   const { isAndroid, isIOS } = useDevice()
 
   fastspot.init(
-    isDev ? 'https://api.test.fastspot.io' : 'https://api.go.fastspot.io',
+    isTestnet ? 'https://api.test.fastspot.io' : 'https://api.go.fastspot.io',
     '447f6050-25a5-453e-9b4f-a2db55abbbec', // API Key is the same for testnet and mainnet Fastspot
     {
       customFetch: isAndroid || isIOS ? nativeFetch : undefined,

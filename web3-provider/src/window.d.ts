@@ -28,6 +28,10 @@ export declare global {
     }
     nimiq?: NimiqProvider
     ethereum?: EthereumProvider
+    /** Nimiq RPC URL injected by the host before this script runs. */
+    __NIMIQ_RPC_URL__?: string
+    /** Ethereum RPC URL injected by the host before this script runs. */
+    __ETH_RPC_URL__?: string
   }
 
   interface WindowEventMap {

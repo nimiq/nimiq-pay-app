@@ -4,9 +4,9 @@ The idea is to eventually move this into a separate lib, therefore we keep the f
 using in the Nimiq Wallet */
 import type { CapacitorHttp } from '@capacitor/core';
 import { ValidationUtils } from '@nimiq/utils';
-import { isDev } from '@/lib/index';
+import { isTestnet } from '@/lib/index';
 
-const GO_CRYPTO_CONFIG = isDev
+const GO_CRYPTO_CONFIG = isTestnet
     // The api keys are allowed to be public. The dev key is from chapter 4 of the documentation, the production key
     // a Nimiq specific key.
     ? { apiEndpoint: 'https://api.staging.gocrypto.com/', apiKey: 'ae7344d0-3839-4732-bf57-c2489b92dc62' }

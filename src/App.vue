@@ -13,6 +13,7 @@ import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -162,6 +163,7 @@ App.addListener('resume', async () => {
 <template>
   <IonApp>
     <IonRouterOutlet />
+    <NetworkOverrideBadge />
     <!-- DEV -->
     <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
       <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
