@@ -6,14 +6,14 @@ import { useWebSocket } from '@vueuse/core'
 import { readonly, ref, toValue as v, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev } from '@/lib/index'
+import { isDev, isTestnet } from '@/lib/index'
 import { useApp } from '@/stores/app'
 import { toSeconds } from './useTime'
 
 const logger = useLogger('useApi')
 
-const basePointsUrl = new URL(isDev ? 'https://bonus-nim.zeromox.com/api/' : 'https://points.nimpay.app/api/')
-const baseCosignerUrl = new URL(isDev ? 'https://pay-test-cos.nim.sh/' : 'https://cs1.nimpay.app/')
+const basePointsUrl = new URL(isTestnet ? 'https://bonus-nim.zeromox.com/api/' : 'https://points.nimpay.app/api/')
+const baseCosignerUrl = new URL(isTestnet ? 'https://pay-test-cos.nim.sh/' : 'https://cs1.nimpay.app/')
 const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
@@ -365,7 +365,7 @@ export function useCplApi() {
         status: { stringValue: string }
       }
     }
-    const { data, error, status, hasError } = await api<OrderByIdFirestoreRes, PointsCplFirestoreRes>(new URL(`v1/projects/checkout-service${isDev ? '-staging-0' : ''}/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
+    const { data, error, status, hasError } = await api<OrderByIdFirestoreRes, PointsCplFirestoreRes>(new URL(`v1/projects/checkout-service${isTestnet ? '-staging-0' : ''}/databases/(default)/documents/orders/${v(id)}`, cplApiUrl))
     if (error || !data || hasError)
       return { data: undefined, status, hasError, error: error || { error: { message: i18n.t('No payment details found'), code: 404, status: 'NOT_FOUND' } } }
     const parsed: OrderByIdRes = {

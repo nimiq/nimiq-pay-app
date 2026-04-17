@@ -11,6 +11,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'
 import { useToast } from '@/composables/useToast'
+import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
 import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
@@ -27,6 +28,8 @@ const evmRpcUrls: Record<string, string> = {
   '0x38': import.meta.env.VITE_BNB_RPC_URL,
   '0xaa36a7': import.meta.env.VITE_SEPOLIA_RPC_URL,
 }
+
+const NIMIQ_RPC_URL = isTestnet ? 'https://rpc.testnet.nimiqwatch.com' : 'https://rpc.nimiqwatch.com'
 
 // Pre-cache web3-provider script for instant injection when opening mini-apps
 const web3ProviderScript = computedAsync(
@@ -111,7 +114,9 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
     // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
     // Use pre-cached script if available, fallback to fetch if not yet loaded
     const cachedScript = web3ProviderScript.value
-    const scriptContent = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
+    const baseScript = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
+    // Seed window.__NIMIQ_RPC_URL__ for the provider's module-init read.
+    const scriptContent = `window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
     // Just in casa, clear cookies
     // TODO: think a better fix, some dApps use cookies to keep account session, maybe allow dapps approved in the past to get address without confirmation

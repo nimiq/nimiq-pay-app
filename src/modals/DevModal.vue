@@ -2,16 +2,18 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
-import { IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, toastController } from '@ionic/vue'
+import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonSegment, IonSegmentButton, toastController } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
+import { isDev, isTestnet, networkOverride, setNetworkOverride } from '@/lib'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
+import { useNaka, useNakaDb } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/stores/sync'
@@ -23,6 +25,7 @@ const logger = useLogger('DevModal')
 // Note: no translations in this file as it's for dev purposes only.
 
 const router = useRouter()
+
 const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(useRemoteSigner())
@@ -31,6 +34,46 @@ const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
 const txInMemPool: Ref<PlainTransactionDetails | undefined> = ref()
 const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
+
+const NETWORK_CHOICES = ['default', 'mainnet', 'testnet'] as const
+type NetworkChoice = typeof NETWORK_CHOICES[number]
+const currentNetworkChoice = computed<NetworkChoice>(() => networkOverride ?? 'default')
+
+function isNetworkChoice(v: unknown): v is NetworkChoice {
+  return typeof v === 'string' && (NETWORK_CHOICES as readonly string[]).includes(v)
+}
+
+async function onNetworkSegmentChange(value: unknown) {
+  if (!isNetworkChoice(value) || value === currentNetworkChoice.value)
+    return
+
+  // Tx history + NAKA card state are environment-scoped — purge before flipping.
+  const alert = await alertController.create({
+    header: `Switch to ${value === 'default' ? 'DEFAULT' : value.toUpperCase()}?`,
+    message: 'This will clear your local transaction history and unregister your NAKA card on this device. Your wallet, PIN, and backup remain intact.',
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Switch', role: 'confirm' },
+    ],
+  })
+  await alert.present()
+  const { role } = await alert.onDidDismiss()
+  if (role !== 'confirm')
+    return
+
+  // Must run before the override flip: SDK keyspace and issuer sourceId are env-scoped.
+  const naka = useNaka()
+  const [, deactivateResult] = await Promise.allSettled([
+    clearTxHistory(),
+    naka.deactivateCardOnDevice(),
+    useNakaDb().purgeNakaCards(),
+  ])
+  if (deactivateResult.status === 'rejected')
+    logger.warn('Failed to deactivate NAKA card on device', deactivateResult.reason)
+  naka.card = undefined
+  setNetworkOverride(value === 'default' ? null : value)
+  router.go(0)
+}
 
 async function writeToClipboard(string: string) {
   await Clipboard.write({
@@ -100,6 +143,32 @@ onMounted(async () => {
     <IonButton class="w-full" @click="() => useNimiqNetwork().reconnect()">
       Reconnect to Network
     </IonButton>
+    <IonCard>
+      <IonCardHeader>
+        <IonCardTitle>Network</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="mb-2">
+          Current: <strong>{{ isTestnet ? 'TESTNET' : 'MAINNET' }}</strong>
+          <span v-if="networkOverride"> (forced)</span>
+          <span v-else> (default — tracks {{ isDev ? 'dev' : 'prod' }} build)</span>
+        </p>
+        <IonSegment :value="currentNetworkChoice" @ion-change="onNetworkSegmentChange($event.detail.value)">
+          <IonSegmentButton value="default">
+            Default
+          </IonSegmentButton>
+          <IonSegmentButton value="mainnet">
+            Mainnet
+          </IonSegmentButton>
+          <IonSegmentButton value="testnet">
+            Testnet
+          </IonSegmentButton>
+        </IonSegment>
+        <p class="mt-2 text-xs opacity-60">
+          Switching clears tx history and reloads. Only Nimiq mini-apps pick up the testnet RPC — EVM mini-apps have no testnet wiring and will keep running against mainnet chains.
+        </p>
+      </IonCardContent>
+    </IonCard>
     <IonCard>
       <IonCardHeader>
         <IonCardTitle>Nimiq Client</IonCardTitle>

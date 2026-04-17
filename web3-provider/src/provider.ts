@@ -42,12 +42,15 @@ if (typeof globalObj.Buffer === 'undefined') {
   globalObj.Buffer = Buffer
 }
 
+const nimiqRpc = (typeof window !== 'undefined' && window.__NIMIQ_RPC_URL__) || 'https://rpc.nimiqwatch.com'
+const ethRpc = (typeof window !== 'undefined' && window.__ETH_RPC_URL__) || 'https://rpc.mevblocker.io/'
+
 const Nimiq = new NimiqProvider({
-  rpc: 'https://rpc.nimiqwatch.com', // https://rpc.testnet.nimiqwatch.com
+  rpc: nimiqRpc,
 })
 const Ethereum = new EthereumProvider({
   chainId: '0x1', // Ethereum mainnet
-  rpc: 'https://rpc.mevblocker.io/',
+  rpc: ethRpc,
 })
 
 const birpc = createBirpc<NativeFunctions, WebviewFunctions>({

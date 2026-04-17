@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { parse } from 'valibot'
 import { computed, ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev } from '.'
+import { isDev, isTestnet } from '.'
 import { useLogger } from '../composables/useLogger'
 import { useLocalWallet } from '../stores/local-wallet'
 import { useRemoteSigner } from '../stores/remote-signer'
@@ -16,7 +16,7 @@ import {
 } from './issuer-schemas/ws.schema'
 import { signMessage } from './issuer-utils'
 
-const ISSUER_SERVER_WS = isDev ? 'https://pay-test-issuer.nim.sh/ws/' : 'wss://ws.issuer.nimpay.app'
+const ISSUER_SERVER_WS = isTestnet ? 'https://pay-test-issuer.nim.sh/ws/' : 'wss://ws.issuer.nimpay.app'
 
 const logger = useLogger('NakaSocket')
 

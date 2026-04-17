@@ -6,7 +6,7 @@ import { computed, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev } from '@/lib'
+import { isTestnet } from '@/lib'
 import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
 
@@ -40,7 +40,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const networkId = ref(0)
 
   async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
-    networkName.value = isDev ? 'testalbatross' : 'MainAlbatross'
+    networkName.value = isTestnet ? 'testalbatross' : 'MainAlbatross'
 
     await Nimiq.default()
 

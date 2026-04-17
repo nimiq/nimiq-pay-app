@@ -7,7 +7,7 @@ import { computed, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
-import { isDev, isNakaEnabled } from '@/lib'
+import { isNakaEnabled, isTestnet } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
 import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -361,7 +361,7 @@ export const useNaka = defineStore('naka', () => {
   }
 
   async function activateCardOnDevice() {
-    await HCESdk.initialize({ storageName: 'naka-card', environment: isDev ? Environment.SANDBOX : Environment.PRODUCTION })
+    await HCESdk.initialize({ storageName: 'naka-card', environment: isTestnet ? Environment.SANDBOX : Environment.PRODUCTION })
     const { cards } = await HCESdk.getAllSucceededCards()
     logger.log('Cards: in SDK storage', cards)
 

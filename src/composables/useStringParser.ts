@@ -6,7 +6,7 @@ import { Currency, EthereumChain, parseRequestLink, ValidationUtils } from '@nim
 import { getAddress } from 'ethers'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { isDev, nimiqDomainUrl } from '@/lib'
+import { isTestnet, nimiqDomainUrl } from '@/lib'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, isValidEthAddress } from '@/lib/ethereum'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
@@ -64,8 +64,8 @@ export function useStringParser() {
     try {
       if (isValidEthAddress(content))
         return true
-      const normalizedContent = content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)
-        ? content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
+      const normalizedContent = content.startsWith(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`)
+        ? content.replace(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`, '')
         : content
       if (isLightningInvoice(normalizedContent))
         return true
@@ -82,7 +82,7 @@ export function useStringParser() {
   }
 
   function isLightningInvoice(content: string): boolean {
-    return content.toLowerCase().startsWith(isDev ? 'lntb' : 'lnbc') || content.toLowerCase().startsWith('lnurl')
+    return content.toLowerCase().startsWith(isTestnet ? 'lntb' : 'lnbc') || content.toLowerCase().startsWith('lnurl')
   }
 
   // Parses different URL formats and returns a PaymentRequestData object
@@ -95,8 +95,8 @@ export function useStringParser() {
     if (isLightningInvoice(content))
       content = `lightning:${content}`
     // Remove wallet.nimiq.com prefix
-    if (content.startsWith(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`)) {
-      content = content.replace(`https://wallet.nimiq${isDev ? '-testnet' : ''}.com/`, '')
+    if (content.startsWith(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`)) {
+      content = content.replace(`https://wallet.nimiq${isTestnet ? '-testnet' : ''}.com/`, '')
     }
     let url: URL
     try {
@@ -230,7 +230,7 @@ export function useStringParser() {
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
     const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection | undefined
-    const expectedNetwork = isDev ? 'tb' : 'bc'
+    const expectedNetwork = isTestnet ? 'tb' : 'bc'
     if (!coinNetworkSection || coinNetworkSection.letters !== expectedNetwork)
       return { error: `${i18n.t('Wrong network in Bitcoin Lightning invoice.')} Expected "${expectedNetwork}", got "${coinNetworkSection?.letters}".`, data: undefined }
 
