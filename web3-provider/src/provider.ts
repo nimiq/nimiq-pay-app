@@ -175,6 +175,10 @@ window.addEventListener('eip6963:requestProvider', () => {
 window.nimiq = Nimiq
 window.ethereum = Ethereum
 
+// Expose host-provided context (selected user language, etc.) to mini apps.
+// Frozen to keep the surface read-only from the dapp side.
+window.nimiqPay = Object.freeze({ language: window.__NIMIQ_PAY__?.lang })
+
 // Announce provider immediately for EIP-6963 discovery
 announceProvider()
 

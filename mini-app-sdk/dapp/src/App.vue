@@ -1,11 +1,31 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
 import Staking from './components/Staking.vue'
 import { useNimiqMiniApp } from './composables/useNimiqMiniApp'
 
 const view = ref('kitchen-sink');
 const { provider, isInitializing, initError, initProvider, retryInit } = useNimiqMiniApp()
+
+// Host-selected user language (Nimiq Pay). Falls back to the browser language
+// when the mini-app runs outside of Nimiq Pay (e.g. local dev in a regular browser).
+const hostLanguage = computed((): string => {
+  const hostLang = window.nimiqPay?.language
+  if (hostLang)
+    return hostLang
+  return navigator.language.split('-')[0] || 'en'
+})
+
+interface I18nEntry { greeting: string, tagline: string }
+const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay mini-app starter' }
+const I18N: Record<string, I18nEntry> = {
+  en: DEFAULT_I18N,
+  es: { greeting: 'Hola', tagline: 'Plantilla de mini-app para Nimiq Pay' },
+  de: { greeting: 'Hallo', tagline: 'Nimiq Pay Mini-App Starter' },
+  fr: { greeting: 'Bonjour', tagline: 'Starter de mini-app Nimiq Pay' },
+  pt: { greeting: 'Olá', tagline: 'Modelo de mini-app para Nimiq Pay' },
+}
+const t = computed<I18nEntry>(() => I18N[hostLanguage.value] ?? DEFAULT_I18N)
 
 onMounted(initProvider)
 </script>
@@ -19,6 +39,10 @@ onMounted(initProvider)
       <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
     </a>
   </div>
+
+  <p data-testid="host-language" style="opacity: 0.7; margin: 0 0 8px;">
+    {{ t.greeting }} — {{ t.tagline }} ({{ hostLanguage }})
+  </p>
 
   <nav style="display: flex; flex-direction: row; justify-content: center; gap: 8px;">
     <button @click="view = 'kitchen-sink'">Kitchen Sink</button>

@@ -136,6 +136,7 @@ vi.mock('@/lib', () => ({
   get isDev() {
     return isDevState.value
   },
+  isTestnet: false,
 }))
 
 vi.mock('@/stores/conn', () => ({
@@ -362,5 +363,20 @@ describe('mini apps modal', () => {
     await flushPromises()
 
     expect(trackDAppOpened).toHaveBeenCalledWith('https://evm-mini-wallet.vercel.app/', 'EVM Mini Wallet', 'featured')
+  })
+
+  it('seeds selected user language into the mini-app preShowScript', async () => {
+    const { useApp } = await import('@/stores/app')
+    const wrapper = mountModal()
+    await flushPromises()
+    useApp().language = 'es'
+    await flushPromises()
+
+    await wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]').trigger('click')
+    await flushPromises()
+
+    expect(openWebView).toHaveBeenCalledTimes(1)
+    const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
+    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es"}')
   })
 })

@@ -15,6 +15,7 @@ import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
 import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
+import { useApp } from '@/stores/app'
 import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
@@ -42,6 +43,8 @@ const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy5
 const store = useMiniApps()
 const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
 const { searchedDescriptions, ensureDescription, addRecentlyViewed } = store
+
+const { language } = storeToRefs(useApp())
 
 const searchQuery = ref('')
 const isSearching = computed(() => !!searchQuery.value.trim())
@@ -115,8 +118,9 @@ async function openMiniApp(url?: string, title?: string, source: 'featured' | 'r
     // Use pre-cached script if available, fallback to fetch if not yet loaded
     const cachedScript = web3ProviderScript.value
     const baseScript = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
-    // Seed window.__NIMIQ_RPC_URL__ for the provider's module-init read.
-    const scriptContent = `window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
+    // Seed host context (language, RPC URL) before provider script runs at document start.
+    const hostContext = JSON.stringify({ lang: language.value })
+    const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
     // Just in casa, clear cookies
     // TODO: think a better fix, some dApps use cookies to keep account session, maybe allow dapps approved in the past to get address without confirmation

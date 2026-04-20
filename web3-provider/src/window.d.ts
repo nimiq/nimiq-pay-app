@@ -32,6 +32,10 @@ export declare global {
     __NIMIQ_RPC_URL__?: string
     /** Ethereum RPC URL injected by the host before this script runs. */
     __ETH_RPC_URL__?: string
+    /** Host context seeded by Nimiq Pay before the provider script runs. */
+    __NIMIQ_PAY__?: { lang?: string }
+    /** Public, read-only host context exposed to mini apps. */
+    nimiqPay?: { readonly language?: string }
   }
 
   interface WindowEventMap {
