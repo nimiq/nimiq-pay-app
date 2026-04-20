@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
-import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar } from '@ionic/vue'
+import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
 import { computedAsync, until } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
@@ -184,9 +184,18 @@ watch(() => localNotifications.value.length, (newValue, oldValue) => {
     scrollToFirstNotification()
 })
 
-watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], ([expired, remoteOk, updatingDb]) => {
-  if (expired && remoteOk && !updatingDb)
-    showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false })
+// Skip re-presenting while one is already shown — showModal() dismisses the
+// current top before re-presenting, which could kill an unrelated overlay.
+let isLongTimeNoSeeOpen = false
+watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, remoteOk, updatingDb]) => {
+  if (!(expired && remoteOk && !updatingDb) || isLongTimeNoSeeOpen)
+    return
+  isLongTimeNoSeeOpen = true
+  await showModal(Modal.LongTimeNoSee, { isSmall: true, canDismiss: false })
+  const top = await modalController.getTop()
+  top?.onDidDismiss().then(() => {
+    isLongTimeNoSeeOpen = false
+  })
 }, { immediate: true })
 
 onMounted(() => {

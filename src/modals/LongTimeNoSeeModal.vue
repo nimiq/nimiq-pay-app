@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar, modalController } from '@ionic/vue'
 import { watchDebounced } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import CircularProgress from '@/components/icons/CircularProgress.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
 import { useModal } from '@/composables/useModal'
@@ -17,9 +17,19 @@ const { consensus } = storeToRefs(useNimiqNetwork())
 const { isHtlcRecreating, hasHtlcExpired, isHtlcActive } = storeToRefs(useRemoteSigner())
 const { blocksUntilNextMacroBlock } = storeToRefs(useSync())
 
-watchDebounced([consensus, isHtlcRecreating], () => {
+// Pin to this specific modal so a later-stacked modal isn't dismissed instead.
+let selfModal: HTMLIonModalElement | undefined
+onMounted(async () => {
+  selfModal = await modalController.getTop()
+})
+
+function dismissSelf() {
+  return closeModal({ modal: selfModal })
+}
+
+watchDebounced([consensus, isHtlcRecreating, isHtlcActive, hasHtlcExpired], () => {
   if (consensus.value === 'established' && hasHtlcExpired.value === false && isHtlcActive.value)
-    closeModal()
+    dismissSelf()
 }, { immediate: true, debounce: debounceDelay, maxWait: debounceMaxWait })
 
 const maxProgress = Nimiq.Policy.BLOCKS_PER_BATCH
@@ -40,7 +50,7 @@ watch(progress, (progress) => {
   <IonHeader class="ion-no-border">
     <IonToolbar>
       <IonButtons slot="end">
-        <IonButton @click.stop="() => closeModal()">
+        <IonButton @click.stop="() => dismissSelf()">
           <IonIcon :icon="close" class="text-white bg-[#DADADA] rounded-full p-1 w-5 h-5" />
         </IonButton>
       </IonButtons>

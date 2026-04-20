@@ -93,12 +93,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value)
   const isHtlcPending = computed(() => start.value > headTimestamp.value)
   const isHtlcRecreating = ref(false)
+  // immediate so the flag is correct when the app starts in an already-expired state.
   watch([hasHtlcExpired, isHtlcPending, isProcessingRemote], ([expired, pending, processing]) => {
     if (expired)
       isHtlcRecreating.value = true
     else if (!pending && !processing)
       isHtlcRecreating.value = false
-  })
+  }, { immediate: true })
   watch(remoteSigner, (newSigner) => {
     if (newSigner === undefined) {
       isHtlcActive.value = false
