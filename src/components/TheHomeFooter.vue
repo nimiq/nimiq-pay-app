@@ -87,7 +87,7 @@ const topDAppIcons = computed(() => {
             v-for="(icon, i) in topDAppIcons"
             :key="i"
             :src="icon"
-            class="size-7 rounded-full ring-2 ring-white object-cover absolute top-0"
+            class="size-7 aspect-square shrink-0 rounded-full ring-2 ring-gray-100 bg-white object-contain object-center absolute top-0"
             :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
             alt=""
           >
