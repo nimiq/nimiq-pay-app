@@ -14,7 +14,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:140
+#: src/stores/transactions.ts:141
 msgid "A transaction is already in progress"
 msgstr ""
 
@@ -23,7 +23,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:40
-#: src/views/HomeView.vue:108
+#: src/views/HomeView.vue:151
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -31,7 +31,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:101
+#: src/views/HomeView.vue:144
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -132,7 +132,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:501
+#: src/lib/flows/index.ts:589
 msgid "Backup successful"
 msgstr ""
 
@@ -344,7 +344,7 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:851
+#: src/stores/polygon-usdt.ts:852
 msgid "Could not determine Polygon transaction hash"
 msgstr ""
 
@@ -369,7 +369,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:16
+#: src/views/HomeView.vue:87
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -417,7 +417,7 @@ msgstr ""
 msgid "Disclaimer"
 msgstr ""
 
-#: src/modals/PointsModal.vue:59
+#: src/modals/PointsModal.vue:64
 msgid "Earn Points"
 msgstr ""
 
@@ -668,8 +668,8 @@ msgid "Invalid"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:43
-#: src/stores/polygon-usdt.ts:204
-#: src/stores/polygon-usdt.ts:218
+#: src/stores/polygon-usdt.ts:205
+#: src/stores/polygon-usdt.ts:219
 msgid "Invalid amount"
 msgstr ""
 
@@ -786,7 +786,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:85
-#: src/stores/polygon-usdt.ts:1608
+#: src/stores/polygon-usdt.ts:1611
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -822,7 +822,7 @@ msgstr ""
 msgid "Invite a Friend"
 msgstr ""
 
-#: src/modals/PointsModal.vue:52
+#: src/modals/PointsModal.vue:57
 #: src/modals/ReferralModal.vue:4
 #: src/views/HomeView.vue:98
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
@@ -865,7 +865,7 @@ msgstr ""
 msgid "Loading swap limits..."
 msgstr ""
 
-#: src/modals/PointsModal.vue:74
+#: src/modals/PointsModal.vue:79
 msgid "Loading tasks…"
 msgstr ""
 
@@ -969,8 +969,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:26
 #: src/stores/local-wallet.ts:76
 #: src/stores/local-wallet.ts:85
-#: src/stores/polygon-usdt.ts:1496
-#: src/stores/polygon-usdt.ts:1578
+#: src/stores/polygon-usdt.ts:1497
+#: src/stores/polygon-usdt.ts:1579
 msgid "No account has been found"
 msgstr ""
 
@@ -1018,7 +1018,7 @@ msgstr ""
 msgid "No saved addresses"
 msgstr ""
 
-#: src/modals/PointsModal.vue:81
+#: src/modals/PointsModal.vue:86
 msgid ""
 "No tasks available.\n"
 "Stay tuned."
@@ -1028,7 +1028,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1613
+#: src/stores/polygon-usdt.ts:1616
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1130,7 +1130,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:364
+#: src/lib/flows/index.ts:427
 msgid "Payment successful"
 msgstr ""
 
@@ -1169,7 +1169,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:530
+#: src/lib/flows/index.ts:618
 msgid "PIN change successful"
 msgstr ""
 
@@ -1235,10 +1235,10 @@ msgid "Polygon fee"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:1461
-#: src/stores/polygon-usdt.ts:1500
-#: src/stores/polygon-usdt.ts:1553
-#: src/stores/polygon-usdt.ts:1582
+#: src/stores/polygon-usdt.ts:1462
+#: src/stores/polygon-usdt.ts:1501
+#: src/stores/polygon-usdt.ts:1554
+#: src/stores/polygon-usdt.ts:1583
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1246,15 +1246,15 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1542
+#: src/stores/polygon-usdt.ts:1543
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1714
+#: src/stores/polygon-usdt.ts:1726
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:860
+#: src/stores/polygon-usdt.ts:861
 msgid "Polygon transaction not found after relay"
 msgstr ""
 
@@ -1325,7 +1325,7 @@ msgstr ""
 msgid "Reopen Mini App on unlock"
 msgstr ""
 
-#: src/views/HomeView.vue:109
+#: src/views/HomeView.vue:152
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1451,7 +1451,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:61
-#: src/lib/flows/index.ts:419
+#: src/lib/flows/index.ts:507
 msgid "Something went wrong"
 msgstr ""
 
@@ -1546,7 +1546,7 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1672
+#: src/stores/polygon-usdt.ts:1675
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
@@ -1558,7 +1558,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:100
+#: src/views/HomeView.vue:143
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1601,7 +1601,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:517
+#: src/lib/flows/index.ts:605
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1698,23 +1698,23 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:199
+#: src/stores/transactions.ts:202
 msgid "Transaction already sent"
 msgstr ""
 
-#: src/lib/flows/index.ts:293
+#: src/lib/flows/index.ts:351
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:218
+#: src/stores/transactions.ts:225
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:253
+#: src/stores/transactions.ts:260
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:864
+#: src/stores/polygon-usdt.ts:865
 msgid "Transaction was not mined on Polygon"
 msgstr ""
 
@@ -1738,7 +1738,7 @@ msgstr ""
 msgid "Unknown"
 msgstr ""
 
-#: src/lib/flows/index.ts:295
+#: src/lib/flows/index.ts:353
 msgid "Unknown error"
 msgstr ""
 
@@ -1767,7 +1767,7 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/lib/flows/index.ts:310
+#: src/lib/flows/index.ts:368
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -1886,7 +1886,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:421
+#: src/lib/flows/index.ts:509
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -1946,7 +1946,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:114
+#: src/views/HomeView.vue:157
 msgid "You have a reward to claim!"
 msgstr ""
 
