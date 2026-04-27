@@ -5,6 +5,7 @@ import { computed } from 'vue'
 function createAddress(value: string) {
   return {
     toUserFriendlyAddress: () => value,
+    equals: (other?: { toUserFriendlyAddress: () => string }) => other?.toUserFriendlyAddress() === value,
   }
 }
 
@@ -42,6 +43,7 @@ const state = vi.hoisted(() => {
     client: {
       waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
       getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
+      getTransaction: vi.fn(() => Promise.resolve(undefined)),
       addHeadChangedListener: vi.fn(),
     },
     height: 128,
@@ -134,6 +136,7 @@ describe('useRemoteSigner', () => {
     state.client = {
       waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
       getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
+      getTransaction: vi.fn(() => Promise.resolve(undefined)),
       addHeadChangedListener: vi.fn(),
     }
     state.height = 128
@@ -244,5 +247,72 @@ describe('useRemoteSigner', () => {
     await store.resolveHomeBalanceState()
 
     expect(store.homeBalanceState).toBe('loading')
+  })
+
+  it('discovers missing historical HTLC signers as inactive without replacing the active signer', async () => {
+    const activeAddress = 'NQ11 TEST ACTIVE REMOTE ADDRESS'
+    const oldAddress = 'NQ22 TEST OLD HTLC ADDRESS'
+    state.query.mockImplementation(((sql: string, _params?: unknown[], options?: { single?: boolean }) => {
+      if (options?.single) {
+        return Promise.resolve({
+          active: true,
+          balance: 25,
+          end: 999_999,
+          proofSize: 98,
+          publicKey: 'service-public-key',
+          start: 123_000,
+          address: activeAddress,
+        })
+      }
+      return Promise.resolve([{
+        active: true,
+        balance: 25,
+        end: 999_999,
+        proofSize: 98,
+        publicKey: 'service-public-key',
+        start: 123_000,
+        address: activeAddress,
+      }])
+    }) as any)
+    state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([{
+      recipient: oldAddress,
+      recipientType: 'htlc',
+      timestamp: 123_100,
+      validityStartHeight: 100,
+      data: { timeout: 999_500 },
+    }]))
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+    await store.discoverRemoteSignersFromBlockchain()
+
+    expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(activeAddress)
+    expect(store.remoteBalance).toBe(25)
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [oldAddress, 0, 98, 'service-public-key', 123_100, 999_500, false])
+  })
+
+  it('does not treat equivalent address values as a newer remote signer', async () => {
+    const activeAddress = 'NQ11 TEST ACTIVE REMOTE ADDRESS'
+    state.query.mockImplementation(((sql: string, _params?: unknown[], options?: { single?: boolean }) => {
+      const signer = {
+        active: true,
+        balance: 25,
+        end: 999_999,
+        proofSize: 98,
+        publicKey: 'service-public-key',
+        start: 123_000,
+        address: activeAddress,
+      }
+      return Promise.resolve(options?.single ? signer : [signer])
+    }) as any)
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+
+    expect(state.logger.log).not.toHaveBeenCalledWith('📡 Found a newer remote signer that is not the active one')
   })
 })

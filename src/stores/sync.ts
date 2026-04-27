@@ -43,7 +43,7 @@ export const useSync = defineStore('sync', () => {
   const { client, height: localHeight, lastMacroBlockHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk, remotePublicKey, remoteSigner, homeBalanceState } = storeToRefs(useRemoteSigner())
-  const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp } = useRemoteSigner()
+  const { getAllRemoteSigners, addRemoteSigner, blockHeightToTimestamp, discoverRemoteSignersFromBlockchain } = useRemoteSigner()
   const { sendTx, addUnknownPaymentToMerchantTransaction, addWithdrawalTransaction, addStakingtransaction, updateTransactionCashbackClaimed, updateTransactionStatus } = useTransactions()
 
   // Whether the remote wallet is synced with the local wallet or not.
@@ -68,6 +68,7 @@ export const useSync = defineStore('sync', () => {
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
   const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
+  const isVerifyingRemoteSignersDb = ref(false)
   const { resume: startPeriodicTransactionRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
       return
@@ -106,7 +107,11 @@ export const useSync = defineStore('sync', () => {
       return
     }
 
-    const remoteBalance = (await getBalance(remoteAddress.value!)).data || 0
+    const { data: remoteBalance = 0, error } = await getBalance(remoteAddress.value!)
+    if (error) {
+      logger.error('Error while getting remote balance before handling funds', error)
+      return
+    }
 
     logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
@@ -222,16 +227,20 @@ export const useSync = defineStore('sync', () => {
       logger.log('Local address not found')
     if (remoteAddress.value) {
       const oldBalance = remoteBalance.value
-      let newBalance = 0
+      let newBalance = oldBalance
+      let canCheckHtlcExtensions = true
       if (consensus.value === 'established') {
         const { data, error } = await getBalance(remoteAddress.value!)
-        if (error)
+        if (error) {
           logger.error('Error while getting remote balance', error)
-        else
+          canCheckHtlcExtensions = false
+        }
+        else {
           newBalance = data
+        }
       }
       else {
-        newBalance = remoteSigner.value?.balance || 0
+        newBalance = remoteSigner.value?.balance ?? oldBalance
       }
 
       remoteBalance.value = newBalance
@@ -240,7 +249,7 @@ export const useSync = defineStore('sync', () => {
 
       // TODO: move this to a separate function
       // Sometimes the extended HTLC was not saved in the DB, so we assume that an address with 0 balance can be an HTLC extension
-      if (remoteBalance.value === 0) {
+      if (canCheckHtlcExtensions && remoteBalance.value === 0) {
         const [txs, remoteSigners] = await Promise.all([getAllOutgoingTransactionsFromHtlcs(remoteAddress.value), getAllRemoteSigners()])
 
         txs.forEach(async (tx) => {
@@ -946,27 +955,19 @@ export const useSync = defineStore('sync', () => {
 
     if (remoteSignersWithBalance.length === 1) {
       logger.log('🫥 There is one remote signers with a balance greater than zero. Setting the one with balance as active', remoteSignersWithBalance[0].address.toUserFriendlyAddress())
-      for (const remoteSigner of remoteSigners) {
-        const isActive = remoteSigner.address.toUserFriendlyAddress() === remoteSignersWithBalance[0].address.toUserFriendlyAddress()
-        await useRemoteSigner().updateRemoteSigner({
-          ...remoteSigner,
-          active: isActive,
-        })
-      }
+      await useRemoteSigner().updateRemoteSigner({
+        ...remoteSignersWithBalance[0],
+        active: true,
+      })
     }
     else {
       logger.log('😱 There are multiple active remote signers with a balance greater than zero. Draining them', remoteSignersWithBalance.map((x) => {
         return { ...x, address: x.address.toUserFriendlyAddress() }
       }))
-      const canEveryHtlcBeDrained = remoteSignersWithBalance.every(remoteSigner => remoteSigner.start < Date.now())
-      if (canEveryHtlcBeDrained)
-        await Promise.all(remoteSignersWithBalance.map(async remoteSigner => await drainRemoteSigner(remoteSigner)))
-      else
-        logger.log('🫠 There are multiple remote signers with a balance greater than zero, but cannot be drained yet... Delaying draining')
+      await drainRecoverableSigners(remoteSignersWithBalance)
     }
 
-    // Updating balance because the active remote signer has changed
-    updateBalances()
+    await updateBalances()
   }
 
   /**
@@ -1003,28 +1004,50 @@ export const useSync = defineStore('sync', () => {
           end,
           proofSize,
         })
-        // Updating balance because the active remote signer has changed
-        updateBalances()
+        await updateBalances()
       }
       return
     }
 
-    const canEveryHtlcBeDrained = remoteSigners.every(remoteSigner => remoteSigner.start < Date.now())
-    if (canEveryHtlcBeDrained) {
-      logger.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet', remoteSigners.map((x) => {
-        return { ...x, address: x.address.toUserFriendlyAddress() }
-      }))
-      await Promise.all(remoteSigners.map(async remoteSigner => await drainRemoteSigner(remoteSigner)))
-    }
-    else {
+    logger.log('😱 There are multiple remote signers with a balance greater than zero. Initiating transactions to transfer funds to the local wallet', remoteSigners.map((x) => {
+      return { ...x, address: x.address.toUserFriendlyAddress() }
+    }))
+    await drainRecoverableSigners(remoteSigners)
+  }
+
+  async function drainRecoverableSigners(signers: RemoteSigner[]) {
+    const recoverable = signers.filter(signer => signer.start < headTimestamp.value)
+    if (recoverable.length === 0) {
       logger.log('🫠 There are multiple remote signers with a balance greater than zero, but cannot be drained yet... Delaying draining')
+      return
     }
+    await Promise.all(recoverable.map(signer => drainRemoteSigner(signer)))
   }
 
   async function verifyRemoteSignersDb() {
-    await useRemoteSigner().updateSignersTableBalance()
-    await ensureSingleRemoteActive()
-    await ensureSingleRemoteSignerWithBalance()
+    if (isVerifyingRemoteSignersDb.value) {
+      logger.log('Remote signer DB verification already running. Skipping duplicate run')
+      return
+    }
+    if (isTransactionPending.value || isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying remote signer DB verification', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
+      return
+    }
+
+    isVerifyingRemoteSignersDb.value = true
+    try {
+      await discoverRemoteSignersFromBlockchain()
+      await useRemoteSigner().updateSignersTableBalance()
+      await ensureSingleRemoteActive()
+      if (isTransactionPending.value || isSendingTx.value) {
+        logger.log('Remote signer DB verification started recovery transactions. Skipping remaining checks until they settle')
+        return
+      }
+      await ensureSingleRemoteSignerWithBalance()
+    }
+    finally {
+      isVerifyingRemoteSignersDb.value = false
+    }
   }
 
   let lastExpiredSwapHtlcCheckTimestamp = 0

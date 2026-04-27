@@ -193,7 +193,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const remoteSigners = (await getAllRemoteSigners()).sort((a, b) => b.start - a.start)
     // Get the last stored remote signer and check if it's the same as the one active
     const newerRemoteSigner = remoteSigners.length > 0 ? remoteSigners[0] : undefined
-    if (newerRemoteSigner && newerRemoteSigner.address !== remoteSigner.value?.address) {
+    if (newerRemoteSigner && (!remoteSigner.value || !newerRemoteSigner.address.equals(remoteSigner.value.address))) {
       logger.log('📡 Found a newer remote signer that is not the active one')
       // Tell the cosigner the new address, in case it's not known for whatever reason
       await getRemoteSigner({ address: newerRemoteSigner.address })
@@ -293,16 +293,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const remoteSigners = await getAllRemoteSigners()
     if (!remoteSigners)
       return
-    // Don't check if validity end is more than 2.5 weeks in the past, because those wallets are already extended and not used anymore
-    const oneWeekAgo = headTimestamp.value - 2.5 /* weeks */ * 7 /* days */ * 24 /* hours */ * 60 /* minutes */ * 60 /* seconds */ * 1e3 /* milliseconds */
-    const remoteSignersToCheck = remoteSigners.filter(remoteSigner => remoteSigner.end > (headTimestamp.value - oneWeekAgo))
-
-    if (remoteSignersToCheck.length === 0)
+    if (remoteSigners.length === 0)
       return
 
     // eslint-disable-next-line no-console
     console.log('📡 Updating remote signers table balance')
-    const addresses = remoteSignersToCheck.map(remoteSigner => remoteSigner.address)
+    const addresses = remoteSigners.map(remoteSigner => remoteSigner.address)
     const { data: accounts, error } = await getAccounts(addresses)
     if (error || !accounts) {
       logger.error('Error getting accounts for Remote Signers', error)
@@ -312,7 +308,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     // Assuming accounts are in the same order as addresses
     for (let i = 0; i < accounts.length; i++) {
       const account = accounts[i]
-      const remoteSigner = remoteSignersToCheck[i]
+      const remoteSigner = remoteSigners[i]
       const newBalance = account.type === 'htlc' ? account.balance : 0
       if (remoteSigner.balance !== newBalance) {
         logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
@@ -325,13 +321,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
    * Fetches all the remote signers from the blockchain and saves them in the database as inactive
    * The updateRemoteFromApi will set the active one
    */
-  async function getRemoteSignersFromBlockchain() {
+  async function discoverRemoteSignersFromBlockchain() {
+    if (!localAddress.value)
+      return
+
     await until(client).not.toBeUndefined()
     await client.value!.waitForConsensusEstablished()
     const transactions = await client.value!.getTransactionsByAddress(localAddress.value)
 
     logger.log('All Transactions from Blockchain', transactions)
-    const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc')
+    const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc') || []
     // If no HTLC transactions, we don't need to wait for the remote public key because there is no remote signer until the user sends funds
     if (htlcTransactions.length) {
       try {
@@ -341,18 +340,22 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         logger.error('Remote Public Key not found')
         return
       }
-    }
-    for (const tx of htlcTransactions) {
-      const htlcData = tx.data
-      await updateRemoteSigner({
-        active: false,
-        balance: 0,
-        address: Nimiq.Address.fromString(tx.recipient),
-        publicKey: remotePublicKey.value!,
-        start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
-        end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-        proofSize: useRemoteSigner().remoteProofSize,
-      })
+
+      // Filter known signers upfront — re-inserting via INSERT OR REPLACE would clobber an existing active=true row to false.
+      const knownRemoteSignerAddresses = new Set((await getAllRemoteSigners()).map(signer => signer.address.toUserFriendlyAddress()))
+      const newHtlcTransactions = htlcTransactions.filter(tx => !knownRemoteSignerAddresses.has(tx.recipient))
+      await Promise.all(newHtlcTransactions.map(async (tx) => {
+        const htlcData = tx.data
+        await addInactiveRemoteSigner({
+          active: false,
+          balance: 0,
+          address: Nimiq.Address.fromString(tx.recipient),
+          publicKey: remotePublicKey.value!,
+          start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
+          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+          proofSize: useRemoteSigner().remoteProofSize,
+        })
+      }))
     }
     await updateRemoteFromApi()
   }
@@ -388,7 +391,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
       if (!remoteSigner.value) {
         logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
-        getRemoteSignersFromBlockchain()
+        discoverRemoteSignersFromBlockchain()
       }
 
       updateRemoteFromApi()
@@ -444,6 +447,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     updateActiveWallet,
     updateRemoteSigner,
     updateSignersTableBalance,
+    discoverRemoteSignersFromBlockchain,
 
     getAllRemoteSigners,
 
