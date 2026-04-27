@@ -200,7 +200,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
         p.url === dapp.url || stripTrailingSlash(p.url) === stripTrailingSlash(dapp.url),
       )
       if (popular)
-        return { ...dapp, description: popular.description }
+        return { ...dapp, icon: popular.icon, description: popular.description }
       if (!recentDescriptionCache.has(dapp.url))
         recentDescriptionCache.set(dapp.url, (await fetchPageDescription(dapp.url)) ?? undefined)
       return { ...dapp, description: recentDescriptionCache.get(dapp.url) }
