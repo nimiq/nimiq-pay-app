@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-27T00:00:00.000Z",
+  "title": "Design System: Nimiq Pay",
+  "extensions": {
+    "colorMeta": {
+      "plaza-night": {
+        "role": "primary",
+        "displayName": "Plaza Night",
+        "canonical": "oklch(24.6% 0.05 273)",
+        "tonalRamp": ["#0D102C", "#12163C", "#1F2348", "#35395A", "#4C4F6D", "#797B91", "#A5A7B6", "#EDEDF0"]
+      },
+      "signal-blue": {
+        "role": "primary",
+        "displayName": "Signal Blue",
+        "canonical": "oklch(54.6% 0.14 234)",
+        "tonalRamp": ["#02325A", "#03406A", "#0582CA", "#1E96D4", "#3FA8DC", "#69B4DF", "#C8E2F4", "#E6F3FA"]
+      },
+      "vault-green": {
+        "role": "secondary",
+        "displayName": "Vault Green",
+        "canonical": "oklch(70% 0.11 175)",
+        "tonalRamp": ["#0E5A50", "#177A6C", "#1DA591", "#21BCA5", "#37C3AE", "#74D5C5", "#B5E7DD", "#E2F6F2"]
+      },
+      "tether-verdigris": {
+        "role": "secondary",
+        "displayName": "Tether Verdigris",
+        "canonical": "oklch(67% 0.10 175)",
+        "tonalRamp": ["#0A4F46", "#106961", "#13A593", "#20B29E", "#3DBFAC", "#74D2C3", "#B5E5DC", "#E2F4F0"]
+      },
+      "honey-coin": {
+        "role": "tertiary",
+        "displayName": "Honey Coin",
+        "canonical": "oklch(76.6% 0.155 88)",
+        "tonalRamp": ["#5C4708", "#8A6B0C", "#CD9D11", "#E9B213", "#EBBA2B", "#F1CD64", "#F8E2A1", "#FCF3D6"]
+      },
+      "streetlamp": {
+        "role": "status-warning",
+        "displayName": "Streetlamp",
+        "canonical": "oklch(72.7% 0.18 53)",
+        "tonalRamp": ["#5E3201", "#8A4801", "#DE7702", "#FC8702", "#FC931B", "#FDB05E", "#FED2A0", "#FEEBD3"]
+      },
+      "stop-red": {
+        "role": "status-danger",
+        "displayName": "Stop Red",
+        "canonical": "oklch(57.5% 0.19 30)",
+        "tonalRamp": ["#5C1B12", "#8A291C", "#BF3C2C", "#D94432", "#DD5747", "#E88478", "#F1B6AE", "#F9E0DC"]
+      },
+      "fresh-mint": {
+        "role": "secondary",
+        "displayName": "Fresh Mint",
+        "canonical": "oklch(76% 0.16 165)",
+        "tonalRamp": ["#0F4A36", "#176C4F", "#1F9D75", "#2CC78F", "#52D2A2", "#8CDFBE", "#BFEDD8", "#E5F8EE"]
+      },
+      "nimiq-coin": {
+        "role": "asset-glyph",
+        "displayName": "Nimiq Coin",
+        "canonical": "oklch(85% 0.16 92)",
+        "tonalRamp": ["#5E4A0F", "#8A6E16", "#CFA025", "#F6C430", "#F8CE53", "#FADE82", "#FCEDB4", "#FEF8DE"]
+      },
+      "bitcoin-orange": {
+        "role": "asset-glyph",
+        "displayName": "Bitcoin Orange",
+        "canonical": "oklch(72% 0.17 60)",
+        "tonalRamp": ["#5C3309", "#8A4D0E", "#CC7415", "#F7931A", "#F8A642", "#FBC07A", "#FDD9AC", "#FEF1DE"]
+      },
+      "cobble-white": {
+        "role": "neutral-bg",
+        "displayName": "Cobble White",
+        "canonical": "oklch(97.5% 0.002 273)",
+        "tonalRamp": ["#1F2348", "#35395A", "#797B91", "#A5A7B6", "#CDCDD5", "#E9E9EB", "#F1F1F1", "#F8F8F8"]
+      },
+      "cobble-fog": {
+        "role": "neutral-bg",
+        "displayName": "Cobble Fog",
+        "canonical": "oklch(96% 0.002 273)",
+        "tonalRamp": ["#1F2348", "#35395A", "#797B91", "#A5A7B6", "#CDCDD5", "#E9E9EB", "#F1F1F1", "#F8F8F8"]
+      },
+      "cobble-ash": {
+        "role": "neutral-divider",
+        "displayName": "Cobble Ash",
+        "canonical": "oklch(93.5% 0.003 273)",
+        "tonalRamp": ["#1F2348", "#35395A", "#797B91", "#A5A7B6", "#BCBDC8", "#CDCDD5", "#E9E9EB", "#F1F1F1"]
+      },
+      "paper-white": {
+        "role": "neutral-surface",
+        "displayName": "Paper White",
+        "canonical": "oklch(100% 0 273)",
+        "tonalRamp": ["#1F2348", "#35395A", "#797B91", "#A5A7B6", "#CDCDD5", "#E9E9EB", "#F8F8F8", "#FFFFFF"]
+      },
+      "void-ink": {
+        "role": "system-contrast",
+        "displayName": "Void Ink",
+        "canonical": "oklch(15% 0.05 273)",
+        "tonalRamp": ["#0D102C", "#12163C", "#1F2348", "#35395A", "#4C4F6D", "#797B91", "#A5A7B6", "#EDEDF0"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero amount on send / receive flows. Single use per screen, always Plaza Night or Signal Blue when focused." },
+      "headline": { "displayName": "Headline", "purpose": "Top-of-flow titles, one per screen." },
+      "title": { "displayName": "Title", "purpose": "Menu items, list rows, modal section heads." },
+      "body": { "displayName": "Body", "purpose": "Paragraphs and helper text. 65 to 75 character measure." },
+      "label": { "displayName": "Label", "purpose": "Pill toggles and uppercase action affordances." },
+      "numerics": { "displayName": "Numerics", "purpose": "All quantities representing value. Fira Mono. Never colored for emphasis." }
+    },
+    "shadows": [
+      { "name": "card-lift", "value": "0px 0.34px 2px rgba(0,0,0,0.03), 0px 1.5px 3px rgba(0,0,0,0.05), 0px 4px 16px rgba(0,0,0,0.07)", "purpose": "Default card shadow. NotificationCard, mini-app tiles, payment-preview blocks." },
+      { "name": "floating-surface", "value": "0px 18px 38px rgba(31,35,72,0.07), 0px 7px 8.5px rgba(31,35,72,0.04), 0px 2px 2.5px rgba(31,35,72,0.02)", "purpose": "Action sheets, sticky dropdowns, keyboard-floating Continue button." },
+      { "name": "around-halo", "value": "0px 6px 20px rgba(59,76,106,0.13), 0px 1.34px 4.47px rgba(59,76,106,0.077), 0px 0.4px 1.33px rgba(59,76,106,0.053)", "purpose": "Floats over busy backdrop (camera-feed Continue pill)." },
+      { "name": "bottom-bar-aura", "value": "0 0 4px rgba(31,35,72,0.03), 0 0 12px rgba(31,35,72,0.05), 0 0 32px rgba(31,35,72,0.06), 0 0 80px rgba(31,35,72,0.07)", "purpose": "PaymentSelector bottom bar; anchors toggle to viewport edge." }
+    ],
+    "motion": [
+      { "name": "ease-default", "value": "cubic-bezier(0.25, 0, 0, 1)", "purpose": "Default app-wide easing. State changes." },
+      { "name": "ease-reveal", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "slideX-AndFade keyframes. Entrance and dismissal of cards, toasts, popovers." },
+      { "name": "duration-fast", "value": "150ms", "purpose": "Micro-feedback (button press, focus ring)." },
+      { "name": "duration-default", "value": "250ms", "purpose": "Standard reveal and dismissal." },
+      { "name": "duration-toggle", "value": "350ms", "purpose": "PaymentSelector pill slider, asset-switcher swap." },
+      { "name": "duration-slow", "value": "500ms", "purpose": "Page-level slide transitions on flows." }
+    ],
+    "breakpoints": [
+      { "name": "xs", "value": "320px" },
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "tall", "value": "(min-height: 800px)" },
+      { "name": "small", "value": "(max-height: 799px)" }
+    ],
+    "gradients": [
+      { "name": "radial-light-blue", "value": "radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%)", "purpose": "NIM identity. Primary gradient commit button. Asset switcher (NIM active)." },
+      { "name": "radial-green-usdt", "value": "radial-gradient(100% 100% at 100% 100%, #008484 0%, #009393 100%)", "purpose": "USDT identity. Primary gradient commit button on USDT flows." },
+      { "name": "radial-green", "value": "radial-gradient(100% 100% at 100% 100%, #41A38E 0%, #21BCA5 100%)", "purpose": "Success / settled badges on transaction history." },
+      { "name": "radial-orange", "value": "radial-gradient(100% 100% at 100% 100%, #FD6216 0%, #FC8701 100%)", "purpose": "Streetlamp banners (backup reminder, network warning)." },
+      { "name": "radial-red", "value": "radial-gradient(100% 100% at 100% 100%, #CC3047 0%, #D94432 100%)", "purpose": "Destructive primary commit only (Delete Address, Log Out)." },
+      { "name": "radial-space", "value": "radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%)", "purpose": "Splash and onboarding hero only. Never a default app surface." },
+      { "name": "radial-blue-50", "value": "radial-gradient(100% 100% at 100% 100%, rgba(38,1,51,0.05) 0%, rgba(31,35,72,0.05) 100%)", "purpose": "Asset switcher idle background. The 'available' tint of the dark gradients." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Commit Button (NIM)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Bottom-of-flow commit. White label, NIM radial gradient surface, full-pill not used here; uses 8px radius to signal commit shape.",
+      "html": "<button class=\"ds-btn-primary-nim\">Send NIM</button>",
+      "css": ".ds-btn-primary-nim { display: inline-flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; min-height: 3.5rem; border: 0; border-radius: 0.5rem; background: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%); color: #ffffff; font-family: Mulish, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; cursor: pointer; transition: filter 150ms cubic-bezier(0.25, 0, 0, 1), transform 150ms cubic-bezier(0.25, 0, 0, 1); } .ds-btn-primary-nim:hover { filter: brightness(0.92); } .ds-btn-primary-nim:focus-visible { outline: 2px solid #1F2348; outline-offset: 3px; } .ds-btn-primary-nim:active { filter: brightness(0.86); }"
+    },
+    {
+      "name": "Primary Commit Button (USDT)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "USDT variant of the commit button. Identical shape and motion, Tether Verdigris gradient.",
+      "html": "<button class=\"ds-btn-primary-usdt\">Send USDT</button>",
+      "css": ".ds-btn-primary-usdt { display: inline-flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; min-height: 3.5rem; border: 0; border-radius: 0.5rem; background: radial-gradient(100% 100% at 100% 100%, #008484 0%, #009393 100%); color: #ffffff; font-family: Mulish, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; cursor: pointer; transition: filter 150ms cubic-bezier(0.25, 0, 0, 1); } .ds-btn-primary-usdt:hover { filter: brightness(0.92); } .ds-btn-primary-usdt:focus-visible { outline: 2px solid #1F2348; outline-offset: 3px; } .ds-btn-primary-usdt:active { filter: brightness(0.86); }"
+    },
+    {
+      "name": "Secondary Pill Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet voice. Plaza Night at 6% opacity on white, full pill, used for Top Up, Withdraw, asset switcher hosts.",
+      "html": "<button class=\"ds-btn-secondary\">Top Up</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; padding: 0.5rem 1.5rem; min-height: 2.5rem; border: 0; border-radius: 9999px; background: rgba(31, 35, 72, 0.06); color: #1F2348; font-family: Mulish, ui-sans-serif, system-ui, sans-serif; font-size: 1rem; font-weight: 700; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 0, 0, 1); } .ds-btn-secondary:hover { background: rgba(31, 35, 72, 0.1); } .ds-btn-secondary:focus-visible { outline: 2px solid #0582CA; outline-offset: 2px; } .ds-btn-secondary:active { background: rgba(31, 35, 72, 0.14); }"
+    },
+    {
+      "name": "Destructive Commit Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Delete Address, Log Out, irreversible confirm. Same shape as primary commit, Stop Red radial.",
+      "html": "<button class=\"ds-btn-destructive\">Delete Address</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; padding: 1rem 1.5rem; min-height: 3.5rem; border: 0; border-radius: 0.5rem; background: radial-gradient(100% 100% at 100% 100%, #CC3047 0%, #D94432 100%); color: #ffffff; font-family: Mulish, ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; cursor: pointer; transition: filter 150ms cubic-bezier(0.25, 0, 0, 1); } .ds-btn-destructive:hover { filter: brightness(0.92); } .ds-btn-destructive:focus-visible { outline: 2px solid #1F2348; outline-offset: 3px; }"
+    },
+    {
+      "name": "Pill Toggle (PaymentSelector)",
+      "kind": "custom",
+      "refersTo": "pill-toggle",
+      "description": "Two-option capsule with a sliding NIM-gradient indicator. Signature component for the Send / Scan / Naka switch on the active flow.",
+      "html": "<div class=\"ds-pill-toggle-host\"><div class=\"ds-pill-toggle\" data-active=\"0\"><span class=\"ds-pill-toggle__slider\"></span><button class=\"ds-pill-toggle__option ds-pill-toggle__option--active\">SCAN QR</button><button class=\"ds-pill-toggle__option\">NAKA</button></div></div>",
+      "css": ".ds-pill-toggle-host { display: flex; justify-content: center; padding: 0.5rem; background: #ffffff; box-shadow: 0 0 4px rgba(31,35,72,0.03), 0 0 12px rgba(31,35,72,0.05), 0 0 32px rgba(31,35,72,0.06), 0 0 80px rgba(31,35,72,0.07); } .ds-pill-toggle { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0.25rem; border-radius: 9999px; background: rgba(31, 35, 72, 0.1); } .ds-pill-toggle__slider { position: absolute; top: 0.25rem; left: 0.25rem; height: calc(100% - 0.5rem); width: calc(50% - 0.25rem); border-radius: 9999px; background: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%); transition: transform 350ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-pill-toggle[data-active=\"1\"] .ds-pill-toggle__slider { transform: translateX(100%); } .ds-pill-toggle__option { position: relative; z-index: 1; padding: 0.75rem 1.5rem; border: 0; background: transparent; color: rgba(31, 35, 72, 0.5); font-family: Mulish, ui-sans-serif, sans-serif; font-size: 0.875rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; cursor: pointer; transition: color 300ms cubic-bezier(0.25, 0, 0, 1); } .ds-pill-toggle__option--active { color: #ffffff; }"
+    },
+    {
+      "name": "Notification Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default lifted card. Card-Lift shadow, rounded-md, white surface. Title in Signal Blue, subtitle in Plaza Night at 60%.",
+      "html": "<article class=\"ds-card-notification\"><button class=\"ds-card-notification__close\" aria-label=\"close\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M4 4l8 8M12 4l-8 8\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg></button><h3 class=\"ds-card-notification__title\">Back up your wallet</h3><p class=\"ds-card-notification__sub\">Write down your 24 words to recover your funds on a new device.</p></article>",
+      "css": ".ds-card-notification { position: relative; padding: 1rem; max-width: 22rem; background: #ffffff; border-radius: 0.375rem; box-shadow: 0px 0.34px 2px rgba(0,0,0,0.03), 0px 1.5px 3px rgba(0,0,0,0.05), 0px 4px 16px rgba(0,0,0,0.07); font-family: Mulish, ui-sans-serif, sans-serif; } .ds-card-notification__close { position: absolute; top: 0.5rem; right: 0.5rem; width: 1.75rem; height: 1.75rem; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; color: rgba(31, 35, 72, 0.4); cursor: pointer; border-radius: 9999px; transition: color 150ms; } .ds-card-notification__close:hover { color: rgba(31, 35, 72, 0.8); } .ds-card-notification__title { margin: 0 1.5rem 0.25rem 0; color: #0582CA; font-size: 1.125rem; font-weight: 700; line-height: 1.25; } .ds-card-notification__sub { margin: 0.5rem 0 0; color: rgba(31, 35, 72, 0.6); font-size: 1rem; line-height: 1.5; }"
+    },
+    {
+      "name": "Amount Input",
+      "kind": "input",
+      "refersTo": "input-amount",
+      "description": "Hero amount field. Mulish 300 at 4.5rem, self-sizing width, idle Plaza Night 50%, focus Signal Blue. Suffix renders as text-3xl bold.",
+      "html": "<form class=\"ds-amount-input\"><span class=\"ds-amount-input__digits\" contenteditable=\"true\">0</span><span class=\"ds-amount-input__suffix\">EUR</span></form>",
+      "css": ".ds-amount-input { display: flex; align-items: baseline; justify-content: center; gap: 1rem; padding: 0.5rem; font-family: Mulish, ui-sans-serif, sans-serif; } .ds-amount-input__digits { font-size: 4.5rem; font-weight: 300; line-height: 1; letter-spacing: -0.025em; color: rgba(31, 35, 72, 0.5); outline: none; box-shadow: inset 0 0 0 0.15rem rgba(31, 35, 72, 0.1); padding: 0 0.25rem; border-radius: 0.5rem; transition: color 200ms cubic-bezier(0.25, 0, 0, 1), box-shadow 50ms; min-width: 1ch; } .ds-amount-input__digits:focus { color: #0582CA; box-shadow: inset 0 0 0 0.15rem rgba(5, 130, 202, 0.4); } .ds-amount-input__digits:not(:empty):not(:focus) { color: #1F2348; } .ds-amount-input__suffix { font-size: 1.875rem; font-weight: 700; line-height: 2.5rem; color: #1F2348; }"
+    },
+    {
+      "name": "PIN Dot Row",
+      "kind": "input",
+      "refersTo": "pin-dot",
+      "description": "Six-dot PIN. Empty dots Plaza Night 10%, filled flip to solid Plaza Night with color transition. Digits never shown.",
+      "html": "<div class=\"ds-pin\"><span class=\"ds-pin__dot ds-pin__dot--filled\"></span><span class=\"ds-pin__dot ds-pin__dot--filled\"></span><span class=\"ds-pin__dot ds-pin__dot--filled\"></span><span class=\"ds-pin__dot\"></span><span class=\"ds-pin__dot\"></span><span class=\"ds-pin__dot\"></span></div>",
+      "css": ".ds-pin { display: inline-flex; gap: 0.75rem; padding: 0.5rem 0; } .ds-pin__dot { width: 1rem; height: 1rem; border-radius: 9999px; background: rgba(31, 35, 72, 0.1); transition: background 200ms cubic-bezier(0.25, 0, 0, 1); } .ds-pin__dot--filled { background: #1F2348; }"
+    },
+    {
+      "name": "Standard Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Outlined input on transparent surface. Idle outline Plaza Night 50%, focus Signal Blue, invalid Streetlamp.",
+      "html": "<input class=\"ds-input-text\" placeholder=\"Recipient address\" />",
+      "css": ".ds-input-text { width: 100%; min-width: min(8em, 220px); padding: 0.28rem 0.875rem; font-family: Mulish, ui-sans-serif, sans-serif; font-size: 1rem; line-height: 1.5; color: #1F2348; background: transparent; border: 0; border-radius: 0.125rem; outline: 1.5px solid rgba(31, 35, 72, 0.4); transition: outline-color 150ms cubic-bezier(0.25, 0, 0, 1), color 150ms; } .ds-input-text::placeholder { color: rgba(31, 35, 72, 0.45); } .ds-input-text:hover { outline-color: rgba(5, 130, 202, 0.3); } .ds-input-text:focus, .ds-input-text:focus-visible { color: #0582CA; outline: 1.5px solid #0582CA; } .ds-input-text:invalid:not(:placeholder-shown) { color: #FC8702; outline: 1.5px solid rgba(252, 135, 2, 0.7); }"
+    },
+    {
+      "name": "Asset Card (NIM)",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Signature card. Full radial gradient surface in the asset's identity hue. Numerics in Fira Mono on Paper White. Used as the asset balance hero on home.",
+      "html": "<article class=\"ds-asset-card\"><span class=\"ds-asset-card__label\">NIM Balance</span><span class=\"ds-asset-card__amount\">12,840.50</span><span class=\"ds-asset-card__sub\">approx. 8.42 EUR</span></article>",
+      "css": ".ds-asset-card { display: flex; flex-direction: column; gap: 0.25rem; padding: 1.25rem 1.5rem; min-width: 16rem; border-radius: 0.5rem; color: #ffffff; background: radial-gradient(100% 100% at 100% 100%, #265DD7 0%, #0582CA 100%); box-shadow: 0px 0.34px 2px rgba(0,0,0,0.03), 0px 1.5px 3px rgba(0,0,0,0.05), 0px 4px 16px rgba(0,0,0,0.07); font-family: Mulish, ui-sans-serif, sans-serif; } .ds-asset-card__label { font-size: 0.875rem; font-weight: 700; letter-spacing: 0.025em; text-transform: uppercase; color: rgba(255, 255, 255, 0.75); } .ds-asset-card__amount { font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace; font-size: 2.25rem; font-weight: 500; line-height: 1.125; letter-spacing: -0.01em; color: #ffffff; } .ds-asset-card__sub { font-family: 'Fira Mono', 'Fira Code', ui-monospace, monospace; font-size: 0.875rem; font-weight: 400; color: rgba(255, 255, 255, 0.7); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Pocket Plaza",
+    "overview": "Nimiq Pay is a small, well-lit public square at dusk. The default surface is cobble-white and paper-white, generous and patient; depth comes from a single deep night-blue (Plaza Night #1F2348) that anchors text, icons, and quiet UI. The personality lives in the lamps: a small set of radial-gradient cards (Signal Blue for NIM, Tether Verdigris for USDT, Honey Coin for rewards, Streetlamp for warnings, Stop Red for destructive moves) that glow against the cobble surface where, and only where, money is actually moving. The system rejects the two clichés Nimiq Pay's strategy explicitly names. It is not a generic crypto wallet (no neon-on-black, no hex-first, no degen voice) and it is not a generic neo-bank (no sterile Revolut blue, no hero-metric balance tile, no identical card grids).",
+    "keyCharacteristics": [
+      "Light theme by default. The plaza is at dusk, not at midnight.",
+      "Single anchor color (Plaza Night) carries 90% of typographic and iconographic weight.",
+      "Asset identity travels by gradient: Signal Blue radial = NIM, Tether Verdigris radial = USDT.",
+      "Numerics always in Fira Mono. Reading a balance, an address, or an amount must feel mechanical, not styled.",
+      "Decoration sits in the cracks (empty states, idle moments, notifications); transactional surfaces stay neutral.",
+      "Soft, low-contrast shadows. Depth whispers; it never announces."
+    ],
+    "rules": [
+      { "name": "The One Lamp Rule", "body": "Each screen has exactly one gradient surface lit at a time. NIM screens light Signal Blue. USDT screens light Tether Verdigris. Rewards screens light Honey Coin. If two gradients appear together, the second becomes flat until the user enters its context.", "section": "colors" },
+      { "name": "The Money Is Plaza Night Rule", "body": "Balances, amounts, addresses, fees, exchange rates, and any number that represents value render in Plaza Night (or Signal Blue only when the input is currently focused). Never colored for emphasis. Never gradient-text. The number is the loudest element by weight and size, never by hue.", "section": "colors" },
+      { "name": "The 6% Wash Rule", "body": "Secondary affordances use Plaza Night at 6% opacity on Paper White (renders as #F3F3F5). This wash is the system's available-but-not-asking signal. Don't substitute a separate gray.", "section": "colors" },
+      { "name": "The Drift Test", "body": "If the screen looks like a 2014 fintech app, the gradient is too saturated and the shadow is too dark. Drop the gradient back into the cobble.", "section": "colors" },
+      { "name": "The Mulish-or-Mono Rule", "body": "Type in this product is Mulish or Fira Mono. There is no third typeface.", "section": "typography" },
+      { "name": "The Numeric Always Mono Rule", "body": "If the character is a digit that represents a quantity, it renders in Fira Mono. Plain Mulish digits are reserved for non-quantitative numerics.", "section": "typography" },
+      { "name": "The No Gradient Text Rule", "body": "Text never sits on background-clip: text. Emphasis is achieved by weight, size, or position. Color emphasis on text uses Plaza Night, Signal Blue, or Stop Red as a flat fill.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadows appear only on cards that lift off the cobble, modal sheets while open, and the bottom bar that hosts a primary action.", "section": "elevation" },
+      { "name": "The No Crisp Shadow Rule", "body": "Every shadow uses at least three layers of low-alpha rgba; no single-shadow quick fixes. If the shadow is visible from across a room, it's wrong.", "section": "elevation" },
+      { "name": "The No Glassmorphism Rule", "body": "No backdrop-filter blur as a decorative card surface. The only legitimate blur in this product is the iOS system status bar handled natively by Capacitor.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do anchor each money-flow screen with one gradient lamp in the asset's identity color (Signal Blue for NIM, Tether Verdigris for USDT). One gradient surface per screen, no more.",
+      "Do render every quantity (balance, amount, fee, address, hash) in Fira Mono with Plaza Night fill.",
+      "Do use the 0.5rem 1.5rem rounded-full pill on Plaza Night at 6% for any secondary, available, not-asking affordance.",
+      "Do keep cards flat-on-cobble unless they need to lift; when they do, use Card-Lift shadow only.",
+      "Do put personality in empty states, idle moments, notifications, and onboarding. Never in a transaction confirm.",
+      "Do respect prefers-reduced-motion: wiggle, slide-fade, and the PaymentSelector slider must collapse to opacity-only fades."
+    ],
+    "donts": [
+      "Don't ship a generic crypto wallet aesthetic. No neon-on-black, no hex-first home screens, no degen copy, no candle charts.",
+      "Don't ship a generic neo-bank aesthetic. No sterile Revolut-blue full-bleed, no hero-metric balance template, no identical card grids of features.",
+      "Don't ship gamified-finance patterns. No green confetti on payment success, no streak counters, no leaderboards.",
+      "Don't use a border-left greater than 1px as a colored accent. Side-stripes are forbidden.",
+      "Don't use background-clip: text with a gradient on any text, ever.",
+      "Don't reach for a modal as the first answer. Inline progressive disclosure or a sheet is usually better.",
+      "Don't stack two gradient cards on the same screen.",
+      "Don't introduce a third typeface. Mulish or Fira Mono.",
+      "Don't add backdrop-filter blur as a decorative card surface.",
+      "Don't use Plaza Night as a full-bleed dark background. Dark mode is not a thing in this product.",
+      "Don't use Vault Green and Stop Red as the only signal of state difference; pair every status color with an icon, label, or position cue.",
+      "Don't animate width, height, top, left, or margin. Animate transform and opacity only.",
+      "Don't use em dashes in product copy."
+    ]
+  }
+}
