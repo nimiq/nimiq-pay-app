@@ -80,9 +80,16 @@ function extractRawHost(raw: string): string | null {
 }
 
 export function analyzeUrlSafety(raw: string): UrlSafetyAnalysis {
+  // Deeplink params often arrive without a scheme (e.g. `example.com/path`). Prepending
+  // `https://` lets us parse and isolate the hostname instead of treating the whole
+  // string as the host (which would mis-flag path/query characters and always emit
+  // "URL could not be parsed.").
+  const hasScheme = /^[a-z][a-z0-9+\-.]*:\/\//i.test(raw)
+  const candidate = hasScheme ? raw : `https://${raw}`
+
   let parsed: URL | null = null
   try {
-    parsed = new URL(raw)
+    parsed = new URL(candidate)
   }
   catch {
     parsed = null
@@ -90,7 +97,7 @@ export function analyzeUrlSafety(raw: string): UrlSafetyAnalysis {
 
   // WHATWG `URL` normalizes hostnames (strips zero-width, IDNA-encodes non-ASCII), which would
   // hide the very characters we want to warn about. Analyze the raw slice instead.
-  const host = extractRawHost(raw) ?? parsed?.hostname ?? raw
+  const host = extractRawHost(candidate) ?? parsed?.hostname ?? raw
   const warnings = new Set<string>()
   const hostChars: HostCharAnalysis[] = []
 

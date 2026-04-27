@@ -11,6 +11,7 @@ export async function confirmUntrustedMiniApp(opts: { normalizedUrl: string, raw
   const modal = await useModal().showModal(Modal.MiniAppWarning, {
     componentProps: { url: opts.normalizedUrl, rawUrl: opts.rawUrl },
     isOnTop: true,
+    isSmall: true,
   })
   if (!modal)
     return false

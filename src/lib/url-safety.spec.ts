@@ -54,6 +54,45 @@ describe('analyzeUrlSafety', () => {
     expect(result.isSuspicious).toBe(true)
   })
 
+  it('parses schemeless host-only input as a valid URL (deeplink param shape)', () => {
+    const result = analyzeUrlSafety('example.com/path')
+    expect(result.isParseable).toBe(true)
+    expect(result.host).toBe('example.com')
+    expect(result.isSuspicious).toBe(false)
+    expect(result.warnings).toEqual([])
+  })
+
+  it('parses bare hostnames without path or scheme', () => {
+    const result = analyzeUrlSafety('app.uniswap.org')
+    expect(result.isParseable).toBe(true)
+    expect(result.host).toBe('app.uniswap.org')
+    expect(result.isSuspicious).toBe(false)
+  })
+
+  it('still flags homograph attacks when the input lacks a scheme', () => {
+    // First `е` is Cyrillic U+0435.
+    const result = analyzeUrlSafety('еxample.com/path')
+    expect(result.isParseable).toBe(true)
+    expect(result.isSuspicious).toBe(true)
+    expect(result.host).toBe('еxample.com')
+    expect(result.hostChars[0].suspicious).toBe(true)
+  })
+
+  it('does not analyze characters outside the hostname (path / query stay untouched)', () => {
+    // The path contains a Cyrillic char; the host is pure ASCII. Path is not part of host analysis.
+    const result = analyzeUrlSafety('example.com/раth?q=1')
+    expect(result.host).toBe('example.com')
+    expect(result.hostChars.every(c => !c.suspicious)).toBe(true)
+    expect(result.isSuspicious).toBe(false)
+  })
+
+  it('preserves an explicit scheme when one is present', () => {
+    const result = analyzeUrlSafety('https://example.com/')
+    expect(result.url).toBe('https://example.com/')
+    expect(result.host).toBe('example.com')
+    expect(result.isParseable).toBe(true)
+  })
+
   it('exposes the full url as received for display', () => {
     const url = 'https://example.com/path?x=1'
     const result = analyzeUrlSafety(url)
