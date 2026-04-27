@@ -23,6 +23,30 @@
 	<key>CFBundleURLSchemes</key>
 	<array>
 		<string>lightning</string>
+		<string>nimiqpay</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>com.nimiq.pay</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lightning</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.nimiq.pay</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nimiqpay</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>103</string>

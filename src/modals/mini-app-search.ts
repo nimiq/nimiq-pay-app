@@ -1,6 +1,7 @@
 import type { MaybeRefOrGetter } from 'vue'
 import { useFuse } from '@vueuse/integrations/useFuse'
 import { computed, toValue } from 'vue'
+import { IPV4_RE } from '@/lib/url-safety'
 
 type MiniAppDescriptions = Record<string, string>
 
@@ -22,9 +23,7 @@ export function normalizeMiniAppUrl(input: string): string | undefined {
       return undefined
 
     const hostname = parsed.hostname.toLowerCase()
-    const isHostnameLike = hostname === 'localhost'
-      || hostname.includes('.')
-      || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)
+    const isHostnameLike = hostname === 'localhost' || hostname.includes('.') || IPV4_RE.test(hostname)
 
     if (!isHostnameLike)
       return undefined
