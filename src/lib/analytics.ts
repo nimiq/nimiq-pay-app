@@ -18,7 +18,7 @@ function capture(event: string, properties: object): void {
   void Posthog.capture({ event, properties: properties as Record<string, unknown> })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 

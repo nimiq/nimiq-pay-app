@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { URLOpenListenerEvent } from '@capacitor/app'
 import { App } from '@capacitor/app'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
@@ -8,7 +7,6 @@ import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
-import { until } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
 import { onMounted } from 'vue'
@@ -19,8 +17,6 @@ import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { trackCurrentAppOpen } from '@/lib/analytics'
 import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/lib/app-resume'
-import { initializeFlow } from '@/lib/flows'
-import { FlowName } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
 import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
@@ -59,20 +55,9 @@ onMounted(async () => {
   }
 })
 
-App.addListener('appUrlOpen', async (event: URLOpenListenerEvent) => {
-  // Wait until the pin code is entered to show the payment request modal
-  const { useDecrypt } = await import('@/composables/useDecrypt')
-  await until(useDecrypt().decrypted).toBeTruthy()
-  // Detect if the app was open with the lightning scheme
-  const url = new URL(event.url)
-  // TODO: accept also nimiq: scheme?
-  if (url.protocol === 'lightning:') {
-    // Open the payment request modal
-    initializeFlow(FlowName.Payment, {
-      initialState: { qrCodeScanner: url.toString() },
-      analyticsSource: 'lightning_deeplink',
-    })
-  }
+App.addListener('appUrlOpen', async (event) => {
+  const { handleDeepLink } = await import('@/lib/deep-link')
+  await handleDeepLink(event)
 })
 
 let lastPauseTimestamp = 0

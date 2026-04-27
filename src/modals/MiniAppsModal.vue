@@ -1,49 +1,25 @@
 <script setup lang="ts">
-import { ScreenOrientation } from '@capacitor/screen-orientation'
-import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
+import type { DAppOpenSource } from '@/lib/analytics'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
-import { computedAsync } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
-import { useLogger } from '@/composables/useLogger'
-import { MiniAppHost } from '@/composables/useMiniAppHost'
-import { useToast } from '@/composables/useToast'
-import { isTestnet } from '@/lib'
-import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
-import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
+import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { useApp } from '@/stores/app'
 import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
-const logger = useLogger('MiniAppModal')
-const evmRpcUrls: Record<string, string> = {
-  '0x1': import.meta.env.VITE_ETHEREUM_RPC_URL,
-  '0x89': import.meta.env.VITE_POLYGON_RPC_URL,
-  '0xa4b1': import.meta.env.VITE_ARBITRUM_RPC_URL,
-  '0xa': import.meta.env.VITE_OPTIMISM_RPC_URL,
-  '0x2105': import.meta.env.VITE_BASE_RPC_URL,
-  '0x38': import.meta.env.VITE_BNB_RPC_URL,
-  '0xaa36a7': import.meta.env.VITE_SEPOLIA_RPC_URL,
-}
+type InAppDAppSource = Exclude<DAppOpenSource, 'deeplink'>
 
-const NIMIQ_RPC_URL = isTestnet ? 'https://rpc.testnet.nimiqwatch.com' : 'https://rpc.nimiqwatch.com'
-
-// Pre-cache web3-provider script for instant injection when opening mini-apps
-const web3ProviderScript = computedAsync(
-  () => fetch('/web3-provider.js').then(res => res.text()),
-  null,
-)
-
-const FALLBACK_ICON = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMxZjIzNDgiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1nbG9iZS1pY29uIGx1Y2lkZS1nbG9iZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48cGF0aCBkPSJNMTIgMmExNC41IDE0LjUgMCAwIDAgMCAyMCAxNC41IDE0LjUgMCAwIDAgMC0yMCIvPjxwYXRoIGQ9Ik0yIDEyaDIwIi8+PC9zdmc+'
+onMounted(() => warmUpWeb3ProviderScript())
 
 const store = useMiniApps()
 const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
-const { searchedDescriptions, ensureDescription, addRecentlyViewed } = store
-
+const { searchedDescriptions, ensureDescription } = store
 const { language } = storeToRefs(useApp())
 
 const searchQuery = ref('')
@@ -51,8 +27,7 @@ const isSearching = computed(() => !!searchQuery.value.trim())
 const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
 const normalizedSearchUrl = computed(() => normalizeMiniAppUrl(searchQuery.value))
 const featuredLabel = computed(() => isSearching.value ? 'Matching Apps' : 'Featured Apps')
-const openingUrl = ref<string | null>(null)
-const isOpeningAny = computed(() => openingUrl.value !== null)
+const isOpeningAny = computed(() => openingMiniAppUrl.value !== null)
 
 const searchedUrlApp = computed(() => {
   const url = normalizedSearchUrl.value
@@ -78,7 +53,7 @@ watch(normalizedSearchUrl, (url) => {
 
 function isOpeningUrl(url: string): boolean {
   const normalizedUrl = normalizeMiniAppUrl(url)
-  return !!normalizedUrl && openingUrl.value === normalizedUrl
+  return !!normalizedUrl && openingMiniAppUrl.value === normalizedUrl
 }
 
 function toUrlTestId(url: string): string {
@@ -86,86 +61,17 @@ function toUrlTestId(url: string): string {
   return normalizedUrl.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
 }
 
-async function openMiniApp(url?: string, title?: string, source: 'featured' | 'recent' | 'search' = 'search') {
-  const searchedUrl = normalizeMiniAppUrl(searchQuery.value)
-  const targetUrl = normalizeMiniAppUrl(url || searchedUrl || '')
-
-  if (isOpeningAny.value)
-    return
-
-  if (!targetUrl) {
-    useToast().setToast({
-      message: 'Enter a valid app URL',
-      type: 'error',
-    })
-    return
-  }
-
-  const appTitle = title || (searchedUrl ? searchedUrlApp.value?.title : undefined) || 'Mini App'
-  let host: MiniAppHost | null = null
-  openingUrl.value = targetUrl
-
-  try {
-    // Create the mini app host with configuration
-    host = new MiniAppHost(InAppBrowser, {
-      url: targetUrl,
-      title: appTitle,
-      requestUserConfirmation,
-      evmRpcUrls,
-    })
-
-    // TODO: Webview opening and lifecycle handling could be moved into the MiniAppHost class constructor
-    // Use pre-cached script if available, fallback to fetch if not yet loaded
-    const cachedScript = web3ProviderScript.value
-    const baseScript = cachedScript !== null ? cachedScript : await fetch('/web3-provider.js').then(res => res.text())
-    // Seed host context (language, RPC URL) before provider script runs at document start.
-    const hostContext = JSON.stringify({ lang: language.value })
-    const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
-
-    // Just in casa, clear cookies
-    // TODO: think a better fix, some dApps use cookies to keep account session, maybe allow dapps approved in the past to get address without confirmation
-    await InAppBrowser.clearAllCookies()
-
-    await InAppBrowser.openWebView({
-      url: targetUrl,
-      title: appTitle,
-      toolbarType: ToolBarType.NAVIGATION,
-      preventDeeplink: true,
-      showReloadButton: true,
-      enabledSafeBottomMargin: true,
-      useTopInset: true,
-      activeNativeNavigationForWebview: true,
-      isPresentAfterPageLoad: true,
-      preShowScript: scriptContent,
-      preShowScriptInjectionTime: 'documentStart',
-    })
-    await ScreenOrientation.unlock()
-
-    const openedAt = Date.now()
-    trackDAppOpened(targetUrl, appTitle, source)
-
-    addRecentlyViewed({ url: targetUrl, name: appTitle, icon: getFaviconUrl(targetUrl), description: searchedUrlApp.value?.description })
-
-    InAppBrowser.addListener('closeEvent', async () => {
-      logger.log('Mini-app webview closed, destroying host')
-      trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
-      await host?.destroy()
-      await ScreenOrientation.lock({ orientation: 'portrait' })
-    })
-  }
-  catch (err) {
-    logger.error('Failed to open mini-app:', err)
-    useToast().setToast({
-      message: 'Could not open the mini-app webview',
-      type: 'error',
-    })
-
-    if (host)
-      await host.destroy()
-  }
-  finally {
-    openingUrl.value = null
-  }
+async function openMiniApp(url?: string, title?: string, source: InAppDAppSource = 'search') {
+  const resolved = searchedUrlApp.value
+  const targetUrl = url || resolved?.url || searchQuery.value
+  const appTitle = title || (resolved ? resolved.title : undefined)
+  await launchMiniApp({
+    url: targetUrl,
+    title: appTitle,
+    source,
+    description: resolved?.description,
+    language: language.value,
+  })
 }
 </script>
 

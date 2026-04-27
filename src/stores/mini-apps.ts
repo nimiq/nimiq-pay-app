@@ -58,7 +58,13 @@ interface RecentDApp {
   description?: string
 }
 
-const MAX_RECENT = 5
+const MAX_RECENT = 20
+const MAX_RECENT_DISPLAY = 5
+const TRAILING_SLASH_RE = /\/$/
+
+function stripTrailingSlash(url: string): string {
+  return url.replace(TRAILING_SLASH_RE, '')
+}
 
 export const useMiniApps = defineStore('mini-apps', () => {
   // Cache remote apps list in Preferences (available pre-login, persists across launches)
@@ -112,10 +118,37 @@ export const useMiniApps = defineStore('mini-apps', () => {
   )
 
   function addRecentlyViewed(dapp: RecentDApp) {
-    const filtered = recentlyViewedDApps.value.filter(d => d.url !== dapp.url)
+    const current = recentlyViewedDApps.value
+    // Already the most-recent entry — skip the storage write.
+    if (current[0]?.url === dapp.url)
+      return
+    const filtered = current.filter(d => d.url !== dapp.url)
     filtered.unshift(dapp)
     recentlyViewedDApps.value = filtered.slice(0, MAX_RECENT)
   }
+
+  /**
+   * Trusted = curated remote list OR recently-viewed history.
+   * Path-scoped (not origin) so subpath phishing (`uniswap.org/swap?to=attacker`) still
+   * triggers the warning prompt.
+   */
+  const trustedUrls = computed(() => {
+    const set = new Set<string>()
+    for (const r of remoteApps.value)
+      set.add(stripTrailingSlash(r.url))
+    for (const r of recentlyViewedDApps.value)
+      set.add(stripTrailingSlash(r.url))
+    return set
+  })
+
+  function isTrustedMiniAppUrl(url: string): boolean {
+    if (!url)
+      return false
+    return trustedUrls.value.has(stripTrailingSlash(url))
+  }
+
+  /** Top-N slice of recently-viewed for the marketplace UI. */
+  const recentDAppsForDisplay = computed(() => recentlyViewedDApps.value.slice(0, MAX_RECENT_DISPLAY))
 
   // Each dApp gets its own computedAsync so descriptions load incrementally.
   // If the remote JSON provides a description, use it directly; otherwise fall back to live scrape.
@@ -158,17 +191,19 @@ export const useMiniApps = defineStore('mini-apps', () => {
     searchedDescriptions[url] = { status: 'done', text: desc || undefined }
   }
 
+  const recentDescriptionCache = new Map<string, string | undefined>()
   const recentDAppsWithDescriptions = computedAsync(async () => {
-    const recentDApps = recentlyViewedDApps.value ?? []
+    const recentDApps = recentDAppsForDisplay.value ?? []
     return Promise.all(recentDApps.map(async (dapp) => {
       // First check if it's in allDApps to avoid unnecessary fetches, matching URLs with or without trailing slash
       const popular = allDApps.value.find(p =>
-        p.url === dapp.url || p.url.replace(/\/$/, '') === dapp.url.replace(/\/$/, ''),
+        p.url === dapp.url || stripTrailingSlash(p.url) === stripTrailingSlash(dapp.url),
       )
       if (popular)
         return { ...dapp, description: popular.description }
-      const description = await fetchPageDescription(dapp.url)
-      return { ...dapp, description: description ?? undefined }
+      if (!recentDescriptionCache.has(dapp.url))
+        recentDescriptionCache.set(dapp.url, (await fetchPageDescription(dapp.url)) ?? undefined)
+      return { ...dapp, description: recentDescriptionCache.get(dapp.url) }
     }))
   }, recentlyViewedDApps.value ?? [])
 
@@ -198,5 +233,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     recentlyViewedDApps,
     recentDAppsWithDescriptions,
     addRecentlyViewed,
+    isTrustedMiniAppUrl,
   }
 })

@@ -109,6 +109,7 @@ vi.mock('@/composables/useLogger', () => ({
 vi.mock('@/composables/useToast', () => ({
   useToast: () => ({
     setToast,
+    clearToast: vi.fn(),
   }),
 }))
 
@@ -143,6 +144,15 @@ vi.mock('@/stores/conn', () => ({
   useConn: () => ({
     query: vi.fn(() => Promise.resolve(undefined)),
     run: vi.fn(() => Promise.resolve()),
+  }),
+}))
+
+vi.mock('@/composables/useModal', () => ({
+  Modal: {},
+  useModal: () => ({
+    showModal: vi.fn(() => Promise.resolve()),
+    closeModal: vi.fn(() => Promise.resolve()),
+    closeAllModals: vi.fn(() => Promise.resolve()),
   }),
 }))
 

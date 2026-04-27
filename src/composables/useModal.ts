@@ -22,6 +22,7 @@ export enum Modal {
   Menu = '@/modals/MenuModal.vue',
   Points = '@/modals/PointsModal.vue',
   MiniApps = '@/modals/MiniAppsModal.vue',
+  MiniAppWarning = '@/modals/MiniAppWarningModal.vue',
   Settings = '@/modals/SettingsModal.vue',
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
@@ -37,7 +38,7 @@ interface ModalAnalyticsOptions {
 function _useModal() {
   const allModals: HTMLIonModalElement[] = []
 
-  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, showHandle?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean, analytics?: ModalAnalyticsOptions }) {
+  async function showModal(modal: Modal, options?: { isOnTop?: boolean, isFullscreen?: boolean, isSmall?: boolean, showHandle?: boolean, componentProps?: ComponentProps<ComponentRef>, canDismiss?: boolean, analytics?: ModalAnalyticsOptions }): Promise<HTMLIonModalElement | undefined> {
     const { isOnTop, isFullscreen, isSmall, showHandle, componentProps, canDismiss = true, analytics } = options || {}
     if (import.meta.env.MODE === 'development')
       logger.log('showModal', modal)
@@ -77,6 +78,9 @@ function _useModal() {
         break
       case Modal.MiniApps:
         component = defineAsyncComponent(() => import(Modal.MiniApps))
+        break
+      case Modal.MiniAppWarning:
+        component = defineAsyncComponent(() => import(Modal.MiniAppWarning))
         break
       case Modal.Settings:
         component = defineAsyncComponent(() => import(Modal.Settings))
@@ -124,6 +128,8 @@ function _useModal() {
         activeAsset: useApp().activeAsset,
       })
     }
+
+    return modalToShow
   }
 
   async function closeModal({ modal: modalToClose, data = null, role = 'confirm' }: { modal?: HTMLIonModalElement, data?: any, role?: CloseRole } = {}) {

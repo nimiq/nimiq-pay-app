@@ -1,0 +1,22 @@
+appId: ${APP_ID}
+---
+# Verifies that nimiqpay://miniapp?url=<url> deeplinks launch the mini-app webview directly.
+
+- runFlow: ../subflows/launch_app.yaml
+
+# Trigger the deeplink. Maestro's openLink dispatches android.intent.action.VIEW on Android
+# and `xcrun simctl openurl` on iOS, exercising the same path as a real external tap.
+- openLink: nimiqpay://miniapp?url=pay.nimiq.com
+- waitForAnimationToEnd
+
+# The InAppBrowser opens a native webview with the URL visible in its navigation toolbar.
+- extendedWaitUntil:
+    visible: pay.nimiq.com
+    timeout: 15000
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/mini_apps_deeplink
+
+# Close the webview and return to the home screen.
+- back
+- waitForAnimationToEnd
+- assertVisible: Top Up
