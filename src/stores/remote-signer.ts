@@ -13,6 +13,7 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 
 const logger = useLogger('remote-signer')
 export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
+const REMOTE_SIGNER_BALANCE_BATCH_SIZE = 20
 
 export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined>(remoteSigners: T): T {
   if (!remoteSigners)
@@ -298,21 +299,24 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     // eslint-disable-next-line no-console
     console.log('📡 Updating remote signers table balance')
-    const addresses = remoteSigners.map(remoteSigner => remoteSigner.address)
-    const { data: accounts, error } = await getAccounts(addresses)
-    if (error || !accounts) {
-      logger.error('Error getting accounts for Remote Signers', error)
-      return
-    }
+    for (let offset = 0; offset < remoteSigners.length; offset += REMOTE_SIGNER_BALANCE_BATCH_SIZE) {
+      const remoteSignerBatch = remoteSigners.slice(offset, offset + REMOTE_SIGNER_BALANCE_BATCH_SIZE)
+      const addresses = remoteSignerBatch.map(remoteSigner => remoteSigner.address)
+      const { data: accounts, error } = await getAccounts(addresses)
+      if (error || !accounts) {
+        logger.error('Error getting accounts for Remote Signers', error)
+        continue
+      }
 
-    // Assuming accounts are in the same order as addresses
-    for (let i = 0; i < accounts.length; i++) {
-      const account = accounts[i]
-      const remoteSigner = remoteSigners[i]
-      const newBalance = account.type === 'htlc' ? account.balance : 0
-      if (remoteSigner.balance !== newBalance) {
-        logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
-        await updateBalance(newBalance, remoteSigner.address)
+      // Assuming accounts are in the same order as addresses
+      for (let i = 0; i < accounts.length; i++) {
+        const account = accounts[i]
+        const remoteSigner = remoteSignerBatch[i]
+        const newBalance = account.type === 'htlc' ? account.balance : 0
+        if (remoteSigner.balance !== newBalance) {
+          logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
+          await updateBalance(newBalance, remoteSigner.address)
+        }
       }
     }
   }

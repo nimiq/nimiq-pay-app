@@ -6,13 +6,29 @@ import { Asset, Chain } from '@/lib/assets'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { Transfer } from '@/types/transactions'
 
+function createAddress(value: string) {
+  return {
+    toUserFriendlyAddress: () => value,
+    equals: (other?: { toUserFriendlyAddress: () => string }) => other?.toUserFriendlyAddress() === value,
+  }
+}
+
 const state = vi.hoisted(() => ({
   activeAsset: 'USDT',
   isSendingTx: false,
+  localAddress: createAddress('NQ00 TEST LOCAL ADDRESS'),
+  localBalance: 0,
+  remoteAddress: createAddress('NQ11 TEST ACTIVE REMOTE ADDRESS'),
   remoteBalance: 0,
+  networkId: 5,
+  client: {
+    waitForConsensusEstablished: vi.fn(async () => undefined),
+    sendTransaction: vi.fn(async () => undefined),
+  },
   query: vi.fn(async () => []),
   run: vi.fn(async () => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
+  updateRemoteSigner: vi.fn(async () => undefined),
   logger: {
     log: vi.fn(),
     warn: vi.fn(),
@@ -74,14 +90,18 @@ vi.mock('@/stores/locks', () => {
 })
 
 vi.mock('@/stores/local-wallet', () => {
-  const useLocalWallet = defineStore('local-wallet', () => ({}))
+  const useLocalWallet = defineStore('local-wallet', () => ({
+    localAddress: computed(() => state.localAddress),
+    localBalance: computed(() => state.localBalance),
+  }))
 
   return { useLocalWallet }
 })
 
 vi.mock('@/stores/nimiq-network', () => {
   const useNimiqNetwork = defineStore('nimiq-network', () => ({
-    client: computed(() => null),
+    client: computed(() => state.client),
+    networkId: computed(() => state.networkId),
   }))
 
   return { useNimiqNetwork }
@@ -90,6 +110,8 @@ vi.mock('@/stores/nimiq-network', () => {
 vi.mock('@/stores/remote-signer', () => {
   const useRemoteSigner = defineStore('remote-signer', () => ({
     updateActiveRemoteBalance: state.updateActiveRemoteBalance,
+    updateRemoteSigner: state.updateRemoteSigner,
+    remoteAddress: computed(() => state.remoteAddress),
     remoteBalance: computed(() => state.remoteBalance),
   }))
 
@@ -97,7 +119,9 @@ vi.mock('@/stores/remote-signer', () => {
 })
 
 vi.mock('@/stores/sync', () => {
-  const useSync = defineStore('sync', () => ({}))
+  const useSync = defineStore('sync', () => ({
+    pendingPaymentTransactions: computed(() => []),
+  }))
 
   return { useSync }
 })
@@ -107,16 +131,37 @@ describe('useTransactions', () => {
     setActivePinia(createPinia())
     state.activeAsset = Asset.USDT
     state.isSendingTx = false
+    state.localAddress = createAddress('NQ00 TEST LOCAL ADDRESS')
+    state.localBalance = 0
+    state.remoteAddress = createAddress('NQ11 TEST ACTIVE REMOTE ADDRESS')
     state.remoteBalance = 0
+    state.networkId = 5
+    state.client = {
+      waitForConsensusEstablished: vi.fn(async () => undefined),
+      sendTransaction: vi.fn(async () => undefined),
+    }
     state.query.mockReset()
     state.query.mockResolvedValue([])
     state.run.mockReset()
     state.run.mockResolvedValue(undefined)
     state.updateActiveRemoteBalance.mockReset()
     state.updateActiveRemoteBalance.mockResolvedValue(undefined)
+    state.updateRemoteSigner.mockReset()
+    state.updateRemoteSigner.mockResolvedValue(undefined)
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
+    vi.stubGlobal('Nimiq', {
+      Address: {
+        fromUserFriendlyAddress: (value: string) => createAddress(value),
+      },
+      AccountType: {
+        HTLC: 2,
+      },
+      BufferUtils: {
+        toHex: vi.fn(() => 'serialized-content'),
+      },
+    })
   })
 
   it('reactively updates active asset transactions when a transaction status changes', async () => {
@@ -294,5 +339,50 @@ describe('useTransactions', () => {
     expect(store.transactions[0].status).toBe('confirmed')
     expect(store.transactions[0].meta).toEqual({ secret: 'preimage' })
     expect(state.run).toHaveBeenCalled()
+  })
+
+  it('does not clear the active remote signer when draining an inactive remote signer', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const inactiveSignerAddress = createAddress('NQ22 TEST INACTIVE REMOTE ADDRESS')
+    const txPlain = {
+      transactionHash: 'inactive-drain-hash',
+      sender: inactiveSignerAddress.toUserFriendlyAddress(),
+      senderType: 2,
+      recipient: state.localAddress.toUserFriendlyAddress(),
+      recipientType: 0,
+      value: 123,
+      fee: 0,
+      timestamp: 1000,
+      validityStartHeight: 1,
+      data: { raw: '' },
+      proof: { raw: '' },
+      valid: true,
+    }
+    const signedTx = {
+      toPlain: () => txPlain,
+      hash: () => txPlain.transactionHash,
+      toHex: () => 'serialized-tx',
+      serializeContent: () => new Uint8Array(),
+      networkId: 5,
+      recipientType: 0,
+      senderType: 2,
+      proof: { length: 98 },
+    }
+    vi.mocked(getSignedTx).mockResolvedValue({
+      data: { signedTx, txSent: true },
+      error: undefined,
+    } as any)
+    state.client.sendTransaction.mockResolvedValue(txPlain as any)
+
+    const store = useTransactions()
+
+    await store.sendTx({
+      transfer: Transfer.RemoteToLocalImmediateReclaim,
+      amount: 123,
+      sender: inactiveSignerAddress,
+    } as any)
+
+    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
   })
 })

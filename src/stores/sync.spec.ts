@@ -1,6 +1,7 @@
 import { createPinia, defineStore, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed } from 'vue'
+import { NO_ACCOUNT_ERROR } from '@/stores/nimiq-network'
 import { Transfer } from '@/types/transactions'
 
 function createAddress(value: string) {
@@ -20,6 +21,8 @@ const state = vi.hoisted(() => {
   const discoverRemoteSignersFromBlockchain = vi.fn(() => Promise.resolve())
   const updateSignersTableBalance = vi.fn(() => Promise.resolve())
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
+  const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
+  const addRemoteSigner = vi.fn(() => Promise.resolve())
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -64,6 +67,8 @@ const state = vi.hoisted(() => {
     discoverRemoteSignersFromBlockchain,
     updateSignersTableBalance,
     updateRemoteSigner,
+    getAllRemoteSigners,
+    addRemoteSigner,
     logger,
   }
 })
@@ -185,6 +190,7 @@ vi.mock('@/stores/nimiq-network', () => {
     CashlinkExtraDataHex: {
       CLAIMING: 'claiming',
     },
+    NO_ACCOUNT_ERROR: 'No account found',
     useNimiqNetwork,
   }
 })
@@ -234,8 +240,8 @@ vi.mock('@/stores/remote-signer', () => {
     remoteSigner: computed(() => state.remoteSigner),
     homeBalanceState: computed(() => 'resolved-remote'),
     remoteProofSize: computed(() => state.remoteProofSize),
-    getAllRemoteSigners: vi.fn(() => Promise.resolve([])),
-    addRemoteSigner: vi.fn(() => Promise.resolve()),
+    getAllRemoteSigners: state.getAllRemoteSigners,
+    addRemoteSigner: state.addRemoteSigner,
     blockHeightToTimestamp: vi.fn((height: number) => Promise.resolve(height * 1000)),
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
     updateSignersTableBalance: state.updateSignersTableBalance,
@@ -340,6 +346,10 @@ describe('useSync remote signer reconciliation', () => {
     state.updateSignersTableBalance.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
     state.updateRemoteSigner.mockResolvedValue(undefined)
+    state.getAllRemoteSigners.mockReset()
+    state.getAllRemoteSigners.mockResolvedValue([])
+    state.addRemoteSigner.mockReset()
+    state.addRemoteSigner.mockResolvedValue(undefined)
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -364,6 +374,34 @@ describe('useSync remote signer reconciliation', () => {
     expect(state.logger.error).toHaveBeenCalledWith('Error while getting remote balance', expect.any(Error))
   })
 
+  it('keeps the previous local balance when local balance lookup fails', async () => {
+    state.localBalance = 42_000
+    state.remoteAddress = undefined as any
+    state.getBalance.mockResolvedValue({ data: undefined, error: new Error('temporary consensus failure') })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.updateBalances()
+
+    expect(state.localBalance).toBe(42_000)
+    expect(state.logger.error).toHaveBeenCalledWith('Error while getting local balance', expect.any(Error))
+  })
+
+  it('sets local balance to zero when the local account is absent on chain', async () => {
+    state.localBalance = 42_000
+    state.remoteAddress = undefined as any
+    state.getBalance.mockResolvedValue({ data: 0, error: NO_ACCOUNT_ERROR })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.updateBalances()
+
+    expect(state.localBalance).toBe(0)
+    expect(state.logger.error).toHaveBeenCalledWith('Error while getting local balance', NO_ACCOUNT_ERROR)
+  })
+
   it('activates a single funded inactive signer after refreshing chain balances', async () => {
     const fundedSigner = remoteSigner('NQ22 TEST FUNDED REMOTE ADDRESS', 700_000, false)
     state.query.mockImplementation((sql = '') => {
@@ -385,7 +423,7 @@ describe('useSync remote signer reconciliation', () => {
     }))
   })
 
-  it('recovers multiple funded remote signers without replacing the active signer first', async () => {
+  it('recovers one inactive funded remote signer per verification pass without replacing the active signer first', async () => {
     const firstSigner = remoteSigner('NQ22 TEST FUNDED REMOTE ADDRESS', 700_000, true)
     const secondSigner = remoteSigner('NQ33 TEST OLD FUNDED REMOTE ADDRESS', 900_000, false)
     state.query.mockImplementation((sql = '') => {
@@ -407,11 +445,7 @@ describe('useSync remote signer reconciliation', () => {
     await store.verifyRemoteSignersDb()
 
     expect(state.updateRemoteSigner).not.toHaveBeenCalled()
-    expect(state.sendTx).toHaveBeenCalledTimes(2)
-    expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({
-      transfer: Transfer.RemoteToLocalImmediateReclaim,
-      amount: 700_000,
-    }))
+    expect(state.sendTx).toHaveBeenCalledTimes(1)
     expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({
       transfer: Transfer.RemoteToLocalImmediateReclaim,
       amount: 900_000,
@@ -441,6 +475,35 @@ describe('useSync remote signer reconciliation', () => {
 
     await store.verifyRemoteSignersDb()
 
-    expect(state.sendTx).toHaveBeenCalledTimes(2)
+    expect(state.sendTx).toHaveBeenCalledTimes(1)
+  })
+
+  it('awaits centralized signer discovery before scanning remote signer history', async () => {
+    const events: string[] = []
+    state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
+      await Promise.resolve()
+      events.push('discover')
+    })
+    state.getAllRemoteSigners.mockImplementation(async () => {
+      events.push('getAllRemoteSigners')
+      return []
+    })
+    state.getAccountTransactions.mockResolvedValue({ data: [] })
+    state.query.mockImplementation((sql = '') => {
+      if (sql.includes('all_transactions'))
+        return Promise.resolve([])
+      if (sql.includes('user_receipts'))
+        return Promise.resolve([])
+      return Promise.resolve([])
+    })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.updateTransactionHistory()
+
+    expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalled()
+    expect(state.addRemoteSigner).not.toHaveBeenCalled()
+    expect(events).toEqual(['discover', 'getAllRemoteSigners'])
   })
 })

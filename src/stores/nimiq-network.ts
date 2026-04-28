@@ -27,6 +27,8 @@ export const CashlinkExtraDataHex = {
 
 export const STAKING_CONTRACT_ADDRESS = 'NQ77 0000 0000 0000 0000 0000 0000 0000 0001'
 
+export const NO_ACCOUNT_ERROR = 'No account found'
+
 export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const { isNetworkReconnecting, isAppStarting } = storeToRefs(useLocks())
   const client = ref<Client>()
@@ -213,7 +215,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     try {
       const account = await client.value?.getAccount(address)
       if (!account)
-        return { data: 0, error: 'No account found' } // No user facing
+        return { data: 0, error: NO_ACCOUNT_ERROR } // No user facing
       return { data: account.balance, error: undefined }
     }
     catch (error) {

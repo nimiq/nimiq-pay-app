@@ -11,7 +11,10 @@ function createAddress(value: string) {
 
 const state = vi.hoisted(() => {
   const getBalance = vi.fn(() => Promise.resolve({ data: 0, error: undefined }))
-  const getAccounts = vi.fn(() => Promise.resolve({ data: [], error: undefined }))
+  const getAccounts = vi.fn((): Promise<{
+    data: { type: string, balance: number }[] | undefined
+    error: Error | undefined
+  }> => Promise.resolve({ data: [], error: undefined }))
   const getStatus = vi.fn(() => Promise.resolve({
     data: {
       status: 'good',
@@ -29,7 +32,7 @@ const state = vi.hoisted(() => {
     hasError: true,
     status: 404,
   }))
-  const query = vi.fn((_sql: string, _params?: unknown[], options?: { single?: boolean }) => Promise.resolve(options?.single ? undefined : []))
+  const query = vi.fn((_sql: string, _params?: unknown[], options?: { single?: boolean }): Promise<unknown[] | unknown | undefined> => Promise.resolve(options?.single ? undefined : []))
   const run = vi.fn(() => Promise.resolve())
   const logger = {
     log: vi.fn(),
@@ -314,5 +317,37 @@ describe('useRemoteSigner', () => {
     await store.init()
 
     expect(state.logger.log).not.toHaveBeenCalledWith('📡 Found a newer remote signer that is not the active one')
+  })
+
+  it('refreshes signer balances in batches and preserves balances for failed batches', async () => {
+    const signers = Array.from({ length: 25 }, (_, index) => ({
+      active: index === 24,
+      balance: 0,
+      end: 999_999,
+      proofSize: 98,
+      publicKey: 'service-public-key',
+      start: 123_000 + index,
+      address: `NQ${String(index).padStart(2, '0')} TEST REMOTE ADDRESS`,
+    }))
+    state.query.mockResolvedValue(signers)
+    state.getAccounts
+      .mockResolvedValueOnce({ data: undefined, error: new Error('temporary accounts failure') })
+      .mockResolvedValueOnce({
+        data: signers.slice(20).map((_, index) => ({
+          type: 'htlc',
+          balance: index + 1,
+        })),
+        error: undefined,
+      })
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.updateSignersTableBalance()
+
+    expect(state.getAccounts).toHaveBeenCalledTimes(2)
+    expect(state.run).toHaveBeenCalledTimes(5)
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [1, 'NQ20 TEST REMOTE ADDRESS'])
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [5, 'NQ24 TEST REMOTE ADDRESS'])
   })
 })

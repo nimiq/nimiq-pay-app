@@ -280,8 +280,11 @@ export const useTransactions = defineStore('transactions', () => {
       transactions.value = [tx, ...transactions.value]
 
     if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
-      // This transaction will drain the remote signer, so we need to deactivate it and wait for a new one
-      await useRemoteSigner().updateRemoteSigner(undefined)
+      // Only clear the active signer if this transaction drained the active signer.
+      const activeRemoteAddress = useRemoteSigner().remoteAddress
+      const senderAddress = Nimiq.Address.fromUserFriendlyAddress(tx.sender)
+      if (activeRemoteAddress?.equals(senderAddress))
+        await useRemoteSigner().updateRemoteSigner(undefined)
     }
     else if (tx.transfer !== Transfer.LocalToRemote && tx.transfer !== Transfer.ExtendRemote) {
       await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
