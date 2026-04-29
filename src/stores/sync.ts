@@ -109,10 +109,17 @@ export const useSync = defineStore('sync', () => {
       return
     }
 
-    const { data: remoteBalance = 0, error } = await getBalance(remoteAddress.value!)
-    if (error) {
-      logger.error('Error while getting remote balance before handling funds', error)
-      return
+    // When `remoteAddress` is missing (e.g. right after a drain cleared the active signer)
+    // or when the predicted HTLC contract has not been created on chain yet, the natural
+    // state is "no remote balance" — proceed to fund a fresh HTLC instead of bailing.
+    let remoteBalance = 0
+    if (remoteAddress.value) {
+      const { data, error } = await getBalance(remoteAddress.value)
+      if (error && error !== NO_ACCOUNT_ERROR) {
+        logger.error('Error while getting remote balance before handling funds', error)
+        return
+      }
+      remoteBalance = data ?? 0
     }
 
     logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
@@ -1213,6 +1220,7 @@ export const useSync = defineStore('sync', () => {
 
     blocksUntilNextMacroBlock,
 
+    handleFunds,
     verifyRemoteSignersDb,
   }
 })

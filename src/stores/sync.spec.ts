@@ -355,6 +355,51 @@ describe('useSync remote signer reconciliation', () => {
     state.logger.error.mockReset()
   })
 
+  it('creates an HTLC during top-up when the remote address has no on-chain account yet', async () => {
+    state.localBalance = 100_000
+    state.remoteBalance = 0
+    state.remoteAddress = createAddress('NQ22 TEST FRESH HTLC ADDRESS')
+    state.getBalance.mockImplementation((address: unknown) => {
+      const addressValue = address as ReturnType<typeof createAddress>
+      if (addressValue.toUserFriendlyAddress() === 'NQ22 TEST FRESH HTLC ADDRESS')
+        return Promise.resolve({ data: 0, error: NO_ACCOUNT_ERROR })
+      return Promise.resolve({ data: 0, error: undefined })
+    })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.handleFunds()
+
+    expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({
+      transfer: Transfer.LocalToRemote,
+    }))
+  })
+
+  it('creates a fresh HTLC during top-up after a drain cleared the active remote address', async () => {
+    state.localBalance = 100_000
+    state.remoteBalance = 0
+    state.remoteAddress = undefined as any
+    state.getBalance.mockImplementation((address: unknown) => {
+      if (!address)
+        return Promise.resolve({ data: 0, error: 'Address missing' })
+      return Promise.resolve({ data: 0, error: undefined })
+    })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.handleFunds()
+
+    expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({
+      transfer: Transfer.LocalToRemote,
+    }))
+    expect(state.logger.error).not.toHaveBeenCalledWith(
+      'Error while getting remote balance before handling funds',
+      expect.anything(),
+    )
+  })
+
   it('keeps the previous remote balance when balance lookup fails', async () => {
     state.remoteBalance = 350_000
     state.remoteSigner = { ...remoteSigner('NQ11 TEST REMOTE ADDRESS', 350_000, true), address: state.remoteAddress }
