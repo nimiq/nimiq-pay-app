@@ -134,31 +134,55 @@ The system rejects the two clichés Nimiq Pay's strategy explicitly names. It is
 
 The palette is built around one deep navy anchor, a paired bright blue accent, and a small constellation of asset and status hues. Stitch frontmatter holds canonical sRGB hex; OKLCH below is provided as a perceptual reference for designers tuning new tints.
 
+### Brand Name ↔ Tailwind Token
+
+> **Critical for implementation.** The brand names below ("Plaza Night", "Signal Blue", …) are the *design lexicon*. They are **not** Tailwind class names. The codebase uses `tailwindcss-nimiq-theme` tokens, which use different names. When writing Tailwind classes, **always use the Tailwind Token column**, not the brand name. `bg-plaza-night/[0.06]` produces no rule and renders transparent; the correct class is `bg-space/[0.06]`.
+
+| Brand Name | Hex | Tailwind Token | Example Class |
+|---|---|---|---|
+| Plaza Night | `#1F2348` | `space` | `text-space`, `bg-space/[0.06]` |
+| Signal Blue | `#0582CA` | `sky` | `text-sky`, `bg-sky/10` |
+| Tether Verdigris | `#20B29E` | `keppel` | `bg-keppel` |
+| Vault Green | `#21BCA5` | `algae` | `text-algae` |
+| Fresh Mint | `#2CC78F` | `mint` | `bg-mint` |
+| Honey Coin | `#E9B213` | `gold` | `bg-gold`, `text-gold` |
+| Streetlamp | `#FC8702` | `pumpkin` | `bg-pumpkin/10`, `text-pumpkin` |
+| Stop Red | `#D94432` | `cherry` | `bg-cherry`, `text-cherry` |
+| Nimiq Coin | `#F6C430` | `nim` | `text-nim` |
+| Bitcoin Orange | `#F7931A` | `btc` | `text-btc` |
+| Cobble White | `#F8F8F8` | `snow` | `bg-snow` |
+| Cobble Fog | `#F1F1F1` | `fog` | `bg-fog` |
+| Cobble Ash | `#E9E9EB` | `ash` | `bg-ash` |
+| Paper White | `#FFFFFF` | `white` | `bg-white` |
+| Void Ink | `#0D102C` | *(no token — use arbitrary value)* | `bg-[#0D102C]` |
+
+Each of `space` / `sky` / `keppel` / `algae` / `mint` / `gold` / `pumpkin` / `cherry` / `grape` / `soil` / `flamingo` / `ocean` / `honey` / `carrot` / `fire` / `tomato` / `salmon` / `pistachio` is also generated at numbered opacity steps (`-100` … `-800`) by the theme. For ad-hoc opacities prefer Tailwind's `/<n>` slash syntax (`bg-space/[0.06]`, `text-space/70`).
+
 ### Primary
-- **Plaza Night** (`#1F2348`, `oklch(24.6% 0.05 273)`): The anchor. Body text, primary icons, headings, default nav, dark numerics. Used as a translucent wash (`Plaza Night / 6%`, `/ 10%`, `/ 50%`) for secondary buttons, divider tints, and disabled states. Never used as a full-bleed dark background; the plaza is light.
-- **Signal Blue** (`#0582CA`, `oklch(54.6% 0.14 234)`): The lamp. Active links, focused inputs, the NIM identity gradient (paired with `#265DD7` toward the corner). Reserved for elements the user is currently engaging with or that represent NIM specifically.
+- **Plaza Night** (`#1F2348`, `oklch(24.6% 0.05 273)`, Tailwind `space`): The anchor. Body text, primary icons, headings, default nav, dark numerics. Used as a translucent wash (`bg-space/[0.06]`, `bg-space/10`, `bg-space/50`; or `text-space/70`) for secondary buttons, divider tints, and disabled states. Never used as a full-bleed dark background; the plaza is light.
+- **Signal Blue** (`#0582CA`, `oklch(54.6% 0.14 234)`, Tailwind `sky`): The lamp. Active links, focused inputs, the NIM identity gradient (paired with `#265DD7` toward the corner). Reserved for elements the user is currently engaging with or that represent NIM specifically.
 
 ### Secondary
-- **Tether Verdigris** (`#20B29E`, `oklch(67% 0.10 175)`): USDT identity. Used inside the green USDT radial gradient (paired with `#008484` and `#009393`) on USDT-specific cards, the receive sheet, and the asset switcher when USDT is active. Never used as a generic "success" color.
-- **Vault Green** (`#21BCA5`, `oklch(70% 0.11 175)`): Success states for *transactions* (confirmation toasts, transaction "completed" badges, atomic-swap "settled" pill). Reads as a brighter sibling of Verdigris on purpose; the user sees green and feels the same family, even though one is identity and one is status.
+- **Tether Verdigris** (`#20B29E`, `oklch(67% 0.10 175)`, Tailwind `keppel`): USDT identity. Used inside the green USDT radial gradient (paired with `#008484` and `#009393`) on USDT-specific cards, the receive sheet, and the asset switcher when USDT is active. Never used as a generic "success" color.
+- **Vault Green** (`#21BCA5`, `oklch(70% 0.11 175)`, Tailwind `algae`): Success states for *transactions* (confirmation toasts, transaction "completed" badges, atomic-swap "settled" pill). Reads as a brighter sibling of Verdigris on purpose; the user sees green and feels the same family, even though one is identity and one is status.
 
 ### Tertiary (rewards and referral)
-- **Honey Coin** (`#E9B213`, `oklch(76.6% 0.155 88)`): Cryptocity Points, referral CTAs, `gradient-orange` cards in onboarding moments. The plaza's lamp-glow. Never used on a money-move screen, only on reward-shaped surfaces.
+- **Honey Coin** (`#E9B213`, `oklch(76.6% 0.155 88)`, Tailwind `gold`): Cryptocity Points, referral CTAs, `gradient-orange` cards in onboarding moments. The plaza's lamp-glow. Never used on a money-move screen, only on reward-shaped surfaces.
 
 ### Status
-- **Streetlamp** (`#FC8702`, `oklch(72.7% 0.18 53)`): Warning. Pending tx, Polygon network warnings, backup-incomplete reminders. Used as a radial gradient on `BackupNotification.vue`-style banners.
-- **Stop Red** (`#D94432`, `oklch(57.5% 0.19 30)`): Destructive only. Delete address, log out, irreversible confirms. Never used for "low balance" or "input invalid"; the plaza calls those out with Streetlamp instead.
+- **Streetlamp** (`#FC8702`, `oklch(72.7% 0.18 53)`, Tailwind `pumpkin`): Warning. Pending tx, Polygon network warnings, backup-incomplete reminders. Used as a radial gradient on `BackupNotification.vue`-style banners.
+- **Stop Red** (`#D94432`, `oklch(57.5% 0.19 30)`, Tailwind `cherry`): Destructive only. Delete address, log out, irreversible confirms. Never used for "low balance" or "input invalid"; the plaza calls those out with Streetlamp instead.
 
 ### Asset Glyphs
-- **Nimiq Coin** (`#F6C430`): Reserved for the NIM logo glyph. Not used in UI chrome.
-- **Bitcoin Orange** (`#F7931A`): Reserved for BTC glyphs (Lightning invoices, BTC swap visualisation). Not used in UI chrome.
+- **Nimiq Coin** (`#F6C430`, Tailwind `nim`): Reserved for the NIM logo glyph. Not used in UI chrome.
+- **Bitcoin Orange** (`#F7931A`, Tailwind `btc`): Reserved for BTC glyphs (Lightning invoices, BTC swap visualisation). Not used in UI chrome.
 
 ### Neutral
-- **Cobble White** (`#F8F8F8`): Default app surface. Body background.
-- **Paper White** (`#FFFFFF`): Cards, sheets, modal interiors. The thing that floats on the cobble.
-- **Cobble Fog** (`#F1F1F1`): Recessed surface. Secondary buttons, scroll-track, search field idle.
-- **Cobble Ash** (`#E9E9EB`): Dividers, hairline borders, disabled-input outlines.
-- **Void Ink** (`#0D102C`): The darkest token. Reserved for system contrast (status bar overlays, splash background, full-screen camera "hole" backdrop). Never a UI surface.
+- **Cobble White** (`#F8F8F8`, Tailwind `snow`): Default app surface. Body background.
+- **Paper White** (`#FFFFFF`, Tailwind `white`): Cards, sheets, modal interiors. The thing that floats on the cobble.
+- **Cobble Fog** (`#F1F1F1`, Tailwind `fog`): Recessed surface. Secondary buttons, scroll-track, search field idle.
+- **Cobble Ash** (`#E9E9EB`, Tailwind `ash`): Dividers, hairline borders, disabled-input outlines.
+- **Void Ink** (`#0D102C`, no Tailwind token — write arbitrary value `bg-[#0D102C]`): The darkest token. Reserved for system contrast (status bar overlays, splash background, full-screen camera "hole" backdrop). Never a UI surface.
 
 ### Named Rules
 
@@ -166,7 +190,7 @@ The palette is built around one deep navy anchor, a paired bright blue accent, a
 
 **The Money Is Plaza Night Rule.** Balances, amounts, addresses, fees, exchange rates, and any number that represents value render in `Plaza Night` (or `Signal Blue` only when the input is currently focused, see `AmountInput.vue`). Never colored for emphasis. Never gradient-text. The number is the loudest element by *weight and size*, never by hue.
 
-**The 6% Wash Rule.** Secondary affordances (home Top Up / Withdraw pills, asset switcher, ghost buttons) use `Plaza Night` at 6% opacity on `Paper White` (renders as `#F3F3F5`). This wash is the system's "available but not asking for attention" signal. Don't substitute a separate gray.
+**The 6% Wash Rule.** Secondary affordances (home Top Up / Withdraw pills, asset switcher, ghost buttons) use `Plaza Night` at 6% opacity on `Paper White` — Tailwind class `bg-space/[0.06]` (renders as `#F3F3F5`). This wash is the system's "available but not asking for attention" signal. Don't substitute a separate gray.
 
 **The Drift Test.** If the screen looks like a 2014 fintech app, the gradient is too saturated and the shadow is too dark. Drop the gradient back into the cobble.
 
@@ -215,6 +239,8 @@ The system is **flat by default with a quiet stack of three soft shadows reserve
 **The No Glassmorphism Rule.** No `backdrop-filter: blur()` as a decorative card surface. The only legitimate blur in this product is the system status bar on iOS, which Capacitor handles natively. Anything else is forbidden.
 
 ## 5. Components
+
+> Component specs below use brand names as design shorthand (e.g. "Plaza Night / 50% background"). Translate to Tailwind via the §2 token table — `Plaza Night / 50%` → `bg-space/50`, `Signal Blue` → `bg-sky` / `text-sky`, `Streetlamp` → `pumpkin`, etc.
 
 ### Buttons
 
