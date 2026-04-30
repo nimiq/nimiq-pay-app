@@ -90,6 +90,8 @@ export const useApp = defineStore('app', () => {
   // TODO: maybe clean this from time to time?
   const displayedPaymentRequests = useStorageAsync<string[]>('displayedPaymentRequests', [], kv(), sharedOptions)
   const showAnimations = useStorageAsync('showAnimations', !useReducedMotion().value, kvPreferences(), sharedOptions)
+  // Dev-menu reveal toggle for tx soft-hide feature (APP-132). Pre-login storage so it survives across logins.
+  const showHiddenTransactions = useStorageAsync('showHiddenTransactions', false, kvPreferences(), sharedOptions)
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
   const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
 
@@ -181,6 +183,7 @@ export const useApp = defineStore('app', () => {
     isBiometricEnabled,
     displayedPaymentRequests,
     showAnimations,
+    showHiddenTransactions,
     decimalsAmount,
     reopenMiniAppWebviewAfterResume,
   }

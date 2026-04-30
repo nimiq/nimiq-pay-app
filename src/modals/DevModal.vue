@@ -2,7 +2,7 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
-import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonSegment, IonSegmentButton, toastController } from '@ionic/vue'
+import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonItem, IonLabel, IonSegment, IonSegmentButton, IonToggle, toastController } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,6 +10,7 @@ import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev, isTestnet, networkOverride, setNetworkOverride } from '@/lib'
 import { SQLQuery } from '@/lib/sql-queries'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -29,6 +30,7 @@ const router = useRouter()
 const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(useRemoteSigner())
+const { showHiddenTransactions } = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query } = useConn()
@@ -167,6 +169,20 @@ onMounted(async () => {
         <p class="mt-2 text-xs opacity-60">
           Switching clears tx history and reloads. Only Nimiq mini-apps pick up the testnet RPC — EVM mini-apps have no testnet wiring and will keep running against mainnet chains.
         </p>
+      </IonCardContent>
+    </IonCard>
+    <IonCard>
+      <IonCardHeader>
+        <IonCardTitle>Hidden Transactions</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="mb-2">
+          Reveal transactions hidden via 5-second long-press. While ON, hidden TX render at 30% opacity and can be unhidden by long-pressing them again.
+        </p>
+        <IonItem lines="none" class="-mx-4">
+          <IonLabel>Show hidden transactions</IonLabel>
+          <IonToggle :checked="showHiddenTransactions" @ion-change="showHiddenTransactions = $event.detail.checked" />
+        </IonItem>
       </IonCardContent>
     </IonCard>
     <IonCard>

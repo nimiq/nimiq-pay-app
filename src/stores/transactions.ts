@@ -49,7 +49,7 @@ export enum TransactionListState {
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
-  const { activeAsset } = storeToRefs(useApp())
+  const { activeAsset, showHiddenTransactions } = storeToRefs(useApp())
 
   const { updateActiveRemoteBalance } = useRemoteSigner()
   const { remoteBalance } = storeToRefs(useRemoteSigner())
@@ -510,6 +510,18 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
+  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). Mirrors setSwapHtlcRefunded —
+  // flag lives in tx.meta, persisted via upsertTx; transactionsToShow filters it out unless the dev-menu
+  // reveal toggle is on. The shallowRef reassignment is required to re-trigger the filter computed.
+  async function setTxHidden(hash: string, hidden: boolean) {
+    const tx = transactions.value.find(tx => tx.hash === hash)
+    if (!tx)
+      return
+    tx.meta = { ...tx.meta, hidden }
+    await upsertTx(tx)
+    transactions.value = [...transactions.value]
+  }
+
   const status = computed(() => {
     if (activeAssetTransactions.value.length === 0)
       return TransactionListState.Empty
@@ -536,11 +548,17 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
     setNakaTxRefunded,
+    setTxHidden,
     clearTxHistory,
     refreshFromDb,
 
     // Search for transactions
-    transactionsToShow: computed(() => searchQuery.value ? filteredTransactions.value : activeAssetTransactions.value),
+    transactionsToShow: computed(() => {
+      const base = searchQuery.value ? filteredTransactions.value : activeAssetTransactions.value
+      if (showHiddenTransactions.value)
+        return base
+      return base.filter(tx => !tx.meta?.hidden)
+    }),
     activeAssetTransactions,
     allTransactions,
     filteredTransactions,

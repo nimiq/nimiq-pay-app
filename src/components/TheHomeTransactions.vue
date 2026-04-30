@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import type { InfiniteScrollCustomEvent } from '@ionic/vue'
-import { IonInfiniteScroll, IonInfiniteScrollContent, IonSkeletonText } from '@ionic/vue'
+import type { ExternalTransaction } from '@/types/transactions'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { alertController, IonInfiniteScroll, IonInfiniteScrollContent, IonSkeletonText } from '@ionic/vue'
+import { vOnLongPress } from '@vueuse/components'
 import { refDebounced } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import TransactionItem from '@/components/TransactionItem.vue'
+import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -17,8 +21,8 @@ import { useTransactions } from '@/stores/transactions'
 
 const { isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
 const { showAnimations, isNimiqAsset, activeAsset } = storeToRefs(useApp())
-const { activeAssetTransactions: transactions } = storeToRefs(useTransactions())
-const { loadMoreTxs, canLoadMore } = useTransactions()
+const { transactionsToShow: transactions } = storeToRefs(useTransactions())
+const { loadMoreTxs, canLoadMore, setTxHidden } = useTransactions()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { hasLoadedHistory: hasLoadedPolygonHistory } = storeToRefs(usePolygonUsdt())
 
@@ -36,6 +40,40 @@ async function onInfiniteScroll(event: InfiniteScrollCustomEvent) {
   if (added === 0)
     isExhausted.value = true
   event.target.complete()
+}
+
+const longPressFired = ref(false)
+
+async function onLongPressTrigger(tx: ExternalTransaction) {
+  longPressFired.value = true
+  // Fire-and-forget: awaiting the bridge stalls the dialog from showing.
+  Haptics.impact({ style: ImpactStyle.Medium }).catch(() => {})
+  const isHidden = !!tx.meta?.hidden
+  const alert = await alertController.create({
+    header: isHidden ? i18n.t('Unhide transaction?') : i18n.t('Hide transaction?'),
+    message: isHidden
+      ? i18n.t('This transaction will reappear in your history.')
+      : i18n.t('This transaction will be hidden from your history. You can reveal it later from the dev menu.'),
+    buttons: [
+      { text: i18n.t('Cancel'), role: 'cancel' },
+      { text: isHidden ? i18n.t('Unhide') : i18n.t('Hide'), role: 'confirm' },
+    ],
+  })
+  await alert.present()
+  const { role } = await alert.onDidDismiss()
+  if (role !== 'confirm')
+    return
+  await setTxHidden(tx.hash, !isHidden)
+}
+
+// Skip the trailing click that follows pointerup when a long-press just fired,
+// so we don't push ViewTransactionDetail on top of (or under) the confirm alert.
+function onRowClick(tx: ExternalTransaction) {
+  if (longPressFired.value) {
+    longPressFired.value = false
+    return
+  }
+  initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })
 }
 </script>
 
@@ -65,7 +103,11 @@ async function onInfiniteScroll(event: InfiniteScrollCustomEvent) {
         :animate="{ opacity: 1, x: 0 }"
         :transition="{ duration: showAnimations ? 0.3 : 0, delay: showAnimations ? Math.min(index, SKELETON_COUNT) * 0.1 : 0 }"
       >
-        <TransactionItem :tx="tx" @click="initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })" />
+        <TransactionItem
+          v-on-long-press="[() => onLongPressTrigger(tx), { delay: 5000 }]"
+          :tx="tx"
+          @click="onRowClick(tx)"
+        />
       </motion.li>
     </motion.ol>
 

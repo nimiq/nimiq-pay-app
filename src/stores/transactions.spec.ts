@@ -64,6 +64,7 @@ vi.mock('@/lib/tx', () => ({
 vi.mock('@/stores/app', () => {
   const useApp = defineStore('app', () => ({
     activeAsset: computed(() => state.activeAsset),
+    showHiddenTransactions: ref(false),
   }))
 
   return { useApp }
@@ -339,6 +340,105 @@ describe('useTransactions', () => {
     expect(store.transactions[0].status).toBe('confirmed')
     expect(store.transactions[0].meta).toEqual({ secret: 'preimage' })
     expect(state.run).toHaveBeenCalled()
+  })
+
+  it('hides a tx from transactionsToShow when the reveal toggle is off (APP-132)', async () => {
+    state.activeAsset = Asset.USDT
+    state.query.mockResolvedValue([])
+
+    const { useTransactions } = await import('./transactions')
+    let store!: ReturnType<typeof useTransactions>
+
+    mount(defineComponent({
+      setup() {
+        store = useTransactions()
+        return () => null
+      },
+    }))
+    await nextTick()
+
+    await store.addWithdrawalTransaction({
+      transfer: Transfer.UserPayment,
+      amount: 100,
+      sender: '0xsender',
+      recipient: '0xrecipient',
+      hash: '0xhide',
+      status: 'confirmed',
+      timestamp: 1,
+      title: 'Payment',
+      fee: 1,
+      proofSize: 0,
+      message: '',
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+    } as any)
+    await nextTick()
+
+    expect(store.transactionsToShow).toHaveLength(1)
+
+    state.run.mockClear()
+    await store.setTxHidden('0xhide', true)
+    await nextTick()
+
+    expect(store.transactionsToShow).toHaveLength(0)
+    expect(store.transactions).toHaveLength(1)
+
+    const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
+      ([query]) => query === SQLQuery.UpsertTx,
+    )
+    expect(upsertCall).toBeDefined()
+    const metaJson = upsertCall![1].find(
+      (arg): arg is string => typeof arg === 'string' && arg.includes('"hidden"'),
+    )
+    expect(metaJson).toContain('"hidden":true')
+  })
+
+  it('reveals hidden txs when showHiddenTransactions is enabled (APP-132)', async () => {
+    state.activeAsset = Asset.USDT
+    state.query.mockResolvedValue([])
+
+    const { useTransactions } = await import('./transactions')
+    const { useApp } = await import('@/stores/app')
+    let store!: ReturnType<typeof useTransactions>
+
+    mount(defineComponent({
+      setup() {
+        store = useTransactions()
+        return () => null
+      },
+    }))
+    await nextTick()
+
+    await store.addWithdrawalTransaction({
+      transfer: Transfer.UserPayment,
+      amount: 100,
+      sender: '0xsender',
+      recipient: '0xrecipient',
+      hash: '0xhide-reveal',
+      status: 'confirmed',
+      timestamp: 1,
+      title: 'Payment',
+      fee: 1,
+      proofSize: 0,
+      message: '',
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+    } as any)
+    await nextTick()
+
+    await store.setTxHidden('0xhide-reveal', true)
+    await nextTick()
+    expect(store.transactionsToShow).toHaveLength(0)
+
+    useApp().showHiddenTransactions = true
+    await nextTick()
+    expect(store.transactionsToShow).toHaveLength(1)
+
+    await store.setTxHidden('0xhide-reveal', false)
+    await nextTick()
+    useApp().showHiddenTransactions = false
+    await nextTick()
+    expect(store.transactionsToShow).toHaveLength(1)
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {
