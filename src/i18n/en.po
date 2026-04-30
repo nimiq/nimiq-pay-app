@@ -202,7 +202,7 @@ msgid "Calculating Polygon fee..."
 msgstr ""
 
 #: src/components/PhoneInput.vue:66
-#: src/components/TransactionList.vue:78
+#: src/components/TheHomeTransactions.vue:58
 #: src/composables/useBiometric.ts:40
 msgid "Cancel"
 msgstr ""
@@ -626,11 +626,11 @@ msgstr ""
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
-#: src/components/TransactionList.vue:79
+#: src/components/TheHomeTransactions.vue:59
 msgid "Hide"
 msgstr ""
 
-#: src/components/TransactionList.vue:73
+#: src/components/TheHomeTransactions.vue:53
 msgid "Hide transaction?"
 msgstr ""
 
@@ -1727,11 +1727,11 @@ msgstr ""
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr ""
 
-#: src/components/TransactionList.vue:76
+#: src/components/TheHomeTransactions.vue:56
 msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
 msgstr ""
 
-#: src/components/TransactionList.vue:75
+#: src/components/TheHomeTransactions.vue:55
 msgid "This transaction will reappear in your history."
 msgstr ""
 
@@ -1791,11 +1791,11 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/components/TransactionList.vue:79
+#: src/components/TheHomeTransactions.vue:59
 msgid "Unhide"
 msgstr ""
 
-#: src/components/TransactionList.vue:73
+#: src/components/TheHomeTransactions.vue:53
 msgid "Unhide transaction?"
 msgstr ""
 

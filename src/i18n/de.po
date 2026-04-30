@@ -224,6 +224,9 @@ msgstr "Adresse kopieren"
 msgid "Claim Promo Code"
 msgstr "Promo-Code einlösen"
 
+msgid "Close"
+msgstr ""
+
 msgid "Complete"
 msgstr "Abgeschlossen"
 
@@ -338,8 +341,14 @@ msgstr "Eine Adresse auswählen…"
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr "Die Löschung deiner Telefonnummer aus dem Kryptostadt-Punkte-System führt zum unwiderruflichen Verlust deiner aktuell gehaltenen Punkte."
 
+msgid "direction-override or bidi control character"
+msgstr ""
+
 msgid "Disclaimer"
 msgstr "Haftungsausschluss"
+
+msgid "Don't open"
+msgstr ""
 
 msgid "Earn Points"
 msgstr "Punkte verdienen"
@@ -467,6 +476,9 @@ msgstr "Empfohlen"
 msgid "Fees may apply {fee}"
 msgstr "Es könnten Gebühren anfallen {fee}"
 
+msgid "Full link:"
+msgstr ""
+
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr "Erhalte Kryptostadt-Punkte als Cashback oder durch Erfüllen von Aufgaben."
 
@@ -492,6 +504,14 @@ msgstr "Hilf mit, die Krypto-Bewegung bekannter zu machen. Lade eine/n Freund/in
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Hallo! Registriere dich in der Nimiq Pay App und erhalte Kryptostadt-Punkte, die du bei Zahlungen in Krypto einsetzen kannst. Benutze meinen Code {code}, um {amount} in Kryptostadt-Punkten bei der Registrierung zu erhalten."
+
+msgid "Hide"
+msgstr ""
+
+#, fuzzy
+#| msgid "All transactions"
+msgid "Hide transaction?"
+msgstr "Alle Transaktionen"
 
 msgid "Hold the button to confirm."
 msgstr ""
@@ -534,6 +554,9 @@ msgstr "Unzureichendes Guthaben"
 
 msgid "Insufficient funds"
 msgstr "Unzureichendes Guthaben"
+
+msgid "Internationalized domain (punycode). Verify it matches the real site."
+msgstr ""
 
 #. For transactions that got rejected by the mempool.
 msgid "Invalid"
@@ -823,6 +846,9 @@ msgstr "Keine Transaktionen gefunden"
 msgid "No USDT HTLC found in swap"
 msgstr "Es wurde kein NIM-HTLC für den Tausch gefunden"
 
+msgid "non-ASCII character (may impersonate Latin letters)"
+msgstr ""
+
 msgid "Not a pending payment request"
 msgstr "Keine ausstehende Zahlungsanfrage"
 
@@ -834,6 +860,12 @@ msgstr "Benachrichtigungen können nicht aktiviert werden, überspringe."
 
 msgid "Only {count} out of {total} remaining."
 msgstr "Nur {count} von {total} übrig."
+
+msgid "Open anyway"
+msgstr ""
+
+msgid "Open this mini app?"
+msgstr ""
 
 msgid "Pay"
 msgstr "Bezahlen"
@@ -995,6 +1027,9 @@ msgstr "Deine Zahlung ist fehlgeschlagen"
 #| msgid "No transactions found for \"{searchQuery}\""
 msgid "Polygon transaction not found after relay"
 msgstr "Keine Transaktionen gefunden für \"{searchQuery}\""
+
+msgid "Position {position}: {glyph} ({code}). {reason}."
+msgstr ""
 
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
@@ -1294,6 +1329,9 @@ msgstr "Diese Punkte sind zum Ausgeben da. Verwende sie für deinen nächsten Ei
 msgid "This action cannot be undone"
 msgstr ""
 
+msgid "This address could not be parsed."
+msgstr ""
+
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
 msgstr "Wechselgebühren sowie BTC-Lightning-Gebühren fallen an."
 
@@ -1323,6 +1361,14 @@ msgstr "Dieser Promo-Code wurde zu oft eingelöst"
 
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr "Bei dieser Zahlung erhältst du {amount} Punkt. | Bei dieser Zahlung erhälst du {amount} Punkte."
+
+msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
+msgstr ""
+
+#, fuzzy
+#| msgid "Transaction already sent"
+msgid "This transaction will reappear in your history."
+msgstr "Transaktion bereits geschickt"
 
 msgid "Top Up"
 msgstr "Aufladen"
@@ -1369,6 +1415,14 @@ msgstr "Verbindung zum Punkte-Server fehlgeschlagen"
 
 msgid "Unexpected GoCrypto error"
 msgstr "Unerwarteter GoCrypto Fehler"
+
+msgid "Unhide"
+msgstr ""
+
+#, fuzzy
+#| msgid "Invalid transfer type"
+msgid "Unhide transaction?"
+msgstr "Ungültige Transferart"
 
 msgid "Unknown"
 msgstr "Unbekannt"
@@ -1423,6 +1477,11 @@ msgstr ""
 
 msgid "We're working on something special"
 msgstr ""
+
+#, fuzzy
+#| msgid "Copy address"
+msgid "Web address"
+msgstr "Adresse kopieren"
 
 msgid "Welcome to Cryptocity Points"
 msgstr ""
@@ -1483,6 +1542,9 @@ msgstr "Für die Zahlung mit BTC-Lightning wird automatisch der entsprechende Be
 
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr "Mit der Registrierung eines Kryptostadt-Punkte-Kontos in Nimiq Pay stimmst du den Datenverarbeitungspraktiken unserer {privacyPolicy} zu. Die Wahrung deiner Privatsphäre und deiner Kontrolle über deine Daten ist uns ein wichtiges Anliegen. Du kannst dein Kryptostadt-Punkte-Konto jederzeit innerhalb der App löschen, wodurch deine persönlichen Daten, wie deine Telefonnummer, dauerhaft aus unserem System gelöscht werden. Um Betrug vorzubeugen, bleibt die Löschung deines Kontos für 12 Monate protokolliert. Solltest du dich für eine Neuanmeldung entscheiden, können frühere Daten und Aktivitäten nicht wiederhergestellt werden. Teil unseres Engagements für deine Datensicherheit ist ein unkompliziertes Verfahren zur Kontolöschung innerhalb der App, das sich an bewährten Praktiken der Branche orientiert, um die Autonomie der Nutzer und den Datenschutz zu gewährleisten. Anweisungen zum Löschen deines Kontos und weitere Informationen findest du in den Kontoeinstellungen innerhalb der App."
+
+msgid "Why this address is flagged"
+msgstr ""
 
 msgid "Withdraw"
 msgstr "Abbuchen"
@@ -1553,6 +1615,9 @@ msgstr "Du kannst dir deinen Bonus abholen!"
 msgid "You have chosen \"{selected}\"."
 msgstr "Du hast \"{selected}\" ausgewählt."
 
+msgid "You have not opened this address before. Read it carefully. Scammers can disguise fake sites with characters that look like normal letters."
+msgstr ""
+
 msgid "You have reached your daily spending limit"
 msgstr ""
 
@@ -1582,6 +1647,9 @@ msgstr "Dein NIM-Guthaben ist noch nicht verfügbar. Du kannst nur mit Punkten b
 msgid "Your number"
 msgstr "Deine Telefonnummer"
 
+msgid "zero-width character (invisible)"
+msgstr ""
+
 #~ msgid "Loading..."
 #~ msgstr "Lade…"
 
@@ -1595,9 +1663,6 @@ msgstr "Deine Telefonnummer"
 #~| msgid "You don't have enough NIM. Your current balance is {balance}."
 #~ msgid "You don't have enough NIM. Your current balance is {balance}."
 #~ msgstr "Du hast nicht genug NIM. Dein aktuelles Guthaben beträgt {balance}."
-
-#~ msgid "All transactions"
-#~ msgstr "Alle Transaktionen"
 
 #~ msgid "Reset search"
 #~ msgstr "Suche zurücksetzen"
@@ -1652,11 +1717,6 @@ msgstr "Deine Telefonnummer"
 #~| msgid "Failed to fetch payment request"
 #~ msgid "Failed to create swap"
 #~ msgstr "Zahlungsanfrage konnte nicht geladen werden"
-
-#, fuzzy
-#~| msgid "Invalid transfer type"
-#~ msgid "Invalid transaction type"
-#~ msgstr "Ungültige Transferart"
 
 #, fuzzy
 #~| msgid "No order found"
