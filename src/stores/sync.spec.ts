@@ -23,6 +23,9 @@ const state = vi.hoisted(() => {
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
   const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
   const addRemoteSigner = vi.fn(() => Promise.resolve())
+  const addReceiptTransaction = vi.fn()
+  const addUnknownPaymentToMerchantTransaction = vi.fn()
+  const addWithdrawalTransaction = vi.fn()
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -69,6 +72,9 @@ const state = vi.hoisted(() => {
     updateRemoteSigner,
     getAllRemoteSigners,
     addRemoteSigner,
+    addReceiptTransaction,
+    addUnknownPaymentToMerchantTransaction,
+    addWithdrawalTransaction,
     logger,
   }
 })
@@ -256,8 +262,9 @@ vi.mock('@/stores/remote-signer', () => {
 vi.mock('@/stores/transactions', () => {
   const useTransactions = defineStore('transactions', () => ({
     sendTx: state.sendTx,
-    addUnknownPaymentToMerchantTransaction: vi.fn(),
-    addWithdrawalTransaction: vi.fn(),
+    addReceiptTransaction: state.addReceiptTransaction,
+    addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
+    addWithdrawalTransaction: state.addWithdrawalTransaction,
     addStakingtransaction: vi.fn(),
     updateTransactionCashbackClaimed: vi.fn(),
     updateTransactionStatus: vi.fn(),
@@ -350,6 +357,9 @@ describe('useSync remote signer reconciliation', () => {
     state.getAllRemoteSigners.mockResolvedValue([])
     state.addRemoteSigner.mockReset()
     state.addRemoteSigner.mockResolvedValue(undefined)
+    state.addReceiptTransaction.mockReset()
+    state.addUnknownPaymentToMerchantTransaction.mockReset()
+    state.addWithdrawalTransaction.mockReset()
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -521,6 +531,63 @@ describe('useSync remote signer reconciliation', () => {
     await store.verifyRemoteSignersDb()
 
     expect(state.sendTx).toHaveBeenCalledTimes(1)
+  })
+
+  it('routes swap HTLCs found behind an extension chain to the swap handler', async () => {
+    const signer = remoteSigner('NQ22 TEST FUNDED REMOTE ADDRESS', 0, true)
+    state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+
+    const extensionTx = {
+      transactionHash: 'extension-hash',
+      sender: signer.address,
+      senderType: 'basic',
+      recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+      recipientType: 'htlc',
+      value: 50_000,
+      fee: 0,
+      state: 'confirmed',
+      timestamp: 150_000,
+      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      proof: { raw: '' },
+    }
+    const swapLeafTx = {
+      transactionHash: 'swap-leaf-hash',
+      sender: 'NQ44 EXTENSION HTLC ADDRESS',
+      senderType: 'htlc',
+      recipient: 'NQ55 SWAP HTLC ADDRESS',
+      recipientType: 'htlc',
+      value: 50_000,
+      fee: 0,
+      state: 'confirmed',
+      timestamp: 160_000,
+      data: { hashRoot: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
+      proof: { raw: '' },
+    }
+
+    state.getAccountTransactions.mockImplementation(((address: any) => {
+      if (address?.toUserFriendlyAddress?.() === signer.address)
+        return Promise.resolve({ data: [extensionTx] })
+      return Promise.resolve({ data: [] })
+    }) as any)
+    state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
+
+    // Force the swap handler down its catch path so we can observe the leaf
+    // reaching it without wiring up a Fastspot mock.
+    vi.doMock('@/composables/useFastspotv1', () => ({
+      useFastspotApiV1: vi.fn(() => Promise.resolve({
+        getContract: vi.fn(() => Promise.reject(new Error('mocked fastspot failure'))),
+      })),
+    }))
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.updateTransactionHistory()
+
+    expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalled()
+    expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
+    )
   })
 
   it('awaits centralized signer discovery before scanning remote signer history', async () => {

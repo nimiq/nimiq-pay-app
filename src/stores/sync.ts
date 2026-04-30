@@ -806,17 +806,17 @@ export const useSync = defineStore('sync', () => {
           await Promise.all(htlcExtensionTxs.map(async (tx) => {
             const txs = await getAllOutgoingTransactionsFromHtlcs(Nimiq.Address.fromString(tx.recipient))
             const categorized = categorizeTransactions(txs)
-            htlcSwapTxs.concat(categorized.htlcSwapTxs)
-            withdrawalTxs.concat(categorized.withdrawalTxs)
-            stakingTxs.concat(categorized.stakingTxs)
-            unknownTxs.concat(categorized.unknownTxs)
+            htlcSwapTxs.push(...categorized.htlcSwapTxs)
+            withdrawalTxs.push(...categorized.withdrawalTxs)
+            stakingTxs.push(...categorized.stakingTxs)
+            unknownTxs.push(...categorized.unknownTxs)
           }))
           await Promise.all([
-            htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
-            withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
-            stakingTxs.map(tx => handleStakingTxs(tx)),
-            unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
-          ].flat())
+            ...htlcSwapTxs.map(tx => handleSwapTxs(tx, { remoteSigner })),
+            ...withdrawalTxs.map(tx => handleWithdrawalTxs(tx, { remoteSigner })),
+            ...stakingTxs.map(tx => handleStakingTxs(tx)),
+            ...unknownTxs.map(tx => handleUnknownTxs(tx, { remoteSigner })),
+          ])
         }
       }
     }
