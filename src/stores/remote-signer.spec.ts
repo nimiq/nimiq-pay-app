@@ -11,6 +11,7 @@ function createAddress(value: string) {
 
 const state = vi.hoisted(() => {
   const getBalance = vi.fn(() => Promise.resolve({ data: 0, error: undefined }))
+  const getAccount = vi.fn((): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: 'No account found' }))
   const getAccounts = vi.fn((): Promise<{
     data: { type: string, balance: number }[] | undefined
     error: Error | undefined
@@ -54,6 +55,7 @@ const state = vi.hoisted(() => {
     consensus: 'established' as 'connecting' | 'established',
     isProcessingRemote: false,
     getBalance,
+    getAccount,
     getAccounts,
     getStatus,
     getRemoteSigner,
@@ -98,6 +100,7 @@ vi.mock('@/stores/locks', () => {
 
 vi.mock('@/stores/nimiq-network', () => {
   const useNimiqNetwork = defineStore('nimiq-network', () => ({
+    getAccount: state.getAccount,
     getAccounts: state.getAccounts,
     getBalance: state.getBalance,
     client: computed(() => state.client),
@@ -149,6 +152,8 @@ describe('useRemoteSigner', () => {
 
     state.getBalance.mockReset()
     state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+    state.getAccount.mockReset()
+    state.getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
     state.getAccounts.mockReset()
     state.getAccounts.mockResolvedValue({ data: [], error: undefined })
     state.getStatus.mockReset()
@@ -349,5 +354,79 @@ describe('useRemoteSigner', () => {
     expect(state.run).toHaveBeenCalledTimes(5)
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [1, 'NQ20 TEST REMOTE ADDRESS'])
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [5, 'NQ24 TEST REMOTE ADDRESS'])
+  })
+
+  describe('registerOwnHtlcIfMissing', () => {
+    it('inserts a previously-unknown HTLC as inactive using the on-chain account fields', async () => {
+      state.getStatus.mockResolvedValueOnce({
+        data: { status: 'good', blockHeight: 128, servicePublicKey: 'service-public-key', network: 'TestAlbatross' },
+        error: undefined,
+        hasError: false,
+        status: 200,
+      })
+      state.getAccount.mockResolvedValue({
+        data: { type: 'htlc', balance: 521, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ_R', timeout: 555_000, hashRoot: '0', hashAlgorithm: 'sha256', hashCount: 1, totalAmount: 521 },
+        error: undefined,
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      // Allow the immediate getStatus interval to populate remotePublicKey.
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
+
+      expect(state.getAccount).toHaveBeenCalled()
+      expect(state.run).toHaveBeenCalledWith(
+        expect.any(String),
+        ['NQ44 EXTENSION HTLC ADDRESS', 521, 98, 'service-public-key', 0, 555_000, false],
+      )
+    })
+
+    it('skips when the HTLC is already in remote_signers', async () => {
+      state.query.mockImplementation(((_sql: string, _params?: unknown[], options?: { single?: boolean }) => {
+        if (options?.single)
+          return Promise.resolve(undefined)
+        return Promise.resolve([{
+          active: false,
+          balance: 0,
+          end: 999_999,
+          proofSize: 98,
+          publicKey: 'service-public-key',
+          start: 0,
+          address: 'NQ44 EXTENSION HTLC ADDRESS',
+        }])
+      }) as any)
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
+
+      expect(state.getAccount).not.toHaveBeenCalled()
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ44 EXTENSION HTLC ADDRESS']),
+      )
+    })
+
+    it('still registers when getAccount returns a non-htlc account (pruned post-drain)', async () => {
+      state.getAccount.mockResolvedValue({
+        data: { type: 'basic', balance: 100 },
+        error: undefined,
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing('NQ44 PRUNED HTLC')
+
+      expect(state.run).toHaveBeenCalledWith(
+        expect.any(String),
+        ['NQ44 PRUNED HTLC', 0, 98, 'service-public-key', 0, 0, false],
+      )
+    })
   })
 })

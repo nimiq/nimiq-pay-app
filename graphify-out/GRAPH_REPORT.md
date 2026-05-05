@@ -1,11 +1,11 @@
-# Graph Report - .  (2026-04-30)
+# Graph Report - .  (2026-05-05)
 
 ## Corpus Check
-- 2150 files · ~5,530,567 words
+- 2346 files · ~6,650,423 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 12742 nodes · 33399 edges · 437 communities detected
+- 12807 nodes · 33498 edges · 443 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -22,194 +22,194 @@
 10. `sqlite3_malloc64()` - 128 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `GULSceneZeroingWeakContainer` --inherits--> `NSObject`  [EXTRACTED]
-  ios/App/Pods/GoogleUtilities/GoogleUtilities/AppDelegateSwizzler/GULSceneDelegateSwizzler.m →   _Bridges community 16 → community 5_
+- `FIRInstallationsBackoffEventData` --inherits--> `NSObject`  [EXTRACTED]
+  ios/App/Pods/FirebaseInstallations/FirebaseInstallations/Source/Library/InstallationsIDController/FIRInstallationsBackoffController.m →   _Bridges community 14 → community 8_
 - `snapshot()` --inherits--> `NSObject`  [EXTRACTED]
-  ios/App/AppUITests/SnapshotHelper.swift →   _Bridges community 16 → community 13_
+  ios/App/AppUITests/SnapshotHelper.swift →   _Bridges community 8 → community 12_
 - `CodingKeys` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatsPayload.swift →   _Bridges community 13 → community 1_
+  ios/App/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatsPayload.swift →   _Bridges community 12 → community 2_
 - `SessionIDChangeReason` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/PostHog/PostHog/PostHogSessionManager.swift →   _Bridges community 1 → community 16_
+  ios/App/Pods/PostHog/PostHog/PostHogSessionManager.swift →   _Bridges community 2 → community 8_
 - `StorageKey` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/PostHog/PostHog/PostHogStorage.swift →   _Bridges community 1 → community 39_
+  ios/App/Pods/PostHog/PostHog/PostHogStorage.swift →   _Bridges community 2 → community 37_
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.0
-Nodes (1601): accessPayload(), accessPayloadChecked(), actionName(), addToBlockedList(), addToVTrans(), adjustStats(), afpCheckReservedLock(), afpClose() (+1593 more)
+Nodes (2098): absFunc(), actionName(), addSpaceSeparator(), AdjustTree(), allConstraintsUsed(), allocSpace(), alsoAnInt(), analyzeFilterKeyword() (+2090 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.0
-Nodes (478): ApplyFiltersAndEncode(), CompressAlphaJob(), EncodeAlpha(), EncodeAlphaInternal(), EncodeLossless(), GetFilterMap(), GetNumColors(), InitFilterTrial() (+470 more)
+Cohesion: 0.01
+Nodes (931): accessPayload(), accessPayloadChecked(), addToBlockedList(), addToVTrans(), adjustStats(), afpCheckReservedLock(), afpClose(), afpLock() (+923 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.01
-Nodes (827): AdjustTree(), asciiFold(), assertColumnName(), blobGrowBuffer(), blobSeekToRow(), bytecodevtabClose(), bytecodevtabCursorClear(), bytecodevtabDisconnect() (+819 more)
+Cohesion: 0.0
+Nodes (523): ApplyFiltersAndEncode(), CompressAlphaJob(), EncodeAlpha(), EncodeAlphaInternal(), EncodeLossless(), GetFilterMap(), GetNumColors(), InitFilterTrial() (+515 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.01
-Nodes (814): addAggInfoColumn(), addAggInfoFunc(), addArgumentToVtab(), addModuleArgument(), addOp4IntSlow(), agginfoFree(), agginfoPersistExprCb(), aggregateConvertIndexedExprRefToColumn() (+806 more)
+Nodes (861): addAggInfoColumn(), addAggInfoFunc(), addArgumentToVtab(), addModuleArgument(), addOp4IntSlow(), agginfoFree(), agginfoPersistExprCb(), aggregateConvertIndexedExprRefToColumn() (+853 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.01
 Nodes (90): $a(), An, Ao, as, b(), ba(), Bi(), bn (+82 more)
 
 ### Community 5 - "Community 5"
-Cohesion: 0.0
-Nodes (487): FIRAnalyticsConfiguration, -postNotificationNamevalue, -setAnalyticsCollectionEnabled, -setAnalyticsCollectionEnabledpersistSetting, -sharedInstance, FIRApp, -actualBundleID, -addAppToAppDictionary (+479 more)
-
-### Community 6 - "Community 6"
 Cohesion: 0.01
 Nodes (236): _a(), aa(), Ac(), Ae(), ai, ao(), ar(), as() (+228 more)
 
-### Community 7 - "Community 7"
+### Community 6 - "Community 6"
 Cohesion: 0.01
 Nodes (127): Address, addToExternrefTable0(), _assertClass(), _base64encodeChunk(), _base64fromByteArray(), _bitsToEntropy(), _bitsToMnemonic(), BLSKeyPair (+119 more)
 
-### Community 8 - "Community 8"
+### Community 7 - "Community 7"
 Cohesion: 0.01
 Nodes (435): A, adapt(), _addListener(), adler32(), afterTransform(), afterWrite(), alloc(), allocUnsafe() (+427 more)
 
+### Community 8 - "Community 8"
+Cohesion: 0.0
+Nodes (376): PodsDummy_AparajitaCapacitorBiometricAuth, PodsDummy_AparajitaCapacitorSecureStorage, PodsDummy_AppsCapacitorMonetplusHce, PodsDummy_Capacitor, PodsDummy_CapacitorApp, PodsDummy_CapacitorBrowser, PodsDummy_CapacitorCamera, PodsDummy_CapacitorClipboard (+368 more)
+
 ### Community 9 - "Community 9"
 Cohesion: 0.01
-Nodes (501): absFunc(), addSpaceSeparator(), areDoubleQuotedStringsEnabled(), autoAdjustDate(), avgFinalize(), bytecodevtabColumn(), bytelengthFunc(), cdateFunc() (+493 more)
+Nodes (177): assetToSwapPair(), buildPaymentAnalyticsProps(), capture(), getAmountRange(), trackAppOpened(), trackChainSwitched(), trackCurrentAppOpen(), trackDAppClosed() (+169 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.01
-Nodes (172): assetToSwapPair(), buildPaymentAnalyticsProps(), capture(), getAmountRange(), trackAppOpened(), trackChainSwitched(), trackCurrentAppOpen(), trackDAppClosed() (+164 more)
-
-### Community 11 - "Community 11"
-Cohesion: 0.01
 Nodes (319): GDTCCTCompressionHelper, -gzippedData, -isGzipped, GDTCCTUploadOperation, -batchByAddingMetricsEventToBatchforTarget, -cancel, -constructRequestProtoWithEvents, -constructRequestWithURLforTargetdata (+311 more)
 
-### Community 12 - "Community 12"
+### Community 11 - "Community 11"
 Cohesion: 0.03
 Nodes (327): $1(), _5(), $7(), _9(), _A(), A1(), a5(), a7() (+319 more)
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.01
 Nodes (181): AccessMode, create, read, update, Archive, Archive.EndOfCentralDirectoryRecord, ArchiveError, cancelledOperation (+173 more)
 
+### Community 13 - "Community 13"
+Cohesion: 0.01
+Nodes (178): FIRAnalyticsConfiguration, -postNotificationNamevalue, -setAnalyticsCollectionEnabled, -setAnalyticsCollectionEnabledpersistSetting, -sharedInstance, FIRApp, -actualBundleID, -addAppToAppDictionary (+170 more)
+
 ### Community 14 - "Community 14"
-Cohesion: 0.02
-Nodes (232): fts3auxGrowStatArray(), fts3GrowSegReaderBuffer(), fts3SegReaderCursorAppend(), fts5AssertComparisonResult(), fts5AssertMultiIterSetup(), fts5BufferAppendTerm(), fts5BufferCompare(), fts5BufferSwap() (+224 more)
+Cohesion: 0.01
+Nodes (171): FIRInstallations, -assertCompatibleIIDVersion, -authTokenForcingRefreshcompletion, -authTokenWithCompletion, -componentsToRegister, -deleteWithCompletion, -initWithApp, -initWithAppOptionsappNameinstallationsIDControllerprefetchAuthToken (+163 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.01
-Nodes (161): FIRInstallations, -assertCompatibleIIDVersion, -authTokenForcingRefreshcompletion, -authTokenWithCompletion, -componentsToRegister, -deleteWithCompletion, -initWithApp, -initWithAppOptionsappNameinstallationsIDControllerprefetchAuthToken (+153 more)
-
-### Community 16 - "Community 16"
-Cohesion: 0.01
-Nodes (77): PodsDummy_AparajitaCapacitorBiometricAuth, PodsDummy_AparajitaCapacitorSecureStorage, PodsDummy_AppsCapacitorMonetplusHce, PodsDummy_Capacitor, PodsDummy_CapacitorApp, PodsDummy_CapacitorBrowser, PodsDummy_CapacitorCamera, PodsDummy_CapacitorClipboard (+69 more)
-
-### Community 17 - "Community 17"
-Cohesion: 0.02
-Nodes (119): CollectHistogram_SSE2(), DC16_SSE2(), DC16Mode_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC4_SSE2(), DC8uv_SSE2() (+111 more)
-
-### Community 18 - "Community 18"
 Cohesion: 0.02
 Nodes (123): FBLPromise, -all, -allOn, -onQueueall, FBLPromise, -always, -alwaysOn, -onQueuealways (+115 more)
 
-### Community 19 - "Community 19"
-Cohesion: 0.02
-Nodes (41): js(), ae(), be(), ce(), Ct(), de(), dt(), _e() (+33 more)
-
-### Community 20 - "Community 20"
+### Community 16 - "Community 16"
 Cohesion: 0.04
 Nodes (96): Ae(), Ai(), ao(), At(), Bo(), Ce(), ci(), cn() (+88 more)
 
-### Community 21 - "Community 21"
+### Community 17 - "Community 17"
 Cohesion: 0.06
 Nodes (124): _0(), a0(), ar(), as(), au(), b0(), bs(), bu() (+116 more)
 
-### Community 22 - "Community 22"
+### Community 18 - "Community 18"
+Cohesion: 0.02
+Nodes (45): ae, At, B(), ce(), Ct(), de(), dt(), _e() (+37 more)
+
+### Community 19 - "Community 19"
+Cohesion: 0.03
+Nodes (89): Add4x4_NEON(), ApplyFilter2_NEON(), ApplyFilter2NoFlip_NEON(), ApplyFilter4_NEON(), ApplyFilter6_NEON(), ConvertU8ToS16_NEON(), DC16_NEON(), DC16NoLeft_NEON() (+81 more)
+
+### Community 20 - "Community 20"
 Cohesion: 0.04
 Nodes (68): CheckSlowModel(), GetCPUInfo(), x86CPUInfo(), xgetbv(), clip(), clip_8b(), clip_bit_depth(), ConvertWRGBToYUV() (+60 more)
 
-### Community 23 - "Community 23"
-Cohesion: 0.06
-Nodes (65): Add4x4_NEON(), ApplyFilter2_NEON(), ApplyFilter2NoFlip_NEON(), ApplyFilter4_NEON(), ApplyFilter6_NEON(), ConvertU8ToS16_NEON(), DC16_NEON(), DC16NoLeft_NEON() (+57 more)
+### Community 21 - "Community 21"
+Cohesion: 0.05
+Nodes (73): ComplexMask_SSE2(), DC16_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC8uv_SSE2(), DC8uvNoLeft_SSE2(), DC8uvNoTop_SSE2() (+65 more)
 
-### Community 24 - "Community 24"
+### Community 22 - "Community 22"
 Cohesion: 0.05
 Nodes (19): a(), b, C, d(), e(), f(), g, h() (+11 more)
 
-### Community 25 - "Community 25"
+### Community 23 - "Community 23"
 Cohesion: 0.04
 Nodes (30): PostHogSwiftUIViewModifier, View, Coordinator, getTargetViews(), Pair, PostHogTagAnchorView, PostHogTagAnchorViewController, PostHogTagView (+22 more)
 
-### Community 26 - "Community 26"
+### Community 24 - "Community 24"
 Cohesion: 0.07
 Nodes (1): i
 
-### Community 27 - "Community 27"
+### Community 25 - "Community 25"
 Cohesion: 0.06
 Nodes (12): AnyObject, ApplicationLifecyclePublisher, AppLifecyclePublishing, BaseApplicationLifecyclePublisher, RegistrationToken, AutocaptureEventProcessing, AutocaptureEventProcessing, BaseApplicationLifecyclePublisher (+4 more)
 
-### Community 28 - "Community 28"
+### Community 26 - "Community 26"
+Cohesion: 0.07
+Nodes (55): CollectHistogram_SSE2(), DC16_SSE2(), DC16Mode_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC4_SSE2(), DC8uv_SSE2() (+47 more)
+
+### Community 27 - "Community 27"
 Cohesion: 0.06
 Nodes (38): clip_8b(), DC16_C(), DC16NoLeft_C(), DC16NoTop_C(), DC16NoTopLeft_C(), DC8uv_C(), DC8uvNoLeft_C(), DC8uvNoTop_C() (+30 more)
+
+### Community 28 - "Community 28"
+Cohesion: 0.09
+Nodes (50): BitsEntropyRefine(), DominantCostRangeInit(), FinalHuffmanCost(), GetBinIdForEntropy(), GetCombineCostFactor(), GetCombinedEntropy(), GetCombinedHistogramEntropy(), GetHistoBinIndex() (+42 more)
 
 ### Community 29 - "Community 29"
 Cohesion: 0.08
 Nodes (44): alias(), autocapture(), buildProperties(), capture(), captureAppBackgrounded(), captureAppInstallLifecycle(), captureAppOpened(), captureScreenViews() (+36 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.09
-Nodes (50): BitsEntropyRefine(), DominantCostRangeInit(), FinalHuffmanCost(), GetBinIdForEntropy(), GetCombineCostFactor(), GetCombinedEntropy(), GetCombinedHistogramEntropy(), GetHistoBinIndex() (+42 more)
-
-### Community 31 - "Community 31"
 Cohesion: 0.05
 Nodes (33): AutoCapturable, Element, EventData, EventSource, actionMethod, gestureRecognizer, notification, EventType (+25 more)
 
-### Community 32 - "Community 32"
-Cohesion: 0.08
-Nodes (40): ComplexMask_SSE2(), DC16_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC8uv_SSE2(), DC8uvNoLeft_SSE2(), DC8uvNoTop_SSE2() (+32 more)
+### Community 31 - "Community 31"
+Cohesion: 0.13
+Nodes (45): hasHighPrecisionDouble(), havingToWhere(), optimizeAggregateUseOfIndexedExpr(), printAggInfo(), sqlite3_test_control(), sqlite3BenignMallocHooks(), sqlite3BtreeSeekCount(), sqlite3ParserCoverage() (+37 more)
 
-### Community 33 - "Community 33"
+### Community 32 - "Community 32"
 Cohesion: 0.09
 Nodes (37): clip_8b(), clip_max(), CollectHistogram_C(), Copy(), Copy16x8_C(), Copy4x4_C(), DC4(), DCMode() (+29 more)
 
-### Community 34 - "Community 34"
+### Community 33 - "Community 33"
 Cohesion: 0.05
 Nodes (1): T
 
-### Community 35 - "Community 35"
+### Community 34 - "Community 34"
 Cohesion: 0.1
 Nodes (36): AccumulateSSE16_NEON(), Add4x4_NEON(), CollectHistogram_NEON(), ConvertU8ToS16_NEON(), DCMode_NEON(), DiffU8ToS16_NEON(), Disto16x16_NEON(), Disto4x4_NEON() (+28 more)
 
-### Community 36 - "Community 36"
-Cohesion: 0.08
-Nodes (24): AddSubtractComponentFull(), AddSubtractComponentHalf(), Average2(), Average3(), Average4(), ClampedAddSubtractFull(), ClampedAddSubtractHalf(), Clip255() (+16 more)
-
-### Community 37 - "Community 37"
+### Community 35 - "Community 35"
 Cohesion: 0.13
 Nodes (36): AddScore(), CheckLambdaValue(), clip(), CopyScore(), CorrectDCValues(), ExpandMatrix(), GetCostModeI4(), InitScore() (+28 more)
 
-### Community 38 - "Community 38"
+### Community 36 - "Community 36"
 Cohesion: 0.11
 Nodes (1): MiniAppHost
 
-### Community 39 - "Community 39"
+### Community 37 - "Community 37"
 Cohesion: 0.09
 Nodes (16): applicationSupportDirectoryURL(), PostHogStorage, StorageKey, anonymousId, distinctId, enabledFeatureFlagPayloads, enabledFeatureFlags, groups (+8 more)
 
-### Community 40 - "Community 40"
+### Community 38 - "Community 38"
 Cohesion: 0.15
 Nodes (31): BranchCost(), CalcSkipProba(), CalcTokenProba(), Clamp(), CodeResiduals(), ComputeNextQ(), FinalizeSkipProba(), FinalizeTokenProbas() (+23 more)
 
-### Community 41 - "Community 41"
+### Community 39 - "Community 39"
+Cohesion: 0.08
+Nodes (11): as(), Ga(), is(), ls(), me(), oe(), ts(), Ve() (+3 more)
+
+### Community 40 - "Community 40"
 Cohesion: 0.12
 Nodes (5): C(), d, e, u(), v()
 
-### Community 42 - "Community 42"
+### Community 41 - "Community 41"
 Cohesion: 0.14
 Nodes (21): ConvertARGBToUV_SSE41(), ConvertARGBToY_SSE41(), ConvertBGR24ToY_SSE41(), ConvertRGB24ToY_SSE41(), ConvertRGBA32ToUV_SSE41(), ConvertRGBToUV_SSE41(), ConvertRGBToY_SSE41(), ConvertYUV444ToRGB_SSE41() (+13 more)
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.2
 Nodes (3): g, m(), q()
+
+### Community 43 - "Community 43"
+Cohesion: 0.11
+Nodes (15): ExportBlock(), ImportBlock(), ImportLine(), InitLeft(), InitTop(), MinSize(), VP8IteratorExport(), VP8IteratorImport() (+7 more)
 
 ### Community 44 - "Community 44"
 Cohesion: 0.11
@@ -240,56 +240,56 @@ Cohesion: 0.13
 Nodes (12): _ACResourceInitProtocol, AppKit.NSColor, AppKit.NSImage, ColorResource, ImageResource, ResourceBundleClass, SwiftUI.Color, SwiftUI.Image (+4 more)
 
 ### Community 48 - "Community 48"
-Cohesion: 0.23
-Nodes (18): ChangeState(), End(), Execute(), Launch(), pthread_cond_destroy(), pthread_cond_init(), pthread_cond_signal(), pthread_cond_wait() (+10 more)
-
-### Community 49 - "Community 49"
 Cohesion: 0.18
 Nodes (3): g(), r, x()
 
-### Community 50 - "Community 50"
+### Community 49 - "Community 49"
 Cohesion: 0.11
 Nodes (1): d
 
-### Community 51 - "Community 51"
+### Community 50 - "Community 50"
 Cohesion: 0.12
 Nodes (1): L
 
-### Community 52 - "Community 52"
+### Community 51 - "Community 51"
 Cohesion: 0.21
 Nodes (4): Data, Encodable, HeartbeatStorage, HeartbeatStorageProtocol
 
-### Community 53 - "Community 53"
-Cohesion: 0.19
-Nodes (11): ChunkAppend(), ChunkDelete(), ChunkInit(), ChunkListDelete(), ChunkRelease(), ChunkSearchList(), ChunkSearchNextInList(), ChunkSetHead() (+3 more)
-
-### Community 54 - "Community 54"
+### Community 52 - "Community 52"
 Cohesion: 0.22
 Nodes (1): f
 
-### Community 55 - "Community 55"
+### Community 53 - "Community 53"
+Cohesion: 0.23
+Nodes (15): fts5Porter_MEq1(), fts5Porter_MGt0(), fts5Porter_MGt1(), fts5Porter_MGt1_and_S_or_T(), fts5Porter_Ostar(), fts5Porter_Vowel(), fts5PorterCb(), fts5PorterGobbleVC() (+7 more)
+
+### Community 54 - "Community 54"
 Cohesion: 0.26
 Nodes (13): getCachedFeatureFlagPayload(), getCachedFeatureFlags(), getFeatureFlag(), getFeatureFlagPayload(), getFeatureFlags(), init(), isFeatureEnabled(), isRecordingActive() (+5 more)
 
-### Community 56 - "Community 56"
+### Community 55 - "Community 55"
 Cohesion: 0.2
 Nodes (8): b(), c(), E(), f(), k(), l(), m(), w()
 
+### Community 56 - "Community 56"
+Cohesion: 0.15
+Nodes (2): D(), I()
+
 ### Community 57 - "Community 57"
-Cohesion: 0.29
-Nodes (13): D(), g(), I(), i1(), j(), k1(), M(), o1() (+5 more)
+Cohesion: 0.28
+Nodes (11): De(), fe(), Ie(), Le(), Ne(), Oe(), qe(), Re() (+3 more)
 
 ### Community 58 - "Community 58"
 Cohesion: 0.28
-Nodes (11): De(), fe(), Ie(), Le(), Ne(), Oe(), qe(), Re() (+3 more)
+Nodes (10): C(), G(), I(), k(), M(), q(), te(), V() (+2 more)
 
 ### Community 59 - "Community 59"
 Cohesion: 0.15
 Nodes (1): m
 
 ### Community 60 - "Community 60"
-Cohesion: 0.28
-Nodes (10): C(), G(), I(), k(), M(), q(), te(), V() (+2 more)
+Cohesion: 0.23
+Nodes (13): memsys5Enter(), memsys5Free(), memsys5FreeUnsafe(), memsys5Init(), memsys5Leave(), memsys5Link(), memsys5Log(), memsys5Malloc() (+5 more)
 
 ### Community 61 - "Community 61"
 Cohesion: 0.23
@@ -308,32 +308,32 @@ Cohesion: 0.35
 Nodes (1): KeychainSwift
 
 ### Community 65 - "Community 65"
-Cohesion: 0.17
-Nodes (3): AppDelegate, UIApplicationDelegate, UIResponder
+Cohesion: 0.26
+Nodes (1): o
 
 ### Community 66 - "Community 66"
 Cohesion: 0.18
 Nodes (1): y
 
 ### Community 67 - "Community 67"
-Cohesion: 0.26
-Nodes (1): o
+Cohesion: 0.17
+Nodes (3): AppDelegate, UIApplicationDelegate, UIResponder
 
 ### Community 68 - "Community 68"
+Cohesion: 0.29
+Nodes (12): copy_stemmer(), doubleConsonant(), hasVowel(), isConsonant(), isVowel(), m_eq_1(), m_gt_0(), m_gt_1() (+4 more)
+
+### Community 69 - "Community 69"
 Cohesion: 0.23
 Nodes (1): Archive
 
-### Community 69 - "Community 69"
+### Community 70 - "Community 70"
 Cohesion: 0.24
 Nodes (6): getScreenSize(), init(), onOrientationDidChange(), onShouldUpdateScreenSize(), registerNotifications(), updateScreenSize()
 
-### Community 70 - "Community 70"
+### Community 71 - "Community 71"
 Cohesion: 0.25
 Nodes (1): PostHogFileBackedQueue
-
-### Community 71 - "Community 71"
-Cohesion: 0.27
-Nodes (2): m(), u
 
 ### Community 72 - "Community 72"
 Cohesion: 0.2
@@ -341,79 +341,79 @@ Nodes (1): o
 
 ### Community 73 - "Community 73"
 Cohesion: 0.4
-Nodes (8): a(), c(), j, k(), q(), S(), T(), w()
+Nodes (8): a(), c(), k(), L, R(), S(), T(), w()
 
 ### Community 74 - "Community 74"
 Cohesion: 0.27
 Nodes (1): y
 
 ### Community 75 - "Community 75"
+Cohesion: 0.27
+Nodes (2): m(), u
+
+### Community 76 - "Community 76"
+Cohesion: 0.31
+Nodes (7): I(), m(), O(), P(), R(), v(), x()
+
+### Community 77 - "Community 77"
 Cohesion: 0.31
 Nodes (1): URLSessionInterceptor
 
-### Community 76 - "Community 76"
+### Community 78 - "Community 78"
 Cohesion: 0.36
 Nodes (3): AppUITests, XCUIApplication, XCTestCase
 
-### Community 77 - "Community 77"
+### Community 79 - "Community 79"
 Cohesion: 0.33
 Nodes (6): CapacitorException, convertBody(), convertFormData(), createProxyUrl(), isRelativeOrProxyUrl(), readFileAsBase64()
 
-### Community 78 - "Community 78"
+### Community 80 - "Community 80"
 Cohesion: 0.22
 Nodes (8): ArrayUtils, BufferUtils, Entropy, ExtendedPrivateKey, MnemonicUtils, NumberUtils, SerialBuffer, StringUtils
-
-### Community 79 - "Community 79"
-Cohesion: 0.22
-Nodes (1): s
-
-### Community 80 - "Community 80"
-Cohesion: 0.53
-Nodes (8): D(), G(), I(), J(), k(), P(), V(), z()
 
 ### Community 81 - "Community 81"
 Cohesion: 0.25
 Nodes (1): l
 
 ### Community 82 - "Community 82"
+Cohesion: 0.53
+Nodes (8): D(), G(), I(), J(), k(), P(), V(), z()
+
+### Community 83 - "Community 83"
+Cohesion: 0.22
+Nodes (1): s
+
+### Community 84 - "Community 84"
 Cohesion: 0.47
 Nodes (1): PostHogApi
 
-### Community 83 - "Community 83"
+### Community 85 - "Community 85"
 Cohesion: 0.25
 Nodes (1): y
 
-### Community 84 - "Community 84"
-Cohesion: 0.25
-Nodes (0): 
-
-### Community 85 - "Community 85"
+### Community 86 - "Community 86"
 Cohesion: 0.25
 Nodes (1): i
 
-### Community 86 - "Community 86"
+### Community 87 - "Community 87"
 Cohesion: 0.32
 Nodes (5): Constants, FileManager, FileStorage, StorageFactory, UserDefaultsStorage
 
-### Community 87 - "Community 87"
+### Community 88 - "Community 88"
 Cohesion: 0.36
 Nodes (1): Archive
 
-### Community 88 - "Community 88"
+### Community 89 - "Community 89"
 Cohesion: 0.46
 Nodes (1): URLSession
 
-### Community 89 - "Community 89"
+### Community 90 - "Community 90"
 Cohesion: 0.29
 Nodes (2): UIView, ViewLayoutTracker
 
-### Community 90 - "Community 90"
+### Community 91 - "Community 91"
 Cohesion: 0.25
 Nodes (6): KeychainSwiftAccessOptions, accessibleAfterFirstUnlock, accessibleAfterFirstUnlockThisDeviceOnly, accessibleWhenPasscodeSetThisDeviceOnly, accessibleWhenUnlocked, accessibleWhenUnlockedThisDeviceOnly
-
-### Community 91 - "Community 91"
-Cohesion: 0.57
-Nodes (6): f(), j(), K(), q(), V(), Y()
 
 ### Community 92 - "Community 92"
 Cohesion: 0.43
@@ -421,191 +421,191 @@ Nodes (1): d
 
 ### Community 93 - "Community 93"
 Cohesion: 0.29
-Nodes (3): Entry.CentralDirectoryStructure, Entry.DataDescriptor, Entry.LocalFileHeader
+Nodes (0): 
 
 ### Community 94 - "Community 94"
-Cohesion: 0.33
-Nodes (2): UIApplication, UIApplicationTracker
+Cohesion: 0.57
+Nodes (6): f(), j(), K(), q(), V(), Y()
 
 ### Community 95 - "Community 95"
-Cohesion: 0.33
-Nodes (1): UIView
+Cohesion: 0.29
+Nodes (3): Entry.CentralDirectoryStructure, Entry.DataDescriptor, Entry.LocalFileHeader
 
 ### Community 96 - "Community 96"
 Cohesion: 0.33
-Nodes (6): GULNetworkInfo, -formatMccandMNC, -getNetworkMobileCountryCode, -getNetworkMobileNetworkCode, -getNetworkRadioType, -getNetworkType
+Nodes (2): UIApplication, UIApplicationTracker
 
 ### Community 97 - "Community 97"
 Cohesion: 0.33
-Nodes (0): 
+Nodes (1): UIView
 
 ### Community 98 - "Community 98"
+Cohesion: 0.33
+Nodes (6): GULNetworkInfo, -formatMccandMNC, -getNetworkMobileCountryCode, -getNetworkMobileNetworkCode, -getNetworkRadioType, -getNetworkType
+
+### Community 99 - "Community 99"
+Cohesion: 0.33
+Nodes (0): 
+
+### Community 100 - "Community 100"
 Cohesion: 0.6
 Nodes (4): D(), P(), R(), w()
 
-### Community 99 - "Community 99"
-Cohesion: 0.53
-Nodes (5): I(), M(), O(), S(), x()
-
-### Community 100 - "Community 100"
+### Community 101 - "Community 101"
 Cohesion: 0.33
 Nodes (1): o
 
-### Community 101 - "Community 101"
+### Community 102 - "Community 102"
 Cohesion: 0.33
 Nodes (1): HeartbeatController
 
-### Community 102 - "Community 102"
+### Community 103 - "Community 103"
 Cohesion: 0.4
 Nodes (3): Date, stat, timeval
 
-### Community 103 - "Community 103"
+### Community 104 - "Community 104"
 Cohesion: 0.33
 Nodes (1): ReadWriteLock
 
-### Community 104 - "Community 104"
+### Community 105 - "Community 105"
 Cohesion: 0.47
 Nodes (2): TimeBasedEpochGenerator, UInt64
 
-### Community 105 - "Community 105"
+### Community 106 - "Community 106"
 Cohesion: 0.53
 Nodes (2): imageToBase64(), UIImage
 
-### Community 106 - "Community 106"
+### Community 107 - "Community 107"
 Cohesion: 0.4
 Nodes (5): GULHeartbeatDateStorageUserDefaults, -heartbeatDateForTag, -heartbeatDictionaryFromDefaults, -initWithDefaultskey, -setHearbeatDateforTag
 
-### Community 107 - "Community 107"
+### Community 108 - "Community 108"
 Cohesion: 0.4
 Nodes (0): 
 
-### Community 108 - "Community 108"
-Cohesion: 0.5
-Nodes (1): r
-
 ### Community 109 - "Community 109"
-Cohesion: 0.6
-Nodes (3): H(), k(), U()
-
-### Community 110 - "Community 110"
 Cohesion: 0.4
 Nodes (1): e
 
+### Community 110 - "Community 110"
+Cohesion: 0.5
+Nodes (0): 
+
 ### Community 111 - "Community 111"
+Cohesion: 0.6
+Nodes (3): H(), O(), U()
+
+### Community 112 - "Community 112"
+Cohesion: 0.5
+Nodes (1): r
+
+### Community 113 - "Community 113"
 Cohesion: 0.5
 Nodes (2): Archive, BackingConfiguration
 
-### Community 112 - "Community 112"
+### Community 114 - "Community 114"
 Cohesion: 0.4
 Nodes (1): PostHogEvent
 
-### Community 113 - "Community 113"
+### Community 115 - "Community 115"
 Cohesion: 0.4
 Nodes (2): CGFloat, Double
 
-### Community 114 - "Community 114"
-Cohesion: 0.4
-Nodes (0): 
-
-### Community 115 - "Community 115"
-Cohesion: 0.4
-Nodes (0): 
-
 ### Community 116 - "Community 116"
-Cohesion: 0.67
-Nodes (2): J(), Q()
+Cohesion: 0.4
+Nodes (0): 
 
 ### Community 117 - "Community 117"
-Cohesion: 0.5
-Nodes (1): m
+Cohesion: 0.4
+Nodes (0): 
 
 ### Community 118 - "Community 118"
 Cohesion: 0.5
-Nodes (1): i
+Nodes (1): m
 
 ### Community 119 - "Community 119"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (2): J(), Q()
 
 ### Community 120 - "Community 120"
 Cohesion: 0.5
 Nodes (1): o
 
 ### Community 121 - "Community 121"
-Cohesion: 0.5
-Nodes (1): n
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 122 - "Community 122"
 Cohesion: 0.5
-Nodes (1): Archive
+Nodes (1): n
 
 ### Community 123 - "Community 123"
 Cohesion: 0.5
-Nodes (1): Data
+Nodes (1): i
 
 ### Community 124 - "Community 124"
-Cohesion: 0.83
-Nodes (3): newDateFormatter(), toISO8601Date(), toISO8601String()
+Cohesion: 0.5
+Nodes (1): Archive
 
 ### Community 125 - "Community 125"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (1): Data
 
 ### Community 126 - "Community 126"
-Cohesion: 0.67
-Nodes (2): Date, dateToMillis()
+Cohesion: 0.83
+Nodes (3): newDateFormatter(), toISO8601Date(), toISO8601String()
 
 ### Community 127 - "Community 127"
 Cohesion: 0.5
-Nodes (2): Optional, String
+Nodes (0): 
 
 ### Community 128 - "Community 128"
-Cohesion: 0.5
-Nodes (1): NetworkSample
+Cohesion: 0.67
+Nodes (2): Date, dateToMillis()
 
 ### Community 129 - "Community 129"
 Cohesion: 0.5
-Nodes (2): UIView, View
+Nodes (2): Optional, String
 
 ### Community 130 - "Community 130"
 Cohesion: 0.5
-Nodes (2): UIView, View
+Nodes (1): NetworkSample
 
 ### Community 131 - "Community 131"
-Cohesion: 0.67
-Nodes (2): initProvider(), retryInit()
+Cohesion: 0.5
+Nodes (2): UIView, View
 
 ### Community 132 - "Community 132"
 Cohesion: 0.5
-Nodes (3): DynamicScroller, DynamicScrollerItem, RecycleScroller
+Nodes (2): UIView, View
 
 ### Community 133 - "Community 133"
-Cohesion: 0.5
-Nodes (0): 
+Cohesion: 0.67
+Nodes (2): initProvider(), retryInit()
 
 ### Community 134 - "Community 134"
 Cohesion: 0.5
-Nodes (0): 
+Nodes (3): DynamicScroller, DynamicScrollerItem, RecycleScroller
 
 ### Community 135 - "Community 135"
-Cohesion: 0.67
+Cohesion: 0.5
 Nodes (0): 
 
 ### Community 136 - "Community 136"
-Cohesion: 1.0
+Cohesion: 0.5
 Nodes (0): 
 
 ### Community 137 - "Community 137"
-Cohesion: 1.0
-Nodes (2): a(), l()
+Cohesion: 0.67
+Nodes (0): 
 
 ### Community 138 - "Community 138"
-Cohesion: 0.67
+Cohesion: 1.0
 Nodes (0): 
 
 ### Community 139 - "Community 139"
-Cohesion: 0.67
-Nodes (0): 
+Cohesion: 1.0
+Nodes (2): a(), l()
 
 ### Community 140 - "Community 140"
 Cohesion: 0.67
@@ -624,28 +624,28 @@ Cohesion: 0.67
 Nodes (1): s
 
 ### Community 144 - "Community 144"
+Cohesion: 1.0
+Nodes (2): A(), C()
+
+### Community 145 - "Community 145"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 145 - "Community 145"
-Cohesion: 1.0
-Nodes (2): FBLPromise, -dispatchGroup
-
 ### Community 146 - "Community 146"
 Cohesion: 0.67
-Nodes (1): Archive
+Nodes (0): 
 
 ### Community 147 - "Community 147"
 Cohesion: 0.67
-Nodes (1): URL
+Nodes (0): 
 
 ### Community 148 - "Community 148"
 Cohesion: 0.67
-Nodes (1): Archive
+Nodes (0): 
 
 ### Community 149 - "Community 149"
-Cohesion: 0.67
-Nodes (1): FileManager
+Cohesion: 1.0
+Nodes (2): FBLPromise, -dispatchGroup
 
 ### Community 150 - "Community 150"
 Cohesion: 0.67
@@ -653,86 +653,86 @@ Nodes (1): Archive
 
 ### Community 151 - "Community 151"
 Cohesion: 0.67
-Nodes (2): Container, DI
+Nodes (1): URL
 
 ### Community 152 - "Community 152"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): Archive
 
 ### Community 153 - "Community 153"
 Cohesion: 0.67
-Nodes (1): UIImage
+Nodes (1): FileManager
 
 ### Community 154 - "Community 154"
 Cohesion: 0.67
-Nodes (1): UUID
+Nodes (1): Archive
 
 ### Community 155 - "Community 155"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (2): Container, DI
 
 ### Community 156 - "Community 156"
 Cohesion: 0.67
-Nodes (1): UIApplication
+Nodes (0): 
 
 ### Community 157 - "Community 157"
 Cohesion: 0.67
-Nodes (1): UITextInputTraits
+Nodes (1): UIImage
 
 ### Community 158 - "Community 158"
 Cohesion: 0.67
-Nodes (1): CGSize
+Nodes (1): UUID
 
 ### Community 159 - "Community 159"
 Cohesion: 0.67
-Nodes (1): UIColor
+Nodes (0): 
 
 ### Community 160 - "Community 160"
 Cohesion: 0.67
-Nodes (1): CGColor
+Nodes (1): UIApplication
 
 ### Community 161 - "Community 161"
 Cohesion: 0.67
-Nodes (1): RRStyle
+Nodes (1): UITextInputTraits
 
 ### Community 162 - "Community 162"
-Cohesion: 1.0
-Nodes (2): maskImage(), toDict()
+Cohesion: 0.67
+Nodes (1): CGSize
 
 ### Community 163 - "Community 163"
 Cohesion: 0.67
-Nodes (1): KeychainSwiftConstants
+Nodes (1): UIColor
 
 ### Community 164 - "Community 164"
 Cohesion: 0.67
-Nodes (1): ExampleInstrumentedTest
+Nodes (1): CGColor
 
 ### Community 165 - "Community 165"
 Cohesion: 0.67
-Nodes (1): ExampleUnitTest
+Nodes (1): RRStyle
 
 ### Community 166 - "Community 166"
-Cohesion: 0.67
-Nodes (1): MockContract
+Cohesion: 1.0
+Nodes (2): maskImage(), toDict()
 
 ### Community 167 - "Community 167"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): KeychainSwiftConstants
 
 ### Community 168 - "Community 168"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): ExampleInstrumentedTest
 
 ### Community 169 - "Community 169"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): ExampleUnitTest
 
 ### Community 170 - "Community 170"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): MockContract
 
 ### Community 171 - "Community 171"
-Cohesion: 1.0
+Cohesion: 0.67
 Nodes (0): 
 
 ### Community 172 - "Community 172"
@@ -812,7 +812,7 @@ Cohesion: 1.0
 Nodes (0): 
 
 ### Community 191 - "Community 191"
-Cohesion: 2.0
+Cohesion: 1.0
 Nodes (0): 
 
 ### Community 192 - "Community 192"
@@ -876,7 +876,7 @@ Cohesion: 1.0
 Nodes (0): 
 
 ### Community 207 - "Community 207"
-Cohesion: 1.0
+Cohesion: 2.0
 Nodes (0): 
 
 ### Community 208 - "Community 208"
@@ -925,11 +925,11 @@ Nodes (0):
 
 ### Community 219 - "Community 219"
 Cohesion: 1.0
-Nodes (1): WeakContainer
+Nodes (0): 
 
 ### Community 220 - "Community 220"
 Cohesion: 1.0
-Nodes (1): PostHogSDK
+Nodes (0): 
 
 ### Community 221 - "Community 221"
 Cohesion: 1.0
@@ -937,7 +937,7 @@ Nodes (0):
 
 ### Community 222 - "Community 222"
 Cohesion: 1.0
-Nodes (1): PostHogConsumerPayload
+Nodes (0): 
 
 ### Community 223 - "Community 223"
 Cohesion: 1.0
@@ -945,51 +945,51 @@ Nodes (0):
 
 ### Community 224 - "Community 224"
 Cohesion: 1.0
-Nodes (1): PostHogPropertiesSanitizer
+Nodes (1): WeakContainer
 
 ### Community 225 - "Community 225"
 Cohesion: 1.0
-Nodes (1): PostHogBatchUploadInfo
+Nodes (1): PostHogSDK
 
 ### Community 226 - "Community 226"
 Cohesion: 1.0
-Nodes (1): UIView
+Nodes (0): 
 
 ### Community 227 - "Community 227"
 Cohesion: 1.0
-Nodes (1): UIWindow
+Nodes (1): PostHogConsumerPayload
 
 ### Community 228 - "Community 228"
 Cohesion: 1.0
-Nodes (1): AssociatedKeys
+Nodes (0): 
 
 ### Community 229 - "Community 229"
 Cohesion: 1.0
-Nodes (1): ViewTreeSnapshotStatus
+Nodes (1): PostHogPropertiesSanitizer
 
 ### Community 230 - "Community 230"
 Cohesion: 1.0
-Nodes (1): MainActivity
+Nodes (1): PostHogBatchUploadInfo
 
 ### Community 231 - "Community 231"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): UIView
 
 ### Community 232 - "Community 232"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): UIWindow
 
 ### Community 233 - "Community 233"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): AssociatedKeys
 
 ### Community 234 - "Community 234"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): ViewTreeSnapshotStatus
 
 ### Community 235 - "Community 235"
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): MainActivity
 
 ### Community 236 - "Community 236"
 Cohesion: 1.0
@@ -1795,562 +1795,590 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
+### Community 437 - "Community 437"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 438 - "Community 438"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 439 - "Community 439"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 440 - "Community 440"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 441 - "Community 441"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 442 - "Community 442"
+Cohesion: 1.0
+Nodes (0): 
+
 ## Knowledge Gaps
 - **1093 isolated node(s):** `ResourceBundleClass`, `ArrayUtils`, `SerialBuffer`, `BufferUtils`, `ExtendedPrivateKey` (+1088 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 168`** (2 nodes): `cypress.config.ts`, `setupNodeEvents()`
+- **Thin community `Community 172`** (2 nodes): `cypress.config.ts`, `setupNodeEvents()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 169`** (2 nodes): `commands.ts`, `e2e.ts`
+- **Thin community `Community 173`** (2 nodes): `commands.ts`, `e2e.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 170`** (2 nodes): `CAPBridgedPlugin.h`, `property()`
+- **Thin community `Community 174`** (2 nodes): `CAPBridgedPlugin.h`, `property()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 171`** (2 nodes): `CDVPluginResult.h`, `CDVPluginResult()`
+- **Thin community `Community 175`** (2 nodes): `transfer-handlers.js`, `setupMainThreadTransferHandlers()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 172`** (2 nodes): `CDVConfigParser.h`, `NSXMLParserDelegate()`
+- **Thin community `Community 176`** (2 nodes): `WithdrawalAddressList-CIAHH1ei.js`, `Z()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 173`** (2 nodes): `CDVPlugin.h`, `UIView()`
+- **Thin community `Community 177`** (2 nodes): `index-BHq--mvT.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 174`** (2 nodes): `CDVCommandDelegateImpl.h`, `CDVCommandDelegateImpl()`
+- **Thin community `Community 178`** (2 nodes): `TransactionItem.vue_vue_type_script_setup_true_lang-JH0JC_uE.js`, `W()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 175`** (2 nodes): `CDVInvokedUrlCommand.h`, `CDVInvokedUrlCommand()`
+- **Thin community `Community 179`** (2 nodes): `useStringParser-Ty_1lO63.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 176`** (2 nodes): `CDVURLProtocol.h`, `CDVURLProtocol()`
+- **Thin community `Community 180`** (2 nodes): `NimWithdraw-BhstQ-Fv.js`, `Ze()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 177`** (2 nodes): `transfer-handlers.js`, `setupMainThreadTransferHandlers()`
+- **Thin community `Community 181`** (2 nodes): `vue3-components-9uN0dvLo.js`, `n()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 178`** (2 nodes): `useBiometric-CMz9EuTi.js`, `__vite__mapDeps()`
+- **Thin community `Community 182`** (2 nodes): `QRScanner--ovbISRC.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 179`** (2 nodes): `index-C3D-Erx9.js`, `__vite__mapDeps()`
+- **Thin community `Community 183`** (2 nodes): `useNotifications--Er9eEjD.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 180`** (2 nodes): `swipe-back-CQpH8b1_.js`, `k()`
+- **Thin community `Community 184`** (2 nodes): `status-tap-r38VFDCc.js`, `m()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 181`** (2 nodes): `useGoCryptoMonitoring-Bw1cgBXM.js`, `__vite__mapDeps()`
+- **Thin community `Community 185`** (2 nodes): `index-BZf1ASoq.js`, `i()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 182`** (2 nodes): `useNotifications-BMhtyf4T.js`, `__vite__mapDeps()`
+- **Thin community `Community 186`** (2 nodes): `nimiq-logo-DMfdzjG_.js`, `c()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 183`** (2 nodes): `md.transition-Cu4jm09z.js`, `v()`
+- **Thin community `Community 187`** (2 nodes): `index-Bc0gn9sM.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 184`** (2 nodes): `loading-spinner-j9QFg_N6.js`, `c()`
+- **Thin community `Community 188`** (2 nodes): `loading-spinner-DEsB1VIZ.js`, `a()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 185`** (2 nodes): `vue3-components-9uN0dvLo.js`, `n()`
+- **Thin community `Community 189`** (2 nodes): `info-BIw8A1Nm.js`, `c()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 186`** (2 nodes): `gamepad-Cq7sZ9WS.js`, `l()`
+- **Thin community `Community 190`** (2 nodes): `mini-app-confirmation-ZQgXiAKU.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 187`** (2 nodes): `status-tap-BxxBrEeS.js`, `m()`
+- **Thin community `Community 191`** (2 nodes): `useBiometric-0UMVMzOn.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 188`** (2 nodes): `EnableNotifications-Bx6HkYaB.js`, `x()`
+- **Thin community `Community 192`** (2 nodes): `PaymentPreview-y6eAyfFG.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 189`** (2 nodes): `NakaOnboardingVerifyId-DugLIdBn.js`, `J()`
+- **Thin community `Community 193`** (2 nodes): `ShortAddressDisplay-BsB_TROu.js`, `B()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 190`** (2 nodes): `TransactionAmounts.vue_vue_type_script_setup_true_lang-rS4axXWE.js`, `z()`
+- **Thin community `Community 194`** (2 nodes): `swipe-back-DCk4BUCr.js`, `k()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 191`** (2 nodes): `points-C_CffqwB.js`, `__vite__mapDeps()`
+- **Thin community `Community 195`** (2 nodes): `cryptocity-logo-B4pSm_0z.js`, `h()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 192`** (2 nodes): `NimAddressInput-BlKPZPXt.js`, `ee()`
+- **Thin community `Community 196`** (2 nodes): `steps-BWpCcsTV.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 193`** (2 nodes): `validation-CS60Lqpv.js`, `__vite__mapDeps()`
+- **Thin community `Community 197`** (2 nodes): `QuickButton.vue_vue_type_script_setup_true_lang-jTO2blex.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 194`** (2 nodes): `useMiniAppSession-mTtk7BEd.js`, `__vite__mapDeps()`
+- **Thin community `Community 198`** (2 nodes): `useMiniAppHost-Dc_qq8Di.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 195`** (2 nodes): `check-DRz7ek-E.js`, `l()`
+- **Thin community `Community 199`** (2 nodes): `arrow-up-right-CYqjrcyb.js`, `a()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 196`** (2 nodes): `WorldIcon-ChAcZGkK.js`, `p()`
+- **Thin community `Community 200`** (2 nodes): `md.transition-BU6gqdft.js`, `v()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 197`** (2 nodes): `usdt-logo-neJGmoWV.js`, `a()`
+- **Thin community `Community 201`** (2 nodes): `index-DTjSBOUS.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 198`** (2 nodes): `index-CBW1PXnh.js`, `i()`
+- **Thin community `Community 202`** (2 nodes): `ShowWords-3kHiOdIe.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 199`** (2 nodes): `mini-app-confirmation-FTnooBcO.js`, `__vite__mapDeps()`
+- **Thin community `Community 203`** (2 nodes): `chevron-right-BVQJDahG.js`, `c()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 200`** (2 nodes): `QuickButton.vue_vue_type_script_setup_true_lang-11gR3_9k.js`, `__vite__mapDeps()`
+- **Thin community `Community 204`** (2 nodes): `EnableNotifications-BGSk11tC.js`, `x()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 201`** (2 nodes): `info-C66TZpuT.js`, `a()`
+- **Thin community `Community 205`** (2 nodes): `gamepad-BAAeja8N.js`, `l()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 202`** (2 nodes): `index-B9EvTM3y.js`, `__vite__mapDeps()`
+- **Thin community `Community 206`** (2 nodes): `kyc-BovLorac.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 203`** (2 nodes): `QRScanner-BMuKdTbU.js`, `__vite__mapDeps()`
+- **Thin community `Community 207`** (2 nodes): `points-ax7qegew.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 204`** (2 nodes): `useStringParser-BMY6wzTz.js`, `__vite__mapDeps()`
+- **Thin community `Community 208`** (2 nodes): `NimAddressInput-C2PfaGrT.js`, `ee()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 205`** (2 nodes): `steps-CDLG9l_u.js`, `__vite__mapDeps()`
+- **Thin community `Community 209`** (2 nodes): `NakaOnboardingVerifyId-BehsyOlW.js`, `J()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 206`** (2 nodes): `chevron-right-JJoZhB7J.js`, `a()`
+- **Thin community `Community 210`** (2 nodes): `usdt-logo-M7p70A6D.js`, `a()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 207`** (2 nodes): `cryptocity-logo-6uBOmvVM.js`, `h()`
+- **Thin community `Community 211`** (2 nodes): `useGoCryptoMonitoring-lKRNuNQv.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 208`** (2 nodes): `TransactionItem.vue_vue_type_script_setup_true_lang-HTUslyT8.js`, `K()`
+- **Thin community `Community 212`** (2 nodes): `useMiniAppSession-BMURGxLW.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 209`** (2 nodes): `WithdrawalAddressList-Dq-8RBqQ.js`, `Z()`
+- **Thin community `Community 213`** (2 nodes): `validation-BZbNbIQ2.js`, `__vite__mapDeps()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 210`** (2 nodes): `PaymentPreview-DRm0x3-p.js`, `__vite__mapDeps()`
+- **Thin community `Community 214`** (2 nodes): `WorldIcon-Dp_eQW3C.js`, `p()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 211`** (2 nodes): `useMiniAppHost-BsK_aHDJ.js`, `__vite__mapDeps()`
+- **Thin community `Community 215`** (2 nodes): `focus-visible-supuXXMI.js`, `h()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 212`** (2 nodes): `kyc-9nfsW2F9.js`, `__vite__mapDeps()`
+- **Thin community `Community 216`** (2 nodes): `check-BB2iIoKb.js`, `l()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 213`** (2 nodes): `focus-visible-supuXXMI.js`, `h()`
+- **Thin community `Community 217`** (2 nodes): `TransactionAmounts.vue_vue_type_script_setup_true_lang-3Cb_-bGS.js`, `z()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 214`** (2 nodes): `arrow-up-right-C94PRukk.js`, `a()`
+- **Thin community `Community 218`** (2 nodes): `CDVPluginResult.h`, `CDVPluginResult()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 215`** (2 nodes): `NimWithdraw-Dbq4PGfo.js`, `Ge()`
+- **Thin community `Community 219`** (2 nodes): `CDVConfigParser.h`, `NSXMLParserDelegate()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 216`** (2 nodes): `ShowWords-Cd5jpUg5.js`, `__vite__mapDeps()`
+- **Thin community `Community 220`** (2 nodes): `CDVPlugin.h`, `UIView()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 217`** (2 nodes): `nimiq-logo-C_SmI3Ub.js`, `c()`
+- **Thin community `Community 221`** (2 nodes): `CDVCommandDelegateImpl.h`, `CDVCommandDelegateImpl()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 218`** (2 nodes): `ShortAddressDisplay-dPa9tbb_.js`, `k()`
+- **Thin community `Community 222`** (2 nodes): `CDVInvokedUrlCommand.h`, `CDVInvokedUrlCommand()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 219`** (2 nodes): `WeakContainer.swift`, `WeakContainer`
+- **Thin community `Community 223`** (2 nodes): `CDVURLProtocol.h`, `CDVURLProtocol()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 220`** (2 nodes): `PostHogExtensions.swift`, `PostHogSDK`
+- **Thin community `Community 224`** (2 nodes): `WeakContainer.swift`, `WeakContainer`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 221`** (2 nodes): `PostHogLegacyQueue.swift`, `migrateOldQueue()`
+- **Thin community `Community 225`** (2 nodes): `PostHogExtensions.swift`, `PostHogSDK`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 222`** (2 nodes): `PostHogConsumerPayload.swift`, `PostHogConsumerPayload`
+- **Thin community `Community 226`** (2 nodes): `PostHogLegacyQueue.swift`, `migrateOldQueue()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 223`** (2 nodes): `PostHogSwizzler.swift`, `swizzle()`
+- **Thin community `Community 227`** (2 nodes): `PostHogConsumerPayload.swift`, `PostHogConsumerPayload`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 224`** (2 nodes): `PostHogPropertiesSanitizer.swift`, `PostHogPropertiesSanitizer`
+- **Thin community `Community 228`** (2 nodes): `PostHogSwizzler.swift`, `swizzle()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 225`** (2 nodes): `PostHogBatchUploadInfo.swift`, `PostHogBatchUploadInfo`
+- **Thin community `Community 229`** (2 nodes): `PostHogPropertiesSanitizer.swift`, `PostHogPropertiesSanitizer`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 226`** (2 nodes): `UIView+PostHogLabel.swift`, `UIView`
+- **Thin community `Community 230`** (2 nodes): `PostHogBatchUploadInfo.swift`, `PostHogBatchUploadInfo`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 227`** (2 nodes): `UIWindow+.swift`, `UIWindow`
+- **Thin community `Community 231`** (2 nodes): `UIView+PostHogLabel.swift`, `UIView`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 228`** (2 nodes): `AssociatedKeys.swift`, `AssociatedKeys`
+- **Thin community `Community 232`** (2 nodes): `UIWindow+.swift`, `UIWindow`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 229`** (2 nodes): `ViewTreeSnapshotStatus.swift`, `ViewTreeSnapshotStatus`
+- **Thin community `Community 233`** (2 nodes): `AssociatedKeys.swift`, `AssociatedKeys`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 230`** (2 nodes): `MainActivity.java`, `MainActivity`
+- **Thin community `Community 234`** (2 nodes): `ViewTreeSnapshotStatus.swift`, `ViewTreeSnapshotStatus`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 231`** (2 nodes): `usePrice.spec.ts`, `fetch()`
+- **Thin community `Community 235`** (2 nodes): `MainActivity.java`, `MainActivity`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 232`** (2 nodes): `remote-signer.spec.ts`, `createAddress()`
+- **Thin community `Community 236`** (2 nodes): `usePrice.spec.ts`, `fetch()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 233`** (2 nodes): `ShortAddressDisplay.spec.ts`, `mountComponent()`
+- **Thin community `Community 237`** (2 nodes): `remote-signer.spec.ts`, `createAddress()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 234`** (2 nodes): `AmountInput.spec.ts`, `mountAmountInput()`
+- **Thin community `Community 238`** (2 nodes): `ShortAddressDisplay.spec.ts`, `mountComponent()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 235`** (2 nodes): `SetupView.spec.ts`, `passthrough()`
+- **Thin community `Community 239`** (2 nodes): `AmountInput.spec.ts`, `mountAmountInput()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 236`** (1 nodes): `eslint.config.js`
+- **Thin community `Community 240`** (2 nodes): `TheHomeFooter.spec.ts`, `iconForUrl()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 237`** (1 nodes): `FIRCurrentDateProvider.h`
+- **Thin community `Community 241`** (2 nodes): `SetupView.spec.ts`, `passthrough()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 238`** (1 nodes): `tailwind.config.js`
+- **Thin community `Community 242`** (1 nodes): `eslint.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 239`** (1 nodes): `capacitor.config.ts`
+- **Thin community `Community 243`** (1 nodes): `FIRCurrentDateProvider.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 240`** (1 nodes): `test.cy.ts`
+- **Thin community `Community 244`** (1 nodes): `tailwind.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 241`** (1 nodes): `CapacitorExtendedDialog_vers.c`
+- **Thin community `Community 245`** (1 nodes): `capacitor.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 242`** (1 nodes): `CapacitorCamera_vers.c`
+- **Thin community `Community 246`** (1 nodes): `test.cy.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 243`** (1 nodes): `CapacitorScreenOrientation_vers.c`
+- **Thin community `Community 247`** (1 nodes): `CapacitorExtendedDialog_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 244`** (1 nodes): `FirebaseInstallations_vers.c`
+- **Thin community `Community 248`** (1 nodes): `CapacitorCamera_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 245`** (1 nodes): `CapacitorDevice_vers.c`
+- **Thin community `Community 249`** (1 nodes): `CapacitorScreenOrientation_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 246`** (1 nodes): `nanopb_vers.c`
+- **Thin community `Community 250`** (1 nodes): `FirebaseInstallations_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 247`** (1 nodes): `CapacitorSumsubMobileSdk_vers.c`
+- **Thin community `Community 251`** (1 nodes): `CapacitorDevice_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 248`** (1 nodes): `GoogleDataTransport_vers.c`
+- **Thin community `Community 252`** (1 nodes): `nanopb_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 249`** (1 nodes): `KeychainSwift_vers.c`
+- **Thin community `Community 253`** (1 nodes): `CapacitorSumsubMobileSdk_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 250`** (1 nodes): `GoogleUtilities_vers.c`
+- **Thin community `Community 254`** (1 nodes): `GoogleDataTransport_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 251`** (1 nodes): `CapacitorPreferences_vers.c`
+- **Thin community `Community 255`** (1 nodes): `KeychainSwift_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 252`** (1 nodes): `Pods_App_vers.c`
+- **Thin community `Community 256`** (1 nodes): `GoogleUtilities_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 253`** (1 nodes): `AppsCapacitorMonetplusHce_vers.c`
+- **Thin community `Community 257`** (1 nodes): `CapacitorPreferences_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 254`** (1 nodes): `CapacitorBrowser_vers.c`
+- **Thin community `Community 258`** (1 nodes): `Pods_App_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 255`** (1 nodes): `CapacitorHaptics_vers.c`
+- **Thin community `Community 259`** (1 nodes): `AppsCapacitorMonetplusHce_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 256`** (1 nodes): `CapacitorStatusBar_vers.c`
+- **Thin community `Community 260`** (1 nodes): `CapacitorBrowser_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 257`** (1 nodes): `CapacitorPushNotifications_vers.c`
+- **Thin community `Community 261`** (1 nodes): `CapacitorHaptics_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 258`** (1 nodes): `FirebaseCoreInternal_vers.c`
+- **Thin community `Community 262`** (1 nodes): `CapacitorStatusBar_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 259`** (1 nodes): `AparajitaCapacitorBiometricAuth_vers.c`
+- **Thin community `Community 263`** (1 nodes): `CapacitorPushNotifications_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 260`** (1 nodes): `AparajitaCapacitorSecureStorage_vers.c`
+- **Thin community `Community 264`** (1 nodes): `FirebaseCoreInternal_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 261`** (1 nodes): `FirebaseMessaging_vers.c`
+- **Thin community `Community 265`** (1 nodes): `AparajitaCapacitorBiometricAuth_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 262`** (1 nodes): `CapawesomeCapacitorPosthog_vers.c`
+- **Thin community `Community 266`** (1 nodes): `AparajitaCapacitorSecureStorage_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 263`** (1 nodes): `CapacitorToast_vers.c`
+- **Thin community `Community 267`** (1 nodes): `FirebaseMessaging_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 264`** (1 nodes): `FBLPromises_vers.c`
+- **Thin community `Community 268`** (1 nodes): `CapawesomeCapacitorPosthog_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 265`** (1 nodes): `PostHog_vers.c`
+- **Thin community `Community 269`** (1 nodes): `CapacitorToast_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 266`** (1 nodes): `CapgoInappbrowser_vers.c`
+- **Thin community `Community 270`** (1 nodes): `FBLPromises_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 267`** (1 nodes): `CapacitorCommunitySqlite_vers.c`
+- **Thin community `Community 271`** (1 nodes): `PostHog_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 268`** (1 nodes): `SQLCipher_vers.c`
+- **Thin community `Community 272`** (1 nodes): `CapgoInappbrowser_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 269`** (1 nodes): `CapacitorApp_vers.c`
+- **Thin community `Community 273`** (1 nodes): `CapacitorCommunitySqlite_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 270`** (1 nodes): `FirebaseCore_vers.c`
+- **Thin community `Community 274`** (1 nodes): `SQLCipher_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 271`** (1 nodes): `Cordova_vers.c`
+- **Thin community `Community 275`** (1 nodes): `CapacitorApp_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 272`** (1 nodes): `CapacitorClipboard_vers.c`
+- **Thin community `Community 276`** (1 nodes): `FirebaseCore_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 273`** (1 nodes): `CapacitorFilesystem_vers.c`
+- **Thin community `Community 277`** (1 nodes): `Cordova_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 274`** (1 nodes): `Capacitor_vers.c`
+- **Thin community `Community 278`** (1 nodes): `CapacitorClipboard_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 275`** (1 nodes): `RdlaboCapacitorScreenshotEvent_vers.c`
+- **Thin community `Community 279`** (1 nodes): `CapacitorFilesystem_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 276`** (1 nodes): `CapacitorShare_vers.c`
+- **Thin community `Community 280`** (1 nodes): `Capacitor_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 277`** (1 nodes): `CapacitorKeyboard_vers.c`
+- **Thin community `Community 281`** (1 nodes): `RdlaboCapacitorScreenshotEvent_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 278`** (1 nodes): `CapgoCameraPreview_vers.c`
+- **Thin community `Community 282`** (1 nodes): `CapacitorShare_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 279`** (1 nodes): `CapacitorCommunityPrivacyScreen_vers.c`
+- **Thin community `Community 283`** (1 nodes): `CapacitorKeyboard_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 280`** (1 nodes): `ZIPFoundation_vers.c`
+- **Thin community `Community 284`** (1 nodes): `CapgoCameraPreview_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 281`** (1 nodes): `CapacitorBrowser-umbrella.h`
+- **Thin community `Community 285`** (1 nodes): `CapacitorCommunityPrivacyScreen_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 282`** (1 nodes): `CapacitorPreferences-umbrella.h`
+- **Thin community `Community 286`** (1 nodes): `ZIPFoundation_vers.c`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 283`** (1 nodes): `CapacitorExtendedDialog-umbrella.h`
+- **Thin community `Community 287`** (1 nodes): `CapacitorBrowser-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 284`** (1 nodes): `SNSThemeMetrics.h`
+- **Thin community `Community 288`** (1 nodes): `CapacitorPreferences-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 285`** (1 nodes): `SNSTheme.h`
+- **Thin community `Community 289`** (1 nodes): `CapacitorExtendedDialog-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 286`** (1 nodes): `SNSMobileSDKInfo.h`
+- **Thin community `Community 290`** (1 nodes): `SNSThemeMetrics.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 287`** (1 nodes): `SNSThemeImages.h`
+- **Thin community `Community 291`** (1 nodes): `SNSTheme.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 288`** (1 nodes): `SNSEvent.h`
+- **Thin community `Community 292`** (1 nodes): `SNSMobileSDKInfo.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 289`** (1 nodes): `IdensicMobileSDK.h`
+- **Thin community `Community 293`** (1 nodes): `SNSThemeImages.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 290`** (1 nodes): `SNSMobileSDKDelegate.h`
+- **Thin community `Community 294`** (1 nodes): `SNSEvent.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 291`** (1 nodes): `SNSSupportItem.h`
+- **Thin community `Community 295`** (1 nodes): `IdensicMobileSDK.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 292`** (1 nodes): `SNSMobileSDK.h`
+- **Thin community `Community 296`** (1 nodes): `SNSMobileSDKDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 293`** (1 nodes): `SNSMobileSDK+Enums.h`
+- **Thin community `Community 297`** (1 nodes): `SNSSupportItem.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 294`** (1 nodes): `SNSThemeSection.h`
+- **Thin community `Community 298`** (1 nodes): `SNSMobileSDK.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 295`** (1 nodes): `SNSDocumentDefinition.h`
+- **Thin community `Community 299`** (1 nodes): `SNSMobileSDK+Enums.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 296`** (1 nodes): `SNSThemeFonts.h`
+- **Thin community `Community 300`** (1 nodes): `SNSThemeSection.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 297`** (1 nodes): `SNSThemeColors.h`
+- **Thin community `Community 301`** (1 nodes): `SNSDocumentDefinition.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 298`** (1 nodes): `FirebaseCore.h`
+- **Thin community `Community 302`** (1 nodes): `SNSThemeFonts.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 299`** (1 nodes): `FirebaseCore-umbrella.h`
+- **Thin community `Community 303`** (1 nodes): `SNSThemeColors.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 300`** (1 nodes): `PromisesObjC-umbrella.h`
+- **Thin community `Community 304`** (1 nodes): `FirebaseCore.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 301`** (1 nodes): `CapacitorScreenOrientation-umbrella.h`
+- **Thin community `Community 305`** (1 nodes): `FirebaseCore-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 302`** (1 nodes): `CapacitorApp-umbrella.h`
+- **Thin community `Community 306`** (1 nodes): `PromisesObjC-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 303`** (1 nodes): `CapacitorFilesystem-umbrella.h`
+- **Thin community `Community 307`** (1 nodes): `CapacitorScreenOrientation-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 304`** (1 nodes): `GoogleDataTransport-umbrella.h`
+- **Thin community `Community 308`** (1 nodes): `CapacitorApp-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 305`** (1 nodes): `GDTCORTargets.h`
+- **Thin community `Community 309`** (1 nodes): `CapacitorFilesystem-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 306`** (1 nodes): `CapacitorShare-umbrella.h`
+- **Thin community `Community 310`** (1 nodes): `GoogleDataTransport-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 307`** (1 nodes): `CapacitorSumsubMobileSdk-umbrella.h`
+- **Thin community `Community 311`** (1 nodes): `GDTCORTargets.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 308`** (1 nodes): `CapacitorStatusBar-umbrella.h`
+- **Thin community `Community 312`** (1 nodes): `CapacitorShare-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 309`** (1 nodes): `FirebaseInstallations-umbrella.h`
+- **Thin community `Community 313`** (1 nodes): `CapacitorSumsubMobileSdk-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 310`** (1 nodes): `FIRInstallationsErrors.h`
+- **Thin community `Community 314`** (1 nodes): `CapacitorStatusBar-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 311`** (1 nodes): `FirebaseInstallations.h`
+- **Thin community `Community 315`** (1 nodes): `FirebaseInstallations-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 312`** (1 nodes): `CapgoCameraPreview-umbrella.h`
+- **Thin community `Community 316`** (1 nodes): `FIRInstallationsErrors.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 313`** (1 nodes): `CAPPluginCall.h`
+- **Thin community `Community 317`** (1 nodes): `FirebaseInstallations.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 314`** (1 nodes): `CAPInstanceDescriptor.h`
+- **Thin community `Community 318`** (1 nodes): `CapgoCameraPreview-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 315`** (1 nodes): `CAPInstanceConfiguration.h`
+- **Thin community `Community 319`** (1 nodes): `CAPPluginCall.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 316`** (1 nodes): `CAPBridgedJSTypes.h`
+- **Thin community `Community 320`** (1 nodes): `CAPInstanceDescriptor.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 317`** (1 nodes): `CAPPluginMethod.h`
+- **Thin community `Community 321`** (1 nodes): `CAPInstanceConfiguration.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 318`** (1 nodes): `CAPBridgeViewController+CDVScreenOrientationDelegate.h`
+- **Thin community `Community 322`** (1 nodes): `CAPBridgedJSTypes.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 319`** (1 nodes): `CAPPlugin.h`
+- **Thin community `Community 323`** (1 nodes): `CAPPluginMethod.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 320`** (1 nodes): `CapawesomeCapacitorPosthog-umbrella.h`
+- **Thin community `Community 324`** (1 nodes): `CAPBridgeViewController+CDVScreenOrientationDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 321`** (1 nodes): `CapacitorDevice-umbrella.h`
+- **Thin community `Community 325`** (1 nodes): `CAPPlugin.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 322`** (1 nodes): `CapacitorPushNotifications-umbrella.h`
+- **Thin community `Community 326`** (1 nodes): `CapawesomeCapacitorPosthog-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 323`** (1 nodes): `FirebaseCoreInternal-umbrella.h`
+- **Thin community `Community 327`** (1 nodes): `cordova.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 324`** (1 nodes): `CapacitorHaptics-umbrella.h`
+- **Thin community `Community 328`** (1 nodes): `nimiq.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 325`** (1 nodes): `CapacitorToast-umbrella.h`
+- **Thin community `Community 329`** (1 nodes): `registerSW.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 326`** (1 nodes): `CapgoInappbrowser-umbrella.h`
+- **Thin community `Community 330`** (1 nodes): `cordova_plugins.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 327`** (1 nodes): `CDVAvailability.h`
+- **Thin community `Community 331`** (1 nodes): `fr-0_eB8Pp8.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 328`** (1 nodes): `CDVViewController.h`
+- **Thin community `Community 332`** (1 nodes): `PaymentSelector-DJiIei24.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 329`** (1 nodes): `CDVScreenOrientationDelegate.h`
+- **Thin community `Community 333`** (1 nodes): `DevModal-DUL_Oh1G.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 330`** (1 nodes): `CDV.h`
+- **Thin community `Community 334`** (1 nodes): `PointsModal-hAC6t6Hf.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 331`** (1 nodes): `CapacitorCordova.h`
+- **Thin community `Community 335`** (1 nodes): `BricksInput-ZPHfE6sH.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 332`** (1 nodes): `NSDictionary+CordovaPreferences.h`
+- **Thin community `Community 336`** (1 nodes): `feature-flags-D0IJRyfv.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 333`** (1 nodes): `CDVWebViewProcessPoolFactory.h`
+- **Thin community `Community 337`** (1 nodes): `TransactionDetails-BMgLvSpz.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 334`** (1 nodes): `CDVPlugin+Resources.h`
+- **Thin community `Community 338`** (1 nodes): `index-C1wUTm-H.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 335`** (1 nodes): `CDVCommandDelegate.h`
+- **Thin community `Community 339`** (1 nodes): `GenericInput-DsyX-tj2.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 336`** (1 nodes): `CDVPluginManager.h`
+- **Thin community `Community 340`** (1 nodes): `es-BB1AVa9_.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 337`** (1 nodes): `SQLCipher-umbrella.h`
+- **Thin community `Community 341`** (1 nodes): `CodeInput-DQ5_Dnlm.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 338`** (1 nodes): `Plugin.h`
+- **Thin community `Community 342`** (1 nodes): `PaymentAmountInput-Dipz0KXK.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 339`** (1 nodes): `AparajitaCapacitorBiometricAuth-umbrella.h`
+- **Thin community `Community 343`** (1 nodes): `CategoryIcon-BVYAYFXI.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 340`** (1 nodes): `CapacitorSQLitePlugin.h`
+- **Thin community `Community 344`** (1 nodes): `ConfirmAddressDeletion-mmYXUldg.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 341`** (1 nodes): `CapacitorCommunitySqlite-umbrella.h`
+- **Thin community `Community 345`** (1 nodes): `ComingSoon-CVGHnF9u.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 342`** (1 nodes): `FirebaseMessaging.h`
+- **Thin community `Community 346`** (1 nodes): `PaymentRequestManualInput-CO2Gbk-P.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 343`** (1 nodes): `FirebaseMessaging-umbrella.h`
+- **Thin community `Community 347`** (1 nodes): `config-19ZQmT4D.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 344`** (1 nodes): `ZIPFoundation-umbrella.h`
+- **Thin community `Community 348`** (1 nodes): `wasm-BxLt509m.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 345`** (1 nodes): `AparajitaCapacitorSecureStorage-umbrella.h`
+- **Thin community `Community 349`** (1 nodes): `DisclaimerModal-DeR6l52p.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 346`** (1 nodes): `PostHog-umbrella.h`
+- **Thin community `Community 350`** (1 nodes): `NakaCardDelete-BHucXwk6.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 347`** (1 nodes): `PostHog.h`
+- **Thin community `Community 351`** (1 nodes): `BluecodeNotSupported-CS47g-cq.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 348`** (1 nodes): `PrivacyScreenPlugin.h`
+- **Thin community `Community 352`** (1 nodes): `Confirm-DDE9h7Pa.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 349`** (1 nodes): `CapacitorCommunityPrivacyScreen-umbrella.h`
+- **Thin community `Community 353`** (1 nodes): `EnableBiometricModal-Co-Yp_Ah.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 350`** (1 nodes): `AppsCapacitorMonetplusHce-umbrella.h`
+- **Thin community `Community 354`** (1 nodes): `MapModal-D0XgcMSn.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 351`** (1 nodes): `GULHeartbeatDateStorable.h`
+- **Thin community `Community 355`** (1 nodes): `MiniAppWarningModal-DXM3asqD.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 352`** (1 nodes): `GULApplication.h`
+- **Thin community `Community 356`** (1 nodes): `index-S_Y1TgvQ.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 353`** (1 nodes): `GoogleUtilities-umbrella.h`
+- **Thin community `Community 357`** (1 nodes): `ModalTemplate.vue_vue_type_script_setup_true_lang-EVr_dPQ3.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 354`** (1 nodes): `GULNetworkLoggerProtocol.h`
+- **Thin community `Community 358`** (1 nodes): `LongTimeNoSeeModal-DYQFDltx.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 355`** (1 nodes): `RdlaboCapacitorScreenshotEvent-umbrella.h`
+- **Thin community `Community 359`** (1 nodes): `BackupIntroduction-57wdCNtE.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 356`** (1 nodes): `nanopb-umbrella.h`
+- **Thin community `Community 360`** (1 nodes): `ValidateWords-B9x3R-9j.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 357`** (1 nodes): `CapacitorClipboard-umbrella.h`
+- **Thin community `Community 361`** (1 nodes): `pt-C-49ZQU9.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 358`** (1 nodes): `KeyboardPlugin.h`
+- **Thin community `Community 362`** (1 nodes): `SetupView-Bp4NHDFl.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 359`** (1 nodes): `CapacitorKeyboard-umbrella.h`
+- **Thin community `Community 363`** (1 nodes): `SettingsModal-Co1dQtv6.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 360`** (1 nodes): `Keyboard.h`
+- **Thin community `Community 364`** (1 nodes): `ReferralModal-my9lGdss.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 361`** (1 nodes): `Pods-App-umbrella.h`
+- **Thin community `Community 365`** (1 nodes): `en-qObpnl0Z.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 362`** (1 nodes): `KeychainSwift-umbrella.h`
+- **Thin community `Community 366`** (1 nodes): `de-ehF7Tva_.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 363`** (1 nodes): `CapacitorCamera-umbrella.h`
+- **Thin community `Community 367`** (1 nodes): `Warning-B6cCnm-B.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 364`** (1 nodes): `cordova.js`
+- **Thin community `Community 368`** (1 nodes): `ExpiringPointsModal-PHpOdDJY.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 365`** (1 nodes): `nimiq.js`
+- **Thin community `Community 369`** (1 nodes): `OnBoardingScreen-DMSwUzxE.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 366`** (1 nodes): `registerSW.js`
+- **Thin community `Community 370`** (1 nodes): `NimAddressDisplay-CzJkZ5G1.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 367`** (1 nodes): `cordova_plugins.js`
+- **Thin community `Community 371`** (1 nodes): `PolygonWarning.vue_vue_type_script_setup_true_lang-MLtkiBmz.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 368`** (1 nodes): `es-CAUXujUk.js`
+- **Thin community `Community 372`** (1 nodes): `PinInput-DLZufE8h.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 369`** (1 nodes): `GenericInput-jtZ0PTy4.js`
+- **Thin community `Community 373`** (1 nodes): `PinInput.vue_vue_type_script_setup_true_lang-BNvFrVsM.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 370`** (1 nodes): `TransactionDetails-IfBpEEQv.js`
+- **Thin community `Community 374`** (1 nodes): `DeletePointsModal-CXyxUHQe.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 371`** (1 nodes): `fr-BbESMV67.js`
+- **Thin community `Community 375`** (1 nodes): `PinView-DEtYgrgh.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 372`** (1 nodes): `MapModal-9tzIGa1z.js`
+- **Thin community `Community 376`** (1 nodes): `AmountInput-fFozQGiJ.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 373`** (1 nodes): `ExpiringPointsModal-B9M9H18D.js`
+- **Thin community `Community 377`** (1 nodes): `CapacitorDevice-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 374`** (1 nodes): `index-BskRTBYA.js`
+- **Thin community `Community 378`** (1 nodes): `CapacitorPushNotifications-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 375`** (1 nodes): `PolygonWarning.vue_vue_type_script_setup_true_lang-BxioRmBl.js`
+- **Thin community `Community 379`** (1 nodes): `FirebaseCoreInternal-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 376`** (1 nodes): `BluecodeNotSupported-DgPDTIG-.js`
+- **Thin community `Community 380`** (1 nodes): `CapacitorHaptics-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 377`** (1 nodes): `wasm-BxLt509m.js`
+- **Thin community `Community 381`** (1 nodes): `CapacitorToast-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 378`** (1 nodes): `NakaCardDelete-ZYOVQ4EQ.js`
+- **Thin community `Community 382`** (1 nodes): `CapgoInappbrowser-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 379`** (1 nodes): `PinView-D28P_w3t.js`
+- **Thin community `Community 383`** (1 nodes): `CDVAvailability.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 380`** (1 nodes): `ValidateWords-BDMtjiCO.js`
+- **Thin community `Community 384`** (1 nodes): `CDVViewController.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 381`** (1 nodes): `PinInput.vue_vue_type_script_setup_true_lang-CFc1x993.js`
+- **Thin community `Community 385`** (1 nodes): `CDVScreenOrientationDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 382`** (1 nodes): `index-BGpsC2Bn.js`
+- **Thin community `Community 386`** (1 nodes): `CDV.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 383`** (1 nodes): `ConfirmAddressDeletion-YFF_tQ64.js`
+- **Thin community `Community 387`** (1 nodes): `CapacitorCordova.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 384`** (1 nodes): `CategoryIcon-BUxZIpeO.js`
+- **Thin community `Community 388`** (1 nodes): `NSDictionary+CordovaPreferences.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 385`** (1 nodes): `NimAddressDisplay-DRMMDaHE.js`
+- **Thin community `Community 389`** (1 nodes): `CDVWebViewProcessPoolFactory.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 386`** (1 nodes): `feature-flags-97uu7T0Q.js`
+- **Thin community `Community 390`** (1 nodes): `CDVPlugin+Resources.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 387`** (1 nodes): `AmountInput-Bs_6ELGe.js`
+- **Thin community `Community 391`** (1 nodes): `CDVCommandDelegate.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 388`** (1 nodes): `PaymentSelector-By1lI2LC.js`
+- **Thin community `Community 392`** (1 nodes): `CDVPluginManager.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 389`** (1 nodes): `DevModal-CmwVnyYr.js`
+- **Thin community `Community 393`** (1 nodes): `SQLCipher-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 390`** (1 nodes): `LongTimeNoSeeModal-BSnXAXot.js`
+- **Thin community `Community 394`** (1 nodes): `Plugin.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 391`** (1 nodes): `en-Du-vadjb.js`
+- **Thin community `Community 395`** (1 nodes): `AparajitaCapacitorBiometricAuth-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 392`** (1 nodes): `Warning-bEhnrTpQ.js`
+- **Thin community `Community 396`** (1 nodes): `CapacitorSQLitePlugin.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 393`** (1 nodes): `DeletePointsModal-DngBkoKx.js`
+- **Thin community `Community 397`** (1 nodes): `CapacitorCommunitySqlite-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 394`** (1 nodes): `Confirm-C76r3Mxb.js`
+- **Thin community `Community 398`** (1 nodes): `FirebaseMessaging.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 395`** (1 nodes): `BackupIntroduction-tiUkRGvW.js`
+- **Thin community `Community 399`** (1 nodes): `FirebaseMessaging-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 396`** (1 nodes): `OnBoardingScreen-BGxRZNQi.js`
+- **Thin community `Community 400`** (1 nodes): `ZIPFoundation-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 397`** (1 nodes): `SetupView-B6rAkhdK.js`
+- **Thin community `Community 401`** (1 nodes): `AparajitaCapacitorSecureStorage-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 398`** (1 nodes): `BricksInput-Bp0EiCFH.js`
+- **Thin community `Community 402`** (1 nodes): `PostHog-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 399`** (1 nodes): `PaymentRequestManualInput-DcEUUJoK.js`
+- **Thin community `Community 403`** (1 nodes): `PostHog.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 400`** (1 nodes): `CodeInput-DIPaMNF3.js`
+- **Thin community `Community 404`** (1 nodes): `PrivacyScreenPlugin.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 401`** (1 nodes): `ModalTemplate.vue_vue_type_script_setup_true_lang-CzI_x-CG.js`
+- **Thin community `Community 405`** (1 nodes): `CapacitorCommunityPrivacyScreen-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 402`** (1 nodes): `ReferralModal-D5ZNRoti.js`
+- **Thin community `Community 406`** (1 nodes): `AppsCapacitorMonetplusHce-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 403`** (1 nodes): `config-B2ErMDeD.js`
+- **Thin community `Community 407`** (1 nodes): `GULHeartbeatDateStorable.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 404`** (1 nodes): `ComingSoon-Dx_-HeZu.js`
+- **Thin community `Community 408`** (1 nodes): `GULApplication.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 405`** (1 nodes): `PaymentAmountInput-D0-vT2_H.js`
+- **Thin community `Community 409`** (1 nodes): `GoogleUtilities-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 406`** (1 nodes): `DisclaimerModal-D_bFfBOO.js`
+- **Thin community `Community 410`** (1 nodes): `GULNetworkLoggerProtocol.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 407`** (1 nodes): `SettingsModal-CG-T6-eY.js`
+- **Thin community `Community 411`** (1 nodes): `RdlaboCapacitorScreenshotEvent-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 408`** (1 nodes): `PinInput-CKU-3ow2.js`
+- **Thin community `Community 412`** (1 nodes): `nanopb-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 409`** (1 nodes): `PointsModal-l78mO-St.js`
+- **Thin community `Community 413`** (1 nodes): `CapacitorClipboard-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 410`** (1 nodes): `EnableBiometricModal-BKWEOOzY.js`
+- **Thin community `Community 414`** (1 nodes): `KeyboardPlugin.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 411`** (1 nodes): `de-Co0sQqrK.js`
+- **Thin community `Community 415`** (1 nodes): `CapacitorKeyboard-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 412`** (1 nodes): `pt-B4Ek2qAc.js`
+- **Thin community `Community 416`** (1 nodes): `Keyboard.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 413`** (1 nodes): `GDTCORMetricsControllerProtocol.h`
+- **Thin community `Community 417`** (1 nodes): `Pods-App-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 414`** (1 nodes): `GDTCORUploader.h`
+- **Thin community `Community 418`** (1 nodes): `KeychainSwift-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 415`** (1 nodes): `GDTCOREndpoints_Private.h`
+- **Thin community `Community 419`** (1 nodes): `CapacitorCamera-umbrella.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 416`** (1 nodes): `FIRInstallationsStatus.h`
+- **Thin community `Community 420`** (1 nodes): `GDTCORMetricsControllerProtocol.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 417`** (1 nodes): `FIRAnalyticsInteropListener.h`
+- **Thin community `Community 421`** (1 nodes): `GDTCORUploader.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 418`** (1 nodes): `PostHogVersion.swift`
+- **Thin community `Community 422`** (1 nodes): `GDTCOREndpoints_Private.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 419`** (1 nodes): `browserstack-upload.js`
+- **Thin community `Community 423`** (1 nodes): `FIRInstallationsStatus.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 420`** (1 nodes): `nimiq-pay.d.ts`
+- **Thin community `Community 424`** (1 nodes): `FIRAnalyticsInteropListener.h`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 421`** (1 nodes): `rollup.config.js`
+- **Thin community `Community 425`** (1 nodes): `PostHogVersion.swift`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 422`** (1 nodes): `window.d.ts`
+- **Thin community `Community 426`** (1 nodes): `browserstack-upload.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 423`** (1 nodes): `vite-env.d.ts`
+- **Thin community `Community 427`** (1 nodes): `nimiq-pay.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 424`** (1 nodes): `shims-vue.d.ts`
+- **Thin community `Community 428`** (1 nodes): `rollup.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 425`** (1 nodes): `light-bolt11-decoder.d.ts`
+- **Thin community `Community 429`** (1 nodes): `window.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 426`** (1 nodes): `nimiq.d.ts`
+- **Thin community `Community 430`** (1 nodes): `vite-env.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 427`** (1 nodes): `process-browser.d.ts`
+- **Thin community `Community 431`** (1 nodes): `shims-vue.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 428`** (1 nodes): `global.d.ts`
+- **Thin community `Community 432`** (1 nodes): `light-bolt11-decoder.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 429`** (1 nodes): `useModal.spec.ts`
+- **Thin community `Community 433`** (1 nodes): `nimiq.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 430`** (1 nodes): `useStringParser.spec.ts`
+- **Thin community `Community 434`** (1 nodes): `process-browser.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 431`** (1 nodes): `mini-apps.spec.ts`
+- **Thin community `Community 435`** (1 nodes): `global.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 432`** (1 nodes): `PolygonWarning.spec.ts`
+- **Thin community `Community 436`** (1 nodes): `useModal.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 433`** (1 nodes): `TheHomeFooter.spec.ts`
+- **Thin community `Community 437`** (1 nodes): `useStringParser.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 434`** (1 nodes): `sql-queries.spec.ts`
+- **Thin community `Community 438`** (1 nodes): `mini-apps.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 435`** (1 nodes): `mini-app-icons.ts`
+- **Thin community `Community 439`** (1 nodes): `PolygonWarning.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 436`** (1 nodes): `history.spec.ts`
+- **Thin community `Community 440`** (1 nodes): `sql-queries.spec.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 441`** (1 nodes): `mini-app-icons.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 442`** (1 nodes): `history.spec.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CodingKeys` connect `Community 13` to `Community 1`?**
+- **Why does `CodingKeys` connect `Community 12` to `Community 2`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `FIRMessagingMetricsLog` connect `Community 16` to `Community 5`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
-- **Why does `snapshot()` connect `Community 13` to `Community 16`?**
+- **Why does `snapshot()` connect `Community 12` to `Community 8`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **What connects `ResourceBundleClass`, `ArrayUtils`, `SerialBuffer` to the rest of the system?**
   _1093 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.0 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.0 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.0 - nodes in this community are weakly interconnected._
+- **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._

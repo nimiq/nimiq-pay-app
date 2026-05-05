@@ -1,7 +1,7 @@
-import type { AccountType, Address, Transaction } from '@nimiq/core'
+import type { AccountType, Address, PlainTransactionDetails, Transaction } from '@nimiq/core'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
 import type { AsyncResult } from '@/types'
-import type { PartialSendTxArgs } from '@/types/transactions'
+import type { PartialSendTxArgs, UserReceiptTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { storeToRefs } from 'pinia'
 import { useRemoteSignerApi } from '@/composables/useApi'
@@ -437,6 +437,25 @@ export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
  */
 function getValidityStartHeight() {
   return Math.max(useRemoteSigner().remoteHeight, height.value) + 1
+}
+
+export function buildTopUpReceipt(tx: PlainTransactionDetails): UserReceiptTransaction {
+  return {
+    transfer: Transfer.UserReceipt,
+    amount: tx.value,
+    sender: tx.sender,
+    senderType: toAccountType(tx.senderType),
+    recipient: tx.recipient,
+    recipientType: toAccountType(tx.recipientType),
+    hash: tx.transactionHash,
+    status: tx.state,
+    timestamp: tx.timestamp,
+    title: 'Top-Up',
+    message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+    fee: tx.fee,
+    // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
+    proofSize: useRemoteSigner().remoteProofSize,
+  }
 }
 
 export function toAccountType(type: 'basic' | 'vesting' | 'htlc' | 'staking'): AccountType {

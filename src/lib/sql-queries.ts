@@ -62,6 +62,7 @@ export enum SQLQuery {
   InsertRemoteSigner = 'INSERT OR REPLACE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
+  PurgeRemoteSigners = 'DELETE FROM remote_signers',
 
   // These queries are used to ensure the correct state of the remote signers
   GetRemoteSignerWithBalance = 'SELECT * FROM remote_signers WHERE balance > 0',
@@ -79,6 +80,7 @@ export enum SQLQuery {
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
   GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
   GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
+  PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
   // Swap Quotes
   CreateSwapQuotesTable = 'CREATE TABLE IF NOT EXISTS swap_quotes (ln_invoice TEXT PRIMARY KEY NOT NULL, swap_id TEXT NOT NULL, timeout INTEGER NOT NULL)',
@@ -87,6 +89,7 @@ export enum SQLQuery {
   DeleteExpiredSwapQuotes = 'DELETE FROM swap_quotes WHERE timeout < ?',
   GetSwapQuote = 'SELECT * FROM swap_quotes WHERE ln_invoice = ? LIMIT 1',
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
+  PurgeSwapQuotes = 'DELETE FROM swap_quotes',
 
   // NAKA
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',

@@ -33,7 +33,7 @@ const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, is
 const { showHiddenTransactions } = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
-const { query } = useConn()
+const { query, run } = useConn()
 const txInMemPool: Ref<PlainTransactionDetails | undefined> = ref()
 const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
 
@@ -49,10 +49,10 @@ async function onNetworkSegmentChange(value: unknown) {
   if (!isNetworkChoice(value) || value === currentNetworkChoice.value)
     return
 
-  // Tx history + NAKA card state are environment-scoped — purge before flipping.
+  // Tx history, remote signers, swap state, and NAKA card state are environment-scoped — purge before flipping.
   const alert = await alertController.create({
     header: `Switch to ${value === 'default' ? 'DEFAULT' : value.toUpperCase()}?`,
-    message: 'This will clear your local transaction history and unregister your NAKA card on this device. Your wallet, PIN, and backup remain intact.',
+    message: 'This will clear your local transaction history, remote signer registrations, pending swaps, and unregister your NAKA card on this device. Your wallet, PIN, and backup remain intact.',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
       { text: 'Switch', role: 'confirm' },
@@ -64,9 +64,14 @@ async function onNetworkSegmentChange(value: unknown) {
     return
 
   // Must run before the override flip: SDK keyspace and issuer sourceId are env-scoped.
+  // Remote signer addresses, swap HTLCs, and swap quotes are tied to a specific cosigner
+  // (per-network public key) — leaving them in place causes the next session to load a
+  // foreign-network signer as "active" and stall sync.
   const naka = useNaka()
-  const [, deactivateResult] = await Promise.allSettled([
+  const [, , , deactivateResult] = await Promise.allSettled([
     clearTxHistory(),
+    run(SQLQuery.PurgeRemoteSigners),
+    Promise.all([run(SQLQuery.PurgeSwapHtlcs), run(SQLQuery.PurgeSwapQuotes)]),
     naka.deactivateCardOnDevice(),
     useNakaDb().purgeNakaCards(),
   ])

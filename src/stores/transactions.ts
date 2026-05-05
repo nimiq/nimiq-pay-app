@@ -60,15 +60,27 @@ export const useTransactions = defineStore('transactions', () => {
    * Select transactions from the database using a basic pagination system. Loads the newest transactions first.
    * If you need to load more transactions, use loadMoreTxs.
    */
+  // UserReceipts whose sender is one of our remote-signer HTLCs are drains, not real Top-Ups —
+  // mis-recording them as receipts would bump the original deposit to the top of the home list with
+  // a recent (drain block) timestamp. Foreign HTLC senders (other Nimiq Pay users paying us) stay.
+  async function filterDisplayableTxs<T extends Pick<ExternalTransaction, 'transfer' | 'sender' | 'hash'>>(txs: T[]): Promise<T[]> {
+    const ourSigners = await useRemoteSigner().getOurRemoteSignerAddresses()
+    const dropped: string[] = []
+    const result = txs.filter((tx) => {
+      if (tx.transfer === Transfer.UserReceipt && ourSigners.has(tx.sender)) {
+        dropped.push(tx.hash)
+        return false
+      }
+      return true
+    })
+    if (dropped.length > 0)
+      logger.log(`🧹 filterDisplayableTxs dropped ${dropped.length} own-HTLC UserReceipt(s)`, dropped)
+    return result
+  }
+
   async function selectTxs(options?: DbPagination) {
     const txs = await query<ExternalTransaction[]>(SQLQuery.SelectPaginationTransactionsByAsset, [activeAsset.value, options?.limit || DEFAULT_LIMIT, options?.offset || 0])
-    // TODO: Temporary, don't handle tx from HTLCs if tx is UserReceiptTransaction
-    const filteredTxs = txs.filter((tx) => {
-      if (tx.transfer === Transfer.UserReceipt)
-        return tx.senderType !== Nimiq.AccountType.HTLC
-      else
-        return true
-    })
+    const filteredTxs = await filterDisplayableTxs(txs)
 
     // Convert JSON strings to objects
     txs.forEach((tx) => {
@@ -343,7 +355,8 @@ export const useTransactions = defineStore('transactions', () => {
    * This ensures the in-memory list stays in sync with the database.
    */
   async function refreshFromDb() {
-    const dbTxs = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [activeAsset.value])
+    const rawDbTxs = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [activeAsset.value])
+    const dbTxs = await filterDisplayableTxs(rawDbTxs)
     dbTxs.forEach((tx) => {
       tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
@@ -361,10 +374,13 @@ export const useTransactions = defineStore('transactions', () => {
   }, { immediate: true })
 
   async function addReceiptTransaction(tx: UserReceiptTransaction) {
+    // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
+    if (tx.senderType === Nimiq.AccountType.HTLC && await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
+      logger.log(`🚫 addReceiptTransaction skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
+      return
+    }
     await upsertTx(tx)
-    // Don't add tx to the transaction list if it came from an HTLC
-    if (tx.senderType !== Nimiq.AccountType.HTLC)
-      addTransaction(tx)
+    addTransaction(tx)
   }
 
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
@@ -383,6 +399,7 @@ export const useTransactions = defineStore('transactions', () => {
     },
     meta?: Record<string, any>,
   ) {
+    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer })
     const newTx = {
       transfer,
       amount: tx.value,
@@ -447,7 +464,19 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   function addTransaction(tx: ExternalTransaction) {
-    transactions.value = [tx, ...transactions.value].sort(
+    // Same hash can arrive via multiple paths (incoming-tx listener + recursive HTLC traversal +
+    // periodic refresh) — replace any existing entry instead of stacking duplicates.
+    const others: ExternalTransaction[] = []
+    let replaced: ExternalTransaction | undefined
+    for (const existing of transactions.value) {
+      if (existing.hash === tx.hash)
+        replaced = existing
+      else
+        others.push(existing)
+    }
+    if (replaced)
+      logger.log(`♻️ addTransaction replacing existing entry`, { hash: tx.hash, transfer: tx.transfer, previousTransfer: replaced.transfer })
+    transactions.value = [tx, ...others].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
     )
   }

@@ -1,0 +1,250 @@
+import type { PlainAccount } from '@nimiq/core'
+import type { SwapHtlc } from '@/types/swapHtlcs'
+import { until } from '@vueuse/core'
+import { defineStore, storeToRefs } from 'pinia'
+import { useLogger } from '@/composables/useLogger'
+import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
+import { SQLQuery } from '@/lib/sql-queries'
+import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { useLocks } from '@/stores/locks'
+import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
+import { useRemoteSigner } from '@/stores/remote-signer'
+import { useSyncState } from '@/stores/sync/state'
+import { useTransactions } from '@/stores/transactions'
+import { Transfer } from '@/types/transactions'
+
+const logger = useLogger('useSync')
+const { setToast } = useToast()
+
+export const useSyncHtlc = defineStore('sync-htlc', () => {
+  const { getBalance } = useNimiqNetwork()
+  const { client, height: localHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
+  const { localAddress, localBalance, localWallet } = storeToRefs(useLocalWallet())
+  const { isProcessingRemote, isSendingTx, htlcCheckLock } = storeToRefs(useLocks())
+  const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
+  const { sendTx } = useTransactions()
+  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended } = storeToRefs(useSyncState())
+
+  /**
+   * If the local wallet gets some funds, move them to the remote wallet immediately.
+   */
+  async function handleFunds() {
+    if (localBalance.value === 0)
+      return
+    if (isTransactionPending.value || isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying handleFunds', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
+      return
+    }
+
+    let remoteBalance = 0
+    if (remoteAddress.value) {
+      const { data, error } = await getBalance(remoteAddress.value)
+      if (error && error !== NO_ACCOUNT_ERROR) {
+        logger.error('Error while getting remote balance before handling funds', error)
+        return
+      }
+      remoteBalance = data ?? 0
+    }
+
+    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
+    logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
+
+    if (remoteBalance === 0 && !isHtlcPending.value) {
+      isProcessingRemote.value = true
+      const { error } = await sendTx({ transfer: Transfer.LocalToRemote })
+      if (error) {
+        isProcessingRemote.value = false
+        setToast({ message: i18n.t('Error while creating deposit'), type: 'error', duration: 5000 })
+        logger.error('Error while creating HTLC', error)
+      }
+      return
+    }
+
+    if (!nodesAreSynced.value)
+      return
+
+    if (isHtlcActive.value && isRemoteOk.value) {
+      isProcessingRemote.value = true
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
+      if (error) {
+        isProcessingRemote.value = false
+        setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
+        logger.error('Error while liquidating HTLC', error)
+        return
+      }
+      if (data) {
+        pendingRemoteDrainTxs.value.push(data.tx)
+      }
+      else {
+        logger.error('No transaction returned from sendTx when liquidating HTLC')
+      }
+      return
+    }
+
+    logger.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}, isHtlcPending: ${isHtlcPending.value}`)
+  }
+
+  async function extendValidity() {
+    if (remoteBalance.value === 0 || !isHtlcActive.value || remoteHeight.value === -1)
+      return
+    logger.log(`Can the HTLC be extended? ${htlcCanBeExtended.value}`)
+    if (htlcCanBeExtended.value) {
+      if (isSendingTx.value) {
+        logger.log('There is a pending transaction. Delaying extendValidity')
+        return
+      }
+      isProcessingRemote.value = true
+      const { error } = await sendTx({ transfer: Transfer.ExtendRemote })
+      if (error) {
+        isProcessingRemote.value = false
+        setToast({ message: i18n.t('Error while extending deposit'), type: 'error', duration: 5000 })
+        logger.error('Error while extending HTLC validity', error)
+        const { data, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimError || !data)
+          logger.error('Error while claiming funds from Remote after extending error', { claimError, data })
+      }
+    }
+  }
+
+  /**
+   * If the server misses the deadline to finalize the HTLC, the local wallet has to recover the funds.
+   */
+  async function checkRemoteValidity() {
+    if (remoteBalance.value === 0)
+      return
+    logger.log(`Did the HTLC expire? ${hasHtlcExpired.value}`)
+    if (hasHtlcExpired.value) {
+      if (isSendingTx.value) {
+        logger.log('There is a pending transaction. Delaying extendValidity')
+        return
+      }
+      isProcessingRemote.value = true
+      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      if (error) {
+        isProcessingRemote.value = false
+        setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
+        logger.error('Error while recovering funds from Remote', error)
+      }
+      else if (data) {
+        pendingRemoteDrainTxs.value.push(data.tx)
+      }
+      else {
+        logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
+      }
+    }
+  }
+
+  async function checkHtlcState() {
+    if (isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying checkHtlcState')
+      return
+    }
+
+    if (remoteBalance.value > 0 && start.value < headTimestamp.value && end.value > headTimestamp.value) {
+      if (pendingHtlcCreationTransactions.value.length === 0) {
+        logger.log('No pending HTLC transactions')
+        isHtlcActive.value = true
+        return
+      }
+      await until(client).not.toBeUndefined()
+      await client.value!.waitForConsensusEstablished()
+      try {
+        const txs = await Promise.all(pendingHtlcCreationTransactions.value.map(tx => client.value!.getTransaction(tx.transactionHash)))
+        logger.log('Checking pending HTLC transactions', txs)
+        isHtlcActive.value = txs.every(tx => tx && tx.state === 'confirmed')
+        pendingHtlcCreationTransactions.value = pendingHtlcCreationTransactions.value.filter(tx => txs.some(t => t && t.transactionHash === tx.transactionHash && t.state !== 'confirmed'))
+      }
+      catch (e) {
+        logger.error('Error checking pending HTLC transactions', e)
+        isHtlcActive.value = false
+      }
+    }
+    else {
+      isHtlcActive.value = false
+    }
+  }
+
+  let lastExpiredSwapHtlcCheckTimestamp = 0
+  async function checkExpiredSwapHtlcs() {
+    const heightTimestamp = headTimestamp.value > 1 ? headTimestamp.value : Date.now()
+    if (heightTimestamp <= lastExpiredSwapHtlcCheckTimestamp + 1 * Nimiq.Policy.BLOCKS_PER_BATCH)
+      return
+    lastExpiredSwapHtlcCheckTimestamp = heightTimestamp
+
+    const conn = useConn()
+    const expiredSwapHtlcs = await conn.query<SwapHtlc[]>(SQLQuery.GetExpiredSwapHtlcs, [heightTimestamp])
+    logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
+
+    for (const htlc of expiredSwapHtlcs) {
+      if (htlc.address.startsWith('0x')) {
+        await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+        await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'expired', timestamp: undefined })
+        continue
+      }
+
+      try {
+        const account = await client.value!.getAccount(htlc.address) as PlainAccount
+        if (!account.balance) {
+          logger.log('Swap HTLC is empty, deleting from db', htlc)
+          await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+          continue
+        }
+
+        logger.log('Refunding swap HTLC', htlc, account)
+        const refundTx = new Nimiq.Transaction(
+          Nimiq.Address.fromUserFriendlyAddress(htlc.address),
+          Nimiq.AccountType.HTLC,
+          new Uint8Array(0),
+          localAddress.value,
+          Nimiq.AccountType.Basic,
+          new Uint8Array(0),
+          BigInt(account.balance),
+          0n,
+          0,
+          localHeight.value,
+          networkId.value,
+        )
+        const { privateKey, publicKey } = localWallet.value
+        const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
+        const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
+        const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
+        proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
+        proof.write(sigProof)
+        refundTx.proof = proof
+        const txDetails = await client.value!.sendTransaction(refundTx)
+        if (txDetails.state !== 'invalidated')
+          useTransactions().setSwapHtlcRefunded(htlc.address)
+        else
+          logger.error('Error while sending refund swap HTLC tx', txDetails)
+      }
+      catch (error) {
+        logger.error('Error while refunding swap HTLC', error)
+      }
+    }
+    useConn().run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
+  }
+
+  async function maybeCheckHtlcState() {
+    if (consensus.value !== 'established')
+      return
+    if (localHeight.value % 10 !== 0)
+      return
+    if (htlcCheckLock.value)
+      return
+
+    htlcCheckLock.value = true
+    await checkHtlcState()
+    htlcCheckLock.value = false
+  }
+
+  return {
+    handleFunds,
+    extendValidity,
+    checkRemoteValidity,
+    checkHtlcState,
+    checkExpiredSwapHtlcs,
+    maybeCheckHtlcState,
+  }
+})

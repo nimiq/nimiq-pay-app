@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   localBalance: 0,
   remoteAddress: createAddress('NQ11 TEST ACTIVE REMOTE ADDRESS'),
   remoteBalance: 0,
+  ourRemoteSignerAddresses: new Set<string>(),
   networkId: 5,
   client: {
     waitForConsensusEstablished: vi.fn(async () => undefined),
@@ -114,6 +115,8 @@ vi.mock('@/stores/remote-signer', () => {
     updateRemoteSigner: state.updateRemoteSigner,
     remoteAddress: computed(() => state.remoteAddress),
     remoteBalance: computed(() => state.remoteBalance),
+    isOurRemoteSigner: async (address: string) => state.ourRemoteSignerAddresses.has(address),
+    getOurRemoteSignerAddresses: async () => state.ourRemoteSignerAddresses,
   }))
 
   return { useRemoteSigner }
@@ -136,6 +139,7 @@ describe('useTransactions', () => {
     state.localBalance = 0
     state.remoteAddress = createAddress('NQ11 TEST ACTIVE REMOTE ADDRESS')
     state.remoteBalance = 0
+    state.ourRemoteSignerAddresses = new Set<string>()
     state.networkId = 5
     state.client = {
       waitForConsensusEstablished: vi.fn(async () => undefined),
@@ -439,6 +443,181 @@ describe('useTransactions', () => {
     useApp().showHiddenTransactions = false
     await nextTick()
     expect(store.transactionsToShow).toHaveLength(1)
+  })
+
+  describe('refreshFromDb / addReceiptTransaction filter our own HTLC drains', () => {
+    const ourHtlc = 'NQ22 TEST OUR OLD HTLC'
+    const foreignHtlc = 'NQ33 OTHER NIMIQ PAY USER HTLC'
+
+    function makeUserReceiptRow(overrides: Record<string, any> = {}) {
+      return {
+        hash: 'hash-default',
+        timestamp: 1,
+        sender: ourHtlc,
+        senderType: 2, // Nimiq.AccountType.HTLC
+        recipient: state.localAddress.toUserFriendlyAddress(),
+        recipientType: 0,
+        amount: 100,
+        fee: 0,
+        status: 'confirmed',
+        title: 'Top-Up',
+        transfer: Transfer.UserReceipt,
+        message: '',
+        asset: Asset.NIM,
+        chain: Chain.Nimiq,
+        ...overrides,
+      }
+    }
+
+    beforeEach(() => {
+      state.activeAsset = Asset.NIM
+      state.ourRemoteSignerAddresses = new Set([ourHtlc])
+    })
+
+    it('refreshFromDb strips UserReceipt rows whose sender is one of our remote signers', async () => {
+      const ourDrain = makeUserReceiptRow({ hash: 'hash-our-drain', sender: ourHtlc, timestamp: 9999 })
+      const foreignTopUp = makeUserReceiptRow({ hash: 'hash-foreign', sender: foreignHtlc, timestamp: 100 })
+      state.query.mockResolvedValue([ourDrain, foreignTopUp] as any)
+
+      const { useTransactions } = await import('./transactions')
+      let store!: ReturnType<typeof useTransactions>
+      mount(defineComponent({
+        setup() {
+          store = useTransactions()
+          return () => null
+        },
+      }))
+      await nextTick()
+
+      await store.refreshFromDb()
+      await nextTick()
+
+      const hashes = store.transactions.map(tx => tx.hash)
+      expect(hashes).toContain('hash-foreign')
+      expect(hashes).not.toContain('hash-our-drain')
+    })
+
+    it('refreshFromDb keeps non-UserReceipt rows even when sender matches our remote signer', async () => {
+      const ourPayment = {
+        ...makeUserReceiptRow({ hash: 'hash-payment', sender: ourHtlc }),
+        transfer: Transfer.UserPayment,
+        title: 'Withdrawal',
+      }
+      state.query.mockResolvedValue([ourPayment] as any)
+
+      const { useTransactions } = await import('./transactions')
+      let store!: ReturnType<typeof useTransactions>
+      mount(defineComponent({
+        setup() {
+          store = useTransactions()
+          return () => null
+        },
+      }))
+      await nextTick()
+
+      await store.refreshFromDb()
+      await nextTick()
+
+      expect(store.transactions.map(tx => tx.hash)).toContain('hash-payment')
+    })
+
+    it('refreshFromDb preserves timestamp DESC ordering after filtering', async () => {
+      const older = makeUserReceiptRow({ hash: 'older', sender: foreignHtlc, timestamp: 100 })
+      const newer = makeUserReceiptRow({ hash: 'newer', sender: foreignHtlc, timestamp: 9999 })
+      state.query.mockResolvedValue([older, newer] as any)
+
+      const { useTransactions } = await import('./transactions')
+      let store!: ReturnType<typeof useTransactions>
+      mount(defineComponent({
+        setup() {
+          store = useTransactions()
+          return () => null
+        },
+      }))
+      await nextTick()
+
+      await store.refreshFromDb()
+      await nextTick()
+
+      expect(store.transactions[0].hash).toBe('newer')
+      expect(store.transactions[1].hash).toBe('older')
+    })
+
+    it('addReceiptTransaction drops drains from one of our remote signers (no upsert, no in-memory entry)', async () => {
+      const { useTransactions } = await import('./transactions')
+      let store!: ReturnType<typeof useTransactions>
+      mount(defineComponent({
+        setup() {
+          store = useTransactions()
+          return () => null
+        },
+      }))
+      await nextTick()
+
+      state.run.mockClear()
+      await store.addReceiptTransaction({
+        transfer: Transfer.UserReceipt,
+        amount: 5505,
+        sender: ourHtlc,
+        senderType: 2,
+        recipient: state.localAddress.toUserFriendlyAddress(),
+        recipientType: 0,
+        hash: 'hash-our-drain',
+        status: 'confirmed',
+        timestamp: Date.now(),
+        title: 'Top-Up',
+        message: '',
+        fee: 0,
+        proofSize: 98,
+        asset: Asset.NIM,
+        chain: Chain.Nimiq,
+      } as any)
+      await nextTick()
+
+      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
+        ([query]) => query === SQLQuery.UpsertTx,
+      )
+      expect(upsertCall).toBeUndefined()
+      expect(store.transactions.map(tx => tx.hash)).not.toContain('hash-our-drain')
+    })
+
+    it('addReceiptTransaction stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
+      const { useTransactions } = await import('./transactions')
+      let store!: ReturnType<typeof useTransactions>
+      mount(defineComponent({
+        setup() {
+          store = useTransactions()
+          return () => null
+        },
+      }))
+      await nextTick()
+
+      state.run.mockClear()
+      await store.addReceiptTransaction({
+        transfer: Transfer.UserReceipt,
+        amount: 1234,
+        sender: foreignHtlc,
+        senderType: 2,
+        recipient: state.localAddress.toUserFriendlyAddress(),
+        recipientType: 0,
+        hash: 'hash-foreign-pay',
+        status: 'confirmed',
+        timestamp: 1,
+        title: 'Top-Up',
+        message: '',
+        fee: 0,
+        proofSize: 98,
+        asset: Asset.NIM,
+        chain: Chain.Nimiq,
+      } as any)
+      await nextTick()
+
+      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
+        ([query]) => query === SQLQuery.UpsertTx,
+      )
+      expect(upsertCall).toBeDefined()
+      expect(store.transactions.map(tx => tx.hash)).toContain('hash-foreign-pay')
+    })
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {

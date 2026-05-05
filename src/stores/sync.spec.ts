@@ -457,6 +457,82 @@ describe('useSync remote signer reconciliation', () => {
     expect(state.logger.error).toHaveBeenCalledWith('Error while getting local balance', NO_ACCOUNT_ERROR)
   })
 
+  it('waits for HTLC extension discovery before finishing balance updates', async () => {
+    let resolveAccount: (account: { type: string, balance: number, timeout: number }) => void = () => {}
+    const extensionTx = {
+      transactionHash: 'extension-hash',
+      recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      timestamp: 150_000,
+      validityStartHeight: 150,
+    }
+
+    state.remoteBalance = 10_000
+    state.getBalance.mockImplementation((address: unknown) => {
+      const addressValue = address as ReturnType<typeof createAddress>
+      if (addressValue.toUserFriendlyAddress() === 'NQ11 TEST REMOTE ADDRESS')
+        return Promise.resolve({ data: 0, error: undefined })
+      return Promise.resolve({ data: 0, error: undefined })
+    })
+    state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([extensionTx] as any)
+    state.getAllRemoteSigners.mockResolvedValue([])
+    state.client.getAccount = vi.fn(() => new Promise(resolve => resolveAccount = resolve))
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    const updatePromise = store.updateBalances()
+    let updateSettled = false
+    updatePromise.then(() => updateSettled = true)
+    for (let i = 0; i < 10 && !state.client.getAccount.mock.calls.length; i++)
+      await Promise.resolve()
+
+    expect(state.client.getAccount).toHaveBeenCalledWith('NQ44 EXTENSION HTLC ADDRESS')
+    expect(updateSettled).toBe(false)
+
+    state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress('NQ44 EXTENSION HTLC ADDRESS') }] as any)
+    resolveAccount({ type: 'htlc', balance: 123_000, timeout: 300_000 })
+    await updatePromise
+
+    expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
+      active: true,
+      balance: 123_000,
+    }))
+  })
+
+  it('logs HTLC extension discovery errors and allows later balance updates', async () => {
+    const extensionTx = {
+      transactionHash: 'extension-hash',
+      recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      timestamp: 150_000,
+      validityStartHeight: 150,
+    }
+    const extensionError = new Error('account lookup failed')
+
+    state.remoteBalance = 10_000
+    state.getBalance.mockImplementation((address: unknown) => {
+      const addressValue = address as ReturnType<typeof createAddress>
+      if (addressValue.toUserFriendlyAddress() === 'NQ11 TEST REMOTE ADDRESS')
+        return Promise.resolve({ data: 0, error: undefined })
+      return Promise.resolve({ data: 0, error: undefined })
+    })
+    state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([extensionTx] as any)
+    state.getAllRemoteSigners.mockResolvedValue([])
+    state.client.getAccount = vi.fn()
+      .mockRejectedValueOnce(extensionError)
+      .mockResolvedValueOnce({ type: 'htlc', balance: 123_000, timeout: 300_000 })
+
+    const { useSync } = await import('./sync')
+    const store = useSync()
+
+    await store.updateBalances()
+    await store.updateBalances()
+
+    expect(state.logger.error).toHaveBeenCalledWith('Error while checking HTLC extension transaction', extensionError)
+    expect(state.updateRemoteSigner).toHaveBeenCalledTimes(1)
+  })
+
   it('activates a single funded inactive signer after refreshing chain balances', async () => {
     const fundedSigner = remoteSigner('NQ22 TEST FUNDED REMOTE ADDRESS', 700_000, false)
     state.query.mockImplementation((sql = '') => {

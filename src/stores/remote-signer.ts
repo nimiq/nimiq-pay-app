@@ -6,6 +6,7 @@ import { computed, readonly, ref, watch } from 'vue'
 import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { SQLQuery } from '@/lib/sql-queries'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -130,6 +131,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       await updateRemoteSigner(signer)
     else
       await addInactiveRemoteSigner(signer)
+    invalidateRemoteSignerAddressCache()
   }
 
   async function updateRemoteSigner(signer: RemoteSigner | undefined) {
@@ -141,6 +143,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteSigner.value = signer
     remoteBalance.value = signer?.balance ?? 0
     homeBalanceState.value = signer ? 'resolved-remote' : 'loading'
+    invalidateRemoteSignerAddressCache()
   }
 
   async function updateActiveWallet() {
@@ -235,6 +238,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       remoteSigner: remoteSignerPlain,
       newRemoteSigner: newRemoteSignerPlain,
     })
+    // Cross-network mismatch detector: stored signer's cosigner publicKey differs from the API
+    // response's. Likely cause: switched networks without purging remote_signers (or migration
+    // bug). Surface as a warning so cross-network bugs aren't silent in logs.
+    if (remoteSigner.value && remoteSigner.value.publicKey !== newRemoteSigner.publicKey) {
+      logger.warn(`⚠️ remote signer publicKey mismatch — stored=${remoteSigner.value.publicKey} api=${newRemoteSigner.publicKey}. Likely stale cross-network state.`)
+    }
     if (remoteSigner.value) {
       const [oldRemoteBalance, newRemoteBalance] = await Promise.allSettled([getBalance(remoteSigner.value.address), getBalance(newRemoteSigner.address)])
       // Don't replace remote signer if old balance is higher than 0 and new balance is 0
@@ -325,13 +334,92 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
    * Fetches all the remote signers from the blockchain and saves them in the database as inactive
    * The updateRemoteFromApi will set the active one
    */
+  // Cached set of our remote-signer addresses, invalidated whenever the remote_signers table is mutated.
+  // Avoids hitting SQLite on every incoming tx / paginated read / 30s refresh.
+  let cachedRemoteSignerAddresses: Set<string> | undefined
+
+  function invalidateRemoteSignerAddressCache() {
+    cachedRemoteSignerAddresses = undefined
+  }
+
+  async function getOurRemoteSignerAddresses(): Promise<Set<string>> {
+    if (cachedRemoteSignerAddresses)
+      return cachedRemoteSignerAddresses
+    const signers = await getAllRemoteSigners()
+    cachedRemoteSignerAddresses = new Set(signers.map(signer => signer.address.toUserFriendlyAddress()))
+    logger.log(`🔄 ourRemoteSignerAddresses cache rebuilt: ${cachedRemoteSignerAddresses.size} signer(s)`, [...cachedRemoteSignerAddresses])
+    return cachedRemoteSignerAddresses
+  }
+
+  async function isOurRemoteSigner(address: string): Promise<boolean> {
+    return (await getOurRemoteSignerAddresses()).has(address)
+  }
+
+  // Self-healing: when we observe a drain whose proof.creator is our local address (verified upstream),
+  // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
+  // without re-reading the proof. Covers extension HTLCs that `discoverRemoteSignersFromBlockchain`
+  // misses because it only walks first-hop HTLCs.
+  async function registerOwnHtlcIfMissing(htlcAddress: string): Promise<void> {
+    if (await isOurRemoteSigner(htlcAddress))
+      return
+    if (!remotePublicKey.value)
+      return
+    const address = Nimiq.Address.fromUserFriendlyAddress(htlcAddress)
+    // Account may already be pruned if the HTLC has been fully drained — in that case we still
+    // register with zero balance/timeout so the cached set short-circuits future drains from
+    // this address instead of looping through getAccount on every periodic refresh.
+    const { data: account } = await useNimiqNetwork().getAccount(address)
+    const balance = account?.type === 'htlc' ? account.balance : 0
+    const end = account?.type === 'htlc' ? account.timeout : 0
+    await addInactiveRemoteSigner({
+      active: false,
+      address,
+      balance,
+      end,
+      start: 0,
+      publicKey: remotePublicKey.value,
+      proofSize: remoteProofSize.value,
+    })
+    invalidateRemoteSignerAddressCache()
+    logger.log(`📝 Registered previously-unknown own HTLC`, { address: htlcAddress, end, balance, accountType: account?.type ?? 'pruned' })
+  }
+
+  // Singleton + timeout: `getTransactionsByAddress` can hang on a freshly-booted light client
+  // before history is ready. Without these, an awaited call from `verifyRemoteSignersDb` blocks
+  // `syncWallets` forever and no listeners ever register.
+  const DISCOVER_TIMEOUT_MS = 30_000
+  let discoverPromise: Promise<void> | undefined
   async function discoverRemoteSignersFromBlockchain() {
+    if (discoverPromise)
+      return discoverPromise
+    discoverPromise = (async () => {
+      try {
+        await runDiscoverRemoteSignersFromBlockchain()
+      }
+      finally {
+        discoverPromise = undefined
+      }
+    })()
+    return discoverPromise
+  }
+
+  async function runDiscoverRemoteSignersFromBlockchain() {
     if (!localAddress.value)
       return
 
     await until(client).not.toBeUndefined()
     await client.value!.waitForConsensusEstablished()
-    const transactions = await client.value!.getTransactionsByAddress(localAddress.value)
+    let transactions: PlainTransactionDetails[]
+    try {
+      transactions = await promiseWithTimeout(
+        client.value!.getTransactionsByAddress(localAddress.value),
+        DISCOVER_TIMEOUT_MS,
+      )
+    }
+    catch (error) {
+      logger.error('discoverRemoteSignersFromBlockchain: getTransactionsByAddress failed', error)
+      return
+    }
 
     logger.log('All Transactions from Blockchain', transactions)
     const htlcTransactions = transactions?.filter(tx => tx.recipientType === 'htlc') || []
@@ -346,20 +434,23 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       }
 
       // Filter known signers upfront — re-inserting via INSERT OR REPLACE would clobber an existing active=true row to false.
-      const knownRemoteSignerAddresses = new Set((await getAllRemoteSigners()).map(signer => signer.address.toUserFriendlyAddress()))
+      const knownRemoteSignerAddresses = await getOurRemoteSignerAddresses()
       const newHtlcTransactions = htlcTransactions.filter(tx => !knownRemoteSignerAddresses.has(tx.recipient))
-      await Promise.all(newHtlcTransactions.map(async (tx) => {
-        const htlcData = tx.data
-        await addInactiveRemoteSigner({
-          active: false,
-          balance: 0,
-          address: Nimiq.Address.fromString(tx.recipient),
-          publicKey: remotePublicKey.value!,
-          start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
-          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-          proofSize: useRemoteSigner().remoteProofSize,
-        })
-      }))
+      if (newHtlcTransactions.length > 0) {
+        await Promise.all(newHtlcTransactions.map(async (tx) => {
+          const htlcData = tx.data
+          await addInactiveRemoteSigner({
+            active: false,
+            balance: 0,
+            address: Nimiq.Address.fromString(tx.recipient),
+            publicKey: remotePublicKey.value!,
+            start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
+            end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+            proofSize: useRemoteSigner().remoteProofSize,
+          })
+        }))
+        invalidateRemoteSignerAddressCache()
+      }
     }
     await updateRemoteFromApi()
   }
@@ -454,6 +545,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     discoverRemoteSignersFromBlockchain,
 
     getAllRemoteSigners,
+    isOurRemoteSigner,
+    getOurRemoteSignerAddresses,
+    registerOwnHtlcIfMissing,
 
     init,
   }
