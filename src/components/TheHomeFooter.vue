@@ -10,7 +10,7 @@ import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
-import { useMiniApps } from '@/stores/mini-apps'
+import { stripTrailingSlash, useMiniApps } from '@/stores/mini-apps'
 
 defineProps<{
   isPaymentDisabled: boolean
@@ -19,12 +19,8 @@ defineProps<{
 const { isIOS } = useDevice()
 const { showAnimations, isNimiqAsset } = storeToRefs(useApp())
 const { showModal } = useModal()
-const { featuredDApps, nonFeaturedDApps, recentlyViewedDApps } = storeToRefs(useMiniApps())
-
-function getDAppKey(url: string) {
-  // Recent entries can differ only by a trailing slash, so normalize before deduping buckets.
-  return url.replace(/\/$/, '')
-}
+const miniApps = useMiniApps()
+const { featuredDApps, nonFeaturedDApps, recentlyViewedDApps } = storeToRefs(miniApps)
 
 const topDAppIcons = computed(() => {
   const selectedDApps = new Set<string>()
@@ -35,12 +31,15 @@ const topDAppIcons = computed(() => {
       if (icons.length >= 3)
         return
 
-      const key = getDAppKey(dapp.url)
+      // Recent entries differ only by trailing slash, so normalize before dedupe.
+      const key = stripTrailingSlash(dapp.url)
       if (selectedDApps.has(key))
         continue
 
       selectedDApps.add(key)
-      icons.push(dapp.icon)
+      // Prefer the curated awesome icon: recently-viewed entries persist whatever icon
+      // was supplied at launch (deeplinks fall back to favicon).
+      icons.push(miniApps.iconForUrl(dapp.url) ?? dapp.icon)
     }
   }
 

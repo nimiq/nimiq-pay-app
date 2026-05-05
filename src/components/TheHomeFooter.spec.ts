@@ -16,6 +16,8 @@ const recentlyViewedDApps = ref([
   { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png' },
   { name: 'Beta', url: 'https://beta.app', icon: 'beta.png' },
 ])
+const knownIcons = ref<Record<string, string>>({})
+const iconForUrl = (url: string) => knownIcons.value[url.replace(/\/$/, '')]
 
 const showModal = vi.fn()
 const initializeFlow = vi.fn()
@@ -85,7 +87,9 @@ vi.mock('@/stores/mini-apps', () => ({
     featuredDApps,
     nonFeaturedDApps,
     recentlyViewedDApps,
+    iconForUrl,
   }),
+  stripTrailingSlash: (url: string) => url.replace(/\/$/, ''),
 }))
 
 describe('theHomeFooter', () => {
@@ -104,6 +108,7 @@ describe('theHomeFooter', () => {
       { name: 'Zeta', url: 'https://zeta.app', icon: 'zeta.png' },
       { name: 'Beta', url: 'https://beta.app', icon: 'beta.png' },
     ]
+    knownIcons.value = {}
     showModal.mockReset()
     initializeFlow.mockReset()
   })
@@ -149,6 +154,31 @@ describe('theHomeFooter', () => {
     const icons = wrapper.findAll('img').map(img => img.attributes('src'))
 
     expect(icons).toEqual(['featured.png', 'alpha.png', 'beta.png'])
+  })
+
+  it('prefers the curated nimiq/awesome icon over a recently-viewed favicon when the URL matches', async () => {
+    featuredDApps.value = []
+    recentlyViewedDApps.value = [
+      { name: 'Beta', url: 'https://beta.app', icon: 'https://t2.gstatic.com/faviconV2?url=beta.app' },
+    ]
+    nonFeaturedDApps.value = []
+    knownIcons.value = { 'https://beta.app': 'awesome-beta.png' }
+
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    const icons = wrapper.findAll('img').map(img => img.attributes('src'))
+
+    expect(icons).toEqual(['awesome-beta.png'])
   })
 
   it('passes the analytics source when opening the payment flow', async () => {

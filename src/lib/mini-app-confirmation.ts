@@ -8,9 +8,14 @@ import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { Crypto } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS } from '@/stores/nimiq-network'
 
 const logger = useLogger('mini-app-confirmation')
+
+function resolveMiniAppLogo(url: string): string {
+  return useMiniApps().iconForUrl(url) ?? getFaviconUrl(url)
+}
 
 /**
  * Request user confirmation for sensitive mini-app operations.
@@ -33,7 +38,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const result = await ExtendedDialog.sheet({
         title: `Connect to ${appName}`,
         subtitle: `${appName} will be able to:`,
-        headerLogo: getFaviconUrl(request.url),
+        headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows: [
           { title: `• See your address ${truncatedAddress}` },
@@ -110,7 +115,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const result = await ExtendedDialog.sheet({
         title: 'Confirm Transaction',
         subtitle: `${appName} asks to send this transaction:`,
-        headerLogo: getFaviconUrl(request.url),
+        headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
         confirmButtonTitle: 'Confirm',
@@ -206,7 +211,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
 
       const result = await ExtendedDialog.sheet({
         title: `Confirm Transaction`,
-        headerLogo: getFaviconUrl(request.url),
+        headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
         confirmButtonTitle: 'Confirm',
@@ -225,7 +230,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const result = await ExtendedDialog.messageSheet({
         title: 'Sign Message',
         subtitle: `${appName} asks to sign this message:`,
-        headerLogo: getFaviconUrl(request.url),
+        headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         message: displayMessage,
         confirmButtonTitle: 'Sign',
@@ -259,7 +264,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const result = await ExtendedDialog.sheet({
         title: action === 'add' ? 'Add Network' : 'Switch Network',
         subtitle: `${appName} wants to ${action === 'add' ? 'add and switch to' : 'switch to'} this network:`,
-        headerLogo: getFaviconUrl(request.url),
+        headerLogo: resolveMiniAppLogo(request.url),
         headerLogoCornerRadius: -1,
         rows,
         confirmButtonTitle: action === 'add' ? 'Approve Network' : 'Switch Network',

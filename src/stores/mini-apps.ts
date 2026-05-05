@@ -62,7 +62,7 @@ const MAX_RECENT = 20
 const MAX_RECENT_DISPLAY = 5
 const TRAILING_SLASH_RE = /\/$/
 
-function stripTrailingSlash(url: string): string {
+export function stripTrailingSlash(url: string): string {
   return url.replace(TRAILING_SLASH_RE, '')
 }
 
@@ -145,6 +145,12 @@ export const useMiniApps = defineStore('mini-apps', () => {
     if (!url)
       return false
     return trustedUrls.value.has(stripTrailingSlash(url))
+  }
+
+  /** Returns the curated nimiq/awesome icon for `url`, or undefined when the dApp is not in the list. */
+  function iconForUrl(url: string): string | undefined {
+    const target = stripTrailingSlash(url)
+    return baseDApps.value.find(d => stripTrailingSlash(d.url) === target)?.icon
   }
 
   /** Top-N slice of recently-viewed for the marketplace UI. */
@@ -234,5 +240,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     recentDAppsWithDescriptions,
     addRecentlyViewed,
     isTrustedMiniAppUrl,
+    iconForUrl,
   }
 })
