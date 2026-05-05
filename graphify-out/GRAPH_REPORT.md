@@ -1,11 +1,11 @@
 # Graph Report - .  (2026-05-05)
 
 ## Corpus Check
-- 2346 files · ~6,650,423 words
+- 2348 files · ~6,653,934 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 12807 nodes · 33498 edges · 443 communities detected
+- 12816 nodes · 33509 edges · 443 communities detected
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
@@ -22,106 +22,106 @@
 10. `sqlite3_malloc64()` - 128 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `FIRInstallationsBackoffEventData` --inherits--> `NSObject`  [EXTRACTED]
-  ios/App/Pods/FirebaseInstallations/FirebaseInstallations/Source/Library/InstallationsIDController/FIRInstallationsBackoffController.m →   _Bridges community 14 → community 8_
+- `PostHogSessionManager` --inherits--> `NSObject`  [EXTRACTED]
+  ios/App/Pods/PostHog/PostHog/PostHogSessionManager.swift →   _Bridges community 4 → community 46_
 - `snapshot()` --inherits--> `NSObject`  [EXTRACTED]
-  ios/App/AppUITests/SnapshotHelper.swift →   _Bridges community 8 → community 12_
+  ios/App/AppUITests/SnapshotHelper.swift →   _Bridges community 4 → community 13_
 - `CodingKeys` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatsPayload.swift →   _Bridges community 12 → community 2_
+  ios/App/Pods/FirebaseCoreInternal/FirebaseCore/Internal/Sources/HeartbeatLogging/HeartbeatsPayload.swift →   _Bridges community 13 → community 1_
 - `SessionIDChangeReason` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/PostHog/PostHog/PostHogSessionManager.swift →   _Bridges community 2 → community 8_
+  ios/App/Pods/PostHog/PostHog/PostHogSessionManager.swift →   _Bridges community 1 → community 46_
 - `StorageKey` --inherits--> `String`  [EXTRACTED]
-  ios/App/Pods/PostHog/PostHog/PostHogStorage.swift →   _Bridges community 2 → community 37_
+  ios/App/Pods/PostHog/PostHog/PostHogStorage.swift →   _Bridges community 1 → community 40_
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.0
-Nodes (2098): absFunc(), actionName(), addSpaceSeparator(), AdjustTree(), allConstraintsUsed(), allocSpace(), alsoAnInt(), analyzeFilterKeyword() (+2090 more)
+Nodes (1678): accessPayload(), accessPayloadChecked(), actionName(), addAggInfoColumn(), addAggInfoFunc(), addToBlockedList(), addToVTrans(), adjustStats() (+1670 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.01
-Nodes (931): accessPayload(), accessPayloadChecked(), addToBlockedList(), addToVTrans(), adjustStats(), afpCheckReservedLock(), afpClose(), afpLock() (+923 more)
+Cohesion: 0.0
+Nodes (558): ApplyFiltersAndEncode(), CompressAlphaJob(), EncodeAlpha(), EncodeAlphaInternal(), EncodeLossless(), GetFilterMap(), GetNumColors(), InitFilterTrial() (+550 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.0
-Nodes (523): ApplyFiltersAndEncode(), CompressAlphaJob(), EncodeAlpha(), EncodeAlphaInternal(), EncodeLossless(), GetFilterMap(), GetNumColors(), InitFilterTrial() (+515 more)
+Cohesion: 0.01
+Nodes (851): addArgumentToVtab(), addModuleArgument(), addOp4IntSlow(), agginfoFree(), agginfoPersistExprCb(), aggregateConvertIndexedExprRefToColumn(), allConstraintsUsed(), allocateIndexInfo() (+843 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.01
-Nodes (861): addAggInfoColumn(), addAggInfoFunc(), addArgumentToVtab(), addModuleArgument(), addOp4IntSlow(), agginfoFree(), agginfoPersistExprCb(), aggregateConvertIndexedExprRefToColumn() (+853 more)
+Nodes (772): AdjustTree(), assert_expr_depth_ok(), assertColumnName(), blobGrowBuffer(), blobSeekToRow(), bytecodevtabClose(), bytecodevtabCursorClear(), bytecodevtabDisconnect() (+764 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.01
-Nodes (90): $a(), An, Ao, as, b(), ba(), Bi(), bn (+82 more)
+Cohesion: 0.0
+Nodes (538): PodsDummy_AparajitaCapacitorBiometricAuth, PodsDummy_AparajitaCapacitorSecureStorage, PodsDummy_AppsCapacitorMonetplusHce, PodsDummy_Capacitor, PodsDummy_CapacitorApp, PodsDummy_CapacitorBrowser, PodsDummy_CapacitorCamera, PodsDummy_CapacitorClipboard (+530 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.01
-Nodes (236): _a(), aa(), Ac(), Ae(), ai, ao(), ar(), as() (+228 more)
+Nodes (90): $a(), An, Ao, as, b(), ba(), Bi(), bn (+82 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.01
-Nodes (127): Address, addToExternrefTable0(), _assertClass(), _base64encodeChunk(), _base64fromByteArray(), _bitsToEntropy(), _bitsToMnemonic(), BLSKeyPair (+119 more)
+Nodes (236): _a(), aa(), Ac(), Ae(), ai, ao(), ar(), as() (+228 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.01
-Nodes (435): A, adapt(), _addListener(), adler32(), afterTransform(), afterWrite(), alloc(), allocUnsafe() (+427 more)
+Nodes (127): Address, addToExternrefTable0(), _assertClass(), _base64encodeChunk(), _base64fromByteArray(), _bitsToEntropy(), _bitsToMnemonic(), BLSKeyPair (+119 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.0
-Nodes (376): PodsDummy_AparajitaCapacitorBiometricAuth, PodsDummy_AparajitaCapacitorSecureStorage, PodsDummy_AppsCapacitorMonetplusHce, PodsDummy_Capacitor, PodsDummy_CapacitorApp, PodsDummy_CapacitorBrowser, PodsDummy_CapacitorCamera, PodsDummy_CapacitorClipboard (+368 more)
+Cohesion: 0.01
+Nodes (435): A, adapt(), _addListener(), adler32(), afterTransform(), afterWrite(), alloc(), allocUnsafe() (+427 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.01
-Nodes (177): assetToSwapPair(), buildPaymentAnalyticsProps(), capture(), getAmountRange(), trackAppOpened(), trackChainSwitched(), trackCurrentAppOpen(), trackDAppClosed() (+169 more)
+Nodes (178): assetToSwapPair(), buildPaymentAnalyticsProps(), capture(), getAmountRange(), trackAppOpened(), trackChainSwitched(), trackCurrentAppOpen(), trackDAppClosed() (+170 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.01
-Nodes (319): GDTCCTCompressionHelper, -gzippedData, -isGzipped, GDTCCTUploadOperation, -batchByAddingMetricsEventToBatchforTarget, -cancel, -constructRequestProtoWithEvents, -constructRequestWithURLforTargetdata (+311 more)
+Nodes (443): absFunc(), addSpaceSeparator(), autoAdjustDate(), avgFinalize(), bytecodevtabColumn(), bytelengthFunc(), cdateFunc(), ceilingFunc() (+435 more)
 
 ### Community 11 - "Community 11"
+Cohesion: 0.01
+Nodes (319): GDTCCTCompressionHelper, -gzippedData, -isGzipped, GDTCCTUploadOperation, -batchByAddingMetricsEventToBatchforTarget, -cancel, -constructRequestProtoWithEvents, -constructRequestWithURLforTargetdata (+311 more)
+
+### Community 12 - "Community 12"
 Cohesion: 0.03
 Nodes (327): $1(), _5(), $7(), _9(), _A(), A1(), a5(), a7() (+319 more)
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.01
 Nodes (181): AccessMode, create, read, update, Archive, Archive.EndOfCentralDirectoryRecord, ArchiveError, cancelledOperation (+173 more)
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.01
 Nodes (178): FIRAnalyticsConfiguration, -postNotificationNamevalue, -setAnalyticsCollectionEnabled, -setAnalyticsCollectionEnabledpersistSetting, -sharedInstance, FIRApp, -actualBundleID, -addAppToAppDictionary (+170 more)
 
-### Community 14 - "Community 14"
-Cohesion: 0.01
-Nodes (171): FIRInstallations, -assertCompatibleIIDVersion, -authTokenForcingRefreshcompletion, -authTokenWithCompletion, -componentsToRegister, -deleteWithCompletion, -initWithApp, -initWithAppOptionsappNameinstallationsIDControllerprefetchAuthToken (+163 more)
-
 ### Community 15 - "Community 15"
+Cohesion: 0.03
+Nodes (187): fts5AppendTokendataIter(), fts5AssertComparisonResult(), fts5AssertMultiIterSetup(), fts5BufferAppendTerm(), fts5BufferCompare(), fts5BufferSwap(), fts5ChunkIterate(), fts5ConfigMakeExprlist() (+179 more)
+
+### Community 16 - "Community 16"
 Cohesion: 0.02
 Nodes (123): FBLPromise, -all, -allOn, -onQueueall, FBLPromise, -always, -alwaysOn, -onQueuealways (+115 more)
 
-### Community 16 - "Community 16"
+### Community 17 - "Community 17"
 Cohesion: 0.04
 Nodes (96): Ae(), Ai(), ao(), At(), Bo(), Ce(), ci(), cn() (+88 more)
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.06
 Nodes (124): _0(), a0(), ar(), as(), au(), b0(), bs(), bu() (+116 more)
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.02
 Nodes (45): ae, At, B(), ce(), Ct(), de(), dt(), _e() (+37 more)
-
-### Community 19 - "Community 19"
-Cohesion: 0.03
-Nodes (89): Add4x4_NEON(), ApplyFilter2_NEON(), ApplyFilter2NoFlip_NEON(), ApplyFilter4_NEON(), ApplyFilter6_NEON(), ConvertU8ToS16_NEON(), DC16_NEON(), DC16NoLeft_NEON() (+81 more)
 
 ### Community 20 - "Community 20"
 Cohesion: 0.04
 Nodes (68): CheckSlowModel(), GetCPUInfo(), x86CPUInfo(), xgetbv(), clip(), clip_8b(), clip_bit_depth(), ConvertWRGBToYUV() (+60 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.05
-Nodes (73): ComplexMask_SSE2(), DC16_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC8uv_SSE2(), DC8uvNoLeft_SSE2(), DC8uvNoTop_SSE2() (+65 more)
+Cohesion: 0.06
+Nodes (65): Add4x4_NEON(), ApplyFilter2_NEON(), ApplyFilter2NoFlip_NEON(), ApplyFilter4_NEON(), ApplyFilter6_NEON(), ConvertU8ToS16_NEON(), DC16_NEON(), DC16NoLeft_NEON() (+57 more)
 
 ### Community 22 - "Community 22"
 Cohesion: 0.05
@@ -148,70 +148,74 @@ Cohesion: 0.06
 Nodes (38): clip_8b(), DC16_C(), DC16NoLeft_C(), DC16NoTop_C(), DC16NoTopLeft_C(), DC8uv_C(), DC8uvNoLeft_C(), DC8uvNoTop_C() (+30 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.09
-Nodes (50): BitsEntropyRefine(), DominantCostRangeInit(), FinalHuffmanCost(), GetBinIdForEntropy(), GetCombineCostFactor(), GetCombinedEntropy(), GetCombinedHistogramEntropy(), GetHistoBinIndex() (+42 more)
-
-### Community 29 - "Community 29"
 Cohesion: 0.08
 Nodes (44): alias(), autocapture(), buildProperties(), capture(), captureAppBackgrounded(), captureAppInstallLifecycle(), captureAppOpened(), captureScreenViews() (+36 more)
+
+### Community 29 - "Community 29"
+Cohesion: 0.09
+Nodes (50): BitsEntropyRefine(), DominantCostRangeInit(), FinalHuffmanCost(), GetBinIdForEntropy(), GetCombineCostFactor(), GetCombinedEntropy(), GetCombinedHistogramEntropy(), GetHistoBinIndex() (+42 more)
 
 ### Community 30 - "Community 30"
 Cohesion: 0.05
 Nodes (33): AutoCapturable, Element, EventData, EventSource, actionMethod, gestureRecognizer, notification, EventType (+25 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.13
-Nodes (45): hasHighPrecisionDouble(), havingToWhere(), optimizeAggregateUseOfIndexedExpr(), printAggInfo(), sqlite3_test_control(), sqlite3BenignMallocHooks(), sqlite3BtreeSeekCount(), sqlite3ParserCoverage() (+37 more)
+Cohesion: 0.08
+Nodes (40): ComplexMask_SSE2(), DC16_SSE2(), DC16NoLeft_SSE2(), DC16NoTop_SSE2(), DC16NoTopLeft_SSE2(), DC8uv_SSE2(), DC8uvNoLeft_SSE2(), DC8uvNoTop_SSE2() (+32 more)
 
 ### Community 32 - "Community 32"
+Cohesion: 0.14
+Nodes (44): hasHighPrecisionDouble(), optimizeAggregateUseOfIndexedExpr(), printAggInfo(), sqlite3_test_control(), sqlite3BenignMallocHooks(), sqlite3BtreeSeekCount(), sqlite3ParserCoverage(), sqlite3PrngRestoreState() (+36 more)
+
+### Community 33 - "Community 33"
 Cohesion: 0.09
 Nodes (37): clip_8b(), clip_max(), CollectHistogram_C(), Copy(), Copy16x8_C(), Copy4x4_C(), DC4(), DCMode() (+29 more)
 
-### Community 33 - "Community 33"
+### Community 34 - "Community 34"
 Cohesion: 0.05
 Nodes (1): T
 
-### Community 34 - "Community 34"
+### Community 35 - "Community 35"
 Cohesion: 0.1
 Nodes (36): AccumulateSSE16_NEON(), Add4x4_NEON(), CollectHistogram_NEON(), ConvertU8ToS16_NEON(), DCMode_NEON(), DiffU8ToS16_NEON(), Disto16x16_NEON(), Disto4x4_NEON() (+28 more)
 
-### Community 35 - "Community 35"
+### Community 36 - "Community 36"
+Cohesion: 0.08
+Nodes (24): AddSubtractComponentFull(), AddSubtractComponentHalf(), Average2(), Average3(), Average4(), ClampedAddSubtractFull(), ClampedAddSubtractHalf(), Clip255() (+16 more)
+
+### Community 37 - "Community 37"
 Cohesion: 0.13
 Nodes (36): AddScore(), CheckLambdaValue(), clip(), CopyScore(), CorrectDCValues(), ExpandMatrix(), GetCostModeI4(), InitScore() (+28 more)
 
-### Community 36 - "Community 36"
+### Community 38 - "Community 38"
+Cohesion: 0.12
+Nodes (33): ConvertARGBToUV_SSE2(), ConvertARGBToY_SSE2(), ConvertBGR24ToY_SSE2(), ConvertRGB24ToY_SSE2(), ConvertRGBA32ToUV_SSE2(), ConvertRGBToUV_SSE2(), ConvertRGBToY_SSE2(), ConvertYUV444ToRGB_SSE2() (+25 more)
+
+### Community 39 - "Community 39"
 Cohesion: 0.11
 Nodes (1): MiniAppHost
 
-### Community 37 - "Community 37"
+### Community 40 - "Community 40"
 Cohesion: 0.09
 Nodes (16): applicationSupportDirectoryURL(), PostHogStorage, StorageKey, anonymousId, distinctId, enabledFeatureFlagPayloads, enabledFeatureFlags, groups (+8 more)
 
-### Community 38 - "Community 38"
-Cohesion: 0.15
-Nodes (31): BranchCost(), CalcSkipProba(), CalcTokenProba(), Clamp(), CodeResiduals(), ComputeNextQ(), FinalizeSkipProba(), FinalizeTokenProbas() (+23 more)
-
-### Community 39 - "Community 39"
+### Community 41 - "Community 41"
 Cohesion: 0.08
 Nodes (11): as(), Ga(), is(), ls(), me(), oe(), ts(), Ve() (+3 more)
 
-### Community 40 - "Community 40"
+### Community 42 - "Community 42"
 Cohesion: 0.12
 Nodes (5): C(), d, e, u(), v()
 
-### Community 41 - "Community 41"
+### Community 43 - "Community 43"
 Cohesion: 0.14
 Nodes (21): ConvertARGBToUV_SSE41(), ConvertARGBToY_SSE41(), ConvertBGR24ToY_SSE41(), ConvertRGB24ToY_SSE41(), ConvertRGBA32ToUV_SSE41(), ConvertRGBToUV_SSE41(), ConvertRGBToY_SSE41(), ConvertYUV444ToRGB_SSE41() (+13 more)
 
-### Community 42 - "Community 42"
+### Community 44 - "Community 44"
 Cohesion: 0.2
 Nodes (3): g, m(), q()
 
-### Community 43 - "Community 43"
-Cohesion: 0.11
-Nodes (15): ExportBlock(), ImportBlock(), ImportLine(), InitLeft(), InitTop(), MinSize(), VP8IteratorExport(), VP8IteratorImport() (+7 more)
-
-### Community 44 - "Community 44"
+### Community 45 - "Community 45"
 Cohesion: 0.11
 Nodes (9): MethodSwizzler<
             @convention(c) (URLSession, Selector, URL, CompletionHandler?) -> URLSessionDataTask,
@@ -227,101 +231,97 @@ Nodes (9): MethodSwizzler<
             @convention(block) (URLSession, URLRequest) -> URLSessionDataTask
         >, DataTaskWithURL, DataTaskWithURLAndCompletion, DataTaskWithURLRequest, DataTaskWithURLRequestAndCompletion (+1 more)
 
-### Community 45 - "Community 45"
+### Community 46 - "Community 46"
+Cohesion: 0.15
+Nodes (9): PostHogSessionManager, SessionIDChangeReason, customSessionId, sessionEnd, sessionIdEmpty, sessionPastMaximumLength, sessionReset, sessionStart (+1 more)
+
+### Community 47 - "Community 47"
 Cohesion: 0.12
 Nodes (12): ApplyAlphaMultiply4444_C(), ApplyAlphaMultiply_16b_C(), dither_hi(), dither_lo(), GetScale(), MakeARGB32(), Mult(), multiply() (+4 more)
 
-### Community 46 - "Community 46"
+### Community 48 - "Community 48"
 Cohesion: 0.17
 Nodes (4): CocoaError, FileManager, POSIXError, URL
 
-### Community 47 - "Community 47"
+### Community 49 - "Community 49"
 Cohesion: 0.13
 Nodes (12): _ACResourceInitProtocol, AppKit.NSColor, AppKit.NSImage, ColorResource, ImageResource, ResourceBundleClass, SwiftUI.Color, SwiftUI.Image (+4 more)
 
-### Community 48 - "Community 48"
+### Community 50 - "Community 50"
 Cohesion: 0.18
 Nodes (3): g(), r, x()
 
-### Community 49 - "Community 49"
+### Community 51 - "Community 51"
 Cohesion: 0.11
 Nodes (1): d
 
-### Community 50 - "Community 50"
+### Community 52 - "Community 52"
 Cohesion: 0.12
 Nodes (1): L
 
-### Community 51 - "Community 51"
+### Community 53 - "Community 53"
 Cohesion: 0.21
 Nodes (4): Data, Encodable, HeartbeatStorage, HeartbeatStorageProtocol
 
-### Community 52 - "Community 52"
+### Community 54 - "Community 54"
 Cohesion: 0.22
 Nodes (1): f
 
-### Community 53 - "Community 53"
-Cohesion: 0.23
-Nodes (15): fts5Porter_MEq1(), fts5Porter_MGt0(), fts5Porter_MGt1(), fts5Porter_MGt1_and_S_or_T(), fts5Porter_Ostar(), fts5Porter_Vowel(), fts5PorterCb(), fts5PorterGobbleVC() (+7 more)
-
-### Community 54 - "Community 54"
+### Community 55 - "Community 55"
 Cohesion: 0.26
 Nodes (13): getCachedFeatureFlagPayload(), getCachedFeatureFlags(), getFeatureFlag(), getFeatureFlagPayload(), getFeatureFlags(), init(), isFeatureEnabled(), isRecordingActive() (+5 more)
 
-### Community 55 - "Community 55"
+### Community 56 - "Community 56"
+Cohesion: 0.26
+Nodes (11): Encode(), WebPMemoryWriterClear(), WebPMemoryWriterInit(), WebPPictureAlloc(), WebPPictureAllocARGB(), WebPPictureAllocYUVA(), WebPPictureFree(), WebPPictureResetBufferARGB() (+3 more)
+
+### Community 57 - "Community 57"
 Cohesion: 0.2
 Nodes (8): b(), c(), E(), f(), k(), l(), m(), w()
 
-### Community 56 - "Community 56"
+### Community 58 - "Community 58"
 Cohesion: 0.15
 Nodes (2): D(), I()
 
-### Community 57 - "Community 57"
+### Community 59 - "Community 59"
 Cohesion: 0.28
 Nodes (11): De(), fe(), Ie(), Le(), Ne(), Oe(), qe(), Re() (+3 more)
 
-### Community 58 - "Community 58"
+### Community 60 - "Community 60"
 Cohesion: 0.28
 Nodes (10): C(), G(), I(), k(), M(), q(), te(), V() (+2 more)
 
-### Community 59 - "Community 59"
+### Community 61 - "Community 61"
 Cohesion: 0.15
 Nodes (1): m
 
-### Community 60 - "Community 60"
-Cohesion: 0.23
-Nodes (13): memsys5Enter(), memsys5Free(), memsys5FreeUnsafe(), memsys5Init(), memsys5Leave(), memsys5Link(), memsys5Log(), memsys5Malloc() (+5 more)
-
-### Community 61 - "Community 61"
+### Community 62 - "Community 62"
 Cohesion: 0.23
 Nodes (6): Archive, fileFromCookie(), MemoryFile, readStub(), seekStub(), writeStub()
 
-### Community 62 - "Community 62"
+### Community 63 - "Community 63"
 Cohesion: 0.21
 Nodes (1): PostHogStorageManager
 
-### Community 63 - "Community 63"
+### Community 64 - "Community 64"
 Cohesion: 0.23
 Nodes (4): Hashable, FoundMethod, MethodSwizzler, MethodSwizzler.FoundMethod
 
-### Community 64 - "Community 64"
+### Community 65 - "Community 65"
 Cohesion: 0.35
 Nodes (1): KeychainSwift
 
-### Community 65 - "Community 65"
+### Community 66 - "Community 66"
 Cohesion: 0.26
 Nodes (1): o
 
-### Community 66 - "Community 66"
+### Community 67 - "Community 67"
 Cohesion: 0.18
 Nodes (1): y
 
-### Community 67 - "Community 67"
+### Community 68 - "Community 68"
 Cohesion: 0.17
 Nodes (3): AppDelegate, UIApplicationDelegate, UIResponder
-
-### Community 68 - "Community 68"
-Cohesion: 0.29
-Nodes (12): copy_stemmer(), doubleConsonant(), hasVowel(), isConsonant(), isVowel(), m_eq_1(), m_gt_0(), m_gt_1() (+4 more)
 
 ### Community 69 - "Community 69"
 Cohesion: 0.23
@@ -2368,17 +2368,17 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `CodingKeys` connect `Community 12` to `Community 2`?**
+- **Why does `CodingKeys` connect `Community 13` to `Community 1`?**
   _High betweenness centrality (0.016) - this node is a cross-community bridge._
-- **Why does `snapshot()` connect `Community 12` to `Community 8`?**
+- **Why does `snapshot()` connect `Community 13` to `Community 4`?**
   _High betweenness centrality (0.013) - this node is a cross-community bridge._
 - **What connects `ResourceBundleClass`, `ArrayUtils`, `SerialBuffer` to the rest of the system?**
   _1093 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.0 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.01 - nodes in this community are weakly interconnected._
-- **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.0 - nodes in this community are weakly interconnected._
+- **Should `Community 2` be split into smaller, more focused modules?**
+  _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._
