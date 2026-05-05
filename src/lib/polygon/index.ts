@@ -1,5 +1,6 @@
 export * from './abis'
 export * from './config'
 export * from './opengsn'
+export * from './rpc-override'
 export * from './types'
 export * from './uniswap'

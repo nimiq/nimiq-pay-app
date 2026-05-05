@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { isTestnet } from '@/lib'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { polygonRpcOverride } from '@/lib/polygon/rpc-override'
 
 const logger = useLogger('FeatureFlagsStore')
 
@@ -21,6 +22,11 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   }, false)
 
   const polygonRpcUrl = computedAsync(async () => {
+    // Dev override (set via DevModal) wins over everything else.
+    if (polygonRpcOverride) {
+      logger.log('Polygon RPC override active', polygonRpcOverride)
+      return polygonRpcOverride
+    }
     // Testnet override supersedes the mainnet PostHog flag.
     if (isTestnet) {
       logger.log('Testnet override active — using Polygon testnet RPC', polygonUsdtConfig.rpcUrl)
@@ -40,7 +46,7 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
       logger.error('Error fetching Polygon RPC URL feature flag:', error)
     }
     return polygonUsdtConfig.rpcUrl
-  }, polygonUsdtConfig.rpcUrl)
+  }, polygonRpcOverride ?? polygonUsdtConfig.rpcUrl)
 
   return {
     isNakaAvailable,

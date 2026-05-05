@@ -2,16 +2,18 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
 import { Clipboard } from '@capacitor/clipboard'
-import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonItem, IonLabel, IonSegment, IonSegmentButton, IonToggle, toastController } from '@ionic/vue'
+import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonItem, IonLabel, IonSegment, IonSegmentButton, IonSelect, IonSelectOption, IonToggle, toastController } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev, isTestnet, networkOverride, setNetworkOverride } from '@/lib'
+import { POLYGON_PUBLIC_RPCS, polygonRpcOverride, setPolygonRpcOverride } from '@/lib/polygon/rpc-override'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNaka, useNakaDb } from '@/stores/naka'
@@ -31,6 +33,7 @@ const { consensus, head, height, peerCount, client, networkName, headTimestamp }
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(useRemoteSigner())
 const { showHiddenTransactions } = storeToRefs(useApp())
+const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query, run } = useConn()
@@ -43,6 +46,17 @@ const currentNetworkChoice = computed<NetworkChoice>(() => networkOverride ?? 'd
 
 function isNetworkChoice(v: unknown): v is NetworkChoice {
   return typeof v === 'string' && (NETWORK_CHOICES as readonly string[]).includes(v)
+}
+
+const DEFAULT_POLYGON_RPC_VALUE = '__default__'
+const currentPolygonRpcChoice = computed<string>(() => polygonRpcOverride ?? DEFAULT_POLYGON_RPC_VALUE)
+
+function onPolygonRpcChange(value: unknown) {
+  if (typeof value !== 'string' || value === currentPolygonRpcChoice.value)
+    return
+  const next = value === DEFAULT_POLYGON_RPC_VALUE ? null : value
+  setPolygonRpcOverride(next)
+  router.go(0)
 }
 
 async function onNetworkSegmentChange(value: unknown) {
@@ -173,6 +187,42 @@ onMounted(async () => {
         </IonSegment>
         <p class="mt-2 text-xs opacity-60">
           Switching clears tx history and reloads. Only Nimiq mini-apps pick up the testnet RPC — EVM mini-apps have no testnet wiring and will keep running against mainnet chains.
+        </p>
+      </IonCardContent>
+    </IonCard>
+    <IonCard>
+      <IonCardHeader>
+        <IonCardTitle>Polygon RPC</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="mb-2">
+          Effective URL: <code>{{ polygonRpcUrl }}</code>
+        </p>
+        <p class="mb-2 text-xs opacity-60">
+          <span v-if="polygonRpcOverride">Local override active. </span>
+          Affects the main-app Polygon USDT client only — mini-apps are unaffected.
+        </p>
+        <IonItem lines="none" class="-mx-4">
+          <IonLabel>RPC node</IonLabel>
+          <IonSelect
+            :value="currentPolygonRpcChoice"
+            interface="action-sheet"
+            @ion-change="onPolygonRpcChange($event.detail.value)"
+          >
+            <IonSelectOption :value="DEFAULT_POLYGON_RPC_VALUE">
+              Default
+            </IonSelectOption>
+            <IonSelectOption
+              v-for="rpc in POLYGON_PUBLIC_RPCS"
+              :key="rpc.url"
+              :value="rpc.url"
+            >
+              {{ rpc.label }}
+            </IonSelectOption>
+          </IonSelect>
+        </IonItem>
+        <p class="mt-2 text-xs opacity-60">
+          Switching reloads the page. The new RPC takes effect on the next request the Polygon USDT store makes.
         </p>
       </IonCardContent>
     </IonCard>
