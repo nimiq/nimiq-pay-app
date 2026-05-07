@@ -14,7 +14,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:141
+#: src/stores/transactions.ts:153
 msgid "A transaction is already in progress"
 msgstr ""
 
@@ -47,7 +47,7 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:81
+#: src/lib/mini-app-confirmation.ts:86
 #: src/types/transactions.ts:143
 msgid "Add Stake"
 msgstr ""
@@ -365,7 +365,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:76
+#: src/lib/mini-app-confirmation.ts:81
 #: src/types/transactions.ts:142
 msgid "Create Staker"
 msgstr ""
@@ -512,19 +512,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync.ts:133
+#: src/stores/sync/htlc.ts:59
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync.ts:176
+#: src/stores/sync/htlc.ts:102
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync.ts:207
+#: src/stores/sync/htlc.ts:127
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync.ts:147
+#: src/stores/sync/htlc.ts:73
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -983,7 +983,7 @@ msgstr ""
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:93
+#: src/lib/mini-app-confirmation.ts:98
 msgid "No"
 msgstr ""
 
@@ -1361,7 +1361,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:103
+#: src/lib/mini-app-confirmation.ts:108
 #: src/types/transactions.ts:147
 msgid "Remove Stake"
 msgstr ""
@@ -1378,7 +1378,7 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:98
+#: src/lib/mini-app-confirmation.ts:103
 #: src/types/transactions.ts:146
 msgid "Retire Stake"
 msgstr ""
@@ -1475,7 +1475,7 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:85
+#: src/lib/mini-app-confirmation.ts:90
 #: src/types/transactions.ts:144
 msgid "Set Active Stake"
 msgstr ""
@@ -1755,7 +1755,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:202
+#: src/stores/transactions.ts:214
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1763,11 +1763,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:225
+#: src/stores/transactions.ts:237
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:260
+#: src/stores/transactions.ts:272
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
@@ -1823,7 +1823,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:90
+#: src/lib/mini-app-confirmation.ts:95
 #: src/types/transactions.ts:145
 msgid "Update Staker"
 msgstr ""
@@ -1985,7 +1985,7 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:93
+#: src/lib/mini-app-confirmation.ts:98
 msgid "Yes"
 msgstr ""
 
