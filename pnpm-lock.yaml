@@ -104,8 +104,8 @@ importers:
         specifier: 5.7.1
         version: 5.7.1
       capacitor-extended-dialog:
-        specifier: ^0.0.13
-        version: 0.0.13(@capacitor/core@7.4.3)
+        specifier: ^0.0.15
+        version: 0.0.15(@capacitor/core@7.4.3)
       capacitor-sumsub-mobile-sdk:
         specifier: ^0.0.6
         version: 0.0.6(@capacitor/core@7.4.3)
@@ -3362,10 +3362,10 @@ packages:
   caniuse-lite@1.0.30001743:
     resolution: {integrity: sha512-e6Ojr7RV14Un7dz6ASD0aZDmQPT/A+eZU+nuTNfjqmRrmkmQlnTNWH0SKmqagx9PeW87UVqapSurtAXifmtdmw==}
 
-  capacitor-extended-dialog@0.0.13:
-    resolution: {integrity: sha512-5AKK5yA3VvsgEL/4JxqVaSo9OvoFxLpypv37bm/YYtQsfxBeK+TZry+DGVXV23NJDaOmcWw/jiqae6XeCNHPdg==}
+  capacitor-extended-dialog@0.0.15:
+    resolution: {integrity: sha512-d0KBUYbnPRiJFgepiwjJekN/mF+zuu4vY90IaqOfuMqz/Jvj2/QfFf4Fkx4s2adxPjPJg9NQQ0e/cCjPkDlNGQ==}
     peerDependencies:
-      '@capacitor/core': '>=7.0.0'
+      '@capacitor/core': '>=8.0.0'
 
   capacitor-sumsub-mobile-sdk@0.0.6:
     resolution: {integrity: sha512-0IdrI5vB8buitaq26ChIbnfQMG1FzPHfySNc4s76EGOQzfponFYy+157h9WpbTf4LQOQREdsmr/xbb53O/gfzw==}
@@ -12213,7 +12213,7 @@ snapshots:
 
   caniuse-lite@1.0.30001743: {}
 
-  capacitor-extended-dialog@0.0.13(@capacitor/core@7.4.3):
+  capacitor-extended-dialog@0.0.15(@capacitor/core@7.4.3):
     dependencies:
       '@capacitor/core': 7.4.3
 
