@@ -556737,7 +556737,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "src/lib/mini-app-launcher.ts",
-      "source_location": "L98",
+      "source_location": "L120",
       "weight": 1.0,
       "_src": "mini_app_launcher_launchminiapp",
       "_tgt": "mini_app_launcher_getweb3providerscript",

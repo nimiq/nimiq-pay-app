@@ -86,6 +86,28 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
 
   let host: MiniAppHost | null = null
   let handle: { remove: () => Promise<void> } | null = null
+  let pageLoadedHandle: { remove: () => Promise<void> } | null = null
+  let pageErrorHandle: { remove: () => Promise<void> } | null = null
+  let watchdog: ReturnType<typeof setTimeout> | null = null
+  let guardCleared = false
+
+  // iOS resolves `openWebView` before the present animation finishes, so the guard
+  // must be held until the webview confirms it loaded / failed / closed.
+  const clearGuard = () => {
+    if (guardCleared)
+      return
+    guardCleared = true
+    openingMiniAppUrl.value = null
+    if (watchdog !== null) {
+      clearTimeout(watchdog)
+      watchdog = null
+    }
+    void pageLoadedHandle?.remove()
+    pageLoadedHandle = null
+    void pageErrorHandle?.remove()
+    pageErrorHandle = null
+  }
+
   try {
     host = new MiniAppHost(InAppBrowser, {
       url: targetUrl,
@@ -101,18 +123,28 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     const hostContext = JSON.stringify({ lang: options.language ?? 'en' })
     const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
-    // Attach BEFORE openWebView so a close fired during the open animation isn't missed.
+    // Attach BEFORE openWebView so events fired during the open animation aren't missed.
     const openedAt = Date.now()
     const hostRef = host
     handle = await InAppBrowser.addListener('closeEvent', async () => {
       const h = handle
+      if (h === null)
+        return
       handle = null
       logger.log('Mini-app webview closed, destroying host')
       trackDAppClosed(targetUrl, appTitle, Date.now() - openedAt)
       await hostRef.destroy()
       await ScreenOrientation.lock({ orientation: 'portrait' })
-      await h?.remove()
+      await h.remove()
+      clearGuard()
     })
+    pageLoadedHandle = await InAppBrowser.addListener('browserPageLoaded', () => {
+      clearGuard()
+    })
+    pageErrorHandle = await InAppBrowser.addListener('pageLoadError', () => {
+      clearGuard()
+    })
+    watchdog = setTimeout(clearGuard, 15_000)
 
     await InAppBrowser.openWebView({
       url: targetUrl,
@@ -150,8 +182,6 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       }
       catch { /* listener may already be removed */ }
     }
-  }
-  finally {
-    openingMiniAppUrl.value = null
+    clearGuard()
   }
 }
