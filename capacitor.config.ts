@@ -32,17 +32,14 @@ const config: CapacitorConfig = {
       enable: false,
       preventScreenshots: false,
     },
-    Keyboard: {
-      resizeOnFullScreen: false,
-    },
-    EdgeToEdge: {
-      backgroundColor: '#F8F8F8',
-    },
     Posthog: {
       apiKey: 'phc_Ar1vGHvWGTZDBG4m5VM9KkpOW6lFkV3fVqUocmoJ2DR',
       host: 'https://eu.i.posthog.com',
       enableSessionReplay: false,
       sessionReplayConfig: undefined,
+    },
+    SystemBars: {
+      insetsHandling: 'disable',
     },
   },
 }

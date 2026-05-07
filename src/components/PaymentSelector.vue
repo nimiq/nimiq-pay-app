@@ -66,6 +66,7 @@ function onClick(optionValue: StepName, e: PointerEvent) {
 
 <style scoped>
 .bottom-bar {
+  padding-bottom: var(--ion-safe-area-bottom, 0px);
   box-shadow: 0px 0px 4px 0px rgba(31, 35, 72, 0.03),
               0px 0px 12px 0px rgba(31, 35, 72, 0.05),
               0px 0px 32px 0px rgba(31, 35, 72, 0.06),

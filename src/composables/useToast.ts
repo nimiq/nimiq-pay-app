@@ -10,6 +10,7 @@ const logger = useLogger('useToast.ts')
 function _useToast() {
   const toast = ref<HTMLIonToastElement | null>(null)
   const toastMessage = ref('')
+  let presentPromise: Promise<void> | null = null
 
   // FIXME: animation not working
   // const enterAnimation = (baseEl: HTMLElement) => {
@@ -26,13 +27,13 @@ function _useToast() {
     // Prevent showing the same toast multiple times
     if (message === toastMessage.value)
       return
-    clearToast()
+    await clearToast()
 
     if (type === 'error')
       logger.error(message)
     else logger.log(message)
 
-    toast.value = await toastController.create({
+    const newToast = await toastController.create({
       message,
       duration: keepOpen ? undefined : duration,
       icon: {
@@ -47,8 +48,9 @@ function _useToast() {
       // animated: true,
       // enterAnimation,
     })
-    toast.value.present()
+    toast.value = newToast
     toastMessage.value = message
+    presentPromise = newToast.present()
 
     const hapticType = {
       success: NotificationType.Success,
@@ -59,13 +61,27 @@ function _useToast() {
     if (hapticType)
       Haptics.notification({ type: hapticType })
 
-    await toast.value.onDidDismiss()
-    toast.value = null
-    toastMessage.value = ''
+    await newToast.onDidDismiss()
+    if (toast.value === newToast) {
+      toast.value = null
+      toastMessage.value = ''
+      presentPromise = null
+    }
   }
 
-  function clearToast() {
-    toast.value?.dismiss()
+  async function clearToast() {
+    const t = toast.value
+    if (!t)
+      return
+    // Wait for present() to finish before dismissing. Without this, dismiss()
+    // called mid-present is dropped on iOS and the toast lingers.
+    if (presentPromise) {
+      try {
+        await presentPromise
+      }
+      catch { /* present rejection is non-fatal for dismissal */ }
+    }
+    await t.dismiss()
   }
 
   return {

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { PrivacyScreen } from '@capacitor-community/privacy-screen'
+import { PrivacyScreen } from '@capacitor/privacy-screen'
 import { IonButton } from '@ionic/vue'
 import { ScreenshotEvent } from '@rdlabo/capacitor-screenshot-event'
 import { computed, onUnmounted, watch } from 'vue'
 import MnemonicDisplay from '@/components/MnemonicDisplay.vue'
-import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
@@ -15,7 +14,6 @@ const props = defineProps({ isVisible: Boolean })
 defineEmits<{ done: [] }>()
 
 const logger = useLogger('ShowWords')
-const { isAndroid } = useDevice()
 
 const words = computed(() => {
   const { data, error } = useLocalWallet().getWords()
@@ -37,9 +35,11 @@ ScreenshotEvent.addListener('userDidTakeScreenshot', () => {
 
 watch(() => props.isVisible, (isVisible) => {
   if (isVisible) {
-    // TODO: there is no way (yet) to enable privacy screen without restricting screenshots in Android
-    if (!isAndroid)
-      PrivacyScreen.enable()
+    PrivacyScreen.enable({
+      android: {
+        preventScreenshots: false,
+      },
+    })
     ScreenshotEvent.startWatchEvent()
   }
   else {

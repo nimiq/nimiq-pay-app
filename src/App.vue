@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { App } from '@capacitor/app'
+import { SystemBars, SystemBarsStyle } from '@capacitor/core'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
-import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
@@ -34,10 +34,9 @@ onMounted(async () => {
 
   if (!useDevice().isWeb) {
     try {
-      await EdgeToEdge.setBackgroundColor({ color: '#F8F8F8' })
       await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
-      await StatusBar.setOverlaysWebView({ overlay: false })
       await StatusBar.setStyle({ style: Style.Light })
+      await SystemBars.setStyle({ style: SystemBarsStyle.Light })
     }
     catch (error) {
       logger.error('Failed to set status bar style', error)

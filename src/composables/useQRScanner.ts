@@ -276,12 +276,11 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
         await CameraPreview.start({
           toBack: true,
           disableAudio: true,
-          width: window.screen.width,
-          height: window.screen.height - 56, // leave space for the header
-          x: 0,
-          y: 56, // leave space for the header
+          aspectMode: 'cover',
           lockAndroidOrientation: true,
           rotateWhenOrientationChanged: false,
+          includeSafeAreaInsets: true,
+          force: true,
         })
         isCameraStarted.value = true
       }

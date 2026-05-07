@@ -19,7 +19,6 @@ export default defineConfig(({ mode }) => {
       vue(),
       poLoader(),
       poOptimizer(),
-      // legacy(),
       VitePWA({ registerType: 'autoUpdate', workbox: { maximumFileSizeToCacheInBytes: 10000000 } }),
       {
         name: 'copy-issuer-schema:serve',
