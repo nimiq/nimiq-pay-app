@@ -32,6 +32,9 @@ function makeState() {
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
   const setNakaTxRefunded = vi.fn()
   const setSwapHtlcRefunded = vi.fn()
+  const setPolygonSwapHtlcRefunded = vi.fn()
+  const refundPolygonSwapHtlc = vi.fn((_htlc?: any): Promise<{ refunded: boolean, preimage?: string, hash?: string }> => Promise.resolve({ refunded: true }))
+  const updateSinglePolygonTransaction = vi.fn((_hash?: string): Promise<void> => Promise.resolve())
   const updatePointsBalance = vi.fn()
   const claimCashback = vi.fn((_tx?: any): Promise<{ error: any, errorType: any }> => Promise.resolve({ error: undefined, errorType: undefined }))
   const reconnect = vi.fn()
@@ -107,6 +110,9 @@ function makeState() {
     refreshFromDb,
     setNakaTxRefunded,
     setSwapHtlcRefunded,
+    setPolygonSwapHtlcRefunded,
+    refundPolygonSwapHtlc,
+    updateSinglePolygonTransaction,
     updatePointsBalance,
     claimCashback,
     reconnect,
@@ -225,6 +231,9 @@ export function resetSyncState() {
     state.refreshFromDb,
     state.setNakaTxRefunded,
     state.setSwapHtlcRefunded,
+    state.setPolygonSwapHtlcRefunded,
+    state.refundPolygonSwapHtlc,
+    state.updateSinglePolygonTransaction,
     state.updatePointsBalance,
     state.claimCashback,
     state.reconnect,
@@ -257,6 +266,8 @@ export function resetSyncState() {
   state.isOurRemoteSigner.mockResolvedValue(false)
   state.registerOwnHtlcIfMissing.mockResolvedValue(undefined)
   state.refreshFromDb.mockResolvedValue(undefined)
+  state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: true })
+  state.updateSinglePolygonTransaction.mockResolvedValue(undefined)
   state.claimCashback.mockResolvedValue({ error: undefined, errorType: undefined })
   state.getOrderById.mockResolvedValue({ data: undefined, error: undefined })
   state.getTransactionState.mockResolvedValue({ data: undefined, error: undefined })
@@ -450,6 +461,15 @@ vi.mock('@/stores/transactions', () => {
     refreshFromDb: state.refreshFromDb,
     setNakaTxRefunded: state.setNakaTxRefunded,
     setSwapHtlcRefunded: state.setSwapHtlcRefunded,
+    setPolygonSwapHtlcRefunded: state.setPolygonSwapHtlcRefunded,
   }))
   return { useTransactions }
+})
+
+vi.mock('@/stores/polygon-usdt', () => {
+  const usePolygonUsdt = defineStore('polygon-usdt', () => ({
+    refundPolygonSwapHtlc: state.refundPolygonSwapHtlc,
+    updateSingleTransaction: state.updateSinglePolygonTransaction,
+  }))
+  return { usePolygonUsdt }
 })

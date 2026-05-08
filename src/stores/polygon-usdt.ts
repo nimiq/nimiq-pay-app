@@ -3,6 +3,7 @@ import type { Log } from 'ethers'
 import type { HDNodeWallet } from 'ethers/wallet'
 import type { PolygonTransferFeeSnapshot, PolygonTransferQuote, RelayServerInfo } from '@/lib/polygon/types'
 import type { AsyncResult } from '@/types'
+import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, MerchantTransaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { Contract, getAddress, Interface, JsonRpcProvider, Signature, Transaction } from 'ethers'
 import { defineStore, storeToRefs } from 'pinia'
@@ -867,48 +868,18 @@ async function relayTransaction({ relayRequest, relayUrl, signature }: RelayExec
   return receipt
 }
 
-async function buildHtlcRelayExecution(
+async function buildHtlcRelayEnvelope(
   wallet: HDNodeWallet,
-  htlcId: string,
-  amount: bigint,
-  recipientAddress: string,
-  hash: string,
-  timeout: number,
+  data: string,
   feeSnapshot: PolygonTransferFeeSnapshot,
 ): Promise<RelayExecutionInput & { fee: bigint }> {
   const client = await getClient()
-  const [tokenNonceRaw, forwarderNonceRaw, blockNumber] = await Promise.all([
-    client.tokenContract.getNonce(wallet.address),
+  const [forwarderNonceRaw, blockNumber] = await Promise.all([
     client.htlcContract.getNonce(wallet.address),
     client.provider.getBlockNumber(),
   ])
-  const tokenNonce = BigInt(tokenNonceRaw.toString())
-  const forwarderNonce = BigInt(forwarderNonceRaw.toString())
   const fee = BigInt(feeSnapshot.fee)
-  const approval = amount + fee
-  const relay = {
-    url: feeSnapshot.relay.url,
-    baseRelayFee: BigInt(feeSnapshot.relay.baseRelayFee),
-    pctRelayFee: BigInt(feeSnapshot.relay.pctRelayFee),
-    relayManagerAddress: feeSnapshot.relay.relayManagerAddress,
-    relayWorkerAddress: feeSnapshot.relay.relayWorkerAddress,
-    minGasPrice: BigInt(feeSnapshot.relay.minGasPrice),
-  }
-  const { sigR, sigS, sigV } = await signTokenApproval(client, wallet, approval, tokenNonce, polygonUsdtConfig.htlcContract)
-  const data = client.htlcContract.interface.encodeFunctionData('openWithApproval', [
-    htlcId,
-    polygonUsdtConfig.tokenContract,
-    amount,
-    wallet.address,
-    getAddress(recipientAddress),
-    hash,
-    timeout,
-    fee,
-    approval,
-    sigR,
-    sigS,
-    sigV,
-  ])
+  const relay = feeSnapshot.relay
 
   const relayRequest: RelayRequest = {
     request: {
@@ -916,14 +887,14 @@ async function buildHtlcRelayExecution(
       to: polygonUsdtConfig.htlcContract,
       data,
       value: '0',
-      nonce: forwarderNonce.toString(),
+      nonce: BigInt(forwarderNonceRaw.toString()).toString(),
       gas: feeSnapshot.gasLimit,
       validUntil: String(blockNumber + 2 * 60 * 30),
     },
     relayData: {
       gasPrice: feeSnapshot.gasPrice,
-      pctRelayFee: relay.pctRelayFee.toString(),
-      baseRelayFee: relay.baseRelayFee.toString(),
+      pctRelayFee: relay.pctRelayFee,
+      baseRelayFee: relay.baseRelayFee,
       relayWorker: relay.relayWorkerAddress,
       paymaster: polygonUsdtConfig.htlcContract,
       paymasterData: '0x',
@@ -950,6 +921,38 @@ async function buildHtlcRelayExecution(
     relayUrl: relay.url,
     signature,
   }
+}
+
+async function buildHtlcRelayExecution(
+  wallet: HDNodeWallet,
+  htlcId: string,
+  amount: bigint,
+  recipientAddress: string,
+  hash: string,
+  timeout: number,
+  feeSnapshot: PolygonTransferFeeSnapshot,
+): Promise<RelayExecutionInput & { fee: bigint }> {
+  const client = await getClient()
+  const tokenNonceRaw = await client.tokenContract.getNonce(wallet.address)
+  const tokenNonce = BigInt(tokenNonceRaw.toString())
+  const fee = BigInt(feeSnapshot.fee)
+  const approval = amount + fee
+  const { sigR, sigS, sigV } = await signTokenApproval(client, wallet, approval, tokenNonce, polygonUsdtConfig.htlcContract)
+  const data = client.htlcContract.interface.encodeFunctionData('openWithApproval', [
+    htlcId,
+    polygonUsdtConfig.tokenContract,
+    amount,
+    wallet.address,
+    getAddress(recipientAddress),
+    hash,
+    timeout,
+    fee,
+    approval,
+    sigR,
+    sigS,
+    sigV,
+  ])
+  return buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
 }
 
 async function fetchGroupedTransfers(address: string, fromBlock: number, toBlock: number, options: FetchGroupedTransfersOptions = {}) {
@@ -1653,16 +1656,20 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       )
       await useTransactions().addPaymentToMerchantTransaction(tx as MerchantTransaction)
 
-      // 8. Save swap HTLC to database for recovery
+      // 8. Save swap HTLC to database for recovery.
+      // Persist usdtContract.timeout in ms (Fastspot returns seconds-since-epoch) so the expiry
+      // sweep — which compares against headTimestamp in ms — treats Polygon and NIM rows uniformly.
+      // htlcDetails.address is the bytes32 on-chain HTLC ID needed to call refund(...) later.
       const swapHtlcKey = getSwapHtlcKey(tx)
       await run(
         SQLQuery.InsertSwapHtlc,
         [
           swapHtlcKey,
           usdtContract.amount,
-          usdtContract.timeout,
+          usdtContract.timeout * 1000,
           swap.id,
           swap.status,
+          htlcDetails.address,
         ],
       )
 
@@ -1728,6 +1735,45 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     }
   }
 
+  // Reclaims a Polygon HTLC whose Lightning leg never produced a preimage. Reuses the same OpenGSN
+  // relay envelope and signing wallet as the original funding tx, so the user spends no MATIC.
+  // Caller (sync sweep) wraps this in try/catch and only deletes the swap_htlcs row on success.
+  async function refundPolygonSwapHtlc(htlc: SwapHtlc): Promise<{ refunded: boolean, preimage?: string, hash?: string }> {
+    if (!htlc.htlc_id)
+      return { refunded: false }
+
+    const { data: wallet, error: walletError } = useLocalWallet().getEthWallet()
+    if (walletError || !wallet) {
+      logger.error('Cannot refund Polygon HTLC: no wallet', { walletError })
+      return { refunded: false }
+    }
+
+    // Late-resolution guard: if Fastspot has the preimage, the redeem path is still viable —
+    // skip refund and let updateSingleTransaction finalize the tx. Run alongside the chain prep
+    // because the timeout path (no preimage) is the dominant case and needs both.
+    const { useFastspotApiV2 } = await import('@/composables/useFastspotV2')
+    const { getSwap } = await useFastspotApiV2()
+    const [swap, client, feeSnapshot] = await Promise.all([
+      getSwap(htlc.swap_id).catch(() => null),
+      getClient(),
+      primeHtlcFee(),
+    ])
+    if (swap && 'preimage' in swap && swap.preimage)
+      return { refunded: false, preimage: swap.preimage }
+
+    const data = client.htlcContract.interface.encodeFunctionData('refund', [
+      htlc.htlc_id,
+      wallet.address,
+      BigInt(feeSnapshot.fee),
+    ])
+    const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
+    const receipt = await relayTransaction(execution)
+
+    await useTransactions().setPolygonSwapHtlcRefunded(htlc.address)
+    await run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+    return { refunded: true, hash: receipt.hash }
+  }
+
   async function resetHistoryState() {
     const { data: address } = useLocalWallet().getEthAddress()
     if (address) {
@@ -1758,5 +1804,6 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     refreshTransferQuote,
     sendPayment,
     sendSwapPayment,
+    refundPolygonSwapHtlc,
   }
 })

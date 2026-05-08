@@ -195,7 +195,8 @@ export const useTransactions = defineStore('transactions', () => {
         signedTx.toHex(),
       )
 
-      // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later
+      // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later.
+      // NIM rows reclaim by HTLC address (TIMEOUT_RESOLVE proof), so htlc_id is null — only Polygon needs it.
       await run(
         SQLQuery.InsertSwapHtlc,
         [
@@ -204,6 +205,7 @@ export const useTransactions = defineStore('transactions', () => {
           (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
           swap.id,
           swap.status,
+          null,
         ],
       )
     }
@@ -528,6 +530,18 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
+  // Polygon swap rows key by tx hash because tx.recipient is the shared HTLC contract address.
+  async function setPolygonSwapHtlcRefunded(txHash: string) {
+    const tx = transactions.value.find(tx => tx.hash === txHash)
+    if (!tx)
+      return
+    tx.meta = {
+      ...tx.meta,
+      refunded: true,
+    }
+    await upsertTx(tx)
+  }
+
   async function setNakaTxRefunded(amount: number) {
     const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
     if (tx) {
@@ -576,6 +590,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
+    setPolygonSwapHtlcRefunded,
     setNakaTxRefunded,
     setTxHidden,
     clearTxHistory,

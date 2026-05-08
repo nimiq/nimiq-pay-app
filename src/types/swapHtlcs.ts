@@ -1,7 +1,8 @@
 export interface SwapHtlc {
   address: string
   amount: number
-  timeoutTime: number
-  swapId: string
-  swapStatus: string
+  timeout_block: number
+  swap_id: string
+  swap_status: string
+  htlc_id?: string | null
 }

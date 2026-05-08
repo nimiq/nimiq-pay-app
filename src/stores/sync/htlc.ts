@@ -168,62 +168,96 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
   let lastExpiredSwapHtlcCheckTimestamp = 0
   async function checkExpiredSwapHtlcs() {
-    const heightTimestamp = headTimestamp.value > 1 ? headTimestamp.value : Date.now()
-    if (heightTimestamp <= lastExpiredSwapHtlcCheckTimestamp + 1 * Nimiq.Policy.BLOCKS_PER_BATCH)
+    if (htlcCheckLock.value)
       return
-    lastExpiredSwapHtlcCheckTimestamp = heightTimestamp
+    htlcCheckLock.value = true
+    try {
+      const heightTimestamp = headTimestamp.value > 1 ? headTimestamp.value : Date.now()
+      if (heightTimestamp <= lastExpiredSwapHtlcCheckTimestamp + Nimiq.Policy.BLOCKS_PER_BATCH)
+        return
+      lastExpiredSwapHtlcCheckTimestamp = heightTimestamp
 
-    const conn = useConn()
-    const expiredSwapHtlcs = await conn.query<SwapHtlc[]>(SQLQuery.GetExpiredSwapHtlcs, [heightTimestamp])
-    logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
+      const conn = useConn()
+      const expiredSwapHtlcs = await conn.query<SwapHtlc[]>(SQLQuery.GetExpiredSwapHtlcs, [heightTimestamp])
+      logger.log('Expired swap HTLCs:', expiredSwapHtlcs)
 
-    for (const htlc of expiredSwapHtlcs) {
-      if (htlc.address.startsWith('0x')) {
-        await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
-        await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'expired', timestamp: undefined })
-        continue
-      }
+      const hasPolygonRows = expiredSwapHtlcs.some(htlc => htlc.address.startsWith('0x'))
+      // Loaded once per sweep — dynamic import breaks a polygon-usdt → useSync circular import.
+      const polygonUsdt = hasPolygonRows ? (await import('@/stores/polygon-usdt')).usePolygonUsdt() : null
 
-      try {
-        const account = await client.value!.getAccount(htlc.address) as PlainAccount
-        if (!account.balance) {
-          logger.log('Swap HTLC is empty, deleting from db', htlc)
-          await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+      for (const htlc of expiredSwapHtlcs) {
+        if (htlc.address.startsWith('0x')) {
+          await handleExpiredPolygonSwapHtlc(htlc, polygonUsdt!)
           continue
         }
 
-        logger.log('Refunding swap HTLC', htlc, account)
-        const refundTx = new Nimiq.Transaction(
-          Nimiq.Address.fromUserFriendlyAddress(htlc.address),
-          Nimiq.AccountType.HTLC,
-          new Uint8Array(0),
-          localAddress.value,
-          Nimiq.AccountType.Basic,
-          new Uint8Array(0),
-          BigInt(account.balance),
-          0n,
-          0,
-          localHeight.value,
-          networkId.value,
-        )
-        const { privateKey, publicKey } = localWallet.value
-        const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
-        const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
-        const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
-        proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
-        proof.write(sigProof)
-        refundTx.proof = proof
-        const txDetails = await client.value!.sendTransaction(refundTx)
-        if (txDetails.state !== 'invalidated')
-          useTransactions().setSwapHtlcRefunded(htlc.address)
-        else
-          logger.error('Error while sending refund swap HTLC tx', txDetails)
+        try {
+          const account = await client.value!.getAccount(htlc.address) as PlainAccount
+          if (!account.balance) {
+            logger.log('Swap HTLC is empty, deleting from db', htlc)
+            await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+            continue
+          }
+
+          logger.log('Refunding swap HTLC', htlc, account)
+          const refundTx = new Nimiq.Transaction(
+            Nimiq.Address.fromUserFriendlyAddress(htlc.address),
+            Nimiq.AccountType.HTLC,
+            new Uint8Array(0),
+            localAddress.value,
+            Nimiq.AccountType.Basic,
+            new Uint8Array(0),
+            BigInt(account.balance),
+            0n,
+            0,
+            localHeight.value,
+            networkId.value,
+          )
+          const { privateKey, publicKey } = localWallet.value
+          const sig = Nimiq.Signature.create(privateKey, publicKey, refundTx.serializeContent())
+          const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
+          const proof = new Nimiq.SerialBuffer(1 + sigProof.length)
+          proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
+          proof.write(sigProof)
+          refundTx.proof = proof
+          const txDetails = await client.value!.sendTransaction(refundTx)
+          if (txDetails.state !== 'invalidated')
+            useTransactions().setSwapHtlcRefunded(htlc.address)
+          else
+            logger.error('Error while sending refund swap HTLC tx', txDetails)
+        }
+        catch (error) {
+          logger.error('Error while refunding swap HTLC', error)
+        }
       }
-      catch (error) {
-        logger.error('Error while refunding swap HTLC', error)
+      conn.run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
+    }
+    finally {
+      htlcCheckLock.value = false
+    }
+  }
+
+  async function handleExpiredPolygonSwapHtlc(htlc: SwapHtlc, polygonUsdt: ReturnType<typeof import('@/stores/polygon-usdt').usePolygonUsdt>) {
+    // Pre-migration rows have no on-chain HTLC ID; can't broadcast refund. Fall back to
+    // the original cosmetic-only behavior so the UI still moves the tx out of "pending".
+    if (!htlc.htlc_id) {
+      await useConn().run(SQLQuery.DeleteSwapHtlc, [htlc.address])
+      await useTransactions().updateTransactionStatus({ hash: htlc.address, status: 'expired', timestamp: undefined })
+      return
+    }
+
+    try {
+      const result = await polygonUsdt.refundPolygonSwapHtlc(htlc)
+      if (!result.refunded && result.preimage) {
+        logger.log('Skipping Polygon refund — Lightning preimage arrived late', htlc)
+        await polygonUsdt.updateSingleTransaction(htlc.address)
       }
     }
-    useConn().run(SQLQuery.DeleteExpiredSwapQuotes, [heightTimestamp])
+    catch (error) {
+      // Leave the row in place so the next sweep retries. refund(...) reverts on already-refunded
+      // HTLCs, so retries are safe.
+      logger.error('Polygon HTLC refund failed; will retry next sweep', error)
+    }
   }
 
   async function maybeCheckHtlcState() {
