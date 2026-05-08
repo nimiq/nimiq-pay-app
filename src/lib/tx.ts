@@ -166,7 +166,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
           )
           break
         case 'retire-stake':
-          data = Nimiq.StakingDataBuilder.retireStaker(
+          data = Nimiq.StakingDataBuilder.retireStake(
             /* retireStake */ BigInt(partialArgs.stakingData.retireStake),
           )
           break
