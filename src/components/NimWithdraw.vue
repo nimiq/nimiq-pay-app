@@ -84,7 +84,11 @@ watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fi
 // JS and their precision issues...
 // Lunas are integers, so no problem in rounding down to the nearest integer.
 const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
-const amountUnits = computed(() => Math.floor(fiatAmount.value / price.value * factor.value))
+const amountUnits = computed(() => {
+  if (!price.value)
+    return 0
+  return Math.floor(fiatAmount.value / price.value * factor.value)
+})
 const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
 const loading = ref(false)
 const remoteBalanceFiat = computed(() => spendableBalance.value / factor.value * price.value)
@@ -112,8 +116,13 @@ const {
   feeText: usdtFeeText,
 } = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
 
-const displayedAmountUnits = computed(() => !isNimiqAsset.value && usdtQuote.value ? usdtQuote.value.totalDebit : amountUnits.value)
-const formattedUsdtAmount = computed(() => formatUsdtPreviewAmount(displayedAmountUnits.value))
+const formattedUsdtAmount = computed(() => {
+  if (usdtQuote.value)
+    return formatUsdtPreviewAmount(usdtQuote.value.totalDebit)
+  if (!price.value)
+    return '—'
+  return formatUsdtPreviewAmount(amountUnits.value)
+})
 const hasEnoughAmount = computed(() => {
   if (!isNimiqAsset.value)
     return !!usdtQuote.value && usdtQuote.value.totalDebit <= spendableBalance.value
@@ -229,7 +238,7 @@ watch(errorMessage, (value) => {
     <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
       <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
       <p class="max-w-full text-base font-semibold text-space/60">
-        <CryptoAmount v-if="isNimiqAsset" :amount="displayedAmountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
+        <CryptoAmount v-if="isNimiqAsset" :amount="amountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
         <span v-else data-testid="nim-withdraw-usdt-amount">{{ formattedUsdtAmount }}</span>
       </p>
       <p v-if="quoteHelperMessage" data-testid="nim-withdraw-quote-helper" class="text-sm font-medium text-space/50">

@@ -69,17 +69,18 @@ export function fastspotFeeTickerToCrypto(ticker: string): Crypto | null {
  * Uses the app's current locale by default.
  */
 export function formatUsdtAmount(amount: number, locale?: string) {
+  const safeAmount = Number.isFinite(amount) ? amount / 1e6 : 0
   return `${new Intl.NumberFormat(locale ?? i18n.locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 6,
-  }).format(amount / 1e6)} USDT`
+  }).format(safeAmount)} USDT`
 }
 
 /**
  * Formats a USDT amount from minor units for preview display (rounded up to 2 decimals).
  */
 export function formatUsdtPreviewAmount(amount: number, suffix = 'USDT') {
-  const roundedAmount = Math.ceil(amount / 10_000) / 100
+  const roundedAmount = Number.isFinite(amount) ? Math.ceil(amount / 10_000) / 100 : 0
   return `${new Intl.NumberFormat(i18n.locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

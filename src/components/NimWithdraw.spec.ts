@@ -11,6 +11,7 @@ const usdtBalance = ref(0)
 const polygonConsensus = ref<'established' | 'connecting'>('established')
 const remoteBalance = ref(0)
 const transferFeeSnapshot = ref<any>(null)
+const priceData = ref<{ price: number } | null>({ price: 1 })
 const getCachedTransferQuote = vi.fn()
 const refreshTransferQuote = vi.fn()
 const primeTransferFee = vi.fn()
@@ -96,8 +97,10 @@ vi.mock('@/composables/useApi', () => ({
   useCurrencyPriceApi: () => ({
     getPriceNow: vi.fn(async () => ({ price: 1 })),
   }),
+  // Snapshot priceData per useFetch() call so each mount gets its own ref;
+  // prevents stale wrappers from prior tests reacting to module-shared state.
   useFetch: () => ({
-    data: ref({ price: 1 }),
+    data: ref(priceData.value),
     fetch: vi.fn(),
   }),
 }))
@@ -227,6 +230,7 @@ describe('nimWithdraw', () => {
     usdtBalance.value = 500_000_000
     polygonConsensus.value = 'established'
     remoteBalance.value = 0
+    priceData.value = { price: 1 }
     addNewWithdrawalAddress.mockReset()
     getCachedTransferQuote.mockReset()
     refreshTransferQuote.mockReset()
@@ -361,6 +365,17 @@ describe('nimWithdraw', () => {
     })
     expect(wrapper.get('[data-testid="nim-withdraw-usdt-amount"]').text()).toBe('500.00 USDT')
     expect(wrapper.get('[data-testid="nim-withdraw-submit"]').attributes('disabled')).toBeUndefined()
+  })
+
+  it('shows an em-dash placeholder before the price has loaded', async () => {
+    priceData.value = null
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    const amountText = wrapper.get('[data-testid="nim-withdraw-usdt-amount"]').text()
+    expect(amountText).not.toContain('NaN')
+    expect(amountText).toBe('—')
   })
 
   it('does not refetch the Polygon fee on every amount edit', async () => {
