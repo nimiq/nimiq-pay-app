@@ -82,6 +82,15 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }))
 
+vi.mock('@capacitor/haptics', () => ({
+  Haptics: {
+    impact: vi.fn(() => Promise.resolve()),
+    notification: vi.fn(() => Promise.resolve()),
+  },
+  ImpactStyle: { Light: 'LIGHT', Medium: 'MEDIUM', Heavy: 'HEAVY' },
+  NotificationType: { Success: 'SUCCESS', Warning: 'WARNING', Error: 'ERROR' },
+}))
+
 vi.mock('@capacitor/screen-orientation', () => ({
   ScreenOrientation: {
     lock: screenOrientationLock,
@@ -168,6 +177,28 @@ const IonSearchbarStub = defineComponent({
   template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown.enter="$emit(\'keydown.enter\')">',
 })
 
+const SwipeToDeleteRowStub = defineComponent({
+  inheritAttrs: false,
+  props: {
+    disabled: { type: Boolean, default: false },
+    deleteLabel: { type: String, default: 'Delete' },
+    deleteTestid: { type: String, default: undefined },
+  },
+  emits: ['delete', 'launch'],
+  template: `
+    <div>
+      <button
+        v-if="deleteTestid"
+        type="button"
+        :data-testid="deleteTestid"
+        :aria-label="deleteLabel"
+        @click="$emit('delete')"
+      >Delete</button>
+      <div @click="$emit('launch')"><slot /></div>
+    </div>
+  `,
+})
+
 function mountModal(component: Component = MiniAppsModal) {
   return mount(component, {
     global: {
@@ -180,6 +211,10 @@ function mountModal(component: Component = MiniAppsModal) {
         IonSkeletonText: {
           template: '<div class="skeleton" />',
         },
+        AnimatePresence: {
+          template: '<div><slot /></div>',
+        },
+        SwipeToDeleteRow: SwipeToDeleteRowStub,
       },
     },
   })
@@ -381,6 +416,42 @@ describe('mini apps modal', () => {
     await flushPromises()
 
     expect(trackDAppOpened).toHaveBeenCalledWith('https://evm-mini-wallet.vercel.app/', 'EVM Mini Wallet', 'featured')
+  })
+
+  it('removes a recently-viewed entry when its delete option is clicked', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    const { useMiniApps } = await import('@/stores/mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://app.uniswap.org', name: 'Uniswap', icon: '' })
+    await flushPromises()
+
+    const recentTestId = toUrlTestId('https://app.uniswap.org')
+    expect(wrapper.find(`[data-testid="recent-dapp-button-${recentTestId}"]`).exists()).toBe(true)
+
+    await wrapper.find(`[data-testid="recent-dapp-delete-${recentTestId}"]`).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find(`[data-testid="recent-dapp-button-${recentTestId}"]`).exists()).toBe(false)
+    expect(store.recentlyViewedDApps.find(d => d.url === 'https://app.uniswap.org')).toBeUndefined()
+    expect(openWebView).not.toHaveBeenCalled()
+  })
+
+  it('still launches the mini-app when a recently-viewed row body is clicked', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    const { useMiniApps } = await import('@/stores/mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://app.uniswap.org', name: 'Uniswap', icon: '' })
+    await flushPromises()
+
+    const recentTestId = toUrlTestId('https://app.uniswap.org')
+    await wrapper.find(`[data-testid="recent-dapp-button-${recentTestId}"]`).trigger('click')
+    await flushPromises()
+
+    expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
   it('seeds selected user language into the mini-app preShowScript', async () => {

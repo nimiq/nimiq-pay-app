@@ -117,6 +117,9 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
+  // In-memory description cache for recently-viewed dApps; keyed by raw stored url.
+  const recentDescriptionCache = new Map<string, string | undefined>()
+
   function addRecentlyViewed(dapp: RecentDApp) {
     const current = recentlyViewedDApps.value
     // Already the most-recent entry — skip the storage write.
@@ -124,7 +127,25 @@ export const useMiniApps = defineStore('mini-apps', () => {
       return
     const filtered = current.filter(d => d.url !== dapp.url)
     filtered.unshift(dapp)
-    recentlyViewedDApps.value = filtered.slice(0, MAX_RECENT)
+    const next = filtered.slice(0, MAX_RECENT)
+    for (const evicted of filtered.slice(MAX_RECENT))
+      recentDescriptionCache.delete(evicted.url)
+    recentlyViewedDApps.value = next
+  }
+
+  function removeRecentlyViewed(url: string) {
+    const target = stripTrailingSlash(url)
+    const current = recentlyViewedDApps.value
+    const filtered: RecentDApp[] = []
+    for (const d of current) {
+      if (stripTrailingSlash(d.url) === target)
+        recentDescriptionCache.delete(d.url)
+      else
+        filtered.push(d)
+    }
+    if (filtered.length === current.length)
+      return
+    recentlyViewedDApps.value = filtered
   }
 
   /**
@@ -197,7 +218,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
     searchedDescriptions[url] = { status: 'done', text: desc || undefined }
   }
 
-  const recentDescriptionCache = new Map<string, string | undefined>()
   const recentDAppsWithDescriptions = computedAsync(async () => {
     const recentDApps = recentDAppsForDisplay.value ?? []
     return Promise.all(recentDApps.map(async (dapp) => {
@@ -239,6 +259,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
     recentlyViewedDApps,
     recentDAppsWithDescriptions,
     addRecentlyViewed,
+    removeRecentlyViewed,
     isTrustedMiniAppUrl,
     iconForUrl,
   }

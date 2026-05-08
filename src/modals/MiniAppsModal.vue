@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { DAppOpenSource } from '@/lib/analytics'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
-import { motion } from 'motion-v'
+import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
+import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
 import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
@@ -20,6 +21,10 @@ onMounted(() => warmUpWeb3ProviderScript())
 const store = useMiniApps()
 const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
 const { searchedDescriptions, ensureDescription } = store
+
+const recentDAppsWithTestIds = computed(() =>
+  (recentDAppsWithDescriptions.value ?? []).map(dapp => ({ ...dapp, testId: toUrlTestId(dapp.url) })),
+)
 const { language } = storeToRefs(useApp())
 
 const searchQuery = ref('')
@@ -139,45 +144,55 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
           Recently Viewed
         </p>
         <div class="flex flex-col gap-4 text-left">
-          <button
-            v-for="dapp in recentDAppsWithDescriptions"
-            :key="dapp.url"
-            class="flex items-center gap-3 text-left transition-opacity"
-            :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
-            :disabled="isOpeningAny"
-            @click="openMiniApp(dapp.url, dapp.name, 'recent')"
-          >
-            <div class="relative w-14 h-14 shrink-0">
-              <img
-                :src="dapp.icon"
-                :alt="dapp.name"
-                class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-                :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-                @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+          <AnimatePresence :initial="false">
+            <SwipeToDeleteRow
+              v-for="dapp in recentDAppsWithTestIds"
+              :key="dapp.url"
+              :disabled="isOpeningAny"
+              :delete-label="`Remove ${dapp.name} from Recently Viewed`"
+              :delete-testid="`recent-dapp-delete-${dapp.testId}`"
+              @launch="openMiniApp(dapp.url, dapp.name, 'recent')"
+              @delete="store.removeRecentlyViewed(dapp.url)"
+            >
+              <div
+                :data-testid="`recent-dapp-button-${dapp.testId}`"
+                class="flex items-center gap-3 transition-opacity select-none"
+                :class="{ 'opacity-50': isOpeningAny }"
               >
-              <motion.div
-                v-if="isOpeningUrl(dapp.url)"
-                class="absolute inset-0 flex items-center justify-center"
-                :initial="{ opacity: 0, scale: 0.85 }"
-                :animate="{ opacity: 1, scale: 1 }"
-                :transition="{ duration: 0.16, ease: 'easeOut' }"
-              >
-                <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-              </motion.div>
-            </div>
-            <div class="flex flex-col min-w-0">
-              <span class="font-bold text-base">{{ dapp.name }}</span>
-              <motion.span
-                :key="dapp.description || dapp.url"
-                class="text-sm text-space/50 truncate"
-                :initial="{ opacity: 0, y: 4 }"
-                :animate="{ opacity: 1, y: 0 }"
-                :transition="{ duration: 0.16, ease: 'easeOut' }"
-              >
-                {{ dapp.description || dapp.url }}
-              </motion.span>
-            </div>
-          </button>
+                <div class="relative w-14 h-14 shrink-0">
+                  <img
+                    :src="dapp.icon"
+                    :alt="dapp.name"
+                    class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity pointer-events-none"
+                    :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
+                    draggable="false"
+                    @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
+                  >
+                  <motion.div
+                    v-if="isOpeningUrl(dapp.url)"
+                    class="absolute inset-0 flex items-center justify-center"
+                    :initial="{ opacity: 0, scale: 0.85 }"
+                    :animate="{ opacity: 1, scale: 1 }"
+                    :transition="{ duration: 0.16, ease: 'easeOut' }"
+                  >
+                    <LoadingSpinnerIcon class="w-6 h-6 text-space" />
+                  </motion.div>
+                </div>
+                <div class="flex flex-col min-w-0">
+                  <span class="font-bold text-base">{{ dapp.name }}</span>
+                  <motion.span
+                    :key="dapp.description || dapp.url"
+                    class="text-sm text-space/50 truncate"
+                    :initial="{ opacity: 0, y: 4 }"
+                    :animate="{ opacity: 1, y: 0 }"
+                    :transition="{ duration: 0.16, ease: 'easeOut' }"
+                  >
+                    {{ dapp.description || dapp.url }}
+                  </motion.span>
+                </div>
+              </div>
+            </SwipeToDeleteRow>
+          </AnimatePresence>
         </div>
       </template>
 

@@ -72,3 +72,52 @@ describe('useMiniApps.isTrustedMiniAppUrl', () => {
     expect(store.isTrustedMiniAppUrl('https://app-4.example/')).toBe(false)
   })
 })
+
+describe('useMiniApps.removeRecentlyViewed', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  it('removes a recently-viewed entry by exact URL match', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://app.uniswap.org/', name: 'Uniswap', icon: '' })
+    store.addRecentlyViewed({ url: 'https://aave.com/', name: 'Aave', icon: '' })
+
+    store.removeRecentlyViewed('https://app.uniswap.org/')
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com/'])
+  })
+
+  it('removes regardless of trailing slash on the lookup URL', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://app.uniswap.org', name: 'Uniswap', icon: '' })
+
+    store.removeRecentlyViewed('https://app.uniswap.org/')
+
+    expect(store.recentlyViewedDApps.length).toBe(0)
+  })
+
+  it('is a noop when the URL is not present', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://aave.com/', name: 'Aave', icon: '' })
+
+    store.removeRecentlyViewed('https://app.uniswap.org/')
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com/'])
+  })
+
+  it('drops the URL from trustedUrls so the warning prompt re-triggers', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://app.uniswap.org/', name: 'Uniswap', icon: '' })
+    expect(store.isTrustedMiniAppUrl('https://app.uniswap.org/')).toBe(true)
+
+    store.removeRecentlyViewed('https://app.uniswap.org/')
+
+    expect(store.isTrustedMiniAppUrl('https://app.uniswap.org/')).toBe(false)
+  })
+})
