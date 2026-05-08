@@ -7,9 +7,10 @@ import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
 import { IonApp, IonFab, IonFabButton, IonIcon, IonRouterOutlet } from '@ionic/vue'
+import { onLongPress } from '@vueuse/core'
 import { bugOutline } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import NetworkOverrideBadge from '@/components/NetworkOverrideBadge.vue'
 import { useDevice } from '@/composables/useDevice'
@@ -23,6 +24,14 @@ import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
 const router = useRouter()
+
+const devFabRef = ref<HTMLElement | null>(null)
+const isDevFabHidden = ref(false)
+onLongPress(
+  devFabRef,
+  () => { isDevFabHidden.value = true },
+  { modifiers: { prevent: true }, delay: 3 * 1e3 },
+)
 
 onMounted(async () => {
   // Stop scanning in case it was still active
@@ -149,8 +158,8 @@ App.addListener('resume', async () => {
     <IonRouterOutlet />
     <NetworkOverrideBadge />
     <!-- DEV -->
-    <IonFab v-if="isDev" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
-      <IonFabButton @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
+    <IonFab v-if="isDev && !isDevFabHidden" slot="fixed" horizontal="end" vertical="bottom" style="z-index: 999999;">
+      <IonFabButton ref="devFabRef" @click="useModal().showModal(Modal.Dev, { isOnTop: true })">
         <IonIcon :icon="bugOutline" />
       </IonFabButton>
     </IonFab>
