@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import { openingMiniAppUrl } from '@/lib/mini-app-launcher'
 import MiniAppsModal from './MiniAppsModal.vue'
 
 function createDeferred<T = void>() {
@@ -190,6 +191,13 @@ function toUrlTestId(url: string) {
 
 describe('mini apps modal', () => {
   beforeEach(() => {
+    // Reset module-scoped guard so prior tests can't leak `openingMiniAppUrl` and
+    // short-circuit subsequent launches (production behavior holds the guard until
+    // `browserPageLoaded`/`pageLoadError`/`closeEvent` fires, which the mocks never do).
+    // Use the static import so we hit the same module instance as MiniAppsModal even
+    // after `vi.resetModules()` runs in another test.
+    openingMiniAppUrl.value = null
+
     openWebView.mockReset()
     openWebView.mockImplementation(() => Promise.resolve())
     addListener.mockReset()

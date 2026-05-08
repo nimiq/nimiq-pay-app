@@ -176,6 +176,12 @@ describe('mini-app-launcher', () => {
     const { launchMiniApp, openingMiniAppUrl } = await importLauncher()
     const deferred = createDeferred<void>()
     openWebView.mockImplementationOnce(() => deferred.promise)
+    let pageLoadedHandler: (() => void) | undefined
+    addListener.mockImplementation(((event: string, handler: () => void) => {
+      if (event === 'browserPageLoaded')
+        pageLoadedHandler = handler
+      return Promise.resolve({ remove: vi.fn() })
+    }) as never)
 
     const pending = launchMiniApp({ url: 'https://app.uniswap.org', source: 'deeplink' })
     await Promise.resolve()
@@ -185,6 +191,8 @@ describe('mini-app-launcher', () => {
     deferred.resolve()
     await pending
 
+    // Guard is held until the webview confirms it loaded; simulate the native event.
+    pageLoadedHandler?.()
     expect(openingMiniAppUrl.value).toBeNull()
   })
 
