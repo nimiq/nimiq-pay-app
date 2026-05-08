@@ -59,6 +59,9 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['@nimiq/core'],
     },
+    build: {
+      target: 'esnext',
+    },
     test: {
       globals: true,
       environment: 'jsdom',
