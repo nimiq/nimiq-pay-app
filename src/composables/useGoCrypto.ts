@@ -509,17 +509,11 @@ export function monitorGoCryptoRequest<IM extends boolean = true>(
 
     monitorGoCryptoRequest_updatePaymentDetails(paymentId, options, state).then((shouldContinueMonitoring) => {
         if (!shouldContinueMonitoring || state.stopped) return; // schedule neither continuous monitoring nor countdowns
-        state.paymentDetailsUpdateInterval = window.setInterval(
-            () => monitorGoCryptoRequest_updatePaymentDetails(paymentId, options, state),
-            5000,
-        );
+        state.paymentDetailsUpdateInterval = window.setInterval(monitorGoCryptoRequest_updatePaymentDetails, 5000, paymentId, options, state);
         // Start countdowns only after initial payment details update, as they're based on them.
         const shouldContinueCountdowns = monitorGoCryptoRequest_updateExpiryCountdowns(options, state);
         if (!shouldContinueCountdowns) return;
-        state.expiryCountdownsUpdateInterval = window.setInterval(
-            () => monitorGoCryptoRequest_updateExpiryCountdowns(options, state),
-            500,
-        );
+        state.expiryCountdownsUpdateInterval = window.setInterval(monitorGoCryptoRequest_updateExpiryCountdowns, 500, options, state);
     });
 
     return function stopMonitoring() {

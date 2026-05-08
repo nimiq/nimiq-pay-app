@@ -119,7 +119,7 @@ async function handleCreateNewCard() {
   logger.log('Creating new card')
   try {
     const user = await getUserStatus()
-    if (user.identifications.find(identification => identification.provider === 'NAKA-SUMSUB' && identification.status === 'VERIFIED')) {
+    if (user.identifications.some(identification => identification.provider === 'NAKA-SUMSUB' && identification.status === 'VERIFIED')) {
       evaluatingCardData.value = true
       await issueNewCard(user)
       evaluatingCardData.value = false

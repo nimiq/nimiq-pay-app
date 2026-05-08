@@ -292,7 +292,7 @@ const unwatchGoCryptoRail = watch(() => payment.value.rail === Rail.GoCrypto, as
   // observe the payment ref and its rail for further changes.
   if (!isGoCrypto)
     return
-  window.setTimeout(() => unwatchGoCryptoRail(), 0) // run after watcher invocation
+  window.setTimeout(unwatchGoCryptoRail, 0) // run after watcher invocation
   // Have to create and dispose an effect scope manually as watchers/effects are not used synchronously in setup script.
   // Could also stop monitoring manually, instead of defining a scope, but the scope already handles automatically not
   // executing the run handler when it's already stopped, i.e. when the component has already been unmounted before the

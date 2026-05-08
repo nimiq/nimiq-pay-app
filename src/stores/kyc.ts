@@ -150,7 +150,7 @@ export const useKyc = defineStore('kyc', () => {
     const { pause } = useIntervalFn(async () => {
       const user = await getUserStatus()
       logger.log('Background KYC check, user identifications:', user.identifications)
-      if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
+      if (user.identifications.some(identification => identification.status === 'VERIFIED')) {
         pause()
         sdkStatus.value = SumsubSdkStatus.APPROVED
         const { useNaka } = await import('@/stores/naka')

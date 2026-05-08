@@ -251,7 +251,7 @@ export const useNaka = defineStore('naka', () => {
       logger.log('No card found in DB, getting it from the server')
       await until(isAppStarting).toBe(false)
       const user = await getUserStatus()
-      if (user.identifications.find(identification => identification.status === 'VERIFIED'))
+      if (user.identifications.some(identification => identification.status === 'VERIFIED'))
         await setupCard(user)
       else
         return
@@ -376,7 +376,7 @@ export const useNaka = defineStore('naka', () => {
       return
     }
 
-    if (cards.find(c => c.id === card.value?.hceId)) {
+    if (cards.some(c => c.id === card.value?.hceId)) {
       logger.log('Naka card is already activated in the SDK', { card })
       return
     }

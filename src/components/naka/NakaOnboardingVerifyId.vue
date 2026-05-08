@@ -40,7 +40,7 @@ async function register() {
     // If user already has a VERIFIED identification, skip KYC and setup card directly
     const user = await getUserStatus()
     // TODO: Check if initialized and wait until verified before trying KYC again
-    if (user.identifications.find(identification => identification.status === 'VERIFIED')) {
+    if (user.identifications.some(identification => identification.status === 'VERIFIED')) {
       await setupCard(user)
       return initializeFlow(FlowName.NakaCardIsReady, { height: 'h-max' })
     }
@@ -64,7 +64,7 @@ async function register() {
 onKycApproved.value = async () => {
   try {
     const user = await getUserStatus()
-    if (!user.identifications.find(identification => identification.status === 'VERIFIED')) {
+    if (!user.identifications.some(identification => identification.status === 'VERIFIED')) {
       isLoading.value = false
       logger.error('User does not have a VERIFIED identification')
       useToast().setToast({

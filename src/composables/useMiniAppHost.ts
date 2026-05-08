@@ -148,7 +148,7 @@ export interface MiniAppHostConfig {
 
   /**
    * Callback to request user confirmation for sensitive operations
-   * @param message - Message to show to the user
+   * @param request - Confirmation request to show to the user
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
