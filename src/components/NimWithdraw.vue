@@ -2,12 +2,11 @@
 import type { PropType } from 'vue'
 import type { State } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
-import { ValidationUtils } from '@nimiq/utils'
 import { FiatAmount } from '@nimiq/vue3-components'
 import { getAddress } from 'ethers'
 import { storeToRefs } from 'pinia'
 
-import { computed, ref, toRef, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
@@ -21,7 +20,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { assetToCrypto, formatUsdtPreviewAmount } from '@/lib/assets'
 import { isValidEthAddress } from '@/lib/ethereum'
 import { initializeFlow } from '@/lib/flows'
-import { FlowName, stepEmits, StepName } from '@/lib/flows/steps.types'
+import { FlowName, stepEmits } from '@/lib/flows/steps.types'
 import { DECIMALS, useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -34,27 +33,29 @@ import ShortAddressDisplay from './ShortAddressDisplay.vue'
 // being inheritable as fallback attributes as there is no single root element in this component.
 defineOptions({ inheritAttrs: false })
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, isVisible: { type: Boolean, default: false }, state: { type: Object as PropType<State>, required: true } })
 
 const emit = defineEmits(stepEmits)
 
 const logger = useLogger('NimWithdraw')
 
-const state = toRef(props, 'state')
 const { withdrawalAddress, selectedFiat, isNimiqAsset, activeAsset } = storeToRefs(useApp())
-const address = computed(() => {
-  const address = withdrawalAddress.value || state.value[StepName.NimAddressInput]
-  if (!address)
+
+// APP-91: derive purely from `withdrawalAddress` — the previous ref + bidirectional watcher
+// raced with the address-selection sub-flow finalize and sent to the wrong recipient.
+const selected = computed(() => {
+  const value = withdrawalAddress.value
+  if (!value)
     return ''
 
   if (!isNimiqAsset.value)
-    return isValidEthAddress(address) ? getAddress(address) : ''
+    return isValidEthAddress(value) ? getAddress(value) : ''
 
   try {
-    return Nimiq.Address.fromString(address).toUserFriendlyAddress()
+    return Nimiq.Address.fromString(value).toUserFriendlyAddress()
   }
   catch (e) {
-    logger.error('Invalid address:', address, e)
+    logger.error('Invalid address:', value, e)
     return ''
   }
 })
@@ -92,7 +93,6 @@ const amountUnits = computed(() => {
 const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
 const loading = ref(false)
 const remoteBalanceFiat = computed(() => spendableBalance.value / factor.value * price.value)
-const selected = ref('')
 const hasPositiveAmount = computed(() => amountUnits.value > 0)
 const currentUsdtQuoteRequest = computed<{
   amount: number
@@ -145,22 +145,6 @@ const flowErrorMessage = computed(() => {
   return props.errorMsg || ''
 })
 
-watch(address, () => {
-  selected.value = address.value
-}, { immediate: true })
-
-watch(selected, (value) => {
-  if (value === 'nim')
-    emit('done', '')
-  else if (value === 'cc')
-    emit('done', '')
-
-  if (ValidationUtils.isValidAddress(value))
-    selected.value = Nimiq.Address.fromString(value).toUserFriendlyAddress()
-  else
-    selected.value = address.value
-})
-
 const errorMessage = computed(() => {
   if (flowErrorMessage.value)
     return flowErrorMessage.value
@@ -199,7 +183,12 @@ function withdraw() {
 
   loading.value = true
   useApp().addNewWithdrawalAddress(selected.value)
-  emit('done', { amount: amountUnits.value, recipient: selected.value, polygonQuote: usdtQuote.value || undefined })
+  emit('done', {
+    amount: amountUnits.value,
+    recipient: selected.value,
+    fiatAmount: fiatAmount.value,
+    polygonQuote: usdtQuote.value || undefined,
+  })
 }
 
 async function fillMaxAmount() {
@@ -230,6 +219,12 @@ watch(errorMessage, (value) => {
   if (value)
     loading.value = false
   logger.error('Error message when trying to withdraw:', value)
+})
+
+// Reset stuck spinner when user returns from confirm/PIN — also un-pauses USDT quote refresh.
+watch(() => props.isVisible, (visible) => {
+  if (visible)
+    loading.value = false
 })
 </script>
 

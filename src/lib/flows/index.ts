@@ -487,10 +487,10 @@ selectionStep ◄────┘
         └────► pinCodeStep
    */
   const [
-    { nimWithdrawalAmountSelectionStep, pinCodeStep },
+    { nimWithdrawalAmountSelectionStep, nimWithdrawalConfirmStep, pinCodeStep },
   ] = await Promise.all([import('./steps')])
   const flowName = FlowName.NimWithdraw
-  const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, pinCodeStep].map(s => s({ flowName }))))
+  const steps = (await Promise.all([nimWithdrawalAmountSelectionStep, nimWithdrawalConfirmStep, pinCodeStep].map(s => s({ flowName }))))
   const onDone: Flow['onDone'] = async ({ nimWithdrawalAmountSelectionStep: { amount, recipient, polygonQuote } }, { err, setToast }) => {
     const [{ Transfer }, { useApp }, { usePolygonUsdt }, { sendTx }] = await Promise.all([
       import('@/types/transactions'),

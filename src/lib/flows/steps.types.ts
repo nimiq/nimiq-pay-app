@@ -89,6 +89,7 @@ export enum StepName {
   PaymentPreview = 'paymentPreview',
   NimWithdrawalAmountSelectionStep = 'nimWithdrawalAmountSelectionStep',
   NimWithdrawalAddressSelectionStep = 'nimWithdrawalAddressSelectionStep',
+  NimWithdrawalConfirmStep = 'nimWithdrawalConfirmStep',
   NimAddressInput = 'nimAddressInput',
   NimAddressDisplay = 'nimAddressDisplay',
   ConfirmAddressDeletion = 'confirmAddressDeletion',
@@ -107,7 +108,7 @@ export enum StepName {
 
 export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput, StepName.HoldNakaCardToReader] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.WhatIsNaka, StepName.VerifyYourIdNaka, StepName.NakaCardIsReady, StepName.NakaCardDelete, StepName.NakaCardManagement, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion, StepName.NimWithdrawalConfirmStep] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -337,5 +338,8 @@ export type NakaPaymentData = Pick<Transaction, 'recipient' | 'amount' | 'messag
 export interface NimWithdrawalSelection {
   amount: number
   recipient: string
+  // Fiat amount the user entered in the amount step, shown verbatim on the confirm screen
+  // so the confirmation matches what they just typed even if rates shift before signing.
+  fiatAmount: number
   polygonQuote?: PolygonTransferQuote
 }

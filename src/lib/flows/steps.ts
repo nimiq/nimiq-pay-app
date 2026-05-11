@@ -30,6 +30,7 @@ const PaymentPreview = defineAsyncComponent(() => import('@/components/PaymentPr
 const CategoryIcon = defineAsyncComponent(() => import('@/components/icons/categories/CategoryIcon.vue'))
 const PaymentAmountInput = defineAsyncComponent(() => import('@/components/PaymentAmountInput.vue'))
 const NimWithdraw = defineAsyncComponent(() => import('@/components/NimWithdraw.vue'))
+const NimWithdrawConfirm = defineAsyncComponent(() => import('@/components/NimWithdrawConfirm.vue'))
 const NimAddressInput = defineAsyncComponent(() => import('@/components/NimAddressInput.vue'))
 const WithdrawalAddressList = defineAsyncComponent(() => import('@/components/WithdrawalAddressList.vue'))
 const NimAddressDisplay = defineAsyncComponent(() => import('@/components/NimAddressDisplay.vue'))
@@ -540,7 +541,7 @@ export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
   get title() { return i18n.t('Withdraw') },
   ariaLabel: 'Withdraw',
   main: markRaw(NimWithdraw),
-  beforeNext: async ({ nimWithdrawalAmountSelectionStep: { amount, recipient } }, { next, err, finalizeFlow, navigateTo }) => {
+  beforeNext: async ({ nimWithdrawalAmountSelectionStep: { amount } }, { next, err }) => {
     const app = useApp()
     const currentBalance = app.isNimiqAsset
       ? (await import('@/stores/remote-signer')).useRemoteSigner().remoteBalance
@@ -556,16 +557,19 @@ export const nimWithdrawalAmountSelectionStep: StepInit = async () => ({
       ))
     }
 
-    if (!amount || !recipient) {
-      // User clicked Address Selection
-      return next()
-    }
+    next()
+  },
+} satisfies Step)
 
-    const { shouldAskPin } = (await import('@/stores/app')).useApp()
-    if (shouldAskPin())
+export const nimWithdrawalConfirmStep: StepInit = async () => ({
+  step: StepName.NimWithdrawalConfirmStep,
+  get title() { return i18n.t('Confirm Withdrawal') },
+  ariaLabel: 'Confirm Withdrawal',
+  main: markRaw(NimWithdrawConfirm),
+  beforeNext: async (_state, { navigateTo, finalizeFlow }) => {
+    if (useApp().shouldAskPin())
       return navigateTo({ step: StepName.PinCode })
-    else
-      finalizeFlow()
+    finalizeFlow()
   },
 } satisfies Step)
 
