@@ -106,6 +106,8 @@
   --radial-gradient-red: radial-gradient(100% 100% at 100% 100%, #CC3047 0%, #D94432 100%);
   --radial-gradient-blue: radial-gradient(100% 100% at 100% 100%, #260133 0%, #1F2348 100%);
   --radial-gradient-blue-50: radial-gradient(100% 100% at 100% 100%, rgba(38, 1, 51, 0.05) 0%, rgba(31, 35, 72, 0.05) 100%);
+  --radial-gradient-gold: radial-gradient(at 100% 100%, oklab(0.7 0.0595 0.1592), oklab(0.7924 0.0122 0.1588));
+  --radial-gradient-blue-evm: radial-gradient(100% 100% at 100% 100%, #3451D1 0%, #627EEA 100%);
 
 
   --slide-left-distance: 200px;

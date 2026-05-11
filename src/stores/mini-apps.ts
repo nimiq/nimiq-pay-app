@@ -8,12 +8,15 @@ import { kv, kvPreferences } from '@/stores/app'
 
 const REMOTE_JSON_URL = 'https://raw.githubusercontent.com/nimiq/awesome/main/src/data/dist/nimiq-mini-apps.json'
 
+export type MiniAppType = 'nimiq' | 'evm'
+
 export interface DApp {
   name: string
   url: string
   icon: string
   description?: string
   featured: boolean
+  type?: MiniAppType
 }
 
 interface BaseDApp {
@@ -21,12 +24,15 @@ interface BaseDApp {
   url: string
   icon: string
   featured: boolean
+  type?: MiniAppType
 }
 
 interface RemoteMiniApp {
   name: string
   url: string
-  type: string
+  // Always overwritten at flatten time from the source array key (nimiq/evm);
+  // raw upstream value is discarded.
+  type: MiniAppType
   description: string
   logo: string
   source: string | null
@@ -46,7 +52,12 @@ function toBaseDApp(remote: RemoteMiniApp): BaseDApp {
     url: remote.url,
     icon: remote.logo || getFaviconUrl(remote.url),
     featured: remote.featured,
+    type: remote.type,
   }
+}
+
+function tagType(items: RemoteMiniApp[] | undefined, type: MiniAppType): RemoteMiniApp[] {
+  return (items ?? []).map(item => ({ ...item, type }))
 }
 
 type SearchedDescriptionState = 'loading' | 'done'
@@ -56,6 +67,7 @@ interface RecentDApp {
   url: string
   icon: string
   description?: string
+  type?: MiniAppType
 }
 
 const MAX_RECENT = 20
@@ -87,7 +99,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
       })
       if (response.status >= 200 && response.status < 300) {
         const data = response.data as RemoteMiniAppsResponse
-        const apps = [...(data.nimiq ?? []), ...(data.evm ?? [])]
+        const apps = [...tagType(data.nimiq, 'nimiq'), ...tagType(data.evm, 'evm')]
         cachedRemoteApps.value = apps
         return apps
       }
@@ -103,6 +115,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
           url: `http://${__VITE_SERVER_IP__}:5174/`,
           icon: getFaviconUrl('http://localhost:5174/'),
           featured: false,
+          type: 'nimiq',
         }]
       : []
     return [...devApp, ...remoteApps.value.map(toBaseDApp)]
@@ -218,15 +231,15 @@ export const useMiniApps = defineStore('mini-apps', () => {
     searchedDescriptions[url] = { status: 'done', text: desc || undefined }
   }
 
-  const recentDAppsWithDescriptions = computedAsync(async () => {
+  const recentDAppsWithDescriptions = computedAsync<RecentDApp[]>(async () => {
     const recentDApps = recentDAppsForDisplay.value ?? []
-    return Promise.all(recentDApps.map(async (dapp) => {
+    return Promise.all(recentDApps.map(async (dapp): Promise<RecentDApp> => {
       // First check if it's in allDApps to avoid unnecessary fetches, matching URLs with or without trailing slash
       const popular = allDApps.value.find(p =>
         p.url === dapp.url || stripTrailingSlash(p.url) === stripTrailingSlash(dapp.url),
       )
       if (popular)
-        return { ...dapp, icon: popular.icon, description: popular.description }
+        return { ...dapp, icon: popular.icon, description: popular.description, type: popular.type }
       if (!recentDescriptionCache.has(dapp.url))
         recentDescriptionCache.set(dapp.url, (await fetchPageDescription(dapp.url)) ?? undefined)
       return { ...dapp, description: recentDescriptionCache.get(dapp.url) }

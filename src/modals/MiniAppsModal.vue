@@ -1,16 +1,21 @@
 <script setup lang="ts">
+import type { TypeFilterValue } from '@/components/MiniAppTypeFilter.vue'
 import type { DAppOpenSource } from '@/lib/analytics'
+import type { MiniAppType } from '@/stores/mini-apps'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
+import { useStorageAsync } from '@vueuse/core'
 import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
+import MiniAppTypeBadge from '@/components/MiniAppTypeBadge.vue'
+import MiniAppTypeFilter from '@/components/MiniAppTypeFilter.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
 import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
-import { useApp } from '@/stores/app'
+import { kvPreferences, useApp } from '@/stores/app'
 import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
@@ -29,7 +34,22 @@ const { language } = storeToRefs(useApp())
 
 const searchQuery = ref('')
 const isSearching = computed(() => !!searchQuery.value.trim())
-const { filteredApps: filteredDApps } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
+const typeFilter = useStorageAsync<TypeFilterValue>('miniAppsTypeFilter', 'all', kvPreferences())
+function matchesType<T extends { type?: MiniAppType }>(dapp: T): boolean {
+  return typeFilter.value === 'all' || dapp.type === typeFilter.value
+}
+const { filteredApps: searchHits } = useMiniAppSearch(searchQuery, popularDApps, descriptionTexts)
+const filteredDApps = computed(() => searchHits.value.filter(matchesType))
+const filteredFeatured = computed(() => featuredDApps.value.filter(matchesType))
+const filteredNonFeatured = computed(() => nonFeaturedDApps.value.filter(matchesType))
+const filteredRecent = computed(() => recentDAppsWithTestIds.value.filter(matchesType))
+const isFilterActive = computed(() => typeFilter.value !== 'all')
+const hasAnyResults = computed(() =>
+  filteredFeatured.value.length > 0 || filteredNonFeatured.value.length > 0 || filteredRecent.value.length > 0,
+)
+const filterEmptyLabel = computed(() =>
+  typeFilter.value === 'nimiq' ? 'No Nimiq apps yet. Check back soon.' : 'No EVM apps yet. Check back soon.',
+)
 const normalizedSearchUrl = computed(() => normalizeMiniAppUrl(searchQuery.value))
 const featuredLabel = computed(() => isSearching.value ? 'Matching Apps' : 'Featured Apps')
 const isOpeningAny = computed(() => openingMiniAppUrl.value !== null)
@@ -47,6 +67,7 @@ const searchedUrlApp = computed(() => {
     title: matchedFeaturedApp?.name || fallbackTitle,
     description: searchedDescriptions[url]?.text || matchedFeaturedApp?.description,
     icon: matchedFeaturedApp?.icon || getFaviconUrl(url),
+    type: matchedFeaturedApp?.type,
     isLoading: searchedDescriptions[url]?.status === 'loading',
   }
 })
@@ -98,6 +119,8 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
         @keydown.enter="openMiniApp()"
       />
 
+      <MiniAppTypeFilter v-model="typeFilter" data-testid="mini-app-type-filter" />
+
       <button
         v-if="searchedUrlApp"
         data-testid="searched-dapp-button"
@@ -124,6 +147,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
           >
             <LoadingSpinnerIcon class="size-6" />
           </motion.div>
+          <MiniAppTypeBadge v-if="searchedUrlApp.type" :type="searchedUrlApp.type" />
         </div>
         <div class="flex flex-col min-w-0">
           <span class="font-bold text-base truncate">{{ searchedUrlApp.title }}</span>
@@ -139,14 +163,14 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
       </button>
 
       <!-- Recently Viewed (shown only when not searching) -->
-      <template v-if="!searchQuery.trim() && recentDAppsWithDescriptions.length > 0">
+      <template v-if="!searchQuery.trim() && filteredRecent.length > 0">
         <p class="text-lg font-bold text-space text-left">
           Recently Viewed
         </p>
         <div class="flex flex-col gap-4 text-left">
           <AnimatePresence :initial="false">
             <SwipeToDeleteRow
-              v-for="dapp in recentDAppsWithTestIds"
+              v-for="dapp in filteredRecent"
               :key="dapp.url"
               :disabled="isOpeningAny"
               :delete-label="`Remove ${dapp.name} from Recently Viewed`"
@@ -177,6 +201,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
                   >
                     <LoadingSpinnerIcon class="w-6 h-6 text-space" />
                   </motion.div>
+                  <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
                 </div>
                 <div class="flex flex-col min-w-0">
                   <span class="font-bold text-base">{{ dapp.name }}</span>
@@ -245,6 +270,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
               >
                 <LoadingSpinnerIcon class="w-6 h-6 text-space" />
               </motion.div>
+              <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
             </div>
             <div class="flex flex-col min-w-0">
               <span class="font-bold text-base">{{ dapp.name }}</span>
@@ -272,13 +298,13 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
       <!-- When not searching: Featured Apps + All Apps sections -->
       <template v-else>
         <!-- Featured Apps -->
-        <template v-if="featuredDApps.length > 0">
+        <template v-if="filteredFeatured.length > 0">
           <p class="text-lg font-bold text-space text-left">
             Featured Apps
           </p>
           <div class="flex flex-col gap-4 text-left">
             <button
-              v-for="dapp in featuredDApps"
+              v-for="dapp in filteredFeatured"
               :key="dapp.url"
               :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
               class="flex items-center gap-3 text-left transition-opacity"
@@ -304,6 +330,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
                 >
                   <LoadingSpinnerIcon class="w-6 h-6 text-space" />
                 </motion.div>
+                <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
               </div>
               <div class="flex flex-col min-w-0">
                 <span class="font-bold text-base">{{ dapp.name }}</span>
@@ -323,13 +350,13 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
         </template>
 
         <!-- All Apps -->
-        <template v-if="nonFeaturedDApps.length > 0">
+        <template v-if="filteredNonFeatured.length > 0">
           <p class="text-lg font-bold text-space text-left">
             All Apps
           </p>
           <div class="flex flex-col gap-4 text-left">
             <button
-              v-for="dapp in nonFeaturedDApps"
+              v-for="dapp in filteredNonFeatured"
               :key="dapp.url"
               :data-testid="`dapp-button-${toUrlTestId(dapp.url)}`"
               class="flex items-center gap-3 text-left transition-opacity"
@@ -355,6 +382,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
                 >
                   <LoadingSpinnerIcon class="w-6 h-6 text-space" />
                 </motion.div>
+                <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
               </div>
               <div class="flex flex-col min-w-0">
                 <span class="font-bold text-base">{{ dapp.name }}</span>
@@ -371,6 +399,14 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
             </button>
           </div>
         </template>
+
+        <!-- Type-filter empty state (no recent + no featured + no non-featured under the active filter) -->
+        <p
+          v-if="isFilterActive && !hasAnyResults"
+          class="text-sm text-space/60 text-center py-6"
+        >
+          {{ filterEmptyLabel }}
+        </p>
       </template>
     </div>
   </ModalTemplate>
