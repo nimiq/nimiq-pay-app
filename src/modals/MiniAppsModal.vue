@@ -103,7 +103,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
 
 <template>
   <ModalTemplate :close-all="true">
-    <div class="w-full h-full flex flex-col gap-6">
+    <div class="w-full h-full flex flex-col gap-6 pb-8">
       <p class="text-2xl font-bold">
         Discover
       </p>
