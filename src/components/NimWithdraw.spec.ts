@@ -1,5 +1,5 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, ref } from 'vue'
 import { StepName } from '@/lib/flows/steps.types'
 import { Transfer } from '@/types/transactions'
@@ -204,6 +204,13 @@ async function mountComponent(
 ) {
   const { default: NimWithdraw } = await import('./NimWithdraw.vue')
 
+  // Component derives `selected` from the `withdrawalAddress` store ref (APP-91);
+  // seed it here so tests that supply an address don't have to do it manually.
+  // Empty `address` is treated as "leave the store value alone" so tests can pre-seed
+  // a persisted address (e.g. a stale NIM address while USDT is active) before mounting.
+  if (address)
+    withdrawalAddress.value = address
+
   return mount(NimWithdraw, {
     props: {
       state: {
@@ -223,6 +230,11 @@ async function mountComponent(
 }
 
 describe('nimWithdraw', () => {
+  // Module-level reactive refs are shared across tests; without auto-unmount, stale
+  // wrappers keep firing autoRefresh watchers when `withdrawalAddress` is reset/seeded
+  // in the next test, polluting spy call counts.
+  enableAutoUnmount(afterEach)
+
   beforeEach(() => {
     withdrawalAddress.value = ''
     selectedFiat.value = 'EUR'
