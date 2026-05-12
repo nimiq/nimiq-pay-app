@@ -61,6 +61,10 @@ vi.mock('@nimiq/vue3-components', () => ({
   }),
 }))
 
+vi.mock('@/stores/app', () => ({
+  useApp: () => ({ getAlias: () => undefined }),
+}))
+
 describe('transactionItem', () => {
   beforeEach(() => {
     vi.stubGlobal('Nimiq', {

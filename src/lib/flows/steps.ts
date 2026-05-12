@@ -581,7 +581,7 @@ export const nimWithdrawalAddressSelectionStep: StepInit = async () => ({
   autofocus: false, // Don't autofocus on the search bar
   beforeNext: async ({ nimWithdrawalAddressSelectionStep }, { next, finalizeFlow }) => {
     if (!nimWithdrawalAddressSelectionStep) {
-      // User clicked "Add NIM address"
+      // User clicked "Add another address"
       return next()
     }
     else {

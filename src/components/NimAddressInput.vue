@@ -19,7 +19,9 @@ const emit = defineEmits(stepEmits)
 
 const { isNimiqAsset } = storeToRefs(useApp())
 const address = ref<string>()
+const alias = ref('')
 watch(() => props.state.qrCodeScanner, (value) => {
+  alias.value = ''
   if (typeof value === 'string')
     address.value = value || ''
   else if (value && typeof value === 'object' && 'recipient' in value)
@@ -53,7 +55,7 @@ function handleSave() {
     return
 
   const normalizedAddress = isNimiqAsset.value ? address.value : getAddress(address.value)
-  useApp().addNewWithdrawalAddress(normalizedAddress)
+  useApp().addNewWithdrawalAddress(normalizedAddress, alias.value)
   emit('done', normalizedAddress)
 }
 </script>
@@ -80,6 +82,19 @@ function handleSave() {
         :placeholder="$t('0x...')"
         aria-label="Address input"
         @input="address = ($event.target as HTMLInputElement).value.trim()"
+      >
+      <input
+        v-if="validAddress"
+        v-model="alias"
+        type="text"
+        maxlength="32"
+        autocapitalize="words"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+        :placeholder="$t('Alias (optional)')"
+        aria-label="Alias (optional)"
+        class="mt-6 w-full px-4 py-3 text-base rounded bg-space/[0.025] placeholder:text-space/40 border-space-space-200 focus:outline-none focus:border-sky/40 focus:bg-space/0 transition-colors truncate"
       >
       <QRIcon class="mt-6 ml-auto w-9 h-9" @click="$emit('done')" />
       <PolygonWarning

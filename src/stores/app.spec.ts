@@ -68,10 +68,44 @@ describe('useApp withdrawal storage', () => {
     app.addNewWithdrawalAddress('0x0000000000000000000000000000000000000004')
 
     expect(app.withdrawalAddressesHistory).toEqual([
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
+      { address: '0x0000000000000000000000000000000000000001' },
+      { address: '0x0000000000000000000000000000000000000002' },
+      { address: '0x0000000000000000000000000000000000000003' },
+      { address: '0x0000000000000000000000000000000000000004' },
     ])
+  })
+
+  it('sets and clears an alias for a withdrawal address', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    app.addNewWithdrawalAddress('NQ77 ALICE')
+    app.setAddressAlias('NQ77 ALICE', 'Alice')
+    expect(app.getAlias('NQ77 ALICE')).toBe('Alice')
+
+    app.setAddressAlias('NQ77 ALICE', '')
+    expect(app.getAlias('NQ77 ALICE')).toBeUndefined()
+  })
+
+  it('looks up Ethereum aliases case-insensitively', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    const checksummed = '0xAbCdEf0000000000000000000000000000000001'
+    const lower = checksummed.toLowerCase()
+    app.addNewWithdrawalAddress(checksummed, 'Kraken')
+
+    expect(app.getAlias(checksummed)).toBe('Kraken')
+    expect(app.getAlias(lower)).toBe('Kraken')
+  })
+
+  it('preserves an existing alias when re-adding the same address', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    app.addNewWithdrawalAddress('NQ77 BOB', 'Bob')
+    app.addNewWithdrawalAddress('NQ77 BOB')
+
+    expect(app.withdrawalAddressesHistory).toEqual([{ address: 'NQ77 BOB', alias: 'Bob' }])
   })
 })

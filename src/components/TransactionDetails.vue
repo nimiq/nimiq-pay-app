@@ -12,6 +12,7 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { Asset, assetToCrypto, assetToPaymentMethod, Chain } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
@@ -25,7 +26,9 @@ const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean
 
 const logger = useLogger('TransactionDetails')
 const { consensus, height } = storeToRefs(useNimiqNetwork())
+const app = useApp()
 const asset = computed(() => props.tx.asset || Asset.NIM)
+const recipientAlias = computed(() => props.tx.recipient ? app.getAlias(props.tx.recipient) : undefined)
 const chain = computed(() => props.tx.chain || Chain.Nimiq)
 const paymentMethod = computed(() => props.tx.paymentMethod || assetToPaymentMethod(asset.value))
 const { crypto, fiat } = usePrice(props.tx.amount, {
@@ -154,8 +157,9 @@ onBeforeMount(() => {
       <div v-if="tx.recipient">
         {{ $t('Recipient') }}
       </div>
-      <div v-if="tx.recipient" @click="() => handleCopy(tx.recipient)">
-        {{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}
+      <div v-if="tx.recipient" class="flex flex-col items-end gap-y-0.5" @click="() => handleCopy(tx.recipient)">
+        <span v-if="recipientAlias" class="font-semibold truncate max-w-full">{{ recipientAlias }}</span>
+        <span :class="recipientAlias ? 'text-sm text-space/60' : ''">{{ tx.recipient.slice(0, 4) }}...{{ tx.recipient.slice(-4) }}</span>
       </div>
 
       <div v-if="tx.meta?.secret" class="max-w-full col-span-2 text-lg text-space/60">

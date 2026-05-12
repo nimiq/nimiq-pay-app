@@ -2,6 +2,7 @@ import type { RelayRequest } from '@opengsn/common/dist/EIP712/RelayRequest'
 import type { Log } from 'ethers'
 import type { HDNodeWallet } from 'ethers/wallet'
 import type { PolygonTransferFeeSnapshot, PolygonTransferQuote, RelayServerInfo } from '@/lib/polygon/types'
+import type { SavedAddress } from '@/stores/app'
 import type { AsyncResult } from '@/types'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, MerchantTransaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
@@ -408,9 +409,9 @@ export async function scanInitialPolygonHistory({
 
 const transferTopicHash = getRequiredContractEvent(tokenInterface, 'Transfer').topicHash
 
-export function getPolygonHistoryTitle(recipient: string, withdrawalAddressesHistory: string[]): TransactionTitle {
+export function getPolygonHistoryTitle(recipient: string, withdrawalAddressesHistory: SavedAddress[]): TransactionTitle {
   const normalizedRecipient = getAddress(recipient)
-  const isSavedWithdrawal = withdrawalAddressesHistory.some(address => addressesEqual(address, normalizedRecipient))
+  const isSavedWithdrawal = withdrawalAddressesHistory.some(entry => addressesEqual(entry.address, normalizedRecipient))
   return isSavedWithdrawal ? 'Withdrawal' : 'Payment'
 }
 

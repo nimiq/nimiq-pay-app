@@ -60,6 +60,8 @@ const selected = computed(() => {
   }
 })
 
+const selectedAlias = computed(() => selected.value ? useApp().getAlias(selected.value) ?? '' : '')
+
 const { height, consensus } = storeToRefs(useNimiqNetwork())
 const { isScannerActive } = storeToRefs(useLocks())
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
@@ -242,18 +244,18 @@ watch(() => props.isVisible, (visible) => {
     </div>
 
     <div
-      class="grid grid-cols-[auto_1fr_auto] items-center w-max mx-auto p-3 px-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
+      class="grid grid-cols-[auto_1fr_auto] items-center w-max min-w-60 max-w-full mx-auto p-3 px-4 font-semibold border-[1.5px] border-solid rounded-md border-space-space-400"
       aria-label="Select withdrawal address"
       @click="initializeFlow(FlowName.AddressSelection, { height: 'h-max', isOnTop: true })"
     >
-      <ShortAddressDisplay v-if="selected" :address="selected" class="text-lg" />
+      <ShortAddressDisplay v-if="selected" :address="selected" :alias="selectedAlias" class="text-lg" />
       <div v-else class="text-lg text-space flex items-center gap-x-4">
         <component :is="isNimiqAsset ? NimiqLogo : UsdtLogo" :class="isNimiqAsset ? 'w-8' : 'w-9'" />
         <span>
           {{ $t('Select an address…') }}
         </span>
       </div>
-      <TriangleIcon class="h-[10px] ml-4 text-space/30" />
+      <TriangleIcon class="h-[10px] ml-4 text-space/30 justify-self-end" />
     </div>
 
     <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>

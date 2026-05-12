@@ -57,6 +57,7 @@ vi.mock('@/stores/app', () => ({
     isNimiqAsset,
     activeAsset: computed(() => isNimiqAsset.value ? 'NIM' : 'USDT'),
     addNewWithdrawalAddress,
+    getAlias: () => undefined,
   }),
 }))
 

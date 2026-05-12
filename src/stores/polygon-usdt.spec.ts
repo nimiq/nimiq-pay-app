@@ -53,7 +53,7 @@ describe('polygon-usdt quote helpers', () => {
 
     expect(getPolygonHistoryTitle(
       '0x00000000000000000000000000000000000000aa',
-      ['0x00000000000000000000000000000000000000bb'],
+      [{ address: '0x00000000000000000000000000000000000000bb' }],
     )).toBe('Payment')
   })
 
@@ -62,7 +62,7 @@ describe('polygon-usdt quote helpers', () => {
 
     expect(getPolygonHistoryTitle(
       '0x00000000000000000000000000000000000000aa',
-      ['0x00000000000000000000000000000000000000Aa'],
+      [{ address: '0x00000000000000000000000000000000000000Aa' }],
     )).toBe('Withdrawal')
   })
 
