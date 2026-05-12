@@ -361,17 +361,39 @@ interface GetSignedTxByRemoteArgs {
 
 export async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
   logger.log('Signing transaction by remote')
-  if (!useRemoteSigner().remoteAddress)
+  if (!useRemoteSigner().remoteAddress) {
+    logger.error('Cannot sign transaction by remote: missing remote address', {
+      requestedAddress: address?.toUserFriendlyAddress(),
+      tx: tx.toPlain(),
+    })
     return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
+  }
   if (tx.networkId !== networkId.value) {
     logger.error('Network ID mismatch', { tx, networkId: tx.networkId, expectedNetworkId: networkId.value })
     return { data: undefined, error: i18n.t('Network ID mismatch') }
   }
   logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
-  const { data: receipt, error, hasError } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
+  const { data: receipt, error, hasError, status } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
   logger.log({ receipt, error })
-  if (hasError)
+  if (hasError) {
+    const plainTx = tx.toPlain()
+    logger.error('Cosigner failed to sign transaction', {
+      status,
+      error,
+      address: address.toUserFriendlyAddress(),
+      hash: tx.hash(),
+      sender: plainTx.sender,
+      senderType: plainTx.senderType,
+      recipient: plainTx.recipient,
+      recipientType: plainTx.recipientType,
+      value: plainTx.value,
+      fee: plainTx.fee,
+      validityStartHeight: plainTx.validityStartHeight,
+      networkId: tx.networkId,
+      expectedNetworkId: networkId.value,
+    })
     return { data: undefined, error: error?.message || i18n.t('Something went wrong signing the transaction') }
+  }
 
   const newTx = new Nimiq.Transaction(
     Nimiq.Address.fromString(receipt.details.sender),

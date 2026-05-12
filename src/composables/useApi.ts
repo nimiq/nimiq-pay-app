@@ -241,6 +241,27 @@ const remoteSignerWsApi = (function () {
             logger.warn('[remoteSignerWsApi] No pending request for id:', responseObject.data.id)
             break
           }
+          const requestData = pendingRequest.requestObject.data
+          const payload = requestData?.payload
+          logger.error('[remoteSignerWsApi] Request failed:', {
+            event: pendingRequest.requestObject.event,
+            id: pendingRequest.id,
+            address: requestData?.address,
+            payload: payload
+              ? {
+                  sender: payload.sender,
+                  senderType: payload.senderType,
+                  recipient: payload.recipient,
+                  recipientType: payload.recipientType,
+                  value: payload.value,
+                  fee: payload.fee,
+                  validityStartHeight: payload.validityStartHeight,
+                  flags: payload.flags,
+                  network: payload.network,
+                }
+              : undefined,
+            response: responseObject.data,
+          })
           pendingRequest.resolve({
             data: undefined,
             hasError: true,

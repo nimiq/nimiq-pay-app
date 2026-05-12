@@ -175,7 +175,16 @@ export const useTransactions = defineStore('transactions', () => {
 
     const res = await getSignedTx(partialTx)
     if (res.error) {
-      logger.error('Error while signing transaction', res.error)
+      logger.error('Error while signing transaction', res.error, {
+        transfer: partialTx.transfer,
+        remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+        remoteBalance: useRemoteSigner().remoteBalance,
+        remoteHeight: useRemoteSigner().remoteHeight,
+        remotePublicKey: useRemoteSigner().remotePublicKey,
+        remoteProofSize: useRemoteSigner().remoteProofSize,
+        localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
+        localBalance: useLocalWallet().localBalance,
+      })
       return res
     }
     // TODO: check if tx is valid before continuing

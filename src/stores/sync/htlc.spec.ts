@@ -91,6 +91,43 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.RemoteToLocal })
     })
 
+    it('logs liquidation context when topping up an active HTLC fails', async () => {
+      state.localBalance = 100_000
+      state.height = 1000
+      state.remoteHeight = 1000
+      state.remoteBalance = 50_000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
+      state.sendTx.mockResolvedValue({ data: undefined, error: 'cosigner rejected' })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      void syncState.nodesAreSynced
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.logger.log).toHaveBeenCalledWith('Preparing to top up deposit by liquidating active HTLC', expect.objectContaining({
+        localBalance: 100_000,
+        remoteBalance: 50_000,
+        remoteAddress: 'NQ11 TEST REMOTE ADDRESS',
+        nodesAreSynced: true,
+        isHtlcActive: true,
+        isRemoteOk: true,
+      }))
+      expect(state.logger.error).toHaveBeenCalledWith('Error while liquidating HTLC', 'cosigner rejected', expect.objectContaining({
+        localBalance: 100_000,
+        remoteBalance: 50_000,
+        remoteAddress: 'NQ11 TEST REMOTE ADDRESS',
+        pendingRemoteDrainTxs: 0,
+        pendingTransactions: 0,
+        pendingHtlcCreationTransactions: 0,
+      }))
+    })
+
     it('delays handleFunds when nodes are not synced and HTLC inactive', async () => {
       state.localBalance = 100_000
       state.height = 1000

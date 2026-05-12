@@ -620,6 +620,29 @@ describe('useTransactions', () => {
     })
   })
 
+  it('logs wallet and signer context when signing a transaction fails', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    state.localBalance = 100_000
+    state.remoteBalance = 50_000
+    vi.mocked(getSignedTx).mockResolvedValue({
+      data: undefined,
+      error: 'cosigner rejected',
+    } as any)
+
+    const store = useTransactions()
+    const result = await store.sendTx({ transfer: Transfer.RemoteToLocal } as any)
+
+    expect(result.error).toBe('cosigner rejected')
+    expect(state.logger.error).toHaveBeenCalledWith('Error while signing transaction', 'cosigner rejected', expect.objectContaining({
+      transfer: Transfer.RemoteToLocal,
+      remoteAddress: 'NQ11 TEST ACTIVE REMOTE ADDRESS',
+      remoteBalance: 50_000,
+      localAddress: 'NQ00 TEST LOCAL ADDRESS',
+      localBalance: 100_000,
+    }))
+  })
+
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {
     const { getSignedTx } = await import('@/lib/tx')
     const { useTransactions } = await import('./transactions')

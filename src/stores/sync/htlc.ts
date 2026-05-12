@@ -38,20 +38,20 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     }
 
-    let remoteBalance = 0
+    let remoteBalanceOnChain = 0
     if (remoteAddress.value) {
       const { data, error } = await getBalance(remoteAddress.value)
       if (error && error !== NO_ACCOUNT_ERROR) {
         logger.error('Error while getting remote balance before handling funds', error)
         return
       }
-      remoteBalance = data ?? 0
+      remoteBalanceOnChain = data ?? 0
     }
 
-    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalance / 1e5} NIM. ${remoteBalance === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
+    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
 
-    if (remoteBalance === 0 && !isHtlcPending.value) {
+    if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
       isProcessingRemote.value = true
       const { error } = await sendTx({ transfer: Transfer.LocalToRemote })
       if (error) {
@@ -66,12 +66,28 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
 
     if (isHtlcActive.value && isRemoteOk.value) {
+      const liquidationContext = {
+        localBalance: localBalance.value,
+        remoteBalance: remoteBalanceOnChain,
+        storeRemoteBalance: remoteBalance.value,
+        remoteAddress: remoteAddress.value?.toUserFriendlyAddress(),
+        localHeight: localHeight.value,
+        remoteHeight: remoteHeight.value,
+        nodesAreSynced: nodesAreSynced.value,
+        isHtlcActive: isHtlcActive.value,
+        isRemoteOk: isRemoteOk.value,
+        isHtlcPending: isHtlcPending.value,
+        pendingRemoteDrainTxs: pendingRemoteDrainTxs.value.length,
+        pendingTransactions: pendingTransactions.value.length,
+        pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value.length,
+      }
+      logger.log('Preparing to top up deposit by liquidating active HTLC', liquidationContext)
       isProcessingRemote.value = true
       const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (error) {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
-        logger.error('Error while liquidating HTLC', error)
+        logger.error('Error while liquidating HTLC', error, liquidationContext)
         return
       }
       if (data) {
