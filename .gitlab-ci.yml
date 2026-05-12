@@ -21,6 +21,25 @@ lint:
     - pnpm install --frozen-lockfile
     - pnpm lint
 
+test:unit:
+  stage: check
+  image: node:lts
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest-10 --activate
+    - pnpm config set store-dir .pnpm-store
+    - echo "@apps:registry=https://scm.nim.team/api/v4/projects/269/packages/npm/" > .npmrc
+    - echo "//scm.nim.team/api/v4/projects/269/packages/npm/:_authToken=${CI_JOB_TOKEN}" >> .npmrc
+  cache:
+    key:
+      files:
+        - pnpm-lock.yaml
+    paths:
+      - .pnpm-store
+  script:
+    - pnpm install --frozen-lockfile
+    - pnpm exec vitest run
+
 build-web:
   stage: build
   image: node:lts
