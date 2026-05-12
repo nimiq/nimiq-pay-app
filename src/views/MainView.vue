@@ -18,7 +18,7 @@ import TheHomeFooter from '@/components/TheHomeFooter.vue'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
-import { debounceDelay, debounceMaxWait } from '@/lib'
+import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -74,7 +74,15 @@ watchEffect(async () => {
     return
 
   if (!isNimiqAsset.value) {
-    if (polygonConsensus.value !== 'established') {
+    if (isTestnet) {
+      statusMessageText.value = i18n.t('USDT is only available on mainnet. Switch to mainnet to use USDT.')
+      statusMessageBgColor.value = 'bg-[#F9EDE1]'
+      statusMessageTextColor.value = 'text-pumpkin'
+      statusMessageIconColor.value = 'text-pumpkin/60'
+      statusMessageIcon.value = markRaw(InfoIcon)
+      isStatusMessageShown.value = true
+    }
+    else if (polygonConsensus.value !== 'established') {
       statusMessageText.value = i18n.t('Connecting to Polygon')
       statusMessageBgColor.value = 'bg-[#F9EDE1]'
       statusMessageTextColor.value = 'text-pumpkin'

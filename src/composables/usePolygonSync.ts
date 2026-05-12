@@ -2,7 +2,7 @@ import { useTimeoutPoll } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
-import { isDev } from '@/lib'
+import { isDev, isTestnet } from '@/lib'
 import { Asset } from '@/lib/assets'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
@@ -16,6 +16,9 @@ const logger = useLogger('polygon-sync')
 let initialized = false
 
 async function feePollCallback() {
+  if (isTestnet)
+    return
+
   const polygonUsdt = usePolygonUsdt()
   const results = await Promise.allSettled([
     polygonUsdt.primeTransferFee(),
@@ -26,6 +29,9 @@ async function feePollCallback() {
 }
 
 async function pollCallback() {
+  if (isTestnet)
+    return
+
   logger.log('Starting Polygon sync poll')
   const polygonUsdt = usePolygonUsdt()
   try {
@@ -61,6 +67,8 @@ export function usePolygonSync() {
   async function init() {
     if (initialized)
       return
+    if (isTestnet)
+      return
 
     try {
       await usePolygonUsdt().init()
@@ -94,6 +102,9 @@ export function usePolygonSync() {
   }
 
   async function triggerNow() {
+    if (isTestnet)
+      return
+
     await pollCallback()
   }
 

@@ -35,6 +35,9 @@ const initNotifications = vi.fn()
 const syncWallets = vi.fn()
 const checkKycInBackground = vi.fn()
 const routerReplace = vi.fn()
+const libState = vi.hoisted(() => ({
+  isTestnet: false,
+}))
 
 vi.mock('@capacitor/app', () => ({
   App: {
@@ -172,6 +175,9 @@ vi.mock('@/i18n/i18n-setup', () => ({
 vi.mock('@/lib', () => ({
   debounceDelay: 0,
   debounceMaxWait: 0,
+  get isTestnet() {
+    return libState.isTestnet
+  },
 }))
 
 vi.mock('@/lib/utils', () => ({
@@ -309,6 +315,7 @@ describe('mainView', () => {
     syncWallets.mockReset()
     checkKycInBackground.mockReset()
     routerReplace.mockReset()
+    libState.isTestnet = false
   })
 
   it('does not show the NIM consensus banner when USDT is the active asset', async () => {
@@ -333,6 +340,21 @@ describe('mainView', () => {
     const wrapper = await mountComponent()
     await flushPromises()
 
+    expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
+  })
+
+  it('shows the USDT testnet warning instead of the Polygon connecting banner', async () => {
+    activeAsset.value = Asset.USDT
+    polygonConsensus.value = 'connecting'
+    usdtBalance.value = 1_000_000
+    libState.isTestnet = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    const statusText = wrapper.get('[data-testid="status-message"]').text()
+    expect(statusText).toContain('USDT is only available on mainnet. Switch to mainnet to use USDT.')
+    expect(statusText).not.toContain('Connecting to Polygon')
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
   })
 })

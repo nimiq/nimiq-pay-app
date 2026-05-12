@@ -19,6 +19,7 @@ const state = vi.hoisted(() => ({
   syncTransactionHistory: vi.fn(async () => {}),
   updateSingleTransaction: vi.fn(async () => {}),
   query: vi.fn(async () => []),
+  isTestnet: false,
 }))
 
 let pollCallCount = 0
@@ -78,6 +79,13 @@ vi.mock('@/stores/polygon-usdt', () => ({
   }),
 }))
 
+vi.mock('@/lib', () => ({
+  isDev: false,
+  get isTestnet() {
+    return state.isTestnet
+  },
+}))
+
 describe('usePolygonSync', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -99,6 +107,7 @@ describe('usePolygonSync', () => {
     state.syncTransactionHistory.mockClear()
     state.updateSingleTransaction.mockClear()
     state.query.mockClear()
+    state.isTestnet = false
   })
 
   it('does not start Polygon polling when NIM is selected', async () => {
@@ -151,5 +160,24 @@ describe('usePolygonSync', () => {
     await state.feePollCallback?.()
 
     expect(state.primeTransferFee).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not initialize or manually sync Polygon while on testnet', async () => {
+    state.activeAsset = ref(Asset.USDT)
+    state.isTestnet = true
+
+    const { usePolygonSync } = await import('./usePolygonSync')
+    const polygonSync = usePolygonSync()
+
+    await polygonSync.init()
+    await polygonSync.triggerNow()
+
+    expect(state.init).not.toHaveBeenCalled()
+    expect(state.resume).not.toHaveBeenCalled()
+    expect(state.resumeFeePoll).not.toHaveBeenCalled()
+    expect(state.updateBalance).not.toHaveBeenCalled()
+    expect(state.syncTransactionHistory).not.toHaveBeenCalled()
+    expect(state.updateSingleTransaction).not.toHaveBeenCalled()
+    expect(state.query).not.toHaveBeenCalled()
   })
 })
