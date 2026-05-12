@@ -48,6 +48,12 @@ vi.mock('@/stores/conn', () => ({
   }),
 }))
 
+vi.mock('@/stores/app', () => ({
+  useApp: () => ({
+    getAlias: () => undefined,
+  }),
+}))
+
 vi.mock('@/stores/nimiq-network', () => ({
   useNimiqNetwork: () => ({
     consensus: 'established',
