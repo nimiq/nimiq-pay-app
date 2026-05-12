@@ -4,10 +4,10 @@ import { ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import PinInput from '@/components/PinInput.vue'
 import { useBiometric } from '@/composables/useBiometric'
-import { hash } from '@/composables/useDecrypt'
 import { useModal } from '@/composables/useModal'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { sha256Hex } from '@/lib/crypto'
 import { useApp } from '@/stores/app'
 
 const { isBiometricEnabled, setPinToSecureStorage } = useBiometric()
@@ -19,7 +19,7 @@ async function handleSubmit(pin: string) {
   if (pin.length < 4)
     return false
 
-  if (hash(pin) !== pinHash.value) {
+  if (sha256Hex(pin) !== pinHash.value) {
     errorMsg.value = i18n.t('Invalid PIN')
     window.setTimeout(() => {
       errorMsg.value = ''

@@ -232,6 +232,16 @@ msgstr "Compléter"
 msgid "Confirm"
 msgstr "Confirmer"
 
+#, fuzzy
+#| msgid "Confirmed"
+msgid "Confirm and send"
+msgstr "Confirmé"
+
+#, fuzzy
+#| msgid "Withdrawal"
+msgid "Confirm Withdrawal"
+msgstr "Retrait"
+
 msgid "Confirm your phone number"
 msgstr "Confirmez votre numéro de téléphone"
 

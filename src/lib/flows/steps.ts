@@ -4,12 +4,12 @@ import type { Step, StepInit } from '@/lib/flows/steps.types'
 import type { ExternalTransaction } from '@/types/transactions'
 import { isValidPhoneNumber } from 'libphonenumber-js'
 import { computed, defineAsyncComponent, h, markRaw, ref } from 'vue'
-import { hash } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
 import { Asset, assetToCrypto } from '@/lib/assets'
+import { sha256Hex } from '@/lib/crypto'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
@@ -124,7 +124,7 @@ export const pinCodeStep: StepInit = async ({ flowName, goBackBy = 1 }) => {
         err(i18n.t('Invalid PIN code'))
       }
       else if (pinHash && flowName !== FlowName.Setup && flowName !== FlowName.SetupWithPromoCode && flowName !== FlowName.Login && flowName !== FlowName.ChangePin) {
-        if (pinHash !== hash(pinCode)) {
+        if (pinHash !== sha256Hex(pinCode)) {
           err(i18n.t('Invalid PIN code'))
         }
         else {
@@ -214,7 +214,7 @@ export const pinCodeChange: StepInit = async () => {
         err(i18n.t('Please enter a PIN code'))
       else if (!PIN_CODE_REGEX.test(pinCodeChange))
         err(i18n.t('Invalid PIN code'))
-      else if (pinHash !== hash(pinCodeChange))
+      else if (pinHash !== sha256Hex(pinCodeChange))
         err(i18n.t('Invalid PIN code'))
       else next()
     },

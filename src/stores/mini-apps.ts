@@ -130,6 +130,24 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
+  // kv() so consent clears on logout alongside other user data.
+  const deviceIdConsent = useStorageAsync<Record<string, true>>(
+    'miniAppDeviceIdConsent',
+    {},
+    kv(),
+    { writeDefaults: false },
+  )
+
+  function hasDeviceIdConsent(origin: string): boolean {
+    return deviceIdConsent.value[origin] === true
+  }
+
+  function grantDeviceIdConsent(origin: string) {
+    if (deviceIdConsent.value[origin])
+      return
+    deviceIdConsent.value = { ...deviceIdConsent.value, [origin]: true }
+  }
+
   // In-memory description cache for recently-viewed dApps; keyed by raw stored url.
   const recentDescriptionCache = new Map<string, string | undefined>()
 
@@ -275,5 +293,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
     removeRecentlyViewed,
     isTrustedMiniAppUrl,
     iconForUrl,
+    hasDeviceIdConsent,
+    grantDeviceIdConsent,
   }
 })

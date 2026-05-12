@@ -175,9 +175,16 @@ window.addEventListener('eip6963:requestProvider', () => {
 window.nimiq = Nimiq
 window.ethereum = Ethereum
 
-// Expose host-provided context (selected user language, etc.) to mini apps.
-// Frozen to keep the surface read-only from the dapp side.
-window.nimiqPay = Object.freeze({ language: window.__NIMIQ_PAY__?.lang })
+window.nimiqPay = Object.freeze({
+  language: window.__NIMIQ_PAY__?.lang,
+  requestDeviceIdentifier: async (options: { reason: string }): Promise<string> => {
+    const reason = options?.reason
+    if (typeof reason !== 'string' || reason.trim().length === 0) {
+      throw new Error('requestDeviceIdentifier: reason must be a non-empty string')
+    }
+    return birpc.handleRequest({ network: 'host', name: 'requestDeviceIdentifier', params: { reason } }) as Promise<string>
+  },
+})
 
 // Announce provider immediately for EIP-6963 discovery
 announceProvider()

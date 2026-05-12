@@ -226,6 +226,16 @@ msgstr "Completar"
 msgid "Confirm"
 msgstr "Confirmar"
 
+#, fuzzy
+#| msgid "Confirmed"
+msgid "Confirm and send"
+msgstr "Confirmado"
+
+#, fuzzy
+#| msgid "Withdrawal"
+msgid "Confirm Withdrawal"
+msgstr "Levantamento"
+
 msgid "Confirm your phone number"
 msgstr "Confirma o teu número de telemóvel"
 

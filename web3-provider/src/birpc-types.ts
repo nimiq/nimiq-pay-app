@@ -1,5 +1,6 @@
-/** Parameters for a Web3 request (no id - birpc manages IDs internally) */
+/** Parameters for a Web3 request (no id - birpc manages IDs internally). */
 export interface RequestParams {
+  /** 'nimiq' | 'ethereum' | 'host'; left as string for upstream-provider compatibility. */
   network: string
   name: string
   params?: unknown

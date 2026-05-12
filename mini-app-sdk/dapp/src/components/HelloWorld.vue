@@ -50,6 +50,19 @@ async function sendBasicTransactionWithData() {
   })
 }
 
+async function requestDeviceIdentifier() {
+  if (!window.nimiqPay?.requestDeviceIdentifier) {
+    output.value = 'nimiqPay.requestDeviceIdentifier is unavailable in this context'
+    return
+  }
+  try {
+    output.value = await window.nimiqPay.requestDeviceIdentifier({ reason: 'Leaderboard ranking' })
+  }
+  catch (err) {
+    output.value = (err as Error).message
+  }
+}
+
 async function retryProviderInit() {
   await props.retryInit().catch(() => {})
 }
@@ -83,6 +96,7 @@ async function retryProviderInit() {
     <button type="button" @click="sign" :disabled="!hasProvider">sign</button>
     <button type="button" @click="sendBasicTransaction" :disabled="!hasProvider">sendBasicTransaction</button>
     <button type="button" @click="sendBasicTransactionWithData" :disabled="!hasProvider">sendBasicTransactionWithData</button>
+    <button type="button" @click="requestDeviceIdentifier">Request Device Identifier</button>
     <br/>
     <strong>Response:</strong>
     <pre>

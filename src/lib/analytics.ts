@@ -202,6 +202,7 @@ export type Web3RequestType
     | 'nimiq_sign'
     | 'nimiq_send_transaction'
     | `nimiq_staking_${string}`
+    | 'request_device_identifier'
 
 export function trackDAppOpened(url: string, name: string, source: DAppOpenSource): void {
   capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })
@@ -213,7 +214,7 @@ export function trackDAppClosed(url: string, name: string, durationMs: number): 
 
 export function trackWeb3Request(opts: {
   requestType: Web3RequestType
-  blockchain: 'ethereum' | 'nimiq'
+  blockchain: 'ethereum' | 'nimiq' | 'host'
   dappUrl: string
   dappName: string
   approved: boolean

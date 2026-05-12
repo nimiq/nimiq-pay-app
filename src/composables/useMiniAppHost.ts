@@ -11,11 +11,13 @@ import { getAddress, Interface } from 'ethers'
 import { i18n } from '@/i18n/i18n-setup'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
 import { formatUsdtAmount } from '@/lib/assets'
+import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { sleep } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -94,44 +96,59 @@ interface NimiqTransactionParams {
   data?: string
 }
 
-export type UserConfirmationRequest = {
+interface MiniAppBase {
   url: string
   name?: string
-  network: 'ethereum' | 'nimiq'
-} & ({
-  type: 'accounts'
-} | {
-  type: 'transaction'
-  data: Omit<PaymentRequestData, 'transfer'>
-  stakingData?: StakingData
-} | {
-  type: 'eth-transaction'
-  data: {
-    to: string
-    from: string
-    value: string // wei as hex
-    data?: string // calldata
-    gas: string // gas limit as hex
-    maxFeePerGas?: string
-    maxPriorityFeePerGas?: string
-    gasPrice?: string // legacy transactions
-    nonce?: number
-    chainId?: string
-    chainName?: string
-    decodedAssetTransfer?: DecodedAssetTransfer
-  }
-} | {
-  type: 'message'
-  data: {
-    message: string
-    isHex: boolean
-  }
-} | {
-  type: 'chain'
-  data: ChainApprovalRequest & {
-    chainName?: string
-  }
-})
+}
+
+type Network = 'ethereum' | 'nimiq'
+
+export type UserConfirmationRequest
+  = | (MiniAppBase & { type: 'accounts', network: Network })
+    | (MiniAppBase & {
+      type: 'transaction'
+      network: Network
+      data: Omit<PaymentRequestData, 'transfer'>
+      stakingData?: StakingData
+    })
+    | (MiniAppBase & {
+      type: 'eth-transaction'
+      network: Network
+      data: {
+        to: string
+        from: string
+        value: string // wei as hex
+        data?: string // calldata
+        gas: string // gas limit as hex
+        maxFeePerGas?: string
+        maxPriorityFeePerGas?: string
+        gasPrice?: string // legacy transactions
+        nonce?: number
+        chainId?: string
+        chainName?: string
+        decodedAssetTransfer?: DecodedAssetTransfer
+      }
+    })
+    | (MiniAppBase & {
+      type: 'message'
+      network: Network
+      data: {
+        message: string
+        isHex: boolean
+      }
+    })
+    | (MiniAppBase & {
+      type: 'chain'
+      network: Network
+      data: ChainApprovalRequest & {
+        chainName?: string
+      }
+    })
+    | (MiniAppBase & {
+      type: 'deviceIdentifier'
+      /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
+      reason: string
+    })
 
 /**
  * Configuration for the MiniAppHost
@@ -167,6 +184,8 @@ export class MiniAppHost {
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
+  /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
+  private readonly origin: string
 
   /** Resolve the RPC URL for the given chain (or current chain if not specified) */
   private getRpcUrlForChain(chainId?: string): string | undefined {
@@ -177,6 +196,7 @@ export class MiniAppHost {
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
     this.config = config
+    this.origin = new URL(config.url).origin.toLowerCase()
     this.setupBirpc()
 
     // Track the active session at module level
@@ -240,6 +260,8 @@ export class MiniAppHost {
               return await this._handleNimiqMessage(params)
             case 'ethereum':
               return await this._handleEthereumMessage(params)
+            case 'host':
+              return await this._handleHostMessage(params)
             default:
               throw new UnknownRequestError(`Unknown network: ${params.network}`)
           }
@@ -1190,11 +1212,54 @@ export class MiniAppHost {
     })
   }
 
-  /**
-   * Handle incoming message from mini app
-   * @private
-   */
-  // private async handleMessage<T extends keyof RequestType>(message: RequestMessage<T>): Promise<ResponseType[T]> {
+  private async _handleHostMessage(message: RequestParams) {
+    logger.log('[MiniAppHost] Handling host message:', message)
+    switch (message.name) {
+      case 'requestDeviceIdentifier':
+        return this.requestDeviceIdentifier(message.params)
+      default:
+        throw new UnknownRequestError(`Unknown host message name: ${message.name}`)
+    }
+  }
+
+  private async requestDeviceIdentifier(params: unknown): Promise<string> {
+    const rawReason = (params as { reason?: unknown } | null | undefined)?.reason
+    const reason = typeof rawReason === 'string' ? rawReason.trim() : ''
+    if (!reason)
+      throw new InternalError('reason is required for requestDeviceIdentifier')
+
+    const trackResult = (approved: boolean, success: boolean) => trackWeb3Request({
+      requestType: 'request_device_identifier',
+      blockchain: 'host',
+      dappUrl: this.config.url,
+      dappName: this.config.title,
+      approved,
+      success,
+    })
+
+    const miniApps = useMiniApps()
+    if (!miniApps.hasDeviceIdConsent(this.origin)) {
+      if (!this.config.requestUserConfirmation)
+        throw new InternalError('Confirmation handler not provided')
+
+      const confirmed = await this.config.requestUserConfirmation({
+        url: this.config.url,
+        name: this.config.title,
+        type: 'deviceIdentifier',
+        reason,
+      })
+      if (!confirmed) {
+        trackResult(false, false)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+      }
+      miniApps.grantDeviceIdConsent(this.origin)
+    }
+
+    const id = await deriveAppScopedId(this.origin)
+    trackResult(true, true)
+    return id
+  }
+
   private async _handleNimiqMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling Nimiq message:', message)
 

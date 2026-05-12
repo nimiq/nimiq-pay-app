@@ -233,6 +233,16 @@ msgstr "Abgeschlossen"
 msgid "Confirm"
 msgstr "Bestätigen"
 
+#, fuzzy
+#| msgid "Confirmed"
+msgid "Confirm and send"
+msgstr "Bestätigt"
+
+#, fuzzy
+#| msgid "Withdrawal"
+msgid "Confirm Withdrawal"
+msgstr "Abbuchung"
+
 msgid "Confirm your phone number"
 msgstr "Bestätige deine Telefonnummer"
 

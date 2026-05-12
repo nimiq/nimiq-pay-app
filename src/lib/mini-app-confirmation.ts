@@ -273,6 +273,22 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return result.confirmed
     }
 
+    case 'deviceIdentifier': {
+      const appName = request.name || new URL(request.url).hostname
+      const result = await ExtendedDialog.sheet({
+        title: `Share device ID with ${appName}?`,
+        subtitle: 'Unique to this Mini App on this device. Cannot be used to track you across other Mini Apps.',
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: 'Reason', value: request.reason },
+        ],
+        confirmButtonTitle: 'Share',
+        cancelButtonTitle: 'Deny',
+      })
+      return result.confirmed
+    }
+
     default:
       logger.error('Unknown confirmation request type:', request)
       return false

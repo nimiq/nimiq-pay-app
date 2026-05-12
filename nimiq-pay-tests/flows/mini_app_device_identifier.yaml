@@ -1,0 +1,46 @@
+appId: ${APP_ID}
+---
+# Verifies that mini apps can request a pseudonymous device identifier and
+# that the consent dialog renders the app name + the reason provided.
+#
+# Prerequisites:
+#   - Dev build (only dev builds expose the "Demo App" entry, src/stores/mini-apps.ts).
+#   - The mini-app-sdk/dapp dev server running on $VITE_SERVER_IP:5174 with the
+#     "Request Device Identifier" button wired (see mini-app-sdk/dapp/src/App.vue).
+#   - Wallet already onboarded (recently-viewed dApps require post-login state).
+
+- runFlow: ../subflows/launch_app.yaml
+
+- assertVisible: Mini Apps
+- tapOn: Mini Apps
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Demo App
+    timeout: 10000
+- tapOn: Demo App
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Request Device Identifier
+    timeout: 15000
+- tapOn: Request Device Identifier
+
+# Consent sheet rendered by mini-app-confirmation.ts ('deviceIdentifier' branch).
+- extendedWaitUntil:
+    visible: Share device ID
+    timeout: 10000
+- assertVisible: Share
+- assertVisible: Deny
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/mini_app_device_identifier_consent
+
+- tapOn: Share
+- waitForAnimationToEnd
+
+# The demo dapp echoes the 64-char hex into the page.
+- assertVisible:
+    text: '[0-9a-f]{64}'
+
+- back
+- waitForAnimationToEnd

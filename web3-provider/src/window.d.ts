@@ -34,8 +34,17 @@ export declare global {
     __ETH_RPC_URL__?: string
     /** Host context seeded by Nimiq Pay before the provider script runs. */
     __NIMIQ_PAY__?: { lang?: string }
-    /** Public, read-only host context exposed to mini apps. */
-    nimiqPay?: { readonly language?: string }
+    /** Public host APIs exposed to mini apps. */
+    nimiqPay?: {
+      readonly language?: string
+      /**
+       * Request a pseudonymous, per-origin device identifier (64-char hex SHA-256).
+       * Prompts the user on first call per origin; subsequent calls auto-resolve.
+       * @param options.reason - shown verbatim to the user
+       * @throws if the user denies the prompt
+       */
+      requestDeviceIdentifier: (options: { reason: string }) => Promise<string>
+    }
   }
 
   interface WindowEventMap {

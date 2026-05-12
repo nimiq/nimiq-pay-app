@@ -1,24 +1,14 @@
 import type { Option } from '@/types'
-import jsSHA from 'jssha'
 import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { sha256Hex } from '@/lib/crypto'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 
 const logger = useLogger('useDecrypt')
-
-/**
- * Hashes an input to SHA-256, encoded as hex
- */
-export function hash(pin: string): string {
-  // We need to use a pure JS library because the native one doesn't work on unsecure contexts
-  // https://forums.appgyver.com/t/error-in-crypto-subtle-on-ios-preview/12946
-  // eslint-disable-next-line new-cap
-  return new jsSHA('SHA-256', 'TEXT', { encoding: 'UTF8' }).update(pin).getHash('HEX')
-}
 
 // Must be defined outside the useDecrypt scope, to be shared between calls
 const decrypted = ref(false)
@@ -88,7 +78,7 @@ export function useDecrypt() {
     if (decrypted.value)
       return
 
-    const inputHash = hash(pin)
+    const inputHash = sha256Hex(pin)
     const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
     if (error)
       return error
@@ -121,7 +111,7 @@ export function useDecrypt() {
     try {
       await sqlite.changeEncryptionSecret(pin, oldPin)
       await openDb()
-      pinHash.value = hash(pin)
+      pinHash.value = sha256Hex(pin)
     }
     catch (e) {
       logger.error(e)
