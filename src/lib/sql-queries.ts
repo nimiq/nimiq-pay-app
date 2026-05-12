@@ -75,7 +75,7 @@ export enum SQLQuery {
   GetClosestPreviousPrice = 'SELECT * FROM prices WHERE checkpoint <= ? AND fiat = ? AND crypto = ? ORDER BY checkpoint DESC LIMIT 1',
 
   // Swap HTLCs
-  CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL, htlc_id TEXT)',
+  CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
   AddHtlcIdColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id TEXT',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
