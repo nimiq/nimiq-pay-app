@@ -3,6 +3,7 @@ import { App } from '@capacitor/app'
 import { SystemBars, SystemBarsStyle } from '@capacitor/core'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { StatusBar, Style } from '@capacitor/status-bar'
+import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { CameraPreview } from '@capgo/camera-preview'
 import { InAppBrowser } from '@capgo/inappbrowser'
@@ -46,6 +47,8 @@ onMounted(async () => {
       await StatusBar.setBackgroundColor({ color: '#F8F8F8' })
       await StatusBar.setStyle({ style: Style.Light })
       await SystemBars.setStyle({ style: SystemBarsStyle.Light })
+      await EdgeToEdge.setStatusBarColor({ color: '#F8F8F8' })
+      await EdgeToEdge.setNavigationBarColor({ color: '#FFFFFF' })
     }
     catch (error) {
       logger.error('Failed to set status bar style', error)

@@ -277,6 +277,9 @@ function useQRScannerMobile({ parseString, onError }: UseQRScannerDeviceOptions)
           toBack: true,
           disableAudio: true,
           aspectMode: 'cover',
+          x: 0,
+          // Set to 0 to avoid rendering in status bar
+          y: 0,
           lockAndroidOrientation: true,
           rotateWhenOrientationChanged: false,
           includeSafeAreaInsets: true,
