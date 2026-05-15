@@ -63,6 +63,9 @@ msgstr "Direcciones no encontradas"
 msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
 msgstr ""
 
+msgid "Alias (optional)"
+msgstr ""
+
 msgid "All"
 msgstr "Todo"
 
@@ -1464,6 +1467,9 @@ msgid "Update Staker"
 msgstr ""
 
 msgid "Updating connection"
+msgstr ""
+
+msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
 msgid "USDT staking requests are not supported"

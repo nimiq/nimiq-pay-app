@@ -326,7 +326,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:154
 #: src/components/PaymentAmountInput.vue:129
-#: src/views/MainView.vue:78
+#: src/views/MainView.vue:86
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -343,7 +343,7 @@ msgstr ""
 msgid "Continue and Pay"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:69
+#: src/components/TransactionDetails.vue:72
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -530,15 +530,15 @@ msgstr ""
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:102
+#: src/stores/sync/htlc.ts:118
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:127
+#: src/stores/sync/htlc.ts:143
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:73
+#: src/stores/sync/htlc.ts:89
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -568,7 +568,7 @@ msgstr ""
 msgid "Failed to copy address to clipboard"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:73
+#: src/components/TransactionDetails.vue:76
 #: src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr ""
@@ -977,7 +977,7 @@ msgstr ""
 msgid "Network fees"
 msgstr ""
 
-#: src/lib/tx.ts:368
+#: src/lib/tx.ts:373
 msgid "Network ID mismatch"
 msgstr ""
 
@@ -1042,7 +1042,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:370
+#: src/composables/useApi.ts:391
 msgid "No payment details found"
 msgstr ""
 
@@ -1182,7 +1182,7 @@ msgstr ""
 msgid "Payment Request"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:66
+#: src/components/TransactionDetails.vue:67
 msgid "Payment Secret"
 msgstr ""
 
@@ -1322,7 +1322,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:104
+#: src/views/MainView.vue:112
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1487,7 +1487,7 @@ msgid "Send USDT to this address"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:163
-#: src/views/MainView.vue:95
+#: src/views/MainView.vue:103
 msgid "Server not available"
 msgstr ""
 
@@ -1552,14 +1552,14 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:374
+#: src/lib/tx.ts:395
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:283
-#: src/composables/useApi.ts:290
+#: src/composables/useApi.ts:304
+#: src/composables/useApi.ts:311
 #: src/lib/tx.ts:260
-#: src/lib/tx.ts:365
+#: src/lib/tx.ts:369
 #: src/lib/tx.ts:38
 #: src/lib/tx.ts:60
 msgid "Something went wrong syncing your account"
@@ -1579,7 +1579,7 @@ msgstr ""
 msgid "Something went wrong verifying the phone number"
 msgstr ""
 
-#: src/composables/useQRScanner.ts:291
+#: src/composables/useQRScanner.ts:294
 msgid "Something went wrong while starting the camera"
 msgstr ""
 
@@ -1667,7 +1667,7 @@ msgid "The PINs do not match"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:242
-#: src/composables/useQRScanner.ts:299
+#: src/composables/useQRScanner.ts:302
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
@@ -1723,15 +1723,15 @@ msgstr ""
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:76
+#: src/components/TransactionDetails.vue:77
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:52
+#: src/components/TransactionDetails.vue:55
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:55
+#: src/components/TransactionDetails.vue:58
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -1771,7 +1771,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:216
+#: src/stores/transactions.ts:225
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1779,11 +1779,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:239
+#: src/stores/transactions.ts:248
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:274
+#: src/stores/transactions.ts:283
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
@@ -1846,6 +1846,10 @@ msgstr ""
 
 #: src/modals/LongTimeNoSeeModal.vue:13
 msgid "Updating connection"
+msgstr ""
+
+#: src/views/MainView.vue:78
+msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
 #: src/lib/flows/index.ts:368

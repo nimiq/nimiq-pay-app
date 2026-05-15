@@ -60,6 +60,9 @@ msgstr "Endereços em falta"
 msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
 msgstr "Após um período de desconexão, a ligação de rede precisa de ser reativada. Isto pode demorar até 60 segundos."
 
+msgid "Alias (optional)"
+msgstr ""
+
 msgid "All"
 msgstr "Tudo"
 
@@ -1424,6 +1427,9 @@ msgstr ""
 
 msgid "Updating connection"
 msgstr "A atualizar conexão"
+
+msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
+msgstr ""
 
 msgid "USDT staking requests are not supported"
 msgstr ""
