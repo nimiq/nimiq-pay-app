@@ -250,7 +250,9 @@ onMounted(async () => {
   }
 
   try {
-    useNotifications().init()
+    const notifs = useNotifications()
+    notifs.init()
+    void notifs.installLocalNotificationsTapHandler()
   }
   catch (error) {
     logger.error('Error initializing notifications:', error)

@@ -34,6 +34,8 @@ PODS:
     - Capacitor
   - CapacitorKeyboard (8.0.3):
     - Capacitor
+  - CapacitorLocalNotifications (8.2.0):
+    - Capacitor
   - CapacitorPreferences (8.0.1):
     - Capacitor
   - CapacitorPrivacyScreen (2.0.1):
@@ -149,6 +151,7 @@ DEPENDENCIES:
   - "CapacitorFilesystem (from `../../node_modules/.pnpm/@capacitor+filesystem@8.1.2_@capacitor+core@8.3.4/node_modules/@capacitor/filesystem`)"
   - "CapacitorHaptics (from `../../node_modules/.pnpm/@capacitor+haptics@8.0.2_@capacitor+core@8.3.4/node_modules/@capacitor/haptics`)"
   - "CapacitorKeyboard (from `../../node_modules/.pnpm/@capacitor+keyboard@8.0.3_@capacitor+core@8.3.4/node_modules/@capacitor/keyboard`)"
+  - "CapacitorLocalNotifications (from `../../node_modules/.pnpm/@capacitor+local-notifications@8.2.0_@capacitor+core@8.3.4/node_modules/@capacitor/local-notifications`)"
   - "CapacitorPreferences (from `../../node_modules/.pnpm/@capacitor+preferences@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/preferences`)"
   - "CapacitorPrivacyScreen (from `../../node_modules/.pnpm/@capacitor+privacy-screen@2.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/privacy-screen`)"
   - "CapacitorPushNotifications (from `../../node_modules/.pnpm/@capacitor+push-notifications@8.0.4_@capacitor+core@8.3.4/node_modules/@capacitor/push-notifications`)"
@@ -216,6 +219,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+haptics@8.0.2_@capacitor+core@8.3.4/node_modules/@capacitor/haptics"
   CapacitorKeyboard:
     :path: "../../node_modules/.pnpm/@capacitor+keyboard@8.0.3_@capacitor+core@8.3.4/node_modules/@capacitor/keyboard"
+  CapacitorLocalNotifications:
+    :path: "../../node_modules/.pnpm/@capacitor+local-notifications@8.2.0_@capacitor+core@8.3.4/node_modules/@capacitor/local-notifications"
   CapacitorPreferences:
     :path: "../../node_modules/.pnpm/@capacitor+preferences@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/preferences"
   CapacitorPrivacyScreen:
@@ -257,6 +262,7 @@ SPEC CHECKSUMS:
   CapacitorFilesystem: 2db285a1ac6e475cc27cae2e1bea999000f9e2be
   CapacitorHaptics: 296f771ecd89c7a1bd92a7b6826a7d268e2e70f5
   CapacitorKeyboard: 31c8285d92c9d1410071d52449f16d2c6673b6f4
+  CapacitorLocalNotifications: 2615aa008f608b95d3921a778ee1988abf1e6148
   CapacitorPreferences: cca2021f386efb75947c850334447d9ff22b14f1
   CapacitorPrivacyScreen: 9a8367698c7eb6c09f2877ef104a95d2d85d978c
   CapacitorPushNotifications: f96978ca9c1b2c0b755e27a13b6bd3f7bc12905c
@@ -288,6 +294,6 @@ SPEC CHECKSUMS:
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: a5d0ecf04a11234afecb1ec6d4c1dec9c496134a
+PODFILE CHECKSUM: 796acd392bd820d25fb025f75c06fd3489f9cb3b
 
 COCOAPODS: 1.15.2

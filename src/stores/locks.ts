@@ -16,6 +16,7 @@ export const useLocks = defineStore('locks', () => {
   const isAppInBackground = ref(false)
   const isScannerActive = ref(false)
   const isNakaCardActivating = ref(false)
+  const isHomeVisible = ref(false)
 
   useMutationObserver(document.body, (mutations) => {
     // If any mutation adds the class, set isScannerActive to true
@@ -36,5 +37,6 @@ export const useLocks = defineStore('locks', () => {
     isAppInBackground,
     isScannerActive,
     isNakaCardActivating,
+    isHomeVisible,
   }
 })

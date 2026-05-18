@@ -191,6 +191,9 @@ importers:
       '@capacitor/keyboard':
         specifier: ^8.0.3
         version: 8.0.3(@capacitor/core@8.3.4)
+      '@capacitor/local-notifications':
+        specifier: ^8.1.0
+        version: 8.2.0(@capacitor/core@8.3.4)
       '@capacitor/push-notifications':
         specifier: ^8.0.4
         version: 8.0.4(@capacitor/core@8.3.4)
@@ -976,6 +979,11 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
+  '@capacitor/local-notifications@8.2.0':
+    resolution: {integrity: sha512-fvLY0w2w4MiX+DD4+Wv4DOwOLdzKZsMDwAcRv/Juudd+QbKbn69s6cM3xVqPwAiDqfnqsY4/S8xtQD6M73wY2A==}
+    peerDependencies:
+      '@capacitor/core': '>=8.0.0'
+
   '@capacitor/preferences@8.0.1':
     resolution: {integrity: sha512-T6no3ebi79XJCk91U3Jp/liJUwgBdvHR+s6vhvPkPxSuch7z3zx5Rv1bdWM6sWruNx+pViuEGqZvbfCdyBvcHQ==}
     peerDependencies:
@@ -1681,7 +1689,7 @@ packages:
     resolution: {integrity: sha512-g/9FpoNcJmU737TRQsNdU5/OGoXnc1UwunJBF/TGw4bx4cQ/pbYO7k0nsZ4RGUFn0jiy9xlxYH+yH1mvSY7+nQ==}
 
   '@nimiq/vue3-components@https://codeload.github.com/nimiq/vue3-components/tar.gz/e63c554e934aa562926393c9689341c4ee3157bf':
-    resolution: {tarball: https://codeload.github.com/nimiq/vue3-components/tar.gz/e63c554e934aa562926393c9689341c4ee3157bf}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/nimiq/vue3-components/tar.gz/e63c554e934aa562926393c9689341c4ee3157bf}
     version: 0.0.0
 
   '@noble/curves@1.2.0':
@@ -8375,7 +8383,7 @@ packages:
     engines: {node: '>=12'}
 
   webpack-i18n-tools@https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56:
-    resolution: {tarball: https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56}
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/nimiq/webpack-i18n-tools/tar.gz/65328a60714851a63045a876b74b011668315c56}
     version: 0.0.1
     peerDependencies:
       webpack: ^4.0.0 || ^5.0.0
@@ -9599,6 +9607,10 @@ snapshots:
       '@capacitor/core': 8.3.4
 
   '@capacitor/keyboard@8.0.3(@capacitor/core@8.3.4)':
+    dependencies:
+      '@capacitor/core': 8.3.4
+
+  '@capacitor/local-notifications@8.2.0(@capacitor/core@8.3.4)':
     dependencies:
       '@capacitor/core': 8.3.4
 

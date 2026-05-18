@@ -24,6 +24,7 @@ function makeState() {
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
   const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<void> => Promise.resolve())
   const addReceiptTransaction = vi.fn()
+  const scheduleIncomingPaymentNotification = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
   const addWithdrawalTransaction = vi.fn()
   const addStakingtransaction = vi.fn()
@@ -102,6 +103,7 @@ function makeState() {
     isOurRemoteSigner,
     registerOwnHtlcIfMissing,
     addReceiptTransaction,
+    scheduleIncomingPaymentNotification,
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
@@ -223,6 +225,7 @@ export function resetSyncState() {
     state.isOurRemoteSigner,
     state.registerOwnHtlcIfMissing,
     state.addReceiptTransaction,
+    state.scheduleIncomingPaymentNotification,
     state.addUnknownPaymentToMerchantTransaction,
     state.addWithdrawalTransaction,
     state.addStakingtransaction,
@@ -473,3 +476,9 @@ vi.mock('@/stores/polygon-usdt', () => {
   }))
   return { usePolygonUsdt }
 })
+
+vi.mock('@/composables/useNotifications', () => ({
+  useNotifications: () => ({
+    scheduleIncomingPaymentNotification: state.scheduleIncomingPaymentNotification,
+  }),
+}))

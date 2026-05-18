@@ -35,7 +35,7 @@ const {
 } = storeToRefs(useApp())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
-const { unregisterNotifications, registerNotifications } = useNotifications()
+const { unregisterNotifications, registerNotifications, requestLocalNotificationsPermission } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
 const nimDecimalsOptions = [0, 2, DECIMALS.NIM]
 
@@ -66,12 +66,14 @@ async function onLongPressCallback() {
   logger.sendReport()
 }
 
-function handlePushNotificationsToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
-  if (event.detail.checked && pushNotificationsStatus.value !== PushNotificationsStatus.GRANTED)
-    registerNotifications()
-
-  else if (!event.detail.checked && pushNotificationsStatus.value === PushNotificationsStatus.GRANTED)
-    unregisterNotifications()
+async function handlePushNotificationsToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {
+  if (event.detail.checked && pushNotificationsStatus.value !== PushNotificationsStatus.GRANTED) {
+    await registerNotifications()
+    await requestLocalNotificationsPermission()
+  }
+  else if (!event.detail.checked && pushNotificationsStatus.value === PushNotificationsStatus.GRANTED) {
+    await unregisterNotifications()
+  }
 }
 
 function handleBiometricToggle(event: IonToggleCustomEvent<ToggleChangeEventDetail>) {

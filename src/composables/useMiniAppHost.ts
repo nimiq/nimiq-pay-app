@@ -8,6 +8,7 @@ import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, Stakin
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
+import { ref } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
 import { formatUsdtAmount } from '@/lib/assets'
@@ -49,6 +50,13 @@ export interface MiniAppSessionState {
 
 /** Module-level reference to the active session state (set by constructor, cleared by destroy) */
 let _activeMiniAppSession: MiniAppSessionState | null = null
+
+/**
+ * Reactive flag mirroring whether a MiniAppHost session is currently active.
+ * Updated in lock-step with `_activeMiniAppSession`. Used to gate UI signals
+ * such as the local-notification visibility check in `useLocks().isHomeVisible`.
+ */
+export const isMiniAppActive = ref(false)
 
 /**
  * Returns a snapshot of the active MiniAppHost session, or null if none is active.
@@ -206,6 +214,7 @@ export class MiniAppHost {
       chainId: this.currentChainId,
       evmRpcUrls: config.evmRpcUrls,
     }
+    isMiniAppActive.value = true
   }
 
   /**
@@ -230,6 +239,7 @@ export class MiniAppHost {
       return
     }
     _activeMiniAppSession = null
+    isMiniAppActive.value = false
     await this.inAppBrowser?.clearAllCookies()
     await this.messageFromWebviewListener?.remove()
     this.messageFromWebviewListener = null

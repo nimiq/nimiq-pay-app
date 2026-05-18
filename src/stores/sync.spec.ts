@@ -92,6 +92,12 @@ vi.mock('@/composables/useApi', () => ({
   }),
 }))
 
+vi.mock('@/composables/useNotifications', () => ({
+  useNotifications: () => ({
+    scheduleIncomingPaymentNotification: vi.fn(),
+  }),
+}))
+
 vi.mock('@/composables/useFastspotv1', () => ({
   useFastspotApiV1: vi.fn(() => Promise.resolve({ getContract: vi.fn() })),
 }))

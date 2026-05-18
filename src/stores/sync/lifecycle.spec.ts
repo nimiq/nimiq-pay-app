@@ -228,6 +228,153 @@ describe('useSyncLifecycle', () => {
         sender: 'NQ77 NEW TOP-UP',
       }))
     })
+
+    describe('local notification dispatch', () => {
+      it('fires scheduleIncomingPaymentNotification for a fresh external top-up', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'notif-h1',
+          sender: 'NQ77 NEW TOP-UP',
+          senderType: 'basic',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 4242,
+          fee: 0,
+          state: 'confirmed',
+          timestamp: 5,
+          data: { raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).toHaveBeenCalledTimes(1)
+        expect(state.scheduleIncomingPaymentNotification).toHaveBeenCalledWith(expect.objectContaining({
+          hash: 'notif-h1',
+          amount: 4242,
+        }))
+      })
+
+      it('fires for foreign-HTLC drain', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'foreign-htlc-notif',
+          sender: 'NQ44 FOREIGN HTLC',
+          senderType: 'htlc',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 99,
+          fee: 0,
+          state: 'confirmed',
+          timestamp: 9,
+          data: { raw: '' },
+          proof: { type: 'timeout-resolve', creator: 'NQ77 FOREIGN CREATOR', raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).toHaveBeenCalledTimes(1)
+      })
+
+      it('does NOT fire when sender is local address', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'self-h',
+          sender: 'NQ00 TEST LOCAL ADDRESS',
+          senderType: 'basic',
+          recipient: 'NQ99 OTHER',
+          recipientType: 'basic',
+          value: 1,
+          fee: 0,
+          state: 'confirmed',
+          data: { raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+
+      it('does NOT fire when sender is remote address', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'remote-h',
+          sender: 'NQ11 TEST REMOTE ADDRESS',
+          senderType: 'basic',
+          recipient: 'NQ99 OTHER',
+          recipientType: 'basic',
+          value: 1,
+          fee: 0,
+          state: 'confirmed',
+          data: { raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+
+      it('does NOT fire when hash already in DB', async () => {
+        state.query.mockImplementation((sql = '') => {
+          if (sql.includes('transfer = '))
+            return Promise.resolve([{ hash: 'dup-h' }])
+          return Promise.resolve([])
+        })
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'dup-h',
+          sender: 'NQ77 EXTERNAL',
+          senderType: 'basic',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 100,
+          fee: 0,
+          state: 'confirmed',
+          data: { raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+
+      it('does NOT fire on own-HTLC drain', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'own-htlc-drain',
+          sender: 'NQ44 EXTENSION HTLC',
+          senderType: 'htlc',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 1,
+          fee: 0,
+          state: 'confirmed',
+          timestamp: 9,
+          data: { raw: '' },
+          proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+
+      it('does NOT fire on NAKA reversal', async () => {
+        vi.doMock('@/lib', () => ({ nakaBufferAddresses: ['NQ99 NAKA'] }))
+        vi.resetModules()
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'naka-h',
+          sender: 'NQ99 NAKA',
+          senderType: 'basic',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 250,
+          fee: 0,
+          state: 'confirmed',
+          data: { raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+        vi.doUnmock('@/lib')
+      })
+
+      it('does NOT fire on add-stake from non-remote sender', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'stake-h',
+          sender: 'NQ77 OUTSIDE STAKER',
+          senderType: 'basic',
+          recipient: 'NQ_STAKING',
+          recipientType: 'staking',
+          value: 100,
+          fee: 0,
+          state: 'confirmed',
+          data: { type: 'add-stake', raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+    })
   })
 
   describe('watchers', () => {

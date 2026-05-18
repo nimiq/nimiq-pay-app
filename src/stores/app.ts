@@ -68,6 +68,12 @@ export enum PushNotificationsStatus {
   PROMPT = 'prompt',
 }
 
+export enum LocalNotificationsStatus {
+  GRANTED = 'granted',
+  DENIED = 'denied',
+  PROMPT = 'prompt',
+}
+
 export function kv(): StorageLikeAsync {
   return {
     getItem: async key => useConn().query<{ value: string }>(SQLQuery.SelectKv, [key], { single: true }).then(x => x?.value),
@@ -117,6 +123,7 @@ export const useApp = defineStore('app', () => {
   const withdrawalAddressesHistory = useStorageAsync<SavedAddress[]>('withdrawalAddressesHistory', [], kv(), { ...sharedOptions, serializer: savedAddressSerializer })
   const topUpAddresses = useStorageAsync<SavedAddress[]>('topUpAddresses', [], kv(), { ...sharedOptions, serializer: savedAddressSerializer })
   const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
+  const localNotificationsStatus = useStorageAsync<LocalNotificationsStatus>('localNotificationsStatus', LocalNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
   const isBiometricEnabled = useStorageAsync('isBiometricEnabled', false, kvPreferences())
   // TODO: maybe clean this from time to time?
@@ -268,6 +275,7 @@ export const useApp = defineStore('app', () => {
     shouldAskPin,
     clearPinInputTs,
     pushNotificationsStatus,
+    localNotificationsStatus,
     closedNotifications,
     isBiometricEnabled,
     displayedPaymentRequests,

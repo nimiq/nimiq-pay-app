@@ -4,6 +4,7 @@ import { until, useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
@@ -192,7 +193,10 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING && tx.senderType !== 'htlc')
       useApp().addNewTopUpAddress(tx.sender)
 
-    useTransactions().addReceiptTransaction(buildTopUpReceipt(tx))
+    const receipt = buildTopUpReceipt(tx)
+    useTransactions().addReceiptTransaction(receipt)
+    // Real-time only: refresh / history paths must NOT fire the notifier.
+    void useNotifications().scheduleIncomingPaymentNotification(receipt)
   }
 
   async function removeListener(listener: number | undefined) {

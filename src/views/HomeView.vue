@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
-import { computedAsync, until } from '@vueuse/core'
+import { computedAsync, until, useElementVisibility, useEventListener } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import BackupNotification from '@/components/BackupNotification.vue'
 import MapIcon from '@/components/icons/crypto-map.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
@@ -17,6 +17,7 @@ import NotificationCard from '@/components/NotificationCard.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
 import { useLogger } from '@/composables/useLogger'
+import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
@@ -55,6 +56,28 @@ const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveCh
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
 const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
+
+// `isHomeVisible` combines three signals because IntersectionObserver alone misses
+// Ionic modals (geometric intersection, not occlusion) and the native InAppBrowser
+// webview (separate from the Vue tree).
+const homeRoot = ref<HTMLElement | null>(null)
+const homeElementVisible = useElementVisibility(homeRoot)
+const openModalCount = ref(0)
+useEventListener(document, 'ionModalDidPresent', () => {
+  openModalCount.value++
+})
+useEventListener(document, 'ionModalDidDismiss', () => {
+  openModalCount.value = Math.max(0, openModalCount.value - 1)
+})
+const { isHomeVisible } = storeToRefs(useLocks())
+watchEffect(() => {
+  const next = homeElementVisible.value && openModalCount.value === 0 && !isMiniAppActive.value
+  if (isHomeVisible.value !== next)
+    isHomeVisible.value = next
+})
+onBeforeUnmount(() => {
+  isHomeVisible.value = false
+})
 
 const referralInfo = computedAsync(async () => {
   const { data, error } = await getReferralInfo()
@@ -205,7 +228,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <IonPage class="bg-[var(--colors-gray)]">
+  <IonPage ref="homeRoot" class="bg-[var(--colors-gray)]">
     <IonHeader class="ion-no-border">
       <BackupNotification v-if="isRecoveryWordsShown" />
       <IonToolbar class="px-2">

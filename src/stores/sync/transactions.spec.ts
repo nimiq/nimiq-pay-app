@@ -218,6 +218,16 @@ describe('useSyncTransactions', () => {
         }))
         expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
       })
+
+      it('does NOT fire scheduleIncomingPaymentNotification for foreign-HTLC found during history refresh', async () => {
+        mockLocalAddressTxs(ownHtlcDrain('timeout-resolve', 'NQ77 FOREIGN CREATOR'))
+        const { useSyncTransactions } = await import('./transactions')
+        await useSyncTransactions().updateTransactionHistory()
+        // Receipt is persisted via the refresh path, but the notifier must stay silent
+        // — that's the listener-only contract for incoming-payment notifications.
+        expect(state.addReceiptTransaction).toHaveBeenCalled()
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
     })
 
     it('awaits centralized signer discovery before scanning remote signer history', async () => {

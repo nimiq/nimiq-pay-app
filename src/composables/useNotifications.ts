@@ -1,11 +1,13 @@
 // TODO: https://capacitorjs.com/docs/apis/background-runner
-// TODO: https://capacitorjs.com/docs/apis/local-notifications
 
 import type { PermissionState } from '@capacitor/core'
 import type { ActionPerformed } from '@capacitor/push-notifications'
 import type { Ref } from 'vue'
 import type { NotificationRes } from '@/composables/useApi'
+import type { UserReceiptTransaction } from '@/types/transactions'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import { PushNotifications } from '@capacitor/push-notifications'
+import { InAppBrowser } from '@capgo/inappbrowser'
 import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
@@ -13,10 +15,15 @@ import { useNotificationsApi } from '@/composables/useApi'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
+import { usePrice } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
+import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { PushNotificationsStatus, useApp } from '@/stores/app'
+import { LocalNotificationsStatus, PushNotificationsStatus, useApp } from '@/stores/app'
+import { useConn } from '@/stores/conn'
+import { useLocks } from '@/stores/locks'
+import { useTransactions } from '@/stores/transactions'
 
 const logger = useLogger('useNotifications')
 const { getRemoteNotifications } = useNotificationsApi()
@@ -243,6 +250,124 @@ export function useNotifications() {
       closedNotifications.value.push(id)
   }
 
+  const { localNotificationsStatus } = storeToRefs(useApp())
+
+  // Android 8+ requires notifications to be assigned to a channel. Default
+  // channel importance is `DEFAULT` (3), which shows the icon in the status bar
+  // but NOT as a heads-up banner. To get the banner we create a dedicated
+  // channel with `importance: 5` (MAX) and reference its id in every
+  // `LocalNotifications.schedule` call below. Channel properties are immutable
+  // post-creation on Android 8+, so the id is fixed.
+  const PAYMENTS_CHANNEL_ID = 'incoming-payments'
+  let paymentsChannelEnsured: Promise<void> | null = null
+  async function ensurePaymentsChannel() {
+    if (isWeb || !isAndroid)
+      return
+    if (paymentsChannelEnsured)
+      return paymentsChannelEnsured
+    paymentsChannelEnsured = (async () => {
+      try {
+        await LocalNotifications.createChannel({
+          id: PAYMENTS_CHANNEL_ID,
+          name: i18n.t('Incoming Payments'),
+          description: i18n.t('Notification when a payment arrives'),
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+          lights: true,
+        })
+      }
+      catch (err) {
+        logger.error('🔔 Failed to create incoming-payments channel', err)
+        paymentsChannelEnsured = null
+      }
+    })()
+    return paymentsChannelEnsured
+  }
+
+  async function requestLocalNotificationsPermission() {
+    if (isWeb)
+      return
+    const current = (await LocalNotifications.checkPermissions()).display
+    const next = current === 'granted'
+      ? 'granted'
+      : (await LocalNotifications.requestPermissions()).display
+    localNotificationsStatus.value = next === 'granted'
+      ? LocalNotificationsStatus.GRANTED
+      : LocalNotificationsStatus.DENIED
+    logger.log('🔔 Local notifications permission:', next)
+    if (next === 'granted')
+      await ensurePaymentsChannel()
+  }
+
+  async function scheduleIncomingPaymentNotification(tx: UserReceiptTransaction) {
+    if (isWeb)
+      return
+    if (localNotificationsStatus.value !== LocalNotificationsStatus.GRANTED) {
+      // Local notifications were added after the push permission flow shipped, so
+      // existing users may have granted push but never been asked for local. Ask now;
+      // they can still deny.
+      await requestLocalNotificationsPermission()
+      // @ts-expect-error - status can change after the await
+      if (localNotificationsStatus.value !== LocalNotificationsStatus.GRANTED) {
+        logger.log('🔔 Cannot schedule incoming payment notification, permission not granted')
+        return
+      }
+    }
+    if (useLocks().isHomeVisible)
+      return
+    if (useConn().locked)
+      return
+
+    const formatted = tx.asset === Asset.USDT
+      ? formatUsdtAmount(tx.amount)
+      : usePrice(tx.amount).crypto.formatted
+
+    try {
+      await ensurePaymentsChannel()
+      await LocalNotifications.schedule({
+        notifications: [{
+          id: hashToInt32(tx.hash),
+          title: i18n.t('Payment received'),
+          body: i18n.t('You received {amount}', { amount: formatted }),
+          extra: { hash: tx.hash },
+          channelId: PAYMENTS_CHANNEL_ID,
+        }],
+      })
+      logger.log('🔔 Local notification scheduled for incoming payment', { hash: tx.hash, amount: formatted })
+    }
+    catch (err) {
+      logger.error('🔔 Failed to schedule local notification', err)
+    }
+  }
+
+  let tapHandle: { remove: () => Promise<void> } | null = null
+  async function installLocalNotificationsTapHandler() {
+    if (isWeb || tapHandle)
+      return
+    const { waitForUnlock } = useConn()
+    const transactionsStore = useTransactions()
+    tapHandle = await LocalNotifications.addListener('localNotificationActionPerformed', async (event) => {
+      const hash = (event.notification?.extra as { hash?: string } | undefined)?.hash
+      if (!hash) {
+        logger.log('🔔 Local notification tapped without hash extra, ignoring')
+        return
+      }
+      logger.log('🔔 Local notification tapped, opening tx detail', { hash })
+      await waitForUnlock()
+      const tx = transactionsStore.transactions.find(t => t.hash === hash)
+      if (!tx) {
+        logger.log('🔔 Tx hash not found in store, cannot open detail', { hash })
+        return
+      }
+      try {
+        await InAppBrowser.close()
+      }
+      catch {}
+      initializeFlow(FlowName.ViewTransactionDetail, { initialState: { transactionList: tx } })
+    })
+  }
+
   return {
     init,
     status,
@@ -254,5 +379,17 @@ export function useNotifications() {
     localNotifications: computed(() => localNotificationsArray.value.filter(n => !closedNotifications.value.includes(n.id))),
     addLocalNotification,
     removeLocalNotification,
+    requestLocalNotificationsPermission,
+    scheduleIncomingPaymentNotification,
+    installLocalNotificationsTapHandler,
   }
+}
+
+// djb2-style 31-bit positive hash; LocalNotifications id field is a 32-bit int.
+// Deterministic per tx-hash so a duplicate fire (e.g. resync) overwrites the same notif slot.
+function hashToInt32(input: string): number {
+  let h = 5381
+  for (let i = 0; i < input.length; i++)
+    h = ((h << 5) + h + input.charCodeAt(i)) | 0
+  return Math.abs(h) || 1
 }
