@@ -11,6 +11,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { isTestnet } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, getRequiredContractEvent, toAddressTopic } from '@/lib/ethereum'
@@ -122,6 +123,33 @@ let htlcAcceptanceBudgetPromise: Promise<bigint> | null = null
 export const POLYGON_TRANSFER_QUOTE_TTL_MS = 20_000
 const CACHED_RELAY_TTL_MS = 5 * 60_000
 const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 20
+const CONCURRENT_RANGE_FETCHES = 4
+const BLOCK_TS_CACHE_MAX = 5_000
+
+// Accept stale-by-a-few-seconds timestamps on deep reorgs in exchange for skipping
+// redundant eth_getBlockByNumber across listener + history loops.
+const blockTimestampCache = new Map<number, number>()
+
+async function getBlockTimestampCached(provider: JsonRpcProvider, blockNumber: number): Promise<number | undefined> {
+  const cached = blockTimestampCache.get(blockNumber)
+  if (cached !== undefined) {
+    // Refresh insertion order so frequently-accessed blocks survive FIFO eviction.
+    blockTimestampCache.delete(blockNumber)
+    blockTimestampCache.set(blockNumber, cached)
+    return cached
+  }
+  const block = await provider.getBlock(blockNumber)
+  const ts = block?.timestamp
+  if (typeof ts === 'number') {
+    if (blockTimestampCache.size >= BLOCK_TS_CACHE_MAX) {
+      const oldest = blockTimestampCache.keys().next().value
+      if (oldest !== undefined)
+        blockTimestampCache.delete(oldest)
+    }
+    blockTimestampCache.set(blockNumber, ts)
+  }
+  return ts
+}
 
 const INSUFFICIENT_USDT_POLYGON_FEE_ERROR = 'You don\'t have enough USDT to cover this payment plus Polygon fees.'
 
@@ -1013,8 +1041,9 @@ async function fetchGroupedTransfers(address: string, fromBlock: number, toBlock
   const blockNumbers = [...new Set(groupedTransfers
     .filter(group => !options.knownHashes?.has(group.hash))
     .map(group => group.blockNumber))]
-  const blocks = await Promise.all(blockNumbers.map(async blockNumber => [blockNumber, await client.provider.getBlock(blockNumber)] as const))
-  const blockTimestamps = new Map(blocks.map(([blockNumber, block]) => [blockNumber, block?.timestamp]))
+  const blockTimestamps = new Map(await Promise.all(
+    blockNumbers.map(async blockNumber => [blockNumber, await getBlockTimestampCached(client.provider, blockNumber)] as const),
+  ))
 
   return groupedTransfers.map(group => ({
     ...group,
@@ -1141,7 +1170,11 @@ function buildOutgoingTransaction(
   }
 }
 
-async function persistHistoryTransaction(group: TransferGroup, address: string) {
+interface PersistHistoryOptions {
+  onIncomingPersisted?: (tx: UserReceiptTransaction) => void | Promise<void>
+}
+
+export async function persistHistoryTransaction(group: TransferGroup, address: string, options?: PersistHistoryOptions) {
   if (!group.main)
     return
 
@@ -1177,14 +1210,17 @@ async function persistHistoryTransaction(group: TransferGroup, address: string) 
     return
   }
 
-  await transactionsStore.addReceiptTransaction({
+  const receipt = {
     ...base,
     transfer: Transfer.UserReceipt,
     sender: group.main.from,
     recipient: group.main.to,
     title: 'Top-Up',
     message: '',
-  } satisfies UserReceiptTransaction)
+  } satisfies UserReceiptTransaction
+
+  await transactionsStore.addReceiptTransaction(receipt)
+  await options?.onIncomingPersisted?.(receipt)
 }
 
 function parseStoredTransaction(tx: ExternalTransaction | null) {
@@ -1194,6 +1230,39 @@ function parseStoredTransaction(tx: ExternalTransaction | null) {
   tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
   tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
   return tx
+}
+
+// Dynamic import to avoid a circular dep between useNotifications and this store.
+async function notifyFreshIncoming(txs: UserReceiptTransaction[], previousMaxTimestamp = 0) {
+  const fresh = txs.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)
+  if (fresh.length === 0)
+    return
+  const { scheduleIncomingPaymentNotification } = (await import('@/composables/useNotifications')).useNotifications()
+  await Promise.all(fresh.map(tx => scheduleIncomingPaymentNotification(tx)))
+}
+
+// Fetch a contiguous block range as rpcMaxBlockRange-sized chunks, CONCURRENT_RANGE_FETCHES
+// at a time. Returns the union of all groups across chunks, unsorted.
+async function fetchRangesParallel(
+  address: string,
+  fromBlock: number,
+  toBlock: number,
+  knownHashes: Set<string>,
+): Promise<Awaited<ReturnType<typeof fetchGroupedTransfers>>> {
+  const ranges: Array<{ from: number, to: number }> = []
+  for (let from = fromBlock; from <= toBlock; from += polygonUsdtConfig.rpcMaxBlockRange) {
+    const to = Math.min(from + polygonUsdtConfig.rpcMaxBlockRange - 1, toBlock)
+    ranges.push({ from, to })
+  }
+
+  const all: Awaited<ReturnType<typeof fetchGroupedTransfers>> = []
+  for (let i = 0; i < ranges.length; i += CONCURRENT_RANGE_FETCHES) {
+    const chunk = ranges.slice(i, i + CONCURRENT_RANGE_FETCHES)
+    const results = await Promise.all(chunk.map(r => fetchGroupedTransfers(address, r.from, r.to, { knownHashes })))
+    for (const groups of results)
+      all.push(...groups)
+  }
+  return all
 }
 
 export const usePolygonUsdt = defineStore('polygon-usdt', () => {
@@ -1324,22 +1393,38 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const client = await getClient()
       const dbTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [Asset.USDT])
       const knownHashes = new Set(dbTransactions.map(tx => tx.hash))
+      // Rows arrive ORDER BY timestamp DESC NULLS FIRST; first row with a real
+      // timestamp is the max. Used to suppress notifications for out-of-order
+      // or late-finality incoming txs.
+      const previousMaxTimestamp = dbTransactions.find(tx => typeof tx.timestamp === 'number')?.timestamp ?? 0
 
-      const latestBlock = await client.provider.getBlockNumber()
+      // Fire the initial-scan nonce in parallel only when we know we'll enter that branch;
+      // ethers v6 batches concurrent JSON-RPC calls so this folds into one HTTP round-trip.
+      const willEnterInitialScan = !(hasLoadedHistory.value && lastHistorySyncBlock.value > 0)
+      const needsInitialNonce = willEnterInitialScan && !initialHistoryScanSession.value
+      const [latestBlock, prefetchedInitialNonce] = await Promise.all([
+        client.provider.getBlockNumber(),
+        needsInitialNonce ? client.tokenContract.getNonce(address) : Promise.resolve(null),
+      ])
+
       if (hasLoadedHistory.value && lastHistorySyncBlock.value > 0) {
         if (latestBlock <= lastHistorySyncBlock.value)
           return
 
-        for (let fromBlock = lastHistorySyncBlock.value + 1; fromBlock <= latestBlock; fromBlock += polygonUsdtConfig.rpcMaxBlockRange) {
-          const toBlock = Math.min(fromBlock + polygonUsdtConfig.rpcMaxBlockRange - 1, latestBlock)
-          const groups = await fetchGroupedTransfers(address, fromBlock, toBlock, { knownHashes })
-          for (const group of groups.sort((a, b) => (a.blockNumber - b.blockNumber) || (a.logIndex - b.logIndex))) {
-            if (!knownHashes.has(group.hash)) {
-              await persistHistoryTransaction(group, address)
-              knownHashes.add(group.hash)
-            }
+        const allGroups = await fetchRangesParallel(address, lastHistorySyncBlock.value + 1, latestBlock, knownHashes)
+        allGroups.sort((a, b) => (a.blockNumber - b.blockNumber) || (a.logIndex - b.logIndex))
+
+        const newIncoming: UserReceiptTransaction[] = []
+        for (const group of allGroups) {
+          if (!knownHashes.has(group.hash)) {
+            await persistHistoryTransaction(group, address, {
+              onIncomingPersisted: (tx) => { newIncoming.push(tx) },
+            })
+            knownHashes.add(group.hash)
           }
         }
+
+        await notifyFreshIncoming(newIncoming, previousMaxTimestamp)
 
         lastHistorySyncBlock.value = latestBlock
         await persistHistoryState(address, {
@@ -1352,7 +1437,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       let session = initialHistoryScanSession.value
       if (!session) {
-        const initialRemainingNonce = BigInt((await client.tokenContract.getNonce(address)).toString())
+        const nonceRaw = prefetchedInitialNonce ?? await client.tokenContract.getNonce(address)
+        const initialRemainingNonce = BigInt(nonceRaw.toString())
         session = {
           canStopEarly: balance.value > 0 || initialRemainingNonce > 0n,
           state: {
@@ -1363,6 +1449,45 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
           },
         }
       }
+
+      // Catch new blocks while the backward scan is still in flight, so new txs aren't
+      // gated on Contract.on listener health (HMR, dropped events, ethers polling stalls).
+      if (session.state.headBlock < latestBlock) {
+        const fwdFrom = session.state.headBlock + 1
+        const forwardGroups = await fetchRangesParallel(address, fwdFrom, latestBlock, knownHashes)
+        forwardGroups.sort((a, b) => (a.blockNumber - b.blockNumber) || (a.logIndex - b.logIndex))
+
+        const forwardIncoming: UserReceiptTransaction[] = []
+        for (const group of forwardGroups) {
+          if (!knownHashes.has(group.hash)) {
+            await persistHistoryTransaction(group, address, {
+              onIncomingPersisted: (tx) => { forwardIncoming.push(tx) },
+            })
+            knownHashes.add(group.hash)
+          }
+        }
+
+        // Always notify — these are post-headBlock txs, genuinely new even on cold install.
+        await notifyFreshIncoming(forwardIncoming, previousMaxTimestamp)
+
+        session.state.headBlock = latestBlock
+        await persistHistoryState(address, {
+          version: 1,
+          mode: 'initial',
+          session: {
+            canStopEarly: session.canStopEarly,
+            state: serializeInitialHistoryScanState(session.state),
+          },
+        })
+        if (forwardIncoming.length > 0)
+          logger.log('🏃 Polygon forward catch-up', { from: fwdFrom, to: latestBlock, newTxs: forwardIncoming.length })
+      }
+
+      // Only notify during the BACKWARD scan if the user already had history (resume case).
+      // True cold start (empty DB) is a backfill of historical txs — surfacing each as a
+      // "Payment received" would be misleading. Mirrors NIM's real-time-only rule.
+      const notifyDuringInitialScan = dbTransactions.length > 0
+      const initialScanIncoming: UserReceiptTransaction[] = []
 
       const scanResult = await scanInitialPolygonHistory({
         latestBlock: session.state.headBlock,
@@ -1376,11 +1501,16 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         fetchGroups: (fromBlock, toBlock) => fetchGroupedTransfers(address, fromBlock, toBlock, { knownHashes }),
         visitGroup: async (group) => {
           if (!knownHashes.has(group.hash)) {
-            await persistHistoryTransaction(group, address)
+            await persistHistoryTransaction(group, address, notifyDuringInitialScan
+              ? { onIncomingPersisted: (tx) => { initialScanIncoming.push(tx) } }
+              : undefined)
             knownHashes.add(group.hash)
           }
         },
       })
+
+      if (notifyDuringInitialScan)
+        await notifyFreshIncoming(initialScanIncoming, previousMaxTimestamp)
 
       if (scanResult.completed) {
         hasLoadedHistory.value = true
@@ -1787,6 +1917,129 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     hydratedHistoryAddress.value = null
     historySyncPromise = null
   }
+
+  // Real-time Transfer listener — fires per incoming USDT event so notifications
+  // don't depend on the poll interval (10s/30s) or the active-asset gate in
+  // usePolygonSync. The poll still runs for backfill on cold start / missed events.
+  let transferListenerAddress: string | null = null
+  let transferListener: ((...args: any[]) => void) | null = null
+
+  async function attachTransferListener(address: string) {
+    const normalized = getAddress(address)
+    if (transferListenerAddress === normalized)
+      return
+    await detachTransferListener()
+
+    const client = await getClient()
+    const filter = client.tokenContract.filters.Transfer(null, normalized)
+
+    const listener = async (...args: any[]) => {
+      try {
+        // ethers v6 passes (from, to, value, payload) with the ContractEventPayload last.
+        // Read everything from the payload to stay resilient to signature drift.
+        const payload = args[args.length - 1]
+        const log: Log | undefined = payload?.log
+        const eventArgs = payload?.args
+        const from: string | undefined = eventArgs?.[0]
+        const value: bigint | undefined = eventArgs?.[2] !== undefined ? BigInt(eventArgs[2]) : undefined
+
+        logger.log('📬 Polygon Transfer listener fired', {
+          from,
+          value: value?.toString(),
+          hash: log?.transactionHash,
+          blockNumber: log?.blockNumber,
+        })
+
+        if (value === undefined || value === 0n)
+          return // ignore address-poisoning zero-value transfers and malformed payloads
+
+        const hash = log?.transactionHash
+        if (!hash || !log || !from)
+          return
+
+        // DB-presence dedup — the poll path will see this hash too and skip.
+        const existing = await query<{ asset: string }>(
+          SQLQuery.GetTransactionAssetByHash,
+          [hash],
+          { single: true },
+        )
+        if (existing) {
+          logger.log('📬 Polygon Transfer listener skipped already-known hash', { hash })
+          return
+        }
+
+        const timestamp = await getBlockTimestampCached(client.provider, log.blockNumber)
+        const parsed: ParsedTransferLog = {
+          hash,
+          blockNumber: log.blockNumber,
+          logIndex: log.index,
+          from: getAddress(from),
+          to: normalized,
+          value,
+        }
+        const group: TransferGroup = {
+          hash,
+          blockNumber: log.blockNumber,
+          logIndex: log.index,
+          main: parsed,
+          incomingTotal: value,
+          outgoingTotal: 0n,
+          fee: 0n,
+          timestamp,
+        }
+
+        await persistHistoryTransaction(group, normalized, {
+          onIncomingPersisted: tx => notifyFreshIncoming([tx]),
+        })
+        logger.log('📬 Polygon Transfer listener persisted incoming tx', { hash })
+      }
+      catch (err) {
+        logger.error('📬 Polygon Transfer listener error', err)
+      }
+    }
+
+    await client.tokenContract.on(filter, listener)
+    transferListenerAddress = normalized
+    transferListener = listener
+    logger.log('📬 Polygon Transfer listener attached', { address: normalized })
+  }
+
+  async function detachTransferListener() {
+    if (!transferListenerAddress || !transferListener)
+      return
+    try {
+      const client = await getClient()
+      const filter = client.tokenContract.filters.Transfer(null, transferListenerAddress)
+      await client.tokenContract.off(filter, transferListener)
+      logger.log('📬 Polygon Transfer listener detached', { address: transferListenerAddress })
+    }
+    catch (err) {
+      logger.error('📬 Failed to detach Polygon Transfer listener', err)
+    }
+    transferListenerAddress = null
+    transferListener = null
+  }
+
+  // Re-attach on address change. getEthAddress() reads ethWallet.value internally,
+  // so wrapping in computed makes the watch reactive without changing the store API.
+  const ethAddress = computed(() => useLocalWallet().getEthAddress().data)
+  watch(ethAddress, async (addr) => {
+    try {
+      if (isTestnet)
+        return
+      if (!addr) {
+        await detachTransferListener()
+        return
+      }
+      await init()
+      if (consensus.value !== 'established')
+        return
+      await attachTransferListener(addr)
+    }
+    catch (err) {
+      logger.error('📬 Polygon Transfer listener (re)attach failed', err)
+    }
+  }, { immediate: true })
 
   return {
     balance,

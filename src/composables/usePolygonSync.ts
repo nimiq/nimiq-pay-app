@@ -34,31 +34,25 @@ async function pollCallback() {
 
   logger.log('Starting Polygon sync poll')
   const polygonUsdt = usePolygonUsdt()
-  try {
-    await polygonUsdt.updateBalance()
-  }
-  catch (error) {
-    logger.error('Error updating Polygon USDT balance', error)
-  }
-  logger.log('Finished Polygon balance update')
+  const { query } = useConn()
 
-  try {
-    await polygonUsdt.syncTransactionHistory()
-  }
-  catch (error) {
-    logger.error('Error syncing Polygon transaction history', error)
-  }
-  logger.log('Finished Polygon transaction history sync pass', { hasLoadedHistory: polygonUsdt.hasLoadedHistory })
+  const [balanceRes, historyRes, pendingRes] = await Promise.allSettled([
+    polygonUsdt.updateBalance(),
+    polygonUsdt.syncTransactionHistory(),
+    (async () => {
+      const dbTxs = await query<Array<{ hash: string, status: string, timestamp?: number, asset?: string }>>(SQLQuery.SelectPendingTransactionsByAsset, [Asset.USDT])
+      await Promise.all(dbTxs.map(dbTx => polygonUsdt.updateSingleTransaction(dbTx.hash)))
+    })(),
+  ])
 
-  try {
-    const { query } = useConn()
-    const dbTxs = await query<Array<{ hash: string, status: string, timestamp?: number, asset?: string }>>(SQLQuery.SelectPendingTransactionsByAsset, [Asset.USDT])
-    await Promise.all(dbTxs.map(dbTx => polygonUsdt.updateSingleTransaction(dbTx.hash)))
-  }
-  catch (error) {
-    logger.error('Error updating pending USDT transactions', error)
-  }
-  logger.log('Finished updating pending USDT transactions')
+  if (balanceRes.status === 'rejected')
+    logger.error('Error updating Polygon USDT balance', balanceRes.reason)
+  if (historyRes.status === 'rejected')
+    logger.error('Error syncing Polygon transaction history', historyRes.reason)
+  if (pendingRes.status === 'rejected')
+    logger.error('Error updating pending USDT transactions', pendingRes.reason)
+
+  logger.log('Finished Polygon sync poll', { hasLoadedHistory: polygonUsdt.hasLoadedHistory })
 }
 
 const { pause, resume, isActive } = useTimeoutPoll(pollCallback, POLYGON_POLL_INTERVAL_MS, { immediate: false })

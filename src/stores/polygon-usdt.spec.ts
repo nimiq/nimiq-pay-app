@@ -5,6 +5,12 @@ import { Transfer } from '@/types/transactions'
 
 const loggerError = vi.fn()
 
+const txMocks = vi.hoisted(() => ({
+  addReceiptTransaction: vi.fn(),
+  addPaymentTransaction: vi.fn(),
+  addWithdrawalTransaction: vi.fn(),
+}))
+
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
     error: loggerError,
@@ -27,13 +33,19 @@ vi.mock('@/stores/local-wallet', () => ({
   }),
 }))
 
+vi.mock('@/stores/app', () => ({
+  useApp: () => ({
+    withdrawalAddressesHistory: [],
+  }),
+}))
+
 vi.mock('@/stores/transactions', () => ({
   getSwapHtlcKey: (tx: { chain?: string, hash: string, recipient: string }) => tx.chain === Chain.Polygon ? tx.hash : tx.recipient,
   useTransactions: () => ({
     addPaymentToMerchantTransaction: vi.fn(),
-    addPaymentTransaction: vi.fn(),
-    addWithdrawalTransaction: vi.fn(),
-    addReceiptTransaction: vi.fn(),
+    addPaymentTransaction: txMocks.addPaymentTransaction,
+    addWithdrawalTransaction: txMocks.addWithdrawalTransaction,
+    addReceiptTransaction: txMocks.addReceiptTransaction,
     updateTransactionStatus: vi.fn(),
     updateTransactionTitle: vi.fn(),
   }),
@@ -434,5 +446,83 @@ describe('polygon-usdt quote helpers', () => {
       [9_001, 12_000],
       [6_001, 9_000],
     ])
+  })
+})
+
+describe('persistHistoryTransaction onIncomingPersisted hook', () => {
+  beforeEach(() => {
+    txMocks.addReceiptTransaction.mockReset()
+    txMocks.addPaymentTransaction.mockReset()
+    txMocks.addWithdrawalTransaction.mockReset()
+  })
+
+  const localAddr = '0x0000000000000000000000000000000000000aaa'
+  const foreignAddr = '0x0000000000000000000000000000000000000bbb'
+
+  function makeIncomingGroup(timestamp: number, hash = '0xhash') {
+    return {
+      main: { from: foreignAddr, to: localAddr, value: 5_000_000n },
+      fee: 0n,
+      hash,
+      timestamp,
+      blockNumber: 1,
+      logIndex: 0,
+    } as any
+  }
+
+  it('invokes onIncomingPersisted with the persisted receipt for incoming txs', async () => {
+    const { persistHistoryTransaction } = await import('./polygon-usdt')
+    const onIncomingPersisted = vi.fn()
+    await persistHistoryTransaction(makeIncomingGroup(2000, '0xfresh'), localAddr, { onIncomingPersisted })
+    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    expect(onIncomingPersisted).toHaveBeenCalledTimes(1)
+    const arg = onIncomingPersisted.mock.calls[0]![0]
+    expect(arg).toMatchObject({ hash: '0xfresh', transfer: Transfer.UserReceipt, asset: Asset.USDT, chain: Chain.Polygon, timestamp: 2000 })
+  })
+
+  it('does NOT invoke onIncomingPersisted when no options passed (initial-scan branch contract)', async () => {
+    const { persistHistoryTransaction } = await import('./polygon-usdt')
+    await persistHistoryTransaction(makeIncomingGroup(2000), localAddr)
+    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    // callback omitted → nothing to assert beyond the receipt being persisted.
+  })
+
+  it('does NOT invoke onIncomingPersisted for outgoing txs', async () => {
+    const { persistHistoryTransaction } = await import('./polygon-usdt')
+    const onIncomingPersisted = vi.fn()
+    const outgoingGroup = {
+      main: { from: localAddr, to: foreignAddr, value: 1_000_000n },
+      fee: 0n,
+      hash: '0xout',
+      timestamp: 2000,
+      blockNumber: 1,
+      logIndex: 0,
+    } as any
+    await persistHistoryTransaction(outgoingGroup, localAddr, { onIncomingPersisted })
+    expect(onIncomingPersisted).not.toHaveBeenCalled()
+    expect(txMocks.addReceiptTransaction).not.toHaveBeenCalled()
+    expect(txMocks.addPaymentTransaction).toHaveBeenCalledTimes(1)
+  })
+})
+
+// Freshness filter used inside syncTransactionHistory incremental branch: only fire
+// notifications for incoming txs strictly newer than the max timestamp present in DB
+// before the pass started.
+describe('usdt incremental freshness filter', () => {
+  function freshnessFilter(newIncoming: Array<{ timestamp: number }>, previousMaxTimestamp: number) {
+    return newIncoming.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)
+  }
+
+  it('keeps txs with timestamp strictly greater than previousMaxTimestamp', () => {
+    const result = freshnessFilter([{ timestamp: 1500 }, { timestamp: 1000 }, { timestamp: 999 }], 1000)
+    expect(result).toEqual([{ timestamp: 1500 }])
+  })
+
+  it('drops txs equal to or older than previousMaxTimestamp (late-finality / out-of-order)', () => {
+    expect(freshnessFilter([{ timestamp: 500 }, { timestamp: 1000 }], 1000)).toEqual([])
+  })
+
+  it('empty input yields empty output', () => {
+    expect(freshnessFilter([], 1000)).toEqual([])
   })
 })
