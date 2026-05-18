@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
@@ -19,6 +20,8 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
+import { Chain } from '@/lib/assets'
+import { addressesEqual } from '@/lib/ethereum'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -184,6 +187,21 @@ watch([hasHtlcExpired], ([expired]) => {
     isConsensusNeeded.value = false
 }, { immediate: true })
 
+async function isOwnRecipient({ recipient, chain }: PaymentRequestData) {
+  if (chain === Chain.Polygon) {
+    const ownEth = useLocalWallet().getEthAddress().data
+    return !!ownEth && addressesEqual(recipient, ownEth)
+  }
+  if (chain === Chain.Nimiq) {
+    const { localAddress: ownNim } = useLocalWallet()
+    if (ownNim.toUserFriendlyAddress() === recipient)
+      return true
+    const ours = await useRemoteSigner().getOurRemoteSignerAddresses()
+    return ours.has(recipient)
+  }
+  return false
+}
+
 async function detectPaymentRequest() {
   try {
     const { type, value: pr } = await Clipboard.read()
@@ -194,8 +212,8 @@ async function detectPaymentRequest() {
       const { isPaymentRequest, getPaymentRequestData } = useStringParser()
       if (isPaymentRequest(pr)) {
         // Invoice could be expired, so we don't want to show the notification if it's invalid
-        const { error } = await getPaymentRequestData(pr)
-        if (!error) {
+        const { data, error } = await getPaymentRequestData(pr)
+        if (!error && data && !(await isOwnRecipient(data))) {
           detectedPaymentRequest.value = pr
           // Wait for the animation to start before vibrating
           // It feels weird if the vibration happens before the notification is even shown
