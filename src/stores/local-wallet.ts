@@ -27,6 +27,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
       logger.error(err)
       return { error: err, data: undefined }
     }
+    Nimiq.Entropy.SIZE = 16
     return { data: Nimiq.Entropy.fromHex(entropy.value).toMnemonic(), error: undefined }
   }
 
