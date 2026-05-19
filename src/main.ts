@@ -51,6 +51,24 @@ installNodeGlobals()
 const isAlertRoute = window.location.pathname.startsWith('/alert')
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // Legacy PWA SW from pre-plugin builds keeps stale precache after a binary update, hanging the first launch. Clean up once.
+  if ('serviceWorker' in navigator) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      if (regs.length) {
+        const tasks: Promise<unknown>[] = regs.map(r => r.unregister())
+        if ('caches' in globalThis)
+          tasks.push(caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))))
+        await Promise.all(tasks)
+        location.reload()
+        return
+      }
+    }
+    catch (e) {
+      console.warn('Legacy SW cleanup failed:', e)
+    }
+  }
+
   const app = createApp(App)
   app.use(IonicVue)
   app.use(createPinia())

@@ -53,10 +53,10 @@ export function useDecrypt() {
     const error = (await sqlite.isSecretStored()).result
       ? await sqlite.checkEncryptionSecret(pin)
           .then(({ result }) => !result ? i18n.t('Invalid PIN') : undefined)
-          .catch(() => i18n.t('Something went wrong decrypting the database'))
+          .catch(() => i18n.t('Something went wrong decrypting the database. Try reloading the app.'))
       : await sqlite.setEncryptionSecret(pin)
           .then(() => undefined)
-          .catch(() => i18n.t('Something went wrong decrypting the database'))
+          .catch(() => i18n.t('Something went wrong decrypting the database. Try reloading the app.'))
 
     if (error) {
       logger.error(error)
@@ -65,7 +65,13 @@ export function useDecrypt() {
 
     logger.log('🔑 Database initialized and encrypted in mobile')
 
-    await openDb()
+    try {
+      await openDb()
+    }
+    catch (e) {
+      logger.error('openDb failed during decrypt', e)
+      return i18n.t('Something went wrong decrypting the database. Try reloading the app.')
+    }
   }
 
   /**
