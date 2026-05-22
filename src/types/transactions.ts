@@ -56,6 +56,11 @@ export enum Transfer {
    * Staking transactions (both to and from the staking contract, both value-transferring and signaling)
    */
   Staking = 'staking',
+
+  /**
+   * Generic HTLC transactions, not related to local/remote wallet or swaps
+   */
+  HTLC = 'htlc',
 }
 
 /**
@@ -257,6 +262,47 @@ export type MerchantTransaction = BaseTransaction & {
   railMerchantId: string
 } */)
 
+export type HtlcData = {
+  type: 'new-htlc',
+  sender: Nimiq.Address,
+  recipient: Nimiq.Address,
+  hashRoot: Nimiq.SerialBuffer,
+  hashCount: number,
+  hashAlgorithm: number,
+  timeout: number,
+} | {
+  type: 'redeem-regular',
+  preImage: Nimiq.SerialBuffer,
+  hashRoot: Nimiq.SerialBuffer,
+  hashCount: number,
+  hashAlgorithm: number,
+} | {
+  type: 'redeem-timeout',
+} | {
+  type: 'redeem-early',
+  senderSignatureProof: Nimiq.SignatureProof,
+  recipientSignatureProof: Nimiq.SignatureProof,
+}
+
+export type HtlcTransaction = BaseTransaction & {
+  transfer: Transfer.HTLC
+  title: TransactionTitle
+  recipientData?: Uint8Array
+  senderData?: Uint8Array
+  rail?: Rail.MiniApp
+  railMerchantId?: string // Mini-app URL
+  merchantName?: string // Mini-app name
+
+  // Unused properties for type compatibility
+  merchantCategory?: undefined
+  paymentMethod?: undefined
+  paymentRef?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
+  fiatCurrency?: undefined
+  isCashbackClaimed?: undefined
+}
+
 export type StakingData = {
   type: 'create-staker'
   delegation: string
@@ -384,6 +430,7 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 
 export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'fee' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
 export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
+export type PartialHtlcTxArgs = Pick<HtlcTransaction, 'sender' | 'recipient' | 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { htlcData: HtlcData }
 
 export type PartialSendTxArgs
   = | PartialUserTxArgs
@@ -396,6 +443,7 @@ export type PartialSendTxArgs
       proofSize: number
     }
     | PartialStakingTxArgs
+    | PartialHtlcTxArgs
 
 export enum PaymentMethod {
   NIM = 'nim',
