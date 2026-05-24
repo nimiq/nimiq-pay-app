@@ -231,6 +231,7 @@ export type Web3RequestType
     | 'nimiq_sign'
     | 'nimiq_send_transaction'
     | `nimiq_staking_${string}`
+    | `nimiq_htlc_${string}`
     | 'request_device_identifier'
 
 export function trackDAppOpened(url: string, name: string, source: DAppOpenSource): void {

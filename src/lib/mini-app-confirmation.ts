@@ -111,6 +111,37 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
         }
       }
 
+      if (request.htlcData) {
+        switch (request.htlcData.type) {
+          case 'new-htlc': {
+            rows.push({ title: 'Action', value: i18n.t('New HTLC') })
+            rows.push({ title: 'HTLC Sender', value: request.htlcData.sender.toUserFriendlyAddress() })
+            rows.push({ title: 'HTLC Recipient', value: request.htlcData.recipient.toUserFriendlyAddress() })
+            rows.push({ title: 'Hash Root', value: Nimiq.BufferUtils.toHex(request.htlcData.hashRoot) })
+            rows.push({ title: 'Hash Count', value: request.htlcData.hashCount.toString(10) })
+            rows.push({ title: 'Timeout', value: new Date(request.htlcData.timeout).toLocaleString() })
+            break
+          }
+          case 'redeem-regular': {
+            rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (regular)') })
+            rows.push({ title: 'Hash Root', value: Nimiq.BufferUtils.toHex(request.htlcData.hashRoot) })
+            rows.push({ title: 'Pre Image', value: Nimiq.BufferUtils.toHex(request.htlcData.preImage) })
+            rows.push({ title: 'Hash Count', value: request.htlcData.hashCount.toString(10) })
+            break
+          }
+          case 'redeem-timeout': {
+            rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (timeout)') })
+            break
+          }
+          case 'redeem-early': {
+            rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (early)') })
+            rows.push({ title: 'Sender Signature', value: Nimiq.BufferUtils.toHex(request.htlcData.senderSignatureProof.serialize()) })
+            rows.push({ title: 'Recipient Signature', value: Nimiq.BufferUtils.toHex(request.htlcData.recipientSignatureProof.serialize()) })
+            break
+          }
+        }
+      }
+
       const appName = request.name || new URL(request.url).hostname
       const result = await ExtendedDialog.sheet({
         title: 'Confirm Transaction',

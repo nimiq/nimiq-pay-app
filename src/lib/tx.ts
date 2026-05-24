@@ -158,7 +158,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
           data.writeUint8(partialArgs.htlcData.hashCount)
           data.writeUint64(partialArgs.htlcData.timeout)
 
-          const tx = new Nimiq.Transaction(
+          let tx = new Nimiq.Transaction(
             /* sender */ useRemoteSigner().remoteAddress!,
             /* senderType */ Nimiq.AccountType.HTLC,
             /* senderData */ new Uint8Array(0),
@@ -167,10 +167,25 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
             /* recipientData */ data,
             /* value */ BigInt(partialArgs.amount),
             /* fee */ 0n,
-            /* flags */ 0b01, // Contract creation
+            /* flags */ 1, // Contract creation
             /* validityStartHeight */ getValidityStartHeight(),
             /* networkId */ networkId.value,
           )
+          const contractAddress = Nimiq.Address.fromString(tx.hash().substring(0, 40))
+          tx = new Nimiq.Transaction(
+            tx.sender,
+            tx.senderType,
+            tx.senderData,
+            contractAddress,
+            tx.recipientType,
+            tx.data,
+            tx.value,
+            tx.fee,
+            tx.flags,
+            tx.validityStartHeight,
+            tx.networkId,
+          )
+
           // Now we create the HTLC early resolve proof
           tx.proof = createResolveProof({ mode: 'early', tx })
           // Finally, we get the cosigner to sign the transaction
@@ -186,7 +201,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
             /* hash algorithm */ + 1
             /* hash root */ + partialArgs.htlcData.hashRoot.length
             /* pre image */ + partialArgs.htlcData.preImage.length
-            /* signature proof */ + Nimiq.SignatureProof.SINGLE_SIG_SIZE
+            /* signature proof */ + Nimiq.SignatureProof.SINGLE_SIG_SIZE,
           )
           proof.writeUint8(0) // regular transfer
           proof.writeUint8(partialArgs.htlcData.hashCount)
@@ -197,7 +212,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
         case 'redeem-timeout':
           proof = new Nimiq.SerialBuffer(
             /* type */ 1
-            /* signature proof */ + Nimiq.SignatureProof.SINGLE_SIG_SIZE
+            /* signature proof */ + Nimiq.SignatureProof.SINGLE_SIG_SIZE,
           )
           proof.writeUint8(2) // timeout resolve
           break
@@ -205,14 +220,15 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
           proof = new Nimiq.SerialBuffer(
             /* type */ 1
             /* signature proof recipient */ + partialArgs.htlcData.recipientSignatureProof.serialize().length
-            /* signature proof sender */ + partialArgs.htlcData.senderSignatureProof.serialize().length
+            /* signature proof sender */ + partialArgs.htlcData.senderSignatureProof.serialize().length,
           )
           proof.writeUint8(1) // early resolve
           proof.write(partialArgs.htlcData.recipientSignatureProof.serialize())
           proof.write(partialArgs.htlcData.senderSignatureProof.serialize())
           break
       }
-    } catch (e) {
+    }
+    catch (e) {
       logger.error('Error creating HTLC transaction', e)
       return { data: undefined, error: e instanceof Error ? e.message : String(e) }
     }
@@ -226,22 +242,19 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       /* recipientData */ new Uint8Array(0),
       /* value */ BigInt(partialArgs.amount),
       /* fee */ 0n,
-      /* flags */ 0b00,
+      /* flags */ 0,
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
     )
 
-    if (partialArgs.htlcData.type === 'redeem-early') {
-      tx.proof = proof
-    } else {
+    if (partialArgs.htlcData.type !== 'redeem-early') {
       // Create the signature and set it on the proof
       const { privateKey, publicKey } = useLocalWallet().localWallet
       const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
-      const tmp = new Nimiq.SerialBuffer(proof.length)
-      tmp.write(proof.subarray(0, proof.length - Nimiq.SignatureProof.SINGLE_SIG_SIZE))
-      tmp.write(sig.serialize())
-      tx.proof = tmp
+      const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig)
+      proof.write(sigProof.serialize())
     }
+    tx.proof = proof
 
     return { data: { signedTx: tx }, error: undefined }
   }
