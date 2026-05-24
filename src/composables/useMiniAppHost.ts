@@ -1,10 +1,11 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
+import type { Address } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
+import type { HtlcData, PartialHtlcTxArgs, PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
@@ -120,6 +121,7 @@ export type UserConfirmationRequest
       network: Network
       data: Omit<PaymentRequestData, 'transfer'>
       stakingData?: StakingData
+      htlcData?: HtlcData
     })
     | (MiniAppBase & {
       type: 'eth-transaction'
@@ -1331,6 +1333,11 @@ export class MiniAppHost {
       case 'sendUpdateStakerTransaction': return this.sendUpdateStakerTransaction(message.params)
       case 'sendRetireStakeTransaction': return this.sendRetireStakeTransaction(message.params)
       case 'sendRemoveStakeTransaction': return this.sendRemoveStakeTransaction(message.params)
+      case 'sendNewHtlcTransaction': return this.sendNewHtlcTransaction(message.params)
+      case 'sendRedeemRegularHtlcTransaction': return this.sendRedeemRegularHtlcTransaction(message.params)
+      case 'sendRedeemTimeoutHtlcTransaction': return this.sendRedeemTimeoutHtlcTransaction(message.params)
+      case 'sendRedeemEarlyHtlcTransaction': return this.sendRedeemEarlyHtlcTransaction(message.params)
+      case 'signRedeemEarlyHtlcTransaction': return this.signRedeemEarlyHtlcTransaction(message.params)
       default:
         logger.log('[MiniAppHost] Unknown message name:', message.name)
         throw new UnknownRequestError(`Unknown message name: ${message.name}`)
@@ -1652,6 +1659,167 @@ export class MiniAppHost {
     })
   }
 
+  private async sendNewHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let htlcSender: Address
+    let htlcRecipient: Address
+    let hashRoot: Uint8Array
+    let hashCount: number
+    let hashAlgorithm: number
+    let timeout: number
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 7) {
+      htlcSender = params[0] ? Nimiq.Address.fromString(params[0]) : useLocalWallet().localAddress
+      htlcRecipient = Nimiq.Address.fromString(params[1])
+      hashRoot = Nimiq.BufferUtils.fromHex(params[2])
+      hashCount = Number(params[3])
+      switch (params[4]) {
+        case 'blake2b':
+          hashAlgorithm = 1
+          break
+        case 'sha256':
+          hashAlgorithm = 3
+          break
+        case 'sha512':
+          hashAlgorithm = 4
+          break
+        default:
+          throw new Error('Invalid hash algorithm')
+      }
+      timeout = Number(params[5])
+      value = Number(params[6])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      htlcSender = 'htlcSender' in params ? Nimiq.Address.fromString((params as any).htlcSender) : useLocalWallet().localAddress
+      htlcRecipient = Nimiq.Address.fromString((params as any).htlcRecipient)
+      hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
+      hashCount = Number((params as any).hashCount)
+      switch ((params as any).hashAlgorithm) {
+        case 'blake2b':
+          hashAlgorithm = 1
+          break
+        case 'sha256':
+          hashAlgorithm = 3
+          break
+        case 'sha512':
+          hashAlgorithm = 4
+          break
+        default:
+          throw new Error('Invalid hash algorithm')
+      }
+      timeout = Number((params as any).timeout)
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendNewHtlcTransaction method')
+    }
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
+      recipient: Nimiq.Address.NULL.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'new-htlc',
+        sender: htlcSender,
+        recipient: htlcRecipient,
+        hashRoot,
+        hashCount,
+        hashAlgorithm,
+        timeout,
+      },
+      htlcTitle: 'New HTLC',
+      value,
+      analyticsRequestType: 'nimiq_htlc_new',
+    })
+  }
+
+  private async sendRedeemRegularHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let preImage: Uint8Array
+    let hashRoot: Uint8Array
+    let hashCount: number
+    let hashAlgorithm: number
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 7) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      preImage = Nimiq.BufferUtils.fromHex(params[2])
+      hashRoot = Nimiq.BufferUtils.fromHex(params[3])
+      hashCount = Number(params[4])
+      switch (params[5]) {
+        case 'blake2b':
+          hashAlgorithm = 1
+          break
+        case 'sha256':
+          hashAlgorithm = 3
+          break
+        case 'sha512':
+          hashAlgorithm = 4
+          break
+        default:
+          throw new Error('Invalid hash algorithm')
+      }
+      value = Number(params[6])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      preImage = Nimiq.BufferUtils.fromHex((params as any).preImage)
+      hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
+      hashCount = Number((params as any).hashCount)
+      switch ((params as any).hashAlgorithm) {
+        case 'blake2b':
+          hashAlgorithm = 1
+          break
+        case 'sha256':
+          hashAlgorithm = 3
+          break
+        case 'sha512':
+          hashAlgorithm = 4
+          break
+        default:
+          throw new Error('Invalid hash algorithm')
+      }
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemRegularHtlcTransaction method')
+    }
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'redeem-regular',
+        preImage,
+        hashRoot,
+        hashCount,
+        hashAlgorithm,
+      },
+      htlcTitle: 'Redeem HTLC (regular)',
+      value,
+      analyticsRequestType: 'nimiq_htlc_redeem_regular',
+    })
+  }
+
+  private async sendRedeemTimeoutHtlcTransaction(_params: unknown): Promise<string> {
+    throw new Error('Not implemented')
+    // TODO
+  }
+
+  private async sendRedeemEarlyHtlcTransaction(_params: unknown): Promise<string> {
+    throw new Error('Not implemented')
+    // TODO
+  }
+
+  private async signRedeemEarlyHtlcTransaction(_params: unknown): Promise<string> {
+    throw new Error('Not implemented')
+    // TODO
+  }
+
   private async sendPayment(txData: {
     value: number
     fee?: number
@@ -1664,6 +1832,12 @@ export class MiniAppHost {
     transfer: Transfer.Staking
     stakingTitle: PartialStakingTxArgs['title']
     stakingData: StakingData
+  } | {
+    transfer: Transfer.HTLC
+    htlcTitle: PartialStakingTxArgs['title']
+    htlcData: HtlcData
+    sender: string
+    recipient: string
   })): Promise<string> {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
@@ -1683,13 +1857,21 @@ export class MiniAppHost {
             // For remove-stake, the recipient is the user's own address
             ? useLocalWallet().localAddress.toUserFriendlyAddress()
             : STAKING_CONTRACT_ADDRESS
-          : txData.recipient,
+          : txData.transfer === Transfer.HTLC
+            ? txData.htlcData.type === 'new-htlc'
+              ? 'New contract'
+              : (txData.recipient || useLocalWallet().localAddress.toUserFriendlyAddress())
+            : txData.recipient,
         recipientType: txData.transfer === Transfer.Staking
           ? txData.stakingData.type === 'remove-stake'
             // For remove-stake transactions, the recipient is the user's local address, which is a basic account
             ? Nimiq.AccountType.Basic
             : Nimiq.AccountType.Staking
-          : Nimiq.AccountType.Basic,
+          : txData.transfer === Transfer.HTLC
+            ? txData.htlcData.type === 'new-htlc'
+              ? Nimiq.AccountType.HTLC
+              : Nimiq.AccountType.Basic
+            : Nimiq.AccountType.Basic,
         amount: txData.value,
         fee: txData.fee ?? 0,
         message: txData.message,
@@ -1698,6 +1880,7 @@ export class MiniAppHost {
         merchantName: this.config.title,
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
+      htlcData: 'htlcData' in txData ? txData.htlcData : undefined,
       network: 'nimiq',
     })
     if (!confirmed) {
@@ -1729,6 +1912,19 @@ export class MiniAppHost {
         merchantName: this.config.title,
         stakingData: txData.stakingData!,
       } satisfies PartialStakingTxArgs
+    }
+    else if (txData.transfer === Transfer.HTLC) {
+      partialTx = {
+        sender: txData.sender,
+        recipient: txData.recipient,
+        amount: txData.value,
+        title: txData.htlcTitle,
+        transfer: txData.transfer,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+        htlcData: txData.htlcData!,
+      } satisfies PartialHtlcTxArgs
     }
     else {
       throw new InternalError('Invalid transfer type')

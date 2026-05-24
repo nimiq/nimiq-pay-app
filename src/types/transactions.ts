@@ -134,6 +134,10 @@ type KnownTransactionTitle
     | 'Remove Stake'
     | 'Delete Validator'
     | 'Staking Contract'
+    | 'New HTLC'
+    | 'Redeem HTLC (regular)'
+    | 'Redeem HTLC (timeout)'
+    | 'Redeem HTLC (early)'
 // artificial string type which is actually just a string, but that assigning a regular string to is a type error
 type UnknownTransactionTitle = string & { isUnknownTitle: true }
 export type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
@@ -158,6 +162,10 @@ export function translateTransactionTitle(title: TransactionTitle) {
     'Remove Stake': i18n.t('Remove Stake'),
     'Delete Validator': i18n.t('Delete Validator'),
     'Staking Contract': i18n.t('Staking Contract'),
+    'New HTLC': i18n.t('New HTLC'),
+    'Redeem HTLC (regular)': i18n.t('Redeem HTLC (regular)'),
+    'Redeem HTLC (timeout)': i18n.t('Redeem HTLC (timeout)'),
+    'Redeem HTLC (early)': i18n.t('Redeem HTLC (early)'),
   }
   return Object.keys(knownTitleTranslations).includes(title)
     ? knownTitleTranslations[title as KnownTransactionTitle]
@@ -263,25 +271,25 @@ export type MerchantTransaction = BaseTransaction & {
 } */)
 
 export type HtlcData = {
-  type: 'new-htlc',
-  sender: Nimiq.Address,
-  recipient: Nimiq.Address,
-  hashRoot: Nimiq.SerialBuffer,
-  hashCount: number,
-  hashAlgorithm: number,
-  timeout: number,
+  type: 'new-htlc'
+  sender: Nimiq.Address
+  recipient: Nimiq.Address
+  hashRoot: Uint8Array
+  hashCount: number
+  hashAlgorithm: number
+  timeout: number
 } | {
-  type: 'redeem-regular',
-  preImage: Nimiq.SerialBuffer,
-  hashRoot: Nimiq.SerialBuffer,
-  hashCount: number,
-  hashAlgorithm: number,
+  type: 'redeem-regular'
+  preImage: Uint8Array
+  hashRoot: Uint8Array
+  hashCount: number
+  hashAlgorithm: number
 } | {
-  type: 'redeem-timeout',
+  type: 'redeem-timeout'
 } | {
-  type: 'redeem-early',
-  senderSignatureProof: Nimiq.SignatureProof,
-  recipientSignatureProof: Nimiq.SignatureProof,
+  type: 'redeem-early'
+  senderSignatureProof: Nimiq.SignatureProof
+  recipientSignatureProof: Nimiq.SignatureProof
 }
 
 export type HtlcTransaction = BaseTransaction & {
