@@ -351,7 +351,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* sender */ useLocalWallet().localAddress,
       /* senderType */ Nimiq.AccountType.Basic,
       /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      /* recipient */ Nimiq.Address.NULL,
       /* recipientType */ Nimiq.AccountType.HTLC,
       /* data */ createDepositData(),
       /* value */ BigInt(useLocalWallet().localBalance),
@@ -439,7 +439,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.AccountType.HTLC,
       /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString('NQ07 0000 0000 0000 0000 0000 0000 0000 0000'),
+      /* recipient */ Nimiq.Address.NULL,
       /* recipientType */ Nimiq.AccountType.HTLC,
       /* recipientData */ createDepositData(),
       /* value */ BigInt(useRemoteSigner().remoteBalance),
@@ -554,18 +554,23 @@ export async function getSignedTxByRemote(
 }
 
 function createDepositData() {
-  const remotePublicKey = useRemoteSigner().remotePublicKey
-  if (!remotePublicKey)
+  const remoteAddress = useRemoteSigner().remoteAddress
+  if (!remoteAddress)
     throw new Error('Remote public key is undefined') // no translation as not user-facing
-  const data = new Nimiq.SerialBuffer(82)
-  data.write(useLocalWallet().localWallet.toAddress().serialize())
-  data.write(Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().serialize())
+  const data = new Nimiq.SerialBuffer(
+    /* sender */ 20
+    /* recipient */ + 20
+    /* hashAlgorithm */ + 1
+    /* hashRoot */ + 32
+    /* hashCount */ + 1
+    /* timeout */ + 8,
+  )
+  data.write(useLocalWallet().localAddress.serialize())
+  data.write(remoteAddress.serialize())
   data.writeUint8(1 /* BLAKE2B */)
-  data.write(new Uint8Array(32))
-  data.writeUint8(1)
-  // Current time + 14 days
-  const timestamp = Date.now() + 14 * 24 * 60 * 60 * 1000
-  data.writeUint64(timestamp)
+  data.write(new Uint8Array(32)) // Hash root - the zero hash, because this HTLC will only ever be redeemed "early" or after timeout
+  data.writeUint8(1) // Hash count
+  data.writeUint64(Date.now() + 14 * 24 * 60 * 60 * 1000) // Current time + 14 days
   return data
 }
 

@@ -141,7 +141,7 @@ describe('getSignedTx', () => {
     })
     vi.stubGlobal('Nimiq', {
       AccountType: { Basic: 0, HTLC: 2, Staking: 3 },
-      Address: { fromString: address },
+      Address: { fromString: address, NULL: address('NQ07 0000 0000 0000 0000 0000 0000 0000 0000') },
       BufferUtils: { fromHex: () => new Uint8Array(), fromUtf8: () => new Uint8Array() },
       Policy: { STAKING_CONTRACT_ADDRESS: 'NQ00 STAKING' },
       PublicKey: { fromHex: () => ({ toAddress: () => address('NQ99 COSIGNER') }) },
