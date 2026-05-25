@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
 import Staking from './components/Staking.vue'
+import HTLC from './components/HTLC.vue';
 import { useNimiqMiniApp } from './composables/useNimiqMiniApp'
 
 const view = ref('kitchen-sink')
@@ -78,6 +79,9 @@ onMounted(initProvider)
     <button @click="view = 'staking'">
       Staking
     </button>
+    <button @click="view = 'htlc'">
+      HTLC
+    </button>
   </nav>
 
   <HelloWorld
@@ -88,7 +92,14 @@ onMounted(initProvider)
     :retry-init="retryInit"
   />
   <Staking
-    v-else
+    v-if="view === 'staking'"
+    :provider="provider"
+    :is-initializing="isInitializing"
+    :init-error="initError"
+    :retry-init="retryInit"
+  />
+  <HTLC
+    v-if="view === 'htlc'"
     :provider="provider"
     :is-initializing="isInitializing"
     :init-error="initError"
