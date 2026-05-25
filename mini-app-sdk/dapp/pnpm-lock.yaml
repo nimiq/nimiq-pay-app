@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@nimiq/mini-app-sdk':
-        specifier: 0.0.1
-        version: 0.0.1
+        specifier: 0.1.0
+        version: 0.1.0
       vue:
         specifier: ^3.5.24
         version: 3.5.24(typescript@5.9.3)
@@ -71,8 +71,8 @@ packages:
   '@napi-rs/wasm-runtime@1.0.7':
     resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
 
-  '@nimiq/mini-app-sdk@0.0.1':
-    resolution: {integrity: sha512-ZyNFTkJnLPJmrF/eAAUgE1bghh5hmT4UJtSFoYXNH2dZ6/ooIwf2UVa7bST9v4/83LdHXFQ5GNFfjCxO3h37Bg==}
+  '@nimiq/mini-app-sdk@0.1.0':
+    resolution: {integrity: sha512-QR5GGrL25U5xRkWdDhDMqY6npRXMtIu07Fe0cTXon5dLLlAuPhIaJU2egwASYITwFH1RXpYCE0JnufO88SleKA==}
 
   '@oxc-project/runtime@0.96.0':
     resolution: {integrity: sha512-34lh4o9CcSw09Hx6fKihPu85+m+4pmDlkXwJrLvN5nMq5JrcGhhihVM415zDqT8j8IixO1PYYdQZRN4SwQCncg==}
@@ -495,7 +495,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@nimiq/mini-app-sdk@0.0.1': {}
+  '@nimiq/mini-app-sdk@0.1.0': {}
 
   '@oxc-project/runtime@0.96.0': {}
 
