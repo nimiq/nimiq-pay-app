@@ -49,39 +49,60 @@ export async function handleDeepLink(event: URLOpenListenerEvent): Promise<void>
         logger.warn('nimiqpay://miniapp missing url param')
         return
       }
-      const normalized = normalizeMiniAppUrl(raw)
-      if (!normalized) {
-        logger.warn('Invalid mini-app url in deeplink:', raw)
+      await openMiniAppFromDeeplink(raw)
+      return
+    }
+
+    case 'https:':
+    case 'http:': {
+      if (url.host !== 'nimpay.app') {
+        logger.log('Unhandled deeplink host:', url.host)
         return
       }
-      // Reject before the user-facing trust gate so "Open anyway" can never reach
-      // a LAN/SSRF target, regardless of what the user taps.
-      const safety = isExternalDeepLinkUrlSafe(normalized)
-      if (!safety.ok) {
-        logger.warn('Refused unsafe mini-app deeplink:', normalized, safety.reasons)
+      const match = url.pathname.match(/^\/miniapps\/open\/(.+)$/)
+      if (!match) {
+        logger.log('Unhandled nimpay.app path:', url.pathname)
         return
       }
-      await until(useDecrypt().decrypted).toBeTruthy()
-      const store = useMiniApps()
-      if (!store.isTrustedMiniAppUrl(normalized)) {
-        const confirmed = await confirmUntrustedMiniApp({ normalizedUrl: normalized, rawUrl: raw })
-        if (!confirmed) {
-          logger.log('User declined untrusted mini-app deeplink:', normalized)
-          return
-        }
-      }
-      // Clear any preserved session + close its webview so PinView's reconnectAndShow
-      // does not race with — or stack on top of — this launch.
-      await Promise.all([
-        hasPendingSession() ? clearSession() : Promise.resolve(),
-        InAppBrowser.close().catch(err =>
-          logger.log('InAppBrowser.close before deeplink launch failed (likely no webview):', err)),
-      ])
-      await launchMiniApp({ url: normalized, source: 'deeplink', language: useApp().language })
+      // Decoded segment may itself contain a path; preserve original search/hash.
+      const raw = decodeURIComponent(match[1]) + url.search + url.hash
+      await openMiniAppFromDeeplink(raw)
       return
     }
 
     default:
       logger.log('Unhandled deeplink protocol:', url.protocol)
   }
+}
+
+async function openMiniAppFromDeeplink(raw: string): Promise<void> {
+  const normalized = normalizeMiniAppUrl(raw)
+  if (!normalized) {
+    logger.warn('Invalid mini-app url in deeplink:', raw)
+    return
+  }
+  // Reject before the user-facing trust gate so "Open anyway" can never reach
+  // a LAN/SSRF target, regardless of what the user taps.
+  const safety = isExternalDeepLinkUrlSafe(normalized)
+  if (!safety.ok) {
+    logger.warn('Refused unsafe mini-app deeplink:', normalized, safety.reasons)
+    return
+  }
+  await until(useDecrypt().decrypted).toBeTruthy()
+  const store = useMiniApps()
+  if (!store.isTrustedMiniAppUrl(normalized)) {
+    const confirmed = await confirmUntrustedMiniApp({ normalizedUrl: normalized, rawUrl: raw })
+    if (!confirmed) {
+      logger.log('User declined untrusted mini-app deeplink:', normalized)
+      return
+    }
+  }
+  // Clear any preserved session + close its webview so PinView's reconnectAndShow
+  // does not race with — or stack on top of — this launch.
+  await Promise.all([
+    hasPendingSession() ? clearSession() : Promise.resolve(),
+    InAppBrowser.close().catch(err =>
+      logger.log('InAppBrowser.close before deeplink launch failed (likely no webview):', err)),
+  ])
+  await launchMiniApp({ url: normalized, source: 'deeplink', language: useApp().language })
 }
