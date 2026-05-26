@@ -104,5 +104,6 @@ async function openMiniAppFromDeeplink(raw: string): Promise<void> {
     InAppBrowser.close().catch(err =>
       logger.log('InAppBrowser.close before deeplink launch failed (likely no webview):', err)),
   ])
-  await launchMiniApp({ url: normalized, source: 'deeplink', language: useApp().language })
+  const app = useApp()
+  await launchMiniApp({ url: normalized, source: 'deeplink', language: app.language, userFiat: app.selectedFiat })
 }

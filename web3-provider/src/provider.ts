@@ -251,6 +251,7 @@ window.ethereum = Ethereum
 
 window.nimiqPay = Object.freeze({
   language: window.__NIMIQ_PAY__?.lang,
+  userFiat: window.__NIMIQ_PAY__?.userFiat,
   requestDeviceIdentifier: async (options: { reason: string }): Promise<string> => {
     const reason = options?.reason
     if (typeof reason !== 'string' || reason.trim().length === 0) {

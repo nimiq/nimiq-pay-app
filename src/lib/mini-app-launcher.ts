@@ -11,6 +11,7 @@ import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
 import { normalizeMiniAppUrl } from '@/modals/mini-app-search'
+import { Fiat } from '@/stores/app'
 import { useMiniApps } from '@/stores/mini-apps'
 
 const logger = useLogger('MiniAppLauncher')
@@ -56,6 +57,8 @@ export interface LaunchMiniAppOptions {
   icon?: string
   /** UI language seeded into `window.__NIMIQ_PAY__`. Defaults to `'en'`. */
   language?: string
+  /** Fiat currency seeded into `window.__NIMIQ_PAY__`. Defaults to `Fiat.USD`. */
+  userFiat?: Fiat
 }
 
 /**
@@ -120,7 +123,10 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       getWeb3ProviderScript(),
       InAppBrowser.clearAllCookies(),
     ])
-    const hostContext = JSON.stringify({ lang: options.language ?? 'en' })
+    const hostContext = JSON.stringify({
+      lang: options.language ?? 'en',
+      userFiat: options.userFiat ?? Fiat.USD,
+    })
     const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
     // Attach BEFORE openWebView so events fired during the open animation aren't missed.

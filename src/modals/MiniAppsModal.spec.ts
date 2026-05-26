@@ -454,11 +454,13 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
-  it('seeds selected user language into the mini-app preShowScript', async () => {
-    const { useApp } = await import('@/stores/app')
+  it('seeds selected user language and fiat into the mini-app preShowScript', async () => {
+    const { useApp, Fiat } = await import('@/stores/app')
     const wrapper = mountModal()
     await flushPromises()
-    useApp().language = 'es'
+    const app = useApp()
+    app.language = 'es'
+    app.selectedFiat = Fiat.EUR
     await flushPromises()
 
     await wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"]').trigger('click')
@@ -466,6 +468,6 @@ describe('mini apps modal', () => {
 
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
-    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es"}')
+    expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR"}')
   })
 })

@@ -30,7 +30,7 @@ const { searchedDescriptions, ensureDescription } = store
 const recentDAppsWithTestIds = computed(() =>
   (recentDAppsWithDescriptions.value ?? []).map(dapp => ({ ...dapp, testId: toUrlTestId(dapp.url) })),
 )
-const { language } = storeToRefs(useApp())
+const { language, selectedFiat } = storeToRefs(useApp())
 
 const searchQuery = ref('')
 const isSearching = computed(() => !!searchQuery.value.trim())
@@ -97,6 +97,7 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
     source,
     description: resolved?.description,
     language: language.value,
+    userFiat: selectedFiat.value,
   })
 }
 </script>

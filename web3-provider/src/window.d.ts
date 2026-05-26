@@ -18,6 +18,9 @@ interface EIP6963AnnounceProviderEvent extends CustomEvent {
   detail: EIP6963ProviderDetail
 }
 
+/** Mirrors `Fiat` from `@nimiq/mini-app-sdk` — keep values in sync. */
+type NimiqPayFiat = 'USD' | 'EUR' | 'CRC' | 'GMD'
+
 /**
  * Window interface extension for `mobileApp` injected by InAppBrowser plugin
  */
@@ -33,10 +36,12 @@ export declare global {
     /** Ethereum RPC URL injected by the host before this script runs. */
     __ETH_RPC_URL__?: string
     /** Host context seeded by Nimiq Pay before the provider script runs. */
-    __NIMIQ_PAY__?: { lang?: string }
+    __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat }
     /** Public host APIs exposed to mini apps. */
     nimiqPay?: {
       readonly language?: string
+      /** Fiat currency selected by the user in Nimiq Pay. */
+      readonly userFiat?: NimiqPayFiat
       /**
        * Request a pseudonymous, per-origin device identifier (64-char hex SHA-256).
        * Prompts the user on first call per origin; subsequent calls auto-resolve.

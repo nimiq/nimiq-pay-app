@@ -1,16 +1,8 @@
-declare global {
-  interface Window {
-    /** Host APIs exposed by Nimiq Pay when running as a mini app. */
-    nimiqPay?: {
-      readonly language?: string
-      /**
-       * Request a pseudonymous, per-origin device identifier (64-char hex SHA-256).
-       * Prompts the user on first call per origin; subsequent calls auto-resolve.
-       * @param options.reason - shown verbatim to the user
-       * @throws if the user denies the prompt
-       */
-      requestDeviceIdentifier: (options: { reason: string }) => Promise<string>
-    }
+// Augments the published `@nimiq/mini-app-sdk` types until 0.2.0 ships
+// `userFiat` upstream. Remove once the dapp depends on a version that includes it.
+declare module '@nimiq/mini-app-sdk' {
+  interface NimiqPayHostContext {
+    readonly userFiat?: 'USD' | 'EUR' | 'CRC' | 'GMD'
   }
 }
 

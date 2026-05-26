@@ -17,6 +17,9 @@ const hostLanguage = computed((): string => {
   return navigator.language.split('-')[0] || 'en'
 })
 
+// Host-selected fiat currency (Nimiq Pay). Falls back to USD outside of Nimiq Pay.
+const hostFiat = computed((): string => window.nimiqPay?.userFiat ?? 'USD')
+
 interface I18nEntry { greeting: string, tagline: string }
 const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay mini-app starter' }
 const I18N: Record<string, I18nEntry> = {
@@ -57,6 +60,9 @@ onMounted(initProvider)
 
   <p data-testid="host-language" style="opacity: 0.7; margin: 0 0 8px;">
     {{ t.greeting }} — {{ t.tagline }} ({{ hostLanguage }})
+  </p>
+  <p data-testid="host-fiat" style="opacity: 0.7; margin: 0 0 8px;">
+    Fiat: {{ hostFiat }}
   </p>
   <p data-testid="device-identifier" style="opacity: 0.7; margin: 0 0 8px;">
     Device Identifier: {{ deviceIdentifier ?? 'not requested' }}
