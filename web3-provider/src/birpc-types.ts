@@ -26,4 +26,6 @@ export interface NativeFunctions {
 /** Functions the webview exposes (called by native) */
 export interface WebviewFunctions {
   updateRpcUrl: (rpcUrl: string) => void
+  /** Clears the webview-side approved-accounts cache for a network (omit to clear all). */
+  clearAccountCache: (network: 'nimiq' | 'ethereum') => void
 }

@@ -6,12 +6,16 @@ import { NimiqProvider } from '@nimiq/web3-provider-nimiq'
 import { Web3Provider } from '@trustwallet/web3-provider-core'
 import { EthereumProvider } from '@trustwallet/web3-provider-ethereum'
 import { createBirpc } from 'birpc'
+import { clearCachedAccounts, getCachedAccounts, getCacheGeneration, setCachedAccounts } from './account-cache'
 import { ALLOWED_EVM_CHAIN_IDS } from './allowedChains'
 import { handleAddEthereumChain, handleSwitchEthereumChain } from './chain-request-handler'
 import { generateUUID } from './utils'
 
 /** Chains added dynamically via wallet_addEthereumChain (session-scoped) */
 const dynamicChainIds = new Set<number>()
+
+/** In-flight native `listAccounts`/`requestAccounts` promises per network — prevents duplicate prompts on concurrent calls. */
+const inFlightAccountRequests = new Map<'nimiq' | 'ethereum', Promise<unknown>>()
 
 function isChainAvailable(chainId: number): boolean {
   return ALLOWED_EVM_CHAIN_IDS.has(chainId) || dynamicChainIds.has(chainId)
@@ -58,6 +62,10 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
     Ethereum.setRPCUrl(rpcUrl)
     log(`Updated RPC URL to ${rpcUrl}`)
   },
+  clearAccountCache: (network: 'nimiq' | 'ethereum') => {
+    clearCachedAccounts(network)
+    log(`Cleared account cache for ${network}`)
+  },
 }, {
   post: data => window.mobileApp?.postMessage({ detail: data }),
   on: (fn) => {
@@ -74,6 +82,58 @@ const provider = new Web3Provider({
   strategy: 'CALLBACK',
   handler: (params) => {
     log('Dapp requested:', params)
+
+    const forwardToNative = (onResult?: (result: unknown) => void): Promise<unknown> => {
+      const { id, ...requestParams } = params
+      return birpc.handleRequest(requestParams)
+        .then((result) => {
+          onResult?.(result)
+          provider.sendResponse(id!, result)
+          return result
+        })
+        .catch((error: any) => {
+          provider.sendError(id!, {
+            code: error.code ?? -32603,
+            message: error.message ?? 'Unknown error',
+          })
+          throw error
+        })
+    }
+
+    const fetchAccounts = (network: 'nimiq' | 'ethereum') => {
+      const cached = getCachedAccounts(network)
+      if (cached) {
+        provider.sendResponse(params.id!, cached)
+        return
+      }
+      const existing = inFlightAccountRequests.get(network)
+      if (existing) {
+        // Ride the in-flight native call so we only ever show one prompt for
+        // concurrent requests; respond to this caller's id once it resolves.
+        existing
+          .then(result => provider.sendResponse(params.id!, result))
+          .catch((error: any) => provider.sendError(params.id!, {
+            code: error.code ?? -32603,
+            message: error.message ?? 'Unknown error',
+          }))
+        return
+      }
+      // Capture the generation before launching: if clearCachedAccounts fires
+      // mid-flight, the generation will advance and we drop the stale write.
+      const gen = getCacheGeneration(network)
+      const nativePromise = forwardToNative((result) => {
+        if (Array.isArray(result) && getCacheGeneration(network) === gen)
+          setCachedAccounts(network, result as string[])
+      })
+      inFlightAccountRequests.set(network, nativePromise)
+      nativePromise
+        .catch(() => { /* sendError already delivered; swallow to avoid unhandledrejection on the originator chain */ })
+        .finally(() => {
+          if (inFlightAccountRequests.get(network) === nativePromise)
+            inFlightAccountRequests.delete(network)
+        })
+    }
+
     switch (params.name) {
       case 'switchEthereumChain':
         if (hasChainId(params.object)) {
@@ -135,14 +195,28 @@ const provider = new Web3Provider({
         }
         break
 
+      case 'listAccounts': {
+        if (params.network !== 'nimiq') {
+          console.warn(`[Provider] Unexpected network '${params.network}' for listAccounts; forwarding without cache.`)
+          forwardToNative()
+          break
+        }
+        fetchAccounts('nimiq')
+        break
+      }
+
+      case 'requestAccounts': {
+        if (params.network !== 'ethereum') {
+          console.warn(`[Provider] Unexpected network '${params.network}' for requestAccounts; forwarding without cache.`)
+          forwardToNative()
+          break
+        }
+        fetchAccounts('ethereum')
+        break
+      }
+
       default: {
-        const { id, ...requestParams } = params
-        birpc.handleRequest(requestParams)
-          .then(result => provider.sendResponse(id!, result))
-          .catch((error: any) => provider.sendError(id!, {
-            code: error.code ?? -32603,
-            message: error.message ?? 'Unknown error',
-          }))
+        forwardToNative()
         break
       }
     }

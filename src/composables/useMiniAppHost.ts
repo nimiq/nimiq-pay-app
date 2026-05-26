@@ -8,7 +8,7 @@ import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, Stakin
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
 import { formatUsdtAmount } from '@/lib/assets'
@@ -192,6 +192,8 @@ export class MiniAppHost {
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
+  /** Stops the remote-signer watcher registered in the constructor. */
+  private stopRemoteAddressWatcher: (() => void) | null = null
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
 
@@ -215,6 +217,19 @@ export class MiniAppHost {
       evmRpcUrls: config.evmRpcUrls,
     }
     isMiniAppActive.value = true
+
+    // When the remote signer address changes (added/refreshed mid-session), the
+    // previously-cached Nimiq accounts list is stale. Clear the webview cache so
+    // the dApp re-prompts and receives the up-to-date account set.
+    this.stopRemoteAddressWatcher = watch(
+      () => useRemoteSigner().remoteAddress,
+      (newAddress, oldAddress) => {
+        if (newAddress === oldAddress)
+          return
+        logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
+        this.birpc?.clearAccountCache('nimiq')
+      },
+    )
   }
 
   /**
@@ -238,6 +253,8 @@ export class MiniAppHost {
     if (this.destroyed) {
       return
     }
+    this.stopRemoteAddressWatcher?.()
+    this.stopRemoteAddressWatcher = null
     _activeMiniAppSession = null
     isMiniAppActive.value = false
     await this.inAppBrowser?.clearAllCookies()
@@ -380,6 +397,10 @@ export class MiniAppHost {
           this.messageFromWebviewListener = handle
         })
       },
+      // Fire-and-forget host→webview methods. Without this birpc treats them as
+      // request/response and the discarded promises would reject with a 120s
+      // timeout if the webview disappears mid-flight (unhandledrejection).
+      eventNames: ['updateRpcUrl', 'clearAccountCache'],
       timeout: 120_000,
     })
   }
@@ -598,7 +619,18 @@ export class MiniAppHost {
   }
 
   private async listEthAccounts(): Promise<string[]> {
-    // Request user confirmation
+    // If a prior wallet_requestPermissions already granted eth_accounts in this
+    // session, reuse that approval instead of re-prompting.
+    if (this.ethAccountsPermission) {
+      const cachedAddress = this.ethAccountsPermission.caveats
+        .find(c => c.type === 'restrictReturnedAccounts')
+        ?.value[0]
+      if (cachedAddress) {
+        trackWeb3Request({ requestType: 'request_accounts', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+        return [cachedAddress]
+      }
+    }
+
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
