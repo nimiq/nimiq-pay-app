@@ -242,7 +242,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
         /* value */ BigInt(partialArgs.amount),
         /* fee */ 0n,
         /* flags */ 0,
-        /* validityStartHeight */ getValidityStartHeight(),
+        /* validityStartHeight */ partialArgs.validityStartHeight ?? getValidityStartHeight(),
         /* networkId */ networkId.value,
       )
 

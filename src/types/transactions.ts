@@ -298,6 +298,7 @@ export type HtlcTransaction = BaseTransaction & {
   rail?: Rail.MiniApp
   railMerchantId?: string // Mini-app URL
   merchantName?: string // Mini-app name
+  validityStartHeight?: number
 
   // Unused properties for type compatibility
   merchantCategory?: undefined
@@ -412,7 +413,7 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 
 export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'fee' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
 export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
-export type PartialHtlcTxArgs = Pick<HtlcTransaction, 'sender' | 'recipient' | 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { htlcData: HtlcData }
+export type PartialHtlcTxArgs = Pick<HtlcTransaction, 'sender' | 'recipient' | 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer' | 'validityStartHeight'> & { htlcData: HtlcData }
 
 export type PartialSendTxArgs
   = | PartialUserTxArgs
