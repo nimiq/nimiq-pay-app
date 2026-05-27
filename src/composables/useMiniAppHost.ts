@@ -1844,13 +1844,17 @@ export class MiniAppHost {
     let htlcSenderSignature: SignatureProof
     let htlcRecipientSignature: SignatureProof
     let value: number
+    // let fee: number | undefined
+    let validityStartHeight: number
 
-    if (Array.isArray(params) && params.length >= 5) {
+    if (Array.isArray(params) && params.length >= 7) {
       contractAddress = Nimiq.Address.fromString(params[0])
       recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
       htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[2]))
       htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[3]))
       value = Number(params[4])
+      // fee = params[5] !== undefined ? Number(params[5]) : undefined
+      validityStartHeight = Number(params[6])
     }
     else if (typeof params === 'object' && params !== null) {
       contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
@@ -1858,6 +1862,8 @@ export class MiniAppHost {
       htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcSenderSignature))
       htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcRecipientSignature))
       value = Number((params as any).value)
+      // fee = (params as any).fee !== undefined ? Number((params as any).fee) : undefined
+      validityStartHeight = Number((params as any).validityStartHeight)
     }
     else {
       throw new InternalError('Invalid parameters for sendRedeemEarlyHtlcTransaction method')
@@ -1877,6 +1883,7 @@ export class MiniAppHost {
         senderSignatureProof: htlcSenderSignature,
         recipientSignatureProof: htlcRecipientSignature,
       },
+      validityStartHeight,
     } satisfies PartialHtlcTxArgs
 
     // Early redeem doesn't require the user's consent, as the two required signatures are already passed in the params.
@@ -1898,16 +1905,22 @@ export class MiniAppHost {
     let contractAddress: Address
     let recipient: Address
     let value: number
+    // let fee: number | undefined
+    let validityStartHeight: number
 
-    if (Array.isArray(params) && params.length >= 3) {
+    if (Array.isArray(params) && params.length >= 5) {
       contractAddress = Nimiq.Address.fromString(params[0])
       recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
       value = Number(params[2])
+      // fee = params[3] !== undefined ? Number(params[3]) : undefined
+      validityStartHeight = Number(params[4])
     }
     else if (typeof params === 'object' && params !== null) {
       contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
       recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
       value = Number((params as any).value)
+      // fee = (params as any).fee !== undefined ? Number((params as any).fee) : undefined
+      validityStartHeight = Number((params as any).validityStartHeight)
     }
     else {
       throw new InternalError('Invalid parameters for signRedeemEarlyHtlcTransaction method')
@@ -1954,7 +1967,7 @@ export class MiniAppHost {
       /* value */ BigInt(value),
       /* fee */ 0n,
       /* flags */ 0,
-      /* validityStartHeight */ Math.max(useRemoteSigner().remoteHeight, useNimiqNetwork().height) + 1,
+      /* validityStartHeight */ validityStartHeight,
       /* networkId */ useNimiqNetwork().networkId,
     )
 
@@ -1983,6 +1996,7 @@ export class MiniAppHost {
     htlcData: HtlcData
     sender: string
     recipient: string
+    validityStartHeight?: number
   })): Promise<string> {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
@@ -2069,6 +2083,7 @@ export class MiniAppHost {
         railMerchantId: this.config.url,
         merchantName: this.config.title,
         htlcData: txData.htlcData!,
+        validityStartHeight: txData.validityStartHeight,
       } satisfies PartialHtlcTxArgs
     }
     else {

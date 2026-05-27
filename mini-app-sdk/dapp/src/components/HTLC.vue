@@ -37,7 +37,6 @@ const addresses = ref<string[]>();
 const account = ref<Account>();
 const contractAddress = ref<string>();
 const contract = ref<HTLContract | null>();
-const earlySigProof = ref<string>();
 const blockNumber = ref(0);
 
 let blockNumberInterval: number | undefined;
@@ -93,6 +92,7 @@ function logout() {
     contractAddress.value = undefined;
     contract.value = undefined;
     earlySigProof.value = undefined;
+    validityStartHeight.value = undefined;
 }
 
 async function fetchBalance() {
@@ -102,7 +102,11 @@ async function fetchBalance() {
 }
 
 async function fetchContract() {
-    if (!provider.value || !contractAddress.value) return;
+    if (!provider.value) return;
+    if (!contractAddress.value) {
+        contract.value = null;
+        return;
+    }
     try {
         contract.value = await provider.value.request({ method: 'getAccountByAddress', params: [contractAddress.value] });
     } catch (e) {
@@ -245,12 +249,16 @@ async function redeemTimeout() {
     }
 }
 
+const validityStartHeight = ref<number>()
+const earlySigProof = ref<string>();
 async function createEarlySignature() {
     if (!provider.value || !contract.value) return;
     try {
+        validityStartHeight.value = blockNumber.value
         const result = await provider.value.signRedeemEarlyHtlcTransaction({
             contractAddress: contract.value.address,
             value: contract.value.balance,
+            validityStartHeight: validityStartHeight.value,
         });
         if (typeof result === 'object' && 'error' in result) {
             alert('Error signing early redeem: ' + result.error.message);
@@ -264,13 +272,14 @@ async function createEarlySignature() {
 }
 
 async function redeemEarly() {
-    if (!provider.value || !contract.value || !earlySigProof.value) return;
+    if (!provider.value || !contract.value || !earlySigProof.value || !validityStartHeight.value) return;
     try {
         const result = await provider.value.sendRedeemEarlyHtlcTransaction({
             contractAddress: contract.value.address,
             htlcSenderSignature: new Array(98).fill('00').join(''), // Zero sigProof
             htlcRecipientSignature: earlySigProof.value,
             value: contract.value.balance,
+            validityStartHeight: validityStartHeight.value,
         });
         if (typeof result === 'object' && 'error' in result) {
             alert('Error redeeming HTLC (early): ' + result.error.message);
@@ -305,7 +314,8 @@ async function redeemEarly() {
 
             <h3>Contract</h3>
             <p>
-                Balance: {{ contract ? (contract.balance / 1e5 + ' NIM') : contract === undefined ? 'Loading...' : '0 NIM' }}<br/>
+                Balance: {{ contract ? (contract.balance / 1e5 + ' NIM') : contract === undefined ? 'Loading...' : '-' }}<br/>
+                Timeout: {{ contract ? Math.round((contract.timeout - now) / 1e3) + 's' : contract === undefined ? 'Loading...' : '-' }}
             </p>
 
             <h3>Actions</h3>
