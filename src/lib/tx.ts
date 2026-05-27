@@ -554,8 +554,8 @@ export async function getSignedTxByRemote(
 }
 
 function createDepositData() {
-  const remoteAddress = useRemoteSigner().remoteAddress
-  if (!remoteAddress)
+  const remotePublicKey = useRemoteSigner().remotePublicKey
+  if (!remotePublicKey)
     throw new Error('Remote public key is undefined') // no translation as not user-facing
   const data = new Nimiq.SerialBuffer(
     /* sender */ 20
@@ -566,7 +566,7 @@ function createDepositData() {
     /* timeout */ + 8,
   )
   data.write(useLocalWallet().localAddress.serialize())
-  data.write(remoteAddress.serialize())
+  data.write(Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().serialize())
   data.writeUint8(1 /* BLAKE2B */)
   data.write(new Uint8Array(32)) // Hash root - the zero hash, because this HTLC will only ever be redeemed "early" or after timeout
   data.writeUint8(1) // Hash count
