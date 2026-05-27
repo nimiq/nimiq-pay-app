@@ -24,10 +24,44 @@ const wordList = Nimiq.MnemonicUtils.DEFAULT_WORDLIST
 
 watchEffect(() => emit('loginWords', loginWords.value))
 let timeout = 0
+
+function distributeTokens(originInput: HTMLInputElement, tokens: string[]) {
+  // Full phrase always starts at input 1, partial pastes resume at the focused input.
+  const startIndex = tokens.length === 12 ? 0 : Number(originInput.id) - 1
+  const count = Math.min(tokens.length, 12 - startIndex)
+
+  for (let i = 0; i < count; i++) {
+    const token = tokens[i]
+    const targetIndex = startIndex + i
+    const targetInput = document.getElementById((targetIndex + 1).toString().padStart(2, '0')) as HTMLInputElement | null
+    if (!targetInput)
+      continue
+
+    targetInput.value = token
+    const parent = targetInput.parentElement as HTMLElement | null
+    parent?.classList.remove('!text-pumpkin')
+    loginWords.value[targetIndex] = wordList.includes(token) ? token : ''
+  }
+
+  const nextEmpty = loginWords.value.findIndex(w => !w)
+  const focusIndex = nextEmpty === -1 ? 11 : nextEmpty
+  const focusInput = document.getElementById((focusIndex + 1).toString().padStart(2, '0')) as HTMLInputElement | null
+  focusInput?.focus()
+}
+
 function inputHandler(e: Event) {
   timeout && clearTimeout(timeout)
 
   const input = e.target as HTMLInputElement
+
+  // Multi-token input (paste or any value containing separators) — distribute across inputs.
+  // WebView paste menu fires `input` with inputType=insertFromPaste, not `paste`, so we detect here.
+  const tokens = input.value.toLowerCase().trim().split(/[\s,]+/).filter(Boolean)
+  if (tokens.length > 1) {
+    input.value = ''
+    distributeTokens(input, tokens)
+    return
+  }
 
   // Check if key is space and skip to next input
   if (e instanceof InputEvent && e.data === ' ') {
