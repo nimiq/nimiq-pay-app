@@ -44,7 +44,7 @@ export type SignedTransactionResult
     | { outcome: 'unknown', error: string }
 
 export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSignedTxOptions = {}): Promise<SignedTransactionResult> {
-  logger.log(partialArgs.transfer)
+  logger.log(`In getSignedTx: transfer = ${partialArgs.transfer}`)
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
       return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
@@ -202,6 +202,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
             /* hash count */ + 1
             /* hash algorithm */ + 1
             /* hash root */ + partialArgs.htlcData.hashRoot.length
+            /* pre image length */ + 1
             /* pre image */ + partialArgs.htlcData.preImage.length
             /* signature proof */ + Nimiq.SignatureProof.SINGLE_SIG_SIZE,
           )
@@ -209,6 +210,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
           proof.writeUint8(partialArgs.htlcData.hashCount)
           proof.writeUint8(partialArgs.htlcData.hashAlgorithm)
           proof.write(partialArgs.htlcData.hashRoot)
+          proof.writeUint8(partialArgs.htlcData.preImage.length)
           proof.write(partialArgs.htlcData.preImage)
           break
         case 'redeem-timeout':
@@ -229,36 +231,36 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
           proof.write(partialArgs.htlcData.senderSignatureProof.serialize())
           break
       }
+
+      const tx = new Nimiq.Transaction(
+        /* sender */ Nimiq.Address.fromString(partialArgs.sender),
+        /* senderType */ Nimiq.AccountType.HTLC,
+        /* senderData */ new Uint8Array(0),
+        /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
+        /* recipientType */ Nimiq.AccountType.Basic,
+        /* recipientData */ new Uint8Array(0),
+        /* value */ BigInt(partialArgs.amount),
+        /* fee */ 0n,
+        /* flags */ 0,
+        /* validityStartHeight */ getValidityStartHeight(),
+        /* networkId */ networkId.value,
+      )
+
+      if (partialArgs.htlcData.type !== 'redeem-early') {
+        // Create the signature and set it on the proof
+        const { privateKey, publicKey } = useLocalWallet().localWallet
+        const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
+        const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig)
+        proof.write(sigProof.serialize())
+      }
+      tx.proof = proof
+
+      return { outcome: 'signed', signedTx: tx }
     }
     catch (e) {
       logger.error('Error creating HTLC transaction', e)
       return { outcome: 'rejected', error: e instanceof Error ? e.message : String(e) }
     }
-
-    const tx = new Nimiq.Transaction(
-      /* sender */ Nimiq.Address.fromString(partialArgs.sender),
-      /* senderType */ Nimiq.AccountType.HTLC,
-      /* senderData */ new Uint8Array(0),
-      /* recipient */ Nimiq.Address.fromString(partialArgs.recipient),
-      /* recipientType */ Nimiq.AccountType.Basic,
-      /* recipientData */ new Uint8Array(0),
-      /* value */ BigInt(partialArgs.amount),
-      /* fee */ 0n,
-      /* flags */ 0,
-      /* validityStartHeight */ getValidityStartHeight(),
-      /* networkId */ networkId.value,
-    )
-
-    if (partialArgs.htlcData.type !== 'redeem-early') {
-      // Create the signature and set it on the proof
-      const { privateKey, publicKey } = useLocalWallet().localWallet
-      const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
-      const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig)
-      proof.write(sigProof.serialize())
-    }
-    tx.proof = proof
-
-    return { outcome: 'signed', signedTx: tx }
   }
   else if (partialArgs.transfer === Transfer.Staking) {
     let data: Uint8Array
