@@ -11,12 +11,16 @@ interface Account {
 interface HTLContract {
     address: string;
     balance: number;
-    // TODO
+    type: 'htlc';
+    sender: string;
+    recipient: string;
+    hashRoot: {
+        algorithm: 'blake2b' | 'sha256' | 'sha512';
+        hash: string;
+    };
     hashCount: number;
-    hashAlgorithm: number;
-    hashRoot: string;
-    totalAmount: number;
     timeout: number;
+    totalAmount: number;
 }
 
 const props = defineProps<{
@@ -133,11 +137,11 @@ const canRedeemEarly = computed(() => {
     return !!canRedeemRegular.value && !!earlySigProof.value;
 })
 
-const ZERO_PUBKEY_ADDRESS = '' // TODO
-const PRE_IMAGE = ''
+const ZERO_PUBKEY_ADDRESS = 'NQ73 H7MG SSLA D4ES UB6H BT83 D69H RQ59 97NA'
+const PRE_IMAGE = '343e07b93a2308d1d8bff4fc97992d2e3bf28af3378232d47781d2b4514ab741'
 const HASH_ALGORITHM = 'sha256'
 const HASH_COUNT = 1
-const HASH_ROOT = '' // TODO
+const HASH_ROOT = '95f8f342c129d514b4dfcfff2cec406a3770697224d5a6a803a2783c71926079'
 
 async function createHtlcForRegularRedeem() {
     if (!provider.value || !addresses.value) return;
@@ -147,7 +151,7 @@ async function createHtlcForRegularRedeem() {
     try {
         const result = await provider.value.sendNewHtlcTransaction({
             htlcSender: ZERO_PUBKEY_ADDRESS,
-            htlcRecipient: addresses.value[0],
+            htlcRecipient: addresses.value[0]!,
             hashCount: HASH_COUNT,
             hashAlgorithm: HASH_ALGORITHM,
             hashRoot: HASH_ROOT,
@@ -205,11 +209,11 @@ async function redeemRegular() {
     if (!provider.value || !contract.value) return;
     try {
         const result = await provider.value.sendRedeemRegularHtlcTransaction({
-            contractAddress: contractAddress.value,
+            contractAddress: contract.value.address,
             preImage: PRE_IMAGE,
-            hashCount: HASH_COUNT,
-            hashAlgorithm: HASH_ALGORITHM,
-            hashRoot: HASH_ROOT,
+            hashCount: contract.value.hashCount,
+            hashAlgorithm: contract.value.hashRoot.algorithm,
+            hashRoot: contract.value.hashRoot.hash,
             value: contract.value.balance,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -227,7 +231,7 @@ async function redeemTimeout() {
     if (!provider.value || !contract.value) return;
     try {
         const result = await provider.value.sendRedeemTimeoutHtlcTransaction({
-            contractAddress: contractAddress.value,
+            contractAddress: contract.value.address,
             value: contract.value.balance,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -245,7 +249,7 @@ async function createEarlySignature() {
     if (!provider.value || !contract.value) return;
     try {
         const result = await provider.value.signRedeemEarlyHtlcTransaction({
-            contractAddress: contractAddress.value,
+            contractAddress: contract.value.address,
             value: contract.value.balance,
         });
         if (typeof result === 'object' && 'error' in result) {
@@ -263,8 +267,8 @@ async function redeemEarly() {
     if (!provider.value || !contract.value || !earlySigProof.value) return;
     try {
         const result = await provider.value.sendRedeemEarlyHtlcTransaction({
-            contractAddress: contractAddress.value,
-            htlcSenderSignature: '', // TODO Zero sigProof
+            contractAddress: contract.value.address,
+            htlcSenderSignature: new Array(98).fill('00').join(''), // Zero sigProof
             htlcRecipientSignature: earlySigProof.value,
             value: contract.value.balance,
         });
