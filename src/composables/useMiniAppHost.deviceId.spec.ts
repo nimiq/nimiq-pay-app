@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useRemoteSigner } from '@/stores/remote-signer'
 import { MiniAppHost } from './useMiniAppHost'
 
 const {
@@ -81,6 +82,7 @@ function createHost(opts: { url?: string, title?: string, confirm?: ReturnType<t
 beforeEach(() => {
   vi.clearAllMocks()
   hasDeviceIdConsent.mockReturnValue(false)
+  vi.mocked(useRemoteSigner).mockReturnValue({ remoteAddress: undefined } as never)
 })
 
 describe('requestDeviceIdentifier RPC', () => {
