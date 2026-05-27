@@ -287,6 +287,8 @@ export type HtlcData = {
 } | {
   type: 'redeem-timeout'
 } | {
+  type: 'sign-early'
+} | {
   type: 'redeem-early'
   senderSignatureProof: Nimiq.SignatureProof
   recipientSignatureProof: Nimiq.SignatureProof

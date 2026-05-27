@@ -1,6 +1,6 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
-import type { Address } from '@nimiq/core'
+import type { Address, SignatureProof } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
@@ -1805,19 +1805,164 @@ export class MiniAppHost {
     })
   }
 
-  private async sendRedeemTimeoutHtlcTransaction(_params: unknown): Promise<string> {
-    throw new Error('Not implemented')
-    // TODO
+  private async sendRedeemTimeoutHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 3) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      value = Number(params[2])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemTimeoutHtlcTransaction method')
+    }
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'redeem-timeout',
+      },
+      htlcTitle: 'Redeem HTLC (timeout)',
+      value,
+      analyticsRequestType: 'nimiq_htlc_redeem_timeout',
+    })
   }
 
-  private async sendRedeemEarlyHtlcTransaction(_params: unknown): Promise<string> {
-    throw new Error('Not implemented')
-    // TODO
+  private async sendRedeemEarlyHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let htlcSenderSignature: SignatureProof
+    let htlcRecipientSignature: SignatureProof
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 5) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[2]))
+      htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[3]))
+      value = Number(params[4])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcSenderSignature))
+      htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcRecipientSignature))
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemEarlyHtlcTransaction method')
+    }
+
+    const partialTx = {
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      amount: value,
+      title: 'Redeem HTLC (early)',
+      transfer: Transfer.HTLC,
+      rail: Rail.MiniApp,
+      railMerchantId: this.config.url,
+      merchantName: this.config.title,
+      htlcData: {
+        type: 'redeem-early',
+        senderSignatureProof: htlcSenderSignature,
+        recipientSignatureProof: htlcRecipientSignature,
+      },
+    } satisfies PartialHtlcTxArgs
+
+    // Early redeem doesn't require the user's consent, as the two required signatures are already passed in the params.
+    // So we shortcut `sendPayment` with its user confirmation and go straight to sending.
+    const analyticsRequestType = 'nimiq_htlc_redeem_early'
+    const result = await useTransactions().sendTx(partialTx)
+    trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: result.outcome === 'submitted' })
+    if (result.outcome === 'rejected')
+      throw new InternalError(`Failed to send payment transaction: ${result.error}`)
+    if (result.outcome === 'unknown') {
+      logger.log('[MiniAppHost] Transaction outcome unknown', { stagedHash: result.stagedHash })
+      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE)
+    }
+    return result.tx.hash
   }
 
-  private async signRedeemEarlyHtlcTransaction(_params: unknown): Promise<string> {
-    throw new Error('Not implemented')
-    // TODO
+  private async signRedeemEarlyHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 3) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      value = Number(params[2])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for signRedeemEarlyHtlcTransaction method')
+    }
+
+    const analyticsRequestType = 'nimiq_htlc_sign_early'
+
+    // Because this request generates and replies with a signature, it should not go through the create/send transaction
+    // flow, as that would be semantically wrong.
+    // Thus we ask for confirmation and generate the signature directly here.
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided')
+    }
+    const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
+      type: 'transaction',
+      data: {
+        recipient: recipient.toUserFriendlyAddress(),
+        recipientType: Nimiq.AccountType.Basic,
+        amount: value,
+        fee: 0,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+      },
+      htlcData: {
+        type: 'sign-early',
+      },
+      network: 'nimiq',
+    })
+    if (!confirmed) {
+      trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+    }
+
+    const tx = new Nimiq.Transaction(
+      /* sender */ contractAddress,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ recipient,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ new Uint8Array(0),
+      /* value */ BigInt(value),
+      /* fee */ 0n,
+      /* flags */ 0,
+      /* validityStartHeight */ Math.max(useRemoteSigner().remoteHeight, useNimiqNetwork().height) + 1,
+      /* networkId */ useNimiqNetwork().networkId,
+    )
+
+    const { privateKey, publicKey } = useLocalWallet().localWallet
+    const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
+    const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig)
+    trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+    return Nimiq.BufferUtils.toHex(sigProof.serialize())
   }
 
   private async sendPayment(txData: {

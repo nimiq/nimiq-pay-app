@@ -220,6 +220,8 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
           )
           proof.writeUint8(2) // timeout resolve
           break
+        case 'sign-early':
+          throw new Error('sign-early HTLC data type should not go through `getSignedTx`')
         case 'redeem-early':
           proof = new Nimiq.SerialBuffer(
             /* type */ 1
