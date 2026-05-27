@@ -133,6 +133,10 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (timeout)') })
             break
           }
+          case 'sign-early': {
+            rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (early)') })
+            break
+          }
           case 'redeem-early': {
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (early)') })
             rows.push({ title: 'Sender Signature', value: Nimiq.BufferUtils.toHex(request.htlcData.senderSignatureProof.serialize()) })
