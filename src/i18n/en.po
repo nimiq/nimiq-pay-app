@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#: src/stores/local-wallet.ts:45
+#: src/stores/local-wallet.ts:46
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
 
@@ -104,7 +104,7 @@ msgstr ""
 msgid "Amount too small"
 msgstr ""
 
-#: src/stores/local-wallet.ts:40
+#: src/stores/local-wallet.ts:41
 msgid "An unknown error occurred while importing words"
 msgstr ""
 
@@ -825,7 +825,7 @@ msgstr ""
 msgid "Invalid QR code"
 msgstr ""
 
-#: src/stores/local-wallet.ts:51
+#: src/stores/local-wallet.ts:52
 msgid "Invalid recovery words"
 msgstr ""
 
@@ -1015,8 +1015,8 @@ msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
 #: src/stores/local-wallet.ts:26
-#: src/stores/local-wallet.ts:76
-#: src/stores/local-wallet.ts:85
+#: src/stores/local-wallet.ts:77
+#: src/stores/local-wallet.ts:86
 #: src/stores/polygon-usdt.ts:1631
 #: src/stores/polygon-usdt.ts:1713
 msgid "No account has been found"
@@ -1627,7 +1627,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:362
+#: src/composables/useMiniAppHost.ts:379
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1731,7 +1731,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:326
+#: src/composables/useMiniAppHost.ts:343
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2017,7 +2017,7 @@ msgstr ""
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/stores/local-wallet.ts:48
+#: src/stores/local-wallet.ts:49
 msgid "Wrong number of recovery words"
 msgstr ""
 

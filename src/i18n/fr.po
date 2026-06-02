@@ -553,6 +553,11 @@ msgstr "Frais inclus"
 msgid "Includes {fee} in fees"
 msgstr ""
 
+#, fuzzy
+#| msgid "Points Payment"
+msgid "Incoming Payments"
+msgstr "Paiement des points"
+
 msgid "Insert PIN to confirm"
 msgstr "Insérer le code PIN pour confirmer"
 
@@ -870,6 +875,9 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr "Pas de demande de paiement en cours"
 
+msgid "Notification when a payment arrives"
+msgstr ""
+
 msgid "Notifications about new campaigns and other important events"
 msgstr "Notifications sur les nouvelles campagnes et autres événements importants"
 
@@ -938,6 +946,11 @@ msgstr "Paiement non valide"
 
 msgid "Payment preview"
 msgstr "Aperçu des paiements"
+
+#, fuzzy
+#| msgid "Payment expired"
+msgid "Payment received"
+msgstr "Paiement expiré"
 
 msgid "Payment rejected due to unknown reason"
 msgstr ""
@@ -1228,6 +1241,11 @@ msgid "Something went wrong claiming the cashback"
 msgstr "Un problème s'est produit lors de la demande de cashback"
 
 msgid "Something went wrong decrypting the database"
+msgstr "Un problème est survenu lors du décryptage de la base de données"
+
+#, fuzzy
+#| msgid "Something went wrong decrypting the database"
+msgid "Something went wrong decrypting the database. Try reloading the app."
 msgstr "Un problème est survenu lors du décryptage de la base de données"
 
 msgid "Something went wrong deleting the account"
@@ -1633,6 +1651,11 @@ msgstr ""
 
 msgid "You have reached your daily spending limit"
 msgstr ""
+
+#, fuzzy
+#| msgid "You received Cryptocity Points"
+msgid "You received {amount}"
+msgstr "Vous avez reçu des points Cryptocity"
 
 msgid "You received Cryptocity Points"
 msgstr "Vous avez reçu des points Cryptocity"
