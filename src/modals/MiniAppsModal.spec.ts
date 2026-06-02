@@ -68,10 +68,15 @@ const {
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
     getPlatform: () => 'ios',
+    isNativePlatform: () => false,
   },
   CapacitorHttp: {
     get: capacitorHttpGet,
   },
+}))
+
+vi.mock('@capacitor/keyboard', () => ({
+  Keyboard: { addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })), hide: vi.fn(() => Promise.resolve()) },
 }))
 
 vi.mock('@capacitor/preferences', () => ({
