@@ -9,7 +9,7 @@ appId: ${APP_ID}
 
 # Verify USDT top-up screen content (aria-label on step title)
 - assertVisible: Top up address
-- assertVisible: Polygon USDT
+- assertVisible: Receive USDT on Polygon
 
 # Verify Polygon address is displayed (starts with 0x)
 - assertVisible:

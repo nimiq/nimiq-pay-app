@@ -1,7 +1,7 @@
 appId: ${APP_ID}
 ---
 # Verifies that nimiqpay://miniapp?url=<url> deeplinks to UNTRUSTED URLs surface the
-# anti-scam warning modal, that "Cancel" aborts the launch, and that "Open anyway"
+# anti-scam warning modal, that "Don't open" aborts the launch, and that "Open anyway"
 # launches the webview after explicit user confirmation.
 
 - runFlow: ../subflows/launch_app.yaml
@@ -14,13 +14,13 @@ appId: ${APP_ID}
 - extendedWaitUntil:
     visible: Open this mini app?
     timeout: 10000
-- assertVisible: Cancel
+- assertVisible: Don't open
 - assertVisible: Open anyway
 
 - takeScreenshot: nimiq-pay-tests/.maestro/screenshots/mini_apps_deeplink_untrusted_warning
 
 # Cancel path: webview must not open.
-- tapOn: Cancel
+- tapOn: Don't open
 - waitForAnimationToEnd
 - assertVisible: Top Up
 - assertNotVisible: example.org
