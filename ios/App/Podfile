@@ -29,7 +29,7 @@ def capacitor_pods
   pod 'CapacitorToast', :path => '../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast'
   pod 'CapawesomeCapacitorPosthog', :path => '../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.4.2_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog'
   pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview'
-  pod 'CapgoInappbrowser', :path => '../../node_modules/.pnpm/@capgo+inappbrowser@8.6.6_@capacitor+core@8.3.4/node_modules/@capgo/inappbrowser'
+  pod 'CapgoCapacitorInappbrowser', :path => '../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.16_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser'
   pod 'RdlaboCapacitorScreenshotEvent', :path => '../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event'
   pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.15_@capacitor+core@8.3.4/node_modules/capacitor-extended-dialog'
   pod 'CapacitorSumsubMobileSdk', :path => '../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.7_@capacitor+core@8.3.4/node_modules/capacitor-sumsub-mobile-sdk'

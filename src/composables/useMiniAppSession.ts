@@ -1,5 +1,5 @@
 import type { MiniAppHost, MiniAppSessionState } from '@/composables/useMiniAppHost'
-import { InAppBrowser } from '@capgo/inappbrowser'
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { useLogger } from '@/composables/useLogger'
 
 const logger = useLogger('MiniAppSession')

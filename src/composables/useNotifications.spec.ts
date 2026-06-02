@@ -47,7 +47,7 @@ vi.mock('@capacitor/push-notifications', () => ({
   },
 }))
 
-vi.mock('@capgo/inappbrowser', () => ({
+vi.mock('@capgo/capacitor-inappbrowser', () => ({
   InAppBrowser: {
     close: () => state.inAppBrowserClose(),
   },

@@ -1,5 +1,5 @@
 import type { PluginListenerHandle } from '@capacitor/core'
-import type { InAppBrowser } from '@capgo/inappbrowser'
+import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'

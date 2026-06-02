@@ -1,6 +1,6 @@
 import type { DAppOpenSource } from '@/lib/analytics'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
-import { InAppBrowser, ToolBarType } from '@capgo/inappbrowser'
+import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { MiniAppHost } from '@/composables/useMiniAppHost'

@@ -6,7 +6,7 @@ const { clearAllCookies } = vi.hoisted(() => ({
   clearAllCookies: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('@capgo/inappbrowser', () => ({
+vi.mock('@capgo/capacitor-inappbrowser', () => ({
   InAppBrowser: {
     clearAllCookies,
     addListener: vi.fn(),

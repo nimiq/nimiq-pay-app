@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Keyboard } from '@capacitor/keyboard'
-import { InAppBrowser } from '@capgo/inappbrowser'
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'

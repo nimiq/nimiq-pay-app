@@ -98,7 +98,7 @@ vi.mock('@capacitor/screen-orientation', () => ({
   },
 }))
 
-vi.mock('@capgo/inappbrowser', () => ({
+vi.mock('@capgo/capacitor-inappbrowser', () => ({
   InAppBrowser: {
     openWebView,
     addListener,

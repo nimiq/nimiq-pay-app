@@ -1,5 +1,5 @@
 import type { URLOpenListenerEvent } from '@capacitor/app'
-import { InAppBrowser } from '@capgo/inappbrowser'
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useLogger } from '@/composables/useLogger'

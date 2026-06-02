@@ -54,7 +54,7 @@ vi.mock('@/stores/app', () => ({
 
 vi.mock('@/composables/useMiniAppSession', () => ({ clearSession, hasPendingSession }))
 
-vi.mock('@capgo/inappbrowser', () => ({
+vi.mock('@capgo/capacitor-inappbrowser', () => ({
   InAppBrowser: { close: inAppBrowserClose },
 }))
 
