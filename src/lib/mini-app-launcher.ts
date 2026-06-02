@@ -1,4 +1,6 @@
 import type { DAppOpenSource } from '@/lib/analytics'
+import { Capacitor } from '@capacitor/core'
+import { Keyboard } from '@capacitor/keyboard'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
 import { ref } from 'vue'
@@ -47,6 +49,38 @@ function getWeb3ProviderScript(): Promise<string> {
 /** Eagerly fetch the web3-provider script so the first mini-app open is instant. */
 export function warmUpWeb3ProviderScript(): void {
   void getWeb3ProviderScript()
+}
+
+/**
+ * Blur the focused input and wait until the soft keyboard is fully hidden before
+ * opening the webview. The native InAppBrowser pins the webview to the safe area once
+ * at present-time; opening while the keyboard is up sizes it to the compressed area and
+ * never recomputes, leaving a blank gap below. No-op when no input is focused (button /
+ * deeplink paths), so it adds no latency there.
+ */
+async function dismissKeyboardBeforeOpen(): Promise<void> {
+  if (!Capacitor.isNativePlatform())
+    return
+  const active = document.activeElement as HTMLElement | null
+  const focused = !!active
+    && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)
+  if (!focused)
+    return
+  active?.blur()
+  await new Promise<void>((resolve) => {
+    let done = false
+    const finish = (sub?: { remove: () => void }) => {
+      if (done)
+        return
+      done = true
+      sub?.remove()
+      resolve()
+    }
+    Keyboard.addListener('keyboardDidHide', () => finish())
+      .then(sub => setTimeout(finish, 350, sub)) // fallback if the event never fires
+      .catch(() => finish())
+    Keyboard.hide().catch(() => {})
+  })
 }
 
 export interface LaunchMiniAppOptions {
@@ -151,6 +185,10 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       clearGuard()
     })
     watchdog = setTimeout(clearGuard, 15_000)
+
+    // Keyboard must be hidden before present so the webview isn't sized to the
+    // above-keyboard area (the loading spinner already shows via openingMiniAppUrl).
+    await dismissKeyboardBeforeOpen()
 
     await InAppBrowser.openWebView({
       url: targetUrl,
