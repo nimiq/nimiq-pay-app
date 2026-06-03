@@ -157,3 +157,11 @@ export function calculateDisplayedDecimals(amount: number | null, currency: Cryp
     return Math.max(decimals, 1)
   return decimals
 }
+
+// iOS Lockdown Mode disables WebAssembly in WKWebView, which is exactly what the
+// Nimiq client needs (`Nimiq.default()`). Validate a minimal module to detect it.
+export function isWasmAvailable(): boolean {
+  return typeof WebAssembly === 'object'
+    && typeof WebAssembly.validate === 'function'
+    && WebAssembly.validate(Uint8Array.of(0, 97, 115, 109, 1, 0, 0, 0))
+}

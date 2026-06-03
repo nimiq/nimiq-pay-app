@@ -623,6 +623,10 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
+#: src/views/LockdownScreen.vue:20
+msgid "Go to Settings → Privacy & Security → Lockdown Mode"
+msgstr ""
+
 #: src/composables/useGoCryptoMonitoring.ts:105
 msgid "GoCrypto refused connecting"
 msgstr ""
@@ -662,6 +666,10 @@ msgstr ""
 
 #: src/views/SetupView.vue:28
 msgid "I have a promo code"
+msgstr ""
+
+#: src/views/LockdownScreen.vue:28
+msgid "I have turned it off"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:128
@@ -925,6 +933,10 @@ msgstr ""
 msgid "Lock card"
 msgstr ""
 
+#: src/views/LockdownScreen.vue:14
+msgid "Lockdown Mode is on"
+msgstr ""
+
 #: src/modals/LogOutModal/Confirm.vue:16
 msgid ""
 "Log in again with your recovery words.\n"
@@ -1000,6 +1012,10 @@ msgstr ""
 
 #: src/components/BricksInput.vue:10
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
+msgstr ""
+
+#: src/views/LockdownScreen.vue:17
+msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:98
@@ -1813,6 +1829,10 @@ msgstr ""
 
 #: src/components/ValidateWords.vue:28
 msgid "Try again"
+msgstr ""
+
+#: src/views/LockdownScreen.vue:23
+msgid "Turn it off, then reopen Nimiq Pay."
 msgstr ""
 
 #: src/stores/points.ts:106

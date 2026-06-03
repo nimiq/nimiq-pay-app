@@ -1,28 +1,31 @@
 import { IonicVue } from '@ionic/vue'
 import { devtools } from '@vue/devtools'
+import { LockdownMode } from 'capacitor-lockdown-mode'
+
 // import { applyPolyfills, defineCustomElements as jeepSqlite } from 'jeep-sqlite/loader'
 import { JeepSqlite } from 'jeep-sqlite/dist/components/jeep-sqlite'
-
 import { createPinia, storeToRefs } from 'pinia'
 import { createApp } from 'vue'
 import VueVirtualScroller from 'vue-virtual-scroller'
+
 import { useDecrypt } from '@/composables/useDecrypt'
 
 import { useDevice } from '@/composables/useDevice'
-
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
 import { installNodeGlobals } from '@/lib/node-globals'
+import { isWasmAvailable } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 /* Libs */
 import { useConn } from '@/stores/conn'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
 
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import App from './App.vue'
 import router from './router'
 import { useMiniApps } from './stores/mini-apps'
 import { useNaka } from './stores/naka'
+import LockdownScreen from './views/LockdownScreen.vue'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
 /* Basic CSS for apps built with Ionic */
@@ -67,6 +70,24 @@ window.addEventListener('DOMContentLoaded', async () => {
     catch (e) {
       console.warn('Legacy SW cleanup failed:', e)
     }
+  }
+
+  // iOS Lockdown Mode disables WebAssembly, which the Nimiq client needs. Without this gate
+  // `nimiq-network.ts` would throw on `Nimiq.default()` and retry forever, hanging the app.
+  // Show a blocking screen instead of booting the normal flow.
+  if (useDevice().isIOS && !isWasmAvailable()) {
+    const lockdownApp = createApp(LockdownScreen)
+    lockdownApp.use(IonicVue)
+    lockdownApp.use(createPinia())
+    lockdownApp.use(i18nRegistration)
+    const { language } = storeToRefs(useApp())
+    await setLanguage(language.value)
+    lockdownApp.mount('#app')
+    // Classify the cause (true Lockdown Mode vs other WASM failure) for diagnostics only.
+    LockdownMode.isLockdownModeEnabled()
+      .then(result => useLogger('LockdownMode').log('WebAssembly unavailable on iOS', result))
+      .catch(() => {})
+    return
   }
 
   const app = createApp(App)
