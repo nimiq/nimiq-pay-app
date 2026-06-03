@@ -399,6 +399,11 @@ function parsePolygonRequestLink(content: string): Result<PaymentRequestData, st
   if (parsed.chainId !== EthereumChain.POLYGON_MAINNET)
     return { error: i18n.t('Invalid USDT Wallet request. Only Polygon network requests are supported.'), data: undefined }
 
+  // Short-form EIP-681 receive QR (e.g. ethereum:0x…@137) carries the recipient
+  // directly with no token contract or amount — treat it as a plain USDT recipient.
+  if (!parsed.contractAddress && parsed.amount === undefined)
+    return parsePolygonAddress(parsed.recipient)
+
   if (parsed.currency !== Currency.USDT) {
     return { error: i18n.t('Invalid USDT Wallet request. Only USDT Wallet requests are supported.'), data: undefined }
   }

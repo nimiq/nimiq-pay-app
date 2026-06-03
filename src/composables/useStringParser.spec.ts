@@ -100,6 +100,20 @@ describe('useStringParser', () => {
     })
   })
 
+  it('parses a short-form EIP-681 Polygon receive URI as a USDT payment target', async () => {
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('ethereum:0x1111111111111111111111111111111111111111@137')
+
+    expect(error).toBeUndefined()
+    expect(data).toMatchObject({
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount: 0,
+      transfer: 'user-payment',
+      asset: 'USDT',
+      chain: 'Polygon',
+    })
+  })
+
   it('rejects native MATIC polygon protocol links from the USDT payment flow', async () => {
     const { useStringParser } = await import('./useStringParser')
     const { data, error } = await useStringParser().getPaymentRequestData('polygon:0x1111111111111111111111111111111111111111?value=2500000')
