@@ -8,15 +8,18 @@ import { refDebounced } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import TestnetFaucet from '@/components/TestnetFaucet.vue'
 import TransactionItem from '@/components/TransactionItem.vue'
 import { i18n } from '@/i18n/i18n-setup'
-import { debounceDelay, debounceMaxWait } from '@/lib'
+import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
+import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
+import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
 
 const { isUpdatingTransactions, isConsensusNeeded } = storeToRefs(useLocks())
@@ -25,6 +28,12 @@ const { transactionsToShow: transactions } = storeToRefs(useTransactions())
 const { loadMoreTxs, canLoadMore, setTxHidden } = useTransactions()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { hasLoadedHistory: hasLoadedPolygonHistory } = storeToRefs(usePolygonUsdt())
+const { localAddress, localBalance } = storeToRefs(useLocalWallet())
+const { remoteBalance } = storeToRefs(useRemoteSigner())
+
+const faucetAddress = computed(() => localAddress.value.toUserFriendlyAddress())
+// Only offer the faucet to a truly empty account: no transactions, no displayed (remote) balance, no local funds.
+const showFaucet = computed(() => isTestnet && isNimiqAsset.value && transactions.value.length === 0 && remoteBalance.value === 0 && localBalance.value === 0)
 
 const SKELETON_COUNT = 4
 
@@ -131,6 +140,13 @@ function onRowClick(tx: ExternalTransaction) {
       </button>
     </li>
   </ol>
+
+  <div v-else-if="showFaucet" class="flex flex-col items-center gap-y-2 mt-12 text-center">
+    <p class="text-base text-space/60">
+      {{ $t('Your testnet account is empty.') }}
+    </p>
+    <TestnetFaucet :address="faucetAddress" />
+  </div>
 </template>
 
 <style scoped>

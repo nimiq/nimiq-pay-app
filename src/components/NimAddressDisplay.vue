@@ -7,8 +7,10 @@ import { storeToRefs } from 'pinia'
 import { computed, onUnmounted } from 'vue'
 import AddressDisplay from '@/components/AddressDisplay.vue'
 import PolygonWarning from '@/components/PolygonWarning.vue'
+import TestnetFaucet from '@/components/TestnetFaucet.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
+import { isTestnet } from '@/lib'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -56,6 +58,7 @@ onUnmounted(() => {
       :tooltip-message="$t('The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss.')"
     />
     <div class="w-full mt-auto mb-4 flex flex-col items-center gap-4">
+      <TestnetFaucet v-if="isTestnet && isNimiqAsset" :address="address" />
       <IonButton
         aria-label="Copy address"
         size="small"

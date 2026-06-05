@@ -53,7 +53,7 @@ msgid "Add Stake"
 msgstr ""
 
 #: src/components/AddressDisplay.vue:50
-#: src/components/NimAddressDisplay.vue:37
+#: src/components/NimAddressDisplay.vue:39
 msgid "Address copied to clipboard"
 msgstr ""
 
@@ -207,7 +207,7 @@ msgid "Calculating Polygon fee..."
 msgstr ""
 
 #: src/components/PhoneInput.vue:66
-#: src/components/TheHomeTransactions.vue:58
+#: src/components/TheHomeTransactions.vue:67
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
 msgid "Cancel"
@@ -351,7 +351,7 @@ msgstr ""
 msgid "Copied to the clipboard!"
 msgstr ""
 
-#: src/components/NimAddressDisplay.vue:22
+#: src/components/NimAddressDisplay.vue:23
 msgid "Copy address"
 msgstr ""
 
@@ -589,6 +589,10 @@ msgstr ""
 msgid "Failed to set app as preferred NFC service: {error}"
 msgstr ""
 
+#: src/lib/faucet.ts:35
+msgid "Faucet error - please try again."
+msgstr ""
+
 #: src/modals/PointsModal.vue:45
 msgid "Featured"
 msgstr ""
@@ -602,6 +606,10 @@ msgstr ""
 msgid "Fees may apply {fee}"
 msgstr ""
 
+#: src/components/TestnetFaucet.vue:18
+msgid "Free NIM is on its way"
+msgstr ""
+
 #: src/modals/MiniAppWarningModal.vue:50
 msgid "Full link:"
 msgstr ""
@@ -609,6 +617,10 @@ msgstr ""
 #: src/components/OnBoardingScreen.vue:34
 #: src/lib/flows/steps.ts:369
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
+msgstr ""
+
+#: src/components/TestnetFaucet.vue:8
+msgid "Get free NIM"
 msgstr ""
 
 #: src/lib/flows/steps.ts:305
@@ -619,7 +631,7 @@ msgstr ""
 msgid "Get Points"
 msgstr ""
 
-#: src/views/SetupView.vue:24
+#: src/views/SetupView.vue:13
 msgid "Get Started"
 msgstr ""
 
@@ -644,11 +656,11 @@ msgstr ""
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:59
+#: src/components/TheHomeTransactions.vue:68
 msgid "Hide"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:53
+#: src/components/TheHomeTransactions.vue:62
 msgid "Hide transaction?"
 msgstr ""
 
@@ -664,7 +676,7 @@ msgstr ""
 msgid "I agree to NAKA Card's {terms}"
 msgstr ""
 
-#: src/views/SetupView.vue:28
+#: src/views/SetupView.vue:17
 msgid "I have a promo code"
 msgstr ""
 
@@ -860,7 +872,7 @@ msgstr ""
 msgid "Invalid USDT address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:415
+#: src/composables/useStringParser.ts:420
 msgid "Invalid USDT Wallet request. Missing amount or recipient."
 msgstr ""
 
@@ -869,8 +881,8 @@ msgid "Invalid USDT Wallet request. Only Polygon network requests are supported.
 msgstr ""
 
 #: src/composables/useStringParser.ts:397
-#: src/composables/useStringParser.ts:403
-#: src/composables/useStringParser.ts:407
+#: src/composables/useStringParser.ts:408
+#: src/composables/useStringParser.ts:412
 msgid "Invalid USDT Wallet request. Only USDT Wallet requests are supported."
 msgstr ""
 
@@ -947,7 +959,7 @@ msgstr ""
 msgid "Log Out"
 msgstr ""
 
-#: src/views/SetupView.vue:31
+#: src/views/SetupView.vue:20
 msgid "Login"
 msgstr ""
 
@@ -1413,6 +1425,15 @@ msgstr ""
 msgid "Reopen Mini App on unlock"
 msgstr ""
 
+#: src/lib/faucet.ts:37
+#: src/lib/faucet.ts:42
+msgid "Request failed"
+msgstr ""
+
+#: src/components/TestnetFaucet.vue:8
+msgid "Requesting…"
+msgstr ""
+
 #: src/views/HomeView.vue:175
 msgid "Requires Phone Number"
 msgstr ""
@@ -1461,7 +1482,7 @@ msgstr ""
 msgid "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
 msgstr ""
 
-#: src/components/NimAddressDisplay.vue:31
+#: src/components/NimAddressDisplay.vue:32
 msgid "Scan Cashlink"
 msgstr ""
 
@@ -1707,6 +1728,10 @@ msgstr ""
 msgid "The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost."
 msgstr ""
 
+#: src/lib/faucet.ts:33
+msgid "There are currently no free NIM available."
+msgstr ""
+
 #: src/lib/flows/steps.ts:709
 msgid "There is no \"Forgot password\""
 msgstr ""
@@ -1775,11 +1800,15 @@ msgstr ""
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:56
+#: src/lib/faucet.ts:31
+msgid "This service is currently not available in your region."
+msgstr ""
+
+#: src/components/TheHomeTransactions.vue:65
 msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:55
+#: src/components/TheHomeTransactions.vue:64
 msgid "This transaction will reappear in your history."
 msgstr ""
 
@@ -1843,11 +1872,11 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:59
+#: src/components/TheHomeTransactions.vue:68
 msgid "Unhide"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:53
+#: src/components/TheHomeTransactions.vue:62
 msgid "Unhide transaction?"
 msgstr ""
 
@@ -2049,6 +2078,10 @@ msgstr ""
 msgid "You can not use this address"
 msgstr ""
 
+#: src/lib/faucet.ts:29
+msgid "You can receive more free NIM in {waitTime} hours."
+msgstr ""
+
 #: src/components/PhoneInput.vue:23
 msgid "You can try again in {remainingTime}"
 msgstr ""
@@ -2125,6 +2158,10 @@ msgstr ""
 
 #: src/components/PhoneInput.vue:9
 msgid "Your number"
+msgstr ""
+
+#: src/components/TheHomeTransactions.vue:58
+msgid "Your testnet account is empty."
 msgstr ""
 
 #: src/modals/MiniAppWarningModal.vue:82
