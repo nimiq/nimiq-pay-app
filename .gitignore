@@ -55,5 +55,4 @@ google-service-account.json
 .npmrc
 public/web3-provider.js
 .serena/
-graphify-out/cache
 nimiq-pay-tests/.maestro/screenshots
