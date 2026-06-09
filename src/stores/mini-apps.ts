@@ -8,6 +8,9 @@ import { kv, kvPreferences } from '@/stores/app'
 
 const REMOTE_JSON_URL = 'https://raw.githubusercontent.com/nimiq/awesome/main/src/data/dist/nimiq-mini-apps.json'
 
+// Base for the nimiq/awesome "report this Mini App" page: `${REPORT_BASE}/<type>/<slug>/report`.
+const REPORT_BASE = 'https://nimpay.app/miniapps'
+
 export type MiniAppType = 'nimiq' | 'evm'
 
 export interface DApp {
@@ -17,6 +20,20 @@ export interface DApp {
   description?: string
   featured: boolean
   type?: MiniAppType
+}
+
+export interface RowDApp {
+  url: string
+  name: string
+  icon: string
+  description?: string
+  type?: MiniAppType
+}
+
+export interface MiniAppMenuContext {
+  app: Pick<RowDApp, 'name' | 'url' | 'icon'>
+  reportUrl?: string
+  removable: boolean
 }
 
 interface BaseDApp {
@@ -205,6 +222,16 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return baseDApps.value.find(d => stripTrailingSlash(d.url) === target)?.icon
   }
 
+  /**
+   * Report-page URL for an awesome-list Mini App, or undefined when `url` isn't in the
+   * curated remote list (only those carry the `slug`/`type` the report endpoint needs).
+   */
+  function getMiniAppReportUrl(url: string): string | undefined {
+    const target = stripTrailingSlash(url)
+    const remote = remoteApps.value.find(r => stripTrailingSlash(r.url) === target)
+    return remote ? `${REPORT_BASE}/${remote.type}/${remote.slug}/report` : undefined
+  }
+
   /** Top-N slice of recently-viewed for the marketplace UI. */
   const recentDAppsForDisplay = computed(() => recentlyViewedDApps.value.slice(0, MAX_RECENT_DISPLAY))
 
@@ -293,6 +320,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
     removeRecentlyViewed,
     isTrustedMiniAppUrl,
     iconForUrl,
+    getMiniAppReportUrl,
     hasDeviceIdConsent,
     grantDeviceIdConsent,
   }

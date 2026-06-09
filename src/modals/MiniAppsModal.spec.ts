@@ -459,6 +459,27 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
+  it('builds the report url only for awesome-list apps', async () => {
+    mountModal()
+    await flushPromises()
+
+    const { useMiniApps } = await import('@/stores/mini-apps')
+    const store = useMiniApps()
+
+    expect(store.getMiniAppReportUrl('https://evm-mini-wallet.vercel.app/')).toBe('https://nimpay.app/miniapps/evm/evm-mini-wallet/report')
+    // Matches regardless of trailing slash, mirroring iconForUrl / isTrustedMiniAppUrl.
+    expect(store.getMiniAppReportUrl('https://evm-mini-wallet.vercel.app')).toBe('https://nimpay.app/miniapps/evm/evm-mini-wallet/report')
+    expect(store.getMiniAppReportUrl('https://not-in-the-list.example/')).toBeUndefined()
+  })
+
+  it('renders the kebab menu trigger on an awesome-list row', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="featured-dapp-menu-https-evm-mini-wallet-vercel-app"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="dapp-menu-https-app-uniswap-org"]').exists()).toBe(true)
+  })
+
   it('seeds selected user language and fiat into the mini-app preShowScript', async () => {
     const { useApp, Fiat } = await import('@/stores/app')
     const wrapper = mountModal()

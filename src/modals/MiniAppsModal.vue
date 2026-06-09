@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import type { TypeFilterValue } from '@/components/MiniAppTypeFilter.vue'
 import type { DAppOpenSource } from '@/lib/analytics'
-import type { MiniAppType } from '@/stores/mini-apps'
+import type { MiniAppMenuContext, MiniAppType } from '@/stores/mini-apps'
 import { IonSearchbar, IonSkeletonText } from '@ionic/vue'
 import { useStorageAsync } from '@vueuse/core'
-import { AnimatePresence, motion } from 'motion-v'
+import { AnimatePresence } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
-import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
-import MiniAppTypeBadge from '@/components/MiniAppTypeBadge.vue'
+import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
+import MiniAppRow from '@/components/MiniAppRow.vue'
 import MiniAppTypeFilter from '@/components/MiniAppTypeFilter.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
-import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { kvPreferences, useApp } from '@/stores/app'
@@ -100,6 +99,14 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
     userFiat: selectedFiat.value,
   })
 }
+
+const menuOpen = ref(false)
+const menuContext = ref<MiniAppMenuContext | null>(null)
+
+function openMenu(context: MiniAppMenuContext) {
+  menuContext.value = context
+  menuOpen.value = true
+}
 </script>
 
 <template>
@@ -122,46 +129,18 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
 
       <MiniAppTypeFilter v-model="typeFilter" data-testid="mini-app-type-filter" />
 
-      <button
+      <MiniAppRow
         v-if="searchedUrlApp"
-        data-testid="searched-dapp-button"
-        class="flex items-center gap-3 text-left transition-opacity"
-        :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+        :dapp="{ url: searchedUrlApp.url, name: searchedUrlApp.title, icon: searchedUrlApp.icon, description: searchedUrlApp.description, type: searchedUrlApp.type }"
+        :opening="isOpeningUrl(searchedUrlApp.url)"
         :disabled="isOpeningAny"
-        @click="openMiniApp(searchedUrlApp.url, searchedUrlApp.title, 'search')"
-      >
-        <div class="relative w-14 h-14 shrink-0">
-          <img
-            :src="searchedUrlApp.icon"
-            :alt="searchedUrlApp.title"
-            class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-            :class="{ 'opacity-40': isOpeningUrl(searchedUrlApp.url) }"
-            @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-          >
-          <motion.div
-            v-if="isOpeningUrl(searchedUrlApp.url)"
-            :data-testid="`dapp-icon-loading-${toUrlTestId(searchedUrlApp.url)}`"
-            class="absolute inset-0 flex items-center justify-center"
-            :initial="{ opacity: 0, scale: 0.85 }"
-            :animate="{ opacity: 1, scale: 1 }"
-            :transition="{ duration: 0.16, ease: 'easeOut' }"
-          >
-            <LoadingSpinnerIcon class="size-6" />
-          </motion.div>
-          <MiniAppTypeBadge v-if="searchedUrlApp.type" :type="searchedUrlApp.type" />
-        </div>
-        <div class="flex flex-col min-w-0">
-          <span class="font-bold text-base truncate">{{ searchedUrlApp.title }}</span>
-          <span class="text-xs text-space/60 truncate">{{ searchedUrlApp.url }}</span>
-          <span
-            v-if="searchedUrlApp.description"
-            class="text-sm text-space/50 truncate"
-          >
-            {{ searchedUrlApp.description }}
-          </span>
-          <IonSkeletonText v-else-if="searchedUrlApp.isLoading" :animated="true" class="h-4 w-3/4 rounded" />
-        </div>
-      </button>
+        :description-loading="searchedUrlApp.isLoading"
+        button-testid="searched-dapp-button"
+        :icon-loading-testid="`dapp-icon-loading-${toUrlTestId(searchedUrlApp.url)}`"
+        :menu-testid="`searched-dapp-menu-${toUrlTestId(searchedUrlApp.url)}`"
+        @open="openMiniApp(searchedUrlApp.url, searchedUrlApp.title, 'search')"
+        @menu="openMenu"
+      />
 
       <!-- Recently Viewed (shown only when not searching) -->
       <template v-if="!searchQuery.trim() && filteredRecent.length > 0">
@@ -179,44 +158,16 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
               @launch="openMiniApp(dapp.url, dapp.name, 'recent')"
               @delete="store.removeRecentlyViewed(dapp.url)"
             >
-              <div
-                :data-testid="`recent-dapp-button-${dapp.testId}`"
-                class="flex items-center gap-3 transition-opacity select-none"
-                :class="{ 'opacity-50': isOpeningAny }"
-              >
-                <div class="relative w-14 h-14 shrink-0">
-                  <img
-                    :src="dapp.icon"
-                    :alt="dapp.name"
-                    class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity pointer-events-none"
-                    :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-                    draggable="false"
-                    @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-                  >
-                  <motion.div
-                    v-if="isOpeningUrl(dapp.url)"
-                    class="absolute inset-0 flex items-center justify-center"
-                    :initial="{ opacity: 0, scale: 0.85 }"
-                    :animate="{ opacity: 1, scale: 1 }"
-                    :transition="{ duration: 0.16, ease: 'easeOut' }"
-                  >
-                    <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-                  </motion.div>
-                  <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
-                </div>
-                <div class="flex flex-col min-w-0">
-                  <span class="font-bold text-base">{{ dapp.name }}</span>
-                  <motion.span
-                    :key="dapp.description || dapp.url"
-                    class="text-sm text-space/50 truncate"
-                    :initial="{ opacity: 0, y: 4 }"
-                    :animate="{ opacity: 1, y: 0 }"
-                    :transition="{ duration: 0.16, ease: 'easeOut' }"
-                  >
-                    {{ dapp.description || dapp.url }}
-                  </motion.span>
-                </div>
-              </div>
+              <MiniAppRow
+                :dapp="dapp"
+                :opening="isOpeningUrl(dapp.url)"
+                :disabled="isOpeningAny"
+                :tappable="false"
+                :removable="true"
+                :button-testid="`recent-dapp-button-${dapp.testId}`"
+                :menu-testid="`recent-dapp-menu-${dapp.testId}`"
+                @menu="openMenu"
+              />
             </SwipeToDeleteRow>
           </AnimatePresence>
         </div>
@@ -244,49 +195,19 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
           {{ featuredLabel }}
         </p>
         <div class="flex flex-col gap-4 text-left">
-          <button
+          <MiniAppRow
             v-for="dapp in filteredDApps"
             :key="dapp.url"
-            :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
-            class="flex items-center gap-3 text-left transition-opacity"
-            :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+            :dapp="dapp"
+            :opening="isOpeningUrl(dapp.url)"
             :disabled="isOpeningAny"
-            @click="openMiniApp(dapp.url, dapp.name, 'featured')"
-          >
-            <div class="relative w-14 h-14 shrink-0">
-              <img
-                :src="dapp.icon"
-                :alt="dapp.name"
-                class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-                :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-                @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-              >
-              <motion.div
-                v-if="isOpeningUrl(dapp.url)"
-                :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
-                class="absolute inset-0 flex items-center justify-center"
-                :initial="{ opacity: 0, scale: 0.85 }"
-                :animate="{ opacity: 1, scale: 1 }"
-                :transition="{ duration: 0.16, ease: 'easeOut' }"
-              >
-                <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-              </motion.div>
-              <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
-            </div>
-            <div class="flex flex-col min-w-0">
-              <span class="font-bold text-base">{{ dapp.name }}</span>
-              <motion.span
-                :key="dapp.description || dapp.url"
-                :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
-                class="text-sm text-space/50 truncate"
-                :initial="{ opacity: 0, y: 4 }"
-                :animate="{ opacity: 1, y: 0 }"
-                :transition="{ duration: 0.16, ease: 'easeOut' }"
-              >
-                {{ dapp.description || dapp.url }}
-              </motion.span>
-            </div>
-          </button>
+            :button-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
+            :subtitle-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
+            :icon-loading-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+            :menu-testid="`search-result-menu-${toUrlTestId(dapp.url)}`"
+            @open="openMiniApp(dapp.url, dapp.name, 'featured')"
+            @menu="openMenu"
+          />
           <p
             v-if="filteredDApps.length === 0"
             class="text-sm text-space/60"
@@ -304,49 +225,19 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
             Featured Apps
           </p>
           <div class="flex flex-col gap-4 text-left">
-            <button
+            <MiniAppRow
               v-for="dapp in filteredFeatured"
               :key="dapp.url"
-              :data-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
-              class="flex items-center gap-3 text-left transition-opacity"
-              :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+              :dapp="dapp"
+              :opening="isOpeningUrl(dapp.url)"
               :disabled="isOpeningAny"
-              @click="openMiniApp(dapp.url, dapp.name, 'featured')"
-            >
-              <div class="relative w-14 h-14 shrink-0">
-                <img
-                  :src="dapp.icon"
-                  :alt="dapp.name"
-                  class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-                  :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-                  @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-                >
-                <motion.div
-                  v-if="isOpeningUrl(dapp.url)"
-                  :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
-                  class="absolute inset-0 flex items-center justify-center"
-                  :initial="{ opacity: 0, scale: 0.85 }"
-                  :animate="{ opacity: 1, scale: 1 }"
-                  :transition="{ duration: 0.16, ease: 'easeOut' }"
-                >
-                  <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-                </motion.div>
-                <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
-              </div>
-              <div class="flex flex-col min-w-0">
-                <span class="font-bold text-base">{{ dapp.name }}</span>
-                <motion.span
-                  :key="dapp.description || dapp.url"
-                  :data-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
-                  class="text-sm text-space/50 truncate"
-                  :initial="{ opacity: 0, y: 4 }"
-                  :animate="{ opacity: 1, y: 0 }"
-                  :transition="{ duration: 0.16, ease: 'easeOut' }"
-                >
-                  {{ dapp.description || dapp.url }}
-                </motion.span>
-              </div>
-            </button>
+              :button-testid="`featured-dapp-button-${toUrlTestId(dapp.url)}`"
+              :subtitle-testid="`featured-dapp-subtitle-${toUrlTestId(dapp.url)}`"
+              :icon-loading-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+              :menu-testid="`featured-dapp-menu-${toUrlTestId(dapp.url)}`"
+              @open="openMiniApp(dapp.url, dapp.name, 'featured')"
+              @menu="openMenu"
+            />
           </div>
         </template>
 
@@ -356,48 +247,18 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
             All Apps
           </p>
           <div class="flex flex-col gap-4 text-left">
-            <button
+            <MiniAppRow
               v-for="dapp in filteredNonFeatured"
               :key="dapp.url"
-              :data-testid="`dapp-button-${toUrlTestId(dapp.url)}`"
-              class="flex items-center gap-3 text-left transition-opacity"
-              :class="{ 'opacity-50 cursor-not-allowed': isOpeningAny }"
+              :dapp="dapp"
+              :opening="isOpeningUrl(dapp.url)"
               :disabled="isOpeningAny"
-              @click="openMiniApp(dapp.url, dapp.name, 'featured')"
-            >
-              <div class="relative w-14 h-14 shrink-0">
-                <img
-                  :src="dapp.icon"
-                  :alt="dapp.name"
-                  class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity"
-                  :class="{ 'opacity-40': isOpeningUrl(dapp.url) }"
-                  @error="($event.target as HTMLImageElement).src = FALLBACK_ICON"
-                >
-                <motion.div
-                  v-if="isOpeningUrl(dapp.url)"
-                  :data-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
-                  class="absolute inset-0 flex items-center justify-center"
-                  :initial="{ opacity: 0, scale: 0.85 }"
-                  :animate="{ opacity: 1, scale: 1 }"
-                  :transition="{ duration: 0.16, ease: 'easeOut' }"
-                >
-                  <LoadingSpinnerIcon class="w-6 h-6 text-space" />
-                </motion.div>
-                <MiniAppTypeBadge v-if="dapp.type" :type="dapp.type" />
-              </div>
-              <div class="flex flex-col min-w-0">
-                <span class="font-bold text-base">{{ dapp.name }}</span>
-                <motion.span
-                  :key="dapp.description || dapp.url"
-                  class="text-sm text-space/50 truncate"
-                  :initial="{ opacity: 0, y: 4 }"
-                  :animate="{ opacity: 1, y: 0 }"
-                  :transition="{ duration: 0.16, ease: 'easeOut' }"
-                >
-                  {{ dapp.description || dapp.url }}
-                </motion.span>
-              </div>
-            </button>
+              :button-testid="`dapp-button-${toUrlTestId(dapp.url)}`"
+              :icon-loading-testid="`dapp-icon-loading-${toUrlTestId(dapp.url)}`"
+              :menu-testid="`dapp-menu-${toUrlTestId(dapp.url)}`"
+              @open="openMiniApp(dapp.url, dapp.name, 'featured')"
+              @menu="openMenu"
+            />
           </div>
         </template>
 
@@ -410,6 +271,12 @@ async function openMiniApp(url?: string, title?: string, source: InAppDAppSource
         </p>
       </template>
     </div>
+
+    <MiniAppActionsSheet
+      v-model:open="menuOpen"
+      :context="menuContext"
+      @remove="menuContext && store.removeRecentlyViewed(menuContext.app.url)"
+    />
   </ModalTemplate>
 </template>
 

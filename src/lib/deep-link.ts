@@ -59,6 +59,7 @@ export async function handleDeepLink(event: URLOpenListenerEvent): Promise<void>
         logger.log('Unhandled deeplink host:', url.host)
         return
       }
+      // Counterpart of miniAppOpenDeeplink (src/lib/mini-app-deeplink.ts) — keep in lockstep.
       const match = url.pathname.match(/^\/miniapps\/open\/(.+)$/)
       if (!match) {
         logger.log('Unhandled nimpay.app path:', url.pathname)

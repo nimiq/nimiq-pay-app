@@ -120,6 +120,17 @@ describe('handleDeepLink', () => {
     }))
   })
 
+  it('round-trips miniAppOpenDeeplink through the https miniapps/open parser', async () => {
+    const { miniAppOpenDeeplink } = await import('./mini-app-deeplink')
+    const handleDeepLink = await loadHandler()
+    await handleDeepLink(event(miniAppOpenDeeplink('https://app.uniswap.org/swap')))
+
+    expect(launchMiniApp).toHaveBeenCalledWith(expect.objectContaining({
+      url: 'https://app.uniswap.org/swap',
+      source: 'deeplink',
+    }))
+  })
+
   it('clears a preserved mini-app session before launching the deeplink target', async () => {
     hasPendingSession.mockReturnValueOnce(true)
     const handleDeepLink = await loadHandler()
