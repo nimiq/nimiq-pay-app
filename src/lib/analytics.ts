@@ -187,6 +187,10 @@ export function trackSwapCompleted(props: { swap_duration_ms: number, asset: Ass
   capture('swap_completed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
+export function trackConsensusEstablished(props: { duration_ms: number, network: string, sync_mode: string }): void {
+  capture('consensus_established', props)
+}
+
 export function trackSwapFailed(props: { error_reason: string, asset: Asset }): void {
   capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }

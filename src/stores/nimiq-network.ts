@@ -7,6 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
+import { trackConsensusEstablished } from '@/lib/analytics'
 import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
 
@@ -59,10 +60,13 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
       ])
     }
-    config.syncMode('pico')
+    const syncMode = 'pico'
+    config.syncMode(syncMode)
 
     // config.logLevel('debug')
     logger.log('Creating Nimiq client with config', config.build())
+    const consensusStartedAt = Date.now()
+    let consensusTracked = false
     try {
       client.value = await promiseWithTimeout(Nimiq.Client.create(config.build()), 30 * 1e3)
       logger.log('Nimiq client created')
@@ -81,6 +85,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     client.value.addConsensusChangedListener(async (newConsensus) => {
       logger.log('Consensus:', newConsensus)
       if (newConsensus === 'established') {
+        if (!consensusTracked) {
+          consensusTracked = true
+          const durationMs = Date.now() - consensusStartedAt
+          logger.log(`Consensus established in ${durationMs}ms`)
+          trackConsensusEstablished({ duration_ms: durationMs, network: networkName.value, sync_mode: syncMode })
+        }
         isAppStarting.value = false
         clearToast()
         if (isPendingReconnectNetwork.value) {
