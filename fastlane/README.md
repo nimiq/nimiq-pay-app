@@ -29,7 +29,7 @@ Build a new beta version for testing
 [bundle exec] fastlane ios screenshots
 ```
 
-Generate screenshots for the App Store
+Generate App Store screenshots via Maestro (mock data baked in)
 
 ----
 
@@ -43,6 +43,14 @@ Generate screenshots for the App Store
 ```
 
 Build a new beta version for testing
+
+### android screenshots
+
+```sh
+[bundle exec] fastlane android screenshots
+```
+
+Generate Play Store screenshots via Maestro (mock data baked in). Requires one booted emulator.
 
 ----
 

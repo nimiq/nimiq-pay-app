@@ -1,0 +1,41 @@
+appId: ${APP_ID}
+---
+# Store screenshots flow. Run against a build with mock data baked in
+# (VITE_MOCK_DATA=true) so balances/transactions/prices are deterministic fixtures.
+#
+# Required env:
+#   OUTPUT_DIR  absolute path where the PNGs are written
+#   APP_ID      bundle id (defaults from config.yaml)
+#
+# Example:
+#   maestro test -e APP_ID=com.nimiq.pay -e OUTPUT_DIR=/tmp/nimiq-pay-screens nimiq-pay-tests/screenshots/store_screenshots.yaml
+
+- runFlow: ../subflows/onboard_if_needed.yaml
+
+# 0 — Home (NIM active, fixture transactions)
+- runFlow: ../subflows/switch_to_nim.yaml
+- extendedWaitUntil:
+    visible: Top Up
+    timeout: 45000
+- waitForAnimationToEnd
+- takeScreenshot: ${OUTPUT_DIR}/0HomeScreen
+
+# 1 — Top Up
+- tapOn: Top Up
+- waitForAnimationToEnd
+- takeScreenshot: ${OUTPUT_DIR}/1TopUp
+- tapOn: close flow modal
+- waitForAnimationToEnd
+
+# 2 — Home with USDT active
+- runFlow: ../subflows/switch_to_usdt.yaml
+- waitForAnimationToEnd
+- takeScreenshot: ${OUTPUT_DIR}/2HomeUSDT
+- runFlow: ../subflows/switch_to_nim.yaml
+
+# 3 — Mini Apps
+- tapOn: Mini Apps
+- waitForAnimationToEnd
+- takeScreenshot: ${OUTPUT_DIR}/3MiniApps
+- tapOn: close modal
+- waitForAnimationToEnd

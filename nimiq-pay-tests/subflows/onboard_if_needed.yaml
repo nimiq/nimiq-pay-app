@@ -1,0 +1,40 @@
+appId: ${APP_ID}
+---
+# Runs the wallet setup once on a fresh install (PIN 1111, skip biometric & notifications),
+# then hands over to the standard launcher. Used by the store-screenshots flow so a freshly
+# reset simulator/emulator can onboard without manual steps.
+
+- launchApp:
+    clearState: false
+
+# Fresh install → Setup view is showing
+- runFlow:
+    when:
+      visible: Get Started
+    commands:
+      - tapOn: Get Started
+      - extendedWaitUntil:
+          visible: Choose a PIN
+          timeout: 10000
+      - inputText: '1111'
+      - extendedWaitUntil:
+          visible: Confirm your PIN
+          timeout: 10000
+      - inputText: '1111'
+      - waitForAnimationToEnd
+      # Biometric step is skipped automatically on devices without biometrics support
+      - runFlow:
+          when:
+            visible: Biometric Authentication
+          commands:
+            - tapOn: Skip for now
+            - waitForAnimationToEnd
+      # Notifications step
+      - runFlow:
+          when:
+            visible: Enable notifications
+          commands:
+            - tapOn: Skip for now
+            - waitForAnimationToEnd
+# Standard launcher: handles PIN entry, leftover modals and home detection
+- runFlow: launch_app.yaml

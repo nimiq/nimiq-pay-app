@@ -63,12 +63,50 @@ platform :ios do
       )
   end
 
-  desc "Generate screenshots for the App Store"
+  desc "Generate App Store screenshots via Maestro (mock data baked in)"
   lane :screenshots do
-    reset_simulator_contents
-    sh "cd .. && ionic cap sync ios --prod"
+    screenshot_devices = ["iPhone 17 Pro Max"]
+    locale = "en-US"
+    out_dir = "screenshots/#{locale}"
 
-    capture_ios_screenshots(scheme: scheme, workspace: workspace, reinstall_app: true, app_identifier: "com.nimiq.pay", override_status_bar: true, concurrent_simulators: false, disable_slide_to_type: true)
+    # Bake mock-data mode into the build so the UI shows deterministic fixtures
+    sh "cd .. && VITE_MOCK_DATA=true ionic cap sync ios --prod"
+
+    build_app(
+      scheme: scheme,
+      workspace: workspace,
+      skip_package_ipa: true,
+      skip_archive: true,
+      destination: "generic/platform=iOS Simulator",
+      derived_data_path: "builds/ios/screenshots",
+    )
+    app_path = "builds/ios/screenshots/Build/Products/Debug-iphonesimulator/App.app"
+
+    sh "mkdir -p #{out_dir}"
+    screenshot_devices.each do |device|
+      udid = sh("xcrun simctl list devices available | grep '#{device} (' | head -1 | grep -oE '[0-9A-F-]{36}'").strip
+      UI.user_error!("Simulator '#{device}' not found. Create it in Xcode > Devices and Simulators.") if udid.empty?
+
+      sh "xcrun simctl boot #{udid} || true"
+      sh "xcrun simctl bootstatus #{udid} -b"
+      sh "xcrun simctl status_bar #{udid} override --time '13:37' --batteryState charged --batteryLevel 100 --cellularMode active --cellularBars 4 --wifiBars 3"
+      sh "xcrun simctl install #{udid} ../#{app_path}"
+
+      tmp_dir = "/tmp/nimiq-pay-screens/#{udid}"
+      sh "rm -rf #{tmp_dir} && mkdir -p #{tmp_dir}"
+      sh "cd .. && maestro --device #{udid} test -e APP_ID=com.nimiq.pay -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
+
+      # Drop this device's previous shots so renamed/removed screens don't linger as stale files
+      Dir.glob("#{out_dir}/#{device}-*.png").each { |old| FileUtils.rm(old) }
+      Dir.glob("#{tmp_dir}/*.png").each do |png|
+        FileUtils.cp(png, "#{out_dir}/#{device}-#{File.basename(png)}")
+      end
+
+      sh "xcrun simctl status_bar #{udid} clear"
+      sh "xcrun simctl shutdown #{udid}"
+    end
+
+    UI.success("Screenshots saved to fastlane/#{out_dir}")
   end
 end
 
@@ -104,5 +142,45 @@ platform :android do
         )
     # Move the generated apk file to the builds folder
     sh "mv #{lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]} ../builds/android/NimiqPay-#{version}.apk"
+  end
+
+  desc "Generate Play Store screenshots via Maestro (mock data baked in). Requires one booted emulator."
+  lane :screenshots do
+    locale = "en-US"
+    out_dir = "screenshots/android/#{locale}"
+
+    # Bake mock-data mode into the build so the UI shows deterministic fixtures
+    sh "cd .. && VITE_MOCK_DATA=true ionic cap sync android --prod"
+
+    gradle(
+      task: "assemble",
+      build_type: "Debug",
+      project_dir: android_project_dir,
+    )
+    apk = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+
+    sh "adb wait-for-device"
+    sh "adb install -r #{apk}"
+
+    # Demo-mode status bar: 9:41, full battery/wifi, no notifications
+    sh "adb shell settings put global sysui_demo_allowed 1"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command enter"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1337"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false"
+
+    tmp_dir = "/tmp/nimiq-pay-screens/android"
+    sh "rm -rf #{tmp_dir} && mkdir -p #{tmp_dir} #{out_dir}"
+    sh "cd .. && maestro test -e APP_ID=com.nimiq.pay.debug -e OUTPUT_DIR=#{tmp_dir} nimiq-pay-tests/screenshots/store_screenshots.yaml"
+
+    # Drop previous shots so renamed/removed screens don't linger as stale files
+    Dir.glob("#{out_dir}/Phone-*.png").each { |old| FileUtils.rm(old) }
+    Dir.glob("#{tmp_dir}/*.png").each do |png|
+      FileUtils.cp(png, "#{out_dir}/Phone-#{File.basename(png)}")
+    end
+
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command exit"
+    UI.success("Screenshots saved to fastlane/#{out_dir}")
   end
 end

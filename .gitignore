@@ -42,6 +42,7 @@ android/.idea
 AndroidManifest.xml.orig
 report.xml
 builds/ios/bundle/*
+builds/ios/screenshots/*
 *.zip
 *.ipa
 *.apk
