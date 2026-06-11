@@ -14,6 +14,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
@@ -366,6 +367,14 @@ export const useTransactions = defineStore('transactions', () => {
    * This ensures the in-memory list stays in sync with the database.
    */
   async function refreshFromDb() {
+    // `transactions` is exported readonly, so mock injection must happen inside the store.
+    // This covers boot hydration (immediate watch below), asset switches and pull-to-refresh.
+    if (isMockEnabled) {
+      const { getMockTransactions } = await import('@/lib/mock-data')
+      transactions.value = getMockTransactions()
+      return
+    }
+
     const rawDbTxs = await query<ExternalTransaction[]>(SQLQuery.SelectTransactionsByAsset, [activeAsset.value])
     const dbTxs = await filterDisplayableTxs(rawDbTxs)
     dbTxs.forEach((tx) => {
@@ -631,6 +640,6 @@ export const useTransactions = defineStore('transactions', () => {
 
     // A function that returns true if there are more transactions to load
     // FIXME: This is not exactly true, because if there is exactly DEFAULT_LIMIT transactions, it will return true, but there are no more transactions to load
-    canLoadMore: () => searchQuery.value ? false : activeAssetTransactions.value.length % DEFAULT_LIMIT === 0,
+    canLoadMore: () => (isMockEnabled || searchQuery.value) ? false : activeAssetTransactions.value.length % DEFAULT_LIMIT === 0,
   }
 })

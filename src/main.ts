@@ -14,6 +14,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { i18nRegistration, setLanguage } from '@/i18n/i18n-setup'
 import { identifyUser, trackCurrentAppOpen } from '@/lib/analytics'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { installNodeGlobals } from '@/lib/node-globals'
 import { isWasmAvailable } from '@/lib/utils'
 import { useApp } from '@/stores/app'
@@ -110,7 +111,9 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (!isAlertRoute)
     await useConn().init()
-  useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute })
+  // Mock mode never launches the client: WASM still loads (address parsing needs the Nimiq global),
+  // but no consensus/sync is started.
+  useNimiqNetwork().init({ launchNimiqClient: !isAlertRoute && !isMockEnabled })
   useLogger().init()
   identifyUser() // Identify user as early as possible to capture all analytics events, including those during app initialization
   if (!isAlertRoute)

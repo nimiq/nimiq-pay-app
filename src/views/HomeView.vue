@@ -26,6 +26,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -55,7 +56,8 @@ const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveCh
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
-const isRecoveryWordsShown = computed(() => !hasDoneBackup.value)
+// Hidden in mock mode without persisting hasDoneBackup (which would suppress a real user's reminder).
+const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && !isMockEnabled)
 
 // `isHomeVisible` combines three signals because IntersectionObserver alone misses
 // Ionic modals (geometric intersection, not occlusion) and the native InAppBrowser

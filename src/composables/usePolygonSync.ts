@@ -4,6 +4,7 @@ import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev, isTestnet } from '@/lib'
 import { Asset } from '@/lib/assets'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -12,6 +13,9 @@ import { usePolygonUsdt } from '@/stores/polygon-usdt'
 const POLYGON_POLL_INTERVAL_MS = isDev ? 30_000 : 10_000
 const POLYGON_FEE_POLL_INTERVAL_MS = 60_000
 const logger = useLogger('polygon-sync')
+
+// USDT only exists on mainnet; mock mode seeds the balance itself and has no client.
+const isPolygonSyncDisabled = isTestnet || isMockEnabled
 
 let initialized = false
 
@@ -29,7 +33,7 @@ async function feePollCallback() {
 }
 
 async function pollCallback() {
-  if (isTestnet)
+  if (isPolygonSyncDisabled)
     return
 
   logger.log('Starting Polygon sync poll')
@@ -61,7 +65,7 @@ export function usePolygonSync() {
   async function init() {
     if (initialized)
       return
-    if (isTestnet)
+    if (isPolygonSyncDisabled)
       return
 
     try {
@@ -96,9 +100,6 @@ export function usePolygonSync() {
   }
 
   async function triggerNow() {
-    if (isTestnet)
-      return
-
     await pollCallback()
   }
 

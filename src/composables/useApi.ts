@@ -7,6 +7,7 @@ import { readonly, ref, toValue as v, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, isTestnet } from '@/lib/index'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
 import { toSeconds } from './useTime'
 
@@ -299,6 +300,11 @@ export function useRemoteSignerApi() {
   }
 
   async function getStatus(): AsyncResultApi<StatusRes, RemoteErrorRes> {
+    // No cosigner in mock mode: report Good here so every consumer (cosigner poll,
+    // resume height check) behaves without needing its own mock guard.
+    if (isMockEnabled)
+      return { data: { status: RemoteStatus.Good, blockHeight: 0, servicePublicKey: '', network: '' }, status: 200, hasError: false, error: undefined }
+
     const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status')
     if (error || data?.status !== 'good' || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
@@ -334,6 +340,21 @@ export function useCurrencyPriceApi() {
     statusCode: number
     error: string
     message: string
+  }
+
+  if (isMockEnabled) {
+    // Historical lookups get a slightly lower price so PriceChange renders a believable +%.
+    const mockPrice = async (currency: MaybeRef<string>, timestamp?: number): Promise<ResultApi<PriceNowRes, PriceErrorRes>> => {
+      const { getMockUsdPrice } = await import('@/lib/mock-data')
+      const nowSeconds = Math.round(Date.now() / 1e3)
+      const isPast = timestamp !== undefined && toSeconds(timestamp) < nowSeconds - 3600
+      const price = getMockUsdPrice(v(currency)) * (isPast ? 0.97 : 1)
+      return { data: { currency: v(currency), time: timestamp ?? nowSeconds, price, error: undefined }, hasError: false, error: undefined, status: 200 }
+    }
+    return {
+      getPriceNow: ({ currency }: PriceNowArg) => mockPrice(currency),
+      getPriceAt: ({ currency, timestamp }: PriceAtArg) => mockPrice(currency, v(timestamp)),
+    }
   }
 
   return {

@@ -8,6 +8,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt } from '@/lib/tx'
 import { useApp } from '@/stores/app'
@@ -66,6 +67,13 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     logger.log('Starting wallet sync process', { hasLocalWallet: hasLocalWallet.value })
     if (!hasLocalWallet.value)
       return
+
+    if (isMockEnabled) {
+      logger.log('🎭 Mock mode: skipping wallet sync, loading mock data')
+      const { loadMockData } = await import('@/lib/mock-data')
+      await loadMockData()
+      return
+    }
 
     isSyncingWallets.value = true
     logger.log('🔄 Remote Signer initialization')

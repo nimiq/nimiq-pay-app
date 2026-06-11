@@ -12,6 +12,7 @@ import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
 import { Asset } from '@/lib/assets'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt, toAccountType } from '@/lib/tx'
 import { useApp } from '@/stores/app'
@@ -104,6 +105,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
    * Updates the transactions history getting transactions from the blockchain and adding them to the db if they are not already there.
    */
   async function updateTransactionHistory() {
+    if (isMockEnabled)
+      return
+
     try {
       await until(isTransactionPending).toBe(false, { timeout: 60_000 })
     }

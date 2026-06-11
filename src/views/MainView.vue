@@ -22,6 +22,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
 import { Chain } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -77,7 +78,8 @@ watchEffect(async () => {
     return
 
   if (!isNimiqAsset.value) {
-    if (isTestnet) {
+    // Mock mode fakes a working USDT setup even on testnet dev builds
+    if (isTestnet && !isMockEnabled) {
       statusMessageText.value = i18n.t('USDT is only available on mainnet. Switch to mainnet to use USDT.')
       statusMessageBgColor.value = 'bg-[#F9EDE1]'
       statusMessageTextColor.value = 'text-pumpkin'

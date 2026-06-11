@@ -1,6 +1,7 @@
 import type { RemoteSigner } from '@/lib/sql-queries'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
@@ -146,6 +147,11 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
   }
 
   async function verifyRemoteSignersDb() {
+    // No client in mock mode — discoverRemoteSignersFromBlockchain would await it forever
+    // and wedge pull-to-refresh.
+    if (isMockEnabled)
+      return
+
     if (isVerifyingRemoteSignersDb.value) {
       logger.log('Remote signer DB verification already running. Skipping duplicate run')
       return

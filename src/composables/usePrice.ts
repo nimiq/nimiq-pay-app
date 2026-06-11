@@ -7,6 +7,7 @@ import { useCurrencyFormatter } from '@/composables/useCurrencyFormatter'
 import { useLogger } from '@/composables/useLogger'
 import { usePriceDb } from '@/composables/usePriceDb'
 import { toMs } from '@/composables/useTime'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { Crypto, DECIMALS, Fiat, useApp } from '@/stores/app'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 
@@ -138,6 +139,15 @@ export function usePrice(_amountInUnits: MaybeRef<number>, options: UsePriceOpti
   }
 
   async function getFiatPrice() {
+    // Short-circuit before the DB read AND the insertPrice write below,
+    // so fake prices never end up in the real prices table.
+    if (isMockEnabled) {
+      const { getMockPrice } = await import('@/lib/mock-data')
+      priceDb.value = getMockPrice(toValue(cryptoCurrency), toValue(fiatCurrency))
+      state.value = PriceStatus.Loaded
+      return
+    }
+
     state.value = closestPreviousPrice.value ? PriceStatus.ClosestPrice : PriceStatus.Loading
 
     // First check if we have the price in the database

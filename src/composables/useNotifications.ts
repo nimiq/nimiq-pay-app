@@ -20,6 +20,7 @@ import { i18n } from '@/i18n/i18n-setup'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { LocalNotificationsStatus, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
@@ -235,6 +236,9 @@ export function useNotifications() {
   }
 
   function addLocalNotification(notification: LocalNotification, unshift = false) {
+    // No notification cards in mock mode — keeps UI-dev views and store screenshots clean.
+    if (isMockEnabled)
+      return
     if (localNotificationsArray.value.some(n => n.id === notification.id))
       return
     if (unshift)

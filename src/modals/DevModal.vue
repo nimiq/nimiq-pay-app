@@ -9,6 +9,7 @@ import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
 import { isDev, isTestnet, networkOverride, setNetworkOverride } from '@/lib'
+import { isMockBakedIn, isMockEnabled, setMockDataOverride } from '@/lib/mock-mode'
 import { POLYGON_PUBLIC_RPCS, polygonRpcOverride, setPolygonRpcOverride } from '@/lib/polygon/rpc-override'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
@@ -93,6 +94,11 @@ async function onNetworkSegmentChange(value: unknown) {
     logger.warn('Failed to deactivate NAKA card on device', deactivateResult.reason)
   naka.card = undefined
   setNetworkOverride(value === 'default' ? null : value)
+  router.go(0)
+}
+
+function onMockToggle(checked: boolean) {
+  setMockDataOverride(checked)
   router.go(0)
 }
 
@@ -224,6 +230,23 @@ onMounted(async () => {
         <p class="mt-2 text-xs opacity-60">
           Switching reloads the page. The new RPC takes effect on the next request the Polygon USDT store makes.
         </p>
+      </IonCardContent>
+    </IonCard>
+    <IonCard>
+      <IonCardHeader>
+        <IonCardTitle>Mock Data</IonCardTitle>
+      </IonCardHeader>
+      <IonCardContent>
+        <p class="mb-2">
+          Replaces balances, transactions and prices with in-memory fixtures and skips
+          blockchain sync. For UI development and store screenshots. Hides the dev FAB — reopen
+          this modal via a 3s long-press on the menu header. Reloads on change.
+          <span v-if="isMockBakedIn">Baked in via VITE_MOCK_DATA — cannot be disabled here.</span>
+        </p>
+        <IonItem lines="none" class="-mx-4">
+          <IonLabel>Enable mock data</IonLabel>
+          <IonToggle :checked="isMockEnabled" :disabled="isMockBakedIn" @ion-change="onMockToggle($event.detail.checked)" />
+        </IonItem>
       </IonCardContent>
     </IonCard>
     <IonCard>

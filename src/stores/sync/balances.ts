@@ -2,6 +2,7 @@ import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -28,6 +29,10 @@ export const useSyncBalances = defineStore('sync-balances', () => {
    * Updates the local and the remote wallet balances.
    */
   async function updateBalances() {
+    // Pull-to-refresh / head listeners must not overwrite mock balances with chain values.
+    if (isMockEnabled)
+      return
+
     if (isUpdatingBalancesNow.value) {
       shouldUpdateBalancesAgain.value = true
       logger.log('Balance update already running. Scheduling another update')
