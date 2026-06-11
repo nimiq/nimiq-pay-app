@@ -14,7 +14,7 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:153
+#: src/stores/transactions.ts:154
 msgid "A transaction is already in progress"
 msgstr ""
 
@@ -23,7 +23,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:40
-#: src/views/HomeView.vue:174
+#: src/views/HomeView.vue:176
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -31,7 +31,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:167
+#: src/views/HomeView.vue:169
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -57,13 +57,13 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:147
-#: src/stores/nimiq-network.ts:169
-#: src/stores/nimiq-network.ts:199
+#: src/stores/nimiq-network.ts:157
+#: src/stores/nimiq-network.ts:179
+#: src/stores/nimiq-network.ts:209
 msgid "Address missing"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:184
+#: src/stores/nimiq-network.ts:194
 msgid "Addresses missing"
 msgstr ""
 
@@ -257,7 +257,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:149
+#: src/stores/nimiq-network.ts:159
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -326,7 +326,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:154
 #: src/components/PaymentAmountInput.vue:129
-#: src/views/MainView.vue:89
+#: src/views/MainView.vue:91
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:110
+#: src/views/HomeView.vue:112
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -505,15 +505,15 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:178
+#: src/stores/nimiq-network.ts:188
 msgid "Error getting account"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:208
+#: src/stores/nimiq-network.ts:218
 msgid "Error getting account transactions"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:193
+#: src/stores/nimiq-network.ts:203
 msgid "Error getting accounts"
 msgstr ""
 
@@ -619,7 +619,7 @@ msgstr ""
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
-#: src/components/TestnetFaucet.vue:8
+#: src/components/TestnetFaucet.vue:9
 msgid "Get free NIM"
 msgstr ""
 
@@ -703,7 +703,7 @@ msgstr ""
 msgid "Includes {fee} in fees"
 msgstr ""
 
-#: src/composables/useNotifications.ts:272
+#: src/composables/useNotifications.ts:276
 msgid "Incoming Payments"
 msgstr ""
 
@@ -997,7 +997,7 @@ msgstr ""
 msgid "Network"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:94
+#: src/stores/nimiq-network.ts:104
 msgid "Network consensus lost."
 msgstr ""
 
@@ -1034,7 +1034,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:173
+#: src/stores/nimiq-network.ts:183
 msgid "No account found"
 msgstr ""
 
@@ -1050,7 +1050,7 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:188
+#: src/stores/nimiq-network.ts:198
 msgid "No accounts found"
 msgstr ""
 
@@ -1058,7 +1058,7 @@ msgstr ""
 msgid "No active card"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:139
+#: src/stores/nimiq-network.ts:149
 msgid "No Cashlink found"
 msgstr ""
 
@@ -1074,7 +1074,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:391
+#: src/composables/useApi.ts:412
 msgid "No payment details found"
 msgstr ""
 
@@ -1100,7 +1100,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:203
+#: src/stores/nimiq-network.ts:213
 msgid "No transactions found"
 msgstr ""
 
@@ -1116,11 +1116,11 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:273
+#: src/composables/useNotifications.ts:277
 msgid "Notification when a payment arrives"
 msgstr ""
 
-#: src/composables/useNotifications.ts:147
+#: src/composables/useNotifications.ts:148
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -1186,7 +1186,7 @@ msgstr ""
 msgid "Payment expiring soon"
 msgstr ""
 
-#: src/composables/useApi.ts:117
+#: src/composables/useApi.ts:118
 #: src/composables/useGoCryptoMonitoring.ts:111
 msgid "Payment invalid"
 msgstr ""
@@ -1208,7 +1208,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useNotifications.ts:331
+#: src/composables/useNotifications.ts:335
 msgid "Payment received"
 msgstr ""
 
@@ -1362,7 +1362,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:115
+#: src/views/MainView.vue:117
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1430,11 +1430,11 @@ msgstr ""
 msgid "Request failed"
 msgstr ""
 
-#: src/components/TestnetFaucet.vue:8
+#: src/components/TestnetFaucet.vue:9
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:175
+#: src/views/HomeView.vue:177
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1447,7 +1447,7 @@ msgstr ""
 msgid "Retire Stake"
 msgstr ""
 
-#: src/composables/useNotifications.ts:146
+#: src/composables/useNotifications.ts:147
 msgid "Rewards Notifications"
 msgstr ""
 
@@ -1536,7 +1536,7 @@ msgid "Send USDT to this address"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:163
-#: src/views/MainView.vue:106
+#: src/views/MainView.vue:108
 msgid "Server not available"
 msgstr ""
 
@@ -1560,7 +1560,7 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/composables/useApi.ts:61
+#: src/composables/useApi.ts:62
 #: src/lib/flows/index.ts:507
 msgid "Something went wrong"
 msgstr ""
@@ -1609,8 +1609,8 @@ msgstr ""
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:304
-#: src/composables/useApi.ts:311
+#: src/composables/useApi.ts:310
+#: src/composables/useApi.ts:317
 #: src/lib/tx.ts:260
 #: src/lib/tx.ts:369
 #: src/lib/tx.ts:38
@@ -1672,7 +1672,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:166
+#: src/views/HomeView.vue:168
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1832,7 +1832,7 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:225
+#: src/stores/transactions.ts:226
 msgid "Transaction already sent"
 msgstr ""
 
@@ -1840,11 +1840,11 @@ msgstr ""
 msgid "Transaction failed: {error}"
 msgstr ""
 
-#: src/stores/transactions.ts:248
+#: src/stores/transactions.ts:249
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:283
+#: src/stores/transactions.ts:284
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
@@ -1913,7 +1913,7 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/views/MainView.vue:81
+#: src/views/MainView.vue:83
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
@@ -2108,7 +2108,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:180
+#: src/views/HomeView.vue:182
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -2124,7 +2124,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:332
+#: src/composables/useNotifications.ts:336
 msgid "You received {amount}"
 msgstr ""
 

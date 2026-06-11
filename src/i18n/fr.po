@@ -479,6 +479,9 @@ msgstr "Pas de demande de paiement en cours"
 msgid "Failed to set app as preferred NFC service: {error}"
 msgstr ""
 
+msgid "Faucet error - please try again."
+msgstr ""
+
 msgid "Featured"
 msgstr "En vedette"
 
@@ -490,11 +493,17 @@ msgstr "En vedette"
 msgid "Fees may apply {fee}"
 msgstr "Des frais peuvent s'appliquer {fee}"
 
+msgid "Free NIM is on its way"
+msgstr ""
+
 msgid "Full link:"
 msgstr ""
 
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr "Obtenez des points Cryptocity comme récompenses de cashback ou complétez des défis pour les gagner."
+
+msgid "Get free NIM"
+msgstr ""
 
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr "Obtenez des informations importantes sur les transactions, les recharges, la sécurité et plus encore."
@@ -504,6 +513,9 @@ msgstr "Obtenir des points"
 
 msgid "Get Started"
 msgstr "Commencer"
+
+msgid "Go to Settings → Privacy & Security → Lockdown Mode"
+msgstr ""
 
 msgid "GoCrypto refused connecting"
 msgstr "GoCrypto a refusé la connexion"
@@ -538,6 +550,9 @@ msgstr ""
 
 msgid "I have a promo code"
 msgstr "J'ai un code promo"
+
+msgid "I have turned it off"
+msgstr ""
 
 msgid "Identification is not verified. Please contact support."
 msgstr ""
@@ -749,6 +764,9 @@ msgstr "Chargement…"
 msgid "Lock card"
 msgstr ""
 
+msgid "Lockdown Mode is on"
+msgstr ""
+
 msgid ""
 "Log in again with your recovery words.\n"
 "Please ensure that you have them available before logging out."
@@ -804,6 +822,9 @@ msgstr ""
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "L'application Nimiq Pay et le Wallet Nimiq utilisent des mots de récupération différents."
+
+msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
+msgstr ""
 
 msgid "No"
 msgstr ""
@@ -1112,6 +1133,12 @@ msgstr ""
 msgid "Reopen Mini App on unlock"
 msgstr ""
 
+msgid "Request failed"
+msgstr ""
+
+msgid "Requesting…"
+msgstr ""
+
 #, fuzzy
 #| msgid "Verify your phone number"
 msgid "Requires Phone Number"
@@ -1347,6 +1374,9 @@ msgstr "Le scanner QR n'est pas encore prêt. Veuillez patienter."
 msgid "The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost."
 msgstr ""
 
+msgid "There are currently no free NIM available."
+msgstr ""
+
 msgid "There is no \"Forgot password\""
 msgstr "Il n'y a pas de \"mot de passe oublié\""
 
@@ -1398,6 +1428,9 @@ msgstr "Ce code promo a été réclamé trop souvent"
 msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
 msgstr "Cet achat vous donne droit à {amount} Point. | Cet achat vous rapporte {amount} Points."
 
+msgid "This service is currently not available in your region."
+msgstr ""
+
 msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
 msgstr ""
 
@@ -1445,6 +1478,9 @@ msgstr ""
 
 msgid "Try again"
 msgstr "Réessayer"
+
+msgid "Turn it off, then reopen Nimiq Pay."
+msgstr ""
 
 msgid "Unable to connect to the Points server"
 msgstr "Impossible de se connecter au serveur de points Cryptocity"
@@ -1614,6 +1650,9 @@ msgstr ""
 msgid "You can not use this address"
 msgstr "Vous ne pouvez pas utiliser cette adresse"
 
+msgid "You can receive more free NIM in {waitTime} hours."
+msgstr ""
+
 msgid "You can try again in {remainingTime}"
 msgstr "Vous pouvez réessayer dans {remainingTime}"
 
@@ -1682,6 +1721,9 @@ msgstr "Votre solde NIM n'est pas encore disponible. Vous ne pouvez payer qu'ave
 
 msgid "Your number"
 msgstr "Votre numéro"
+
+msgid "Your testnet account is empty."
+msgstr ""
 
 msgid "zero-width character (invisible)"
 msgstr ""
