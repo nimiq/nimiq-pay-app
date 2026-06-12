@@ -15,6 +15,7 @@ import { isTestnet } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, getRequiredContractEvent, toAddressTopic } from '@/lib/ethereum'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TOKEN_APPROVAL_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { fetchLogsWithAdaptiveRange } from '@/lib/polygon/history'
@@ -497,6 +498,10 @@ async function getPoolAddress(client: PolygonUsdtClient) {
 
 function getPolygonHistoryStateKey(address: string) {
   return `polygonUsdtHistoryState:${getAddress(address).toLowerCase()}`
+}
+
+function getUsdtBalanceCacheKey(address: string) {
+  return `usdtBalanceCache:${getAddress(address).toLowerCase()}`
 }
 
 function serializeInitialHistoryScanState(state: InitialHistoryScanState): PersistedInitialHistoryScanState {
@@ -1293,10 +1298,35 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     return balance.value > 0 ? 'resolved-balance' : 'resolved-empty'
   })
 
+  let hasHydratedCachedBalance = false
+  let persistedBalance: number | null = null
+
+  // Display-only fallback so the home screen can show the last known balance while the RPC
+  // connects. Kept separate from `balance` (strictly RPC truth) so spend/quote paths never
+  // see a cached value. Mainnet-only: the kv table survives the dev network switch, and mock
+  // mode seeds balance itself.
+  const lastKnownBalance = shallowRef(0)
+
+  async function hydrateCachedBalance() {
+    if (hasHydratedCachedBalance || isTestnet || isMockEnabled)
+      return
+    const { data: address, error } = useLocalWallet().getEthAddress()
+    if (error || !address)
+      return
+    hasHydratedCachedBalance = true
+    const cached = Number((await query<{ value: string }>(SQLQuery.SelectKv, [getUsdtBalanceCacheKey(address)], { single: true }))?.value)
+    if (Number.isFinite(cached) && cached > 0) {
+      persistedBalance = cached
+      lastKnownBalance.value = cached
+    }
+  }
+
   async function init() {
     if (consensus.value === 'established')
       return
 
+    // Fire-and-forget: nothing here depends on it, and awaiting would delay the RPC connect.
+    hydrateCachedBalance().catch(error => logger.error('Failed to hydrate cached USDT balance', error))
     consensus.value = 'syncing'
     try {
       await getClient()
@@ -1324,6 +1354,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const newBalance = Number(await client.tokenContract.balanceOf(address))
       if (newBalance !== balance.value)
         balance.value = newBalance
+      // Persist once per changed value (not per poll); also converges a stale cache back to 0.
+      if (persistedBalance !== newBalance) {
+        persistedBalance = newBalance
+        await run(SQLQuery.UpsertKv, [getUsdtBalanceCacheKey(address), String(newBalance)])
+      }
     }
     catch (error) {
       logger.error('Failed to fetch Polygon USDT balance', error)
@@ -2043,6 +2078,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
   return {
     balance,
+    lastKnownBalance: readonly(lastKnownBalance),
     consensus,
     hasLoadedHistory: readonly(hasLoadedHistory),
     homeBalanceState: readonly(homeBalanceState),

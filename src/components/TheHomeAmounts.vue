@@ -14,29 +14,38 @@ import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
 
-const { remoteBalance: balance } = storeToRefs(useRemoteSigner())
-const { homeBalanceState } = storeToRefs(useRemoteSigner())
-const { balance: usdtBalance, homeBalanceState: usdtHomeBalanceState } = storeToRefs(usePolygonUsdt())
+const { remoteBalance: balance, homeBalanceState, lastKnownRemoteBalance } = storeToRefs(useRemoteSigner())
+const { balance: usdtBalance, lastKnownBalance: lastKnownUsdtBalance, homeBalanceState: usdtHomeBalanceState } = storeToRefs(usePolygonUsdt())
 const { isTransactionPending } = storeToRefs(useSync())
 const { showAnimations, activeAsset } = storeToRefs(useApp())
 const { isProcessingRemote } = storeToRefs(useLocks())
-const displayedBalance = computed(() => activeAsset.value === Asset.USDT ? usdtBalance.value : balance.value)
+
+// During HTLC create/extend/recreate the on-chain NIM balance is transiently 0 and the
+// signer can be cleared (homeBalanceState 'loading'). Spend-to-zero never sets these flags.
+const isNimHtlcTransition = computed(() =>
+  activeAsset.value === Asset.NIM
+  && (isProcessingRemote.value || isTransactionPending.value || homeBalanceState.value === 'loading'),
+)
+
+const displayedBalance = computed(() => {
+  if (activeAsset.value === Asset.USDT) {
+    // Pre-consensus the canonical balance is always 0; fall back to the KV-cached value.
+    return usdtBalance.value === 0 && usdtHomeBalanceState.value === 'loading' ? lastKnownUsdtBalance.value : usdtBalance.value
+  }
+  if (balance.value === 0 && isNimHtlcTransition.value)
+    return lastKnownRemoteBalance.value
+  return balance.value
+})
 const displayedBalanceState = computed(() => activeAsset.value === Asset.USDT ? usdtHomeBalanceState.value : homeBalanceState.value)
 const minimumCryptoDecimals = computed(() => activeAsset.value === Asset.USDT ? 2 : 0)
 const { fiat, crypto } = usePrice(displayedBalance, {
   cryptoCurrency: computed(() => assetToCrypto(activeAsset.value)),
 })
 
-/**
- * Show skeleton if:
- *  - The home balance is still unresolved
- *  - There is a pending HTLC-related transaction
- *  - The remote wallet is currently being processed
- */
+/** Show skeleton only when we genuinely have no balance number to show. */
 const showSkeleton = computed(() =>
-  displayedBalanceState.value === 'loading'
-  || (displayedBalance.value === 0 && isTransactionPending.value)
-  || isProcessingRemote.value,
+  displayedBalance.value === 0
+  && (displayedBalanceState.value === 'loading' || isNimHtlcTransition.value),
 )
 
 const animatedAmount = ref(0)

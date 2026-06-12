@@ -5,8 +5,10 @@ import { computed, defineComponent, reactive, ref } from 'vue'
 import { Asset } from '@/lib/assets'
 
 const remoteBalance = ref(0)
+const lastKnownRemoteBalance = ref(0)
 const homeBalanceState = ref<'loading' | 'resolved-empty' | 'resolved-remote'>('loading')
 const usdtBalance = ref(0)
+const lastKnownUsdtBalance = ref(0)
 const usdtHomeBalanceState = ref<'loading' | 'resolved-empty' | 'resolved-balance'>('loading')
 const isTransactionPending = ref(false)
 const showAnimations = ref(false)
@@ -16,6 +18,7 @@ const activeAsset = ref<Asset>(Asset.NIM)
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
     remoteBalance,
+    lastKnownRemoteBalance,
     homeBalanceState,
   }),
 }))
@@ -23,6 +26,7 @@ vi.mock('@/stores/remote-signer', () => ({
 vi.mock('@/stores/polygon-usdt', () => ({
   usePolygonUsdt: () => ({
     balance: usdtBalance,
+    lastKnownBalance: lastKnownUsdtBalance,
     homeBalanceState: usdtHomeBalanceState,
   }),
 }))
@@ -111,8 +115,10 @@ async function mountComponent() {
 describe('theHomeAmounts', () => {
   beforeEach(() => {
     remoteBalance.value = 0
+    lastKnownRemoteBalance.value = 0
     homeBalanceState.value = 'loading'
     usdtBalance.value = 0
+    lastKnownUsdtBalance.value = 0
     usdtHomeBalanceState.value = 'loading'
     isTransactionPending.value = false
     showAnimations.value = false
@@ -145,6 +151,80 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+  })
+
+  it('shows the last known balance instead of the skeleton during HTLC recreation', async () => {
+    homeBalanceState.value = 'loading'
+    remoteBalance.value = 0
+    isProcessingRemote.value = true
+    lastKnownRemoteBalance.value = 500
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('500')
+  })
+
+  it('shows the optimistic balance while remote processing with a known balance', async () => {
+    homeBalanceState.value = 'resolved-remote'
+    remoteBalance.value = 750
+    isProcessingRemote.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('750')
+  })
+
+  it('shows zero after a spend-to-zero instead of the last known balance', async () => {
+    homeBalanceState.value = 'resolved-remote'
+    remoteBalance.value = 0
+    lastKnownRemoteBalance.value = 500
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('0')
+  })
+
+  it('keeps the skeleton during a pending transaction when no balance was ever known', async () => {
+    homeBalanceState.value = 'loading'
+    isTransactionPending.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+  })
+
+  it('shows the cached USDT balance instead of the skeleton before consensus', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 0
+    usdtHomeBalanceState.value = 'loading'
+    lastKnownUsdtBalance.value = 50
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('50')
+  })
+
+  it('does not show the skeleton for USDT while a NIM HTLC is processing', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 99
+    usdtHomeBalanceState.value = 'resolved-balance'
+    isProcessingRemote.value = true
+    isTransactionPending.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('99')
   })
 
   it('switches to the USDT balance when the active asset is USDT', async () => {

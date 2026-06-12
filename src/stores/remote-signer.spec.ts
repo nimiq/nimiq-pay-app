@@ -1,6 +1,6 @@
 import { createPinia, defineStore, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed } from 'vue'
+import { computed, nextTick } from 'vue'
 
 function createAddress(value: string) {
   return {
@@ -64,6 +64,24 @@ const state = vi.hoisted(() => {
     logger,
   }
 })
+
+// Makes the DB return one active remote signer (balance 25) for `single` queries.
+function mockActiveSignerQuery() {
+  state.query.mockImplementation(((_sql: string, _params?: unknown[], options?: { single?: boolean }) => {
+    if (options?.single) {
+      return Promise.resolve({
+        active: true,
+        balance: 25,
+        end: 999999,
+        proofSize: 98,
+        publicKey: 'service-public-key',
+        start: 123_000,
+        address: 'NQ11 TEST REMOTE ADDRESS',
+      })
+    }
+    return Promise.resolve([])
+  }) as any)
+}
 
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => state.logger,
@@ -221,20 +239,7 @@ describe('useRemoteSigner', () => {
 
   it('resolves as remote without consensus when an HTLC signer is already known', async () => {
     state.consensus = 'connecting'
-    state.query.mockImplementation(((sql: string, _params?: unknown[], options?: { single?: boolean }) => {
-      if (options?.single) {
-        return Promise.resolve({
-          active: true,
-          balance: 25,
-          end: 999999,
-          proofSize: 98,
-          publicKey: 'service-public-key',
-          start: 123_000,
-          address: 'NQ11 TEST REMOTE ADDRESS',
-        })
-      }
-      return Promise.resolve([])
-    }) as any)
+    mockActiveSignerQuery()
 
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
@@ -244,6 +249,23 @@ describe('useRemoteSigner', () => {
 
     expect(store.homeBalanceState).toBe('resolved-remote')
     expect(store.remoteBalance).toBe(25)
+  })
+
+  it('retains the last known balance after the active signer is cleared for a drain', async () => {
+    mockActiveSignerQuery()
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+    await nextTick()
+    expect(store.lastKnownRemoteBalance).toBe(25)
+
+    await store.updateRemoteSigner(undefined)
+    await nextTick()
+
+    expect(store.remoteBalance).toBe(0)
+    expect(store.lastKnownRemoteBalance).toBe(25)
   })
 
   it('keeps loading when the local account already has main-address funds', async () => {

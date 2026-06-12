@@ -85,6 +85,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
   const remoteBalance = ref(0)
+  // Last positive balance, in-memory only — cold start is covered by DB hydration in init().
+  // Lets the home screen keep showing a number while the HTLC is drained/recreated.
+  const lastKnownRemoteBalance = ref(0)
+  watch(remoteBalance, (balance) => {
+    if (balance > 0)
+      lastKnownRemoteBalance.value = balance
+  })
   const homeBalanceState = ref<HomeBalanceState>('loading')
   // const remoteProofSize = computed(() => remoteSigner.value?.proofSize || 98)
   const remoteProofSize = ref(98)
@@ -525,6 +532,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     start,
     end,
     remoteBalance,
+    lastKnownRemoteBalance,
     homeBalanceState,
     remotePublicKey,
     remoteProofSize,
