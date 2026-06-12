@@ -39,3 +39,20 @@ appId: ${APP_ID}
 - takeScreenshot: ${OUTPUT_DIR}/3MiniApps
 - tapOn: close modal
 - waitForAnimationToEnd
+
+# 4 — QR scanner (Pay)
+- tapOn: Pay
+- extendedWaitUntil:
+    visible: Enter manually
+    timeout: 45000
+- waitForAnimationToEnd
+# Sleep so the camera preview has time to warm up and render before capture.
+# Maestro has no sleep command; waiting for an always-visible element to disappear
+# (with optional) blocks for the full timeout, then continues.
+- extendedWaitUntil:
+    notVisible: Enter manually
+    timeout: 3000
+    optional: true
+- takeScreenshot: ${OUTPUT_DIR}/4Scanner
+- tapOn: close flow modal
+- waitForAnimationToEnd
