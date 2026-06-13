@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
-import { computedAsync, until, useElementVisibility, useEventListener } from '@vueuse/core'
+import { computedAsync, useElementVisibility, useEventListener } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -27,7 +27,7 @@ import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
-import { sleep } from '@/lib/utils'
+import { promiseWithTimeout, sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useKyc } from '@/stores/kyc'
@@ -146,18 +146,32 @@ function scrollToFirstNotification() {
   })
 }
 
+const REFRESH_SPINNER_TIMEOUT = 5_000 // hide wheel even if sync still running (APP-159)
+
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')
-  await Promise.all([
-    sleep(2000),
-    updatePointsBalance(),
-    updatePointsStatus(),
-    useSync().updateBalances(),
-    useSync().updateTransactionHistory(),
-    usePolygonSync().triggerNow(),
-  ])
-  await useSync().verifyRemoteSignersDb()
-  await until(isUpdatingTransactions).toBe(false)
+  // Detached so the spinner can be capped while sync finishes. The `.catch` keeps this promise
+  // from rejecting (the timeout below may leave it pending) — it ONLY handles real sync failures.
+  // The trailing refreshFromDb repaints the list with freshly-written txs once sync finishes,
+  // including the case where it outlived the spinner timeout.
+  const syncWork = (async () => {
+    await Promise.all([
+      sleep(2000),
+      updatePointsBalance(),
+      updatePointsStatus(),
+      useSync().updateBalances(),
+      useSync().updateTransactionHistory(),
+      usePolygonSync().triggerNow(),
+    ])
+    await useSync().verifyRemoteSignersDb()
+    await useTransactions().refreshFromDb()
+  })().catch(err => logger.error('Refresh sync work failed', err))
+
+  // Cap the wheel: if sync outlives the timeout it keeps running in the background and the
+  // refreshFromDb inside syncWork repaints the list when it completes. This catch only ever
+  // fires on timeout (syncWork never rejects), so the message is accurate.
+  await promiseWithTimeout(syncWork, REFRESH_SPINNER_TIMEOUT)
+    .catch(() => logger.warn('Refresh still syncing after timeout, dismissing spinner (APP-159)'))
   await useTransactions().refreshFromDb()
   event.detail.complete()
 }

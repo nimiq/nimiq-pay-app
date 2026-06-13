@@ -137,6 +137,12 @@ App.addListener('resume', async () => {
 
   trackCurrentAppOpen('resume')
 
+  // Show cached txs right away on resume, then refresh history in the background (APP-159)
+  const { useTransactions } = await import('@/stores/transactions')
+  const { useSync } = await import('@/stores/sync')
+  await useTransactions().refreshFromDb()
+  void useSync().updateTransactionHistory()
+
   const { getStatus } = useRemoteSignerApi()
   const { data, hasError } = await getStatus()
   if (hasError)

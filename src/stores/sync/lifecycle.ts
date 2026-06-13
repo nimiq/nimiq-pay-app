@@ -90,6 +90,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     await until(client).toBeTruthy()
     logger.log('Waiting for consensus to be established')
     await client.value!.waitForConsensusEstablished()
+    // Surface cached/history txs ASAP — don't block first paint on remote-signer verification (APP-159)
+    void updateTransactionHistory()
     await useRemoteSigner().resolveHomeBalanceState()
 
     logger.log('Verifying remote signers in DB')
@@ -97,7 +99,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
-    updateTransactionHistory()
     startPeriodicTransactionRefresh()
     await registerWalletListeners()
 
