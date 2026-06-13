@@ -11,6 +11,7 @@ const logger = useLogger('useModal')
 export type CloseRole = 'confirm' | 'cancel'
 
 export enum Modal {
+  AutoDepositThreshold = '@/modals/AutoDepositThresholdModal.vue',
   DeletePoints = '@/modals/DeletePointsModal.vue',
   Disclaimer = '@/modals/DisclaimerModal.vue',
   Dev = '@/modals/DevModal.vue',
@@ -49,6 +50,9 @@ function _useModal() {
 
     // Lazy loading of modals, we need to do this because dynamic import is not supported by Vite
     switch (modal) {
+      case Modal.AutoDepositThreshold:
+        component = defineAsyncComponent(() => import(Modal.AutoDepositThreshold))
+        break
       case Modal.DeletePoints:
         component = defineAsyncComponent(() => import(Modal.DeletePoints))
         break

@@ -79,6 +79,7 @@ function makeState() {
     homeBalanceState: 'resolved-remote' as 'resolved-empty' | 'resolved-remote' | 'pending',
     htlcStart: 100_000,
     htlcEnd: 300_000,
+    htlcThreshold: 0,
     pointsToken: undefined as string | undefined,
     client: {
       waitForConsensusEstablished: vi.fn((): Promise<void> => Promise.resolve()),
@@ -199,6 +200,7 @@ export function resetSyncState() {
   state.homeBalanceState = 'resolved-remote'
   state.htlcStart = 100_000
   state.htlcEnd = 300_000
+  state.htlcThreshold = 0
   state.pointsToken = undefined
   state.client = {
     waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
@@ -336,6 +338,7 @@ vi.mock('@/lib/tx', () => ({
 vi.mock('@/stores/app', () => {
   const useApp = defineStore('app', () => ({
     pointsToken: computed(() => state.pointsToken),
+    htlcThreshold: computed(() => state.htlcThreshold),
     addNewTopUpAddress: state.addNewTopUpAddress,
   }))
   return { useApp }

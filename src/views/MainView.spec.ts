@@ -25,6 +25,7 @@ const isSyncingWallets = ref(false)
 const isConsensusNeeded = ref(false)
 const isScannerActive = ref(false)
 const localBalance = ref(0)
+const htlcThreshold = ref(0)
 const kycSdkStatus = ref('idle')
 
 const updatePointsBalance = vi.fn()
@@ -189,6 +190,7 @@ vi.mock('@/stores/app', () => ({
     phoneNumberVerified,
     displayedPaymentRequests,
     isNimiqAsset,
+    htlcThreshold,
   }),
 }))
 
@@ -305,6 +307,7 @@ describe('mainView', () => {
     isConsensusNeeded.value = false
     isScannerActive.value = false
     localBalance.value = 0
+    htlcThreshold.value = 0
     kycSdkStatus.value = 'idle'
     updatePointsBalance.mockReset()
     updateTasks.mockReset()
@@ -356,5 +359,29 @@ describe('mainView', () => {
     expect(statusText).toContain('USDT is only available on mainnet. Switch to mainnet to use USDT.')
     expect(statusText).not.toContain('Connecting to Polygon')
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
+  })
+
+  it('does not show "Processing funds" when local balance is below the HTLC threshold', async () => {
+    isHtlcActive.value = false
+    remoteBalance.value = 0
+    localBalance.value = 2 * 1e5
+    htlcThreshold.value = 5 * 1e5
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Processing funds')
+  })
+
+  it('shows "Processing funds" once local balance reaches the HTLC threshold', async () => {
+    isHtlcActive.value = false
+    remoteBalance.value = 0
+    localBalance.value = 5 * 1e5
+    htlcThreshold.value = 5 * 1e5
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Processing funds')
   })
 })

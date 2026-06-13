@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useApp } from '@/stores/app'
 
 const props = defineProps({
@@ -92,7 +93,9 @@ async function updateWidth() {
   const placeholderWidth = widthPlaceholder.value.offsetWidth - 40
   const valueWidth = widthValue.value.offsetWidth
 
-  width.value = (formattedValue.value ? valueWidth : placeholderWidth)
+  const newWidth = formattedValue.value ? valueWidth : placeholderWidth
+  if (newWidth !== width.value)
+    width.value = newWidth
 }
 
 watch(formattedValue, updateWidth)
@@ -101,6 +104,13 @@ watch(
   (newValue: number | undefined) => newValue && updateValue(newValue),
   { immediate: true },
 )
+
+// Recompute width once the element is laid out — the immediate watch above runs before the DOM is
+// measurable (e.g. inside a modal opening), leaving a preset value with a too-narrow initial width.
+// onMounted can still be too early during a modal present animation, so also re-measure whenever the
+// element actually gains/changes size.
+onMounted(updateWidth)
+useResizeObserver(fullWidth, updateWidth)
 </script>
 
 <template>

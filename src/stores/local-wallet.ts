@@ -1,10 +1,11 @@
 import type { Result } from '@/types'
+import { useStorageAsync } from '@vueuse/core'
 import { HDNodeWallet, Mnemonic } from 'ethers/wallet'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
-import { useApp } from './app'
+import { kv, useApp } from './app'
 
 const logger = useLogger('local-wallet')
 
@@ -19,7 +20,9 @@ export const useLocalWallet = defineStore('local-wallet', () => {
 
   const localAddress = computed(() => localWallet.value.toAddress())
   const publicKey = computed(() => localWallet.value.publicKey.toHex())
-  const localBalance = ref(0)
+  // Persisted so the home screen's "pending" amount shows instantly on cold start, before the
+  // network balance fetch completes. Hydrated from the per-account DB cache (cleared on logout).
+  const localBalance = useStorageAsync('localBalance', 0, kv(), { writeDefaults: false })
 
   function getWords(): Result<string[], string> {
     if (!entropy.value) {

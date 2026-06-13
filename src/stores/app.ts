@@ -62,6 +62,10 @@ export const DECIMALS: Record<Crypto, number> = {
   [Crypto.USDT]: 6,
 }
 
+// Min NIM (in luna) that must accumulate in the local staging wallet before a new HTLC is
+// created. Batches micro-payments into one HTLC instead of one per payment. 0 = create immediately.
+export const DEFAULT_HTLC_THRESHOLD_LUNA = 5 * 1e5
+
 export enum PushNotificationsStatus {
   GRANTED = 'granted',
   DENIED = 'denied',
@@ -132,6 +136,7 @@ export const useApp = defineStore('app', () => {
   // Dev-menu reveal toggle for tx soft-hide feature (APP-132). Pre-login storage so it survives across logins.
   const showHiddenTransactions = useStorageAsync('showHiddenTransactions', false, kvPreferences(), sharedOptions)
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
+  const htlcThreshold = useStorageAsync('htlcThreshold', DEFAULT_HTLC_THRESHOLD_LUNA, kv(), sharedOptions)
   const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
 
   const pendingReferralCode = ref('')
@@ -282,6 +287,7 @@ export const useApp = defineStore('app', () => {
     showAnimations,
     showHiddenTransactions,
     decimalsAmount,
+    htlcThreshold,
     reopenMiniAppWebviewAfterResume,
   }
 })

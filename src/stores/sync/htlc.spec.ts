@@ -17,6 +17,15 @@ describe('useSyncHtlc', () => {
     vi.useRealTimers()
   })
 
+  // nodesAreSynced is an async computed; touch it then flush microtasks so it resolves to true.
+  async function primeNodesAreSynced() {
+    const { useSyncState } = await import('./state')
+    void useSyncState().nodesAreSynced
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  }
+
   describe('handleFunds', () => {
     it('returns immediately when localBalance is 0', async () => {
       state.localBalance = 0
@@ -80,13 +89,7 @@ describe('useSyncHtlc', () => {
       state.isRemoteOk = true
       state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
-      const { useSyncState } = await import('./state')
-      // Touch nodesAreSynced to start the async computed
-      const syncState = useSyncState()
-      void syncState.nodesAreSynced
-      await Promise.resolve()
-      await Promise.resolve()
-      await Promise.resolve()
+      await primeNodesAreSynced()
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.RemoteToLocal })
     })
@@ -101,12 +104,7 @@ describe('useSyncHtlc', () => {
       state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
       state.sendTx.mockResolvedValue({ data: undefined, error: 'cosigner rejected' })
       const { useSyncHtlc } = await import('./htlc')
-      const { useSyncState } = await import('./state')
-      const syncState = useSyncState()
-      void syncState.nodesAreSynced
-      await Promise.resolve()
-      await Promise.resolve()
-      await Promise.resolve()
+      await primeNodesAreSynced()
 
       await useSyncHtlc().handleFunds()
 
@@ -137,6 +135,58 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).not.toHaveBeenCalled()
+    })
+
+    it('does not create an HTLC when localBalance is below htlcThreshold', async () => {
+      state.localBalance = 50_000
+      state.htlcThreshold = 100_000
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).not.toHaveBeenCalled()
+      // Guarded before the remote-balance fetch, so no RPC is wasted while below threshold.
+      expect(state.getBalance).not.toHaveBeenCalled()
+    })
+
+    it('creates an HTLC once localBalance reaches htlcThreshold', async () => {
+      state.localBalance = 100_000
+      state.htlcThreshold = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+    })
+
+    it('does not liquidate an active HTLC when localBalance is below htlcThreshold', async () => {
+      state.localBalance = 50_000
+      state.htlcThreshold = 100_000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).not.toHaveBeenCalled()
+    })
+
+    it('liquidates an active HTLC once localBalance reaches htlcThreshold', async () => {
+      state.localBalance = 100_000
+      state.htlcThreshold = 100_000
+      state.height = 1000
+      state.remoteHeight = 1000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await primeNodesAreSynced()
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.RemoteToLocal })
+    })
+
+    it('creates an HTLC immediately when htlcThreshold is 0 (regression)', async () => {
+      state.localBalance = 1
+      state.htlcThreshold = 0
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
   })
 

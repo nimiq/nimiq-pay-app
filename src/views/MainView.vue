@@ -41,7 +41,7 @@ const logger = useLogger('HomeView')
 const router = useRouter()
 
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
-const { phoneNumberVerified, displayedPaymentRequests, isNimiqAsset } = storeToRefs(useApp())
+const { phoneNumberVerified, displayedPaymentRequests, isNimiqAsset, htlcThreshold } = storeToRefs(useApp())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
@@ -113,7 +113,9 @@ watchEffect(async () => {
       isStatusMessageShown.value = true
     }
   }
-  else if (((remoteBalance.value > 0 || localBalance.value > 0) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
+  // Local funds below the HTLC threshold are just accumulating (shown as "pending"), not being
+  // processed yet — only treat them as "processing" once they'll actually trigger an HTLC.
+  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && localBalance.value >= htlcThreshold.value)) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
     statusMessageText.value = i18n.tc(
       'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
       blocksUntilNextMacroBlock.value,

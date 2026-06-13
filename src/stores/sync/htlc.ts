@@ -6,6 +6,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -25,6 +26,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { isProcessingRemote, isSendingTx, htlcCheckLock } = storeToRefs(useLocks())
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(useRemoteSigner())
   const { sendTx } = useTransactions()
+  const { htlcThreshold } = storeToRefs(useApp())
   const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended } = storeToRefs(useSyncState())
 
   /**
@@ -35,6 +37,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     if (isTransactionPending.value || isSendingTx.value) {
       logger.log('There is a pending transaction. Delaying handleFunds', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
+      return
+    }
+
+    // Let micro-payments accumulate in the local wallet until they reach the threshold before
+    // moving them into the HTLC, instead of creating/topping-up an HTLC for every payment.
+    // Checked before fetching the remote balance to skip a wasted RPC while below threshold.
+    // (localBalance is already > 0 here, so a threshold of 0 keeps the previous immediate behavior.)
+    if (localBalance.value < htlcThreshold.value) {
+      logger.log(`💤 Local balance ${localBalance.value / 1e5} NIM below HTLC threshold ${htlcThreshold.value / 1e5} NIM — accumulating, skipping HTLC create/top-up`)
       return
     }
 

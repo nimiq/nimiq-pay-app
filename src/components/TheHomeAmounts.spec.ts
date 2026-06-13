@@ -14,6 +14,7 @@ const isTransactionPending = ref(false)
 const showAnimations = ref(false)
 const isProcessingRemote = ref(false)
 const activeAsset = ref<Asset>(Asset.NIM)
+const localBalance = ref(0)
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
@@ -51,6 +52,18 @@ vi.mock('@/stores/app', () => ({
 vi.mock('@/stores/locks', () => ({
   useLocks: () => ({
     isProcessingRemote,
+  }),
+}))
+
+vi.mock('@/stores/local-wallet', () => ({
+  useLocalWallet: () => ({
+    localBalance,
+  }),
+}))
+
+vi.mock('@/components/icons/top-up.vue', () => ({
+  default: defineComponent({
+    template: '<div data-testid="top-up-icon" />',
   }),
 }))
 
@@ -103,6 +116,9 @@ async function mountComponent() {
   return mount(TheHomeAmounts, {
     global: {
       plugins: [createPinia()],
+      mocks: {
+        $t: (key: string) => key,
+      },
       stubs: {
         IonSkeletonText: {
           template: '<div data-testid="balance-skeleton" />',
@@ -124,6 +140,7 @@ describe('theHomeAmounts', () => {
     showAnimations.value = false
     isProcessingRemote.value = false
     activeAsset.value = Asset.NIM
+    localBalance.value = 0
   })
 
   it('shows the skeleton while the home balance state is still loading', async () => {
@@ -250,5 +267,82 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="crypto-amount"]').attributes('data-min-decimals')).toBe('2')
+  })
+
+  it('shows the pending top-up line for NIM without adding it to the main balance', async () => {
+    homeBalanceState.value = 'resolved-remote'
+    remoteBalance.value = 25
+    localBalance.value = 10
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(true)
+    // Main balance stays the spendable remote balance, not remote + local.
+    expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('25')
+  })
+
+  it('hides the pending top-up line for USDT even when localBalance is set', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 99
+    usdtHomeBalanceState.value = 'resolved-balance'
+    localBalance.value = 10
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(false)
+  })
+
+  it('hides the pending top-up line when localBalance is 0', async () => {
+    homeBalanceState.value = 'resolved-remote'
+    remoteBalance.value = 25
+    localBalance.value = 0
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(false)
+  })
+
+  it('shows the skeleton (no pending line) while loading with no local funds', async () => {
+    homeBalanceState.value = 'loading'
+    remoteBalance.value = 0
+    localBalance.value = 0
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(false)
+  })
+
+  it('shows the balance skeleton (not the last known balance) while funds are pending with a 0 balance, and keeps the pending line', async () => {
+    // localBalance holds funds just drained from our own remote to recreate the HTLC.
+    homeBalanceState.value = 'loading'
+    isProcessingRemote.value = true
+    remoteBalance.value = 0
+    lastKnownRemoteBalance.value = 500
+    localBalance.value = 500
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    // Balance shows a skeleton (real balance unknown), but the pending line stays visible.
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="fiat-amount"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(true)
+  })
+
+  it('shows the balance skeleton with the pending line when the balance is 0 and funds are pending (no transition)', async () => {
+    homeBalanceState.value = 'resolved-empty'
+    remoteBalance.value = 0
+    localBalance.value = 300
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="balance-skeleton"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(true)
   })
 })

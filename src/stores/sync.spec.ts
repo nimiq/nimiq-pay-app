@@ -136,7 +136,10 @@ vi.mock('@/lib/tx', () => ({
 
 vi.mock('@/stores/app', () => {
   const useApp = defineStore('app', () => ({
-    pointsToken: undefined,
+    // storeToRefs reads `.effect` on every state value, so these must be reactive, not plain
+    // values — a bare `undefined` would throw once a consumer (htlc.ts) calls storeToRefs(useApp()).
+    pointsToken: computed(() => undefined),
+    htlcThreshold: computed(() => 0),
     addNewTopUpAddress: vi.fn(),
   }))
 

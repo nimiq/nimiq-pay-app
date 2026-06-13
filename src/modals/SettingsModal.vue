@@ -2,20 +2,21 @@
 import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
-import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
+import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonNote, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { computedAsync, onLongPress, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount, ref } from 'vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useBiometric } from '@/composables/useBiometric'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { useNotifications } from '@/composables/useNotifications'
+import { toCoins } from '@/composables/usePrice'
 import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-setup'
 import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
+import { Crypto, DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
@@ -31,8 +32,12 @@ const {
   phoneNumberVerified,
   showAnimations,
   decimalsAmount,
+  htlcThreshold,
   reopenMiniAppWebviewAfterResume,
 } = storeToRefs(useApp())
+
+// Threshold is stored in luna; show it in NIM. Edited via the AutoDepositThreshold modal.
+const htlcThresholdNim = computed(() => toCoins(htlcThreshold.value, Crypto.NIM))
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const { unregisterNotifications, registerNotifications, requestLocalNotificationsPermission } = useNotifications()
@@ -153,6 +158,13 @@ onBeforeMount(updateBiometryInfo)
               {{ decimals || 'None' }}
             </IonSelectOption>
           </IonSelect>
+        </IonItem>
+
+        <IonItem button :detail="false" @click="showModal(Modal.AutoDepositThreshold, { isOnTop: true, isSmall: true })">
+          <IonLabel>{{ $t('Auto-deposit threshold') }}</IonLabel>
+          <IonNote slot="end" class="text-lg">
+            {{ htlcThresholdNim }} NIM
+          </IonNote>
         </IonItem>
 
         <IonItem>
