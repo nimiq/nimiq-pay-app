@@ -2,6 +2,7 @@
 import { Keyboard } from '@capacitor/keyboard'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { IonContent, IonGrid, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
+import { onLongPress } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,6 +11,7 @@ import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { clearSession, hasPendingSession, reconnectAndShow } from '@/composables/useMiniAppSession'
+import { i18n } from '@/i18n/i18n-setup'
 import { useConn } from '@/stores/conn'
 
 const logger = useLogger('PinView')
@@ -18,35 +20,50 @@ const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
 const errorMsg = ref('')
 
+// Escape hatch to export logs if login fails here (Settings is unreachable while stuck). Long-press the title for 3s.
+const titleRef = ref<HTMLElement | null>(null)
+onLongPress(titleRef, () => logger.sendReport(), { modifiers: { prevent: true }, delay: 3 * 1e3 })
+
 async function handleSubmit(pin: string) {
   if (pin.length < 4)
     return false
 
-  const error = await decrypt(pin)
-  if (error) {
-    errorMsg.value = error
+  // Anything that throws here (decrypt, mini-app reconnect, navigation) must surface as a visible,
+  // recoverable error — otherwise the failure is swallowed and the user is left silently stuck on the PIN screen.
+  try {
+    const error = await decrypt(pin)
+    if (error) {
+      errorMsg.value = error
+      window.setTimeout(() => {
+        errorMsg.value = ''
+      }, 2000)
+      return
+    }
+
+    // If a mini-app webview was hidden before the reload, reconnect and show it
+    if (hasPendingSession()) {
+      try {
+        await reconnectAndShow()
+      }
+      catch (err) {
+        logger.error('Failed to reconnect mini-app session:', err)
+        await clearSession()
+        try {
+          await InAppBrowser.close()
+        }
+        catch {}
+      }
+    }
+
+    await router.replace('/app')
+  }
+  catch (err) {
+    logger.error('Login failed after PIN entry', err)
+    errorMsg.value = i18n.t('Something went wrong decrypting the database. Try reloading the app.')
     window.setTimeout(() => {
       errorMsg.value = ''
-    }, 2000)
-    return
+    }, 4000)
   }
-
-  // If a mini-app webview was hidden before the reload, reconnect and show it
-  if (hasPendingSession()) {
-    try {
-      await reconnectAndShow()
-    }
-    catch (err) {
-      logger.error('Failed to reconnect mini-app session:', err)
-      await clearSession()
-      try {
-        await InAppBrowser.close()
-      }
-      catch {}
-    }
-  }
-
-  await router.replace('/app')
 }
 
 function shown() {
@@ -96,7 +113,7 @@ onMounted(async () => {
     </IonHeader>
     <IonContent class="ion-padding text-center" style="--background: #F8F8F8">
       <IonGrid class="h-full flex flex-col" aria-label="Enter PIN">
-        <h1 class="font-bold">
+        <h1 ref="titleRef" class="font-bold">
           {{ $t('Enter PIN') }}
         </h1>
         <PinInput :input-length="4" :error-msg="errorMsg" :can-use-biometric="true" @done="handleSubmit" />

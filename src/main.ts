@@ -150,8 +150,25 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // This router navigation guard is to prevent switching to the new route before the language file finished loading.
   // If there are any routes which do not require translations, they can be skipped here.
+  // A rejected setLanguage (e.g. a failed locale chunk import) must still call next(), otherwise the
+  // navigation wedges forever and the user is stuck on the current screen (e.g. the PIN view).
   router.beforeResolve((to, from, next) => {
-    setLanguage(language.value).then(() => next())
+    setLanguage(language.value)
+      .catch(e => useLogger('router').error('setLanguage failed in beforeResolve', e))
+      .finally(() => next())
+  })
+
+  // Routes are lazy-loaded. A failed dynamic import (stale hashed chunk after a binary update) otherwise
+  // aborts navigation silently — with no onError handler the user is left stuck on the current route.
+  // Log every navigation error, and recover from chunk-load failures with a single fresh reload.
+  router.onError((err) => {
+    const message = err instanceof Error ? err.message : String(err)
+    useLogger('router').error('Navigation error', message)
+    const isChunkError = /dynamically imported module|module script failed|ChunkLoadError|Failed to fetch dynamically/i.test(message)
+    if (isChunkError && !sessionStorage.getItem('chunkReloaded')) {
+      sessionStorage.setItem('chunkReloaded', '1')
+      location.reload()
+    }
   })
 
   app.use(router)

@@ -1,9 +1,18 @@
 <script setup lang="ts">
 import { IonButton, IonContent, IonHeader, IonPage, IonToolbar } from '@ionic/vue'
+import { onLongPress } from '@vueuse/core'
+import { ref } from 'vue'
 import NimiqPayLogo from '@/components/icons/nimiq-pay-logo.vue'
+import { useLogger } from '@/composables/useLogger'
 import { trackWalletEntrySelected } from '@/lib/analytics'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+
+const logger = useLogger('SetupView')
+
+// Escape hatch to export logs if setup fails here (Settings is unreachable). Long-press the logo for 3s.
+const logoRef = ref<HTMLElement | null>(null)
+onLongPress(logoRef, () => logger.sendReport(), { modifiers: { prevent: true }, delay: 3 * 1e3 })
 
 function startSetupFlow(entryMethod: 'create' | 'create_with_promo_code' | 'import') {
   trackWalletEntrySelected(entryMethod)
@@ -22,7 +31,7 @@ function startSetupFlow(entryMethod: 'create' | 'create_with_promo_code' | 'impo
     </IonHeader>
     <IonContent :fullscreen="true">
       <div class="flex flex-col items-center justify-center h-full text-center">
-        <div class="mt-auto">
+        <div ref="logoRef" class="mt-auto">
           <NimiqPayLogo class="w-[169px]" />
         </div>
         <div class="w-10/12 mx-auto mt-auto">
