@@ -60,7 +60,7 @@ PODS:
     - PostHog (< 4.0, >= 3.19.1)
   - CapgoCameraPreview (8.3.8):
     - Capacitor
-  - CapgoCapacitorInappbrowser (8.6.16):
+  - CapgoCapacitorInappbrowser (8.6.23):
     - Capacitor
   - CocoaLumberjack (3.9.1):
     - CocoaLumberjack/Core (= 3.9.1)
@@ -165,7 +165,7 @@ DEPENDENCIES:
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast`)"
   - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.4.2_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview`)"
-  - "CapgoCapacitorInappbrowser (from `../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.16_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser`)"
+  - "CapgoCapacitorInappbrowser (from `../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.23_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser`)"
   - Firebase/Messaging
   - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
@@ -247,7 +247,7 @@ EXTERNAL SOURCES:
   CapgoCameraPreview:
     :path: "../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview"
   CapgoCapacitorInappbrowser:
-    :path: "../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.16_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser"
+    :path: "../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.23_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser"
   RdlaboCapacitorScreenshotEvent:
     :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event"
 
@@ -279,7 +279,7 @@ SPEC CHECKSUMS:
   CapacitorToast: 408036fbd702120d3adde3980b740f3c0fb60c9e
   CapawesomeCapacitorPosthog: 5a15e900a01c1ac10e7f22f9a0c3c4344fbb2e30
   CapgoCameraPreview: bdbc20c3ed01ffdf37151164c6c8355b1c0c544e
-  CapgoCapacitorInappbrowser: 50787d78d5b52b1a96f0205cdb97788592a030b0
+  CapgoCapacitorInappbrowser: aa12d455f08c9f069a344e701d8ed7882b093b31
   CocoaLumberjack: e4ba3b414dfca8c1916c6303d37f63b3a95134c6
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
@@ -300,6 +300,6 @@ SPEC CHECKSUMS:
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: d94f4776dd835cf535e6310b814389f1f2453346
+PODFILE CHECKSUM: 13a36e4269fab5a093943fe6cdf7266c3af092be
 
 COCOAPODS: 1.15.2
