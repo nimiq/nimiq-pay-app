@@ -114,6 +114,9 @@ msgstr "Sicher, dass du dich ausloggen willst?"
 msgid "Asset"
 msgstr ""
 
+msgid "Auto-deposit threshold"
+msgstr ""
+
 msgid "Backup Account"
 msgstr "Konto-Backup erstellen"
 
@@ -567,6 +570,9 @@ msgstr "Inkl. Gebühren"
 msgid "Includes {fee} in fees"
 msgstr "Inklusive {fee} Gebühren"
 
+msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
+msgstr ""
+
 #, fuzzy
 #| msgid "Points Payment"
 msgid "Incoming Payments"
@@ -992,6 +998,11 @@ msgstr "Zahlung wurde zurückerstattet"
 #| msgid "Payment"
 msgid "Payments"
 msgstr "Zahlung"
+
+#, fuzzy
+#| msgid "Pending"
+msgid "pending"
+msgstr "Ausstehend"
 
 msgid "Pending"
 msgstr "Ausstehend"

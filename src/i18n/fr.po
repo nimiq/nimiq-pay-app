@@ -115,6 +115,9 @@ msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 msgid "Asset"
 msgstr ""
 
+msgid "Auto-deposit threshold"
+msgstr ""
+
 msgid "Backup Account"
 msgstr "Sauvegarder votre compte"
 
@@ -568,6 +571,9 @@ msgstr "Frais inclus"
 msgid "Includes {fee} in fees"
 msgstr ""
 
+msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
+msgstr ""
+
 #, fuzzy
 #| msgid "Points Payment"
 msgid "Incoming Payments"
@@ -997,6 +1003,11 @@ msgstr "Le paiement a été remboursé"
 #| msgid "Payment"
 msgid "Payments"
 msgstr "Paiement"
+
+#, fuzzy
+#| msgid "Pending"
+msgid "pending"
+msgstr "En attente"
 
 msgid "Pending"
 msgstr "En attente"

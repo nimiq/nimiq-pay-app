@@ -23,7 +23,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:40
-#: src/views/HomeView.vue:176
+#: src/views/HomeView.vue:190
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -31,7 +31,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:169
+#: src/views/HomeView.vue:183
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -132,7 +132,7 @@ msgstr ""
 msgid "Asset"
 msgstr ""
 
-#: src/modals/AutoDepositThresholdModal.vue:4
+#: src/modals/AutoDepositThresholdModal.vue:13
 #: src/modals/SettingsModal.vue:47
 msgid "Auto-deposit threshold"
 msgstr ""
@@ -708,7 +708,7 @@ msgstr ""
 msgid "Includes {fee} in fees"
 msgstr ""
 
-#: src/modals/AutoDepositThresholdModal.vue:7
+#: src/modals/AutoDepositThresholdModal.vue:16
 msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
 msgstr ""
 
@@ -1447,7 +1447,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:177
+#: src/views/HomeView.vue:191
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1471,7 +1471,7 @@ msgstr ""
 
 #: src/components/NimAddressInput.vue:56
 #: src/components/WithdrawalAddressList.vue:18
-#: src/modals/AutoDepositThresholdModal.vue:13
+#: src/modals/AutoDepositThresholdModal.vue:22
 msgid "Save"
 msgstr ""
 
@@ -1604,6 +1604,7 @@ msgstr ""
 #: src/composables/useDecrypt.ts:56
 #: src/composables/useDecrypt.ts:59
 #: src/composables/useDecrypt.ts:73
+#: src/views/PinView.vue:62
 msgid "Something went wrong decrypting the database. Try reloading the app."
 msgstr ""
 
@@ -1686,7 +1687,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:168
+#: src/views/HomeView.vue:182
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -2122,7 +2123,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:182
+#: src/views/HomeView.vue:196
 msgid "You have a reward to claim!"
 msgstr ""
 

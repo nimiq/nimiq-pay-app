@@ -109,6 +109,9 @@ msgstr "Tens a certeza que queres encerrar sessão?"
 msgid "Asset"
 msgstr ""
 
+msgid "Auto-deposit threshold"
+msgstr ""
+
 msgid "Backup Account"
 msgstr "Fazer cópia de segurançada conta"
 
@@ -550,6 +553,9 @@ msgstr "Taxas incluídas"
 msgid "Includes {fee} in fees"
 msgstr "Incluí {fee} em taxas"
 
+msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
+msgstr ""
+
 #, fuzzy
 #| msgid "Points Payment"
 msgid "Incoming Payments"
@@ -973,6 +979,11 @@ msgstr "O pagamento foi reembolsado"
 #| msgid "Payment"
 msgid "Payments"
 msgstr "Pagamento"
+
+#, fuzzy
+#| msgid "Pending"
+msgid "pending"
+msgstr "Pendente"
 
 msgid "Pending"
 msgstr "Pendente"
