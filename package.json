@@ -106,7 +106,7 @@
     "@ionic/core": "8.8.6",
     "@ionic/vue": "8.8.6",
     "@ionic/vue-router": "8.8.6",
-    "@nimiq/core": "^2.6.1",
+    "@nimiq/core": "^2.7.0",
     "@types/youtube-player": "^5.5.11",
     "@vitejs/plugin-vue": "^6.0.6",
     "@vue/devtools": "^8.1.2",

@@ -216,8 +216,8 @@ importers:
         specifier: 8.8.6
         version: 8.8.6(@stencil/core@4.43.4)(vue-router@4.6.4(vue@3.5.34(typescript@5.9.3)))(vue@3.5.34(typescript@5.9.3))
       '@nimiq/core':
-        specifier: ^2.6.1
-        version: 2.6.1
+        specifier: ^2.7.0
+        version: 2.7.0(vite@7.3.3(@types/node@25.6.0)(jiti@1.21.7)(terser@5.47.1)(yaml@2.8.4))
       '@types/youtube-player':
         specifier: ^5.5.11
         version: 5.5.11
@@ -1178,8 +1178,13 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
-  '@nimiq/core@2.6.1':
-    resolution: {integrity: sha512-Wye2o2oSB8tpWwYzTEw8Mtte7SWM/cJ8NsBBb0lAYLL9OGx6lgBV0HOkruQWNBw9DBIPWrRo2oy4nVTQcy770A==}
+  '@nimiq/core@2.7.0':
+    resolution: {integrity: sha512-uPSgz7BwoBk3o7xb0E9KoertwCZyrfmU6M3Yczw74DjCDR9vEBzEXvCkIehwiyFQ6UpaFzwBIg7/ElHe6c0kVQ==}
+    peerDependencies:
+      vite: '>=5.0.0'
+    peerDependenciesMeta:
+      vite:
+        optional: true
 
   '@nimiq/fastspot-api@1.10.3':
     resolution: {integrity: sha512-CUkIAcF7R3OlN45idB+yC9Wnuz2YXTPx25xYswCdmbMGu/EGZFNnGHLIe6HkbHd8Eh+uBrwqBmLZGm8jyQ9+6A==}
@@ -8755,10 +8760,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@nimiq/core@2.6.1':
+  '@nimiq/core@2.7.0(vite@7.3.3(@types/node@25.6.0)(jiti@1.21.7)(terser@5.47.1)(yaml@2.8.4))':
     dependencies:
       comlink: 4.4.2
+      vite-plugin-wasm: 3.6.0(vite@7.3.3(@types/node@25.6.0)(jiti@1.21.7)(terser@5.47.1)(yaml@2.8.4))
       websocket: 1.0.35
+    optionalDependencies:
+      vite: 7.3.3(@types/node@25.6.0)(jiti@1.21.7)(terser@5.47.1)(yaml@2.8.4)
     transitivePeerDependencies:
       - supports-color
 
