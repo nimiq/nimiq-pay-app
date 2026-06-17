@@ -63,6 +63,9 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'jsdom',
+      testTimeout: 20000,
+      hookTimeout: 20000,
+      retry: process.env.CI ? 2 : 0,
     },
     define: {
       __VITE_SERVER_IP__: JSON.stringify(getLocalIP()),

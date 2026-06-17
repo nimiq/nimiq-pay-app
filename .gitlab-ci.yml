@@ -36,6 +36,7 @@ test:unit:
         - pnpm-lock.yaml
     paths:
       - .pnpm-store
+      - node_modules/.vite
   script:
     - pnpm install --frozen-lockfile
     - pnpm exec vitest run
