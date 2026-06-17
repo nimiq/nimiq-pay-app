@@ -1,14 +1,15 @@
 # Daniel 2024.
 # Mathéo Raveux 2024.
+# Alberto Monterroso 2026.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-05-11 13:20+0000\n"
-"Last-Translator: Mathéo Raveux\n"
+"PO-Revision-Date: 2026-06-17 10:27+0000\n"
+"Last-Translator: Alberto Monterroso\n"
 "Language: fr\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 4.18.2\n"
+"X-Generator: Weblate 5.13.3\n"
 
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" est un mot de récupération non valide"
@@ -17,12 +18,10 @@ msgid "{count} of {total} remaining."
 msgstr "{count} sur {total} restant."
 
 msgid "0x..."
-msgstr ""
+msgstr "0x..."
 
-#, fuzzy
-#| msgid "Transaction already sent"
 msgid "A transaction is already in progress"
-msgstr "Transaction déjà envoyée"
+msgstr "Une transaction est déjà en cours"
 
 msgid "About"
 msgstr "À propos"
@@ -31,24 +30,22 @@ msgid "Activate Cashback & Rewards"
 msgstr "Activer les Cashback et les Récompenses"
 
 msgid "Activate NAKA Card"
-msgstr ""
+msgstr "Activer la carte NAKA"
 
 msgid "Activate NAKA for contactless payments"
-msgstr ""
+msgstr "Activez NAKA pour les paiements sans contact"
 
 msgid "Activating scanner"
-msgstr ""
+msgstr "Activation du scanner"
 
-#, fuzzy
-#| msgid "Add NIM address"
 msgid "Add another address"
-msgstr "Ajouter une adresse NIM"
+msgstr "Ajouter une autre adresse"
 
 msgid "Add new card"
-msgstr ""
+msgstr "Ajouter une nouvelle carte"
 
 msgid "Add Stake"
-msgstr ""
+msgstr "Ajouter au staking"
 
 msgid "Address copied to clipboard"
 msgstr "Adresse copiée dans le presse-papiers"
@@ -60,10 +57,10 @@ msgid "Addresses missing"
 msgstr "Adresses manquantes"
 
 msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
-msgstr ""
+msgstr "Après une déconnexion prolongée, la connexion au réseau doit être actualisée. Cela peut prendre jusqu'à 60 sec."
 
 msgid "Alias (optional)"
-msgstr ""
+msgstr "Alias (facultatif)"
 
 msgid "All"
 msgstr "Tout"
@@ -72,51 +69,43 @@ msgid "Already paid"
 msgstr "Déjà payé"
 
 msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
-msgstr ""
+msgstr "Vérifiez toujours que vous payez vers une adresse Polygon, sinon vos fonds pourraient être définitivement perdus !"
 
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
-msgstr ""
+msgstr "Vérifiez toujours que vous payez vers une adresse Polygon, sinon vos fonds pourraient être définitivement perdus !"
 
 msgid "Amount exceeds daily limit of {fiatAmount}"
-msgstr ""
+msgstr "Le montant dépasse la limite quotidienne de {fiatAmount}"
 
 msgid "Amount exceeds payment limit of {fiatAmount}"
-msgstr ""
+msgstr "Le montant dépasse la limite de paiement de {fiatAmount}"
 
 msgid "Amount too small"
-msgstr ""
+msgstr "Montant trop faible"
 
 msgid "An unknown error occurred while importing words"
 msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
 
-#, fuzzy
-#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error occurred, biometric cannot be used"
-msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+msgstr "Une erreur inconnue s'est produite, la biométrie ne peut pas être utilisée"
 
-#, fuzzy
-#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, biometric cannot be used"
-msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+msgstr "Une erreur inconnue s'est produite, la biométrie ne peut pas être utilisée"
 
-#, fuzzy
-#| msgid "An unknown error occurred while importing words"
 msgid "An unknown error ocurred, please manually input your PIN"
-msgstr "Une erreur inconnue s'est produite lors de l'importation des mots"
+msgstr "Une erreur inconnue s'est produite, veuillez saisir votre code PIN manuellement"
 
-#, fuzzy
-#| msgid "Settings"
 msgid "App Settings"
-msgstr "Paramètres"
+msgstr "Paramètres de l'application"
 
 msgid "Are you sure you want to log out?"
 msgstr "Êtes-vous sûr de vouloir vous déconnecter ?"
 
 msgid "Asset"
-msgstr ""
+msgstr "Actif"
 
 msgid "Auto-deposit threshold"
-msgstr ""
+msgstr "Seuil de dépôt automatique"
 
 msgid "Backup Account"
 msgstr "Sauvegarder votre compte"
@@ -128,28 +117,28 @@ msgid "Backup your account before logging out"
 msgstr "Sauvegardez votre compte avant de vous déconnecter"
 
 msgid "Biometric Authentication"
-msgstr ""
+msgstr "Authentification biométrique"
 
 msgid "Biometric authentication enabled"
-msgstr ""
+msgstr "Authentification biométrique activée"
 
 msgid "Biometric is not supported on this device"
-msgstr ""
+msgstr "La biométrie n'est pas prise en charge sur cet appareil"
 
 msgid "Bitcoin Lightning invoice expired."
 msgstr "La facture Bitcoin Lightning a expiré."
 
 msgid "Block"
-msgstr ""
+msgstr "Bloquer"
 
 msgid "Block card"
-msgstr ""
+msgstr "Bloquer la carte"
 
 msgid "Blocked"
-msgstr ""
+msgstr "Bloquée"
 
 msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
-msgstr ""
+msgstr "Bloquer votre carte la désactivera définitivement. Vos fonds ne seront pas affectés et resteront en sécurité sur votre compte. Vous pourrez toujours créer une nouvelle carte après avoir bloqué la carte actuelle."
 
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode est un service de paiement européen qui prend désormais en charge NIM."
@@ -164,45 +153,43 @@ msgid "By tapping “verify”, you agree to our data management practices."
 msgstr "En cliquant sur \"vérifier\", vous acceptez nos politiques de gestion des données."
 
 msgid "Calculating fees..."
-msgstr ""
+msgstr "Calcul des frais..."
 
 msgid "Calculating Polygon fee..."
-msgstr ""
+msgstr "Calcul des frais Polygon..."
 
 msgid "Cancel"
 msgstr "Annuler"
 
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Cannot create swap"
-msgstr "Pas de demande de paiement en cours"
+msgstr "Impossible de créer le swap"
 
 msgid "Cannot enable biometric"
-msgstr ""
+msgstr "Impossible d'activer la biométrie"
 
 msgid "Cannot fetch existing swap"
-msgstr ""
+msgstr "Impossible de récupérer le swap existant"
 
 msgid "Cannot verify daily limits: {error}"
-msgstr ""
+msgstr "Impossible de vérifier les limites quotidiennes : {error}"
 
 msgid "Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr ""
+msgstr "Impossible de vérifier les limites quotidiennes : {expectedCurrency} demandé mais {actualCurrency} obtenu"
 
 msgid "Cannot verify payment limits: {error}"
-msgstr ""
+msgstr "Impossible de vérifier les limites de paiement : {error}"
 
 msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr ""
+msgstr "Impossible de vérifier les limites de paiement : {expectedCurrency} demandé mais {actualCurrency} obtenu"
 
 msgid "Card blocked"
-msgstr ""
+msgstr "Carte bloquée"
 
 msgid "Card locked"
-msgstr ""
+msgstr "Carte verrouillée"
 
 msgid "Card unlocked"
-msgstr ""
+msgstr "Carte déverrouillée"
 
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink réclamé avec succès"
@@ -210,27 +197,23 @@ msgstr "Cashlink réclamé avec succès"
 msgid "Cashlink has no balance"
 msgstr "Le Cashlink n'a pas de solde"
 
-#, fuzzy
-#| msgid "Choose a PIN"
 msgid "Change PIN"
-msgstr "Choisir un code PIN"
+msgstr "Modifier le code PIN"
 
 msgid "Check"
-msgstr ""
+msgstr "Vérifier"
 
 msgid "Choose a PIN"
 msgstr "Choisir un code PIN"
 
-#, fuzzy
-#| msgid "Copy address"
 msgid "Choose an address"
-msgstr "Copier l'adresse"
+msgstr "Choisir une adresse"
 
 msgid "Claim Promo Code"
 msgstr "Réclamer le code promo"
 
 msgid "Close"
-msgstr ""
+msgstr "Fermer"
 
 msgid "Complete"
 msgstr "Compléter"
@@ -238,15 +221,11 @@ msgstr "Compléter"
 msgid "Confirm"
 msgstr "Confirmer"
 
-#, fuzzy
-#| msgid "Confirmed"
 msgid "Confirm and send"
-msgstr "Confirmé"
+msgstr "Confirmer et envoyer"
 
-#, fuzzy
-#| msgid "Withdrawal"
 msgid "Confirm Withdrawal"
-msgstr "Retrait"
+msgstr "Confirmer le retrait"
 
 msgid "Confirm your phone number"
 msgstr "Confirmez votre numéro de téléphone"
@@ -264,10 +243,8 @@ msgstr "Confirmation"
 msgid "Connecting to network."
 msgstr "Connexion au réseau."
 
-#, fuzzy
-#| msgid "Connecting to network."
 msgid "Connecting to Polygon"
-msgstr "Connexion au réseau."
+msgstr "Connexion à Polygon"
 
 msgid "Consensus established."
 msgstr "Consensus établi."
@@ -275,10 +252,8 @@ msgstr "Consensus établi."
 msgid "Continue"
 msgstr "Continuer"
 
-#, fuzzy
-#| msgid "Continue"
 msgid "Continue and Pay"
-msgstr "Continuer"
+msgstr "Continuer et payer"
 
 msgid "Copied to clipboard"
 msgstr "Copié dans le presse-papiers"
@@ -296,12 +271,10 @@ msgid "Copy or scan the address"
 msgstr "Copier ou scanner l'adresse"
 
 msgid "Could not determine Polygon transaction hash"
-msgstr ""
+msgstr "Impossible de déterminer le hash de la transaction Polygon"
 
-#, fuzzy
-#| msgid "Could not fetch NIM amount for Bitcoin Lightning swap."
 msgid "Could not fetch amount for Bitcoin Lightning swap."
-msgstr "Impossible de récupérer le montant de NIM pour l'échange Bitcoin Lightning."
+msgstr "Impossible de récupérer le montant du swap Bitcoin Lightning."
 
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Créez une sauvegarde. C'est le seul moyen de récupérer votre compte."
@@ -310,15 +283,13 @@ msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr "Créez un code-barres Bluecode et montrez-le au caissier pour payer."
 
 msgid "Create Staker"
-msgstr ""
+msgstr "Créer un staker"
 
 msgid "Cryptocity Points"
 msgstr "Points Cryptocity"
 
-#, fuzzy
-#| msgid "Cryptocity Points have been credited"
 msgid "Cryptocity Points are coming soon. Stay tuned!"
-msgstr "Les points Cryptocity ont été crédités"
+msgstr "Les points Cryptoville arrivent bientôt. Plus d'informations bientôt !"
 
 msgid "Cryptocity Points have been credited"
 msgstr "Les points Cryptocity ont été crédités"
@@ -327,20 +298,16 @@ msgid "Currency"
 msgstr "Devise"
 
 msgid "Daily limit"
-msgstr ""
+msgstr "Limite quotidienne"
 
 msgid "Date"
 msgstr "Date"
 
-#, fuzzy
-#| msgid "Select an address…"
 msgid "Delete {address}?"
-msgstr "Sélectionnez une adresse…"
+msgstr "Supprimer {address} ?"
 
-#, fuzzy
-#| msgid "Select an address…"
 msgid "Delete Address"
-msgstr "Sélectionnez une adresse…"
+msgstr "Supprimer l'adresse"
 
 msgid "Delete Cryptocity Points account"
 msgstr "Supprimer le compte de points Cryptocity"
@@ -348,53 +315,47 @@ msgstr "Supprimer le compte de points Cryptocity"
 msgid "Delete Points Account"
 msgstr "Supprimer le compte"
 
-#, fuzzy
-#| msgid "Select an address…"
 msgid "Delete Validator"
-msgstr "Sélectionnez une adresse…"
+msgstr "Supprimer le validateur"
 
 msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
 msgstr "La suppression de votre numéro de téléphone du système de points Cryptocity entraînera la perte définitive de tous les points que vous détenez actuellement."
 
 msgid "direction-override or bidi control character"
-msgstr ""
+msgstr "caractère de contrôle bidirectionnel ou de remplacement de direction"
 
 msgid "Disclaimer"
 msgstr "Clause de non-responsabilité"
 
 msgid "Don't open"
-msgstr ""
+msgstr "Ne pas ouvrir"
 
 msgid "Earn Points"
 msgstr "Gagner des points"
 
 msgid "Enable Fingerprint"
-msgstr ""
+msgstr "Activer l'empreinte digitale"
 
 msgid "Enable NFC to pay"
-msgstr ""
+msgstr "Activez le NFC pour payer"
 
 msgid "Enable notifications"
 msgstr "Activer les notifications"
 
 msgid "Enable Touch ID/Face ID"
-msgstr ""
+msgstr "Activer Touch ID/Face ID"
 
 msgid "Enter Address"
 msgstr "Saisir l'adresse"
 
-#, fuzzy
-#| msgid "Enter recovery words"
 msgid "Enter feature password"
-msgstr "Saisir les mots de récupération"
+msgstr "Saisir le mot de passe de la fonctionnalité"
 
 msgid "Enter manually"
-msgstr ""
+msgstr "Saisir manuellement"
 
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Enter payment request"
-msgstr "Pas de demande de paiement en cours"
+msgstr "Saisir une demande de paiement"
 
 msgid "Enter PIN"
 msgstr "Saisir le code PIN"
@@ -406,7 +367,7 @@ msgid "Enter the code from the SMS sent to you."
 msgstr "Saisissez le code figurant dans le SMS qui vous a été envoyé."
 
 msgid "Enter your PIN to enable biometric authentication"
-msgstr ""
+msgstr "Saisissez votre code PIN pour activer l'authentification biométrique"
 
 msgid "Enter your promo code"
 msgstr "Entrez votre code promo"
@@ -415,39 +376,37 @@ msgid "Enter your referral promo code."
 msgstr "Saisissez votre code promo de parrainage."
 
 msgid "Error getting account"
-msgstr ""
+msgstr "Erreur lors de la récupération du compte"
 
 msgid "Error getting account transactions"
-msgstr ""
+msgstr "Erreur lors de la récupération des transactions du compte"
 
 msgid "Error getting accounts"
-msgstr ""
+msgstr "Erreur lors de la récupération des comptes"
 
 msgid "Error using BiometricAuth"
-msgstr ""
+msgstr "Erreur lors de l'utilisation de BiometricAuth"
 
 msgid "Error using SecureStorage"
-msgstr ""
+msgstr "Erreur lors de l'utilisation de SecureStorage"
 
 msgid "Error while creating deposit"
-msgstr ""
+msgstr "Erreur lors de la création du dépôt"
 
 msgid "Error while extending deposit"
-msgstr ""
+msgstr "Erreur lors de la prolongation du dépôt"
 
 msgid "Error while recovering deposit"
-msgstr ""
+msgstr "Erreur lors de la récupération du dépôt"
 
 msgid "Error while topping up deposit"
-msgstr ""
+msgstr "Erreur lors du rechargement du dépôt"
 
-#, fuzzy
-#| msgid "Trying to establish network consensus:"
 msgid "Establishing consensus"
-msgstr "Tentative d'établissement d'un consensus au sein du réseau :"
+msgstr "Établissement du consensus"
 
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
-msgstr ""
+msgstr "Limite de swap sur 30 jours dépassée. Votre plafond de paiement pour BTC LN est de {remainingFiatLimits}"
 
 msgid "Expired"
 msgstr "Expiré"
@@ -456,57 +415,49 @@ msgid "Expiring Points"
 msgstr "Points en cours d'expiration"
 
 msgid "Failed to activate NAKA Card on device: {error}"
-msgstr ""
+msgstr "Échec de l'activation de la carte NAKA sur l'appareil : {error}"
 
-#, fuzzy
-#| msgid "Address copied to clipboard"
 msgid "Failed to copy address to clipboard"
-msgstr "Adresse copiée dans le presse-papiers"
+msgstr "Échec de la copie de l'adresse dans le presse-papiers"
 
-#, fuzzy
-#| msgid "Copied to the clipboard!"
 msgid "Failed to copy to clipboard"
-msgstr "Copié dans le presse-papiers !"
+msgstr "Échec de la copie dans le presse-papiers"
 
 msgid "Failed to delete Points account"
 msgstr "Échec de la suppression du compte de Points Cryptocity"
 
 msgid "Failed to fetch LNURL service"
-msgstr ""
+msgstr "Échec de la récupération du service LNURL"
 
-#, fuzzy
-#| msgid "Not a pending payment request"
 msgid "Failed to fetch payment request"
-msgstr "Pas de demande de paiement en cours"
+msgstr "Échec de la récupération de la demande de paiement"
 
 msgid "Failed to set app as preferred NFC service: {error}"
-msgstr ""
+msgstr "Impossible de définir l'application comme service NFC par défaut : {error}"
 
 msgid "Faucet error - please try again."
-msgstr ""
+msgstr "Erreur du faucet - veuillez réessayer."
 
 msgid "Featured"
 msgstr "En vedette"
 
-#, fuzzy
-#| msgid "Featured"
 msgid "Features"
-msgstr "En vedette"
+msgstr "Fonctionnalités"
 
 msgid "Fees may apply {fee}"
 msgstr "Des frais peuvent s'appliquer {fee}"
 
 msgid "Free NIM is on its way"
-msgstr ""
+msgstr "Vos NIM gratuits arrivent"
 
 msgid "Full link:"
-msgstr ""
+msgstr "Lien complet :"
 
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr "Obtenez des points Cryptocity comme récompenses de cashback ou complétez des défis pour les gagner."
 
 msgid "Get free NIM"
-msgstr ""
+msgstr "Obtenir des NIM gratuits"
 
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr "Obtenez des informations importantes sur les transactions, les recharges, la sécurité et plus encore."
@@ -518,7 +469,7 @@ msgid "Get Started"
 msgstr "Commencer"
 
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
-msgstr ""
+msgstr "Allez dans Réglages → Confidentialité et sécurité → Mode Isolement"
 
 msgid "GoCrypto refused connecting"
 msgstr "GoCrypto a refusé la connexion"
@@ -526,86 +477,72 @@ msgstr "GoCrypto a refusé la connexion"
 msgid "Got it"
 msgstr "J'ai compris"
 
-#, fuzzy
-#| msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} in Cryptocity Points."
 msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
-msgstr "Aidez à développer le mouvement d'adoption des crypto-monnaies. Invite un ami et vous recevrez tous les deux {amount} en points Cryptocity."
+msgstr "Aidez à développer le mouvement d'adoption des cryptomonnaies. Invitez un ami et vous recevrez tous les deux {amount} points Cryptoville."
 
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr "Rejoignez-moi sur l'application Nimiq Pay et gagnez des Cryptocity Points pour payer vos achats en crypto ! Utilisez mon code {code} pour gagner {amount} en points Cryptocity à l'inscription."
 
 msgid "Hide"
-msgstr ""
+msgstr "Masquer"
 
-#, fuzzy
-#| msgid "All transactions"
 msgid "Hide transaction?"
-msgstr "Toutes les transactions"
+msgstr "Masquer la transaction ?"
 
 msgid "Hold the button to confirm."
-msgstr ""
+msgstr "Maintenez le bouton enfoncé pour confirmer."
 
 msgid "Hold your phone near the terminal"
-msgstr ""
+msgstr "Approchez votre téléphone du terminal"
 
 msgid "I agree to NAKA Card's {terms}"
-msgstr ""
+msgstr "J'accepte les {terms} de la carte NAKA"
 
 msgid "I have a promo code"
 msgstr "J'ai un code promo"
 
 msgid "I have turned it off"
-msgstr ""
+msgstr "Je l'ai désactivé"
 
 msgid "Identification is not verified. Please contact support."
-msgstr ""
+msgstr "Votre identité n'est pas vérifiée. Veuillez contacter le support."
 
-#, fuzzy
-#| msgid "Incl. fees"
 msgid "incl. {fee} fees"
-msgstr "Frais inclus"
+msgstr "{fee} de frais inclus"
 
 msgid "Incl. fees"
 msgstr "Frais inclus"
 
 msgid "Includes {fee} in fees"
-msgstr ""
+msgstr "Inclut {fee} de frais"
 
 msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
-msgstr ""
+msgstr "Les fonds entrants s'accumulent jusqu'à atteindre ce montant avant qu'un dépôt soit créé. Réglez sur 0 pour déposer immédiatement."
 
-#, fuzzy
-#| msgid "Points Payment"
 msgid "Incoming Payments"
-msgstr "Paiement des points"
+msgstr "Paiements entrants"
 
 msgid "Insert PIN to confirm"
 msgstr "Insérer le code PIN pour confirmer"
 
-#, fuzzy
-#| msgid "Insufficient funds"
 msgid "Insufficient balance"
-msgstr "Fonds insuffisants"
+msgstr "Solde insuffisant"
 
-#, fuzzy
-#| msgid "Insufficient funds"
 msgid "Insufficient balance for this payment"
-msgstr "Fonds insuffisants"
+msgstr "Solde insuffisant pour ce paiement"
 
 msgid "Insufficient funds"
 msgstr "Fonds insuffisants"
 
 msgid "Internationalized domain (punycode). Verify it matches the real site."
-msgstr ""
+msgstr "Domaine internationalisé (punycode). Vérifiez qu'il correspond au véritable site."
 
 #. For transactions that got rejected by the mempool.
 msgid "Invalid"
 msgstr "Invalide"
 
-#, fuzzy
-#| msgid "Invalid"
 msgid "Invalid amount"
-msgstr "Invalide"
+msgstr "Montant invalide"
 
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr "Facture Bitcoin Lightning invalide : montant manquant."
@@ -617,10 +554,10 @@ msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Facture Bitcoin Lightning invalide."
 
 msgid "Invalid callback URL"
-msgstr ""
+msgstr "URL de rappel invalide"
 
 msgid "Invalid card signature. Please try again"
-msgstr ""
+msgstr "Signature de carte invalide. Veuillez réessayer"
 
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink non valide. Impossible d'obtenir les détails du paiement."
@@ -640,20 +577,14 @@ msgstr "Réponse invalide de GoCrypto"
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Format de lien non valide. Les CPLinks ne sont pris en charge que pour NIM."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
 msgstr "Format de lien non valide. Seuls les CPLinks, les requêtes NAKA pour NIM et les requêtes Bitcoin Lightning sont pris en charge."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
 
-#, fuzzy
-#| msgid "Invalid PIN"
 msgid "Invalid LNURL"
-msgstr "PIN invalide"
+msgstr "LNURL invalide"
 
 msgid "Invalid NIM HTLC data in swap"
 msgstr "Données NIM HTLC non valides dans le swap"
@@ -664,15 +595,11 @@ msgstr "Adresse Nimiq invalide"
 msgid "Invalid Nimiq Cashlink"
 msgstr "Cashlink Nimiq invalide"
 
-#, fuzzy
-#| msgid "Invalid CPLink. Missing amount or recipient."
 msgid "Invalid Nimiq Wallet request. Missing recipient."
-msgstr "CPLink non valide. Montant ou bénéficiaire manquant."
+msgstr "Requête Nimiq Wallet non valide. Bénéficiaire manquant."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
-msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
+msgstr "Requête Nimiq Wallet non valide. Seules les requêtes Nimiq Wallet sont prises en charge."
 
 msgid "Invalid phone number"
 msgstr "Numéro de téléphone invalide"
@@ -693,7 +620,7 @@ msgid "Invalid recovery words"
 msgstr "Mots de récupération non valides"
 
 msgid "Invalid signature. Please try again"
-msgstr ""
+msgstr "Signature invalide. Veuillez réessayer"
 
 msgid "Invalid swap hash"
 msgstr "Hash su swap invalide"
@@ -704,25 +631,17 @@ msgstr "Type de transfert non valide"
 msgid "Invalid URL: {url}"
 msgstr "URL non valide : {url}"
 
-#, fuzzy
-#| msgid "Invalid Nimiq address"
 msgid "Invalid USDT address"
-msgstr "Adresse Nimiq invalide"
+msgstr "Adresse USDT invalide"
 
-#, fuzzy
-#| msgid "Invalid CPLink. Missing amount or recipient."
 msgid "Invalid USDT Wallet request. Missing amount or recipient."
-msgstr "CPLink non valide. Montant ou bénéficiaire manquant."
+msgstr "Requête USDT Wallet non valide. Montant ou bénéficiaire manquant."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid USDT Wallet request. Only Polygon network requests are supported."
-msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
+msgstr "Requête USDT Wallet non valide. Seules les requêtes sur le réseau Polygon sont prises en charge."
 
-#, fuzzy
-#| msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgid "Invalid USDT Wallet request. Only USDT Wallet requests are supported."
-msgstr "Format de lien non valide. Seuls les CPLinks et les requêtes NAKA pour NIM sont pris en charge."
+msgstr "Requête USDT Wallet non valide. Seules les requêtes USDT Wallet sont prises en charge."
 
 msgid "Invite a Friend"
 msgstr "Inviter un ami"
@@ -734,15 +653,13 @@ msgid "Is this your phone number?"
 msgstr "Est-ce votre numéro de téléphone ?"
 
 msgid "Keep pressing…"
-msgstr ""
+msgstr "Continuez d'appuyer…"
 
 msgid "KYC verification in progress, we will notify you once it is completed."
-msgstr ""
+msgstr "Vérification KYC en cours, nous vous préviendrons dès qu'elle sera terminée."
 
-#, fuzzy
-#| msgid "This merchant is not registered to receive Points payments."
 msgid "KYC verification required to complete this payment"
-msgstr "Ce commerçant n'est pas enregistré pour recevoir des paiements en points."
+msgstr "Vérification KYC requise pour finaliser ce paiement"
 
 msgid "Language"
 msgstr "Langue"
@@ -751,15 +668,13 @@ msgid "Learn more"
 msgstr "En savoir plus"
 
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
-msgstr ""
+msgstr "La requête Lightning porte sur un montant variable, mais les montants variables ne sont pas pris en charge"
 
 msgid "Loading"
 msgstr "Chargement"
 
-#, fuzzy
-#| msgid "Loading..."
 msgid "Loading swap limits..."
-msgstr "Chargement..."
+msgstr "Chargement des limites de swap..."
 
 msgid "Loading tasks…"
 msgstr "Chargement des tâches…"
@@ -768,10 +683,10 @@ msgid "Loading…"
 msgstr "Chargement…"
 
 msgid "Lock card"
-msgstr ""
+msgstr "Verrouiller la carte"
 
 msgid "Lockdown Mode is on"
-msgstr ""
+msgstr "Le mode Isolement est activé"
 
 msgid ""
 "Log in again with your recovery words.\n"
@@ -785,55 +700,55 @@ msgid "Login"
 msgstr "Connexion"
 
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
-msgstr ""
+msgstr "Assurez-vous d'envoyer depuis une adresse Polygon, sinon vos fonds pourraient être définitivement perdus !"
 
 msgid "Mini Apps"
-msgstr ""
+msgstr "Mini Apps"
 
 msgid "Minimum NIM Decimals"
-msgstr ""
+msgstr "Décimales NIM minimales"
 
 msgid "Naka"
-msgstr ""
+msgstr "Naka"
 
 msgid "NAKA Card"
-msgstr ""
+msgstr "Carte NAKA"
 
 msgid "NAKA Support"
-msgstr ""
+msgstr "Support NAKA"
 
 msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
-msgstr ""
+msgstr "NAKA fonctionne exactement comme une carte de crédit. Payez en NIM en approchant simplement votre téléphone partout où NAKA est accepté."
 
 msgid "Network"
-msgstr ""
+msgstr "Réseau"
 
 msgid "Network consensus lost."
 msgstr "Le consensus du réseau a été perdu."
 
 msgid "Network fees"
-msgstr ""
+msgstr "Frais de réseau"
 
 msgid "Network ID mismatch"
-msgstr ""
+msgstr "Identifiant de réseau incohérent"
 
 msgid "New"
 msgstr "Nouveau"
 
 msgid "NFC is not enabled"
-msgstr ""
+msgstr "Le NFC n'est pas activé"
 
 msgid "NFC is not supported on this device"
-msgstr ""
+msgstr "Le NFC n'est pas pris en charge sur cet appareil"
 
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "L'application Nimiq Pay et le Wallet Nimiq utilisent des mots de récupération différents."
 
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
-msgstr ""
+msgstr "Nimiq Pay repose sur WebAssembly, que le mode Isolement d'iOS bloque. L'application ne peut pas fonctionner tant que le mode Isolement n'est pas désactivé."
 
 msgid "No"
-msgstr ""
+msgstr "Non"
 
 msgid "No account found"
 msgstr "Pas de compte trouvé"
@@ -848,15 +763,13 @@ msgid "No accounts found"
 msgstr "Aucun compte trouvé"
 
 msgid "No active card"
-msgstr ""
+msgstr "Aucune carte active"
 
 msgid "No Cashlink found"
 msgstr "Aucun Cashlink trouvé"
 
-#, fuzzy
-#| msgid "No Cashlink found"
 msgid "No NAKA Card found"
-msgstr "Aucun Cashlink trouvé"
+msgstr "Aucune carte NAKA trouvée"
 
 msgid "No NIM HTLC found in swap"
 msgstr "Aucun HTLC NIM n'a été trouvé dans le swap"
@@ -871,15 +784,13 @@ msgid "No payment request found"
 msgstr "Aucune demande de paiement trouvée"
 
 msgid "No permission to use the camera"
-msgstr ""
+msgstr "Aucune autorisation d'utiliser l'appareil photo"
 
 msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
 msgstr "Aucun point n'expire actuellement | {amount} expire bientôt | {amount} expirent bientôt"
 
-#, fuzzy
-#| msgid "Copy or scan the address"
 msgid "No saved addresses"
-msgstr "Copier ou scanner l'adresse"
+msgstr "Aucune adresse enregistrée"
 
 msgid ""
 "No tasks available.\n"
@@ -891,19 +802,17 @@ msgstr ""
 msgid "No transactions found"
 msgstr "Aucune transaction trouvée"
 
-#, fuzzy
-#| msgid "No NIM HTLC found in swap"
 msgid "No USDT HTLC found in swap"
-msgstr "Aucun HTLC NIM n'a été trouvé dans le swap"
+msgstr "Aucun HTLC USDT n'a été trouvé dans le swap"
 
 msgid "non-ASCII character (may impersonate Latin letters)"
-msgstr ""
+msgstr "caractère non-ASCII (peut imiter des lettres latines)"
 
 msgid "Not a pending payment request"
 msgstr "Pas de demande de paiement en cours"
 
 msgid "Notification when a payment arrives"
-msgstr ""
+msgstr "Notification à la réception d'un paiement"
 
 msgid "Notifications about new campaigns and other important events"
 msgstr "Notifications sur les nouvelles campagnes et autres événements importants"
@@ -915,16 +824,16 @@ msgid "Only {count} out of {total} remaining."
 msgstr "Il ne reste que {count} sur {total}."
 
 msgid "Open anyway"
-msgstr ""
+msgstr "Ouvrir quand même"
 
 msgid "Open this mini app?"
-msgstr ""
+msgstr "Ouvrir cette Mini App ?"
 
 msgid "Pay"
 msgstr "Payer"
 
 msgid "PAY"
-msgstr ""
+msgstr "PAYER"
 
 msgid "Pay with Bluecode"
 msgstr "Payer avec Bluecode"
@@ -933,7 +842,7 @@ msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr "Payez avec des points Cryptocity au lieu de NIM partout où ils sont acceptés."
 
 msgid "Pay with NAKA Card"
-msgstr ""
+msgstr "Payer avec la carte NAKA"
 
 msgid "Pay with Points"
 msgstr "Payer avec des points"
@@ -944,10 +853,8 @@ msgstr "Paiement"
 msgid "Payment cancelled"
 msgstr "Paiement annulé"
 
-#, fuzzy
-#| msgid "No payment details found"
 msgid "Payment details"
-msgstr "Aucun détail de paiement n'a été trouvé"
+msgstr "Détails du paiement"
 
 msgid "Payment expired"
 msgstr "Paiement expiré"
@@ -961,31 +868,23 @@ msgstr "Paiement non valide"
 msgid "Payment is being processed"
 msgstr "Le paiement est en cours de traitement"
 
-#, fuzzy
-#| msgid "Payment invalid"
 msgid "Payment limit"
-msgstr "Paiement non valide"
+msgstr "Limite de paiement"
 
-#, fuzzy
-#| msgid "Payment invalid"
 msgid "Payment limits"
-msgstr "Paiement non valide"
+msgstr "Limites de paiement"
 
 msgid "Payment preview"
 msgstr "Aperçu des paiements"
 
-#, fuzzy
-#| msgid "Payment expired"
 msgid "Payment received"
-msgstr "Paiement expiré"
+msgstr "Paiement reçu"
 
 msgid "Payment rejected due to unknown reason"
-msgstr ""
+msgstr "Paiement rejeté pour une raison inconnue"
 
-#, fuzzy
-#| msgid "Payment Secret"
 msgid "Payment Request"
-msgstr "Secret du paiement"
+msgstr "Demande de paiement"
 
 msgid "Payment Secret"
 msgstr "Secret du paiement"
@@ -999,15 +898,11 @@ msgstr "Le paiement n'a pas abouti"
 msgid "Payment was refunded"
 msgstr "Le paiement a été remboursé"
 
-#, fuzzy
-#| msgid "Payment"
 msgid "Payments"
-msgstr "Paiement"
+msgstr "Paiements"
 
-#, fuzzy
-#| msgid "Pending"
 msgid "pending"
-msgstr "En attente"
+msgstr "en attente"
 
 msgid "Pending"
 msgstr "En attente"
@@ -1018,18 +913,14 @@ msgstr "Numéro de téléphone manquant"
 msgid "Phone number not verified"
 msgstr "Numéro de téléphone non vérifié"
 
-#, fuzzy
-#| msgid "Payment successful"
 msgid "PIN change successful"
-msgstr "Paiement réussi"
+msgstr "Code PIN modifié avec succès"
 
 msgid "PIN did not match"
 msgstr "Le code PIN ne correspond pas"
 
-#, fuzzy
-#| msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
-msgstr "Veuillez permettre à Nimiq Pay d'accéder à votre appareil photo et essayez à nouveau de scanner les codes QR."
+msgstr "Veuillez autoriser Nimiq Pay à accéder à votre appareil photo, puis réessayez de scanner les QR codes."
 
 msgid "Please confirm your PIN code"
 msgstr "Veuillez confirmer votre code PIN"
@@ -1050,7 +941,7 @@ msgid "Please enter at least ten characters"
 msgstr "Veuillez saisir au moins dix caractères"
 
 msgid "Please verify yourself with SumSub to activate your NAKA Card."
-msgstr ""
+msgstr "Veuillez vérifier votre identité avec SumSub pour activer votre carte NAKA."
 
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
 msgstr "Veuillez attendre {time} minute avant de demander un nouveau code | Veuillez attendre {time} minutes avant de demander un nouveau code"
@@ -1068,39 +959,31 @@ msgid "Points Payment"
 msgstr "Paiement des points"
 
 msgid "Polygon fee"
-msgstr ""
+msgstr "Frais Polygon"
 
 msgid "Polygon is not ready yet"
-msgstr ""
+msgstr "Polygon n'est pas encore prêt"
 
 msgid "Polygon is still connecting. Please wait a moment."
-msgstr ""
+msgstr "Polygon est encore en cours de connexion. Veuillez patienter un instant."
 
-#, fuzzy
-#| msgid "Your payment failed"
 msgid "Polygon payment failed"
-msgstr "Votre paiement a échoué"
+msgstr "Le paiement Polygon a échoué"
 
-#, fuzzy
-#| msgid "Your payment failed"
 msgid "Polygon swap payment failed"
-msgstr "Votre paiement a échoué"
+msgstr "Le paiement du swap Polygon a échoué"
 
-#, fuzzy
-#| msgid "No transactions found for \"{searchQuery}\""
 msgid "Polygon transaction not found after relay"
-msgstr "Aucune transaction trouvée pour \"{searchQuery}\""
+msgstr "Transaction Polygon introuvable après le relais"
 
 msgid "Position {position}: {glyph} ({code}). {reason}."
-msgstr ""
+msgstr "Position {position} : {glyph} ({code}). {reason}."
 
 msgid "Privacy Policy"
 msgstr "Politique de confidentialité"
 
-#, fuzzy
-#| msgid "Processing funds… | Processing funds. Wait ~{blocks} minute to pay. | Processing funds. Wait ~{blocks} minutes to pay."
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
-msgstr "Traitement des fonds... | Traitement des fonds. Veuillez patienter ~{blocks} minute pour payer. | Traitement des fonds. Veuillez patienter ~{blocks} minutes pour payer."
+msgstr "Traitement des fonds… | Traitement des fonds. Patientez ~{blocks} seconde pour payer. | Traitement des fonds. Patientez ~{blocks} secondes pour payer."
 
 msgid "Promo code missing"
 msgstr "Code promo manquant"
@@ -1121,7 +1004,7 @@ msgid "Receive Push Notifications"
 msgstr "Recevoir les notifications push"
 
 msgid "Receive USDT on Polygon"
-msgstr ""
+msgstr "Recevoir des USDT sur Polygon"
 
 msgid "Recipient"
 msgstr "Bénéficiaire"
@@ -1130,88 +1013,70 @@ msgid "Recovery Words"
 msgstr "Mots de récupération"
 
 msgid "Reduce Animations"
-msgstr ""
+msgstr "Réduire les animations"
 
 msgid "Refreshing connection"
-msgstr ""
+msgstr "Actualisation de la connexion"
 
 msgid "Refunded"
 msgstr "Remboursé"
 
 msgid "Remove Stake"
-msgstr ""
+msgstr "Retirer du staking"
 
 msgid "Reopen Mini App on unlock"
-msgstr ""
+msgstr "Rouvrir la Mini App au déverrouillage"
 
 msgid "Request failed"
-msgstr ""
+msgstr "La requête a échoué"
 
 msgid "Requesting…"
-msgstr ""
+msgstr "Demande en cours…"
 
-#, fuzzy
-#| msgid "Verify your phone number"
 msgid "Requires Phone Number"
-msgstr "Vérifiez votre numéro de téléphone"
+msgstr "Numéro de téléphone requis"
 
 msgid "Resend"
 msgstr "Renvoyer"
 
-#, fuzzy
-#| msgid "Get Started"
 msgid "Retire Stake"
-msgstr "Commencer"
+msgstr "Désactiver le staking"
 
 msgid "Rewards Notifications"
 msgstr "Notifications de récompenses"
 
 msgid "save"
-msgstr ""
+msgstr "enregistrer"
 
 msgid "Save"
 msgstr "Sauvegarder"
 
-#, fuzzy
-#| msgid "Scan QR code"
 msgid "Scan an address QR code."
-msgstr "Scanner un QR Code"
+msgstr "Scannez un QR code d'adresse."
 
-#, fuzzy
-#| msgid "Scan any Nimiq or NAKA QR code to pay."
 msgid "Scan any Nimiq, USDT or NAKA QR code to pay."
-msgstr "Scannez n'importe quel QR code Nimiq ou NAKA pour payer."
+msgstr "Scannez n'importe quel QR code Nimiq, USDT ou NAKA pour payer."
 
-#, fuzzy
-#| msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
-msgstr "Scannez n'importe quel QR code Nimiq, Bitcoin Lightning ou NAKA pour payer."
+msgstr "Scannez n'importe quel QR code Nimiq, USDT, Bitcoin Lightning ou NAKA pour payer."
 
-#, fuzzy
-#| msgid "Scan any Nimiq or NAKA QR code to pay."
 msgid "Scan any supported Nimiq, USDT or NAKA QR code to pay."
-msgstr "Scannez n'importe quel QR code Nimiq ou NAKA pour payer."
+msgstr "Scannez n'importe quel QR code Nimiq, USDT ou NAKA pris en charge pour payer."
 
-#, fuzzy
-#| msgid "Scan any Nimiq, Bitcoin Lightning or NAKA QR code to pay."
 msgid "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
-msgstr "Scannez n'importe quel QR code Nimiq, Bitcoin Lightning ou NAKA pour payer."
+msgstr "Scannez n'importe quel QR code Nimiq, USDT, Bitcoin Lightning ou NAKA pris en charge pour payer."
 
 msgid "Scan Cashlink"
 msgstr "Scanner un Cashlink"
 
-#, fuzzy
-#| msgid "Scan QR code"
 msgid "Scan QR"
-msgstr "Scanner un QR Code"
+msgstr "Scanner un QR code"
 
 msgid "Scan QR code"
 msgstr "Scanner un QR Code"
 
-#, fuzzy
-#| msgid "Send NIM to this address"
 msgid "Scan the QR code to send NIM to this address"
-msgstr "Envoyer les NIM à cette adresse"
+msgstr "Scannez le QR code pour envoyer des NIM à cette adresse"
 
 msgid "Search for a country"
 msgstr "Rechercher un pays"
@@ -1220,7 +1085,7 @@ msgid "See words"
 msgstr "Voir les mots"
 
 msgid "Select an address to calculate Polygon fee."
-msgstr ""
+msgstr "Sélectionnez une adresse pour calculer les frais Polygon."
 
 msgid "Select an address…"
 msgstr "Sélectionnez une adresse…"
@@ -1231,29 +1096,23 @@ msgstr "Envoyez une transaction à l'adresse ci-dessous. Rechargez autant que vo
 msgid "Send NIM to this address"
 msgstr "Envoyer les NIM à cette adresse"
 
-#, fuzzy
-#| msgid "Send NIM to top up"
 msgid "Send NIM to top up"
 msgstr "Envoyez des NIM pour recharger"
 
 msgid "Send USDT on Polygon to the address below."
-msgstr ""
+msgstr "Envoyez des USDT sur Polygon à l'adresse ci-dessous."
 
-#, fuzzy
-#| msgid "Send NIM to this address"
 msgid "Send USDT to this address"
-msgstr "Envoyer les NIM à cette adresse"
+msgstr "Envoyer des USDT à cette adresse"
 
 msgid "Server not available"
-msgstr ""
+msgstr "Serveur indisponible"
 
 msgid "Set Active Stake"
-msgstr ""
+msgstr "Définir le staking actif"
 
-#, fuzzy
-#| msgid "You earn {amount}"
 msgid "Set an amount"
-msgstr "Vous gagnez {amount}"
+msgstr "Définir un montant"
 
 msgid "Settings"
 msgstr "Paramètres"
@@ -1267,10 +1126,8 @@ msgstr "Quelque chose n'a pas fonctionné"
 msgid "Something went wrong authorizing the phone number"
 msgstr "Un problème s'est produit lors de l'autorisation du numéro de téléphone"
 
-#, fuzzy
-#| msgid "Something went wrong updating the tasks"
 msgid "Something went wrong changing the PIN"
-msgstr "Un problème s'est produit lors de la mise à jour des tâches"
+msgstr "Un problème s'est produit lors de la modification du code PIN"
 
 msgid "Something went wrong checking the promo code"
 msgstr "Un problème s'est produit lors de la vérification du code promo"
@@ -1281,10 +1138,8 @@ msgstr "Un problème s'est produit lors de la demande de cashback"
 msgid "Something went wrong decrypting the database"
 msgstr "Un problème est survenu lors du décryptage de la base de données"
 
-#, fuzzy
-#| msgid "Something went wrong decrypting the database"
 msgid "Something went wrong decrypting the database. Try reloading the app."
-msgstr "Un problème est survenu lors du décryptage de la base de données"
+msgstr "Un problème s'est produit lors du déchiffrement de la base de données. Essayez de recharger l'application."
 
 msgid "Something went wrong deleting the account"
 msgstr "Un problème est survenu lors de la suppression du compte"
@@ -1310,13 +1165,11 @@ msgstr "Un problème s'est produit lors de la mise à jour de vos points"
 msgid "Something went wrong verifying the phone number"
 msgstr "La vérification du numéro de téléphone a échoué"
 
-#, fuzzy
-#| msgid "Something went wrong claiming the cashback"
 msgid "Something went wrong while starting the camera"
-msgstr "Un problème s'est produit lors de la demande de cashback"
+msgstr "Un problème s'est produit lors du démarrage de l'appareil photo"
 
 msgid "Staking Contract"
-msgstr ""
+msgstr "Contrat de staking"
 
 msgid "Standard rates may apply."
 msgstr "Les tarifs standard peuvent s'appliquer."
@@ -1325,30 +1178,28 @@ msgid "Status"
 msgstr "Statut"
 
 msgid "Store screenshot safely"
-msgstr ""
+msgstr "Conservez la capture d'écran en lieu sûr"
 
 msgid "Support"
-msgstr ""
+msgstr "Support"
 
-#, fuzzy
-#| msgid "Swap pending"
 msgid "Swap fee"
-msgstr "Swap en attente"
+msgstr "Frais de swap"
 
 msgid "Swap timed out waiting for Lightning payment confirmation"
-msgstr ""
+msgstr "Le swap a expiré en attendant la confirmation du paiement Lightning"
 
 msgid "Switched to {chain}"
-msgstr ""
+msgstr "Basculé sur {chain}"
 
 msgid "Syncing with network."
 msgstr "Synchronisation avec le réseau."
 
 msgid "Tap to pay with NAKA!"
-msgstr ""
+msgstr "Touchez pour payer avec NAKA !"
 
 msgid "Terms & Conditions"
-msgstr ""
+msgstr "Conditions générales"
 
 msgid "Terms of service"
 msgstr "Conditions d'utilisation"
@@ -1363,30 +1214,28 @@ msgid "The correct answer is \"{correct}\"."
 msgstr "La bonne réponse est \"{correct}\"."
 
 msgid "The exchange rate is unfavorable. Please try again later"
-msgstr ""
+msgstr "Le taux de change est défavorable. Veuillez réessayer plus tard"
 
 msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss."
-msgstr ""
+msgstr "L'application Pay utilise les USDT sur le réseau Polygon. Envoyer des fonds depuis une adresse autre que Polygon pourrait entraîner une perte définitive."
 
 msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
-msgstr ""
+msgstr "L'application Pay utilise les USDT sur le réseau Polygon. Envoyer des fonds vers une adresse autre que Polygon pourrait entraîner une perte définitive."
 
 msgid "The payment amount exceeds the allowed limit"
-msgstr ""
+msgstr "Le montant du paiement dépasse la limite autorisée"
 
-#, fuzzy
-#| msgid "PIN did not match"
 msgid "The PINs do not match"
-msgstr "Le code PIN ne correspond pas"
+msgstr "Les codes PIN ne correspondent pas"
 
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "Le scanner QR n'est pas encore prêt. Veuillez patienter."
 
 msgid "The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost."
-msgstr ""
+msgstr "Le stablecoin USDT a été lancé à l'origine sur Ethereum. Pour éviter des frais élevés et permettre des transactions rapides, l'application Pay utilise la version Polygon. Les fonds envoyés vers des adresses USDT autres que Polygon pourraient être définitivement perdus."
 
 msgid "There are currently no free NIM available."
-msgstr ""
+msgstr "Aucun NIM gratuit n'est disponible pour le moment."
 
 msgid "There is no \"Forgot password\""
 msgstr "Il n'y a pas de \"mot de passe oublié\""
@@ -1398,40 +1247,40 @@ msgid "There is no cashback reward when paying with Points."
 msgstr "Il n'y a pas de cashback lorsque vous payez avec des points."
 
 msgid "There was an error setting up your NAKA Card. Please try again later."
-msgstr ""
+msgstr "Une erreur s'est produite lors de la configuration de votre carte NAKA. Veuillez réessayer plus tard."
 
 msgid "These Points are made for spending. Get out there and help drive crypto adoption."
 msgstr "Ces points sont faits pour être dépensés. Allez-y et contribuez à l'adoption des crypto-monnaies."
 
 msgid "This action cannot be undone"
-msgstr ""
+msgstr "Cette action est irréversible"
 
 msgid "This address could not be parsed."
-msgstr ""
+msgstr "Cette adresse n'a pas pu être analysée."
 
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
-msgstr ""
+msgstr "Cette conversion et le fonctionnement d'un canal BTC Lightning entraînent des frais."
 
 msgid "This is your last card. If you block it, you will need to contact support for a replacement."
-msgstr ""
+msgstr "C'est votre dernière carte. Si vous la bloquez, vous devrez contacter le support pour obtenir un remplacement."
 
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Ce commerçant n'est pas enregistré pour recevoir des paiements en points."
 
 msgid "This network is not supported by Nimiq Pay"
-msgstr ""
+msgstr "Ce réseau n'est pas pris en charge par Nimiq Pay"
 
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Ce paiement n'est pas éligible pour recevoir ou payer avec des points."
 
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
-msgstr ""
+msgstr "Cette transaction en attente sera automatiquement remboursée si elle n'est pas finalisée avant l'expiration du délai"
 
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
-msgstr ""
+msgstr "Cette transaction en attente sera automatiquement remboursée si elle n'est pas finalisée dans les prochaines 24 heures | Cette transaction en attente sera automatiquement remboursée si elle n'est pas finalisée dans les {days} prochains jours"
 
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
-msgstr ""
+msgstr "Cette transaction en attente sera automatiquement remboursée si elle n'est pas finalisée dans l'heure | Cette transaction en attente sera automatiquement remboursée si elle n'est pas finalisée dans les {hours} prochaines heures"
 
 msgid "This promo code has been claimed too many times"
 msgstr "Ce code promo a été réclamé trop souvent"
@@ -1440,15 +1289,13 @@ msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} 
 msgstr "Cet achat vous donne droit à {amount} Point. | Cet achat vous rapporte {amount} Points."
 
 msgid "This service is currently not available in your region."
-msgstr ""
+msgstr "Ce service n'est pas disponible dans votre région pour le moment."
 
 msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
-msgstr ""
+msgstr "Cette transaction sera masquée de votre historique. Vous pourrez la réafficher plus tard depuis le menu développeur."
 
-#, fuzzy
-#| msgid "Transaction already sent"
 msgid "This transaction will reappear in your history."
-msgstr "Transaction déjà envoyée"
+msgstr "Cette transaction réapparaîtra dans votre historique."
 
 msgid "Top Up"
 msgstr "Recharger"
@@ -1457,12 +1304,10 @@ msgid "Top-Up"
 msgstr "Recharge"
 
 msgid "Total debit"
-msgstr ""
+msgstr "Débit total"
 
-#, fuzzy
-#| msgid "Incl. fees"
 msgid "Total fees"
-msgstr "Frais inclus"
+msgstr "Total des frais"
 
 msgid "Transaction"
 msgstr "Transaction"
@@ -1476,22 +1321,20 @@ msgstr "La transaction a échoué : {error}"
 msgid "Transaction invalid"
 msgstr "Transaction invalide"
 
-#, fuzzy
-#| msgid "Transaction invalid"
 msgid "Transaction invalid for PoS network"
-msgstr "Transaction invalide"
+msgstr "Transaction non valide pour le réseau PoS"
 
 msgid "Transaction was not mined on Polygon"
-msgstr ""
+msgstr "La transaction n'a pas été minée sur Polygon"
 
 msgid "Trigger a payment on the issuer"
-msgstr ""
+msgstr "Déclencher un paiement auprès de l'émetteur"
 
 msgid "Try again"
 msgstr "Réessayer"
 
 msgid "Turn it off, then reopen Nimiq Pay."
-msgstr ""
+msgstr "Désactivez-le, puis rouvrez Nimiq Pay."
 
 msgid "Unable to connect to the Points server"
 msgstr "Impossible de se connecter au serveur de points Cryptocity"
@@ -1500,44 +1343,40 @@ msgid "Unexpected GoCrypto error"
 msgstr "Erreur inattendue de GoCrypto"
 
 msgid "Unhide"
-msgstr ""
+msgstr "Réafficher"
 
-#, fuzzy
-#| msgid "Invalid transfer type"
 msgid "Unhide transaction?"
-msgstr "Type de transfert non valide"
+msgstr "Réafficher la transaction ?"
 
 msgid "Unknown"
 msgstr "Inconnu"
 
-#, fuzzy
-#| msgid "Unknown"
 msgid "Unknown error"
-msgstr "Inconnu"
+msgstr "Erreur inconnue"
 
 msgid "Unlock card"
-msgstr ""
+msgstr "Déverrouiller la carte"
 
 msgid "Unlock Nimiq Pay with your biometric data"
-msgstr ""
+msgstr "Déverrouillez Nimiq Pay avec vos données biométriques"
 
 msgid "Unlock the app using Fingerprint instead of PIN"
-msgstr ""
+msgstr "Déverrouillez l'application avec l'empreinte digitale plutôt qu'avec le code PIN"
 
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
-msgstr ""
+msgstr "Déverrouillez l'application avec Touch ID/Face ID plutôt qu'avec le code PIN"
 
 msgid "Update Staker"
-msgstr ""
+msgstr "Mettre à jour le staker"
 
 msgid "Updating connection"
-msgstr ""
+msgstr "Mise à jour de la connexion"
 
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
-msgstr ""
+msgstr "Les USDT ne sont disponibles que sur le mainnet. Basculez sur le mainnet pour utiliser les USDT."
 
 msgid "USDT staking requests are not supported"
-msgstr ""
+msgstr "Les requêtes de staking en USDT ne sont pas prises en charge"
 
 msgid "Use {amount}"
 msgstr "Utiliser {amount}"
@@ -1545,10 +1384,8 @@ msgstr "Utiliser {amount}"
 msgid "Verify"
 msgstr "Vérifier"
 
-#, fuzzy
-#| msgid "Verify"
 msgid "Verify ID"
-msgstr "Vérifier"
+msgstr "Vérifier l'identité"
 
 msgid "Verify your ID"
 msgstr "Vérifiez votre identité"
@@ -1557,15 +1394,13 @@ msgid "Verify your phone number"
 msgstr "Vérifiez votre numéro de téléphone"
 
 msgid "Wait for consensus before withdrawing"
-msgstr ""
+msgstr "Attendez le consensus avant de retirer"
 
 msgid "We're working on something special"
-msgstr ""
+msgstr "Nous préparons quelque chose de spécial"
 
-#, fuzzy
-#| msgid "Copy address"
 msgid "Web address"
-msgstr "Copier l'adresse"
+msgstr "Adresse web"
 
 msgid "Welcome to Cryptocity Points"
 msgstr "Découvrez les Points Cryptocity"
@@ -1613,22 +1448,22 @@ msgid "What's the 9th word?"
 msgstr "Quel est le 9ème mot ?"
 
 msgid "When paying with BTC Lightning, NIM are swapped to BTC."
-msgstr ""
+msgstr "Lors d'un paiement en BTC Lightning, les NIM sont échangés contre des BTC."
 
 msgid "When paying with BTC Lightning, USDT are swapped to BTC."
-msgstr ""
+msgstr "Lors d'un paiement en BTC Lightning, les USDT sont échangés contre des BTC."
 
 msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
 msgstr "Lorsque vous vous inscrivez pour un compte Cryptocity Points dans Nimiq Pay, vous consentez à nos pratiques de gestion des données telles que détaillées dans notre {privacyPolicy}. Nous donnons la priorité à votre droit à la vie privée et au contrôle de vos données, en fournissant donc une option dans l'application pour supprimer votre compte de points Cryptocity à tout moment. Cette action supprimera définitivement vos informations personnelles, telles que votre numéro de téléphone, de nos dossiers. Afin de prévenir la fraude, un journal sécurisé des comptes supprimés sera conservé pendant une période de 12 mois. Si vous décidez de vous réinscrire, les activités ou données antérieures ne seront pas récupérables. Notre engagement envers la sécurité de vos données comprend un processus de suppression de compte simple et intégré à l'application, conforme aux meilleures pratiques du secteur afin de garantir l'autonomie de l'utilisateur et la protection des données. Pour obtenir des instructions sur la suppression de votre compte ou pour plus d'informations, veuillez vous référer aux paramètres du compte dans l'application."
 
 msgid "Why this address is flagged"
-msgstr ""
+msgstr "Pourquoi cette adresse est signalée"
 
 msgid "Withdraw"
 msgstr "Retirer"
 
 msgid "Withdraw to Polygon USDT addresses only!"
-msgstr ""
+msgstr "Ne retirez que vers des adresses USDT sur Polygon !"
 
 msgid "Withdrawal"
 msgstr "Retrait"
@@ -1656,39 +1491,31 @@ msgid "Wrong number of recovery words"
 msgstr "Nombre incorrect de mots de récupération"
 
 msgid "Yes"
-msgstr ""
+msgstr "Oui"
 
 msgid "You can not use this address"
 msgstr "Vous ne pouvez pas utiliser cette adresse"
 
 msgid "You can receive more free NIM in {waitTime} hours."
-msgstr ""
+msgstr "Vous pourrez recevoir davantage de NIM gratuits dans {waitTime} heures."
 
 msgid "You can try again in {remainingTime}"
 msgstr "Vous pouvez réessayer dans {remainingTime}"
 
-#, fuzzy
-#| msgid "You don't have enough NIM for this purchase."
 msgid "You don't have enough NIM for this purchase."
 msgstr "Vous n'avez pas assez de NIM pour cet achat."
 
-#, fuzzy
-#| msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgid "You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr "Vous n'avez pas assez de NIM pour cet achat. Vous ne pouvez payer qu'avec des points."
 
 msgid "You don't have enough Points for this purchase."
 msgstr "Vous n'avez pas assez de points pour cet achat."
 
-#, fuzzy
-#| msgid "You don't have enough Points for this purchase."
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
-msgstr "Vous n'avez pas assez de points pour cet achat."
+msgstr "Vous n'avez pas assez d'USDT pour couvrir ce paiement et les frais Polygon."
 
-#, fuzzy
-#| msgid "You don't have enough Points for this purchase."
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
-msgstr "Vous n'avez pas assez de points pour cet achat."
+msgstr "Vous n'avez pas assez d'USDT pour couvrir ce retrait et les frais Polygon."
 
 msgid "You have a reward to claim!"
 msgstr "Vous avez une récompense à réclamer !"
@@ -1697,15 +1524,13 @@ msgid "You have chosen \"{selected}\"."
 msgstr "Vous avez choisi \"{selected}\"."
 
 msgid "You have not opened this address before. Read it carefully. Scammers can disguise fake sites with characters that look like normal letters."
-msgstr ""
+msgstr "Vous n'avez jamais ouvert cette adresse auparavant. Lisez-la attentivement. Les escrocs peuvent camoufler de faux sites à l'aide de caractères qui ressemblent à des lettres normales."
 
 msgid "You have reached your daily spending limit"
-msgstr ""
+msgstr "Vous avez atteint votre limite de dépenses quotidienne"
 
-#, fuzzy
-#| msgid "You received Cryptocity Points"
 msgid "You received {amount}"
-msgstr "Vous avez reçu des points Cryptocity"
+msgstr "Vous avez reçu {amount}"
 
 msgid "You received Cryptocity Points"
 msgstr "Vous avez reçu des points Cryptocity"
@@ -1720,13 +1545,11 @@ msgid "Your account, funds and data will be lost if you log out without a backup
 msgstr "Votre compte, vos fonds et vos données seront perdus si vous vous déconnectez sans sauvegarde."
 
 msgid "Your ID has been successfully verified. Tap ‘Pay’ on the start screen and chose NAKA to pay."
-msgstr ""
+msgstr "Votre identité a été vérifiée avec succès. Touchez « Payer » sur l'écran d'accueil et choisissez NAKA pour payer."
 
 msgid "Your NAKA Card is ready!"
-msgstr ""
+msgstr "Votre carte NAKA est prête !"
 
-#, fuzzy
-#| msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgstr "Votre solde NIM n'est pas encore disponible. Vous ne pouvez payer qu'avec des points."
 
@@ -1734,10 +1557,10 @@ msgid "Your number"
 msgstr "Votre numéro"
 
 msgid "Your testnet account is empty."
-msgstr ""
+msgstr "Votre compte testnet est vide."
 
 msgid "zero-width character (invisible)"
-msgstr ""
+msgstr "caractère de largeur nulle (invisible)"
 
 #~ msgid "Loading..."
 #~ msgstr "Chargement..."
