@@ -42,7 +42,7 @@ include ':capawesome-capacitor-android-edge-to-edge-support'
 project(':capawesome-capacitor-android-edge-to-edge-support').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-android-edge-to-edge-support@8.0.8_@capacitor+core@8.3.4/node_modules/@capawesome/capacitor-android-edge-to-edge-support/android')
 
 include ':capawesome-capacitor-posthog'
-project(':capawesome-capacitor-posthog').projectDir = new File('../node_modules/.pnpm/@capawesome+capacitor-posthog@8.4.2_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog/android')
+project(':capawesome-capacitor-posthog').projectDir = new File('../../capacitor-plugins/packages/posthog/android')
 
 include ':capgo-camera-preview'
 project(':capgo-camera-preview').projectDir = new File('../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview/android')
