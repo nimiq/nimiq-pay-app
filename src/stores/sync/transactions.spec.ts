@@ -111,7 +111,7 @@ describe('useSyncTransactions', () => {
     })
 
     it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {
-      vi.doMock('@/lib', () => ({ nakaBufferAddresses: ['NQ99 NAKA'] }))
+      vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
       vi.resetModules()
       const nakaTx = {
         transactionHash: 'naka-tx',

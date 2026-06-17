@@ -69,8 +69,10 @@ platform :ios do
     locale = "en-US"
     out_dir = "screenshots/#{locale}"
 
-    # Bake mock-data mode into the build so the UI shows deterministic fixtures
-    sh "cd .. && VITE_MOCK_DATA=true ionic cap sync ios --prod"
+    # Bake mock-data mode into the build so the UI shows deterministic fixtures.
+    # Must be a development-mode build (import.meta.env.DEV === true) — mock is dev-gated and can
+    # never activate in a production (--prod) build. See src/lib/mock-mode.ts.
+    sh "cd .. && VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync ios"
 
     build_app(
       scheme: scheme,
@@ -149,8 +151,10 @@ platform :android do
     locale = "en-US"
     out_dir = "screenshots/android/#{locale}"
 
-    # Bake mock-data mode into the build so the UI shows deterministic fixtures
-    sh "cd .. && VITE_MOCK_DATA=true ionic cap sync android --prod"
+    # Bake mock-data mode into the build so the UI shows deterministic fixtures.
+    # Must be a development-mode build (import.meta.env.DEV === true) — mock is dev-gated and can
+    # never activate in a production (--prod) build. See src/lib/mock-mode.ts.
+    sh "cd .. && VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync android"
 
     gradle(
       task: "assemble",

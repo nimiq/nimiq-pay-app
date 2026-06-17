@@ -174,6 +174,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 }))
 
 vi.mock('@/lib', () => ({
+  isDev: false,
   debounceDelay: 0,
   debounceMaxWait: 0,
   get isTestnet() {

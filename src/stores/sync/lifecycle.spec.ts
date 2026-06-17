@@ -150,7 +150,7 @@ describe('useSyncLifecycle', () => {
     })
 
     it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {
-      vi.doMock('@/lib', () => ({ nakaBufferAddresses: ['NQ99 NAKA'] }))
+      vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
       vi.resetModules()
       const listener = await captureLocalTxListener()
       await listener({
@@ -341,7 +341,7 @@ describe('useSyncLifecycle', () => {
       })
 
       it('does NOT fire on NAKA reversal', async () => {
-        vi.doMock('@/lib', () => ({ nakaBufferAddresses: ['NQ99 NAKA'] }))
+        vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
         vi.resetModules()
         const listener = await captureLocalTxListener()
         await listener({

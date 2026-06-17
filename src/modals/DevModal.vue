@@ -232,7 +232,7 @@ onMounted(async () => {
         </p>
       </IonCardContent>
     </IonCard>
-    <IonCard>
+    <IonCard v-if="isDev">
       <IonCardHeader>
         <IonCardTitle>Mock Data</IonCardTitle>
       </IonCardHeader>

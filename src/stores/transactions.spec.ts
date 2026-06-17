@@ -54,6 +54,7 @@ vi.mock('@/composables/useTransactionSearch', () => ({
 }))
 
 vi.mock('@/lib', () => ({
+  isDev: false,
   nakaBufferAddresses: [],
 }))
 
