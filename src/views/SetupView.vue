@@ -10,9 +10,10 @@ import { FlowName } from '@/lib/flows/steps.types'
 
 const logger = useLogger('SetupView')
 
-// Escape hatch to export logs if setup fails here (Settings is unreachable). Long-press the logo for 3s.
+// Escape hatch to export logs if setup fails here (Settings is unreachable): hold the logo ~1s.
+// distanceThreshold:false so a small finger movement during the hold can't cancel it.
 const logoRef = ref<HTMLElement | null>(null)
-onLongPress(logoRef, () => logger.sendReport(), { modifiers: { prevent: true }, delay: 3 * 1e3 })
+onLongPress(logoRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
 function startSetupFlow(entryMethod: 'create' | 'create_with_promo_code' | 'import') {
   trackWalletEntrySelected(entryMethod)

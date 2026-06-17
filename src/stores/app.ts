@@ -5,12 +5,15 @@ import { useStorageAsync } from '@vueuse/core'
 import { useReducedMotion } from 'motion-v'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { useLogger } from '@/composables/useLogger'
 import { guessUserLanguage } from '@/i18n/i18n-setup'
 import { nakaBufferAddresses } from '@/lib'
 import { Asset, DEFAULT_ASSET } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useConn } from './conn'
+
+const logger = useLogger('useApp')
 
 export interface SavedAddress { address: string, alias?: string }
 
@@ -142,12 +145,14 @@ export const useApp = defineStore('app', () => {
   const pendingReferralCode = ref('')
   const entropy = ref('')
   async function setEntropy() {
+    logger.log('🌱 setEntropy: entry', { hasInMemoryEntropy: !!entropy.value })
     if (pendingReferralCode.value)
       await kv().setItem('referralCode', pendingReferralCode.value)
     // This case only happen when importing from words (login)
     if (entropy.value) {
       await Promise.all([kv().setItem('entropy', entropy.value), kv().setItem('hasDoneBackup', 'true')])
       hasDoneBackup.value = true
+      logger.log('🌱 setEntropy: done (imported)')
       return
     }
     // Maybe we should revisit this later. Right now this will be in memory all the times
@@ -160,6 +165,7 @@ export const useApp = defineStore('app', () => {
       entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
       await kv().setItem('entropy', entropy.value)
     }
+    logger.log('🌱 setEntropy: done', { fromDb: !!entropyDb })
   }
 
   async function setReferralCode(referralCode: string) {

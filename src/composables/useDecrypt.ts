@@ -46,11 +46,16 @@ export function useDecrypt() {
     if (isWeb)
       throw new Error('This method is not supported in web.') // no translation as not user-facing
 
+    logger.log('🔑 decryptMobile: entry', { isOpen: isOpen.value })
     // FIXME try to do this without closing the db
-    if (isOpen.value)
+    if (isOpen.value) {
+      logger.log('🔑 decryptMobile: closing existing db')
       await closeDb()
+    }
 
-    const error = (await sqlite.isSecretStored()).result
+    const secretStored = (await sqlite.isSecretStored()).result
+    logger.log('🔑 decryptMobile: verifying secret', { secretStored })
+    const error = secretStored
       ? await sqlite.checkEncryptionSecret(pin)
           .then(({ result }) => !result ? i18n.t('Invalid PIN') : undefined)
           .catch(() => i18n.t('Something went wrong decrypting the database. Try reloading the app.'))
@@ -66,7 +71,9 @@ export function useDecrypt() {
     logger.log('🔑 Database initialized and encrypted in mobile')
 
     try {
+      logger.log('🔑 decryptMobile: openDb start')
       await openDb()
+      logger.log('🔑 decryptMobile: openDb done')
     }
     catch (e) {
       logger.error('openDb failed during decrypt', e)
@@ -81,21 +88,29 @@ export function useDecrypt() {
    * @returns An error message if there was an error, undefined otherwise
    */
   async function decrypt(pin: string): Promise<Option<string>> {
-    if (decrypted.value)
+    logger.log('🔓 decrypt: entry')
+    if (decrypted.value) {
+      logger.log('🔓 decrypt: already decrypted, short-circuit')
       return
+    }
 
     const inputHash = sha256Hex(pin)
+    logger.log('🔓 decrypt: running', { isWeb })
     const error = await (isWeb ? decryptWeb(pin, inputHash) : decryptMobile(pin))
+    logger.log('🔓 decrypt: db unlock done', { error })
     if (error)
       return error
 
     const { setEntropy, updatePinInputTs } = useApp()
+    logger.log('🔓 decrypt: setEntropy start')
     await setEntropy()
+    logger.log('🔓 decrypt: setEntropy done')
     updatePinInputTs()
 
     pinHash.value = inputHash
 
     decrypted.value = true
+    logger.log('🔓 decrypt: decrypted=true')
   }
 
   /**

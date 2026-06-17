@@ -834,7 +834,7 @@ msgid "Invalid phone number"
 msgstr ""
 
 #: src/composables/useDecrypt.ts:42
-#: src/composables/useDecrypt.ts:55
+#: src/composables/useDecrypt.ts:60
 #: src/modals/EnableBiometricModal.vue:23
 msgid "Invalid PIN"
 msgstr ""
@@ -1583,7 +1583,7 @@ msgstr ""
 msgid "Something went wrong authorizing the phone number"
 msgstr ""
 
-#: src/composables/useDecrypt.ts:124
+#: src/composables/useDecrypt.ts:139
 msgid "Something went wrong changing the PIN"
 msgstr ""
 
@@ -1601,10 +1601,10 @@ msgstr ""
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
-#: src/composables/useDecrypt.ts:56
-#: src/composables/useDecrypt.ts:59
-#: src/composables/useDecrypt.ts:73
-#: src/views/PinView.vue:62
+#: src/composables/useDecrypt.ts:61
+#: src/composables/useDecrypt.ts:64
+#: src/composables/useDecrypt.ts:80
+#: src/views/PinView.vue:77
 msgid "Something went wrong decrypting the database. Try reloading the app."
 msgstr ""
 

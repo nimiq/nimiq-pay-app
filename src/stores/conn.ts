@@ -7,11 +7,16 @@ import { computed, ref } from 'vue'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { migrations } from '@/lib/sql-queries'
+import { promiseWithTimeout } from '@/lib/utils'
 
 const logger = useLogger('useConn')
 
 const DB_NAME = 'storage'
 const DB_VERSION = migrations.at(-1)!.toVersion
+// Cap db.open() (keying + migrations run here). Without it, a stalled open never resolves and
+// resolveUnlockDb() is never reached, so every later query() awaits the unlock promise forever — a
+// silent app-wide wedge with no error. The timeout turns that into a surfaced, recoverable error.
+const DB_OPEN_TIMEOUT = 20 * 1e3
 
 export const useConn = defineStore('conn', () => {
   const { isWeb } = useDevice()
@@ -70,16 +75,22 @@ export const useConn = defineStore('conn', () => {
     // await init()
     const encrypted = !isWeb // Only encrypt on mobile
     const mode = encrypted ? 'secret' : 'no-encryption'
+    logger.log('🗄️ open: resolving connection')
     db.value = (await sqlite.checkConnectionsConsistency()).result && (await sqlite.isConnection(DB_NAME, false)).result
       ? await sqlite.retrieveConnection(DB_NAME, false)
       : await sqlite.createConnection(DB_NAME, encrypted, mode, DB_VERSION, false)
-    await db.value!.open()
+    logger.log('🗄️ open: connection ready, opening DB (keying + migrations)')
+    // Timeout the open so a keying/migration stall surfaces as an error (caught by the decrypt
+    // caller) instead of silently leaving `locked` true forever.
+    await promiseWithTimeout(db.value!.open(), DB_OPEN_TIMEOUT)
+    logger.log('🗄️ open: DB opened')
 
     // https://github.com/capacitor-community/sqlite/issues/215#issuecomment-1028913155
     if (isWeb)
       await db.value!.execute(`PRAGMA journal_mode=WAL;`, false)
 
     resolveUnlockDb()
+    logger.log('🗄️ open: unlocked')
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
 

@@ -12,6 +12,7 @@ import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { clearSession, hasPendingSession, reconnectAndShow } from '@/composables/useMiniAppSession'
 import { i18n } from '@/i18n/i18n-setup'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 
 const logger = useLogger('PinView')
@@ -20,18 +21,28 @@ const { decrypt, decrypted } = useDecrypt()
 const router = useRouter()
 const errorMsg = ref('')
 
-// Escape hatch to export logs if login fails here (Settings is unreachable while stuck). Long-press the title for 3s.
+// Each unlock phase must finish within this window; a hang past it surfaces a visible error
+// instead of a silently stuck PIN screen. Generous so slow devices / DB migrations don't trip it.
+const UNLOCK_PHASE_TIMEOUT = 15 * 1e3
+
+// Escape hatch to export logs if login fails here (Settings is unreachable while stuck): hold the
+// title ~1s. distanceThreshold:false so a small finger movement during the hold — or IonContent
+// stealing the pointermove — can't cancel it (the old 3s + default threshold was unreliable).
 const titleRef = ref<HTMLElement | null>(null)
-onLongPress(titleRef, () => logger.sendReport(), { modifiers: { prevent: true }, delay: 3 * 1e3 })
+onLongPress(titleRef, () => logger.sendReport(), { delay: 1000, distanceThreshold: false, modifiers: { prevent: true } })
 
 async function handleSubmit(pin: string) {
   if (pin.length < 4)
     return false
 
-  // Anything that throws here (decrypt, mini-app reconnect, navigation) must surface as a visible,
-  // recoverable error — otherwise the failure is swallowed and the user is left silently stuck on the PIN screen.
+  logger.log('🔓 handleSubmit: PIN submitted', { length: pin.length })
+  // Anything that throws OR hangs here (decrypt, mini-app reconnect, navigation) must surface as a
+  // visible, recoverable error — otherwise the failure is swallowed and the user is left silently
+  // stuck on the PIN screen. Each phase is timeout-guarded so a hang cannot wedge the screen.
   try {
-    const error = await decrypt(pin)
+    logger.log('🔓 handleSubmit: decrypt start')
+    const error = await promiseWithTimeout(decrypt(pin), UNLOCK_PHASE_TIMEOUT)
+    logger.log('🔓 handleSubmit: decrypt done', { error })
     if (error) {
       errorMsg.value = error
       window.setTimeout(() => {
@@ -42,8 +53,10 @@ async function handleSubmit(pin: string) {
 
     // If a mini-app webview was hidden before the reload, reconnect and show it
     if (hasPendingSession()) {
+      logger.log('🔓 handleSubmit: reconnectAndShow start')
       try {
-        await reconnectAndShow()
+        await promiseWithTimeout(reconnectAndShow(), UNLOCK_PHASE_TIMEOUT)
+        logger.log('🔓 handleSubmit: reconnectAndShow done')
       }
       catch (err) {
         logger.error('Failed to reconnect mini-app session:', err)
@@ -55,7 +68,9 @@ async function handleSubmit(pin: string) {
       }
     }
 
-    await router.replace('/app')
+    logger.log('🔓 handleSubmit: router.replace(/app) start')
+    await promiseWithTimeout(router.replace('/app'), UNLOCK_PHASE_TIMEOUT)
+    logger.log('🔓 handleSubmit: router.replace(/app) done')
   }
   catch (err) {
     logger.error('Login failed after PIN entry', err)

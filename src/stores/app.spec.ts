@@ -4,6 +4,8 @@ import { ref } from 'vue'
 import { Asset } from '@/lib/assets'
 
 vi.mock('@vueuse/core', () => ({
+  // useLogger (imported by app.ts) debounces its log flush at module load.
+  useDebounceFn: <T>(fn: T) => fn,
   useStorageAsync: <T>(_key: string, defaultValue: T) => {
     const value = Array.isArray(defaultValue)
       ? [...defaultValue] as T

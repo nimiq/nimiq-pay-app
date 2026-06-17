@@ -6,6 +6,7 @@ import { until } from '@vueuse/core'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useBiometric } from '@/composables/useBiometric'
+import { useLogger } from '@/composables/useLogger'
 import { stepEmits } from '@/lib/flows/steps.types'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
@@ -24,6 +25,7 @@ const props = defineProps({
 })
 const emit = defineEmits(stepEmits)
 
+const logger = useLogger('PinInput')
 const { updateBiometryInfo, addBiometricResumeListener, removeBiometricResumeListener, getPinFromSecureStorage, isBiometricEnabled, isBiometricSupported, BiometryErrorType } = useBiometric()
 const isScrolling = computed(() => props.isScrolling)
 const inputRef = ref<HTMLInputElement | null>(null)
@@ -35,6 +37,7 @@ const customError = ref('')
 
 watch(pinCodeInput, async (pin) => {
   if (pin.length === props.inputLength) {
+    logger.log('🔢 PIN complete, emitting done')
     emit('done', pin)
     if (props.showLoading)
       isLoading.value = true
@@ -99,7 +102,9 @@ onMounted(async () => {
   }
 
   if (props.canUseBiometric && isBiometricEnabled.value && isBiometricSupported.value) {
+    logger.log('👆 biometric: getPinFromSecureStorage start')
     const { pinCode, success, error, errorType } = await getPinFromSecureStorage()
+    logger.log('👆 biometric: done', { success, errorType, hasPin: !!pinCode })
     if (success && pinCode)
       pinCodeInput.value = pinCode.toString()
     else if (error && errorType !== BiometryErrorType.userCancel)

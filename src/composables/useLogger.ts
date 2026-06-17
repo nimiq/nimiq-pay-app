@@ -142,17 +142,51 @@ export function useLogger(name: string = '') {
 
   async function sendReport() {
     console.log('Sending report...')
-    await saveLogsToFile()
+    try {
+      await saveLogsToFile()
 
-    const { files } = await Filesystem.readdir({
-      path: '',
-      directory,
-    })
+      const { files } = await Filesystem.readdir({
+        path: '',
+        directory,
+      })
 
-    console.log('Files:', files)
-    await Share.share({
-      files: files.map(file => file.uri),
-    })
+      // Best-effort: also drop a copy in a public dir so logs are retrievable via
+      // `adb pull` on release builds, where `run-as` is blocked on the non-debuggable app.
+      try {
+        const { data } = await Filesystem.readFile({ path: logFileName, directory, encoding: Encoding.UTF8 })
+        const { uri } = await Filesystem.writeFile({
+          path: `nimiq-pay-${logFileName}`,
+          data: data as string,
+          directory: Directory.Documents,
+          encoding: Encoding.UTF8,
+          recursive: true,
+        })
+        console.log('📄 Public log copy written to', uri)
+      }
+      catch (e) {
+        console.warn('Could not write public log copy', e)
+      }
+
+      console.log('Files:', files)
+      await Share.share({
+        files: files.map(file => file.uri),
+      })
+    }
+    catch (e) {
+      // Surface the failure instead of swallowing it, so a broken export is debuggable.
+      error('sendReport failed', e)
+      try {
+        const { toastController } = await import('@ionic/vue')
+        const toast = await toastController.create({
+          message: `Couldn't export logs: ${e instanceof Error ? e.message : String(e)}`,
+          duration: 4000,
+          color: 'danger',
+        })
+        await toast.present()
+      }
+      catch {}
+      throw e
+    }
   }
 
   async function forceSaveToFile() {
