@@ -1,7 +1,8 @@
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
-def repositoryUsername = properties.getProperty('NAKA_REPOSITORY_USERNAME') ?: "null"
-def repositoryPassword = properties.getProperty('NAKA_REPOSITORY_PASSWORD') ?: "null"
+// NAKA disabled: capacitor-monetplus-hce removed. Monet+ Maven credentials no longer needed; uncomment to restore.
+// Properties properties = new Properties()
+// properties.load(project.rootProject.file('local.properties').newDataInputStream())
+// def repositoryUsername = properties.getProperty('NAKA_REPOSITORY_USERNAME') ?: "null"
+// def repositoryPassword = properties.getProperty('NAKA_REPOSITORY_PASSWORD') ?: "null"
 
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
@@ -27,20 +28,21 @@ allprojects {
         google()
         mavenCentral()
         maven { url "https://maven.sumsub.com/repository/maven-public/" }
-        maven {
-            url = uri("https://nexus3-public.monetplus.cz/repository/mobile-android/")
-            credentials {
-                username = repositoryUsername
-                password = repositoryPassword
-            }
-        }
-        maven {
-            url = uri("https://nexus3-public.monetplus.cz/repository/ahead-android-release/")
-            credentials {
-                username = repositoryUsername
-                password = repositoryPassword
-            }
-        }
+        // NAKA disabled: capacitor-monetplus-hce removed. Monet+ Maven repos disabled; uncomment (with the creds above) to restore.
+        // maven {
+        //     url = uri("https://nexus3-public.monetplus.cz/repository/mobile-android/")
+        //     credentials {
+        //         username = repositoryUsername
+        //         password = repositoryPassword
+        //     }
+        // }
+        // maven {
+        //     url = uri("https://nexus3-public.monetplus.cz/repository/ahead-android-release/")
+        //     credentials {
+        //         username = repositoryUsername
+        //         password = repositoryPassword
+        //     }
+        // }
     }
 }
 

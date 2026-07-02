@@ -22,9 +22,6 @@ importers:
       '@aparajita/capacitor-secure-storage':
         specifier: ^8.0.0
         version: 8.0.0
-      '@apps/capacitor-monetplus-hce':
-        specifier: ^1.1.0
-        version: 1.1.0(@capacitor/core@8.3.4)
       '@capacitor/browser':
         specifier: ^8.0.3
         version: 8.0.3(@capacitor/core@8.3.4)
@@ -389,11 +386,6 @@ packages:
   '@aparajita/capacitor-secure-storage@8.0.0':
     resolution: {integrity: sha512-oYnwSjdIh23aRNgz8982+TmFvQH/2yZkEdw1iIg+H2ziFJoOVELPTc7u6Ez2HwOuDIW5AGqBX75GvrzQ+D70Qg==}
     engines: {node: '>=20.0.0'}
-
-  '@apps/capacitor-monetplus-hce@1.1.0':
-    resolution: {integrity: sha1-rKR4iYs4FnTyxvPzXlgXFOybjgE=, tarball: https://scm.nim.team/api/v4/projects/269/packages/npm/@apps/capacitor-monetplus-hce/-/@apps/capacitor-monetplus-hce-1.1.0.tgz}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
@@ -7833,10 +7825,6 @@ snapshots:
       '@capacitor/core': 8.3.4
       '@capacitor/ios': 8.3.4(@capacitor/core@8.3.4)
       '@capacitor/keyboard': 8.0.3(@capacitor/core@8.3.4)
-
-  '@apps/capacitor-monetplus-hce@1.1.0(@capacitor/core@8.3.4)':
-    dependencies:
-      '@capacitor/core': 8.3.4
 
   '@asamuzakjp/css-color@3.2.0':
     dependencies:

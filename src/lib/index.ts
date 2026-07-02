@@ -1,4 +1,3 @@
-import { useDevice } from '@/composables/useDevice'
 import { isTestnet } from '@/lib/network'
 
 export const isDev = import.meta.env.DEV
@@ -17,6 +16,10 @@ export const nakaBufferAddresses = [
 export const debounceDelay = 1000
 export const debounceMaxWait = 3000
 
-export const isNakaEnabled = __ENABLE_NAKA__ && (useDevice().isAndroid || isDev)
+// NAKA hidden: the `@apps/capacitor-monetplus-hce` plugin was removed (feature stopped working).
+// Hard-disabled here so it stays hidden in committed/CI/release builds (.env is gitignored).
+// Re-enable by restoring the original expression below.
+export const isNakaEnabled = false
+// export const isNakaEnabled = __ENABLE_NAKA__ && (useDevice().isAndroid || isDev)
 // export const isBlueCodeEnabled = __ENABLE_BLUECODE__ && (useDevice().isIOS || isDev)
 export const isMiniAppsEnabled = __ENABLE_MINI_APPS__

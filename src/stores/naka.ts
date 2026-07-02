@@ -1,15 +1,18 @@
 import type { NakaCard as ApiNakaCard, Identification, NakaRegistrationResponse, UserStatusResponse } from '../lib/issuer-schemas/rest.schema'
 import type { Fiat } from '@/stores/app'
-import { Environment, ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
+// NAKA disabled: capacitor-monetplus-hce removed. Re-add the dep and uncomment to restore.
+// import { Environment, ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
 import { until, useStorageAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
 import { useToast } from '@/composables/useToast'
-import { isNakaEnabled, isTestnet } from '@/lib'
+import { isNakaEnabled } from '@/lib'
 import { useIssuerRestApi } from '@/lib/issuer-rest-api'
-import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
+// NAKA disabled: capacitor-monetplus-hce removed. Only used by activateCardOnDevice (commented out below).
+// import { isTestnet } from '@/lib'
+// import { getDecryptedNakaCardData } from '@/lib/issuer-utils'
 import { SQLQuery } from '@/lib/sql-queries'
 import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -18,7 +21,8 @@ import { Rail } from '@/types/transactions'
 
 const logger = useLogger('useNaka')
 
-const { changeNakaCardPin, getNakaCardPinChangeToken, getUserStatus, registerForNaka, issueCard } = useIssuerRestApi()
+// NAKA disabled: changeNakaCardPin / getNakaCardPinChangeToken only used by activateCardOnDevice (commented out below).
+const { getUserStatus, registerForNaka, issueCard } = useIssuerRestApi()
 
 export interface CardExpiry {
   year: number
@@ -147,12 +151,13 @@ export const useNaka = defineStore('naka', () => {
     card.value = newCard
 
     // Set this card as the default for payments
-    if (card.value.hceId) {
-      await HCESdk.setDefaultCard({ cardId: card.value.hceId })
-    }
-    else {
-      logger.warn('Card has no hceId, cannot set as default in SDK', { card: card.value })
-    }
+    // NAKA disabled: capacitor-monetplus-hce removed.
+    // if (card.value.hceId) {
+    //   await HCESdk.setDefaultCard({ cardId: card.value.hceId })
+    // }
+    // else {
+    //   logger.warn('Card has no hceId, cannot set as default in SDK', { card: card.value })
+    // }
   }
 
   async function reset() {
@@ -161,10 +166,11 @@ export const useNaka = defineStore('naka', () => {
     logger.log('reset')
     registration.value = undefined
     await purgeNakaCards()
-    const { cards } = await HCESdk.getAllSucceededCards()
-    for (const card of cards) {
-      await HCESdk.deactivateCard({ cardId: card.id })
-    }
+    // NAKA disabled: capacitor-monetplus-hce removed.
+    // const { cards } = await HCESdk.getAllSucceededCards()
+    // for (const card of cards) {
+    //   await HCESdk.deactivateCard({ cardId: card.id })
+    // }
     card.value = undefined
     return true
   }
@@ -361,6 +367,9 @@ export const useNaka = defineStore('naka', () => {
   }
 
   async function activateCardOnDevice() {
+    // NAKA disabled: capacitor-monetplus-hce removed. No-op. Original implementation kept below for re-enable.
+    logger.warn('NAKA disabled: activateCardOnDevice is a no-op (capacitor-monetplus-hce removed)')
+    /*
     await HCESdk.initialize({ storageName: 'naka-card', environment: isTestnet ? Environment.SANDBOX : Environment.PRODUCTION })
     const { cards } = await HCESdk.getAllSucceededCards()
     logger.log('Cards: in SDK storage', cards)
@@ -421,6 +430,7 @@ export const useNaka = defineStore('naka', () => {
     if (!cypher)
       return logger.error('Failed to encrypt PIN for NAKA Card')
     await changeNakaCardPin(card.value.sourceId, publicKey, cypher)
+    */
   }
 
   async function deactivateCardOnDevice() {
@@ -429,7 +439,8 @@ export const useNaka = defineStore('naka', () => {
       return
     }
 
-    await HCESdk.deactivateCard({ cardId: card.value.hceId })
+    // NAKA disabled: capacitor-monetplus-hce removed.
+    // await HCESdk.deactivateCard({ cardId: card.value.hceId })
     logger.log('NAKA Card deactivated on device', { card: card.value })
   }
 

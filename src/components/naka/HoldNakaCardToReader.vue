@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import { ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
+// NAKA disabled: capacitor-monetplus-hce removed. Re-add the dep and uncomment to restore.
+// import { ErrorType, HCESdk } from '@apps/capacitor-monetplus-hce'
 import { IonButton } from '@ionic/vue'
 import { until, useIntervalFn } from '@vueuse/core'
 import { motion } from 'motion-v'
@@ -242,7 +243,12 @@ watch(paymentRejection, (rejection) => {
   })
 })
 
-const { pause: stopNfcCheck, resume: startNfcCheck } = useIntervalFn(async () => {
+const { pause: stopNfcCheck, resume: startNfcCheck } = useIntervalFn(() => {
+  // NAKA disabled: capacitor-monetplus-hce removed. NFC is unavailable; stop the interval. Original polling kept below for re-enable.
+  isNfcSupported.value = false
+  isNfcEnabled.value = false
+  stopNfcCheck()
+  /*
   if (isWeb) {
     isNfcSupported.value = false
     isNfcEnabled.value = false
@@ -272,6 +278,7 @@ const { pause: stopNfcCheck, resume: startNfcCheck } = useIntervalFn(async () =>
   const { isEnabled } = await HCESdk.isNfcEnabled()
   logger.log('NFC enabled:', isEnabled)
   isNfcEnabled.value = isEnabled
+  */
 }, 1000, { immediate: false })
 
 watch([() => props.isVisible, isCardActiveOnDevice], async ([isVisible, isCardActiveOnDevice]) => {
@@ -285,31 +292,32 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
   if (isVisible && isCardActive.value && isCardActiveOnDevice && isNfcEnabled.value) {
     // Need to wait until app is in foreground (not in background) or it will crash the app
     await until(isAppInBackground).toBe(false)
-    logger.log('Setting app as preferred NFC service')
-    const { success, error } = await HCESdk.setAsPreferredService()
-    if (!success) {
-      logger.error('Failed to set app as preferred NFC service:', error)
-      if (error.errorType === ErrorType.NFC_NOT_SUPPORTED) {
-        isNfcSupported.value = false
-        useToast().setToast({
-          type: 'error',
-          message: i18n.t('NFC is not supported on this device'),
-        })
-      }
-      else if (error.errorType === ErrorType.NFC_NOT_ENABLED) {
-        isNfcEnabled.value = false
-        useToast().setToast({
-          type: 'error',
-          message: i18n.t('NFC is not enabled'),
-        })
-      }
-      else {
-        useToast().setToast({
-          type: 'error',
-          message: i18n.t('Failed to set app as preferred NFC service: {error}', { error: error.message }),
-        })
-      }
-    }
+    // NAKA disabled: capacitor-monetplus-hce removed. Preferred NFC service registration skipped.
+    // logger.log('Setting app as preferred NFC service')
+    // const { success, error } = await HCESdk.setAsPreferredService()
+    // if (!success) {
+    //   logger.error('Failed to set app as preferred NFC service:', error)
+    //   if (error.errorType === ErrorType.NFC_NOT_SUPPORTED) {
+    //     isNfcSupported.value = false
+    //     useToast().setToast({
+    //       type: 'error',
+    //       message: i18n.t('NFC is not supported on this device'),
+    //     })
+    //   }
+    //   else if (error.errorType === ErrorType.NFC_NOT_ENABLED) {
+    //     isNfcEnabled.value = false
+    //     useToast().setToast({
+    //       type: 'error',
+    //       message: i18n.t('NFC is not enabled'),
+    //     })
+    //   }
+    //   else {
+    //     useToast().setToast({
+    //       type: 'error',
+    //       message: i18n.t('Failed to set app as preferred NFC service: {error}', { error: error.message }),
+    //     })
+    //   }
+    // }
   }
 }, { immediate: true })
 </script>
@@ -384,7 +392,7 @@ watch([() => props.isVisible, isNfcEnabled, isCardActiveOnDevice], async ([isVis
             v-else-if="!isNfcEnabled"
             class="mt-4 normal-case font-bold text-sm"
             style="--padding-top: 6px; --padding-bottom: 6px; --padding-start: 16px; --padding-end: 16px"
-            @click="() => HCESdk.openNfcSettings()"
+            @click="() => { /* NAKA disabled: HCESdk.openNfcSettings() removed */ }"
           >
             {{ $t('Enable NFC to pay') }}
           </IonButton>

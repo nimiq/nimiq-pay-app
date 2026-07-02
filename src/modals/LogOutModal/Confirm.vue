@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { HCESdk } from '@apps/capacitor-monetplus-hce'
+// NAKA disabled: capacitor-monetplus-hce removed. Re-add the dep and uncomment to restore.
+// import { HCESdk } from '@apps/capacitor-monetplus-hce'
 import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
@@ -9,7 +10,8 @@ import { Modal, useModal } from '@/composables/useModal'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useNaka } from '@/stores/naka'
+// NAKA disabled: capacitor-monetplus-hce removed. useNaka only used for card deactivation on logout (commented out below).
+// import { useNaka } from '@/stores/naka'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
 const logger = useLogger('LogOutModal/Confirm')
@@ -19,27 +21,29 @@ const router = useRouter()
 const { hasDoneBackup } = storeToRefs(useApp())
 const { remoteBalance } = storeToRefs(useRemoteSigner())
 const { localBalance } = storeToRefs(useLocalWallet())
-const { hasCard } = storeToRefs(useNaka())
+// NAKA disabled: capacitor-monetplus-hce removed.
+// const { hasCard } = storeToRefs(useNaka())
 const { deleteDatabase } = useConn()
 
 async function handleConfirm() {
   logger.log('handleConfirm', { hasDoneBackup: hasDoneBackup.value, localBalance: localBalance.value, remoteBalance: remoteBalance.value })
   if (hasDoneBackup.value || (remoteBalance.value === 0 && localBalance.value === 0)) {
     // TODO: ask for pin
-    if (hasCard.value) {
-      try {
-        await HCESdk.initialize({ storageName: 'naka-card' })
-        const { cards } = await HCESdk.getAllSucceededCards()
-        logger.log('Cards: in SDK storage', cards)
-        for (const card of cards) {
-          logger.log('Deactivating card', card)
-          await HCESdk.deactivateCard({ cardId: card.id })
-        }
-      }
-      catch (error) {
-        logger.error('Error deactivating NAKA card during logout', error)
-      }
-    }
+    // NAKA disabled: capacitor-monetplus-hce removed. Card deactivation on logout skipped.
+    // if (hasCard.value) {
+    //   try {
+    //     await HCESdk.initialize({ storageName: 'naka-card' })
+    //     const { cards } = await HCESdk.getAllSucceededCards()
+    //     logger.log('Cards: in SDK storage', cards)
+    //     for (const card of cards) {
+    //       logger.log('Deactivating card', card)
+    //       await HCESdk.deactivateCard({ cardId: card.id })
+    //     }
+    //   }
+    //   catch (error) {
+    //     logger.error('Error deactivating NAKA card during logout', error)
+    //   }
+    // }
     await deleteDatabase()
     router.replace('/setup')
   }

@@ -4,8 +4,6 @@ PODS:
   - AparajitaCapacitorSecureStorage (8.0.0):
     - Capacitor
     - KeychainSwift (~> 21.0)
-  - AppsCapacitorMonetplusHce (1.1.0):
-    - Capacitor
   - Capacitor (8.3.4):
     - CapacitorCordova
   - CapacitorApp (8.1.0):
@@ -140,7 +138,6 @@ PODS:
 DEPENDENCIES:
   - "AparajitaCapacitorBiometricAuth (from `../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@10.0.0/node_modules/@aparajita/capacitor-biometric-auth`)"
   - "AparajitaCapacitorSecureStorage (from `../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@8.0.0/node_modules/@aparajita/capacitor-secure-storage`)"
-  - "AppsCapacitorMonetplusHce (from `../../node_modules/.pnpm/@apps+capacitor-monetplus-hce@1.1.0_@capacitor+core@8.3.4/node_modules/@apps/capacitor-monetplus-hce`)"
   - "Capacitor (from `../../node_modules/.pnpm/@capacitor+ios@8.3.4_@capacitor+core@8.3.4/node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.4/node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/.pnpm/@capacitor+browser@8.0.3_@capacitor+core@8.3.4/node_modules/@capacitor/browser`)"
@@ -196,8 +193,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@aparajita+capacitor-biometric-auth@10.0.0/node_modules/@aparajita/capacitor-biometric-auth"
   AparajitaCapacitorSecureStorage:
     :path: "../../node_modules/.pnpm/@aparajita+capacitor-secure-storage@8.0.0/node_modules/@aparajita/capacitor-secure-storage"
-  AppsCapacitorMonetplusHce:
-    :path: "../../node_modules/.pnpm/@apps+capacitor-monetplus-hce@1.1.0_@capacitor+core@8.3.4/node_modules/@apps/capacitor-monetplus-hce"
   Capacitor:
     :path: "../../node_modules/.pnpm/@capacitor+ios@8.3.4_@capacitor+core@8.3.4/node_modules/@capacitor/ios"
   CapacitorApp:
@@ -254,7 +249,6 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   AparajitaCapacitorBiometricAuth: 1ae24ba90d7977dffb4bc9040f374a807a510c98
   AparajitaCapacitorSecureStorage: 8128d05cafcb13b00448e20fb388a0edccd44b12
-  AppsCapacitorMonetplusHce: 50b837a12eaa1faa91aa8a0cb4ef72a15d5e6b1e
   Capacitor: d13cad5fa09155679672808cc4ca9fbc2997e1b4
   CapacitorApp: 449ffe26375e96f8aaaee625ac6e01e5c57c8650
   CapacitorBrowser: c987c73d09d8bd3b5ec13f06338b1e14d5d2be69
@@ -300,6 +294,6 @@ SPEC CHECKSUMS:
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: 680a44f01a42d2e879d7642454549745c2a4df37
+PODFILE CHECKSUM: e5f68dfa0679c56d4da6772542f9a2696d4b8c63
 
 COCOAPODS: 1.15.2

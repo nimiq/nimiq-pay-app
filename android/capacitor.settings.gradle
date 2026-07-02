@@ -8,9 +8,6 @@ project(':aparajita-capacitor-biometric-auth').projectDir = new File('../node_mo
 include ':aparajita-capacitor-secure-storage'
 project(':aparajita-capacitor-secure-storage').projectDir = new File('../node_modules/.pnpm/@aparajita+capacitor-secure-storage@8.0.0/node_modules/@aparajita/capacitor-secure-storage/android')
 
-include ':apps-capacitor-monetplus-hce'
-project(':apps-capacitor-monetplus-hce').projectDir = new File('../node_modules/.pnpm/@apps+capacitor-monetplus-hce@1.1.0_@capacitor+core@8.3.4/node_modules/@apps/capacitor-monetplus-hce/android')
-
 include ':capacitor-browser'
 project(':capacitor-browser').projectDir = new File('../node_modules/.pnpm/@capacitor+browser@8.0.3_@capacitor+core@8.3.4/node_modules/@capacitor/browser/android')
 
