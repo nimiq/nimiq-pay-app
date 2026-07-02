@@ -56,14 +56,14 @@ importers:
         specifier: ^8.0.8
         version: 8.0.8(@capacitor/core@8.3.4)
       '@capawesome/capacitor-posthog':
-        specifier: ^8.4.2
-        version: 8.4.2(@capacitor/core@8.3.4)(posthog-js@1.372.9)
+        specifier: ^8.5.0
+        version: 8.5.0(@capacitor/core@8.3.4)(posthog-js@1.372.9)
       '@capgo/camera-preview':
         specifier: ^8.3.8
         version: 8.3.8(@capacitor/core@8.3.4)
       '@capgo/capacitor-inappbrowser':
-        specifier: ^8.6.23
-        version: 8.6.23(@capacitor/core@8.3.4)
+        specifier: ^8.6.32
+        version: 8.6.32(@capacitor/core@8.3.4)
       '@internationalized/number':
         specifier: ^3.6.6
         version: 3.6.6
@@ -216,7 +216,7 @@ importers:
         specifier: 8.8.6
         version: 8.8.6(@stencil/core@4.43.4)(vue-router@4.6.4(vue@3.5.34(typescript@5.9.3)))(vue@3.5.34(typescript@5.9.3))
       '@nimiq/core':
-        specifier: ^2.7.0
+        specifier: ^2.6.0
         version: 2.7.0(vite@7.3.3(@types/node@25.6.0)(jiti@1.21.7)(terser@5.47.1)(yaml@2.8.4))
       '@types/youtube-player':
         specifier: ^5.5.11
@@ -541,8 +541,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capawesome/capacitor-posthog@8.4.2':
-    resolution: {integrity: sha512-ocCEV5BpQdaKUIjT10Av895Wlldz6aH6fc2OakoyFMHwrmRxHvQeT9+yckksAkoov5lE5lkuBgb0ptWQiRnyOA==}
+  '@capawesome/capacitor-posthog@8.5.0':
+    resolution: {integrity: sha512-s+NPyqgASk0k7zmXDpiYXjkOFGvoWxWQNclkhXS8RlQ91q/iW4LmN6r3oNwNtcE4N8oufiEXCyvS9cmNBfY9WA==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
       posthog-js: ^1.306.2
@@ -555,8 +555,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capgo/capacitor-inappbrowser@8.6.23':
-    resolution: {integrity: sha512-BRaduAReNyHka/tZb8zlObabL/E/5C6PAH34S72XpF8zT/yXCksD3LFfJWIF7XMIX80Nh58Xe3NWoMHoQN3T6A==}
+  '@capgo/capacitor-inappbrowser@8.6.32':
+    resolution: {integrity: sha512-DKJO0eB75uYvjMOofCULGPSTv8i4dArFrmd4ZA3MZSUB3IELER8maFNq70wPWKrDpVq4JGOM8cqJV8MEN42KjQ==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -8022,7 +8022,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.3.4
 
-  '@capawesome/capacitor-posthog@8.4.2(@capacitor/core@8.3.4)(posthog-js@1.372.9)':
+  '@capawesome/capacitor-posthog@8.5.0(@capacitor/core@8.3.4)(posthog-js@1.372.9)':
     dependencies:
       '@capacitor/core': 8.3.4
     optionalDependencies:
@@ -8032,7 +8032,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.3.4
 
-  '@capgo/capacitor-inappbrowser@8.6.23(@capacitor/core@8.3.4)':
+  '@capgo/capacitor-inappbrowser@8.6.32(@capacitor/core@8.3.4)':
     dependencies:
       '@capacitor/core': 8.3.4
 

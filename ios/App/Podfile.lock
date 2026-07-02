@@ -55,12 +55,12 @@ PODS:
     - IdensicMobileSDK
   - CapacitorToast (8.0.1):
     - Capacitor
-  - CapawesomeCapacitorPosthog (8.4.2):
+  - CapawesomeCapacitorPosthog (8.5.0):
     - Capacitor
     - PostHog (< 4.0, >= 3.56.0)
   - CapgoCameraPreview (8.3.8):
     - Capacitor
-  - CapgoCapacitorInappbrowser (8.6.23):
+  - CapgoCapacitorInappbrowser (8.6.32):
     - Capacitor
   - CocoaLumberjack (3.9.1):
     - CocoaLumberjack/Core (= 3.9.1)
@@ -163,9 +163,9 @@ DEPENDENCIES:
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.4/node_modules/@capacitor/status-bar`)"
   - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.7_@capacitor+core@8.3.4/node_modules/capacitor-sumsub-mobile-sdk`)"
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast`)"
-  - CapawesomeCapacitorPosthog (from `../../../capacitor-plugins/packages/posthog`)
+  - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.5.0_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview`)"
-  - "CapgoCapacitorInappbrowser (from `../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.23_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser`)"
+  - "CapgoCapacitorInappbrowser (from `../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.32_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser`)"
   - Firebase/Messaging
   - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
@@ -243,11 +243,11 @@ EXTERNAL SOURCES:
   CapacitorToast:
     :path: "../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast"
   CapawesomeCapacitorPosthog:
-    :path: "../../../capacitor-plugins/packages/posthog"
+    :path: "../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.5.0_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog"
   CapgoCameraPreview:
     :path: "../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview"
   CapgoCapacitorInappbrowser:
-    :path: "../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.23_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser"
+    :path: "../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.6.32_@capacitor+core@8.3.4/node_modules/@capgo/capacitor-inappbrowser"
   RdlaboCapacitorScreenshotEvent:
     :path: "../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event"
 
@@ -277,9 +277,9 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: 01d5763b4ed720de5ce2edbc938de6a98f4c8f32
   CapacitorSumsubMobileSdk: 0923814fbe75504bab8abd647ecb029d49b437a7
   CapacitorToast: 408036fbd702120d3adde3980b740f3c0fb60c9e
-  CapawesomeCapacitorPosthog: bb68c11b64b5266c5ca3d361f7c435f24c5b899a
+  CapawesomeCapacitorPosthog: 96feaf395849fc3e9b186b8d2d4fbf79bdd8a6b9
   CapgoCameraPreview: bdbc20c3ed01ffdf37151164c6c8355b1c0c544e
-  CapgoCapacitorInappbrowser: aa12d455f08c9f069a344e701d8ed7882b093b31
+  CapgoCapacitorInappbrowser: 893bf9506895fc41ee66b1db08c687edf4c5ffc9
   CocoaLumberjack: e4ba3b414dfca8c1916c6303d37f63b3a95134c6
   Firebase: 4453b799f72f625384dc23f412d3be92b0e3b2a0
   FirebaseCore: 74f647ad9739ea75112ce6c3b3b91f5488ce1122
@@ -300,6 +300,6 @@ SPEC CHECKSUMS:
   SVGKit: 1ad7513f8c74d9652f94ed64ddecda1a23864dea
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: dceff0506c1df962a5ffec89db95d881dca5ae4f
+PODFILE CHECKSUM: 680a44f01a42d2e879d7642454549745c2a4df37
 
 COCOAPODS: 1.15.2
