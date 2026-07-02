@@ -92,11 +92,11 @@ msgstr ""
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:138
+#: src/components/naka/HoldNakaCardToReader.vue:139
 msgid "Amount exceeds daily limit of {fiatAmount}"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:88
+#: src/components/naka/HoldNakaCardToReader.vue:89
 msgid "Amount exceeds payment limit of {fiatAmount}"
 msgstr ""
 
@@ -230,19 +230,19 @@ msgstr ""
 msgid "Cannot fetch existing swap"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:163
+#: src/components/naka/HoldNakaCardToReader.vue:164
 msgid "Cannot verify daily limits: {error}"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:150
+#: src/components/naka/HoldNakaCardToReader.vue:151
 msgid "Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:113
+#: src/components/naka/HoldNakaCardToReader.vue:114
 msgid "Cannot verify payment limits: {error}"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:100
+#: src/components/naka/HoldNakaCardToReader.vue:101
 msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
 msgstr ""
 
@@ -590,10 +590,6 @@ msgstr ""
 msgid "Failed to fetch payment request"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:309
-msgid "Failed to set app as preferred NFC service: {error}"
-msgstr ""
-
 #: src/lib/faucet.ts:35
 msgid "Faucet error - please try again."
 msgstr ""
@@ -721,7 +717,7 @@ msgstr ""
 msgid "Insert PIN to confirm"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:176
+#: src/components/naka/HoldNakaCardToReader.vue:177
 msgid "Insufficient balance"
 msgstr ""
 
@@ -1022,11 +1018,6 @@ msgstr ""
 msgid "New"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:303
-msgid "NFC is not enabled"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:296
 #: src/components/naka/HoldNakaCardToReader.vue:65
 msgid "NFC is not supported on this device"
 msgstr ""

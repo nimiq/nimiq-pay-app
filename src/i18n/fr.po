@@ -432,9 +432,6 @@ msgstr "Échec de la récupération du service LNURL"
 msgid "Failed to fetch payment request"
 msgstr "Échec de la récupération de la demande de paiement"
 
-msgid "Failed to set app as preferred NFC service: {error}"
-msgstr "Impossible de définir l'application comme service NFC par défaut : {error}"
-
 msgid "Faucet error - please try again."
 msgstr "Erreur du faucet - veuillez réessayer."
 
@@ -734,9 +731,6 @@ msgstr "Identifiant de réseau incohérent"
 
 msgid "New"
 msgstr "Nouveau"
-
-msgid "NFC is not enabled"
-msgstr "Le NFC n'est pas activé"
 
 msgid "NFC is not supported on this device"
 msgstr "Le NFC n'est pas pris en charge sur cet appareil"
@@ -1561,6 +1555,12 @@ msgstr "Votre compte testnet est vide."
 
 msgid "zero-width character (invisible)"
 msgstr "caractère de largeur nulle (invisible)"
+
+#~ msgid "Failed to set app as preferred NFC service: {error}"
+#~ msgstr "Impossible de définir l'application comme service NFC par défaut : {error}"
+
+#~ msgid "NFC is not enabled"
+#~ msgstr "Le NFC n'est pas activé"
 
 #~ msgid "Loading..."
 #~ msgstr "Chargement..."
