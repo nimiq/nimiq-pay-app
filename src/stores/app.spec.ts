@@ -31,8 +31,8 @@ vi.mock('@/lib', () => ({
 
 vi.mock('./conn', () => ({
   useConn: () => ({
-    query: vi.fn(),
-    run: vi.fn(),
+    query: vi.fn(() => Promise.resolve(undefined)),
+    run: vi.fn(() => Promise.resolve()),
   }),
 }))
 
@@ -109,5 +109,15 @@ describe('useApp withdrawal storage', () => {
     app.addNewWithdrawalAddress('NQ77 BOB')
 
     expect(app.withdrawalAddressesHistory).toEqual([{ address: 'NQ77 BOB', alias: 'Bob' }])
+  })
+
+  // New-wallet entropy needs the Nimiq WASM CSPRNG. When the global is unavailable (undefined in
+  // this spec) setEntropy must reject — no silent fallback — so the caller surfaces an error.
+  it('rejects entropy generation when the Nimiq global is unavailable', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    await expect(app.setEntropy()).rejects.toThrow()
+    expect(app.entropy).toBe('')
   })
 })

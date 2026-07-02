@@ -161,6 +161,8 @@ export const useApp = defineStore('app', () => {
       entropy.value = entropyDb
     }
     else {
+      // Generating a brand-new wallet needs the Nimiq WASM CSPRNG. If WASM failed to instantiate
+      // this throws and the caller surfaces a recoverable error to the user — no silent fallback.
       Nimiq.Entropy.SIZE = 16
       entropy.value = Nimiq.Entropy.generate().toHex().substring(0, 32)
       await kv().setItem('entropy', entropy.value)

@@ -36,6 +36,14 @@ onLongPress(
 )
 
 onMounted(async () => {
+  try {
+    const { version, build } = await App.getInfo()
+    logger.log(`Nimiq Pay v${version} (build ${build})`)
+  }
+  catch (error) {
+    logger.error('Failed to get app version', error)
+  }
+
   // Stop scanning in case it was still active
   document.body.classList.remove('native-qr-scanner-modal-open')
   try {

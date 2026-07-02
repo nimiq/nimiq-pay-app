@@ -7,7 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { trackConsensusEstablished } from '@/lib/analytics'
+import { reportCriticalError, trackConsensusEstablished } from '@/lib/analytics'
 import { promiseWithTimeout, translateConsensus } from '@/lib/utils'
 import { useLocks } from '@/stores/locks'
 
@@ -45,7 +45,18 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
     networkName.value = isTestnet ? 'testalbatross' : 'MainAlbatross'
 
-    await Nimiq.default()
+    try {
+      await Nimiq.default()
+    }
+    catch (error) {
+      // WASM instantiation can fail on some WebViews (e.g. a non-callable `crypto.getRandomValues`
+      // import). Never let that become an uncaught rejection or wedge boot — log and bail so the app
+      // still unlocks and renders; sync simply stays offline until the next launch.
+      // iOS Lockdown Mode is gated out in main.ts before init() runs, so this is a genuine failure.
+      logger.error('Nimiq WASM init failed; running without the PoS client', error)
+      reportCriticalError(error, { context: 'nimiq-wasm-init', network: networkName.value })
+      return
+    }
 
     if (!options.launchNimiqClient)
       return
