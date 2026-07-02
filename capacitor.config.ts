@@ -37,6 +37,7 @@ const config: CapacitorConfig = {
       host: 'https://eu.i.posthog.com',
       enableSessionReplay: false,
       sessionReplayConfig: undefined,
+      autoCaptureExceptions: true,
     },
     SystemBars: {
       insetsHandling: 'disable',

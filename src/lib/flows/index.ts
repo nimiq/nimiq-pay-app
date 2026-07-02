@@ -17,6 +17,7 @@ import { isNakaEnabled } from '@/lib'
 import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
+  reportCriticalError,
   trackFeatureOpened,
   trackPaymentCancelled,
   trackPaymentCompleted,
@@ -286,8 +287,11 @@ const paymentFlow: FlowInit = async () => {
     const isBluecodePaymentRequest = objectHasData(bluecodePaymentRequest)
 
     // No translation as not user-facing. Dev error which should not occur in production.
-    if (payWithPuntos && isNimPaymentRequest)
-      throw new Error('User can only pay with puntos if they have scanned a payment request')
+    if (payWithPuntos && isNimPaymentRequest) {
+      const msg = 'User can only pay with puntos if they have scanned a payment request'
+      reportCriticalError(new Error(msg), { flow: flowName })
+      throw new Error(msg)
+    }
     if (isBluecodePaymentRequest)
       throw new Error('Bluecode payments are not supported yet')
     if (isNakaPaymentRequest && !isNakaAvailableForActiveAsset)
@@ -399,9 +403,12 @@ const paymentFlow: FlowInit = async () => {
         break
       }
       case PaymentMethod.Points: {
-        if (!payment.request.rail || !payment.request.paymentRef)
-        // No translation as not user-facing. Dev error which should not occur in production.
-          throw new Error(`You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(payment.request)}`)
+        if (!payment.request.rail || !payment.request.paymentRef) {
+          // No translation as not user-facing. Dev error which should not occur in production.
+          const msg = `You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(payment.request)}`
+          reportCriticalError(new Error(msg), { flow: flowName })
+          throw new Error(msg)
+        }
 
         const { usePoints } = await import('@/stores/points')
         const { error } = await usePoints().payWithPoints(payment.request)

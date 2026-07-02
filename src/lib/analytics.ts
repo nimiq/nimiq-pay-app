@@ -18,6 +18,18 @@ function capture(event: string, properties: object): void {
   void Posthog.capture({ event, properties: properties as Record<string, unknown> })
 }
 
+// Report a critical "should-not-happen" error to PostHog. Use only for genuine
+// invariant violations, not everyday failures. Not isDev-gated: dev reports are
+// filterable via the isDev person-property set in identifyUser().
+export function reportCriticalError(error: unknown, context?: Record<string, unknown>): void {
+  const err = error instanceof Error ? error : new Error(String(error))
+  void Posthog.captureException({
+    message: err.message,
+    name: err.name,
+    properties: { ...context, stack: err.stack },
+  })
+}
+
 export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink'
 
 export type AppOpenSource = 'cold_start' | 'resume'

@@ -3,6 +3,7 @@ import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
   getAmountRange,
+  reportCriticalError,
   startPaymentAnalytics,
   trackAppOpened,
   trackFeatureOpened,
@@ -14,6 +15,7 @@ import {
 const state = vi.hoisted(() => ({
   capture: vi.fn(),
   identify: vi.fn(),
+  captureException: vi.fn(),
   isDev: false,
 }))
 
@@ -21,6 +23,7 @@ vi.mock('@capawesome/capacitor-posthog', () => ({
   Posthog: {
     capture: state.capture,
     identify: state.identify,
+    captureException: state.captureException,
   },
 }))
 
@@ -66,6 +69,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 beforeEach(() => {
   state.capture.mockReset()
   state.identify.mockReset()
+  state.captureException.mockReset()
   state.isDev = false
 })
 
@@ -252,5 +256,49 @@ describe('core analytics events', () => {
     })
 
     expect(state.capture).not.toHaveBeenCalled()
+  })
+})
+
+describe('reportCriticalError', () => {
+  it('captures an Error with its message, name and stack', () => {
+    const error = new TypeError('boom')
+
+    reportCriticalError(error)
+
+    expect(state.captureException).toHaveBeenCalledWith({
+      message: 'boom',
+      name: 'TypeError',
+      properties: { stack: error.stack },
+    })
+  })
+
+  it('normalizes non-Error values into an Error', () => {
+    reportCriticalError('plain failure')
+
+    expect(state.captureException).toHaveBeenCalledWith({
+      message: 'plain failure',
+      name: 'Error',
+      properties: { stack: expect.any(String) },
+    })
+  })
+
+  it('merges context into the reported properties', () => {
+    const error = new Error('invariant')
+
+    reportCriticalError(error, { flow: 'payment' })
+
+    expect(state.captureException).toHaveBeenCalledWith({
+      message: 'invariant',
+      name: 'Error',
+      properties: { flow: 'payment', stack: error.stack },
+    })
+  })
+
+  it('reports even in development mode (filterable via the isDev person-property)', () => {
+    state.isDev = true
+
+    reportCriticalError(new Error('still reported'))
+
+    expect(state.captureException).toHaveBeenCalledTimes(1)
   })
 })

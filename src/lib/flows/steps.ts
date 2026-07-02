@@ -8,6 +8,7 @@ import { useDevice } from '@/composables/useDevice'
 import { QRDataFormat } from '@/composables/useStringParser'
 import { i18n } from '@/i18n/i18n-setup'
 import { isNakaEnabled } from '@/lib'
+import { reportCriticalError } from '@/lib/analytics'
 import { Asset, assetToCrypto } from '@/lib/assets'
 import { sha256Hex } from '@/lib/crypto'
 import { defaultStepInitOptions, FlowName, StepName } from '@/lib/flows/steps.types'
@@ -524,9 +525,12 @@ export const paymentPreviewStep: StepInit = async () => {
     },
     beforeNext: async ({ qrCodeScanner: request }, { navigateTo, finalizeFlow }) => {
       // The request should be a PaymentRequestData, but we need to handle the case where it's a string
-      if (typeof request === 'string')
+      if (typeof request === 'string') {
         // No translation as not user-facing. Dev error which should not occur in production.
-        throw new Error(`Request is a string: ${request}`)
+        const msg = `Request is a string: ${request}`
+        reportCriticalError(new Error(msg), { step: StepName.PaymentPreview })
+        throw new Error(msg)
+      }
 
       // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input
       if ((await import('@/stores/app')).useApp().shouldAskPin())
