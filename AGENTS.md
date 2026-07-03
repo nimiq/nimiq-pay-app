@@ -7,6 +7,7 @@ prevent future agents from having the same issue.
 
 If you have any question, ask, don't assume! If you are unsure about something, ask the developer working with you.
 Simplify everything, don't create extra functions or components if they are not needed (only do it to prevent duplicates), don't overcomplicate things, keep it simple and straightforward. If you need to create a new function or component, ask to the dev working with you.
+Don't create wrapper functions that only forward to another function with fixed arguments (e.g. `function securePendingNow() { handleFunds(true) }`). Call the target directly at the call site instead (e.g. `@click="handleFunds(true)"`).
 Don't touch any `*.po` file, they are auto generated. To update them, run `pnpm i18n:extract`.
 Use `pnpm` to install dependencies and run scripts.
 Use `isNimiqAsset` (not `isNimAsset`) as the naming convention when checking if the active asset is NIM.

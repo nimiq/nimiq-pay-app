@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IonSkeletonText } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
-import { animate, useMotionValue } from 'motion-v'
+import { animate, motion, useMotionValue } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
@@ -19,6 +19,7 @@ import { useSync } from '@/stores/sync'
 const { remoteBalance: balance, homeBalanceState, lastKnownRemoteBalance } = storeToRefs(useRemoteSigner())
 const { balance: usdtBalance, lastKnownBalance: lastKnownUsdtBalance, homeBalanceState: usdtHomeBalanceState } = storeToRefs(usePolygonUsdt())
 const { isTransactionPending } = storeToRefs(useSync())
+const { handleFunds } = useSync()
 const { showAnimations, activeAsset } = storeToRefs(useApp())
 const { localBalance } = storeToRefs(useLocalWallet())
 const { isProcessingRemote } = storeToRefs(useLocks())
@@ -107,11 +108,30 @@ watch(showSkeleton, (isShowing) => {
         <PriceChange :currency="crypto.currency" />
       </div>
     </div>
+    <!--
+      Tour hook (APP-177): tapping the pending line force-secures the locally-staged NIM into the
+      HTLC right now, bypassing the htlcThreshold auto-deposit gate. Disabled/dimmed while a NIM HTLC
+      tx is already in flight (isNimHtlcTransition). The future onboarding tour targets
+      [data-tour="pending-topup"] and calls this same handleFunds(true) path.
+    -->
     <Transition name="pending">
-      <div v-if="pendingNim > 0" class="text-space/40 flex items-center gap-x-1.5 text-sm font-semibold">
-        <TopUpIcon class="w-3.5 h-3.5 shrink-0" />
+      <button
+        v-if="pendingNim > 0"
+        type="button"
+        data-tour="pending-topup"
+        :disabled="isNimHtlcTransition"
+        class="text-space/40 flex items-center gap-x-1.5 text-sm font-semibold cursor-pointer select-none transition-opacity active:opacity-60 disabled:opacity-50 disabled:cursor-default"
+        @click="handleFunds(true)"
+      >
+        <motion.div
+          :animate="showAnimations && !isNimHtlcTransition ? { y: [0, -2, 0] } : {}"
+          :transition="{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }"
+          class="shrink-0"
+        >
+          <TopUpIcon class="w-3.5 h-3.5" />
+        </motion.div>
         <span>+<CryptoAmount :amount="pendingNim" :currency="Crypto.NIM" />&nbsp;{{ $t('pending') }}</span>
-      </div>
+      </button>
     </Transition>
   </div>
 </template>

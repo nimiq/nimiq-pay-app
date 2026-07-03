@@ -32,7 +32,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
    */
-  async function handleFunds() {
+  async function handleFunds(bypassThreshold = false) {
     if (localBalance.value === 0)
       return
     if (isTransactionPending.value || isSendingTx.value) {
@@ -46,7 +46,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     // below-threshold deposit would otherwise sit pending forever — secure it immediately instead.
     // Gated before the remote-balance RPC below so an accumulating top-up skips it.
     // (localBalance is already > 0 here, so a threshold of 0 keeps the previous immediate behavior.)
-    if (remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
+    if (!bypassThreshold && remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
       logger.log(`💤 Local balance ${localBalance.value / 1e5} NIM below HTLC threshold ${htlcThreshold.value / 1e5} NIM — accumulating, skipping HTLC create/top-up`)
       return
     }
