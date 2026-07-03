@@ -2,18 +2,19 @@
 import type { PropType, Ref } from 'vue'
 import type { CloseRole } from '@/composables/useModal'
 import type { flowHeightOptions } from '@/lib/flows'
-import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step, StepName } from '@/lib/flows/steps.types'
+import type { Flow, FlowHookCb, InputStepName, NavigateToOptions, NavigationControl, OnDoneStepValue, State, Step } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { IonBackButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { until, useIntersectionObserver } from '@vueuse/core'
 import { close } from 'ionicons/icons'
-import { computed, nextTick, onMounted, reactive, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, watchEffect } from 'vue'
 import { useCarousel } from '@/composables/useCarousel'
 import { useLogger } from '@/composables/useLogger'
 import { useModal } from '@/composables/useModal'
+import { useSharedPinInput } from '@/composables/useSharedPinInput'
 
 import { useToast } from '@/composables/useToast'
-import { inputSteps, isInputStep } from '@/lib/flows/steps.types'
+import { inputSteps, isInputStep, StepName } from '@/lib/flows/steps.types'
 
 const props = defineProps({
   flow: {
@@ -119,6 +120,21 @@ watch(() => props.isClosing, async () => {
 const scroller = ref<HTMLElement>()
 const scrollerItems = ref<HTMLElement[]>([])
 const { goToSlide, isScrolling } = useCarousel(scroller, { activeIndex })
+
+// The single hidden input shared by the PIN steps (see useSharedPinInput). Only rendered/provided for flows
+// that actually contain a PIN step, so non-PIN flows don't carry the input in their DOM. Kept in this modal so
+// it is never inside a scrolling slide nor in the modal's inert background.
+const hasPinStep = stepsInFlow.some(s => ([StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange] as StepName[]).includes(s.step))
+const sharedPin = useSharedPinInput()
+const sharedPinInputEl = ref<HTMLInputElement>()
+onMounted(() => {
+  if (sharedPinInputEl.value)
+    sharedPin.provideElement(sharedPinInputEl.value)
+})
+onBeforeUnmount(() => {
+  if (sharedPinInputEl.value)
+    sharedPin.releaseElement(sharedPinInputEl.value)
+})
 
 const activeStep = computed(() => historyStack.value[activeIndex.value])
 // Get the element in screen knowing the active step using the li key
@@ -467,6 +483,9 @@ function focus() {
   // TODO: remove when focus is working in every device (mobile + tablet)
   logger.log('focus', input)
   input?.focus()
+  // PIN steps render no input in the slide — their input is the shared one (useSharedPinInput). Open it here,
+  // when the step is fully visible, so the keyboard auto-opens like other input steps.
+  sharedPin.focusActive()
 }
 
 function blur() {
@@ -529,7 +548,7 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
       <div class="flex flex-col flex-1">
         <component
           :is="main"
-          v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isScrolling, stepName: step }"
+          v-bind="{ errorMsg: getInputStepError(step), canSkip: !!skipAheadBy, state, isVisible: isStepVisible(step), isActive: activeStep.step === step, isScrolling, stepName: step }"
           v-on="{ focus, done: makeStepDoneHandler(step), select: makeStepDoneHandler(step), skip: makeSkipOrBackHandler(step, { skipAheadBy }), back: makeSkipOrBackHandler(step, { goBackBy }), blur, navigateTo: makeStepNavigateHandler(step), overrideHeight: (value: flowHeightOptions) => { logger.log('Override height for step:', { step, value }) } }"
         />
       </div>
@@ -540,6 +559,15 @@ watch(() => activeStep.value.overrideHeight, async (newHeight, oldHeight) => {
       </div>
     </div>
   </ul>
+
+  <!-- Single hidden input shared by the PIN steps. Lives here (inside the modal, outside the slide carousel)
+       so focus never has to hand off between two inputs and the numeric keyboard appears (APP-157). Only
+       rendered for flows that contain a PIN step. -->
+  <input
+    v-if="hasPinStep"
+    ref="sharedPinInputEl" type="tel" inputmode="numeric" pattern="[0-9]*" autocomplete="off"
+    aria-label="PIN" class="caret-transparent sr-only"
+  >
 
   <slot name="default" v-bind="{ activeStep }" v-on="activeStepHandlers" />
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from 'vue'
+import type { PinReceiver } from '@/composables/useSharedPinInput'
 import type { State } from '@/lib/flows/steps.types'
 import { Haptics, NotificationType } from '@capacitor/haptics'
 import { until } from '@vueuse/core'
@@ -7,6 +8,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import { useBiometric } from '@/composables/useBiometric'
 import { useLogger } from '@/composables/useLogger'
+import { useSharedPinInput } from '@/composables/useSharedPinInput'
 import { stepEmits } from '@/lib/flows/steps.types'
 
 // Avoid warnings regarding additional props/attributes assigned in Flow.vue not being used in this component, and not
@@ -17,6 +19,7 @@ const props = defineProps({
   errorMsg: { type: String },
   inputLength: { type: Number, required: true },
   isScrolling: { type: Boolean, required: false },
+  isActive: { type: Boolean, required: false },
   showLoading: { type: Boolean, required: false },
   stepName: { type: String, required: false },
   state: { type: Object as PropType<State>, required: false },
@@ -27,15 +30,47 @@ const emit = defineEmits(stepEmits)
 
 const logger = useLogger('PinInput')
 const { updateBiometryInfo, addBiometricResumeListener, removeBiometricResumeListener, getPinFromSecureStorage, isBiometricEnabled, isBiometricSupported, BiometryErrorType } = useBiometric()
-const isScrolling = computed(() => props.isScrolling)
 const inputRef = ref<HTMLInputElement | null>(null)
-const isInputFocused = ref(false)
+// Focus state of the standalone local input; flow steps derive focus from isActive (see isInputFocused).
+const localFocused = ref(false)
 const pinCodeInput = ref('')
 const wiggle = ref(false)
 const isLoading = ref(false)
 const customError = ref('')
 
+// Flow steps (which pass a stepName) share a single hidden <input> so focus never has to hand off between the
+// enter-PIN and confirm-PIN slides. Standalone usages keep their own local <input> (rendered below).
+const isFlowStep = !!props.stepName
+// Drives the dot bounce animation: flow steps have no local input, so focus tracks isActive; standalone tracks
+// the local input's focus/blur.
+const isInputFocused = computed(() => (isFlowStep ? !!props.isActive : localFocused.value))
+const sharedPin = useSharedPinInput()
+const receiver: PinReceiver = {
+  id: Symbol('pin'),
+  inputLength: props.inputLength,
+  getValue: () => pinCodeInput.value,
+  setValue: (value) => { pinCodeInput.value = value },
+  canAccept: () => !wiggle.value && !isLoading.value,
+}
+
+if (isFlowStep)
+  sharedPin.register(receiver)
+
+// Route the shared input to whichever step is active. isActive is set synchronously on navigation (step ===
+// activeStep), so it never depends on the IntersectionObserver and can't leave input permanently blocked.
+watch(() => props.isActive, (isActive) => {
+  if (!isFlowStep)
+    return
+  if (isActive)
+    sharedPin.setActive(receiver)
+  else
+    sharedPin.clearActive(receiver)
+}, { immediate: true })
+
 watch(pinCodeInput, async (pin) => {
+  if (isFlowStep)
+    sharedPin.syncValue(receiver)
+
   if (pin.length === props.inputLength) {
     logger.log('🔢 PIN complete, emitting done')
     emit('done', pin)
@@ -46,8 +81,8 @@ watch(pinCodeInput, async (pin) => {
     // and when the users goes back to this component, the input will be empty.
     // Only do this if the stepName is defined, as this is a step in a flow, and not a standalone component.
     if (props.stepName && !props.errorMsg) {
-      await until(isScrolling).toBe(true, { timeout: 1000 })
-      await until(isScrolling).toBe(false, { timeout: 1000 })
+      await until(() => props.isScrolling).toBe(true, { timeout: 1000 })
+      await until(() => props.isScrolling).toBe(false, { timeout: 1000 })
     }
     clearInput()
   }
@@ -72,17 +107,28 @@ watch(isLoading, (loading) => {
 })
 
 function handleInput(event: Event) {
-  // Prevent input when there's an error message and the input is being animated
-  if (wiggle.value)
-    return
   const target = event.target as HTMLInputElement
+  // Standalone-only local input. Ignore keystrokes during the error wiggle and reset the DOM value so a
+  // stray tap can't leak into the next accepted keystroke.
+  if (wiggle.value) {
+    target.value = pinCodeInput.value
+    return
+  }
   pinCodeInput.value = target.value
 }
 
+function focusInput() {
+  if (isFlowStep)
+    sharedPin.focus()
+  else
+    inputRef.value?.focus()
+}
+
 function handleInputClick(i: number) {
+  // Editing pinCodeInput triggers the watcher above, which pushes the change to the shared input via syncValue.
   if (pinCodeInput.value.length > 0)
     pinCodeInput.value = pinCodeInput.value.slice(0, -(pinCodeInput.value.length - i) - 1)
-  inputRef.value?.focus()
+  focusInput()
 }
 
 function clearInput() {
@@ -112,7 +158,11 @@ onMounted(async () => {
   }
 })
 
-onBeforeUnmount(removeBiometricResumeListener)
+onBeforeUnmount(() => {
+  removeBiometricResumeListener()
+  if (isFlowStep)
+    sharedPin.unregister(receiver)
+})
 </script>
 
 <template>
@@ -123,7 +173,7 @@ onBeforeUnmount(removeBiometricResumeListener)
       />
       <div
         v-else
-        class="flex justify-center gap-x-8 px-2 py-4" :class="{ 'animate-wiggle': wiggle }" @click="inputRef?.focus()"
+        class="flex justify-center gap-x-8 px-2 py-4" :class="{ 'animate-wiggle': wiggle }" @click="focusInput"
       >
         <div
           v-for="i in inputLength" :key="i"
@@ -138,15 +188,16 @@ onBeforeUnmount(removeBiometricResumeListener)
       {{ customError }}
     </p>
   </div>
+  <!-- Standalone usages keep a local input; flow steps use the shared hidden input (useSharedPinInput). -->
   <input
+    v-if="!stepName"
     ref="inputRef" type="password" inputmode="numeric" class="caret-transparent sr-only" pattern="[0-9]*"
     autocomplete="false" onpaste.prevent ondrop.prevent
-    :name="stepName"
     :aria-label="stepName"
     :minlength="inputLength" :maxlength="inputLength" :size="inputLength"
     :value="pinCodeInput"
     @input="handleInput"
-    @focus="isInputFocused = true"
-    @blur="isInputFocused = false"
+    @focus="localFocused = true"
+    @blur="localFocused = false"
   >
 </template>
