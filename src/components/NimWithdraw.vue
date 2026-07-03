@@ -81,6 +81,9 @@ const fiatDecimals = 6
 const fiatAmount = ref(0)
 // TODO: replace comma with dot
 const fiatAmountModel = ref(0)
+// APP-178: when the user taps "All" for NIM, send the exact integer luna balance instead of the
+// fiat-derived amount. The fiat round-trip floors twice, which otherwise leaves dust behind.
+const sendMaxNim = ref(false)
 watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
 watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fiatDecimals)
 
@@ -186,7 +189,7 @@ function withdraw() {
   loading.value = true
   useApp().addNewWithdrawalAddress(selected.value)
   emit('done', {
-    amount: amountUnits.value,
+    amount: isNimiqAsset.value && sendMaxNim.value ? spendableBalance.value : amountUnits.value,
     recipient: selected.value,
     fiatAmount: fiatAmount.value,
     polygonQuote: usdtQuote.value || undefined,
@@ -195,7 +198,8 @@ function withdraw() {
 
 async function fillMaxAmount() {
   if (isNimiqAsset.value) {
-    fiatAmount.value = remoteBalanceFiat.value
+    sendMaxNim.value = true
+    fiatAmount.value = remoteBalanceFiat.value // display only; withdraw() sends the exact luna balance
     return
   }
 
@@ -233,7 +237,7 @@ watch(() => props.isVisible, (visible) => {
 <template>
   <div v-if="!isScannerActive" class="h-full flex flex-1 flex-col">
     <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
-      <AmountInput v-model="fiatAmountModel" :decimals="fiatDecimals" />
+      <AmountInput :model-value="fiatAmountModel" :decimals="fiatDecimals" @update:model-value="(v) => { fiatAmountModel = v; sendMaxNim = false }" />
       <p class="max-w-full text-base font-semibold text-space/60">
         <CryptoAmount v-if="isNimiqAsset" :amount="amountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
         <span v-else data-testid="nim-withdraw-usdt-amount">{{ formattedUsdtAmount }}</span>
@@ -261,13 +265,13 @@ watch(() => props.isVisible, (visible) => {
     <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
     <div class="flex w-full mt-auto mb-4 justify-evenly">
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 25">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 25 }">
         <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 50">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 50 }">
         <FiatAmount :amount="50" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => fiatAmount = 100">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 100 }">
         <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
       </button>
       <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="fillMaxAmount">
