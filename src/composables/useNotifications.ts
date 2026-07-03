@@ -12,6 +12,7 @@ import { computedAsync } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useNotificationsApi } from '@/composables/useApi'
+import { useChangelog } from '@/composables/useChangelog'
 import { useDevice } from '@/composables/useDevice'
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
@@ -94,6 +95,8 @@ export function useNotifications() {
         })
       })
       .catch(e => logger.error('Error getting remote notifications', e))
+
+    maybeAddChangelogNotification().catch(e => logger.error('Error adding changelog notification', e))
 
     if (isWeb)
       return
@@ -252,6 +255,30 @@ export function useNotifications() {
 
     if (permanent)
       closedNotifications.value.push(id)
+  }
+
+  // "What's New" card: shown once per update, only when the installed version has an
+  // unseen changelog entry. Opening the modal (from the card or the menu) marks it seen.
+  async function maybeAddChangelogNotification() {
+    if (isMockEnabled)
+      return
+    const { hasUnseenChangelog, changelogCardExhausted, recordChangelogCardShown, resolveVersion, currentVersion } = useChangelog()
+    await resolveVersion()
+    // Hide once seen, or after it has been shown a few times without interaction.
+    if (!hasUnseenChangelog.value || changelogCardExhausted.value)
+      return
+    const id = `changelog-${currentVersion.value}`
+    // Already dismissed → don't re-show or count it.
+    if (closedNotifications.value.includes(id))
+      return
+    // Opening the modal marks the changelog seen (ChangelogModal onMounted), so no need here.
+    addLocalNotification({
+      id,
+      title: i18n.t('What\'s New'),
+      subtitle: i18n.t('Learn what is new in this update'),
+      action: () => useModal().showModal(Modal.Changelog, { isOnTop: true }),
+    }, true)
+    recordChangelogCardShown()
   }
 
   const { localNotificationsStatus } = storeToRefs(useApp())

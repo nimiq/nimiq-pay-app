@@ -2,6 +2,7 @@
   "verbose": 2,
   "hooks": {
     "after:bump": [
+      "node scripts/generate-changelog.mjs ${version}",
       "pnpm build:ios",
       "pnpm build:android"
     ],
@@ -21,6 +22,7 @@
   },
   "gitlab": {
     "release": true,
+    "releaseNotes": "node scripts/generate-changelog.mjs ${version} --print-latest",
     "genericPackageRepositoryName": "nimiq-pay",
     "useGenericPackageRepositoryForAssets": true,
     "assets": [

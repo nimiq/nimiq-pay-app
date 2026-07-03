@@ -27,5 +27,6 @@ appId: ${APP_ID}
 - runFlow: flows/withdraw_address_usdt.yaml
 - runFlow: flows/crypto_map.yaml
 - runFlow: flows/about_menu_item.yaml
+- runFlow: flows/changelog_modal.yaml
 - runFlow: flows/price_change_indicator.yaml
 - runFlow: flows/mini_apps_button.yaml

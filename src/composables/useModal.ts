@@ -29,6 +29,7 @@ export enum Modal {
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
   Map = '@/modals/MapModal.vue',
+  Changelog = '@/modals/ChangelogModal.vue',
 }
 
 interface ModalAnalyticsOptions {
@@ -103,6 +104,9 @@ function _useModal() {
         break
       case Modal.Map:
         component = defineAsyncComponent(() => import(Modal.Map))
+        break
+      case Modal.Changelog:
+        component = defineAsyncComponent(() => import(Modal.Changelog))
         break
     }
 

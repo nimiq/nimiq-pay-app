@@ -13,6 +13,7 @@ import LiveChatIcon from '@/components/icons/live-chat.vue'
 import LogoutIcon from '@/components/icons/log-out.vue'
 import NimiqOutlineLogo from '@/components/icons/nimiq-outline.vue'
 import SettingsIcon from '@/components/icons/settings.vue'
+import SparklesIcon from '@/components/icons/sparkles.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
@@ -127,6 +128,12 @@ onLongPress(
       :title="$t('Backup Account')"
       aria-label="Backup Account"
       @click="initializeFlow(FlowName.Backup, { analyticsSource: 'menu' })"
+    />
+    <MenuItem
+      :icon="SparklesIcon"
+      :title="$t('What\'s New')"
+      aria-label="What's New"
+      @click="showModal(Modal.Changelog, { isOnTop: true })"
     />
     <MenuItem
       :icon="NimiqOutlineLogo"

@@ -141,6 +141,13 @@ export const useApp = defineStore('app', () => {
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
   const htlcThreshold = useStorageAsync('htlcThreshold', DEFAULT_HTLC_THRESHOLD_LUNA, kv(), sharedOptions)
   const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
+  // Last app version whose changelog the user has seen. Pre-login storage so the
+  // "What's New" card/modal state survives across logins (see useChangelog).
+  const lastSeenChangelogVersion = useStorageAsync('lastSeenChangelogVersion', '', kvPreferences(), sharedOptions)
+  // How many times the "What's New" card has been shown for changelogCardVersion, so it
+  // auto-hides after a few appearances even if the user never opens or dismisses it.
+  const changelogCardVersion = useStorageAsync('changelogCardVersion', '', kvPreferences(), sharedOptions)
+  const changelogCardShownCount = useStorageAsync('changelogCardShownCount', 0, kvPreferences(), sharedOptions)
 
   const pendingReferralCode = ref('')
   const entropy = ref('')
@@ -297,5 +304,8 @@ export const useApp = defineStore('app', () => {
     decimalsAmount,
     htlcThreshold,
     reopenMiniAppWebviewAfterResume,
+    lastSeenChangelogVersion,
+    changelogCardVersion,
+    changelogCardShownCount,
   }
 })

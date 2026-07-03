@@ -18,7 +18,7 @@ msgstr ""
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:77
+#: src/modals/MenuModal.vue:83
 msgid "About"
 msgstr ""
 
@@ -286,6 +286,7 @@ msgstr ""
 msgid "Claim Promo Code"
 msgstr ""
 
+#: src/modals/ChangelogModal.vue:5
 #: src/modals/MiniAppWarningModal.vue:5
 msgid "Close"
 msgstr ""
@@ -673,6 +674,10 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
+#: src/components/ChangelogEntry.vue:20
+msgid "How to use:"
+msgstr ""
+
 #: src/components/naka/NakaOnboardingVerifyId.vue:7
 msgid "I agree to NAKA Card's {terms}"
 msgstr ""
@@ -708,7 +713,7 @@ msgstr ""
 msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
 msgstr ""
 
-#: src/composables/useNotifications.ts:276
+#: src/composables/useNotifications.ts:295
 msgid "Incoming Payments"
 msgstr ""
 
@@ -925,6 +930,10 @@ msgstr ""
 msgid "Learn more"
 msgstr ""
 
+#: src/composables/useNotifications.ts:271
+msgid "Learn what is new in this update"
+msgstr ""
+
 #: src/composables/useBitcoinLightning.ts:71
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr ""
@@ -960,7 +969,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:84
+#: src/modals/MenuModal.vue:90
 msgid "Log Out"
 msgstr ""
 
@@ -1062,6 +1071,10 @@ msgstr ""
 msgid "No Cashlink found"
 msgstr ""
 
+#: src/modals/ChangelogModal.vue:40
+msgid "No changelog yet. Check back after the next update."
+msgstr ""
+
 #: src/components/naka/HoldNakaCardToReader.vue:82
 msgid "No NAKA Card found"
 msgstr ""
@@ -1116,11 +1129,11 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:277
+#: src/composables/useNotifications.ts:296
 msgid "Notification when a payment arrives"
 msgstr ""
 
-#: src/composables/useNotifications.ts:148
+#: src/composables/useNotifications.ts:151
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -1208,7 +1221,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useNotifications.ts:335
+#: src/composables/useNotifications.ts:354
 msgid "Payment received"
 msgstr ""
 
@@ -1362,6 +1375,10 @@ msgstr ""
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr ""
 
+#: src/modals/ChangelogModal.vue:28
+msgid "Previous versions"
+msgstr ""
+
 #: src/modals/DisclaimerModal.vue:17
 msgid "Privacy Policy"
 msgstr ""
@@ -1451,7 +1468,7 @@ msgstr ""
 msgid "Retire Stake"
 msgstr ""
 
-#: src/composables/useNotifications.ts:147
+#: src/composables/useNotifications.ts:150
 msgid "Rewards Notifications"
 msgstr ""
 
@@ -1948,6 +1965,10 @@ msgstr ""
 msgid "Verify your phone number"
 msgstr ""
 
+#: src/components/ChangelogEntry.vue:5
+msgid "Version"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:161
 msgid "Wait for consensus before withdrawing"
 msgstr ""
@@ -1970,6 +1991,12 @@ msgstr ""
 
 #: src/lib/flows/steps.ts:355
 msgid "What is Bluecode?"
+msgstr ""
+
+#: src/composables/useNotifications.ts:270
+#: src/modals/ChangelogModal.vue:17
+#: src/modals/MenuModal.vue:77
+msgid "What's New"
 msgstr ""
 
 #: src/components/ValidateWords.vue:82
@@ -2130,7 +2157,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:336
+#: src/composables/useNotifications.ts:355
 msgid "You received {amount}"
 msgstr ""
 
