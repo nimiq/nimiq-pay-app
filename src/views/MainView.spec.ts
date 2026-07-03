@@ -362,7 +362,21 @@ describe('mainView', () => {
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
   })
 
-  it('does not show "Processing funds" when local balance is below the HTLC threshold', async () => {
+  it('does not show "Processing funds" when accumulating below threshold onto an active HTLC', async () => {
+    // Below-threshold top-up onto an existing secured balance just accumulates (shown as "pending").
+    isHtlcActive.value = true
+    remoteBalance.value = 10 * 1e5
+    localBalance.value = 2 * 1e5
+    htlcThreshold.value = 5 * 1e5
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('Processing funds')
+  })
+
+  it('shows "Processing funds" for a below-threshold deposit when no secured balance exists yet', async () => {
+    // Fresh wallet: the deposit is forced into an HTLC immediately rather than kept pending.
     isHtlcActive.value = false
     remoteBalance.value = 0
     localBalance.value = 2 * 1e5
@@ -371,7 +385,7 @@ describe('mainView', () => {
     const wrapper = await mountComponent()
     await flushPromises()
 
-    expect(wrapper.text()).not.toContain('Processing funds')
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Processing funds')
   })
 
   it('shows "Processing funds" once local balance reaches the HTLC threshold', async () => {

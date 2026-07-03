@@ -137,14 +137,26 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).not.toHaveBeenCalled()
     })
 
-    it('does not create an HTLC when localBalance is below htlcThreshold', async () => {
+    it('accumulates (no HTLC touch) when below threshold and a remote balance already exists', async () => {
       state.localBalance = 50_000
       state.htlcThreshold = 100_000
+      state.remoteBalance = 100_000
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).not.toHaveBeenCalled()
       // Guarded before the remote-balance fetch, so no RPC is wasted while below threshold.
       expect(state.getBalance).not.toHaveBeenCalled()
+    })
+
+    it('creates an HTLC below threshold when no remote balance exists yet (force, do not keep pending)', async () => {
+      state.localBalance = 50_000
+      state.htlcThreshold = 100_000
+      state.remoteBalance = 0
+      state.isHtlcPending = false
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
 
     it('creates an HTLC once localBalance reaches htlcThreshold', async () => {
@@ -159,6 +171,7 @@ describe('useSyncHtlc', () => {
     it('does not liquidate an active HTLC when localBalance is below htlcThreshold', async () => {
       state.localBalance = 50_000
       state.htlcThreshold = 100_000
+      state.remoteBalance = 100_000
       state.isHtlcActive = true
       state.isRemoteOk = true
       const { useSyncHtlc } = await import('./htlc')

@@ -41,10 +41,12 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     }
 
     // Let micro-payments accumulate in the local wallet until they reach the threshold before
-    // moving them into the HTLC, instead of creating/topping-up an HTLC for every payment.
-    // Checked before fetching the remote balance to skip a wasted RPC while below threshold.
+    // topping up the HTLC, instead of creating/topping-up an HTLC for every payment. Only applies
+    // once a secured balance exists: with remoteBalance 0 there's nothing to batch onto, so a
+    // below-threshold deposit would otherwise sit pending forever — secure it immediately instead.
+    // Gated before the remote-balance RPC below so an accumulating top-up skips it.
     // (localBalance is already > 0 here, so a threshold of 0 keeps the previous immediate behavior.)
-    if (localBalance.value < htlcThreshold.value) {
+    if (remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
       logger.log(`💤 Local balance ${localBalance.value / 1e5} NIM below HTLC threshold ${htlcThreshold.value / 1e5} NIM — accumulating, skipping HTLC create/top-up`)
       return
     }

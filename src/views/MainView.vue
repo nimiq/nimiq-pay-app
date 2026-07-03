@@ -113,9 +113,10 @@ watchEffect(async () => {
       isStatusMessageShown.value = true
     }
   }
-  // Local funds below the HTLC threshold are just accumulating (shown as "pending"), not being
-  // processed yet — only treat them as "processing" once they'll actually trigger an HTLC.
-  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && localBalance.value >= htlcThreshold.value)) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
+  // Local funds are just accumulating (shown as "pending"), not processing, only while they're
+  // below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
+  // with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
+  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
     statusMessageText.value = i18n.tc(
       'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
       blocksUntilNextMacroBlock.value,
