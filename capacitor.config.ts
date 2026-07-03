@@ -28,6 +28,12 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    LocalNotifications: {
+      // Local notifications default to the generic Android info icon; point them
+      // at the Nimiq Pay icon (same drawable FCM push already uses). Android-only;
+      // iOS local notifications always use the app icon.
+      smallIcon: 'ic_stat_name',
+    },
     PrivacyScreen: {
       enable: false,
       preventScreenshots: false,
