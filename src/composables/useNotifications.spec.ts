@@ -5,7 +5,6 @@ const state = vi.hoisted(() => ({
   isWeb: false,
   isAndroid: true,
   localNotificationsStatus: undefined as any,
-  isHomeVisible: false,
   locked: false,
   schedule: vi.fn(async (_args: any) => {}),
   createChannel: vi.fn(async (_args: any) => {}),
@@ -119,12 +118,6 @@ vi.mock('@/stores/conn', () => ({
   }),
 }))
 
-vi.mock('@/stores/locks', () => ({
-  useLocks: () => ({
-    get isHomeVisible() { return state.isHomeVisible },
-  }),
-}))
-
 vi.mock('@/stores/transactions', () => ({
   useTransactions: () => ({
     get transactions() { return state.transactions },
@@ -154,7 +147,6 @@ describe('useNotifications — local notifications', () => {
     state.isWeb = false
     state.isAndroid = true
     state.localNotificationsStatus = ref('granted')
-    state.isHomeVisible = false
     state.locked = false
     state.schedule.mockReset()
     state.schedule.mockResolvedValue(undefined)
@@ -180,13 +172,6 @@ describe('useNotifications — local notifications', () => {
   describe('scheduleIncomingPaymentNotification gates', () => {
     it('skips when isWeb', async () => {
       state.isWeb = true
-      const { useNotifications } = await import('./useNotifications')
-      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt())
-      expect(state.schedule).not.toHaveBeenCalled()
-    })
-
-    it('skips when isHomeVisible', async () => {
-      state.isHomeVisible = true
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt())
       expect(state.schedule).not.toHaveBeenCalled()
@@ -220,7 +205,7 @@ describe('useNotifications — local notifications', () => {
       expect(state.schedule).toHaveBeenCalledTimes(1)
     })
 
-    it('fires when all gates pass (modal-over-Home: isHomeVisible=false)', async () => {
+    it('fires when all gates pass', async () => {
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt())
       expect(state.schedule).toHaveBeenCalledTimes(1)

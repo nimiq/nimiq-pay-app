@@ -24,7 +24,6 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { LocalNotificationsStatus, PushNotificationsStatus, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
-import { useLocks } from '@/stores/locks'
 import { useTransactions } from '@/stores/transactions'
 
 const logger = useLogger('useNotifications')
@@ -345,8 +344,6 @@ export function useNotifications() {
         return
       }
     }
-    if (useLocks().isHomeVisible)
-      return
     if (useConn().locked)
       return
 
