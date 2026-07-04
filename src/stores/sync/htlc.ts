@@ -45,8 +45,9 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     // once a secured balance exists: with remoteBalance 0 there's nothing to batch onto, so a
     // below-threshold deposit would otherwise sit pending forever — secure it immediately instead.
     // Gated before the remote-balance RPC below so an accumulating top-up skips it.
+    // Expired signers must still hit the RPC: the cosigner can lag behind a timeout reclaim.
     // (localBalance is already > 0 here, so a threshold of 0 keeps the previous immediate behavior.)
-    if (!bypassThreshold && remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
+    if (!bypassThreshold && !hasHtlcExpired.value && remoteBalance.value > 0 && localBalance.value < htlcThreshold.value) {
       logger.log(`💤 Local balance ${localBalance.value / 1e5} NIM below HTLC threshold ${htlcThreshold.value / 1e5} NIM — accumulating, skipping HTLC create/top-up`)
       return
     }

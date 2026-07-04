@@ -159,6 +159,20 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
 
+    it('creates an HTLC below threshold when stale expired remote balance is already drained on-chain', async () => {
+      state.localBalance = 50_000
+      state.htlcThreshold = 100_000
+      state.remoteBalance = 100_000
+      state.hasHtlcExpired = true
+      state.isHtlcActive = false
+      state.isHtlcPending = false
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().handleFunds()
+      expect(state.getBalance).toHaveBeenCalledWith(state.remoteAddress)
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+    })
+
     it('creates an HTLC once localBalance reaches htlcThreshold', async () => {
       state.localBalance = 100_000
       state.htlcThreshold = 100_000
