@@ -1,0 +1,43 @@
+appId: ${APP_ID}
+---
+# APP-175 regression: rapidly double-tapping a Mini App row must open exactly ONE
+# webview. Before the fix, the loading guard could clear while the webview was still
+# loading invisibly, letting a second tap stack a second webview on top.
+
+- runFlow: ../subflows/launch_app.yaml
+
+- assertVisible: Mini Apps
+- tapOn: Mini Apps
+- waitForAnimationToEnd
+
+# First tap starts the launch; the immediate second tap must be swallowed by the
+# disabled row / launcher guard. `optional` because after the fix the row may
+# already be covered or disabled when the second tap lands.
+# Row text is the full concatenated row content, so anchor with a regex.
+- extendedWaitUntil:
+    visible: Nimtris.*
+    timeout: 20000
+- tapOn:
+    text: Nimtris.*
+    retryTapIfNoChange: false
+- tapOn:
+    text: Nimtris.*
+    retryTapIfNoChange: false
+    optional: true
+
+# Webview presented: the native dialog covers the Discover modal.
+- extendedWaitUntil:
+    notVisible: Discover
+    timeout: 20000
+
+- takeScreenshot: nimiq-pay-tests/.maestro/screenshots/mini_apps_double_tap
+
+# ONE back must close the only webview and reveal the Discover modal again.
+# With a stacked second webview, back would reveal the other webview instead.
+- back
+- waitForAnimationToEnd
+- assertVisible: Discover
+
+# Close the Discover modal to leave the app in a clean state.
+- back
+- waitForAnimationToEnd

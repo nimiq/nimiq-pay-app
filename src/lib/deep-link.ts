@@ -1,9 +1,7 @@
 import type { URLOpenListenerEvent } from '@capacitor/app'
-import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { until } from '@vueuse/core'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useLogger } from '@/composables/useLogger'
-import { clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { normalizeMiniAppUrl } from '@/modals/mini-app-search'
@@ -98,13 +96,8 @@ async function openMiniAppFromDeeplink(raw: string): Promise<void> {
       return
     }
   }
-  // Clear any preserved session + close its webview so PinView's reconnectAndShow
-  // does not race with — or stack on top of — this launch.
-  await Promise.all([
-    hasPendingSession() ? clearSession() : Promise.resolve(),
-    InAppBrowser.close().catch(err =>
-      logger.log('InAppBrowser.close before deeplink launch failed (likely no webview):', err)),
-  ])
+  // launchMiniApp owns the never-stack-webviews invariant (closes live webviews and
+  // clears preserved sessions before opening) for every caller, this one included.
   const app = useApp()
   await launchMiniApp({ url: normalized, source: 'deeplink', language: app.language, userFiat: app.selectedFiat })
 }

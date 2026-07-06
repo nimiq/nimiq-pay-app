@@ -194,6 +194,8 @@ export class MiniAppHost {
   private ethAccountsPermission: EthAccountsPermission | null = null
   /** Stops the remote-signer watcher registered in the constructor. */
   private stopRemoteAddressWatcher: (() => void) | null = null
+  /** The session object this host registered; destroy() only clears module state it still owns. */
+  private sessionState: MiniAppSessionState | null = null
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
 
@@ -216,6 +218,7 @@ export class MiniAppHost {
       chainId: this.currentChainId,
       evmRpcUrls: config.evmRpcUrls,
     }
+    this.sessionState = _activeMiniAppSession
     isMiniAppActive.value = true
 
     // When the remote signer address changes (added/refreshed mid-session), the
@@ -255,14 +258,19 @@ export class MiniAppHost {
     }
     this.stopRemoteAddressWatcher?.()
     this.stopRemoteAddressWatcher = null
-    _activeMiniAppSession = null
-    isMiniAppActive.value = false
+    // A late destroy of an old host must not clobber the session a newer host
+    // registered, nor remove listeners it doesn't own (destroy only removes its
+    // own messageFromWebview listener; removeAllListeners would wipe a concurrent
+    // launch's closeEvent/browserPageLoaded listeners too).
+    if (_activeMiniAppSession === this.sessionState) {
+      _activeMiniAppSession = null
+      isMiniAppActive.value = false
+    }
     await this.inAppBrowser?.clearAllCookies()
     await this.messageFromWebviewListener?.remove()
     this.messageFromWebviewListener = null
     this.birpc?.$close()
     this.birpc = null
-    await this.inAppBrowser?.removeAllListeners()
     this.inAppBrowser = null
     this.destroyed = true
   }

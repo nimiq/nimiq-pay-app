@@ -30,3 +30,4 @@ appId: ${APP_ID}
 - runFlow: flows/changelog_modal.yaml
 - runFlow: flows/price_change_indicator.yaml
 - runFlow: flows/mini_apps_button.yaml
+- runFlow: flows/mini_apps_double_tap.yaml

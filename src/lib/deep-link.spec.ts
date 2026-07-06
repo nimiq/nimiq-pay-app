@@ -4,10 +4,7 @@ import { flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
-  clearSession,
   confirmUntrustedMiniApp,
-  hasPendingSession,
-  inAppBrowserClose,
   initializeFlow,
   isTrustedMiniAppUrl,
   launchMiniApp,
@@ -15,10 +12,7 @@ const {
   loggerLog,
   loggerWarn,
 } = vi.hoisted(() => ({
-  clearSession: vi.fn(() => Promise.resolve()),
   confirmUntrustedMiniApp: vi.fn(() => Promise.resolve(false)),
-  hasPendingSession: vi.fn(() => false),
-  inAppBrowserClose: vi.fn(() => Promise.resolve()),
   initializeFlow: vi.fn(),
   isTrustedMiniAppUrl: vi.fn(() => true),
   launchMiniApp: vi.fn(() => Promise.resolve()),
@@ -52,12 +46,6 @@ vi.mock('@/stores/app', () => ({
   useApp: () => ({ language: 'en' }),
 }))
 
-vi.mock('@/composables/useMiniAppSession', () => ({ clearSession, hasPendingSession }))
-
-vi.mock('@capgo/capacitor-inappbrowser', () => ({
-  InAppBrowser: { close: inAppBrowserClose },
-}))
-
 vi.mock('@/stores/mini-apps', () => ({
   useMiniApps: () => ({ isTrustedMiniAppUrl }),
 }))
@@ -86,12 +74,6 @@ describe('handleDeepLink', () => {
     loggerError.mockReset()
     loggerLog.mockReset()
     loggerWarn.mockReset()
-    clearSession.mockReset()
-    clearSession.mockImplementation(() => Promise.resolve())
-    hasPendingSession.mockReset()
-    hasPendingSession.mockImplementation(() => false)
-    inAppBrowserClose.mockReset()
-    inAppBrowserClose.mockImplementation(() => Promise.resolve())
     isTrustedMiniAppUrl.mockReset()
     isTrustedMiniAppUrl.mockImplementation(() => true)
     confirmUntrustedMiniApp.mockReset()
@@ -129,27 +111,6 @@ describe('handleDeepLink', () => {
       url: 'https://app.uniswap.org/swap',
       source: 'deeplink',
     }))
-  })
-
-  it('clears a preserved mini-app session before launching the deeplink target', async () => {
-    hasPendingSession.mockReturnValueOnce(true)
-    const handleDeepLink = await loadHandler()
-    await handleDeepLink(event('nimiqpay://miniapp?url=example.com'))
-
-    expect(clearSession).toHaveBeenCalledTimes(1)
-    expect(inAppBrowserClose).toHaveBeenCalledTimes(1)
-    const clearOrder = clearSession.mock.invocationCallOrder[0]
-    const launchOrder = launchMiniApp.mock.invocationCallOrder[0]
-    expect(clearOrder).toBeLessThan(launchOrder)
-  })
-
-  it('still closes any lingering webview even when no session marker is pending', async () => {
-    const handleDeepLink = await loadHandler()
-    await handleDeepLink(event('nimiqpay://miniapp?url=example.com'))
-
-    expect(clearSession).not.toHaveBeenCalled()
-    expect(inAppBrowserClose).toHaveBeenCalledTimes(1)
-    expect(launchMiniApp).toHaveBeenCalledTimes(1)
   })
 
   it('opens the warning modal for an untrusted url and aborts if the user cancels', async () => {

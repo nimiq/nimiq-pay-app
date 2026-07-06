@@ -108,6 +108,7 @@ vi.mock('@capgo/capacitor-inappbrowser', () => ({
     openWebView,
     addListener,
     clearAllCookies,
+    close: vi.fn(() => Promise.resolve()),
   },
   ToolBarType: {
     NAVIGATION: 'navigation',
@@ -118,6 +119,7 @@ vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
     error: loggerError,
     log: loggerLog,
+    warn: vi.fn(),
   }),
 }))
 
@@ -128,11 +130,15 @@ vi.mock('@/composables/useToast', () => ({
   }),
 }))
 
-vi.mock('@/composables/useMiniAppHost', () => ({
-  MiniAppHost: class {
-    destroy = hostDestroy
-  },
-}))
+vi.mock('@/composables/useMiniAppHost', async () => {
+  const { ref } = await import('vue')
+  return {
+    isMiniAppActive: ref(false),
+    MiniAppHost: class {
+      destroy = hostDestroy
+    },
+  }
+})
 
 vi.mock('@/lib/mini-app-confirmation', () => ({
   requestUserConfirmation: vi.fn(() => Promise.resolve(true)),

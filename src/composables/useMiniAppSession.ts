@@ -1,3 +1,4 @@
+import type { PluginListenerHandle } from '@capacitor/core'
 import type { MiniAppHost, MiniAppSessionState } from '@/composables/useMiniAppHost'
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser'
 import { useLogger } from '@/composables/useLogger'
@@ -91,9 +92,16 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
     }, session.chainId)
 
     // Re-register close listener so the host is destroyed when user closes the webview
-    InAppBrowser.addListener('closeEvent', async () => {
+    // (host.destroy() no longer removes listeners it doesn't own). Null re-entry guard
+    // because plugin close() and dialog dismiss can both emit closeEvent.
+    let closeHandle: PluginListenerHandle | null = await InAppBrowser.addListener('closeEvent', async () => {
+      const h = closeHandle
+      if (h === null)
+        return
+      closeHandle = null
       logger.log('Reconnected mini-app webview closed, destroying host')
       await host.destroy()
+      await h.remove()
     })
 
     await InAppBrowser.show()

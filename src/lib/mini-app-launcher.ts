@@ -3,9 +3,11 @@ import { Capacitor } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import { ScreenOrientation } from '@capacitor/screen-orientation'
 import { InAppBrowser, ToolBarType } from '@capgo/capacitor-inappbrowser'
+import { until } from '@vueuse/core'
 import { ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
-import { MiniAppHost } from '@/composables/useMiniAppHost'
+import { isMiniAppActive, MiniAppHost } from '@/composables/useMiniAppHost'
+import { clearSession, hasPendingSession } from '@/composables/useMiniAppSession'
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
@@ -30,13 +32,17 @@ const evmRpcUrls: Record<string, string> = {
 
 const NIMIQ_RPC_URL = isTestnet ? 'https://rpc.testnet.nimiqwatch.com' : 'https://rpc.nimiqwatch.com'
 
+const LAUNCH_FAILED_TOAST = 'Could not open the Mini App'
+
 export const openingMiniAppUrl = ref<string | null>(null)
 
 let web3ProviderScript: Promise<string> | null = null
 
 function getWeb3ProviderScript(): Promise<string> {
   if (!web3ProviderScript) {
-    web3ProviderScript = fetch('/web3-provider.js')
+    // Timeout so a hung fetch rejects (clearing the memoized promise) instead of
+    // wedging every future launch behind it.
+    web3ProviderScript = fetch('/web3-provider.js', { signal: AbortSignal.timeout(10_000) })
       .then(res => res.text())
       .catch((err) => {
         web3ProviderScript = null
@@ -127,6 +133,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   let pageErrorHandle: { remove: () => Promise<void> } | null = null
   let watchdog: ReturnType<typeof setTimeout> | null = null
   let guardCleared = false
+  let openCalled = false
 
   // iOS resolves `openWebView` before the present animation finishes, so the guard
   // must be held until the webview confirms it loaded / failed / closed.
@@ -135,6 +142,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       return
     guardCleared = true
     openingMiniAppUrl.value = null
+    if (showLoadingToast)
+      toast.clearToast()
     if (watchdog !== null) {
       clearTimeout(watchdog)
       watchdog = null
@@ -145,7 +154,35 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     pageErrorHandle = null
   }
 
+  // Failure paths share this: release the guard, tell the user, and kill the pending
+  // invisible webview (isPresentAfterPageLoad) so it can't pop up later or stack
+  // under a retry. If no webview exists, destroy the host directly — no closeEvent
+  // will ever fire for it.
+  const failLaunch = (reason: string) => {
+    logger.warn('Mini App launch failed:', reason, targetUrl)
+    clearGuard()
+    toast.setToast({ message: LAUNCH_FAILED_TOAST, type: 'error' })
+    void InAppBrowser.close().catch(() => host?.destroy())
+  }
+
+  // Scheduled before any await so a hung fetch/native call can never wedge the guard
+  // (a wedged guard silently suppresses every future launch).
+  watchdog = setTimeout(failLaunch, 15_000, 'timed out')
+
   try {
+    // Never stack webviews: a Mini App can be live in this session (isMiniAppActive)
+    // or surviving hidden from before a resume-reload (pending session marker, which
+    // PinView's reconnectAndShow would otherwise race with). Close it and wait for
+    // its closeEvent-driven teardown, so the old host's destroy() cannot clobber the
+    // session state the new MiniAppHost is about to register.
+    const pendingSession = hasPendingSession()
+    if (isMiniAppActive.value || pendingSession) {
+      if (pendingSession)
+        await clearSession()
+      await InAppBrowser.close().catch(err => logger.log('close before launch failed (likely no webview):', err))
+      await until(isMiniAppActive).toBe(false, { timeout: 3000 })
+    }
+
     host = new MiniAppHost(InAppBrowser, {
       url: targetUrl,
       title: appTitle,
@@ -164,6 +201,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
     // Attach BEFORE openWebView so events fired during the open animation aren't missed.
+    // Null re-entry guard: plugin close() and dialog dismiss can both emit closeEvent.
     const openedAt = Date.now()
     const hostRef = host
     handle = await InAppBrowser.addListener('closeEvent', async () => {
@@ -178,33 +216,55 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       await h.remove()
       clearGuard()
     })
+    // "Presented" = openWebView resolved AND browserPageLoaded fired. Android
+    // resolves at show() (its pageLoaded event reaches JS earlier); iOS resolves at
+    // webview creation (pageLoaded fires after presentView). Requiring both clears
+    // the guard at actual presentation on both platforms.
+    let opened = false
+    let pageLoaded = false
+    const clearGuardWhenPresented = () => {
+      if (opened && pageLoaded)
+        clearGuard()
+    }
     pageLoadedHandle = await InAppBrowser.addListener('browserPageLoaded', () => {
-      clearGuard()
+      pageLoaded = true
+      clearGuardWhenPresented()
     })
     pageErrorHandle = await InAppBrowser.addListener('pageLoadError', () => {
-      clearGuard()
+      failLaunch('page load error')
     })
-    watchdog = setTimeout(clearGuard, 15_000)
 
     // Keyboard must be hidden before present so the webview isn't sized to the
     // above-keyboard area (the loading spinner already shows via openingMiniAppUrl).
     await dismissKeyboardBeforeOpen()
 
+    // The watchdog may have fired while the awaits above were pending; opening now
+    // would pop an unexpected webview over whatever the user is doing by then.
+    if (guardCleared) {
+      await host.destroy()
+      await handle?.remove()
+      handle = null
+      return
+    }
+
+    openCalled = true
     await InAppBrowser.openWebView({
       url: targetUrl,
       title: appTitle,
       toolbarType: ToolBarType.NAVIGATION,
       preventDeeplink: true,
       showReloadButton: true,
-      enabledSafeBottomMargin: true,
-      useTopInset: true,
       activeNativeNavigationForWebview: true,
       isPresentAfterPageLoad: true,
       preShowScript: scriptContent,
       preShowScriptInjectionTime: 'documentStart',
     })
-    if (showLoadingToast)
-      toast.clearToast()
+    // Watchdog/pageLoadError may have failed this launch (and closed the webview)
+    // while openWebView was in flight; skip the success bookkeeping then.
+    if (guardCleared)
+      return
+    opened = true
+    clearGuardWhenPresented()
     await ScreenOrientation.unlock()
 
     trackDAppOpened(targetUrl, appTitle, options.source)
@@ -216,8 +276,18 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     })
   }
   catch (err) {
+    // pageLoadError / watchdog may have already toasted + closed before the
+    // rejection surfaced here (Android rejects openWebView on main-frame errors).
+    const alreadyHandled = guardCleared
     logger.error('Failed to open mini-app:', err)
-    useToast().setToast({ message: 'Could not open the mini-app webview', type: 'error' })
+    clearGuard()
+    if (!alreadyHandled) {
+      toast.setToast({ message: LAUNCH_FAILED_TOAST, type: 'error' })
+      // A rejected openWebView leaves the not-yet-shown dialog alive on Android;
+      // close it so its error page can't present itself later.
+      if (openCalled)
+        void InAppBrowser.close().catch(() => {})
+    }
     if (host)
       await host.destroy()
     if (handle) {
@@ -226,6 +296,5 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       }
       catch { /* listener may already be removed */ }
     }
-    clearGuard()
   }
 }
