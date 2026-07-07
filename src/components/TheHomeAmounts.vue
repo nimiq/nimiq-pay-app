@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { IonSkeletonText } from '@ionic/vue'
-import { FiatAmount } from '@nimiq/vue3-components'
-import { animate, motion, useMotionValue } from 'motion-v'
+import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import TopUpIcon from '@/components/icons/top-up.vue'
 import PriceChange from '@/components/PriceChange.vue'
+import RollingNumber from '@/components/RollingNumber.vue'
 import { usePrice } from '@/composables/usePrice'
 import { Asset, assetToCrypto } from '@/lib/assets'
 import { Crypto, useApp } from '@/stores/app'
@@ -60,36 +60,6 @@ const showSkeleton = computed(() =>
   displayedBalance.value === 0
   && (displayedBalanceState.value === 'loading' || isNimHtlcTransition.value || pendingNim.value > 0),
 )
-
-const animatedAmount = ref(0)
-const countMotionValue = useMotionValue(0)
-
-countMotionValue.on('change', (value) => {
-  animatedAmount.value = Math.max(0, value)
-})
-
-watch([() => fiat.total, showSkeleton], ([newTotal, showSkeleton]) => {
-  if (!showSkeleton && newTotal !== undefined) {
-    if (!showAnimations.value) {
-      animatedAmount.value = newTotal
-      countMotionValue.set(newTotal)
-    }
-    else {
-      animate(countMotionValue, newTotal, {
-        duration: 1,
-        ease: 'easeOut',
-      })
-    }
-  }
-}, { immediate: true })
-
-// Reset animation when showing skeleton
-watch(showSkeleton, (isShowing) => {
-  if (isShowing) {
-    countMotionValue.set(0)
-    animatedAmount.value = 0
-  }
-})
 </script>
 
 <template>
@@ -102,7 +72,7 @@ watch(showSkeleton, (isShowing) => {
       </div>
     </div>
     <div v-else class="flex flex-col items-center gap-y-2">
-      <FiatAmount class="text-5xl font-normal text-space" :amount="animatedAmount" :currency="fiat.currency" :hide-decimals="false" :max-relative-deviation="1" />
+      <RollingNumber class="text-5xl font-normal text-space" :value="fiat.total" :currency="fiat.currency" :animate="showAnimations" />
       <div class="text-space/60 flex gap-x-4 font-semibold">
         <CryptoAmount :amount="crypto.totalUnits" :currency="crypto.currency" :min-decimals="minimumCryptoDecimals" />
         <PriceChange :currency="crypto.currency" />

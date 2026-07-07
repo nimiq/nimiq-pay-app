@@ -86,15 +86,15 @@ vi.mock('@/components/PriceChange.vue', () => ({
   }),
 }))
 
-vi.mock('@nimiq/vue3-components', () => ({
-  FiatAmount: defineComponent({
+vi.mock('@/components/RollingNumber.vue', () => ({
+  default: defineComponent({
     props: {
-      amount: {
+      value: {
         type: Number,
         required: true,
       },
     },
-    template: '<div data-testid="fiat-amount">{{ amount }}</div>',
+    template: '<div data-testid="fiat-amount">{{ value }}</div>',
   }),
 }))
 
