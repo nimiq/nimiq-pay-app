@@ -2,11 +2,14 @@
 import type { PropType } from 'vue'
 import type { State } from '@/lib/flows/steps.types'
 import { IonButton } from '@ionic/vue'
+import { Identicon } from '@nimiq/vue3-components'
 import { getAddress } from 'ethers'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import AddressDisplay from '@/components/AddressDisplay.vue'
 import AddressInput from '@/components/AddressInput.vue'
 import QRIcon from '@/components/icons/qr.vue'
+import UsdtLogo from '@/components/icons/usdt-logo.vue'
 import PolygonWarning from '@/components/PolygonWarning.vue'
 import { addressesEqual, isValidEthAddress } from '@/lib/ethereum'
 import { stepEmits } from '@/lib/flows/steps.types'
@@ -14,7 +17,9 @@ import { useApp } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useRemoteSigner } from '@/stores/remote-signer'
 
-const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, state: { type: Object as PropType<State>, required: true } })
+// `saveContact`: opened from an incoming payment to save its sender. The address is
+// prefilled (via state.qrCodeScanner) and shown read-only; the user only adds a name.
+const props = defineProps({ errorMsg: { type: String }, canSkip: { type: Boolean }, saveContact: { type: Boolean, default: false }, state: { type: Object as PropType<State>, required: true } })
 const emit = defineEmits(stepEmits)
 
 const { isNimiqAsset } = storeToRefs(useApp())
@@ -63,11 +68,16 @@ function handleSave() {
 <template>
   <div class="flex flex-col self-start w-full h-full py-8">
     <div class="m-auto">
-      <p aria-label="Enter Address" class="mb-6 text-sm font-bold text-center uppercase text-space/60">
+      <p v-if="!saveContact" aria-label="Enter Address" class="mb-6 text-sm font-bold text-center uppercase text-space/60">
         {{ $t('Enter Address') }}
       </p>
+      <div v-if="saveContact" class="flex flex-col items-center gap-y-6">
+        <Identicon v-if="!address?.startsWith('0x')" :address="address ?? ''" class="size-20" />
+        <UsdtLogo v-else class="size-16" />
+        <AddressDisplay :address="address ?? ''" :format="address?.startsWith('0x') ? 'ethereum' : 'nimiq'" />
+      </div>
       <AddressInput
-        v-if="isNimiqAsset"
+        v-else-if="isNimiqAsset"
         :address="props.state.qrCodeScanner as string"
         @update:address="(v: string) => address = v"
       />
@@ -96,9 +106,9 @@ function handleSave() {
         aria-label="Alias (optional)"
         class="mt-6 w-full px-4 py-3 text-base rounded bg-space/[0.025] placeholder:text-space/40 border-space-space-200 focus:outline-none focus:border-sky/40 focus:bg-space/0 transition-colors truncate"
       >
-      <QRIcon class="mt-6 ml-auto w-9 h-9" @click="$emit('done')" />
+      <QRIcon v-if="!saveContact" class="mt-6 ml-auto w-9 h-9" @click="$emit('done')" />
       <PolygonWarning
-        v-if="!isNimiqAsset"
+        v-if="!isNimiqAsset && !saveContact"
         class="mt-6"
         :message="$t('Withdraw to Polygon USDT addresses only!')"
         :tooltip-message="$t('The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost.')"

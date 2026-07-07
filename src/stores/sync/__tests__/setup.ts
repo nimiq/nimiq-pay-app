@@ -46,7 +46,6 @@ function makeState() {
   const initPolygon = vi.fn((): Promise<void> => Promise.resolve())
   const resolveHomeBalanceState = vi.fn((): Promise<void> => Promise.resolve())
   const blockHeightToTimestamp = vi.fn((height: number): Promise<number> => Promise.resolve(height * 1000))
-  const addNewTopUpAddress = vi.fn()
   const setToast = vi.fn()
   const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
@@ -126,7 +125,6 @@ function makeState() {
     initPolygon,
     resolveHomeBalanceState,
     blockHeightToTimestamp,
-    addNewTopUpAddress,
     setToast,
     logger,
   }
@@ -249,7 +247,6 @@ export function resetSyncState() {
     state.initPolygon,
     state.resolveHomeBalanceState,
     state.blockHeightToTimestamp,
-    state.addNewTopUpAddress,
     state.setToast,
     state.logger.log,
     state.logger.warn,
@@ -340,7 +337,6 @@ vi.mock('@/stores/app', () => {
   const useApp = defineStore('app', () => ({
     pointsToken: computed(() => state.pointsToken),
     htlcThreshold: computed(() => state.htlcThreshold),
-    addNewTopUpAddress: state.addNewTopUpAddress,
   }))
   return { useApp }
 })

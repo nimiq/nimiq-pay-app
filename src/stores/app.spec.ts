@@ -2,6 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 import { Asset } from '@/lib/assets'
+import { SQLQuery } from '@/lib/sql-queries'
 
 vi.mock('@vueuse/core', () => ({
   // useLogger (imported by app.ts) debounces its log flush at module load.
@@ -29,16 +30,17 @@ vi.mock('@/lib', () => ({
   nakaBufferAddresses: [],
 }))
 
+const { queryMock, runMock } = vi.hoisted(() => ({ queryMock: vi.fn(), runMock: vi.fn() }))
+
 vi.mock('./conn', () => ({
-  useConn: () => ({
-    query: vi.fn(() => Promise.resolve(undefined)),
-    run: vi.fn(() => Promise.resolve()),
-  }),
+  useConn: () => ({ query: queryMock, run: runMock }),
 }))
 
 describe('useApp withdrawal storage', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    queryMock.mockReset().mockResolvedValue(undefined)
+    runMock.mockReset().mockResolvedValue(undefined)
   })
 
   it('keeps the selected withdrawal address separated by active asset', async () => {
@@ -119,5 +121,42 @@ describe('useApp withdrawal storage', () => {
 
     await expect(app.setEntropy()).rejects.toThrow()
     expect(app.entropy).toBe('')
+  })
+
+  it('reports whether an address is already saved', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    expect(app.isSavedAddress('NQ77 ZARA')).toBe(false)
+    app.addNewWithdrawalAddress('NQ77 ZARA')
+    expect(app.isSavedAddress('NQ77 ZARA')).toBe(true)
+  })
+
+  describe('topUpAddresses migration (APP-171)', () => {
+    it('folds aliased entries into withdrawal history and drops the unaliased ones', async () => {
+      queryMock.mockResolvedValueOnce({ value: JSON.stringify([
+        { address: 'NQ77 ALICE', alias: 'Alice' },
+        { address: 'NQ00 NOALIAS' },
+      ]) })
+      const { useApp } = await import('./app')
+      const app = useApp()
+
+      await app.migrateTopUpAddresses()
+
+      expect(app.withdrawalAddressesHistory).toEqual([{ address: 'NQ77 ALICE', alias: 'Alice' }])
+      expect(runMock).toHaveBeenCalledWith(SQLQuery.DeleteKv, ['topUpAddresses'])
+    })
+
+    it('does not clobber existing history and is a no-op when the key is gone', async () => {
+      // queryMock defaults to undefined → no topUpAddresses key
+      const { useApp } = await import('./app')
+      const app = useApp()
+      app.addNewWithdrawalAddress('NQ11 EXISTING', 'Existing')
+
+      await app.migrateTopUpAddresses()
+
+      expect(app.withdrawalAddressesHistory).toEqual([{ address: 'NQ11 EXISTING', alias: 'Existing' }])
+      expect(runMock).not.toHaveBeenCalledWith(SQLQuery.DeleteKv, ['topUpAddresses'])
+    })
   })
 })

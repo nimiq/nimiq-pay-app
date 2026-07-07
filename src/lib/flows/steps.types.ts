@@ -17,6 +17,7 @@ export enum FlowName {
   NimWithdraw = 'nimWithdraw',
   AddressSelection = 'addressSelection',
   AddressDeletion = 'addressDeletion',
+  SaveAddress = 'saveAddress',
   NimTopUp = 'nimTopUp',
   ViewTransactions = 'viewTransactions',
   ViewTransactionDetail = 'viewTransactionDetail', // This is just a one-step flow

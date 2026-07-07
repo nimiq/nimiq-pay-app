@@ -603,15 +603,25 @@ export const confirmAddressDeletionStep: StepInit = async () => ({
   main: markRaw(props => h(ConfirmAddressDeletion, props)),
 } satisfies Step)
 
-export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions }> = async ({ props }) => ({
+export const nimAddressInputStep: StepInit<{ overrideHeight: flowHeightOptions, saveContact?: boolean }> = async ({ props }) => ({
   step: StepName.NimAddressInput,
-  get title() { return useApp().isNimiqAsset ? i18n.t('Send NIM to this address') : i18n.t('Send USDT to this address') },
-  ariaLabel: 'Send to this address',
-  get description() { return i18n.t('Copy or scan the address') },
-  main: markRaw(NimAddressInput),
+  get title() {
+    if (props?.saveContact)
+      return i18n.t('Add to address book')
+    return useApp().isNimiqAsset ? i18n.t('Send NIM to this address') : i18n.t('Send USDT to this address')
+  },
+  ariaLabel: props?.saveContact ? 'Add to address book' : 'Send to this address',
+  get description() { return props?.saveContact ? i18n.t('Give it a name so you recognise it later') : i18n.t('Copy or scan the address') },
+  main: markRaw(inner => h(NimAddressInput, { ...inner, saveContact: props?.saveContact })),
   autofocus: false, // Usually the user will scan the QR code
   overrideHeight: props?.overrideHeight,
   beforeNext: async ({ nimAddressInput }, { next, prev, err }) => {
+    // Save-contact is a standalone single-step flow: the address is already saved on `done`,
+    // so finalize (next() on the last step closes the flow). The withdraw-flow path below
+    // instead calls prev() to return to the payment preview, which has no previous step here.
+    if (props?.saveContact)
+      return next()
+
     // The NIM Address Step is a special step:
     //   - if the address is ok, then we would go to the previous slide
     //   - if the address is empty, then the user clicked "Scan QR code"

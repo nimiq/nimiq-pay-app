@@ -109,6 +109,7 @@ export function getMockTransactions(): ExternalTransaction[] {
       senderType: Nimiq.AccountType.Basic,
       recipient: MOCK_REMOTE_HTLC_ADDRESS,
       recipientType: Nimiq.AccountType.Basic,
+      message: 'Thanks for lunch!',
       timestamp: now - 5 * HOUR,
       amount: 10_000 * 1e5,
       hash: mockHash(2),

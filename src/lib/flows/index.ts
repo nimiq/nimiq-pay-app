@@ -545,6 +545,21 @@ const addressDeletionFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
+// Single-step flow to add a known address (e.g. an incoming payment's sender) to the
+// address book. Reuses NimAddressInput in save-contact mode: address prefilled read-only,
+// user adds an optional name.
+const saveAddressFlow: FlowInit = async () => {
+  const { nimAddressInputStep } = await import('./steps')
+  const flowName = FlowName.SaveAddress
+  const steps = (await Promise.all([
+    (options: StepInitOptions) => nimAddressInputStep({ ...options, props: { overrideHeight: 'h-max', saveContact: true } }),
+  ].map(s => s({ flowName }))))
+  const onDone: Flow['onDone'] = async (_state, { setToast }) => {
+    setToast({ message: i18n.t('Address saved') })
+  }
+  return { flowName, steps, onDone }
+}
+
 const nimTopUpFlow: FlowInit = async () => {
   const [
     { nimAddressDisplay, qrCodeDisplayStep, qrCodeScannerStep },
@@ -714,6 +729,7 @@ const flows = {
   [FlowName.NakaCardManagement]: nakaCardManagementFlow,
   [FlowName.AddressSelection]: addressSelectionFlow,
   [FlowName.AddressDeletion]: addressDeletionFlow,
+  [FlowName.SaveAddress]: saveAddressFlow,
   [FlowName.AskForPin]: askForPinFlow,
 
 }

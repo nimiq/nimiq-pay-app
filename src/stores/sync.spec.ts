@@ -141,7 +141,6 @@ vi.mock('@/stores/app', () => {
     // values — a bare `undefined` would throw once a consumer (htlc.ts) calls storeToRefs(useApp()).
     pointsToken: computed(() => undefined),
     htlcThreshold: computed(() => 0),
-    addNewTopUpAddress: vi.fn(),
   }))
 
   return { useApp }

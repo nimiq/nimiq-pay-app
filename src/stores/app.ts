@@ -7,7 +7,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { guessUserLanguage } from '@/i18n/i18n-setup'
-import { nakaBufferAddresses } from '@/lib'
+// import { nakaBufferAddresses } from '@/lib'
 import { Asset, DEFAULT_ASSET } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -128,7 +128,6 @@ export const useApp = defineStore('app', () => {
     },
   })
   const withdrawalAddressesHistory = useStorageAsync<SavedAddress[]>('withdrawalAddressesHistory', [], kv(), { ...sharedOptions, serializer: savedAddressSerializer })
-  const topUpAddresses = useStorageAsync<SavedAddress[]>('topUpAddresses', [], kv(), { ...sharedOptions, serializer: savedAddressSerializer })
   const pushNotificationsStatus = useStorageAsync<PushNotificationsStatus>('pushNotificationsStatus', PushNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const localNotificationsStatus = useStorageAsync<LocalNotificationsStatus>('localNotificationsStatus', LocalNotificationsStatus.PROMPT, kvPreferences(), sharedOptions)
   const closedNotifications = useStorageAsync<string[]>('closedNotifications', [], kv(), sharedOptions)
@@ -196,18 +195,19 @@ export const useApp = defineStore('app', () => {
     return Date.now() - lastPinInputTs.value > MIN_PIN_INPUT_INTERVAL
   }
 
-  function addNewTopUpAddress(address: string) {
-    // Prevent adding NAKA buffer address, just in case
-    if (nakaBufferAddresses.includes(address))
+  // One-time (APP-171): we no longer auto-save incoming-payment senders. Drop the old
+  // `topUpAddresses` list, but keep any user-set aliases by folding them into withdrawal
+  // history so they still label transactions. Deleting the KV key is the "already ran"
+  // marker → idempotent, no version flag needed.
+  async function migrateTopUpAddresses() {
+    const raw = await kv().getItem('topUpAddresses')
+    if (raw == null)
       return
-
-    // Preserve existing entry (and its alias) if the address is already saved.
-    if (findSavedAddress(topUpAddresses.value, address))
-      return
-
-    const addresses = [...topUpAddresses.value, { address }]
-    // Limit the number of addresses to 5
-    topUpAddresses.value = addresses.length > 5 ? addresses.slice(addresses.length - 5) : addresses
+    for (const entry of savedAddressSerializer.read(raw)) {
+      if (entry.alias?.trim())
+        addNewWithdrawalAddress(entry.address, entry.alias)
+    }
+    await kv().removeItem('topUpAddresses')
   }
 
   function addNewWithdrawalAddress(address: string, alias?: string) {
@@ -225,41 +225,39 @@ export const useApp = defineStore('app', () => {
     ]
   }
 
+  function isSavedAddress(address: string): boolean {
+    return !!findSavedAddress(withdrawalAddressesHistory.value, address)
+  }
+
   function removeSavedAddress(address: string) {
-    for (const list of [withdrawalAddressesHistory, topUpAddresses]) {
-      const next = list.value.filter(entry => !matchesAddress(entry, address))
-      if (next.length !== list.value.length)
-        list.value = next
-    }
+    const next = withdrawalAddressesHistory.value.filter(entry => !matchesAddress(entry, address))
+    if (next.length !== withdrawalAddressesHistory.value.length)
+      withdrawalAddressesHistory.value = next
     if (withdrawalAddress.value === address)
       withdrawalAddress.value = ''
   }
 
   function setAddressAlias(address: string, alias: string) {
     const trimmed = alias.trim() || undefined
-    for (const list of [withdrawalAddressesHistory, topUpAddresses]) {
-      const target = findSavedAddress(list.value, address)
-      if (!target || target.alias === trimmed)
-        continue
-      list.value = list.value.map(entry => entry === target
-        ? trimmed ? { ...entry, alias: trimmed } : { address: entry.address }
-        : entry,
-      )
-    }
+    const target = findSavedAddress(withdrawalAddressesHistory.value, address)
+    if (!target || target.alias === trimmed)
+      return
+    withdrawalAddressesHistory.value = withdrawalAddressesHistory.value.map(entry => entry === target
+      ? trimmed ? { ...entry, alias: trimmed } : { address: entry.address }
+      : entry,
+    )
   }
 
   // Indexed map so per-tx alias lookups in transaction lists stay O(1)
-  // instead of re-scanning both saved-address lists for every row.
+  // instead of re-scanning the saved-address list for every row.
   const aliasMap = computed(() => {
     const map = new Map<string, string>()
-    for (const list of [withdrawalAddressesHistory.value, topUpAddresses.value]) {
-      for (const entry of list) {
-        if (!entry.alias)
-          continue
-        const key = entry.address.startsWith('0x') ? entry.address.toLowerCase() : entry.address
-        if (!map.has(key))
-          map.set(key, entry.alias)
-      }
+    for (const entry of withdrawalAddressesHistory.value) {
+      if (!entry.alias)
+        continue
+      const key = entry.address.startsWith('0x') ? entry.address.toLowerCase() : entry.address
+      if (!map.has(key))
+        map.set(key, entry.alias)
     }
     return map
   })
@@ -286,8 +284,8 @@ export const useApp = defineStore('app', () => {
     withdrawalAddress,
     withdrawalAddressesHistory,
     addNewWithdrawalAddress,
-    topUpAddresses,
-    addNewTopUpAddress,
+    isSavedAddress,
+    migrateTopUpAddresses,
     setAddressAlias,
     getAlias,
     removeSavedAddress,

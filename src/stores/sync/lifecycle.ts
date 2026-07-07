@@ -11,11 +11,10 @@ import { nakaBufferAddresses } from '@/lib'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt } from '@/lib/tx'
-import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
-import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
+import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncBalances } from '@/stores/sync/balances'
 import { useSyncHtlc } from '@/stores/sync/htlc'
@@ -198,9 +197,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
       return useTransactions().setNakaTxRefunded(tx.value)
     }
-
-    if (tx.data.raw !== CashlinkExtraDataHex.CLAIMING && tx.senderType !== 'htlc')
-      useApp().addNewTopUpAddress(tx.sender)
 
     const receipt = buildTopUpReceipt(tx)
     useTransactions().addReceiptTransaction(receipt)

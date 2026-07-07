@@ -12,23 +12,15 @@ import { useApp } from '@/stores/app'
 
 const emit = defineEmits(stepEmits)
 const app = useApp()
-const { withdrawalAddressesHistory, topUpAddresses, isNimiqAsset } = storeToRefs(app)
+const { withdrawalAddressesHistory, isNimiqAsset } = storeToRefs(app)
 
-// Dedup by address. When both lists hold the same address, prefer the entry
-// that already has an alias so it doesn't get hidden.
-const addresses = computed<SavedAddress[]>(() => {
-  const all = [...topUpAddresses.value, ...withdrawalAddressesHistory.value.slice().reverse()]
-  const byAddress = new Map<string, SavedAddress>()
-  for (const entry of all) {
-    const key = entry.address.startsWith('0x') ? entry.address.toLowerCase() : entry.address
-    const existing = byAddress.get(key)
-    if (!existing || (!existing.alias && entry.alias))
-      byAddress.set(key, entry)
-  }
-  return [...byAddress.values()].filter(({ address }) =>
-    isNimiqAsset.value ? address.startsWith('NQ') : address.startsWith('0x'),
-  )
-})
+// Most-recently-saved first, filtered to the active asset.
+const addresses = computed<SavedAddress[]>(() =>
+  withdrawalAddressesHistory.value
+    .slice()
+    .reverse()
+    .filter(({ address }) => isNimiqAsset.value ? address.startsWith('NQ') : address.startsWith('0x')),
+)
 
 function handleSelectAddress(address: string) {
   emit('done', address)

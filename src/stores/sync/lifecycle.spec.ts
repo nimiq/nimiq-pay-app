@@ -207,7 +207,7 @@ describe('useSyncLifecycle', () => {
       expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
     })
 
-    it('records new top-up address and saves a receipt for a fresh external transaction', async () => {
+    it('saves a receipt for a fresh external transaction', async () => {
       const listener = await captureLocalTxListener()
       await listener({
         transactionHash: 'h1',
@@ -221,7 +221,6 @@ describe('useSyncLifecycle', () => {
         timestamp: 5,
         data: { raw: '' },
       })
-      expect(state.addNewTopUpAddress).toHaveBeenCalledWith('NQ77 NEW TOP-UP')
       expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
         hash: 'h1',
         amount: 1000,

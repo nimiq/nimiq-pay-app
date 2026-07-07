@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
+import { FlowName } from '@/lib/flows/steps.types'
 import { MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 
 const updateNimiqTransaction = vi.fn()
@@ -48,10 +49,22 @@ vi.mock('@/stores/conn', () => ({
   }),
 }))
 
+const initializeFlow = vi.fn()
+
 vi.mock('@/stores/app', () => ({
   useApp: () => ({
     getAlias: () => undefined,
+    isSavedAddress: () => false,
   }),
+}))
+
+vi.mock('@/lib/flows', () => ({
+  initializeFlow: (...args: unknown[]) => initializeFlow(...args),
+}))
+
+vi.mock('@ionic/vue', () => ({
+  IonButton: defineComponent({ template: '<button><slot /></button>' }),
+  IonIcon: defineComponent({ template: '<i />' }),
 }))
 
 vi.mock('@/stores/nimiq-network', () => ({
@@ -160,5 +173,71 @@ describe('transactionDetails', () => {
     expect(wrapper.text()).toContain('USDT')
     expect(wrapper.text()).toContain('Network')
     expect(wrapper.text()).toContain('Polygon')
+  })
+
+  // APP-170: for an incoming payment, show the sender + message and offer to save the sender.
+  // The recipient (the user's own address) must be hidden — showing it was the reported bug.
+  it('shows the sender and message and hides the own-address recipient for an incoming payment', async () => {
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.UserReceipt,
+          title: 'Top-Up',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: 'nimhash',
+          sender: 'NQ11 SENDERADDR',
+          recipient: 'NQ00 OWNADDRESS',
+          message: 'Thanks for lunch',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        },
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+
+    expect(wrapper.text()).toContain('Sender')
+    expect(wrapper.text()).not.toContain('Recipient')
+    expect(wrapper.text()).toContain('Message')
+    expect(wrapper.text()).toContain('Thanks for lunch')
+
+    // Tapping the sender opens the save-to-address-book flow prefilled with the sender.
+    initializeFlow.mockClear()
+    await wrapper.get('[aria-label="Add sender to address book"]').trigger('click')
+    expect(initializeFlow).toHaveBeenCalledWith(
+      FlowName.SaveAddress,
+      expect.objectContaining({ initialState: { qrCodeScanner: 'NQ11 SENDERADDR' } }),
+    )
+  })
+
+  it('shows the recipient and no add-to-book action for an outgoing payment', async () => {
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.UserPayment,
+          title: 'Withdrawal',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: 'nimhash2',
+          sender: 'NQ00 OWNADDRESS',
+          recipient: 'NQ11 DESTADDR',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        },
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+
+    expect(wrapper.text()).toContain('Recipient')
+    expect(wrapper.text()).not.toContain('Sender')
+    expect(wrapper.text()).not.toContain('Add to address book')
   })
 })

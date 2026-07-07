@@ -101,11 +101,20 @@ export function useDecrypt() {
     if (error)
       return error
 
-    const { setEntropy, updatePinInputTs } = useApp()
+    const { setEntropy, updatePinInputTs, migrateTopUpAddresses } = useApp()
     logger.log('🔓 decrypt: setEntropy start')
     await setEntropy()
     logger.log('🔓 decrypt: setEntropy done')
     updatePinInputTs()
+
+    // One-time (APP-171): fold aliased top-up entries into withdrawal history, drop the rest.
+    // Guarded so a migration failure never blocks unlock.
+    try {
+      await migrateTopUpAddresses()
+    }
+    catch (e) {
+      logger.error('topUpAddresses migration failed', e)
+    }
 
     pinHash.value = inputHash
 

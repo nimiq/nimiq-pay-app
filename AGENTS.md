@@ -17,6 +17,7 @@ if implementing a new feature or making big UI changes, check if there are exist
 Add comments to code that is complex or not immediately obvious; keep them concise and focused on explaining *why*, not *what*.
 `Flow.vue` keeps previously visited steps mounted in `historyStack`. When wiring step event handlers (`done`, `select`, `skip`, `back`, or `navigateTo`), always validate that the emitting step is still the active step before changing flow state.
 Always execute `pnpm lint` and `pnpm typecheck` after making changes to ensure code quality and type safety.
+When working with animations, prefer `motion-v` (use the `motion` skill).
 Never use `arr.forEach(async ...)`: the callback is fire-and-forget so awaits inside are not awaited by the loop. Use `for (const x of arr)` for sequential work or `await Promise.all(arr.map(async ...))` for parallel.
 `Array.prototype.concat` returns a new array and does not mutate. If you intend to grow an existing local array (e.g. when accumulating categorized transactions), use `arr.push(...other)` instead — `arr.concat(other)` silently discards the result.
 Nimiq client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. on logout → login) must capture the ID and remove the previous one first; see the `watch(remoteAddress, ...)` block in `src/stores/sync.ts` for the canonical pattern.
