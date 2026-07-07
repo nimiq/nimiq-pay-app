@@ -83,6 +83,25 @@ function mockActiveSignerQuery() {
   }) as any)
 }
 
+// Makes the DB return one active remote signer whose validity window has already passed
+// (end 100_000 < headTimestamp 123_456), with the given balance.
+function mockExpiredSignerQuery(balance: number) {
+  state.query.mockImplementation(((_sql: string, _params?: unknown[], options?: { single?: boolean }) => {
+    if (options?.single) {
+      return Promise.resolve({
+        active: true,
+        balance,
+        end: 100_000,
+        proofSize: 98,
+        publicKey: 'service-public-key',
+        start: 90_000,
+        address: 'NQ11 TEST REMOTE ADDRESS',
+      })
+    }
+    return Promise.resolve([])
+  }) as any)
+}
+
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => state.logger,
 }))
@@ -266,6 +285,36 @@ describe('useRemoteSigner', () => {
 
     expect(store.remoteBalance).toBe(0)
     expect(store.lastKnownRemoteBalance).toBe(25)
+  })
+
+  // An expired-but-drained signer is inert: nothing to recover, so it must not drive the
+  // "Updating connection" recovery UI even though its validity window has passed.
+  it('does not flag an expired HTLC as expired when it holds no balance to recover', async () => {
+    state.consensus = 'connecting'
+    mockExpiredSignerQuery(0)
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+    await nextTick()
+
+    expect(store.remoteBalance).toBe(0)
+    expect(store.hasHtlcExpired).toBeFalsy()
+  })
+
+  it('flags an expired HTLC as expired when it still holds a balance to recover', async () => {
+    state.consensus = 'connecting'
+    mockExpiredSignerQuery(25)
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+    await nextTick()
+
+    expect(store.remoteBalance).toBe(25)
+    expect(store.hasHtlcExpired).toBe(true)
   })
 
   it('keeps loading when the local account already has main-address funds', async () => {

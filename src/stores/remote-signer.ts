@@ -99,7 +99,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   // Checks if the remote is in the validity window, which means that the remote
   // wallet and the local wallet have currently an active HTLC.
   const isHtlcActive = ref(false)
-  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value)
+  // An expired HTLC with no balance is inert: nothing to recover, so it must not drive the
+  // recovery / "Updating connection" UI. Require funds, mirroring checkRemoteValidity's gate.
+  const hasHtlcExpired = computed(() => remoteAddress.value && end.value < headTimestamp.value && remoteBalance.value > 0)
   const isHtlcPending = computed(() => start.value > headTimestamp.value)
   const isHtlcRecreating = ref(false)
   // immediate so the flag is correct when the app starts in an already-expired state.
