@@ -4,6 +4,7 @@ import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { isDev } from '@/lib'
 import { fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
+import { safeHostname, safeOrigin } from '@/lib/url-safety'
 import { kv, kvPreferences } from '@/stores/app'
 
 const REMOTE_JSON_URL = 'https://raw.githubusercontent.com/nimiq/awesome/main/src/data/dist/nimiq-mini-apps.json'
@@ -170,11 +171,13 @@ export const useMiniApps = defineStore('mini-apps', () => {
 
   function addRecentlyViewed(dapp: RecentDApp) {
     const current = recentlyViewedDApps.value
-    // Already the most-recent entry — skip the storage write.
-    if (current[0]?.url === dapp.url)
+    const root = safeOrigin(dapp.url)
+    const host = safeHostname(dapp.url)
+    // Collapse to one row per hostname; store the app's root URL (APP-166).
+    if (current[0]?.url === root)
       return
-    const filtered = current.filter(d => d.url !== dapp.url)
-    filtered.unshift(dapp)
+    const filtered = current.filter(d => safeHostname(d.url) !== host)
+    filtered.unshift({ ...dapp, url: root })
     const next = filtered.slice(0, MAX_RECENT)
     for (const evicted of filtered.slice(MAX_RECENT))
       recentDescriptionCache.delete(evicted.url)

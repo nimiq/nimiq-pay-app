@@ -87,7 +87,7 @@ describe('useMiniApps.removeRecentlyViewed', () => {
 
     store.removeRecentlyViewed('https://app.uniswap.org/')
 
-    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com/'])
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com'])
   })
 
   it('removes regardless of trailing slash on the lookup URL', async () => {
@@ -107,7 +107,7 @@ describe('useMiniApps.removeRecentlyViewed', () => {
 
     store.removeRecentlyViewed('https://app.uniswap.org/')
 
-    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com/'])
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://aave.com'])
   })
 
   it('drops the URL from trustedUrls so the warning prompt re-triggers', async () => {
@@ -119,5 +119,48 @@ describe('useMiniApps.removeRecentlyViewed', () => {
     store.removeRecentlyViewed('https://app.uniswap.org/')
 
     expect(store.isTrustedMiniAppUrl('https://app.uniswap.org/')).toBe(false)
+  })
+})
+
+describe('useMiniApps.addRecentlyViewed hostname dedupe', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  it('collapses different paths of the same host into one root entry', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://payshareminiapp.vercel.app/', name: 'Share', icon: '' })
+    store.addRecentlyViewed({ url: 'https://payshareminiapp.vercel.app/another-thing', name: 'Share', icon: '' })
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://payshareminiapp.vercel.app'])
+  })
+
+  it('normalizes a deep-path open to the root URL', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://payshareminiapp.vercel.app/invite/abc', name: 'Share', icon: '' })
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://payshareminiapp.vercel.app'])
+  })
+
+  it('keeps separate entries for different hosts', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://a.example/x', name: 'A', icon: '' })
+    store.addRecentlyViewed({ url: 'https://b.example/y', name: 'B', icon: '' })
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://b.example', 'https://a.example'])
+  })
+
+  it('moves a revisited host back to the top', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    const store = useMiniApps()
+    store.addRecentlyViewed({ url: 'https://a.example/', name: 'A', icon: '' })
+    store.addRecentlyViewed({ url: 'https://b.example/', name: 'B', icon: '' })
+    store.addRecentlyViewed({ url: 'https://a.example/deep', name: 'A', icon: '' })
+
+    expect(store.recentlyViewedDApps.map(d => d.url)).toEqual(['https://a.example', 'https://b.example'])
   })
 })

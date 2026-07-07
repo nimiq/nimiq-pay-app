@@ -141,6 +141,16 @@ export function safeHostname(url: string, fallback: string = url): string {
   }
 }
 
+/** Best-effort origin (root URL) with a fallback for unparseable URLs. */
+export function safeOrigin(url: string, fallback: string = url): string {
+  try {
+    return new URL(url).origin || fallback
+  }
+  catch {
+    return fallback
+  }
+}
+
 function ipv4Octets(host: string): number[] | null {
   if (!IPV4_RE.test(host))
     return null
