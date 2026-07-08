@@ -6,7 +6,9 @@ import { FiatAmount } from '@nimiq/vue3-components'
 import { storeToRefs } from 'pinia'
 import { computed, ref, toRef, watch } from 'vue'
 import AmountInput from '@/components/AmountInput.vue'
+import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
+import SwapVerticalIcon from '@/components/icons/swap-vertical.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { useUsdtQuoteRefresh } from '@/composables/useUsdtQuoteRefresh'
@@ -71,9 +73,39 @@ watch(height, () => {
 })
 const price = computed(() => (cryptoUsdPrice.value?.price || 0) * (fiatUsdPrice.value?.price || 0))
 
-const amountUnits = ref(0)
+// APP-169: the amount can be entered directly in the crypto unit (NIM/USDT) or in fiat. Crypto is the
+// default; in crypto mode the entered minor-unit value is the source of truth, in fiat mode it is
+// derived from the entered fiat value.
+type Denomination = 'crypto' | 'fiat'
+const denomination = ref<Denomination>('crypto')
+const fiatDecimals = 2
+// The entered crypto amount (luna) is the single source of truth; the fiat model is a synced view of
+// it. Toggling denomination must NOT re-derive the amount — round-tripping through a cents-rounded
+// fiat value drifts it lower on every toggle. Instead we keep both models in sync only on real edits
+// and make the toggle a pure view switch.
+const cryptoAmountModel = ref(0)
+const fiatAmountModel = ref(0)
+
 const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
+const amountUnits = computed(() => cryptoAmountModel.value)
 const hasPositiveAmount = computed(() => amountUnits.value > 0)
+
+function onAmountInput(value: number) {
+  if (denomination.value === 'crypto') {
+    cryptoAmountModel.value = value
+    if (price.value)
+      fiatAmountModel.value = Math.floor(value / factor.value * price.value * 10 ** fiatDecimals)
+  }
+  else {
+    fiatAmountModel.value = value
+    if (price.value)
+      cryptoAmountModel.value = Math.floor(value / 10 ** fiatDecimals / price.value * factor.value)
+  }
+}
+
+function toggleDenomination() {
+  denomination.value = denomination.value === 'crypto' ? 'fiat' : 'crypto'
+}
 
 // USDT quote
 const loading = ref(false)
@@ -169,21 +201,40 @@ watch(errorMessage, (value) => {
     </p>
 
     <div class="flex flex-col items-center justify-center w-full mb-16 gap-y-2">
-      <AmountInput v-model="amountUnits" :decimals="DECIMALS[cryptoCurrency]" :suffix="cryptoCurrency" />
-      <p class="max-w-full text-base font-semibold text-space/60">
-        <template v-if="hasPositiveAmount">
-          <FiatAmount v-if="fiatEquivalent != null" :amount="fiatEquivalent" :currency="selectedFiat" />
-          <span v-if="feeInFiat != null">
-            <span v-if="fiatEquivalent != null"> &middot; </span>
-            <i18n-t keypath="incl. {fee} fees">
-              <template #fee>
-                <FiatAmount :amount="feeInFiat" :currency="selectedFiat" />
-              </template>
-            </i18n-t>
-          </span>
-          <span v-else-if="usdtFeeText">
-            <span v-if="fiatEquivalent != null"> &middot; </span>{{ usdtFeeText }}
-          </span>
+      <AmountInput
+        :key="denomination"
+        :model-value="denomination === 'crypto' ? cryptoAmountModel : fiatAmountModel"
+        :decimals="denomination === 'crypto' ? DECIMALS[cryptoCurrency] : fiatDecimals"
+        :suffix="denomination === 'crypto' ? cryptoCurrency : selectedFiat"
+        @update:model-value="onAmountInput"
+      />
+      <button
+        type="button"
+        data-testid="payment-denomination-toggle"
+        class="flex items-center gap-x-2 px-2 py-2 min-h-[44px] max-w-full text-base font-semibold text-space/60 outline-0"
+        :aria-label="$t('Enter amount in {currency}', { currency: denomination === 'crypto' ? selectedFiat : cryptoCurrency })"
+        @click="toggleDenomination"
+      >
+        <span class="truncate">
+          <template v-if="denomination === 'crypto'">
+            <FiatAmount v-if="fiatEquivalent != null" :amount="fiatEquivalent" :currency="selectedFiat" />
+            <span v-else>—</span>
+          </template>
+          <CryptoAmount v-else :amount="amountUnits" :currency="cryptoCurrency" />
+        </span>
+        <SwapVerticalIcon
+          class="size-4 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none opacity-70"
+          :class="{ 'rotate-180': denomination === 'fiat' }"
+        />
+      </button>
+      <p v-if="hasPositiveAmount && (feeInFiat != null || usdtFeeText)" class="max-w-full text-sm font-medium text-space/50">
+        <i18n-t v-if="feeInFiat != null" keypath="incl. {fee} fees">
+          <template #fee>
+            <FiatAmount :amount="feeInFiat" :currency="selectedFiat" />
+          </template>
+        </i18n-t>
+        <template v-else>
+          {{ usdtFeeText }}
         </template>
       </p>
     </div>

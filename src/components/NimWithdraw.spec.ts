@@ -187,6 +187,12 @@ vi.mock('@/components/icons/triangle.vue', () => ({
   }),
 }))
 
+vi.mock('@/components/icons/swap-vertical.vue', () => ({
+  default: defineComponent({
+    template: '<span data-testid="swap-icon" />',
+  }),
+}))
+
 vi.mock('@nimiq/vue3-components', () => ({
   FiatAmount: defineComponent({
     props: {
@@ -368,7 +374,7 @@ describe('nimWithdraw', () => {
   it('uses the spendable USDT balance when the user taps All', async () => {
     const wrapper = await mountComponent()
 
-    await wrapper.get('button:last-of-type').trigger('click')
+    await wrapper.get('[data-testid="nim-withdraw-max"]').trigger('click')
     await flushPromises()
 
     expect(refreshTransferQuote.mock.lastCall?.[0]).toEqual({
@@ -416,5 +422,43 @@ describe('nimWithdraw', () => {
 
     expect(getCachedTransferQuote).toHaveBeenCalled()
     expect(refreshTransferQuote).toHaveBeenCalledTimes(1)
+  })
+
+  it('switches the amount denomination between fiat and crypto (APP-169)', async () => {
+    isNimiqAsset.value = true
+    remoteBalance.value = 100_000_000
+
+    const wrapper = await mountComponent('')
+
+    // Enter 5 in fiat minor units (6 decimals) → 5 NIM at price 1 → 500000 luna
+    await wrapper.get('[data-testid="amount-input"]').setValue('5000000')
+    await flushPromises()
+
+    await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
+    await flushPromises()
+
+    // Big input now holds the NIM amount in luna (5 NIM = 500000 luna)
+    expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('500000')
+
+    // Toggling back restores the fiat value
+    await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
+    await flushPromises()
+    expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('5000000')
+  })
+
+  it('fills the exact NIM balance (no dust) when tapping All in crypto mode (APP-169)', async () => {
+    isNimiqAsset.value = true
+    remoteBalance.value = 123_456_789
+
+    const wrapper = await mountComponent('')
+
+    // Enter crypto mode, then tap All
+    await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
+    await flushPromises()
+    await wrapper.get('[data-testid="nim-withdraw-max"]').trigger('click')
+    await flushPromises()
+
+    // Exact integer luna balance, not a floored fiat round-trip
+    expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('123456789')
   })
 })

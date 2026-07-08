@@ -10,7 +10,7 @@ msgstr ""
 msgid "{count} of {total} remaining."
 msgstr ""
 
-#: src/components/NimAddressInput.vue:20
+#: src/components/NimAddressInput.vue:25
 msgid "0x..."
 msgstr ""
 
@@ -52,6 +52,10 @@ msgstr ""
 msgid "Add Stake"
 msgstr ""
 
+#: src/lib/flows/steps.ts:610
+msgid "Add to address book"
+msgstr ""
+
 #: src/components/AddressDisplay.vue:50
 #: src/components/NimAddressDisplay.vue:39
 msgid "Address copied to clipboard"
@@ -63,6 +67,10 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
+#: src/lib/flows/index.ts:558
+msgid "Address saved"
+msgstr ""
+
 #: src/stores/nimiq-network.ts:205
 msgid "Addresses missing"
 msgstr ""
@@ -71,12 +79,12 @@ msgstr ""
 msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
 msgstr ""
 
-#: src/components/NimAddressInput.vue:33
+#: src/components/NimAddressInput.vue:38
 #: src/components/WithdrawalAddressList.vue:11
 msgid "Alias (optional)"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:42
+#: src/components/NimWithdraw.vue:63
 msgid "All"
 msgstr ""
 
@@ -88,7 +96,7 @@ msgstr ""
 msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:33
+#: src/components/PaymentAmountInput.vue:50
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
@@ -142,7 +150,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:596
+#: src/lib/flows/index.ts:611
 msgid "Backup successful"
 msgstr ""
 
@@ -175,7 +183,7 @@ msgid "Block"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:107
-#: src/lib/flows/steps.ts:765
+#: src/lib/flows/steps.ts:775
 msgid "Block card"
 msgstr ""
 
@@ -183,7 +191,7 @@ msgstr ""
 msgid "Blocked"
 msgstr ""
 
-#: src/lib/flows/steps.ts:766
+#: src/lib/flows/steps.ts:776
 msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
 msgstr ""
 
@@ -330,8 +338,8 @@ msgstr ""
 msgid "Connecting to network."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:154
-#: src/components/PaymentAmountInput.vue:129
+#: src/components/NimWithdraw.vue:176
+#: src/components/PaymentAmountInput.vue:167
 #: src/views/MainView.vue:91
 msgid "Connecting to Polygon"
 msgstr ""
@@ -345,11 +353,11 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:46
+#: src/components/PaymentAmountInput.vue:63
 msgid "Continue and Pay"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:72
+#: src/components/TransactionDetails.vue:84
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -365,7 +373,7 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:610
+#: src/lib/flows/steps.ts:614
 msgid "Copy or scan the address"
 msgstr ""
 
@@ -377,7 +385,7 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/lib/flows/steps.ts:714
+#: src/lib/flows/steps.ts:724
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
@@ -475,6 +483,11 @@ msgstr ""
 msgid "Enter Address"
 msgstr ""
 
+#: src/components/NimWithdraw.vue:15
+#: src/components/PaymentAmountInput.vue:19
+msgid "Enter amount in {currency}"
+msgstr ""
+
 #: src/modals/SecretFeaturesModal.vue:4
 msgid "Enter feature password"
 msgstr ""
@@ -532,19 +545,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:70
+#: src/stores/sync/htlc.ts:73
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:129
+#: src/stores/sync/htlc.ts:132
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:154
+#: src/stores/sync/htlc.ts:157
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:100
+#: src/stores/sync/htlc.ts:103
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -574,7 +587,7 @@ msgstr ""
 msgid "Failed to copy address to clipboard"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:76
+#: src/components/TransactionDetails.vue:88
 #: src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr ""
@@ -637,6 +650,10 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
+#: src/lib/flows/steps.ts:614
+msgid "Give it a name so you recognise it later"
+msgstr ""
+
 #: src/views/LockdownScreen.vue:20
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr ""
@@ -695,7 +712,7 @@ msgid "Identification is not verified. Please contact support."
 msgstr ""
 
 #: src/components/NimWithdrawConfirm.vue:11
-#: src/components/PaymentAmountInput.vue:14
+#: src/components/PaymentAmountInput.vue:35
 #: src/components/PaymentPreview.vue:129
 #: src/composables/useUsdtQuoteRefresh.ts:199
 msgid "incl. {fee} fees"
@@ -713,7 +730,7 @@ msgstr ""
 msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
 msgstr ""
 
-#: src/composables/useNotifications.ts:295
+#: src/composables/useNotifications.ts:302
 msgid "Incoming Payments"
 msgstr ""
 
@@ -730,8 +747,8 @@ msgstr ""
 msgid "Insufficient balance for this payment"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:168
-#: src/components/PaymentAmountInput.vue:136
+#: src/components/NimWithdraw.vue:190
+#: src/components/PaymentAmountInput.vue:174
 msgid "Insufficient funds"
 msgstr ""
 
@@ -814,7 +831,7 @@ msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
 #: src/composables/useStringParser.ts:46
-#: src/lib/flows/steps.ts:631
+#: src/lib/flows/steps.ts:641
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -878,7 +895,7 @@ msgstr ""
 
 #: src/composables/useQRScanner.ts:89
 #: src/composables/useStringParser.ts:39
-#: src/lib/flows/steps.ts:624
+#: src/lib/flows/steps.ts:634
 msgid "Invalid USDT address"
 msgstr ""
 
@@ -930,7 +947,7 @@ msgstr ""
 msgid "Learn more"
 msgstr ""
 
-#: src/composables/useNotifications.ts:271
+#: src/composables/useNotifications.ts:277
 msgid "Learn what is new in this update"
 msgstr ""
 
@@ -982,6 +999,10 @@ msgstr ""
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
+#: src/components/TransactionDetails.vue:87
+msgid "Message"
+msgstr ""
+
 #: src/modals/MenuModal.vue:54
 msgid "Mini Apps"
 msgstr ""
@@ -1002,7 +1023,7 @@ msgstr ""
 msgid "NAKA Support"
 msgstr ""
 
-#: src/lib/flows/steps.ts:741
+#: src/lib/flows/steps.ts:751
 msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
 msgstr ""
 
@@ -1129,11 +1150,11 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/composables/useNotifications.ts:296
+#: src/composables/useNotifications.ts:303
 msgid "Notification when a payment arrives"
 msgstr ""
 
-#: src/composables/useNotifications.ts:151
+#: src/composables/useNotifications.ts:150
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
@@ -1170,7 +1191,7 @@ msgstr ""
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/lib/flows/steps.ts:740
+#: src/lib/flows/steps.ts:750
 msgid "Pay with NAKA Card"
 msgstr ""
 
@@ -1221,7 +1242,7 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useNotifications.ts:354
+#: src/composables/useNotifications.ts:359
 msgid "Payment received"
 msgstr ""
 
@@ -1235,7 +1256,7 @@ msgstr ""
 msgid "Payment Request"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:67
+#: src/components/TransactionDetails.vue:94
 msgid "Payment Secret"
 msgstr ""
 
@@ -1255,7 +1276,7 @@ msgstr ""
 msgid "Payments"
 msgstr ""
 
-#: src/components/TheHomeAmounts.vue:20
+#: src/components/TheHomeAmounts.vue:39
 msgid "pending"
 msgstr ""
 
@@ -1282,7 +1303,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:625
+#: src/lib/flows/index.ts:640
 msgid "PIN change successful"
 msgstr ""
 
@@ -1319,7 +1340,7 @@ msgstr ""
 msgid "Please enter at least ten characters"
 msgstr ""
 
-#: src/lib/flows/steps.ts:748
+#: src/lib/flows/steps.ts:758
 msgid "Please verify yourself with SumSub to activate your NAKA Card."
 msgstr ""
 
@@ -1383,7 +1404,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:119
+#: src/views/MainView.vue:120
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1412,12 +1433,12 @@ msgstr ""
 msgid "Receive Push Notifications"
 msgstr ""
 
-#: src/lib/flows/steps.ts:642
+#: src/lib/flows/steps.ts:652
 msgid "Receive USDT on Polygon"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:93
-#: src/components/TransactionDetails.vue:59
+#: src/components/TransactionDetails.vue:79
 msgid "Recipient"
 msgstr ""
 
@@ -1468,7 +1489,7 @@ msgstr ""
 msgid "Retire Stake"
 msgstr ""
 
-#: src/composables/useNotifications.ts:150
+#: src/composables/useNotifications.ts:149
 msgid "Rewards Notifications"
 msgstr ""
 
@@ -1477,7 +1498,7 @@ msgstr ""
 msgid "save"
 msgstr ""
 
-#: src/components/NimAddressInput.vue:56
+#: src/components/NimAddressInput.vue:61
 #: src/components/WithdrawalAddressList.vue:18
 #: src/modals/AutoDepositThresholdModal.vue:22
 msgid "Save"
@@ -1513,11 +1534,11 @@ msgid "Scan QR"
 msgstr ""
 
 #: src/lib/flows/steps.ts:377
-#: src/lib/flows/steps.ts:671
+#: src/lib/flows/steps.ts:681
 msgid "Scan QR code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:672
+#: src/lib/flows/steps.ts:682
 msgid "Scan the QR code to send NIM to this address"
 msgstr ""
 
@@ -1529,35 +1550,39 @@ msgstr ""
 msgid "See words"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:138
+#: src/components/NimWithdraw.vue:160
 msgid "Select an address to calculate Polygon fee."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:23
+#: src/components/NimWithdraw.vue:44
 msgid "Select an address…"
 msgstr ""
 
-#: src/lib/flows/steps.ts:644
+#: src/lib/flows/steps.ts:654
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:608
+#: src/lib/flows/steps.ts:611
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:642
+#: src/lib/flows/steps.ts:652
 msgid "Send NIM to top up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:644
+#: src/lib/flows/steps.ts:654
 msgid "Send USDT on Polygon to the address below."
 msgstr ""
 
-#: src/lib/flows/steps.ts:608
+#: src/lib/flows/steps.ts:611
 msgid "Send USDT to this address"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:163
+#: src/components/TransactionDetails.vue:60
+msgid "Sender"
+msgstr ""
+
+#: src/components/NimWithdraw.vue:185
 #: src/views/MainView.vue:108
 msgid "Server not available"
 msgstr ""
@@ -1591,7 +1616,7 @@ msgstr ""
 msgid "Something went wrong authorizing the phone number"
 msgstr ""
 
-#: src/composables/useDecrypt.ts:139
+#: src/composables/useDecrypt.ts:148
 msgid "Something went wrong changing the PIN"
 msgstr ""
 
@@ -1687,7 +1712,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:379
+#: src/composables/useMiniAppHost.ts:387
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1708,7 +1733,7 @@ msgstr ""
 msgid "Terms of service"
 msgstr ""
 
-#: src/lib/flows/steps.ts:727
+#: src/lib/flows/steps.ts:737
 msgid "Test your backup"
 msgstr ""
 
@@ -1729,7 +1754,7 @@ msgstr ""
 msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:34
+#: src/components/PaymentAmountInput.vue:51
 #: src/components/PaymentPreview.vue:218
 msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
 msgstr ""
@@ -1738,7 +1763,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:612
+#: src/lib/flows/index.ts:627
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1747,7 +1772,7 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/components/NimAddressInput.vue:42
+#: src/components/NimAddressInput.vue:47
 msgid "The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost."
 msgstr ""
 
@@ -1755,7 +1780,7 @@ msgstr ""
 msgid "There are currently no free NIM available."
 msgstr ""
 
-#: src/lib/flows/steps.ts:713
+#: src/lib/flows/steps.ts:723
 msgid "There is no \"Forgot password\""
 msgstr ""
 
@@ -1795,7 +1820,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:343
+#: src/composables/useMiniAppHost.ts:351
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -1803,15 +1828,15 @@ msgstr ""
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:77
+#: src/components/TransactionDetails.vue:105
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:55
+#: src/components/TransactionDetails.vue:67
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:58
+#: src/components/TransactionDetails.vue:70
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -1851,7 +1876,7 @@ msgstr ""
 msgid "Total fees"
 msgstr ""
 
-#: src/lib/flows/steps.ts:688
+#: src/lib/flows/steps.ts:698
 msgid "Transaction"
 msgstr ""
 
@@ -1957,7 +1982,7 @@ msgid "Verify ID"
 msgstr ""
 
 #: src/lib/flows/steps.ts:369
-#: src/lib/flows/steps.ts:747
+#: src/lib/flows/steps.ts:757
 msgid "Verify your ID"
 msgstr ""
 
@@ -1969,11 +1994,11 @@ msgstr ""
 msgid "Version"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:161
+#: src/components/NimWithdraw.vue:183
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
-#: src/lib/flows/steps.ts:734
+#: src/lib/flows/steps.ts:744
 msgid "We're working on something special"
 msgstr ""
 
@@ -1993,7 +2018,7 @@ msgstr ""
 msgid "What is Bluecode?"
 msgstr ""
 
-#: src/composables/useNotifications.ts:270
+#: src/composables/useNotifications.ts:276
 #: src/modals/ChangelogModal.vue:17
 #: src/modals/MenuModal.vue:77
 msgid "What's New"
@@ -2063,13 +2088,13 @@ msgstr ""
 msgid "Why this address is flagged"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:53
+#: src/components/NimWithdraw.vue:74
 #: src/lib/flows/steps.ts:546
 #: src/views/HomeView.vue:44
 msgid "Withdraw"
 msgstr ""
 
-#: src/components/NimAddressInput.vue:41
+#: src/components/NimAddressInput.vue:46
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
@@ -2081,11 +2106,11 @@ msgstr ""
 msgid "Withdrawal successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:720
+#: src/lib/flows/steps.ts:730
 msgid "Write down these words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:721
+#: src/lib/flows/steps.ts:731
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -2107,7 +2132,7 @@ msgstr ""
 msgid "Yes"
 msgstr ""
 
-#: src/components/NimAddressInput.vue:48
+#: src/components/NimAddressInput.vue:53
 msgid "You can not use this address"
 msgstr ""
 
@@ -2131,13 +2156,13 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:137
+#: src/components/PaymentAmountInput.vue:175
 #: src/components/PaymentPreview.vue:205
 #: src/composables/useUsdtQuoteRefresh.ts:45
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:169
+#: src/components/NimWithdraw.vue:191
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
@@ -2157,7 +2182,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:355
+#: src/composables/useNotifications.ts:360
 msgid "You received {amount}"
 msgstr ""
 

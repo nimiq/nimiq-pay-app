@@ -11,6 +11,7 @@ import AmountInput from '@/components/AmountInput.vue'
 import CryptoAmount from '@/components/CryptoAmount.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
 import NimiqLogo from '@/components/icons/nimiq-logo.vue'
+import SwapVerticalIcon from '@/components/icons/swap-vertical.vue'
 import TriangleIcon from '@/components/icons/triangle.vue'
 import UsdtLogo from '@/components/icons/usdt-logo.vue'
 import { useCurrencyPriceApi, useFetch } from '@/composables/useApi'
@@ -87,15 +88,33 @@ const sendMaxNim = ref(false)
 watch(fiatAmount, () => fiatAmountModel.value = Math.floor(fiatAmount.value * 10 ** fiatDecimals))
 watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fiatDecimals)
 
+// APP-169: the user can enter the amount either in fiat or directly in the crypto unit (NIM/USDT).
+// In crypto mode the entered minor-unit value (luna/USDT units) is the source of truth; in fiat mode
+// it stays derived from the fiat value as before.
+type Denomination = 'fiat' | 'crypto'
+const denomination = ref<Denomination>('fiat')
+const cryptoAmountModel = ref(0)
+
 // JS and their precision issues...
 // Lunas are integers, so no problem in rounding down to the nearest integer.
 const factor = computed(() => 10 ** DECIMALS[cryptoCurrency.value])
+const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
 const amountUnits = computed(() => {
+  // APP-178/APP-169: "All" pins the exact integer luna balance, so no dust is left and the amount
+  // stays valid regardless of the entry denomination or later price drift (avoids the double-tap).
+  if (isNimiqAsset.value && sendMaxNim.value)
+    return spendableBalance.value
+  if (denomination.value === 'crypto')
+    return cryptoAmountModel.value
   if (!price.value)
     return 0
   return Math.floor(fiatAmount.value / price.value * factor.value)
 })
-const spendableBalance = computed(() => isNimiqAsset.value ? remoteBalance.value : usdtBalance.value)
+const displayedFiatAmount = computed(() =>
+  denomination.value === 'crypto'
+    ? (price.value ? amountUnits.value / factor.value * price.value : 0)
+    : fiatAmount.value,
+)
 const loading = ref(false)
 const remoteBalanceFiat = computed(() => spendableBalance.value / factor.value * price.value)
 const hasPositiveAmount = computed(() => amountUnits.value > 0)
@@ -182,6 +201,32 @@ const disabled = computed(() => {
   return baseDisabled || (!isRemoteOk.value && !isHtlcActive.value) || (hasHtlcExpired.value && consensus.value !== 'established')
 })
 
+function onAmountInput(value: number) {
+  sendMaxNim.value = false
+  if (denomination.value === 'crypto')
+    cryptoAmountModel.value = value
+  else
+    fiatAmountModel.value = value
+}
+
+function toggleDenomination() {
+  if (denomination.value === 'fiat') {
+    cryptoAmountModel.value = amountUnits.value
+    denomination.value = 'crypto'
+  }
+  else {
+    fiatAmount.value = displayedFiatAmount.value
+    denomination.value = 'fiat'
+  }
+}
+
+function applyFiatPreset(value: number) {
+  sendMaxNim.value = false
+  fiatAmount.value = value
+  if (denomination.value === 'crypto' && price.value)
+    cryptoAmountModel.value = Math.floor(value / price.value * factor.value)
+}
+
 function withdraw() {
   if (loading.value)
     return
@@ -189,9 +234,9 @@ function withdraw() {
   loading.value = true
   useApp().addNewWithdrawalAddress(selected.value)
   emit('done', {
-    amount: isNimiqAsset.value && sendMaxNim.value ? spendableBalance.value : amountUnits.value,
+    amount: amountUnits.value,
     recipient: selected.value,
-    fiatAmount: fiatAmount.value,
+    fiatAmount: displayedFiatAmount.value,
     polygonQuote: usdtQuote.value || undefined,
   })
 }
@@ -200,6 +245,8 @@ async function fillMaxAmount() {
   if (isNimiqAsset.value) {
     sendMaxNim.value = true
     fiatAmount.value = remoteBalanceFiat.value // display only; withdraw() sends the exact luna balance
+    if (denomination.value === 'crypto')
+      cryptoAmountModel.value = spendableBalance.value
     return
   }
 
@@ -214,6 +261,8 @@ async function fillMaxAmount() {
       )
 
     fiatAmount.value = maxSendableUnits / factor.value * price.value
+    if (denomination.value === 'crypto')
+      cryptoAmountModel.value = maxSendableUnits
   }
   catch (error) {
     logger.error('Failed to calculate max Polygon withdrawal amount', error)
@@ -237,11 +286,32 @@ watch(() => props.isVisible, (visible) => {
 <template>
   <div v-if="!isScannerActive" class="h-full flex flex-1 flex-col">
     <div class="flex flex-col items-center justify-center w-full mt-6 mb-16 gap-y-2">
-      <AmountInput :model-value="fiatAmountModel" :decimals="fiatDecimals" @update:model-value="(v) => { fiatAmountModel = v; sendMaxNim = false }" />
-      <p class="max-w-full text-base font-semibold text-space/60">
-        <CryptoAmount v-if="isNimiqAsset" :amount="amountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
-        <span v-else data-testid="nim-withdraw-usdt-amount">{{ formattedUsdtAmount }}</span>
-      </p>
+      <AmountInput
+        :key="denomination"
+        :model-value="denomination === 'crypto' ? cryptoAmountModel : fiatAmountModel"
+        :decimals="denomination === 'crypto' ? DECIMALS[cryptoCurrency] : fiatDecimals"
+        :suffix="denomination === 'crypto' ? cryptoCurrency : undefined"
+        @update:model-value="onAmountInput"
+      />
+      <button
+        type="button"
+        data-testid="nim-withdraw-denomination-toggle"
+        class="flex items-center gap-x-2 px-2 py-2 min-h-[44px] max-w-full text-base font-semibold text-space/60 outline-0"
+        :aria-label="$t('Enter amount in {currency}', { currency: denomination === 'fiat' ? cryptoCurrency : selectedFiat })"
+        @click="toggleDenomination"
+      >
+        <span class="truncate">
+          <FiatAmount v-if="denomination === 'crypto'" :amount="displayedFiatAmount" :currency="selectedFiat" />
+          <template v-else>
+            <CryptoAmount v-if="isNimiqAsset" :amount="amountUnits" :currency="cryptoCurrency" :min-decimals="DECIMALS.NIM" />
+            <span v-else data-testid="nim-withdraw-usdt-amount">{{ formattedUsdtAmount }}</span>
+          </template>
+        </span>
+        <SwapVerticalIcon
+          class="size-4 shrink-0 transition-transform duration-200 ease-out motion-reduce:transition-none opacity-70"
+          :class="{ 'rotate-180': denomination === 'crypto' }"
+        />
+      </button>
       <p v-if="quoteHelperMessage" data-testid="nim-withdraw-quote-helper" class="text-sm font-medium text-space/50">
         {{ quoteHelperMessage }}
       </p>
@@ -265,16 +335,16 @@ watch(() => props.isVisible, (visible) => {
     <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
     <div class="flex w-full mt-auto mb-4 justify-evenly">
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 25 }">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="applyFiatPreset(25)">
         <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 50 }">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="applyFiatPreset(50)">
         <FiatAmount :amount="50" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="() => { sendMaxNim = false; fiatAmount = 100 }">
+      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="applyFiatPreset(100)">
         <FiatAmount :amount="100" :currency="selectedFiat" hide-decimals />
       </button>
-      <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="fillMaxAmount">
+      <button data-testid="nim-withdraw-max" class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="fillMaxAmount">
         {{ $t('All') }}
       </button>
     </div>

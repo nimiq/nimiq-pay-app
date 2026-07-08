@@ -135,6 +135,12 @@ vi.mock('@/components/icons/loading-spinner.vue', () => ({
   }),
 }))
 
+vi.mock('@/components/icons/swap-vertical.vue', () => ({
+  default: defineComponent({
+    template: '<span data-testid="swap-icon" />',
+  }),
+}))
+
 interface MountOptions {
   merchantName?: string
   asset?: Asset
@@ -299,5 +305,41 @@ describe('paymentAmountInput', () => {
 
     expect((wrapper.get('[data-testid="payment-amount-input-pay"]').element as HTMLButtonElement).disabled).toBe(true)
     expect(wrapper.text()).toContain('You don\'t have enough USDT to cover this payment plus Polygon fees.')
+  })
+
+  it('switches the amount denomination between crypto and fiat (APP-169)', async () => {
+    const wrapper = await mountComponent({ asset: Asset.NIM })
+    await flushPromises()
+
+    const input = wrapper.get('[data-testid="amount-input"]')
+    expect(input.attributes('data-suffix')).toBe('NIM')
+    expect(input.attributes('data-decimals')).toBe('5')
+
+    await wrapper.get('[data-testid="payment-denomination-toggle"]').trigger('click')
+    await flushPromises()
+
+    const fiatInput = wrapper.get('[data-testid="amount-input"]')
+    expect(fiatInput.attributes('data-suffix')).toBe('USD')
+    expect(fiatInput.attributes('data-decimals')).toBe('2')
+  })
+
+  it('does not drift the amount when toggling denomination repeatedly (APP-169)', async () => {
+    // A price with a sub-cent remainder exposes the lossy fiat round-trip on each toggle.
+    cryptoUsdPrice.value = { price: 0.0463, currency: 'USD' }
+    remoteBalance.value = 10_000_000 // enough balance so the Pay button stays enabled
+
+    const wrapper = await mountComponent({ asset: Asset.NIM })
+    await flushPromises()
+    await wrapper.get('[data-testid="amount-input"]').trigger('click') // crypto = 1_000_000 luna
+    await flushPromises()
+
+    for (let i = 0; i < 6; i++) {
+      await wrapper.get('[data-testid="payment-denomination-toggle"]').trigger('click')
+      await flushPromises()
+    }
+
+    // Back in crypto mode after 6 toggles; the amount must be exactly what was entered.
+    await wrapper.get('[data-testid="payment-amount-input-pay"]').trigger('click')
+    expect(wrapper.emitted('done')?.at(-1)).toEqual([1_000_000])
   })
 })
