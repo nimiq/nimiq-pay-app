@@ -110,6 +110,10 @@ function _useBiometric() {
 
       await BiometricAuth.authenticate(options)
       const pinCode = await SecureStorage.get(pinKey)
+      if (!pinCode) {
+        isBiometricEnabled.value = false
+        return { success: false, error: i18n.t('Something went wrong, please re-enable biometric login') }
+      }
       return { success: true, pinCode }
     }
     catch (error) {
