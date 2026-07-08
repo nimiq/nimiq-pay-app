@@ -113,7 +113,7 @@ describe('theHomeFooter', () => {
     initializeFlow.mockReset()
   })
 
-  it('fills remaining footer slots with recent apps before the rest', async () => {
+  it('leads with the most recent Mini App, then featured, then non-featured', async () => {
     const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
     const wrapper = mount(TheHomeFooter, {
       props: {
@@ -128,7 +128,56 @@ describe('theHomeFooter', () => {
 
     const icons = wrapper.findAll('img').map(img => img.attributes('src'))
 
-    expect(icons).toEqual(['featured.png', 'zeta.png', 'beta.png'])
+    expect(icons).toEqual(['zeta.png', 'featured.png', 'alpha.png'])
+  })
+
+  it('uses only the single most recent app, filling the other two slots with featured', async () => {
+    featuredDApps.value = [
+      { name: 'Featured1', url: 'https://f1.app', icon: 'f1.png', featured: true },
+      { name: 'Featured2', url: 'https://f2.app', icon: 'f2.png', featured: true },
+    ]
+    recentlyViewedDApps.value = [
+      { name: 'Recent1', url: 'https://r1.app', icon: 'r1.png' },
+      { name: 'Recent2', url: 'https://r2.app', icon: 'r2.png' },
+    ]
+    nonFeaturedDApps.value = []
+
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    const icons = wrapper.findAll('img').map(img => img.attributes('src'))
+
+    // Only the most recent (r1) leads; r2 is excluded, the other two slots are featured.
+    expect(icons).toEqual(['r1.png', 'f1.png', 'f2.png'])
+  })
+
+  it('falls back to the globe icon when a footer image fails to load', async () => {
+    const { MINI_APP_FALLBACK_ICON } = await import('@/lib/mini-app-icons')
+    const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
+    const wrapper = mount(TheHomeFooter, {
+      props: {
+        isPaymentDisabled: false,
+      },
+      global: {
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    const img = wrapper.find('img')
+    await img.trigger('error')
+
+    expect(img.attributes('src')).toBe(MINI_APP_FALLBACK_ICON)
   })
 
   it('sorts the remaining non-featured apps alphabetically when featured and recent buckets are exhausted', async () => {

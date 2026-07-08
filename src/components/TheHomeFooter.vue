@@ -9,6 +9,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
 import { useApp } from '@/stores/app'
 import { stripTrailingSlash, useMiniApps } from '@/stores/mini-apps'
 
@@ -43,12 +44,17 @@ const topDAppIcons = computed(() => {
     }
   }
 
+  // Lead with the most recent Mini App; fill the other two from featured, then non-featured.
+  appendIcons(recentlyViewedDApps.value.slice(0, 1))
   appendIcons(featuredDApps.value)
-  appendIcons(recentlyViewedDApps.value)
   appendIcons([...nonFeaturedDApps.value].sort((a, b) => a.name.localeCompare(b.name)))
 
   return icons
 })
+
+function onImgError(event: Event) {
+  (event.target as HTMLImageElement).src = MINI_APP_FALLBACK_ICON
+}
 </script>
 
 <template>
@@ -89,6 +95,7 @@ const topDAppIcons = computed(() => {
             class="size-7 aspect-square shrink-0 rounded-full ring-2 ring-gray-100 bg-white object-contain object-center absolute top-0"
             :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
             alt=""
+            @error="onImgError"
           >
         </div>
       </button>
