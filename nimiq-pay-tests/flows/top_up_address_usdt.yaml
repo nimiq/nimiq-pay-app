@@ -7,9 +7,11 @@ appId: ${APP_ID}
 - tapOn: Top Up
 - waitForAnimationToEnd
 
-# Verify USDT top-up screen content (aria-label on step title)
+# Verify USDT top-up screen content. The visible "Receive USDT on Polygon" <h1> is
+# shadowed in the a11y tree by the step container's aria-label ("Top up address"),
+# so assert the USDT-specific description instead — it distinguishes USDT from NIM.
 - assertVisible: Top up address
-- assertVisible: Receive USDT on Polygon
+- assertVisible: 'Send USDT on Polygon to the address below.'
 
 # Verify Polygon address is displayed (starts with 0x)
 - assertVisible:

@@ -33,8 +33,12 @@ appId: ${APP_ID}
     timeout: 10000
 - tapOn: Paste or type the invoice here
 - inputText: '0x1111111111111111111111111111111111111111'
-- hideKeyboard
-- waitForAnimationToEnd
+# Tap the title to blur the textarea: the "Continue and Pay" CTA is hidden while the
+# field is focused, and hideKeyboard alone does not blur the WebView input.
+- tapOn: Enter payment request
+- extendedWaitUntil:
+    visible: Continue and Pay
+    timeout: 10000
 - tapOn: Continue and Pay
 - waitForAnimationToEnd
 

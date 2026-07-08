@@ -14,9 +14,11 @@ appId: ${APP_ID}
 - tapOn: What's New
 - waitForAnimationToEnd
 
-# Changelog modal shows the latest version entry
+# Changelog modal shows the latest version entry (e.g. "Version 2.17.0");
+# Maestro full-matches text, so use a wildcard to match the version suffix.
 - extendedWaitUntil:
-    visible: Version
+    visible:
+      text: 'Version.*'
     timeout: 5000
 
 - takeScreenshot: nimiq-pay-tests/.maestro/screenshots/changelog_modal

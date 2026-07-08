@@ -6,10 +6,12 @@ appId: ${APP_ID}
 - tapOn: Crypto Map
 - waitForAnimationToEnd
 
-# Wait for map view to load (external iframe content)
+# Wait for map view to load (external iframe content). The map localizes its search
+# placeholder to the device system locale, so match the supported locales.
 - extendedWaitUntil:
-    visible: Search here
-    timeout: 10000
+    visible:
+      text: 'Search here|Buscar aquí|Suchen|Rechercher|Buscar'
+    timeout: 15000
 
 - takeScreenshot: nimiq-pay-tests/.maestro/screenshots/map_tab
 
