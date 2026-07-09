@@ -15,7 +15,8 @@
 // Idempotent: if src/data/changelog.json already has an entry for `version`, the AI
 // is NOT called again (manual edits are preserved) unless --force is passed.
 //
-// AI backend is auto-detected: `claude -p` is preferred, `codex exec` is the fallback.
+// AI backend: interactively pick `claude` or `codex` when both are installed and running
+// in a TTY; otherwise (CI, --print-latest, or only one installed) `claude` is preferred.
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -98,7 +99,7 @@ function loadEntries() {
   }
 }
 
-function detectAi() {
+function detectAvailable() {
   const has = (cmd) => {
     try {
       execFileSync('which', [cmd], { stdio: 'ignore' })
@@ -108,11 +109,23 @@ function detectAi() {
       return false
     }
   }
+  const backends = []
   if (has('claude'))
-    return { cmd: 'claude', args: ['-p'] }
+    backends.push({ cmd: 'claude', args: ['-p'] })
   if (has('codex'))
-    return { cmd: 'codex', args: ['exec', '-'] }
-  return null
+    backends.push({ cmd: 'codex', args: ['exec', '-'] })
+  return backends
+}
+
+async function chooseAi() {
+  const available = detectAvailable()
+  if (available.length === 0)
+    throw new Error('Neither `claude` nor `codex` CLI is available. Install one or edit src/data/changelog.json manually.')
+  // Non-interactive (CI / --print-latest) or only one installed: prefer claude.
+  if (available.length === 1 || printLatest || !process.stdin.isTTY)
+    return available[0]
+  const answer = (await ask('\n🤖 Which AI CLI should write the changelog? [claude/codex] (default: claude): ')).toLowerCase()
+  return available.find(a => a.cmd === answer) || available[0]
 }
 
 function buildPrompt(version, commitLog) {
@@ -128,7 +141,8 @@ Rules:
 - "howTo" is OPTIONAL: include it only for a NEW feature the user can act on, describing
   where to find it or how to use it in plain steps. Omit the field otherwise.
 - IGNORE internal-only changes: chores, CI, refactors, dependency bumps, i18n extraction,
-  linting, tests, build config.
+  linting, tests, build config, analytics, tracking, and telemetry.
+- NEVER mention analytics, tracking, telemetry, or event logging — not even as a benefit.
 - If nothing user-facing changed, return a single highlight titled "Improvements & bug fixes"
   describing that this release contains under-the-hood stability and performance improvements.
 - Do NOT invent features that are not in the commits.
@@ -148,10 +162,7 @@ function extractJson(text) {
   return JSON.parse(candidate.slice(start, end + 1))
 }
 
-function generateEntry(version, commitLog) {
-  const ai = detectAi()
-  if (!ai)
-    throw new Error('Neither `claude` nor `codex` CLI is available. Install one or edit src/data/changelog.json manually.')
+function generateEntry(version, commitLog, ai) {
   log(`🤖 Generating changelog for v${version} via ${ai.cmd}...`)
   const output = execFileSync(ai.cmd, ai.args, {
     cwd: ROOT,
@@ -208,14 +219,18 @@ function renderReleaseNotes(entry, subjects) {
   return parts.join('\n')
 }
 
-function confirmReview() {
+function ask(question) {
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stderr })
-    rl.question(`\n📝 Review/edit ${CHANGELOG_JSON} now, then press Enter to continue (Ctrl+C to abort)... `, () => {
+    rl.question(question, (answer) => {
       rl.close()
-      resolve()
+      resolve(answer.trim())
     })
   })
+}
+
+async function confirmReview() {
+  await ask(`\n📝 Review/edit ${CHANGELOG_JSON} now, then press Enter to continue (Ctrl+C to abort)... `)
 }
 
 async function main() {
@@ -229,9 +244,10 @@ async function main() {
     log(`♻️  Reusing existing entry for v${version}.`)
   }
   else {
+    const ai = await chooseAi()
     const range = resolveRange()
     log(`📦 Changelog for v${version} — ${range}`)
-    entry = generateEntry(version, gitLog(range, '%s%n%b%n<<<commit>>>'))
+    entry = generateEntry(version, gitLog(range, '%s%n%b%n<<<commit>>>'), ai)
     if (existingIndex >= 0)
       entries[existingIndex] = entry
     else
