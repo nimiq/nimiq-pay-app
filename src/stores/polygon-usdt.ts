@@ -12,7 +12,7 @@ import { computed, readonly, shallowRef, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
-import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
+import { trackSwapCompleted, trackSwapFailed, trackTopUpReceived } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { addressesEqual, getRequiredContractEvent, toAddressTopic } from '@/lib/ethereum'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -1238,10 +1238,17 @@ function parseStoredTransaction(tx: ExternalTransaction | null) {
 }
 
 // Dynamic import to avoid a circular dep between useNotifications and this store.
-async function notifyFreshIncoming(txs: UserReceiptTransaction[], previousMaxTimestamp = 0) {
+async function notifyFreshIncoming(txs: UserReceiptTransaction[], currentBalance: number, previousMaxTimestamp = 0) {
   const fresh = txs.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)
   if (fresh.length === 0)
     return
+  // Track each as a Top-Up, except own swap-HTLC refunds — those come from the HTLC contract
+  // and aren't real deposits.
+  const htlcContract = getAddress(polygonUsdtConfig.htlcContract)
+  for (const tx of fresh) {
+    if (getAddress(tx.sender) !== htlcContract)
+      trackTopUpReceived(tx, currentBalance)
+  }
   const { scheduleIncomingPaymentNotification } = (await import('@/composables/useNotifications')).useNotifications()
   await Promise.all(fresh.map(tx => scheduleIncomingPaymentNotification(tx)))
 }
@@ -1459,7 +1466,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
           }
         }
 
-        await notifyFreshIncoming(newIncoming, previousMaxTimestamp)
+        await notifyFreshIncoming(newIncoming, balance.value, previousMaxTimestamp)
 
         lastHistorySyncBlock.value = latestBlock
         await persistHistoryState(address, {
@@ -1503,7 +1510,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
 
         // Always notify — these are post-headBlock txs, genuinely new even on cold install.
-        await notifyFreshIncoming(forwardIncoming, previousMaxTimestamp)
+        await notifyFreshIncoming(forwardIncoming, balance.value, previousMaxTimestamp)
 
         session.state.headBlock = latestBlock
         await persistHistoryState(address, {
@@ -1545,7 +1552,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       })
 
       if (notifyDuringInitialScan)
-        await notifyFreshIncoming(initialScanIncoming, previousMaxTimestamp)
+        await notifyFreshIncoming(initialScanIncoming, balance.value, previousMaxTimestamp)
 
       if (scanResult.completed) {
         hasLoadedHistory.value = true
@@ -2024,7 +2031,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
 
         await persistHistoryTransaction(group, normalized, {
-          onIncomingPersisted: tx => notifyFreshIncoming([tx]),
+          onIncomingPersisted: tx => notifyFreshIncoming([tx], balance.value),
         })
         logger.log('📬 Polygon Transfer listener persisted incoming tx', { hash })
       }

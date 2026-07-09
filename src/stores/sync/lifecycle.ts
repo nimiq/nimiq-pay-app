@@ -8,6 +8,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
+import { trackTopUpReceived } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt } from '@/lib/tx'
@@ -200,6 +201,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
 
     const receipt = buildTopUpReceipt(tx)
     useTransactions().addReceiptTransaction(receipt)
+    trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)
     // Real-time only: refresh / history paths must NOT fire the notifier.
     void useNotifications().scheduleIncomingPaymentNotification(receipt)
   }

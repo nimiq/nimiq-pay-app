@@ -1,3 +1,4 @@
+import type { UserReceiptTransaction } from '@/types/transactions'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   buildPaymentAnalyticsProps,
@@ -7,6 +8,7 @@ import {
   startPaymentAnalytics,
   trackAppOpened,
   trackFeatureOpened,
+  trackTopUpReceived,
   trackWalletCreated,
   trackWalletEntrySelected,
   trackWalletImported,
@@ -153,6 +155,59 @@ describe('buildPaymentAnalyticsProps', () => {
       transfer: Transfer.UserPaymentToMerchant,
     })
     expect(props.amount_range).toBe('10-100')
+  })
+})
+
+describe('trackTopUpReceived', () => {
+  async function makeReceipt(asset: UserReceiptTransaction['asset'], amount: number): Promise<UserReceiptTransaction> {
+    const { Transfer } = await import('@/types/transactions')
+    return {
+      transfer: Transfer.UserReceipt,
+      title: 'Top-Up',
+      sender: 'sender',
+      recipient: 'recipient',
+      status: 'confirmed',
+      timestamp: 0,
+      amount,
+      fee: 0,
+      hash: 'hash',
+      proofSize: 0,
+      asset,
+    }
+  }
+
+  it('resolves an undefined asset to NIM and buckets luna amount and balance', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const receipt = await makeReceipt(undefined, 500_000) // 5 NIM
+
+    trackTopUpReceived(receipt, 5_000_000) // 50 NIM
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'top_up_received',
+      properties: { asset: Asset.NIM, amount_range: '1-10', balance_range: '10-100' },
+    })
+  })
+
+  it('buckets a USDT deposit and balance from 6-decimal base units', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const receipt = await makeReceipt(Asset.USDT, 50_000_000) // 50 USDT
+
+    trackTopUpReceived(receipt, 1_000_000_000) // 1000 USDT
+
+    expect(state.capture).toHaveBeenCalledWith({
+      event: 'top_up_received',
+      properties: { asset: Asset.USDT, amount_range: '10-100', balance_range: '100-1000' },
+    })
+  })
+
+  it('does not emit capture events in development mode', async () => {
+    const { Asset } = await import('@/lib/assets')
+    state.isDev = true
+    const receipt = await makeReceipt(Asset.USDT, 50_000_000)
+
+    trackTopUpReceived(receipt, 1_000_000_000)
+
+    expect(state.capture).not.toHaveBeenCalled()
   })
 })
 

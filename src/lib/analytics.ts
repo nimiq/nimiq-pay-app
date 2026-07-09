@@ -1,4 +1,4 @@
-import type { PaymentMethod, Rail } from '@/types/transactions'
+import type { PaymentMethod, Rail, UserReceiptTransaction } from '@/types/transactions'
 import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useDecrypt } from '@/composables/useDecrypt'
@@ -171,6 +171,19 @@ export function getAmountRange(amount: number): AmountRange {
   if (amount <= 100000)
     return '50000-100000'
   return '100000+'
+}
+
+// Incoming deposit ("Top-Up"). Callers must only invoke this for genuinely-new deposits and
+// never for our own HTLC claims (NIM: excluded by the isOwnHtlcDrain guard; USDT: excluded by
+// the htlcContract-sender check). currentBalance is in the asset's smallest units.
+export function trackTopUpReceived(receipt: UserReceiptTransaction, currentBalance: number): void {
+  const asset = receipt.asset || Asset.NIM
+  const { decimals } = assetRegistry[asset]
+  capture('top_up_received', {
+    asset,
+    amount_range: getAmountRange(receipt.amount / 10 ** decimals),
+    balance_range: getAmountRange(currentBalance / 10 ** decimals),
+  })
 }
 
 export function trackPaymentStarted(props: PaymentEventProperties): void {
