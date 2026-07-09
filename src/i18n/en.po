@@ -96,7 +96,7 @@ msgstr ""
 msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:50
+#: src/components/PaymentAmountInput.vue:52
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
@@ -124,7 +124,7 @@ msgstr ""
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr ""
 
-#: src/composables/useBiometric.ts:127
+#: src/composables/useBiometric.ts:131
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
@@ -339,7 +339,7 @@ msgid "Connecting to network."
 msgstr ""
 
 #: src/components/NimWithdraw.vue:176
-#: src/components/PaymentAmountInput.vue:167
+#: src/components/PaymentAmountInput.vue:161
 #: src/views/MainView.vue:91
 msgid "Connecting to Polygon"
 msgstr ""
@@ -353,7 +353,7 @@ msgstr ""
 msgid "Continue"
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:63
+#: src/components/PaymentAmountInput.vue:65
 msgid "Continue and Pay"
 msgstr ""
 
@@ -540,7 +540,7 @@ msgstr ""
 msgid "Error using BiometricAuth"
 msgstr ""
 
-#: src/composables/useBiometric.ts:123
+#: src/composables/useBiometric.ts:127
 #: src/composables/useBiometric.ts:94
 msgid "Error using SecureStorage"
 msgstr ""
@@ -748,7 +748,7 @@ msgid "Insufficient balance for this payment"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:190
-#: src/components/PaymentAmountInput.vue:174
+#: src/components/PaymentAmountInput.vue:168
 msgid "Insufficient funds"
 msgstr ""
 
@@ -881,7 +881,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:85
-#: src/stores/polygon-usdt.ts:1780
+#: src/stores/polygon-usdt.ts:1787
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -1075,8 +1075,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:29
 #: src/stores/local-wallet.ts:80
 #: src/stores/local-wallet.ts:89
-#: src/stores/polygon-usdt.ts:1666
-#: src/stores/polygon-usdt.ts:1748
+#: src/stores/polygon-usdt.ts:1673
+#: src/stores/polygon-usdt.ts:1755
 msgid "No account has been found"
 msgstr ""
 
@@ -1138,7 +1138,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1785
+#: src/stores/polygon-usdt.ts:1792
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1369,10 +1369,10 @@ msgid "Polygon fee"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:1631
-#: src/stores/polygon-usdt.ts:1670
-#: src/stores/polygon-usdt.ts:1723
-#: src/stores/polygon-usdt.ts:1752
+#: src/stores/polygon-usdt.ts:1638
+#: src/stores/polygon-usdt.ts:1677
+#: src/stores/polygon-usdt.ts:1730
+#: src/stores/polygon-usdt.ts:1759
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1380,11 +1380,11 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1712
+#: src/stores/polygon-usdt.ts:1719
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1899
+#: src/stores/polygon-usdt.ts:1906
 msgid "Polygon swap payment failed"
 msgstr ""
 
@@ -1684,6 +1684,10 @@ msgstr ""
 msgid "Something went wrong while starting the camera"
 msgstr ""
 
+#: src/composables/useBiometric.ts:115
+msgid "Something went wrong, please re-enable biometric login"
+msgstr ""
+
 #: src/types/transactions.ts:149
 msgid "Staking Contract"
 msgstr ""
@@ -1708,7 +1712,7 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1848
+#: src/stores/polygon-usdt.ts:1855
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
@@ -1754,7 +1758,7 @@ msgstr ""
 msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:51
+#: src/components/PaymentAmountInput.vue:53
 #: src/components/PaymentPreview.vue:218
 msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
 msgstr ""
@@ -2156,7 +2160,7 @@ msgstr ""
 msgid "You don't have enough Points for this purchase."
 msgstr ""
 
-#: src/components/PaymentAmountInput.vue:175
+#: src/components/PaymentAmountInput.vue:169
 #: src/components/PaymentPreview.vue:205
 #: src/composables/useUsdtQuoteRefresh.ts:45
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."

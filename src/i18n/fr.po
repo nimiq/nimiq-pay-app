@@ -47,10 +47,20 @@ msgstr "Ajouter une nouvelle carte"
 msgid "Add Stake"
 msgstr "Ajouter au staking"
 
+#, fuzzy
+#| msgid "Add another address"
+msgid "Add to address book"
+msgstr "Ajouter une autre adresse"
+
 msgid "Address copied to clipboard"
 msgstr "Adresse copiée dans le presse-papiers"
 
 msgid "Address missing"
+msgstr "Adresse manquante"
+
+#, fuzzy
+#| msgid "Address missing"
+msgid "Address saved"
 msgstr "Adresse manquante"
 
 msgid "Addresses missing"
@@ -348,6 +358,9 @@ msgstr "Activer Touch ID/Face ID"
 msgid "Enter Address"
 msgstr "Saisir l'adresse"
 
+msgid "Enter amount in {currency}"
+msgstr ""
+
 msgid "Enter feature password"
 msgstr "Saisir le mot de passe de la fonctionnalité"
 
@@ -465,6 +478,9 @@ msgstr "Obtenir des points"
 msgid "Get Started"
 msgstr "Commencer"
 
+msgid "Give it a name so you recognise it later"
+msgstr ""
+
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr "Allez dans Réglages → Confidentialité et sécurité → Mode Isolement"
 
@@ -491,6 +507,9 @@ msgstr "Maintenez le bouton enfoncé pour confirmer."
 
 msgid "Hold your phone near the terminal"
 msgstr "Approchez votre téléphone du terminal"
+
+msgid "How to use:"
+msgstr ""
 
 msgid "I agree to NAKA Card's {terms}"
 msgstr "J'accepte les {terms} de la carte NAKA"
@@ -664,6 +683,9 @@ msgstr "Langue"
 msgid "Learn more"
 msgstr "En savoir plus"
 
+msgid "Learn what is new in this update"
+msgstr ""
+
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr "La requête Lightning porte sur un montant variable, mais les montants variables ne sont pas pris en charge"
 
@@ -698,6 +720,9 @@ msgstr "Connexion"
 
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr "Assurez-vous d'envoyer depuis une adresse Polygon, sinon vos fonds pourraient être définitivement perdus !"
+
+msgid "Message"
+msgstr ""
 
 msgid "Mini Apps"
 msgstr "Mini Apps"
@@ -761,6 +786,9 @@ msgstr "Aucune carte active"
 
 msgid "No Cashlink found"
 msgstr "Aucun Cashlink trouvé"
+
+msgid "No changelog yet. Check back after the next update."
+msgstr ""
 
 msgid "No NAKA Card found"
 msgstr "Aucune carte NAKA trouvée"
@@ -973,6 +1001,9 @@ msgstr "Transaction Polygon introuvable après le relais"
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr "Position {position} : {glyph} ({code}). {reason}."
 
+msgid "Previous versions"
+msgstr ""
+
 msgid "Privacy Policy"
 msgstr "Politique de confidentialité"
 
@@ -1099,6 +1130,11 @@ msgstr "Envoyez des USDT sur Polygon à l'adresse ci-dessous."
 msgid "Send USDT to this address"
 msgstr "Envoyer des USDT à cette adresse"
 
+#, fuzzy
+#| msgid "Send"
+msgid "Sender"
+msgstr "Envoyer"
+
 msgid "Server not available"
 msgstr "Serveur indisponible"
 
@@ -1161,6 +1197,11 @@ msgstr "La vérification du numéro de téléphone a échoué"
 
 msgid "Something went wrong while starting the camera"
 msgstr "Un problème s'est produit lors du démarrage de l'appareil photo"
+
+#, fuzzy
+#| msgid "Something went wrong paying with Points"
+msgid "Something went wrong, please re-enable biometric login"
+msgstr "Un problème est survenu lors du paiement avec des points"
 
 msgid "Staking Contract"
 msgstr "Contrat de staking"
@@ -1387,6 +1428,9 @@ msgstr "Vérifiez votre identité"
 msgid "Verify your phone number"
 msgstr "Vérifiez votre numéro de téléphone"
 
+msgid "Version"
+msgstr ""
+
 msgid "Wait for consensus before withdrawing"
 msgstr "Attendez le consensus avant de retirer"
 
@@ -1404,6 +1448,11 @@ msgstr "Que voulez-vous faire ?"
 
 msgid "What is Bluecode?"
 msgstr "Bluecode, qu'est-ce que c'est ?"
+
+#, fuzzy
+#| msgid "What's the 1st word?"
+msgid "What's New"
+msgstr "Quel est le 1er mot ?"
 
 msgid "What's the 10th word?"
 msgstr "Quel est le 10ème mot ?"
@@ -1567,9 +1616,6 @@ msgstr "caractère de largeur nulle (invisible)"
 
 #~ msgid "Select withdrawal address"
 #~ msgstr "Sélectionner l'adresse de retrait"
-
-#~ msgid "Send"
-#~ msgstr "Envoyer"
 
 #, fuzzy
 #~| msgid "You don't have enough NIM. Your current balance is {balance}."

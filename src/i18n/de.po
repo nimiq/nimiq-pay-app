@@ -46,10 +46,20 @@ msgstr "Neue Karte hinzufügen"
 msgid "Add Stake"
 msgstr "Stake hinzufügen"
 
+#, fuzzy
+#| msgid "Add another address"
+msgid "Add to address book"
+msgstr "Weitere Adresse hinzufügen"
+
 msgid "Address copied to clipboard"
 msgstr "Adresse kopiert"
 
 msgid "Address missing"
+msgstr "Adresse fehlt"
+
+#, fuzzy
+#| msgid "Address missing"
+msgid "Address saved"
 msgstr "Adresse fehlt"
 
 msgid "Addresses missing"
@@ -347,6 +357,9 @@ msgstr "Touch ID/Face ID aktivieren"
 msgid "Enter Address"
 msgstr "Adresse eingeben"
 
+msgid "Enter amount in {currency}"
+msgstr ""
+
 msgid "Enter feature password"
 msgstr "Feature-Passwort eingeben"
 
@@ -464,6 +477,9 @@ msgstr "Punkte Verdienen"
 msgid "Get Started"
 msgstr "Los geht's"
 
+msgid "Give it a name so you recognise it later"
+msgstr ""
+
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr "Gehe zu Einstellungen → Datenschutz & Sicherheit → Blockierungsmodus"
 
@@ -490,6 +506,9 @@ msgstr "Halte die Taste gedrückt, um zu bestätigen."
 
 msgid "Hold your phone near the terminal"
 msgstr "Halte dein Telefon an das Terminal"
+
+msgid "How to use:"
+msgstr ""
 
 msgid "I agree to NAKA Card's {terms}"
 msgstr "Ich stimme den {terms} der NAKA-Karte zu"
@@ -663,6 +682,9 @@ msgstr "Sprache"
 msgid "Learn more"
 msgstr "Mehr erfahren"
 
+msgid "Learn what is new in this update"
+msgstr ""
+
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr "Die BTC-Lightning-Anfrage enthält einen variablen Betrag, welcher nicht unterstützt wird"
 
@@ -697,6 +719,9 @@ msgstr "Einloggen"
 
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr "Stelle sicher, dass du von einer Polygon-Adresse sendest, sonst kann dein Guthaben unwiderruflich verloren gehen!"
+
+msgid "Message"
+msgstr ""
 
 msgid "Mini Apps"
 msgstr "Mini Apps"
@@ -760,6 +785,9 @@ msgstr "Keine aktive Karte"
 
 msgid "No Cashlink found"
 msgstr "Kein Cashlink gefunden"
+
+msgid "No changelog yet. Check back after the next update."
+msgstr ""
 
 msgid "No NAKA Card found"
 msgstr "Keine NAKA-Karte gefunden"
@@ -972,6 +1000,9 @@ msgstr "Polygon-Transaktion nach dem Relay nicht gefunden"
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr "Position {position}: {glyph} ({code}). {reason}."
 
+msgid "Previous versions"
+msgstr ""
+
 msgid "Privacy Policy"
 msgstr "Datenschutzerklärung"
 
@@ -1098,6 +1129,11 @@ msgstr "Sende USDT auf Polygon an die untenstehende Adresse."
 msgid "Send USDT to this address"
 msgstr "Schicke USDT an diese Adresse"
 
+#, fuzzy
+#| msgid "Send"
+msgid "Sender"
+msgstr "Senden"
+
 msgid "Server not available"
 msgstr "Server nicht verfügbar"
 
@@ -1160,6 +1196,11 @@ msgstr "Etwas ist bei der Verifizierung der Telefonnummer schiefgelaufen"
 
 msgid "Something went wrong while starting the camera"
 msgstr "Beim Starten der Kamera ist etwas schiefgelaufen"
+
+#, fuzzy
+#| msgid "Something went wrong paying with Points"
+msgid "Something went wrong, please re-enable biometric login"
+msgstr "Etwas ist bei der Punkte-Zahlung schiefgelaufen"
 
 msgid "Staking Contract"
 msgstr "Staking-Vertrag"
@@ -1386,6 +1427,9 @@ msgstr "Identität bestätigen"
 msgid "Verify your phone number"
 msgstr "Telefonnummer bestätigen"
 
+msgid "Version"
+msgstr ""
+
 msgid "Wait for consensus before withdrawing"
 msgstr "Warte auf den Konsens, bevor du auszahlst"
 
@@ -1405,6 +1449,11 @@ msgstr "Was möchtest du tun?"
 
 msgid "What is Bluecode?"
 msgstr "Was ist Bluecode?"
+
+#, fuzzy
+#| msgid "What's the 1st word?"
+msgid "What's New"
+msgstr "Was ist das erste Wort?"
 
 msgid "What's the 10th word?"
 msgstr "Was ist das zehnte Wort?"
@@ -1568,9 +1617,6 @@ msgstr "Zeichen ohne Breite (unsichtbar)"
 
 #~ msgid "Select withdrawal address"
 #~ msgstr "Empfangsadresse auswählen"
-
-#~ msgid "Send"
-#~ msgstr "Senden"
 
 #, fuzzy
 #~| msgid "You don't have enough NIM. Your current balance is {balance}."
