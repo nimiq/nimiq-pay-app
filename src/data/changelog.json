@@ -1,5 +1,34 @@
 [
   {
+    "version": "2.18.0",
+    "date": "2026-07-09",
+    "highlights": [
+      {
+        "title": "Enter amounts in crypto or fiat",
+        "description": "You can now type any amount in either the crypto amount or its fiat value, whichever is easier for you. The app converts it for you automatically.",
+        "howTo": "When sending or requesting, tap the amount field and switch between crypto and your local currency."
+      },
+      {
+        "title": "Secure pending NIM in one tap",
+        "description": "Got NIM waiting to be secured? Just tap your pending NIM on the home screen to lock it in right away instead of waiting.",
+        "howTo": "On the Home screen, tap your pending NIM balance to secure it."
+      },
+      {
+        "title": "What's New in the app",
+        "description": "See exactly what changed with each update. A friendly summary now appears after you update, with older release notes available anytime."
+      },
+      {
+        "title": "Smoother Mini Apps",
+        "description": "Your most recently used Mini Apps now appear first, each app shows up only once, and opening them is faster and more reliable. Apps without an image now show a clean fallback icon.",
+        "howTo": "Find your recent Mini Apps in the row at the bottom of the Home screen."
+      },
+      {
+        "title": "Reliability & polish",
+        "description": "Faster PIN entry, more dependable incoming-payment notifications, a correct app icon on Android notifications, and \"Withdraw All\" now clears every last bit of NIM. Biometric login is also disabled when no PIN is set, for better security."
+      }
+    ]
+  },
+  {
     "version": "2.17.0",
     "date": "2026-07-02",
     "highlights": [
