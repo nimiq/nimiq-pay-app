@@ -3,7 +3,7 @@ import { computedAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { isDev } from '@/lib'
-import { fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
+import { fetchBestIcon, fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname, safeOrigin } from '@/lib/url-safety'
 import { kv, kvPreferences } from '@/stores/app'
 
@@ -40,7 +40,6 @@ export interface MiniAppMenuContext {
 interface BaseDApp {
   name: string
   url: string
-  icon: string
   featured: boolean
   type?: MiniAppType
 }
@@ -68,7 +67,6 @@ function toBaseDApp(remote: RemoteMiniApp): BaseDApp {
   return {
     name: remote.name,
     url: remote.url,
-    icon: remote.logo || getFaviconUrl(remote.url),
     featured: remote.featured,
     type: remote.type,
   }
@@ -105,6 +103,16 @@ export const useMiniApps = defineStore('mini-apps', () => {
     { writeDefaults: false },
   )
 
+  // Lazily-resolved best icon per origin, filling the fallback slot when awesome has no
+  // curated logo. Persisted so we don't re-scrape sites on every launch. See ensureBestIcon.
+  const bestIcons = useStorageAsync<Record<string, string>>(
+    'miniAppsBestIcons',
+    {},
+    kvPreferences(),
+    { writeDefaults: false },
+  )
+  const bestIconInFlight = new Set<string>()
+
   // Fetch remote apps, update cache on success, fall back to cache on failure
   const remoteApps = computedAsync<RemoteMiniApp[]>(async () => {
     try {
@@ -131,7 +139,6 @@ export const useMiniApps = defineStore('mini-apps', () => {
       ? [{
           name: 'Demo App',
           url: `http://${__VITE_SERVER_IP__}:5174/`,
-          icon: getFaviconUrl('http://localhost:5174/'),
           featured: false,
           type: 'nimiq',
         }]
@@ -219,10 +226,36 @@ export const useMiniApps = defineStore('mini-apps', () => {
     return trustedUrls.value.has(stripTrailingSlash(url))
   }
 
-  /** Returns the curated nimiq/awesome icon for `url`, or undefined when the dApp is not in the list. */
-  function iconForUrl(url: string): string | undefined {
-    const target = stripTrailingSlash(url)
-    return baseDApps.value.find(d => stripTrailingSlash(d.url) === target)?.icon
+  /**
+   * The single owner of icon precedence for any `url` (listed or not):
+   * curated awesome logo -> lazily-resolved best site icon -> /favicon.ico.
+   */
+  function iconForUrl(url: string): string {
+    const logo = remoteApps.value.find(r => stripTrailingSlash(r.url) === stripTrailingSlash(url))?.logo
+    return logo || bestIcons.value[safeOrigin(url)] || getFaviconUrl(url)
+  }
+
+  /**
+   * Lazily resolve & cache the best icon for a logo-less Mini App's own site (fetches the
+   * site HTML). Call only for on-screen / opened apps — never eagerly for the whole list.
+   * No-op when a curated awesome logo exists (source of truth), when already cached, or in-flight.
+   */
+  async function ensureBestIcon(url: string) {
+    const origin = safeOrigin(url)
+    if (!origin.startsWith('http') || bestIcons.value[origin] || bestIconInFlight.has(origin))
+      return
+    if (remoteApps.value.some(r => r.logo && safeOrigin(r.url) === origin))
+      return
+
+    bestIconInFlight.add(origin)
+    try {
+      const icon = await fetchBestIcon(url)
+      if (icon)
+        bestIcons.value = { ...bestIcons.value, [origin]: icon }
+    }
+    finally {
+      bestIconInFlight.delete(origin)
+    }
   }
 
   /**
@@ -250,6 +283,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
   const allDApps = computed<DApp[]>(() =>
     baseDApps.value.map((dapp, i) => ({
       ...dapp,
+      icon: iconForUrl(dapp.url),
       description: descriptions.value[i]?.value || undefined,
     })),
   )
@@ -290,7 +324,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
         return { ...dapp, icon: popular.icon, description: popular.description, type: popular.type }
       if (!recentDescriptionCache.has(dapp.url))
         recentDescriptionCache.set(dapp.url, (await fetchPageDescription(dapp.url)) ?? undefined)
-      return { ...dapp, description: recentDescriptionCache.get(dapp.url) }
+      return { ...dapp, icon: iconForUrl(dapp.url), description: recentDescriptionCache.get(dapp.url) }
     }))
   }, recentlyViewedDApps.value ?? [])
 
@@ -323,6 +357,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
     removeRecentlyViewed,
     isTrustedMiniAppUrl,
     iconForUrl,
+    ensureBestIcon,
     getMiniAppReportUrl,
     hasDeviceIdConsent,
     grantDeviceIdConsent,

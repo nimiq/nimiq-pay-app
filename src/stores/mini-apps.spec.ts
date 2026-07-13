@@ -31,6 +31,7 @@ vi.mock('@/stores/conn', () => ({
 vi.mock('@/lib/site-metadata', () => ({
   getFaviconUrl: (url: string) => `https://icons.example/${encodeURIComponent(url)}`,
   fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
+  fetchBestIcon: vi.fn(() => Promise.resolve(undefined)),
 }))
 
 describe('useMiniApps.isTrustedMiniAppUrl', () => {

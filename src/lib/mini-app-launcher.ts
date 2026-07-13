@@ -122,6 +122,8 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   openingMiniAppUrl.value = targetUrl
   const toast = useToast()
   const icon = options.icon ?? getFaviconUrl(targetUrl)
+  // Upgrade + cache this site's real icon for opened/searched apps not resolved via the list.
+  void useMiniApps().ensureBestIcon(targetUrl)
   // Loading toast only for deeplinks; modal callers show per-button spinner via `openingMiniAppUrl`.
   const showLoadingToast = options.source === 'deeplink'
   if (showLoadingToast)

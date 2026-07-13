@@ -160,8 +160,9 @@ describe('theHomeFooter', () => {
     expect(icons).toEqual(['r1.png', 'f1.png', 'f2.png'])
   })
 
-  it('falls back to the globe icon when a footer image fails to load', async () => {
+  it('falls back through the Google favicon, then to the globe icon, when a footer image fails to load', async () => {
     const { MINI_APP_FALLBACK_ICON } = await import('@/lib/mini-app-icons')
+    const { getGoogleFaviconUrl } = await import('@/lib/site-metadata')
     const { default: TheHomeFooter } = await import('./TheHomeFooter.vue')
     const wrapper = mount(TheHomeFooter, {
       props: {
@@ -174,9 +175,12 @@ describe('theHomeFooter', () => {
       },
     })
 
+    // The most-recent app (zeta) leads; its icon fails to load first.
     const img = wrapper.find('img')
     await img.trigger('error')
+    expect(img.attributes('src')).toBe(getGoogleFaviconUrl('https://zeta.app'))
 
+    await img.trigger('error')
     expect(img.attributes('src')).toBe(MINI_APP_FALLBACK_ICON)
   })
 

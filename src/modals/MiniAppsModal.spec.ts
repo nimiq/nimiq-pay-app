@@ -147,6 +147,8 @@ vi.mock('@/lib/mini-app-confirmation', () => ({
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription,
   getFaviconUrl,
+  fetchBestIcon: vi.fn(() => Promise.resolve(undefined)),
+  getGoogleFaviconUrl: (url: string) => `https://t2.gstatic.com/faviconV2?url=${encodeURIComponent(url)}`,
 }))
 
 vi.mock('@/lib/analytics', () => ({
@@ -374,13 +376,15 @@ describe('mini apps modal', () => {
     expect(wrapper.find(`[data-testid="dapp-button-${toUrlTestId(demoUrl)}"]`).exists()).toBe(true)
   })
 
-  it('falls back to fallback icon when image loading fails', async () => {
+  it('falls back through the Google favicon, then to the fallback icon, when image loading fails', async () => {
     const wrapper = mountModal()
     await flushPromises()
 
     const uniswapIcon = wrapper.find('[data-testid="dapp-button-https-app-uniswap-org"] img')
     await uniswapIcon.trigger('error')
+    expect((uniswapIcon.element as HTMLImageElement).src).toContain('t2.gstatic.com')
 
+    await uniswapIcon.trigger('error')
     expect((uniswapIcon.element as HTMLImageElement).src).toContain('data:image/svg+xml')
   })
 

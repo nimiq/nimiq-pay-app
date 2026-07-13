@@ -107,6 +107,7 @@ vi.mock('@/lib/mini-app-confirmation', () => ({
 
 vi.mock('@/lib/site-metadata', () => ({
   fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
+  fetchBestIcon: vi.fn(() => Promise.resolve(undefined)),
   getFaviconUrl,
 }))
 

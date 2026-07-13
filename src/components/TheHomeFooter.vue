@@ -9,7 +9,7 @@ import { Modal, useModal } from '@/composables/useModal'
 import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
-import { MINI_APP_FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { applyIconFallback } from '@/lib/mini-app-icons'
 import { useApp } from '@/stores/app'
 import { stripTrailingSlash, useMiniApps } from '@/stores/mini-apps'
 
@@ -25,7 +25,7 @@ const { featuredDApps, nonFeaturedDApps, recentlyViewedDApps } = storeToRefs(min
 
 const topDAppIcons = computed(() => {
   const selectedDApps = new Set<string>()
-  const icons: string[] = []
+  const icons: Array<{ icon: string, url: string }> = []
 
   const appendIcons = (dapps: Array<{ url: string, icon: string }>) => {
     for (const dapp of dapps) {
@@ -40,7 +40,7 @@ const topDAppIcons = computed(() => {
       selectedDApps.add(key)
       // Prefer the curated awesome icon: recently-viewed entries persist whatever icon
       // was supplied at launch (deeplinks fall back to favicon).
-      icons.push(miniApps.iconForUrl(dapp.url) ?? dapp.icon)
+      icons.push({ icon: miniApps.iconForUrl(dapp.url) ?? dapp.icon, url: dapp.url })
     }
   }
 
@@ -51,10 +51,6 @@ const topDAppIcons = computed(() => {
 
   return icons
 })
-
-function onImgError(event: Event) {
-  (event.target as HTMLImageElement).src = MINI_APP_FALLBACK_ICON
-}
 </script>
 
 <template>
@@ -89,13 +85,15 @@ function onImgError(event: Event) {
       >
         <div class="relative h-7 w-16">
           <img
-            v-for="(icon, i) in topDAppIcons"
+            v-for="(item, i) in topDAppIcons"
             :key="i"
-            :src="icon"
+            :src="item.icon"
             class="size-7 aspect-square shrink-0 rounded-full ring-2 ring-gray-100 bg-white object-contain object-center absolute top-0"
             :style="{ zIndex: 3 - i, left: `${i * 14}px` }"
             alt=""
-            @error="onImgError"
+            decoding="async"
+            referrerpolicy="no-referrer"
+            @error="applyIconFallback($event, item.url)"
           >
         </div>
       </button>

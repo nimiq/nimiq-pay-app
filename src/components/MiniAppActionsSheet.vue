@@ -9,7 +9,7 @@ import FlagIcon from '@/components/icons/flag.vue'
 import RemoveIcon from '@/components/icons/remove.vue'
 import ShareIcon from '@/components/icons/share.vue'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
-import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { applyIconFallback, MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
 
 const props = defineProps<{
   open: boolean
@@ -46,10 +46,6 @@ function onReport() {
 function onRemove() {
   emit('remove')
   close()
-}
-
-function onImgError(event: Event) {
-  (event.target as HTMLImageElement).src = FALLBACK_ICON
 }
 
 // Color tokens differ per row; the shared layout classes live on the button in the template.
@@ -93,7 +89,10 @@ watch(() => props.open, (isOpen) => {
               :src="context.app.icon || FALLBACK_ICON"
               :alt="context.app.name"
               class="w-10 h-10 rounded-full object-contain bg-white/10 p-1 shrink-0"
-              @error="onImgError"
+              loading="lazy"
+              decoding="async"
+              referrerpolicy="no-referrer"
+              @error="applyIconFallback($event, context.app.url)"
             >
             <DialogTitle class="text-lg font-semibold text-space truncate">
               {{ context.app.name }}

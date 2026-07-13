@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { MiniAppMenuContext, RowDApp } from '@/stores/mini-apps'
 import { IonSkeletonText } from '@ionic/vue'
+import { useIntersectionObserver } from '@vueuse/core'
 import { motion } from 'motion-v'
+import { ref } from 'vue'
 import HorizontalEllipsisIcon from '@/components/icons/horizontal-ellipsis.vue'
 import LoadingSpinnerIcon from '@/components/icons/loading-spinner.vue'
 import MiniAppTypeBadge from '@/components/MiniAppTypeBadge.vue'
-import { MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { applyIconFallback } from '@/lib/mini-app-icons'
 import { useMiniApps } from '@/stores/mini-apps'
 
 const props = withDefaults(defineProps<{
@@ -43,13 +45,19 @@ function onMenu() {
   })
 }
 
-function onImgError(event: Event) {
-  (event.target as HTMLImageElement).src = FALLBACK_ICON
-}
+// Resolve the site's own best icon only once this row scrolls into view (never eagerly for
+// the whole list). No-op for apps with a curated awesome logo; the store dedupes/caches.
+const rootEl = ref<HTMLElement>()
+const { stop } = useIntersectionObserver(rootEl, ([entry]) => {
+  if (entry?.isIntersecting) {
+    void useMiniApps().ensureBestIcon(props.dapp.url)
+    stop()
+  }
+})
 </script>
 
 <template>
-  <div class="flex items-center gap-3">
+  <div ref="rootEl" class="flex items-center gap-3">
     <component
       :is="tappable ? 'button' : 'div'"
       :type="tappable ? 'button' : undefined"
@@ -66,7 +74,10 @@ function onImgError(event: Event) {
           class="w-14 h-14 rounded-full object-contain bg-white/10 p-1 transition-opacity pointer-events-none"
           :class="{ 'opacity-40': opening }"
           draggable="false"
-          @error="onImgError"
+          loading="lazy"
+          decoding="async"
+          referrerpolicy="no-referrer"
+          @error="applyIconFallback($event, dapp.url)"
         >
         <motion.div
           v-if="opening"
