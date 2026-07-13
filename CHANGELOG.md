@@ -23,7 +23,7 @@ Your most recently used Mini Apps now appear first, each app shows up only once,
 _How to use:_ Find your recent Mini Apps in the row at the bottom of the Home screen.
 
 ### Reliability & polish
-Faster PIN entry, more dependable incoming-payment notifications, a correct app icon on Android notifications, and "Withdraw All" now clears every last bit of NIM. Biometric login is also disabled when no PIN is set, for better security.
+Faster PIN entry, more dependable incoming-payment notifications, a correct app icon on notifications, and "Withdraw All" now clears every last bit of NIM. Biometric login is also disabled when no PIN is set, for better security.
 
 ## 2.17.0 — 2026-07-02
 

@@ -143,6 +143,7 @@ Rules:
 - IGNORE internal-only changes: chores, CI, refactors, dependency bumps, i18n extraction,
   linting, tests, build config, analytics, tracking, and telemetry.
 - NEVER mention analytics, tracking, telemetry, or event logging — not even as a benefit.
+- NEVER mention specific operating systems, app stores, device brands, or third-party platforms. Describe benefits in platform-neutral terms.
 - If nothing user-facing changed, return a single highlight titled "Improvements & bug fixes"
   describing that this release contains under-the-hood stability and performance improvements.
 - Do NOT invent features that are not in the commits.

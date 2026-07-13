@@ -24,7 +24,7 @@
       },
       {
         "title": "Reliability & polish",
-        "description": "Faster PIN entry, more dependable incoming-payment notifications, a correct app icon on Android notifications, and \"Withdraw All\" now clears every last bit of NIM. Biometric login is also disabled when no PIN is set, for better security."
+        "description": "Faster PIN entry, more dependable incoming-payment notifications, a correct app icon on notifications, and \"Withdraw All\" now clears every last bit of NIM. Biometric login is also disabled when no PIN is set, for better security."
       }
     ]
   },
