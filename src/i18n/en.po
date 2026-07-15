@@ -35,7 +35,7 @@ msgstr ""
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
-#: src/components/QRScanner.vue:56
+#: src/components/QRScanner.vue:57
 msgid "Activating scanner"
 msgstr ""
 
@@ -340,7 +340,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:176
 #: src/components/PaymentAmountInput.vue:161
-#: src/views/MainView.vue:91
+#: src/views/MainView.vue:92
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -1404,7 +1404,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:120
+#: src/views/MainView.vue:121
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1583,7 +1583,7 @@ msgid "Sender"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:185
-#: src/views/MainView.vue:108
+#: src/views/MainView.vue:109
 msgid "Server not available"
 msgstr ""
 
@@ -1965,7 +1965,7 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/views/MainView.vue:83
+#: src/views/MainView.vue:84
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
