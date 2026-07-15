@@ -2,6 +2,17 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.18.1 — 2026-07-15
+
+### Better Mini App icons
+Mini App icons now load only when needed and are saved for faster access later, improving privacy and performance.
+
+### Cleaner in-app browsing
+Fixed extra spacing that could appear while viewing content inside Nimiq Pay.
+
+### Clearer wording
+Updated messages throughout the app to use more consistent, platform-neutral language.
+
 ## 2.18.0 — 2026-07-09
 
 ### Enter amounts in crypto or fiat

@@ -1,5 +1,23 @@
 [
   {
+    "version": "2.18.1",
+    "date": "2026-07-15",
+    "highlights": [
+      {
+        "title": "Better Mini App icons",
+        "description": "Mini App icons now load only when needed and are saved for faster access later, improving privacy and performance."
+      },
+      {
+        "title": "Cleaner in-app browsing",
+        "description": "Fixed extra spacing that could appear while viewing content inside Nimiq Pay."
+      },
+      {
+        "title": "Clearer wording",
+        "description": "Updated messages throughout the app to use more consistent, platform-neutral language."
+      }
+    ]
+  },
+  {
     "version": "2.18.0",
     "date": "2026-07-09",
     "highlights": [
