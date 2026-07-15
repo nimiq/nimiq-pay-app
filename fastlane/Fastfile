@@ -72,7 +72,7 @@ platform :ios do
     # Bake mock-data mode into the build so the UI shows deterministic fixtures.
     # Must be a development-mode build (import.meta.env.DEV === true) — mock is dev-gated and can
     # never activate in a production (--prod) build. See src/lib/mock-mode.ts.
-    sh "cd .. && VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync ios"
+    sh "cd .. && NODE_ENV=development VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync ios"
 
     build_app(
       scheme: scheme,
@@ -154,7 +154,7 @@ platform :android do
     # Bake mock-data mode into the build so the UI shows deterministic fixtures.
     # Must be a development-mode build (import.meta.env.DEV === true) — mock is dev-gated and can
     # never activate in a production (--prod) build. See src/lib/mock-mode.ts.
-    sh "cd .. && VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync android"
+    sh "cd .. && NODE_ENV=development VITE_MOCK_DATA=true pnpm exec vite build --mode development && npx cap sync android"
 
     gradle(
       task: "assemble",
@@ -166,12 +166,14 @@ platform :android do
     sh "adb wait-for-device"
     sh "adb install -r #{apk}"
 
-    # Demo-mode status bar: 9:41, full battery/wifi, no notifications
+    # Demo-mode status bar: 13:37, full battery/wifi, no notifications
     sh "adb shell settings put global sysui_demo_allowed 1"
+    sh "adb shell settings put system time_12_24 24"
     sh "adb shell am broadcast -a com.android.systemui.demo -e command enter"
     sh "adb shell am broadcast -a com.android.systemui.demo -e command clock -e hhmm 1337"
     sh "adb shell am broadcast -a com.android.systemui.demo -e command battery -e level 100 -e plugged false"
-    sh "adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e mobile show -e datatype none -e level 4"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command network -e wifi show -e level 4 -e fully true"
+    sh "adb shell am broadcast -a com.android.systemui.demo -e command network -e mobile hide"
     sh "adb shell am broadcast -a com.android.systemui.demo -e command notifications -e visible false"
 
     tmp_dir = "/tmp/nimiq-pay-screens/android"

@@ -11,6 +11,7 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { stepEmits } from '@/lib/flows/steps.types'
 import { isDev } from '@/lib/index'
+import { isMockEnabled } from '@/lib/mock-mode'
 
 const props = defineProps({
   isVisible: { type: Boolean, required: true },
@@ -87,7 +88,7 @@ function handleManualInput() {
 
 <template>
   <div class="mt-8 px-0.5">
-    <div v-if="isDev && expect !== QRDataFormat.NimCashlink" class="flex flex-col items-center mb-6" :class="{ 'absolute z-10  -translate-x-1/2 left-1/2 bottom-0': !isWeb }">
+    <div v-if="isDev && !isMockEnabled && expect !== QRDataFormat.NimCashlink" class="flex flex-col items-center mb-6" :class="{ 'absolute z-10  -translate-x-1/2 left-1/2 bottom-0': !isWeb }">
       <button
         aria-label="Use mockup data"
         class="block w-full text-sm font-normal text-center underline text-space/80"

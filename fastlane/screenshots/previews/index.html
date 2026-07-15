@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nimiq Pay Store Preview Exporter</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><path fill=%22%23f5b400%22 d=%22M16 4h32l16 28-16 28H16L0 32z%22/></svg>">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="toolbar">
+      <div>
+        <h1>Store preview exporter</h1>
+        <p>Five formats, four fixed concepts, saved directly in this project.</p>
+      </div>
+      <div class="toolbar-actions">
+        <p id="batch-status" role="status" aria-live="polite">Loading previews…</p>
+        <button id="export-all" type="button" disabled>Export all PNGs</button>
+      </div>
+    </header>
+    <main id="gallery" aria-label="Store preview formats"></main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

@@ -3,6 +3,7 @@ import { computedAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive } from 'vue'
 import { isDev } from '@/lib'
+import { isMockEnabled } from '@/lib/mock-mode'
 import { fetchBestIcon, fetchPageDescription, getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname, safeOrigin } from '@/lib/url-safety'
 import { kv, kvPreferences } from '@/stores/app'
@@ -135,7 +136,7 @@ export const useMiniApps = defineStore('mini-apps', () => {
   }, [])
 
   const baseDApps = computed<BaseDApp[]>(() => {
-    const devApp: BaseDApp[] = isDev
+    const devApp: BaseDApp[] = isDev && !isMockEnabled
       ? [{
           name: 'Demo App',
           url: `http://${__VITE_SERVER_IP__}:5174/`,

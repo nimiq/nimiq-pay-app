@@ -1,6 +1,10 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const { env } = vi.hoisted(() => ({
+  env: { isDev: false, isMockEnabled: false },
+}))
+
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'ios' },
   CapacitorHttp: {
@@ -17,8 +21,16 @@ vi.mock('@capacitor/preferences', () => ({
 }))
 
 vi.mock('@/lib', () => ({
-  isDev: false,
+  get isDev() {
+    return env.isDev
+  },
   isTestnet: false,
+}))
+
+vi.mock('@/lib/mock-mode', () => ({
+  get isMockEnabled() {
+    return env.isMockEnabled
+  },
 }))
 
 vi.mock('@/stores/conn', () => ({
@@ -36,6 +48,8 @@ vi.mock('@/lib/site-metadata', () => ({
 
 describe('useMiniApps.isTrustedMiniAppUrl', () => {
   beforeEach(() => {
+    env.isDev = false
+    env.isMockEnabled = false
     setActivePinia(createPinia())
     vi.resetModules()
   })
@@ -71,6 +85,26 @@ describe('useMiniApps.isTrustedMiniAppUrl', () => {
     // The 5 oldest entries are evicted; the oldest survivor (added 5th) is still trusted.
     expect(store.isTrustedMiniAppUrl('https://app-5.example/')).toBe(true)
     expect(store.isTrustedMiniAppUrl('https://app-4.example/')).toBe(false)
+  })
+})
+
+describe('useMiniApps development app', () => {
+  beforeEach(() => {
+    env.isDev = true
+    env.isMockEnabled = false
+    setActivePinia(createPinia())
+    vi.resetModules()
+  })
+
+  it('includes the local Demo App during normal development', async () => {
+    const { useMiniApps } = await import('./mini-apps')
+    expect(useMiniApps().allDApps.map(({ name }) => name)).toContain('Demo App')
+  })
+
+  it('hides the local Demo App from screenshot mock mode', async () => {
+    env.isMockEnabled = true
+    const { useMiniApps } = await import('./mini-apps')
+    expect(useMiniApps().allDApps.map(({ name }) => name)).not.toContain('Demo App')
   })
 })
 

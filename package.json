@@ -17,6 +17,7 @@
     "build:android": "dotenv bundle exec fastlane android beta",
     "screenshots:ios": "dotenv bundle exec fastlane ios screenshots",
     "screenshots:android": "dotenv bundle exec fastlane android screenshots",
+    "screenshots:previews": "node scripts/store-preview-server.mjs --open",
     "build:web3-provider": "pnpm --dir web3-provider install && pnpm --dir web3-provider build",
     "release": "pnpm i18n:sync && ionic cap build --prod",
     "release:beta": "pnpm i18n:sync && dotenv release-it",
