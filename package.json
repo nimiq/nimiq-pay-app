@@ -28,7 +28,7 @@
     "copy:nimiq": "/bin/bash -c 'cp -r ${PWD}/node_modules/@nimiq/core/{launcher,lib,web} ${PWD}/public/nimiq/'",
     "postinstall": "pnpm copy:nimiq && pnpm build:web3-provider",
     "typecheck": "vue-tsc --noEmit",
-    "test:e2e": "cypress run",
+    "test:e2e": "pnpm test:maestro",
     "test:maestro": "maestro test nimiq-pay-tests/run_all.yaml",
     "test:maestro:all": "maestro test nimiq-pay-tests/flows/",
     "test:unit": "vitest",
