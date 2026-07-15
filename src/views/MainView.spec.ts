@@ -322,6 +322,13 @@ describe('mainView', () => {
     libState.isTestnet = false
   })
 
+  it('does not update the NAKA user from the retired issuer API on mount', async () => {
+    await mountComponent()
+    await flushPromises()
+
+    expect(updateNakaUser).not.toHaveBeenCalled()
+  })
+
   it('does not show the NIM consensus banner when USDT is the active asset', async () => {
     activeAsset.value = Asset.USDT
     polygonConsensus.value = 'connecting'

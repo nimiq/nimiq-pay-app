@@ -55,6 +55,8 @@ interface ApiTokenPayload {
 
 let _token: Token | null = null
 
+// Kept for restoring the disabled issuer request below.
+// eslint-disable-next-line unused-imports/no-unused-vars
 async function getToken() {
   if (_token) {
     // If token is valid for at least 1 more minute, use it
@@ -127,6 +129,8 @@ async function getToken() {
   }
 }
 
+// Kept for restoring the disabled issuer request below.
+// eslint-disable-next-line unused-imports/no-unused-vars
 interface ErrorResponse {
   message: string
   error: string
@@ -135,6 +139,11 @@ interface ErrorResponse {
 
 export function useIssuerRestApi() {
   async function api<T extends BaseSchema<unknown, unknown, BaseIssue<unknown>>>(path: string, method: 'GET' | 'POST', body: string, responseSchema: T): Promise<InferOutput<T>> {
+    void body
+    void responseSchema
+    throw new Error(`Issuer API disabled: ${method} ${path}`)
+
+    /* NAKA disabled: issuer server retired. Keep request implementation for restoration.
     const res = await fetch(`${ISSUER_SERVER_REST_ORIGIN}${path}`, {
       method,
       headers: {
@@ -172,6 +181,7 @@ export function useIssuerRestApi() {
       return parse(responseSchema, await res.text())
     }
     return parse(responseSchema, await res.json())
+    */
   }
 
   async function getUserStatus(): Promise<UserStatusResponse> {
