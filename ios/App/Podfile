@@ -28,7 +28,7 @@ def capacitor_pods
   pod 'CapacitorToast', :path => '../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast'
   pod 'CapawesomeCapacitorPosthog', :path => '../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.5.0_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog'
   pod 'CapgoCameraPreview', :path => '../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview'
-  pod 'CapgoCapacitorInappbrowser', :path => '../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.8.0_patch_hash=88bef105a0b04db4dbdf24b5ff58c8b9376405af_e056f078d35fdf1272706b7dfa03ee5c/node_modules/@capgo/capacitor-inappbrowser'
+  pod 'CapgoCapacitorInappbrowser', :path => '../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.10.7_patch_hash=88bef105a0b04db4dbdf24b5ff58c8b9376405a_8dfa1c3bd61dfa1df9890bafe1a1a9c3/node_modules/@capgo/capacitor-inappbrowser'
   pod 'RdlaboCapacitorScreenshotEvent', :path => '../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event'
   pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.15_@capacitor+core@8.3.4/node_modules/capacitor-extended-dialog'
   pod 'CapacitorLockdownMode', :path => '../../node_modules/.pnpm/capacitor-lockdown-mode@0.0.1_@capacitor+core@8.3.4/node_modules/capacitor-lockdown-mode'
