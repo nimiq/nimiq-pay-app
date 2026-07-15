@@ -15,14 +15,16 @@
 // Idempotent: if src/data/changelog.json already has an entry for `version`, the AI
 // is NOT called again (manual edits are preserved) unless --force is passed.
 //
-// AI backend: interactively pick `claude` or `codex` when both are installed and running
-// in a TTY; otherwise (CI, --print-latest, or only one installed) `claude` is preferred.
+// AI backend: `release:beta` asks before release-it starts and passes the choice here.
+// Direct interactive runs ask when both CLIs are installed; other runs prefer `claude`.
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import process from 'node:process'
 import { createInterface } from 'node:readline'
 import { fileURLToPath } from 'node:url'
+import { detectAvailable, selectAi } from './changelog-ai.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHANGELOG_JSON = join(ROOT, 'src/data/changelog.json')
@@ -99,33 +101,17 @@ function loadEntries() {
   }
 }
 
-function detectAvailable() {
-  const has = (cmd) => {
-    try {
-      execFileSync('which', [cmd], { stdio: 'ignore' })
-      return true
-    }
-    catch {
-      return false
-    }
-  }
-  const backends = []
-  if (has('claude'))
-    backends.push({ cmd: 'claude', args: ['-p'] })
-  if (has('codex'))
-    backends.push({ cmd: 'codex', args: ['exec', '-'] })
-  return backends
-}
-
 async function chooseAi() {
   const available = detectAvailable()
   if (available.length === 0)
     throw new Error('Neither `claude` nor `codex` CLI is available. Install one or edit src/data/changelog.json manually.')
+  if (process.env.CHANGELOG_AI)
+    return selectAi(available, process.env.CHANGELOG_AI)
   // Non-interactive (CI / --print-latest) or only one installed: prefer claude.
   if (available.length === 1 || printLatest || !process.stdin.isTTY)
     return available[0]
   const answer = (await ask('\n🤖 Which AI CLI should write the changelog? [claude/codex] (default: claude): ')).toLowerCase()
-  return available.find(a => a.cmd === answer) || available[0]
+  return answer ? selectAi(available, answer) : available[0]
 }
 
 function buildPrompt(version, commitLog) {

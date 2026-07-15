@@ -20,7 +20,7 @@
     "screenshots:previews": "node scripts/store-preview-server.mjs --open",
     "build:web3-provider": "pnpm --dir web3-provider install && pnpm --dir web3-provider build",
     "release": "pnpm i18n:sync && ionic cap build --prod",
-    "release:beta": "pnpm i18n:sync && dotenv release-it",
+    "release:beta": "pnpm i18n:sync && node scripts/release-beta.mjs",
     "changelog": "node scripts/generate-changelog.mjs",
     "release:browserstack": "dotenv node scripts/browserstack-upload.js",
     "release:bs": "pnpm release:browserstack",
