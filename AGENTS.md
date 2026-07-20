@@ -51,6 +51,10 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Data & schema
 
+### Transaction messages
+
+Transaction messages are limited to 64 bytes: up to 64 ASCII characters, or fewer multibyte Unicode characters
+
 ### SQLite migrations — additive only
 
 Never modify an existing `CREATE TABLE` query in `src/lib/sql-queries.ts` (or anywhere else) to add/remove/rename columns. Existing users already ran the original `CREATE TABLE` in an earlier migration, so editing it only changes the schema for fresh installs and produces a divergent state that breaks subsequent `ALTER` migrations (e.g. "duplicate column name" on fresh installs because the column is added twice — once in the edited CREATE, once in the ALTER).

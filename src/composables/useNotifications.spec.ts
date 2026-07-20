@@ -19,7 +19,7 @@ const state = vi.hoisted(() => ({
   initializeFlow: vi.fn(),
   waitForUnlock: vi.fn(async () => undefined),
   transactions: [] as Array<{ hash: string }>,
-  formatUsdtAmount: vi.fn((amount: number) => `${amount} USDT`),
+  formatUsdtAmount: vi.fn((_amount: number) => '5.00 USDT'),
   usePriceFormatted: vi.fn(() => '123.456 NIM'),
 }))
 
@@ -211,60 +211,58 @@ describe('useNotifications — local notifications', () => {
       expect(state.schedule).toHaveBeenCalledTimes(1)
       const arg = state.schedule.mock.calls[0]![0]
       expect(arg.notifications[0]).toMatchObject({
-        title: 'Payment received',
+        title: 'You received {amount}::{"amount":"123.456 NIM"}',
+        body: '',
         extra: { hash: 'test-hash' },
         channelId: 'incoming-payments',
       })
-      expect(arg.notifications[0].body).toContain('You received {amount}')
       expect(typeof arg.notifications[0].id).toBe('number')
     })
 
-    it.each([undefined, '', '   '])('keeps the existing body without a meaningful memo (%s)', async (message) => {
+    it.each([undefined, '', '   '])('leaves the body empty without a meaningful memo (%s)', async (message) => {
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
       const notification = state.schedule.mock.calls[0]![0].notifications[0]
-      expect(notification.body).toBe('You received {amount}::{"amount":"123.456 NIM"}')
+      expect(notification.title).toBe('You received {amount}::{"amount":"123.456 NIM"}')
+      expect(notification.body).toBe('')
       expect(notification).not.toHaveProperty('largeBody')
     })
 
-    it('appends a short memo to the body without largeBody', async () => {
+    it('uses a short memo as the body without largeBody', async () => {
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message: 'NimJump prize' }))
       const notification = state.schedule.mock.calls[0]![0].notifications[0]
-      expect(notification.body).toBe('You received {amount}::{"amount":"123.456 NIM"}\nNimJump prize')
+      expect(notification.title).toBe('You received {amount}::{"amount":"123.456 NIM"}')
+      expect(notification.body).toBe('NimJump prize')
       expect(notification).not.toHaveProperty('largeBody')
     })
 
-    it('keeps a 100-character memo in the body without largeBody', async () => {
-      const message = 'a'.repeat(100)
+    it('keeps the maximum 64-byte ASCII memo in the body without largeBody', async () => {
+      const message = 'a'.repeat(64)
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
       const notification = state.schedule.mock.calls[0]![0].notifications[0]
-      expect(notification.body).toBe(`You received {amount}::{"amount":"123.456 NIM"}\n${message}`)
+      expect(notification.body).toBe(message)
       expect(notification).not.toHaveProperty('largeBody')
     })
 
-    it('adds largeBody for a memo longer than 100 characters', async () => {
+    it('never adds largeBody', async () => {
       const message = 'a'.repeat(101)
-      const expectedBody = `You received {amount}::{"amount":"123.456 NIM"}\n${message}`
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
-      expect(state.schedule.mock.calls[0]![0].notifications[0]).toMatchObject({
-        body: expectedBody,
-        largeBody: expectedBody,
-      })
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe(message)
+      expect(notification).not.toHaveProperty('largeBody')
     })
 
-    it('uses the same long-memo payload on iOS', async () => {
+    it('uses the same maximum-length memo payload on iOS', async () => {
       state.isAndroid = false
-      const message = 'a'.repeat(101)
-      const expectedBody = `You received {amount}::{"amount":"123.456 NIM"}\n${message}`
+      const message = 'a'.repeat(64)
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
-      expect(state.schedule.mock.calls[0]![0].notifications[0]).toMatchObject({
-        body: expectedBody,
-        largeBody: expectedBody,
-      })
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe(message)
+      expect(notification).not.toHaveProperty('largeBody')
     })
 
     it('ensures the high-importance payments channel exists before scheduling on Android', async () => {
@@ -300,6 +298,7 @@ describe('useNotifications — local notifications', () => {
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ asset: 'USDT', amount: 5_000_000 }))
       expect(state.formatUsdtAmount).toHaveBeenCalledWith(5_000_000)
       expect(state.usePriceFormatted).not.toHaveBeenCalled()
+      expect(state.schedule.mock.calls[0]![0].notifications[0].title).toBe('You received {amount}::{"amount":"5.00 USDT"}')
     })
 
     it('formats NIM amount via usePrice', async () => {
@@ -307,6 +306,7 @@ describe('useNotifications — local notifications', () => {
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ asset: 'NIM', amount: 12345 }))
       expect(state.usePriceFormatted).toHaveBeenCalledTimes(1)
       expect(state.formatUsdtAmount).not.toHaveBeenCalled()
+      expect(state.schedule.mock.calls[0]![0].notifications[0].title).toBe('You received {amount}::{"amount":"123.456 NIM"}')
     })
 
     it('produces a deterministic id for the same hash', async () => {
