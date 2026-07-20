@@ -124,7 +124,7 @@ vi.mock('@/stores/transactions', () => ({
   }),
 }))
 
-function makeReceipt(overrides?: Partial<{ hash: string, amount: number, asset: string, timestamp: number }>) {
+function makeReceipt(overrides?: Partial<{ hash: string, amount: number, asset: string, timestamp: number, message: string }>) {
   return {
     hash: 'test-hash',
     amount: 12345,
@@ -217,6 +217,54 @@ describe('useNotifications — local notifications', () => {
       })
       expect(arg.notifications[0].body).toContain('You received {amount}')
       expect(typeof arg.notifications[0].id).toBe('number')
+    })
+
+    it.each([undefined, '', '   '])('keeps the existing body without a meaningful memo (%s)', async (message) => {
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe('You received {amount}::{"amount":"123.456 NIM"}')
+      expect(notification).not.toHaveProperty('largeBody')
+    })
+
+    it('appends a short memo to the body without largeBody', async () => {
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message: 'NimJump prize' }))
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe('You received {amount}::{"amount":"123.456 NIM"}\nNimJump prize')
+      expect(notification).not.toHaveProperty('largeBody')
+    })
+
+    it('keeps a 100-character memo in the body without largeBody', async () => {
+      const message = 'a'.repeat(100)
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe(`You received {amount}::{"amount":"123.456 NIM"}\n${message}`)
+      expect(notification).not.toHaveProperty('largeBody')
+    })
+
+    it('adds largeBody for a memo longer than 100 characters', async () => {
+      const message = 'a'.repeat(101)
+      const expectedBody = `You received {amount}::{"amount":"123.456 NIM"}\n${message}`
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
+      expect(state.schedule.mock.calls[0]![0].notifications[0]).toMatchObject({
+        body: expectedBody,
+        largeBody: expectedBody,
+      })
+    })
+
+    it('uses the same long-memo payload on iOS', async () => {
+      state.isAndroid = false
+      const message = 'a'.repeat(101)
+      const expectedBody = `You received {amount}::{"amount":"123.456 NIM"}\n${message}`
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ message }))
+      expect(state.schedule.mock.calls[0]![0].notifications[0]).toMatchObject({
+        body: expectedBody,
+        largeBody: expectedBody,
+      })
     })
 
     it('ensures the high-importance payments channel exists before scheduling on Android', async () => {

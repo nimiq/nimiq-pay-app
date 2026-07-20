@@ -350,6 +350,8 @@ export function useNotifications() {
     const formatted = tx.asset === Asset.USDT
       ? formatUsdtAmount(tx.amount)
       : usePrice(tx.amount).crypto.formatted
+    const memo = tx.message?.trim()
+    const body = `${i18n.t('You received {amount}', { amount: formatted })}${memo ? `\n${tx.message}` : ''}`
 
     try {
       await ensurePaymentsChannel()
@@ -357,7 +359,8 @@ export function useNotifications() {
         notifications: [{
           id: hashToInt32(tx.hash),
           title: i18n.t('Payment received'),
-          body: i18n.t('You received {amount}', { amount: formatted }),
+          body,
+          ...(memo && memo.length > 100 ? { largeBody: body } : {}),
           extra: { hash: tx.hash },
           channelId: PAYMENTS_CHANNEL_ID,
         }],
