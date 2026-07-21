@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 
-#: src/stores/local-wallet.ts:49
+#: src/stores/local-wallet.ts:50
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
 
@@ -112,7 +112,7 @@ msgstr ""
 msgid "Amount too small"
 msgstr ""
 
-#: src/stores/local-wallet.ts:44
+#: src/stores/local-wallet.ts:45
 msgid "An unknown error occurred while importing words"
 msgstr ""
 
@@ -664,6 +664,7 @@ msgstr ""
 
 #: src/components/naka/NakaOnboardingWhatIsNaka.vue:7
 #: src/components/OnBoardingScreen.vue:23
+#: src/components/TheHomeAmounts.vue:63
 msgid "Got it"
 msgstr ""
 
@@ -872,7 +873,7 @@ msgstr ""
 msgid "Invalid QR code"
 msgstr ""
 
-#: src/stores/local-wallet.ts:55
+#: src/stores/local-wallet.ts:56
 msgid "Invalid recovery words"
 msgstr ""
 
@@ -1072,9 +1073,9 @@ msgstr ""
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
-#: src/stores/local-wallet.ts:29
-#: src/stores/local-wallet.ts:80
-#: src/stores/local-wallet.ts:89
+#: src/stores/local-wallet.ts:30
+#: src/stores/local-wallet.ts:81
+#: src/stores/local-wallet.ts:90
 #: src/stores/polygon-usdt.ts:1673
 #: src/stores/polygon-usdt.ts:1755
 msgid "No account has been found"
@@ -1242,10 +1243,6 @@ msgstr ""
 msgid "Payment preview"
 msgstr ""
 
-#: src/composables/useNotifications.ts:359
-msgid "Payment received"
-msgstr ""
-
 #: src/lib/issuer-websocket.ts:75
 msgid "Payment rejected due to unknown reason"
 msgstr ""
@@ -1276,7 +1273,7 @@ msgstr ""
 msgid "Payments"
 msgstr ""
 
-#: src/components/TheHomeAmounts.vue:39
+#: src/components/TheHomeAmounts.vue:40
 msgid "pending"
 msgstr ""
 
@@ -1728,6 +1725,10 @@ msgstr ""
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
+#: src/components/TheHomeAmounts.vue:54
+msgid "Tap your pending NIM to add it to your available balance."
+msgstr ""
+
 #: src/components/naka/NakaCardManagement.vue:89
 #: src/components/naka/NakaOnboardingVerifyId.vue:10
 msgid "Terms & Conditions"
@@ -2128,7 +2129,7 @@ msgstr ""
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/stores/local-wallet.ts:52
+#: src/stores/local-wallet.ts:53
 msgid "Wrong number of recovery words"
 msgstr ""
 
@@ -2186,7 +2187,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:360
+#: src/composables/useNotifications.ts:361
 msgid "You received {amount}"
 msgstr ""
 

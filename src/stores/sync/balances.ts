@@ -19,7 +19,7 @@ function isHtlcExtensionTx(tx: PlainTransactionDetails) {
 export const useSyncBalances = defineStore('sync-balances', () => {
   const { getAllOutgoingTransactionsFromHtlcs, getBalance } = useNimiqNetwork()
   const { client, height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
-  const { localAddress, localBalance } = storeToRefs(useLocalWallet())
+  const { localAddress, localBalance, pendingNimSince } = storeToRefs(useLocalWallet())
   const { isSendingTx } = storeToRefs(useLocks())
   const { remoteBalance, remoteAddress, remotePublicKey, remoteSigner } = storeToRefs(useRemoteSigner())
   const { getAllRemoteSigners, blockHeightToTimestamp } = useRemoteSigner()
@@ -64,8 +64,14 @@ export const useSyncBalances = defineStore('sync-balances', () => {
       const { data, error } = await getBalance(localAddress.value)
       if (error)
         logger.error('Error while getting local balance', error)
-      if (!error || error === NO_ACCOUNT_ERROR)
-        localBalance.value = data
+      if (!error || error === NO_ACCOUNT_ERROR) {
+        const updatedLocalBalance = data ?? 0
+        if (updatedLocalBalance === 0)
+          pendingNimSince.value = 0
+        else if (pendingNimSince.value === 0)
+          pendingNimSince.value = Date.now()
+        localBalance.value = updatedLocalBalance
+      }
     }
     else {
       logger.log('Local address not found')

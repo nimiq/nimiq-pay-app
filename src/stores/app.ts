@@ -139,6 +139,7 @@ export const useApp = defineStore('app', () => {
   const showHiddenTransactions = useStorageAsync('showHiddenTransactions', false, kvPreferences(), sharedOptions)
   const decimalsAmount = useStorageAsync('decimalsAmount', 0, kv(), sharedOptions)
   const htlcThreshold = useStorageAsync('htlcThreshold', DEFAULT_HTLC_THRESHOLD_LUNA, kv(), sharedOptions)
+  const hasDismissedPendingNimHint = useStorageAsync('hasDismissedPendingNimHint', false, kv(), sharedOptions)
   const reopenMiniAppWebviewAfterResume = useStorageAsync('reopenMiniAppWebviewAfterResume', true, kvPreferences(), sharedOptions)
   // Last app version whose changelog the user has seen. Pre-login storage so the
   // "What's New" card/modal state survives across logins (see useChangelog).
@@ -301,6 +302,7 @@ export const useApp = defineStore('app', () => {
     showHiddenTransactions,
     decimalsAmount,
     htlcThreshold,
+    hasDismissedPendingNimHint,
     reopenMiniAppWebviewAfterResume,
     lastSeenChangelogVersion,
     changelogCardVersion,

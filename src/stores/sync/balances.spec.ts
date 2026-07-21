@@ -55,6 +55,31 @@ describe('useSyncBalances', () => {
     expect(state.localBalance).toBe(50_000)
   })
 
+  it('starts the pending NIM clock when a non-zero balance is first observed', async () => {
+    const now = 123_456
+    const dateNow = vi.spyOn(Date, 'now').mockReturnValue(now)
+    state.localBalance = 50_000
+    state.pendingNimSince = 0
+    state.getBalance.mockResolvedValueOnce({ data: 50_000, error: undefined })
+
+    const { useSyncBalances } = await import('./balances')
+    await useSyncBalances().updateBalances()
+
+    expect(state.pendingNimSince).toBe(now)
+    dateNow.mockRestore()
+  })
+
+  it('preserves the pending NIM clock while the balance stays non-zero', async () => {
+    state.localBalance = 50_000
+    state.pendingNimSince = 123_456
+    state.getBalance.mockResolvedValueOnce({ data: 75_000, error: undefined })
+
+    const { useSyncBalances } = await import('./balances')
+    await useSyncBalances().updateBalances()
+
+    expect(state.pendingNimSince).toBe(123_456)
+  })
+
   it('keeps the previous local balance when local balance lookup fails', async () => {
     state.localBalance = 42_000
     state.remoteAddress = undefined
@@ -67,11 +92,13 @@ describe('useSyncBalances', () => {
 
   it('zeroes localBalance on NO_ACCOUNT_ERROR', async () => {
     state.localBalance = 42_000
+    state.pendingNimSince = 123_456
     state.remoteAddress = undefined
     state.getBalance.mockResolvedValue({ data: 0, error: 'No account found' })
     const { useSyncBalances } = await import('./balances')
     await useSyncBalances().updateBalances()
     expect(state.localBalance).toBe(0)
+    expect(state.pendingNimSince).toBe(0)
   })
 
   it('keeps the previous remote balance when remote balance lookup fails', async () => {

@@ -35,6 +35,7 @@ const state = vi.hoisted(() => {
   return {
     localAddress: createAddress('NQ00 TEST LOCAL ADDRESS'),
     localBalance: 0,
+    pendingNimSince: 0,
     hasLocalWallet: true,
     remoteAddress: createAddress('NQ11 TEST REMOTE ADDRESS'),
     remoteBalance: 0,
@@ -161,6 +162,10 @@ vi.mock('@/stores/local-wallet', () => {
     localBalance: computed({
       get: () => state.localBalance,
       set: value => state.localBalance = value,
+    }),
+    pendingNimSince: computed({
+      get: () => state.pendingNimSince,
+      set: value => state.pendingNimSince = value,
     }),
     localWallet: computed(() => ({ privateKey: {}, publicKey: {} })),
     hasLocalWallet: computed(() => state.hasLocalWallet),
@@ -317,6 +322,7 @@ describe('useSync remote signer reconciliation', () => {
 
     state.localAddress = createAddress('NQ00 TEST LOCAL ADDRESS')
     state.localBalance = 0
+    state.pendingNimSince = 0
     state.hasLocalWallet = true
     state.remoteAddress = createAddress('NQ11 TEST REMOTE ADDRESS')
     state.remoteBalance = 0

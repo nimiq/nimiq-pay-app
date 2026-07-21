@@ -23,6 +23,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
   // Persisted so the home screen's "pending" amount shows instantly on cold start, before the
   // network balance fetch completes. Hydrated from the per-account DB cache (cleared on logout).
   const localBalance = useStorageAsync('localBalance', 0, kv(), { writeDefaults: false })
+  const pendingNimSince = useStorageAsync('pendingNimSince', 0, kv(), { writeDefaults: false })
 
   function getWords(): Result<string[], string> {
     if (!entropy.value) {
@@ -98,6 +99,7 @@ export const useLocalWallet = defineStore('local-wallet', () => {
     localAddress,
     publicKey,
     localBalance,
+    pendingNimSince,
     getWords,
     importWords,
     getEthAddress,

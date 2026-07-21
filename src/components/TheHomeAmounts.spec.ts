@@ -1,6 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, reactive, ref } from 'vue'
 import { Asset } from '@/lib/assets'
 
@@ -15,6 +15,9 @@ const showAnimations = ref(false)
 const isProcessingRemote = ref(false)
 const activeAsset = ref<Asset>(Asset.NIM)
 const localBalance = ref(0)
+const pendingNimSince = ref(0)
+const hasDismissedPendingNimHint = ref(false)
+const handleFunds = vi.fn()
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
@@ -35,6 +38,7 @@ vi.mock('@/stores/polygon-usdt', () => ({
 vi.mock('@/stores/sync', () => ({
   useSync: () => ({
     isTransactionPending,
+    handleFunds,
   }),
 }))
 
@@ -46,6 +50,7 @@ vi.mock('@/stores/app', () => ({
   useApp: () => ({
     showAnimations,
     activeAsset,
+    hasDismissedPendingNimHint,
   }),
 }))
 
@@ -58,8 +63,35 @@ vi.mock('@/stores/locks', () => ({
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => ({
     localBalance,
+    pendingNimSince,
   }),
 }))
+
+vi.mock('reka-ui', () => {
+  const passthrough = defineComponent({
+    template: '<div><slot /></div>',
+  })
+  const PopoverRoot = defineComponent({
+    name: 'PopoverRoot',
+    props: {
+      open: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    emits: ['update:open'],
+    template: '<div data-testid="pending-nim-popover-root" :data-open="String(open)"><slot /></div>',
+  })
+
+  return {
+    PopoverAnchor: passthrough,
+    PopoverArrow: passthrough,
+    PopoverClose: passthrough,
+    PopoverContent: passthrough,
+    PopoverPortal: passthrough,
+    PopoverRoot,
+  }
+})
 
 vi.mock('@/components/icons/top-up.vue', () => ({
   default: defineComponent({
@@ -141,6 +173,13 @@ describe('theHomeAmounts', () => {
     isProcessingRemote.value = false
     activeAsset.value = Asset.NIM
     localBalance.value = 0
+    pendingNimSince.value = 0
+    hasDismissedPendingNimHint.value = false
+    handleFunds.mockReset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('shows the skeleton while the home balance state is still loading', async () => {
@@ -282,6 +321,108 @@ describe('theHomeAmounts', () => {
     expect(wrapper.find('[data-testid="fiat-amount"]').text()).toBe('25')
   })
 
+  it('opens the pending NIM hint after 48 continuous hours', async () => {
+    const twoDays = 2 * 24 * 60 * 60 * 1000
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
+
+    await vi.advanceTimersByTimeAsync(twoDays - 1)
+
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
+
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('true')
+  })
+
+  it('opens the pending NIM hint immediately when it is already 48 hours old', async () => {
+    const twoDays = 2 * 24 * 60 * 60 * 1000
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now - twoDays
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('true')
+  })
+
+  it('keeps the pending NIM hint hidden after permanent dismissal', async () => {
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now - 2 * 24 * 60 * 60 * 1000
+    hasDismissedPendingNimHint.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
+  })
+
+  it('permanently dismisses the pending NIM hint from its close action', async () => {
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now - 2 * 24 * 60 * 60 * 1000
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    await wrapper.get('[data-testid="pending-nim-hint-dismiss"]').trigger('click')
+
+    expect(hasDismissedPendingNimHint.value).toBe(true)
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
+  })
+
+  it('permanently dismisses the pending NIM hint when Reka closes it', async () => {
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now - 2 * 24 * 60 * 60 * 1000
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    wrapper.getComponent({ name: 'PopoverRoot' }).vm.$emit('update:open', false)
+    await flushPromises()
+
+    expect(hasDismissedPendingNimHint.value).toBe(true)
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
+  })
+
+  it('dismisses the hint and secures pending NIM when the pending amount is tapped', async () => {
+    const now = 1_000_000_000
+    vi.useFakeTimers()
+    vi.setSystemTime(now)
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    pendingNimSince.value = now - 2 * 24 * 60 * 60 * 1000
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    await wrapper.get('[data-tour="pending-topup"]').trigger('click')
+
+    expect(handleFunds).toHaveBeenCalledWith(true)
+    expect(hasDismissedPendingNimHint.value).toBe(true)
+  })
+
   it('hides the pending top-up line for USDT even when localBalance is set', async () => {
     activeAsset.value = Asset.USDT
     usdtBalance.value = 99
@@ -292,6 +433,7 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
   })
 
   it('hides the pending top-up line when localBalance is 0', async () => {
@@ -303,6 +445,7 @@ describe('theHomeAmounts', () => {
     await flushPromises()
 
     expect(wrapper.find('[data-testid="top-up-icon"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="pending-nim-popover-root"]').attributes('data-open')).toBe('false')
   })
 
   it('shows the skeleton (no pending line) while loading with no local funds', async () => {

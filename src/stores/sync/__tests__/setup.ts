@@ -52,6 +52,7 @@ function makeState() {
   return {
     localAddress: createAddress('NQ00 TEST LOCAL ADDRESS') as any,
     localBalance: 0,
+    pendingNimSince: 0,
     hasLocalWallet: true,
     remoteAddress: createAddress('NQ11 TEST REMOTE ADDRESS') as any,
     remoteBalance: 0,
@@ -172,6 +173,7 @@ export function stubNimiqGlobal() {
 export function resetSyncState() {
   state.localAddress = createAddress('NQ00 TEST LOCAL ADDRESS')
   state.localBalance = 0
+  state.pendingNimSince = 0
   state.hasLocalWallet = true
   state.remoteAddress = createAddress('NQ11 TEST REMOTE ADDRESS')
   state.remoteBalance = 0
@@ -355,6 +357,10 @@ vi.mock('@/stores/local-wallet', () => {
     localBalance: computed({
       get: () => state.localBalance,
       set: value => state.localBalance = value,
+    }),
+    pendingNimSince: computed({
+      get: () => state.pendingNimSince,
+      set: value => state.pendingNimSince = value,
     }),
     localWallet: computed(() => ({ privateKey: {}, publicKey: {} })),
     hasLocalWallet: computed(() => state.hasLocalWallet),
