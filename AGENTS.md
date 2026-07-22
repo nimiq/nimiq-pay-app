@@ -43,6 +43,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Testing
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
+- Don't run test all the time. Run tests only when you are about to commit or when you are debugging a test failure. Don't run tests after every change, it slows down development and is unnecessary.
 
 ## Nimiq client & sync
 
