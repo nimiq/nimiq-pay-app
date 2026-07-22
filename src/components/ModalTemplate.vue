@@ -8,6 +8,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  scrollY: {
+    type: Boolean,
+    default: true,
+  },
   onClosing: {
     type: Function,
     default: () => {},
@@ -36,7 +40,7 @@ function handleClose() {
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <IonContent class="text-center" style="--padding-top: 16px; --padding-bottom: 16px;">
+  <IonContent :scroll-y="props.scrollY" class="text-center" style="--padding-top: 16px; --padding-bottom: 16px;">
     <IonGrid class="flex flex-col h-full gap-4 mx-6">
       <IonRow v-if="$slots.title" class="ion-justify-content-center">
         <h1 class="text-2xl font-bold text-balance">

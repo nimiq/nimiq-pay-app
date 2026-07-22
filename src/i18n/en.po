@@ -6,8 +6,21 @@ msgstr ""
 msgid "\"{word}\" is an invalid recovery word"
 msgstr ""
 
+#: src/components/competition/CompetitionSpotlight.vue:32
+msgid "{count} entries"
+msgstr ""
+
 #: src/modals/ReferralModal.vue:22
 msgid "{count} of {total} remaining."
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:12
+#: src/components/competition/CompetitionAppPoster.vue:15
+msgid "{name} preview"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:71
+msgid "{name} screenshot {number}"
 msgstr ""
 
 #: src/components/NimAddressInput.vue:25
@@ -128,6 +141,14 @@ msgstr ""
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:57
+msgid "App previews"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:61
+msgid "App screenshots"
+msgstr ""
+
 #: src/modals/MenuModal.vue:59
 msgid "App Settings"
 msgstr ""
@@ -201,6 +222,10 @@ msgstr ""
 
 #: src/composables/useDecrypt.ts:36
 msgid "Both expected and the given PIN are empty"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:84
+msgid "Builder"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:223
@@ -282,6 +307,14 @@ msgstr ""
 msgid "Check"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:87
+msgid "Check back when the next entries arrive."
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:16
+msgid "Check your connection and try again."
+msgstr ""
+
 #: src/lib/flows/steps.ts:96
 msgid "Choose a PIN"
 msgstr ""
@@ -297,6 +330,14 @@ msgstr ""
 #: src/modals/ChangelogModal.vue:5
 #: src/modals/MiniAppWarningModal.vue:5
 msgid "Close"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:46
+msgid "Competition cycles"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:13
+msgid "Competition entries could not be loaded"
 msgstr ""
 
 #: src/components/TaskCard.vue:10
@@ -412,6 +453,12 @@ msgstr ""
 
 #: src/modals/SettingsModal.vue:26
 msgid "Currency"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:34
+#: src/components/competition/CompetitionSpotlight.vue:26
+#: src/components/competition/MiniAppsCompetitionView.vue:57
+msgid "Cycle {number}"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:28
@@ -579,6 +626,10 @@ msgstr ""
 msgid "Expiring Points"
 msgstr ""
 
+#: src/components/competition/CompetitionSpotlight.vue:35
+msgid "Explore entries"
+msgstr ""
+
 #: src/components/naka/NakaCard.vue:66
 msgid "Failed to activate NAKA Card on device: {error}"
 msgstr ""
@@ -664,7 +715,7 @@ msgstr ""
 
 #: src/components/naka/NakaOnboardingWhatIsNaka.vue:7
 #: src/components/OnBoardingScreen.vue:23
-#: src/components/TheHomeAmounts.vue:63
+#: src/components/TheHomeAmounts.vue:64
 msgid "Got it"
 msgstr ""
 
@@ -1000,12 +1051,21 @@ msgstr ""
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:40
+msgid "Meet the builders creating new experiences for Nimiq Pay."
+msgstr ""
+
 #: src/components/TransactionDetails.vue:87
 msgid "Message"
 msgstr ""
 
 #: src/modals/MenuModal.vue:54
 msgid "Mini Apps"
+msgstr ""
+
+#: src/components/competition/CompetitionSpotlight.vue:29
+#: src/components/competition/MiniAppsCompetitionView.vue:37
+msgid "Mini Apps Competition"
 msgstr ""
 
 #: src/modals/SettingsModal.vue:37
@@ -1097,6 +1157,10 @@ msgstr ""
 msgid "No changelog yet. Check back after the next update."
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:84
+msgid "No entries in this cycle yet"
+msgstr ""
+
 #: src/components/naka/HoldNakaCardToReader.vue:82
 msgid "No NAKA Card found"
 msgstr ""
@@ -1167,12 +1231,24 @@ msgstr ""
 msgid "Only {count} out of {total} remaining."
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:136
+msgid "Open {name}"
+msgstr ""
+
 #: src/modals/MiniAppWarningModal.vue:104
 msgid "Open anyway"
 msgstr ""
 
+#: src/components/competition/CompetitionSpotlight.vue:6
+msgid "Open Mini Apps Competition"
+msgstr ""
+
 #: src/modals/MiniAppWarningModal.vue:22
 msgid "Open this mini app?"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:136
+msgid "Opening…"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:245
@@ -1685,6 +1761,10 @@ msgstr ""
 msgid "Something went wrong, please re-enable biometric login"
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:104
+msgid "Source code"
+msgstr ""
+
 #: src/types/transactions.ts:149
 msgid "Staking Contract"
 msgstr ""
@@ -1699,6 +1779,14 @@ msgstr ""
 
 #: src/components/ShowWords.vue:30
 msgid "Store screenshot safely"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:64
+msgid "Submissions"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:93
+msgid "Submitted {date}"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:82
@@ -1725,7 +1813,7 @@ msgstr ""
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
-#: src/components/TheHomeAmounts.vue:54
+#: src/components/TheHomeAmounts.vue:55
 msgid "Tap your pending NIM to add it to your available balance."
 msgstr ""
 
@@ -1909,6 +1997,7 @@ msgstr ""
 msgid "Trigger a payment on the issuer"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:19
 #: src/components/ValidateWords.vue:28
 msgid "Try again"
 msgstr ""
@@ -1999,8 +2088,20 @@ msgstr ""
 msgid "Version"
 msgstr ""
 
+#: src/components/competition/CompetitionAppPoster.vue:6
+msgid "View {name}"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:122
+msgid "View on X"
+msgstr ""
+
 #: src/components/NimWithdraw.vue:183
 msgid "Wait for consensus before withdrawing"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:113
+msgid "Watch demo"
 msgstr ""
 
 #: src/lib/flows/steps.ts:744

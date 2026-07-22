@@ -30,7 +30,7 @@ export function reportCriticalError(error: unknown, context?: Record<string, unk
   })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 

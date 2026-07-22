@@ -17,38 +17,12 @@ function createDeferred<T = void>() {
   return { promise, resolve, reject }
 }
 
-const {
-  addListener,
-  capacitorHttpGet,
-  clearAllCookies,
-  fetchPageDescription,
-  getFaviconUrl,
-  hostDestroy,
-  isDevState,
-  loggerError,
-  loggerLog,
-  openWebView,
-  screenOrientationLock,
-  screenOrientationUnlock,
-  setToast,
-  trackDAppClosed,
-  trackDAppOpened,
-} = vi.hoisted(() => ({
-  openWebView: vi.fn(() => Promise.resolve()),
-  addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
-  clearAllCookies: vi.fn(() => Promise.resolve()),
-  setToast: vi.fn(),
-  loggerError: vi.fn(),
-  loggerLog: vi.fn(),
-  fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
-  getFaviconUrl: vi.fn((url: string) => `https://icons.example/${encodeURIComponent(url)}`),
-  hostDestroy: vi.fn(() => Promise.resolve()),
-  screenOrientationUnlock: vi.fn(() => Promise.resolve()),
-  screenOrientationLock: vi.fn(() => Promise.resolve()),
-  trackDAppClosed: vi.fn(),
-  trackDAppOpened: vi.fn(),
-  isDevState: { value: false },
-  capacitorHttpGet: vi.fn(() => Promise.resolve({
+function translate(value: string, params: Record<string, unknown> = {}) {
+  return Object.entries(params).reduce((text, [key, replacement]) => text.replace(`{${key}}`, String(replacement)), value)
+}
+
+function miniAppsResponse(): { status: number, data: unknown } {
+  return {
     status: 200,
     data: {
       nimiq: [],
@@ -62,7 +36,74 @@ const {
         { name: 'DappRadar', url: 'https://dappradar.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'dappradar' },
       ],
     },
-  })),
+  }
+}
+
+function competitionFeedResponse(): { status: number, data: unknown } {
+  return {
+    status: 200,
+    data: {
+      generated_at: '2026-07-22T11:22:14.251Z',
+      commit: '457ce53',
+      apps: [{
+        cycle: 'cycle2',
+        app_name: 'Roundtrip',
+        category: 'Productivity',
+        tagline: 'Split the trip. Settle in a tap.',
+        description: 'Track shared expenses and settle in NIM.',
+        pricing: 'Free',
+        url: 'https://roundtrip.example/',
+        repo_url: 'https://github.com/example/roundtrip',
+        video_url: null,
+        icon: 'https://assets.example/icon.png',
+        thumbnail: 'https://assets.example/thumbnail.png',
+        screenshots: [],
+        github_login: 'builder',
+        x_account: null,
+        team_name: null,
+        team_members: [],
+        submitted_at: '2026-07-10T12:36:19.329Z',
+      }],
+    },
+  }
+}
+
+const {
+  addListener,
+  browserOpen,
+  capacitorHttpGet,
+  clearAllCookies,
+  fetchPageDescription,
+  getFaviconUrl,
+  hostDestroy,
+  isDevState,
+  loggerError,
+  loggerLog,
+  openWebView,
+  screenOrientationLock,
+  screenOrientationUnlock,
+  setToast,
+  trackDAppClosed,
+  trackFeatureOpened,
+  trackDAppOpened,
+} = vi.hoisted(() => ({
+  openWebView: vi.fn(() => Promise.resolve()),
+  browserOpen: vi.fn(() => Promise.resolve()),
+  addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+  clearAllCookies: vi.fn(() => Promise.resolve()),
+  setToast: vi.fn(),
+  loggerError: vi.fn(),
+  loggerLog: vi.fn(),
+  fetchPageDescription: vi.fn(() => Promise.resolve(undefined)),
+  getFaviconUrl: vi.fn((url: string) => `https://icons.example/${encodeURIComponent(url)}`),
+  hostDestroy: vi.fn(() => Promise.resolve()),
+  screenOrientationUnlock: vi.fn(() => Promise.resolve()),
+  screenOrientationLock: vi.fn(() => Promise.resolve()),
+  trackDAppClosed: vi.fn(),
+  trackFeatureOpened: vi.fn(),
+  trackDAppOpened: vi.fn(),
+  isDevState: { value: false },
+  capacitorHttpGet: vi.fn((_options?: { url: string }): Promise<{ status: number, data: unknown }> => Promise.resolve({ status: 200, data: {} })),
 }))
 
 vi.mock('@capacitor/core', () => ({
@@ -73,6 +114,10 @@ vi.mock('@capacitor/core', () => ({
   CapacitorHttp: {
     get: capacitorHttpGet,
   },
+}))
+
+vi.mock('@capacitor/browser', () => ({
+  Browser: { open: browserOpen },
 }))
 
 vi.mock('@capacitor/keyboard', () => ({
@@ -153,6 +198,7 @@ vi.mock('@/lib/site-metadata', () => ({
 
 vi.mock('@/lib/analytics', () => ({
   trackDAppClosed,
+  trackFeatureOpened,
   trackDAppOpened,
 }))
 
@@ -190,6 +236,12 @@ const IonSearchbarStub = defineComponent({
   template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keydown.enter="$emit(\'keydown.enter\')">',
 })
 
+const IonBackButtonStub = defineComponent({
+  inheritAttrs: false,
+  emits: ['click'],
+  template: '<button v-bind="$attrs" @click="$emit(\'click\', $event)">Back</button>',
+})
+
 const SwipeToDeleteRowStub = defineComponent({
   inheritAttrs: false,
   props: {
@@ -216,11 +268,15 @@ function mountModal(component: Component = MiniAppsModal) {
   return mount(component, {
     global: {
       plugins: [createPinia()],
+      mocks: { $t: translate },
       stubs: {
         ModalTemplate: {
-          template: '<div><slot /></div>',
+          props: { scrollY: { type: Boolean, default: true } },
+          template: '<div data-testid="modal-template" :data-scroll-y="String(scrollY)"><slot name="leftButton" /><slot /></div>',
         },
         IonSearchbar: IonSearchbarStub,
+        IonBackButton: IonBackButtonStub,
+        IonButtons: { template: '<div><slot /></div>' },
         IonSkeletonText: {
           template: '<div class="skeleton" />',
         },
@@ -248,6 +304,8 @@ describe('mini apps modal', () => {
 
     openWebView.mockReset()
     openWebView.mockImplementation(() => Promise.resolve())
+    browserOpen.mockReset()
+    browserOpen.mockImplementation(() => Promise.resolve())
     addListener.mockReset()
     addListener.mockImplementation(() => Promise.resolve({ remove: vi.fn() }))
     clearAllCookies.mockReset()
@@ -266,26 +324,148 @@ describe('mini apps modal', () => {
     screenOrientationLock.mockReset()
     screenOrientationLock.mockImplementation(() => Promise.resolve())
     trackDAppClosed.mockReset()
+    trackFeatureOpened.mockReset()
     trackDAppOpened.mockReset()
     isDevState.value = false
     capacitorHttpGet.mockReset()
-    capacitorHttpGet.mockImplementation(() => Promise.resolve({
-      status: 200,
-      data: {
-        nimiq: [],
-        evm: [
-          { name: 'EVM Mini Wallet', url: 'https://evm-mini-wallet.vercel.app/', type: 'evm', description: 'Test wallet', logo: '', source: null, developer: null, featured: true, slug: 'evm-mini-wallet' },
-          { name: '1inch', url: 'https://1inch.com/', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: '1inch' },
-          { name: 'Uniswap', url: 'https://app.uniswap.org', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'uniswap' },
-          { name: 'Polymarket', url: 'https://polymarket.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'polymarket' },
-          { name: 'OpenSea', url: 'https://opensea.io', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'opensea' },
-          { name: 'Aave', url: 'https://app.aave.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'aave' },
-          { name: 'DappRadar', url: 'https://dappradar.com', type: 'evm', description: '', logo: '', source: null, developer: null, featured: false, slug: 'dappradar' },
-        ],
-      },
-    }))
+    capacitorHttpGet.mockImplementation(options => Promise.resolve(
+      options?.url.includes('miniappscompetition-submissions') ? competitionFeedResponse() : miniAppsResponse(),
+    ))
 
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('window.__provider = true') })))
+  })
+
+  it('moves from Mini Apps to entries and detail, then returns one flow step at a time', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    const spotlight = wrapper.find('[data-testid="competition-spotlight"]')
+    expect(spotlight.exists()).toBe(true)
+    expect(spotlight.text()).toContain('Cycle 2')
+    expect(spotlight.text()).toContain('1 entries')
+    const appsStep = wrapper.find('[data-testid="mini-apps-flow-apps"]').element as HTMLElement
+    appsStep.scrollTop = 96
+
+    await spotlight.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('true')
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('1')
+    expect(trackFeatureOpened).toHaveBeenCalledWith(expect.objectContaining({
+      featureName: 'mini_apps',
+      source: 'competition_spotlight',
+      channel: 'flow',
+    }))
+
+    const competitionScroller = wrapper.find('.competition-scroll').element as HTMLElement
+    competitionScroller.scrollTop = 128
+    await wrapper.find('[data-testid="competition-entry-0"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('true')
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition-detail"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="competition-detail"]').text()).toContain('Track shared expenses and settle in NIM.')
+
+    await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('true')
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition-detail"]').attributes('aria-hidden')).toBe('true')
+    expect(competitionScroller.scrollTop).toBe(128)
+
+    await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('true')
+    expect(appsStep.scrollTop).toBe(96)
+  })
+
+  it('registers every flow scroller with Ionic sheet gesture boundaries', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="modal-template"]').attributes('data-scroll-y')).toBe('false')
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').classes()).toContain('ion-content-scroll-host')
+
+    await wrapper.find('[data-testid="competition-spotlight"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.competition-scroll').classes()).toContain('ion-content-scroll-host')
+
+    await wrapper.find('[data-testid="competition-entry-0"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="competition-detail-scroll"]').classes()).toContain('ion-content-scroll-host')
+  })
+
+  it('does not transform the shared ancestor of the independent vertical scrollers', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-spotlight"]').trigger('click')
+    await wrapper.find('[data-testid="competition-entry-0"]').trigger('click')
+    await flushPromises()
+
+    const flowTrack = wrapper.find('.mini-apps-flow').element.firstElementChild as HTMLElement
+    await vi.waitFor(() => {
+      expect(flowTrack.style.transform).toBe('')
+      expect(flowTrack.style.marginLeft).not.toBe('')
+    })
+  })
+
+  it('opens competition links and launches the selected entry from its detail step', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-spotlight"]').trigger('click')
+    await wrapper.find('[data-testid="competition-entry-0"]').trigger('click')
+    await flushPromises()
+
+    await wrapper.findAll('button').find(button => button.text().includes('Source code'))!.trigger('click')
+    expect(browserOpen).toHaveBeenCalledWith({
+      url: 'https://github.com/example/roundtrip',
+      toolbarColor: '#0582CA',
+    })
+
+    await wrapper.find('[data-testid="competition-open"]').trigger('click')
+    await flushPromises()
+
+    expect(openWebView).toHaveBeenCalledTimes(1)
+    expect(trackDAppOpened).toHaveBeenCalledWith('https://roundtrip.example/', 'Roundtrip', 'competition')
+  })
+
+  it('advances to competition while the feed is loading', async () => {
+    const competitionResponse = createDeferred<{ status: number, data: unknown }>()
+    const defaultResponse = capacitorHttpGet.getMockImplementation()!
+    capacitorHttpGet.mockImplementation(options => options?.url.includes('miniappscompetition-submissions')
+      ? competitionResponse.promise
+      : defaultResponse(options))
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-spotlight-loading"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="competition-loading"]').exists()).toBe(true)
+    competitionResponse.resolve({ status: 200, data: { apps: [] } })
+    await flushPromises()
+  })
+
+  it('keeps competition entries out of search and hides the spotlight for EVM', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('input').setValue('Roundtrip')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="competition-spotlight"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="dapp-button-https-roundtrip-example"]').exists()).toBe(false)
+
+    await wrapper.find('input').setValue('')
+    await wrapper.findAll('[role="radio"]').find(item => item.text() === 'EVM')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="competition-spotlight"]').exists()).toBe(false)
   })
 
   it('blocks repeated taps while first open is pending', async () => {
