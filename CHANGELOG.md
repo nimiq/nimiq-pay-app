@@ -2,6 +2,24 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.19.0 — 2026-07-23
+
+### Mini Apps competition showcase
+Discover the latest competition entries in a new Mini Apps showcase.
+
+_How to use:_ Open Mini Apps and explore the competition showcase.
+
+### Easier wallet recovery
+Get helpful word suggestions while entering your recovery phrase, making wallet recovery faster and less error-prone.
+
+_How to use:_ Choose wallet recovery and start entering your recovery words to see suggestions.
+
+### Clearer pending payments
+A new hint explains when an incoming NIM payment is still pending, so you know it is on its way.
+
+### More useful notifications
+Payment notifications now have clearer details and include transaction memos when available.
+
 ## 2.18.1 — 2026-07-15
 
 ### Better Mini App icons
