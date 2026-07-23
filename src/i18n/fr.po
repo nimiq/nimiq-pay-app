@@ -14,8 +14,19 @@ msgstr ""
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" est un mot de récupération non valide"
 
+msgid "{count} entries"
+msgstr ""
+
 msgid "{count} of {total} remaining."
 msgstr "{count} sur {total} restant."
+
+#, fuzzy
+#| msgid "Payment preview"
+msgid "{name} preview"
+msgstr "Aperçu des paiements"
+
+msgid "{name} screenshot {number}"
+msgstr ""
 
 msgid "0x..."
 msgstr "0x..."
@@ -105,6 +116,14 @@ msgstr "Une erreur inconnue s'est produite, la biométrie ne peut pas être util
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Une erreur inconnue s'est produite, veuillez saisir votre code PIN manuellement"
 
+msgid "App previews"
+msgstr ""
+
+#, fuzzy
+#| msgid "Store screenshot safely"
+msgid "App screenshots"
+msgstr "Conservez la capture d'écran en lieu sûr"
+
 msgid "App Settings"
 msgstr "Paramètres de l'application"
 
@@ -155,6 +174,9 @@ msgstr "Bluecode est un service de paiement européen qui prend désormais en ch
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Le code PIN attendu et le code PIN donné sont tous deux vides"
+
+msgid "Builder"
+msgstr ""
 
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "En cliquant sur « payer », vous acceptez les {terms} de Fastspot"
@@ -213,6 +235,12 @@ msgstr "Modifier le code PIN"
 msgid "Check"
 msgstr "Vérifier"
 
+msgid "Check back when the next entries arrive."
+msgstr ""
+
+msgid "Check your connection and try again."
+msgstr ""
+
 msgid "Choose a PIN"
 msgstr "Choisir un code PIN"
 
@@ -224,6 +252,14 @@ msgstr "Réclamer le code promo"
 
 msgid "Close"
 msgstr "Fermer"
+
+msgid "Competition cycles"
+msgstr ""
+
+#, fuzzy
+#| msgid "This address could not be parsed."
+msgid "Competition entries could not be loaded"
+msgstr "Cette adresse n'a pas pu être analysée."
 
 msgid "Complete"
 msgstr "Compléter"
@@ -306,6 +342,9 @@ msgstr "Les points Cryptocity ont été crédités"
 
 msgid "Currency"
 msgstr "Devise"
+
+msgid "Cycle {number}"
+msgstr ""
 
 msgid "Daily limit"
 msgstr "Limite quotidienne"
@@ -426,6 +465,9 @@ msgstr "Expiré"
 
 msgid "Expiring Points"
 msgstr "Points en cours d'expiration"
+
+msgid "Explore entries"
+msgstr ""
 
 msgid "Failed to activate NAKA Card on device: {error}"
 msgstr "Échec de l'activation de la carte NAKA sur l'appareil : {error}"
@@ -721,10 +763,18 @@ msgstr "Connexion"
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr "Assurez-vous d'envoyer depuis une adresse Polygon, sinon vos fonds pourraient être définitivement perdus !"
 
+msgid "Meet the builders creating new experiences for Nimiq Pay."
+msgstr ""
+
 msgid "Message"
 msgstr ""
 
 msgid "Mini Apps"
+msgstr "Mini Apps"
+
+#, fuzzy
+#| msgid "Mini Apps"
+msgid "Mini Apps Competition"
 msgstr "Mini Apps"
 
 msgid "Minimum NIM Decimals"
@@ -790,6 +840,9 @@ msgstr "Aucun Cashlink trouvé"
 msgid "No changelog yet. Check back after the next update."
 msgstr ""
 
+msgid "No entries in this cycle yet"
+msgstr ""
+
 msgid "No NAKA Card found"
 msgstr "Aucune carte NAKA trouvée"
 
@@ -845,11 +898,24 @@ msgstr "Les notifications ne peuvent pas être activées, nous passons donc cett
 msgid "Only {count} out of {total} remaining."
 msgstr "Il ne reste que {count} sur {total}."
 
+#, fuzzy
+#| msgid "Open anyway"
+msgid "Open {name}"
+msgstr "Ouvrir quand même"
+
 msgid "Open anyway"
 msgstr "Ouvrir quand même"
 
+msgid "Open Mini Apps Competition"
+msgstr ""
+
 msgid "Open this mini app?"
 msgstr "Ouvrir cette Mini App ?"
+
+#, fuzzy
+#| msgid "Keep pressing…"
+msgid "Opening…"
+msgstr "Continuez d'appuyer…"
 
 msgid "Pay"
 msgstr "Payer"
@@ -898,9 +964,6 @@ msgstr "Limites de paiement"
 
 msgid "Payment preview"
 msgstr "Aperçu des paiements"
-
-msgid "Payment received"
-msgstr "Paiement reçu"
 
 msgid "Payment rejected due to unknown reason"
 msgstr "Paiement rejeté pour une raison inconnue"
@@ -1203,6 +1266,11 @@ msgstr "Un problème s'est produit lors du démarrage de l'appareil photo"
 msgid "Something went wrong, please re-enable biometric login"
 msgstr "Un problème est survenu lors du paiement avec des points"
 
+#, fuzzy
+#| msgid "Pay with Bluecode"
+msgid "Source code"
+msgstr "Payer avec Bluecode"
+
 msgid "Staking Contract"
 msgstr "Contrat de staking"
 
@@ -1214,6 +1282,12 @@ msgstr "Statut"
 
 msgid "Store screenshot safely"
 msgstr "Conservez la capture d'écran en lieu sûr"
+
+msgid "Submissions"
+msgstr ""
+
+msgid "Submitted {date}"
+msgstr ""
 
 msgid "Support"
 msgstr "Support"
@@ -1232,6 +1306,9 @@ msgstr "Synchronisation avec le réseau."
 
 msgid "Tap to pay with NAKA!"
 msgstr "Touchez pour payer avec NAKA !"
+
+msgid "Tap your pending NIM to add it to your available balance."
+msgstr ""
 
 msgid "Terms & Conditions"
 msgstr "Conditions générales"
@@ -1431,8 +1508,17 @@ msgstr "Vérifiez votre numéro de téléphone"
 msgid "Version"
 msgstr ""
 
+msgid "View {name}"
+msgstr ""
+
+msgid "View on X"
+msgstr ""
+
 msgid "Wait for consensus before withdrawing"
 msgstr "Attendez le consensus avant de retirer"
+
+msgid "Watch demo"
+msgstr ""
 
 msgid "We're working on something special"
 msgstr "Nous préparons quelque chose de spécial"
@@ -1605,6 +1691,9 @@ msgstr "Votre compte testnet est vide."
 msgid "zero-width character (invisible)"
 msgstr "caractère de largeur nulle (invisible)"
 
+#~ msgid "Payment received"
+#~ msgstr "Paiement reçu"
+
 #~ msgid "Failed to set app as preferred NFC service: {error}"
 #~ msgstr "Impossible de définir l'application comme service NFC par défaut : {error}"
 
@@ -1641,11 +1730,6 @@ msgstr "caractère de largeur nulle (invisible)"
 
 #~ msgid "Your wallet is ready to use"
 #~ msgstr "Votre wallet est prêt à l'emploi"
-
-#, fuzzy
-#~| msgid "Pay with Bluecode"
-#~ msgid "Bluecode"
-#~ msgstr "Payer avec Bluecode"
 
 #~ msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 #~ msgstr "Les Points Cryptocity sont des points de fidélité que vous pouvez gagner et payer. Ils ont la même valeur que les NIM ( Point Cryptocity : 1 NIM)."

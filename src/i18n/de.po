@@ -13,8 +13,19 @@ msgstr ""
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" ist ein ungültiges Wiederherstellungswort"
 
+msgid "{count} entries"
+msgstr ""
+
 msgid "{count} of {total} remaining."
 msgstr "{count} von {total} verbleibend."
+
+#, fuzzy
+#| msgid "Payment preview"
+msgid "{name} preview"
+msgstr "Zahlungsvorschau"
+
+msgid "{name} screenshot {number}"
+msgstr ""
 
 msgid "0x..."
 msgstr "0x..."
@@ -104,6 +115,14 @@ msgstr "Ein unbekannter Fehler ist aufgetreten, Biometrie kann nicht verwendet w
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Ein unbekannter Fehler ist aufgetreten, bitte gib deine PIN manuell ein"
 
+msgid "App previews"
+msgstr ""
+
+#, fuzzy
+#| msgid "Store screenshot safely"
+msgid "App screenshots"
+msgstr "Screenshot sicher aufbewahren"
+
 msgid "App Settings"
 msgstr "App-Einstellungen"
 
@@ -154,6 +173,9 @@ msgstr "Bluecode is ein europäischer Zahlungsdienstleister, der nun NIM unterst
 
 msgid "Both expected and the given PIN are empty"
 msgstr "Sowohl die erwartete, als auch die eingegebene PIN sind ungesetzt"
+
+msgid "Builder"
+msgstr ""
 
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "Durch Antippen von \"Bezahlen\", stimmst du Fastspots {terms} zu."
@@ -212,6 +234,12 @@ msgstr "PIN ändern"
 msgid "Check"
 msgstr "Prüfen"
 
+msgid "Check back when the next entries arrive."
+msgstr ""
+
+msgid "Check your connection and try again."
+msgstr ""
+
 msgid "Choose a PIN"
 msgstr "PIN wählen"
 
@@ -223,6 +251,14 @@ msgstr "Promo-Code einlösen"
 
 msgid "Close"
 msgstr "Schließen"
+
+msgid "Competition cycles"
+msgstr ""
+
+#, fuzzy
+#| msgid "This address could not be parsed."
+msgid "Competition entries could not be loaded"
+msgstr "Diese Adresse konnte nicht verarbeitet werden."
 
 msgid "Complete"
 msgstr "Abgeschlossen"
@@ -305,6 +341,9 @@ msgstr "Kryptostadt-Punkte wurden gutgeschrieben"
 
 msgid "Currency"
 msgstr "Währung"
+
+msgid "Cycle {number}"
+msgstr ""
 
 msgid "Daily limit"
 msgstr "Tageslimit"
@@ -425,6 +464,9 @@ msgstr "Abgelaufen"
 
 msgid "Expiring Points"
 msgstr "Verfallende Punkte"
+
+msgid "Explore entries"
+msgstr ""
 
 msgid "Failed to activate NAKA Card on device: {error}"
 msgstr "NAKA-Karte konnte auf dem Gerät nicht aktiviert werden: {error}"
@@ -720,10 +762,18 @@ msgstr "Einloggen"
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr "Stelle sicher, dass du von einer Polygon-Adresse sendest, sonst kann dein Guthaben unwiderruflich verloren gehen!"
 
+msgid "Meet the builders creating new experiences for Nimiq Pay."
+msgstr ""
+
 msgid "Message"
 msgstr ""
 
 msgid "Mini Apps"
+msgstr "Mini Apps"
+
+#, fuzzy
+#| msgid "Mini Apps"
+msgid "Mini Apps Competition"
 msgstr "Mini Apps"
 
 msgid "Minimum NIM Decimals"
@@ -789,6 +839,9 @@ msgstr "Kein Cashlink gefunden"
 msgid "No changelog yet. Check back after the next update."
 msgstr ""
 
+msgid "No entries in this cycle yet"
+msgstr ""
+
 msgid "No NAKA Card found"
 msgstr "Keine NAKA-Karte gefunden"
 
@@ -844,11 +897,24 @@ msgstr "Benachrichtigungen können nicht aktiviert werden, überspringe."
 msgid "Only {count} out of {total} remaining."
 msgstr "Nur {count} von {total} übrig."
 
+#, fuzzy
+#| msgid "Open anyway"
+msgid "Open {name}"
+msgstr "Trotzdem öffnen"
+
 msgid "Open anyway"
 msgstr "Trotzdem öffnen"
 
+msgid "Open Mini Apps Competition"
+msgstr ""
+
 msgid "Open this mini app?"
 msgstr "Diese Mini App öffnen?"
+
+#, fuzzy
+#| msgid "Keep pressing…"
+msgid "Opening…"
+msgstr "Weiter gedrückt halten…"
 
 msgid "Pay"
 msgstr "Bezahlen"
@@ -897,9 +963,6 @@ msgstr "Zahlungslimits"
 
 msgid "Payment preview"
 msgstr "Zahlungsvorschau"
-
-msgid "Payment received"
-msgstr "Zahlung erhalten"
 
 msgid "Payment rejected due to unknown reason"
 msgstr "Zahlung aus unbekanntem Grund abgelehnt"
@@ -1202,6 +1265,11 @@ msgstr "Beim Starten der Kamera ist etwas schiefgelaufen"
 msgid "Something went wrong, please re-enable biometric login"
 msgstr "Etwas ist bei der Punkte-Zahlung schiefgelaufen"
 
+#, fuzzy
+#| msgid "Pay with Bluecode"
+msgid "Source code"
+msgstr "Mit Bluecode bezahlen"
+
 msgid "Staking Contract"
 msgstr "Staking-Vertrag"
 
@@ -1213,6 +1281,12 @@ msgstr "Status"
 
 msgid "Store screenshot safely"
 msgstr "Screenshot sicher aufbewahren"
+
+msgid "Submissions"
+msgstr ""
+
+msgid "Submitted {date}"
+msgstr ""
 
 msgid "Support"
 msgstr "Support"
@@ -1231,6 +1305,9 @@ msgstr "Synchronisiere mit dem Netzwerk."
 
 msgid "Tap to pay with NAKA!"
 msgstr "Tippe, um mit NAKA zu bezahlen!"
+
+msgid "Tap your pending NIM to add it to your available balance."
+msgstr ""
 
 msgid "Terms & Conditions"
 msgstr "Allgemeine Geschäftsbedingungen"
@@ -1430,8 +1507,17 @@ msgstr "Telefonnummer bestätigen"
 msgid "Version"
 msgstr ""
 
+msgid "View {name}"
+msgstr ""
+
+msgid "View on X"
+msgstr ""
+
 msgid "Wait for consensus before withdrawing"
 msgstr "Warte auf den Konsens, bevor du auszahlst"
+
+msgid "Watch demo"
+msgstr ""
 
 msgid "We're working on something special"
 msgstr "Wir arbeiten an etwas Besonderem"
@@ -1606,6 +1692,9 @@ msgstr "Dein Testnet-Konto ist leer."
 msgid "zero-width character (invisible)"
 msgstr "Zeichen ohne Breite (unsichtbar)"
 
+#~ msgid "Payment received"
+#~ msgstr "Zahlung erhalten"
+
 #~ msgid "Failed to set app as preferred NFC service: {error}"
 #~ msgstr "App konnte nicht als bevorzugter NFC-Dienst festgelegt werden: {error}"
 
@@ -1642,11 +1731,6 @@ msgstr "Zeichen ohne Breite (unsichtbar)"
 
 #~ msgid "Your wallet is ready to use"
 #~ msgstr "Deine Wallet ist bereit zur Benutzung"
-
-#, fuzzy
-#~| msgid "Pay with Bluecode"
-#~ msgid "Bluecode"
-#~ msgstr "Mit Bluecode bezahlen"
 
 #~ msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
 #~ msgstr "Kryptostadt-Punkte sind Treuepunkte, die du verdienen und zum Bezahlen benutzen kannst. Der Wert eines Kryptostadt-Punkts entspricht einem NIM."
