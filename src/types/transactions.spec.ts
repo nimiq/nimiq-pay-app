@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { isPendingAtomicSwapTransaction, Transfer } from './transactions'
+import { isPendingAtomicSwapTransaction, Transfer, translateTransactionTitle } from './transactions'
 
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: {
-    t: (value: string) => value,
+    t: (value: string) => value === 'Cashlink Claiming' ? 'Translated Cashlink Claiming' : value,
   },
 }))
 
@@ -36,5 +36,11 @@ describe('isPendingAtomicSwapTransaction', () => {
       status: 'mined',
       meta: { refunded: true },
     })).toBe(false)
+  })
+})
+
+describe('translateTransactionTitle', () => {
+  it('translates Cashlink Claiming', () => {
+    expect(translateTransactionTitle('Cashlink Claiming')).toBe('Translated Cashlink Claiming')
   })
 })

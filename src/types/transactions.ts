@@ -113,6 +113,7 @@ export interface BaseTransaction {
 
 type KnownTransactionTitle
   = | 'Top-Up'
+    | 'Cashlink Claiming'
     | 'Withdrawal'
     | 'Payment'
     | 'Points Payment'
@@ -136,6 +137,7 @@ export function translateTransactionTitle(title: TransactionTitle) {
   // Define translations as record such that ts warns us if a translation for a known title is missing
   const knownTitleTranslations: Record<KnownTransactionTitle, string> = {
     'Top-Up': i18n.t('Top-Up'),
+    'Cashlink Claiming': i18n.t('Cashlink Claiming'),
     'Withdrawal': i18n.t('Withdrawal'),
     'Payment': i18n.t('Payment'),
     'Points Payment': i18n.t('Points Payment'),

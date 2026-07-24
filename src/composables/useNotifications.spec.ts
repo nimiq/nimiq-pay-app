@@ -124,7 +124,7 @@ vi.mock('@/stores/transactions', () => ({
   }),
 }))
 
-function makeReceipt(overrides?: Partial<{ hash: string, amount: number, asset: string, timestamp: number, message: string }>) {
+function makeReceipt(overrides?: Partial<{ hash: string, amount: number, asset: string, timestamp: number, message: string, title: string }>) {
   return {
     hash: 'test-hash',
     amount: 12345,
@@ -235,6 +235,16 @@ describe('useNotifications — local notifications', () => {
       expect(notification.title).toBe('You received {amount}::{"amount":"123.456 NIM"}')
       expect(notification.body).toBe('NimJump prize')
       expect(notification).not.toHaveProperty('largeBody')
+    })
+
+    it('identifies Cashlink receipts instead of showing marker data', async () => {
+      const { useNotifications } = await import('./useNotifications')
+      await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({
+        title: 'Cashlink Claiming',
+        message: 'raw Cashlink marker',
+      }))
+      const notification = state.schedule.mock.calls[0]![0].notifications[0]
+      expect(notification.body).toBe('Cashlink Claiming')
     })
 
     it('keeps the maximum 64-byte ASCII memo in the body without largeBody', async () => {

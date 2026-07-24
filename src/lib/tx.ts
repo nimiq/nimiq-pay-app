@@ -8,14 +8,15 @@ import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { useLocalWallet } from '@/stores/local-wallet'
-import { useNimiqNetwork } from '@/stores/nimiq-network'
+import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { Transfer } from '@/types/transactions'
 import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
 import { useFastspotApiV1 } from '../composables/useFastspotv1'
 
 const logger = useLogger('tx.ts')
-const { networkId, height } = storeToRefs(useNimiqNetwork())
+const nimiqNetwork = useNimiqNetwork()
+const { networkId, height } = storeToRefs(nimiqNetwork)
 
 /**
  * Signs any transaction in the wallet.
@@ -461,19 +462,30 @@ function getValidityStartHeight() {
   return Math.max(useRemoteSigner().remoteHeight, height.value) + 1
 }
 
-export function buildTopUpReceipt(tx: PlainTransactionDetails): UserReceiptTransaction {
+export async function buildTopUpReceipt(tx: PlainTransactionDetails): Promise<UserReceiptTransaction> {
+  const isCashlink = tx.data.raw.toLowerCase() === CashlinkExtraDataHex.CLAIMING
+  const cashlinkFundingTx = isCashlink
+    ? (await nimiqNetwork.getAccountTransactions(tx.sender as unknown as Address)).data.find(candidate =>
+        candidate.recipient === tx.sender
+        && candidate.data.raw.toLowerCase() === CashlinkExtraDataHex.FUNDING
+        && candidate.state !== 'invalidated'
+        && candidate.state !== 'expired'
+        && candidate.value >= tx.value + tx.fee
+        && (candidate.blockHeight === undefined || tx.blockHeight === undefined || candidate.blockHeight <= tx.blockHeight),
+      )
+    : undefined
   return {
     transfer: Transfer.UserReceipt,
     amount: tx.value,
-    sender: tx.sender,
-    senderType: toAccountType(tx.senderType),
+    sender: cashlinkFundingTx?.sender || tx.sender,
+    senderType: toAccountType(cashlinkFundingTx?.senderType || tx.senderType),
     recipient: tx.recipient,
     recipientType: toAccountType(tx.recipientType),
     hash: tx.transactionHash,
     status: tx.state,
     timestamp: tx.timestamp,
-    title: 'Top-Up',
-    message: Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
+    title: isCashlink ? 'Cashlink Claiming' : 'Top-Up',
+    message: isCashlink ? '' : Nimiq.BufferUtils.toUtf8(Nimiq.BufferUtils.fromHex(tx.data.raw)),
     fee: tx.fee,
     // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
     proofSize: useRemoteSigner().remoteProofSize,

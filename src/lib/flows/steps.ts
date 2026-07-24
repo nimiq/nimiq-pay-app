@@ -398,7 +398,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
           navigateTo({ step: StepName.PaymentPreview })
       }
     },
-    beforeNext: async (state, { prev, navigateTo }) => {
+    beforeNext: async (state, { prev, navigateTo, finalizeFlow }) => {
       document.body.classList.remove('native-qr-scanner-modal-open')
       if (defaultProps?.expect === QRDataFormat.PaymentRequest) {
         if (state.qrCodeScanner === undefined)
@@ -409,7 +409,7 @@ export const qrCodeScannerStep: StepInit<{ expect: QRDataFormat, overrideHeight?
           navigateTo({ step: StepName.PaymentPreview })
       }
       else if (defaultProps?.expect === QRDataFormat.NimCashlink) {
-        navigateTo({ step: StepName.PaymentRequestManualInput })
+        await finalizeFlow()
       }
       else { // For Top-Up and Withdrawal, we go back to the previous step
         prev()

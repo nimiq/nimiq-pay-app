@@ -199,7 +199,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return useTransactions().setNakaTxRefunded(tx.value)
     }
 
-    const receipt = buildTopUpReceipt(tx)
+    const receipt = await buildTopUpReceipt(tx)
     useTransactions().addReceiptTransaction(receipt)
     trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)
     // Real-time only: refresh / history paths must NOT fire the notifier.

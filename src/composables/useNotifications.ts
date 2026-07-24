@@ -351,7 +351,9 @@ export function useNotifications() {
       ? formatUsdtAmount(tx.amount)
       : usePrice(tx.amount).crypto.formatted
     const memo = tx.message?.trim()
-    const body = memo ? tx.message! : ''
+    let body = memo ? tx.message! : ''
+    if (tx.title === 'Cashlink Claiming')
+      body = i18n.t('Cashlink Claiming')
 
     try {
       await ensurePaymentsChannel()

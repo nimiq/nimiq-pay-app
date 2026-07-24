@@ -157,7 +157,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         if (tx.senderType === 'staking')
           handleStakingTxs(tx)
         else
-          useTransactions().addReceiptTransaction(buildTopUpReceipt(tx))
+          useTransactions().addReceiptTransaction(await buildTopUpReceipt(tx))
       }))
 
       const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)

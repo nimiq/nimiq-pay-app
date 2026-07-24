@@ -61,7 +61,7 @@ msgid "Add new card"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:86
-#: src/types/transactions.ts:143
+#: src/types/transactions.ts:145
 msgid "Add Stake"
 msgstr ""
 
@@ -295,6 +295,11 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
+#: src/composables/useNotifications.ts:356
+#: src/types/transactions.ts:140
+msgid "Cashlink Claiming"
+msgstr ""
+
 #: src/stores/nimiq-network.ts:170
 msgid "Cashlink has no balance"
 msgstr ""
@@ -365,13 +370,13 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:166
+#: src/types/transactions.ts:168
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:161
-#: src/types/transactions.ts:162
+#: src/types/transactions.ts:163
+#: src/types/transactions.ts:164
 msgid "Confirming"
 msgstr ""
 
@@ -435,7 +440,7 @@ msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:81
-#: src/types/transactions.ts:142
+#: src/types/transactions.ts:144
 msgid "Create Staker"
 msgstr ""
 
@@ -485,7 +490,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/types/transactions.ts:148
+#: src/types/transactions.ts:150
 msgid "Delete Validator"
 msgstr ""
 
@@ -618,7 +623,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:165
+#: src/types/transactions.ts:167
 msgid "Expired"
 msgstr ""
 
@@ -809,8 +814,8 @@ msgid "Internationalized domain (punycode). Verify it matches the real site."
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:163
-#: src/types/transactions.ts:164
+#: src/types/transactions.ts:165
+#: src/types/transactions.ts:166
 msgid "Invalid"
 msgstr ""
 
@@ -878,7 +883,7 @@ msgstr ""
 msgid "Invalid LNURL"
 msgstr ""
 
-#: src/lib/tx.ts:114
+#: src/lib/tx.ts:115
 msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
@@ -932,12 +937,12 @@ msgstr ""
 msgid "Invalid signature. Please try again"
 msgstr ""
 
-#: src/lib/tx.ts:85
+#: src/lib/tx.ts:86
 #: src/stores/polygon-usdt.ts:1787
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:353
+#: src/lib/tx.ts:354
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -1101,11 +1106,11 @@ msgstr ""
 msgid "Network fees"
 msgstr ""
 
-#: src/lib/tx.ts:373
+#: src/lib/tx.ts:374
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:159
+#: src/types/transactions.ts:161
 msgid "New"
 msgstr ""
 
@@ -1129,7 +1134,7 @@ msgstr ""
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:257
+#: src/lib/tx.ts:258
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1165,7 +1170,7 @@ msgstr ""
 msgid "No NAKA Card found"
 msgstr ""
 
-#: src/lib/tx.ts:90
+#: src/lib/tx.ts:91
 msgid "No NIM HTLC found in swap"
 msgstr ""
 
@@ -1276,7 +1281,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:140
+#: src/types/transactions.ts:142
 msgid "Payment"
 msgstr ""
 
@@ -1355,7 +1360,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:30
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:160
+#: src/types/transactions.ts:162
 msgid "Pending"
 msgstr ""
 
@@ -1433,7 +1438,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:141
+#: src/types/transactions.ts:143
 msgid "Points Payment"
 msgstr ""
 
@@ -1532,7 +1537,7 @@ msgid "Refunded"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:108
-#: src/types/transactions.ts:147
+#: src/types/transactions.ts:149
 msgid "Remove Stake"
 msgstr ""
 
@@ -1558,7 +1563,7 @@ msgid "Resend"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:103
-#: src/types/transactions.ts:146
+#: src/types/transactions.ts:148
 msgid "Retire Stake"
 msgstr ""
 
@@ -1661,7 +1666,7 @@ msgid "Server not available"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:90
-#: src/types/transactions.ts:144
+#: src/types/transactions.ts:146
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1726,16 +1731,16 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:395
+#: src/lib/tx.ts:396
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:310
 #: src/composables/useApi.ts:317
-#: src/lib/tx.ts:260
-#: src/lib/tx.ts:369
-#: src/lib/tx.ts:38
-#: src/lib/tx.ts:60
+#: src/lib/tx.ts:261
+#: src/lib/tx.ts:370
+#: src/lib/tx.ts:39
+#: src/lib/tx.ts:61
 msgid "Something went wrong syncing your account"
 msgstr ""
 
@@ -1765,7 +1770,7 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
-#: src/types/transactions.ts:149
+#: src/types/transactions.ts:151
 msgid "Staking Contract"
 msgstr ""
 
@@ -1957,7 +1962,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:138
+#: src/types/transactions.ts:139
 msgid "Top-Up"
 msgstr ""
 
@@ -2022,7 +2027,7 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
-#: src/types/transactions.ts:170
+#: src/types/transactions.ts:172
 msgid "Unknown"
 msgstr ""
 
@@ -2047,7 +2052,7 @@ msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:95
-#: src/types/transactions.ts:145
+#: src/types/transactions.ts:147
 msgid "Update Staker"
 msgstr ""
 
@@ -2204,7 +2209,7 @@ msgstr ""
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
-#: src/types/transactions.ts:139
+#: src/types/transactions.ts:141
 msgid "Withdrawal"
 msgstr ""
 
@@ -2288,7 +2293,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:361
+#: src/composables/useNotifications.ts:363
 msgid "You received {amount}"
 msgstr ""
 
