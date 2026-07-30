@@ -3,7 +3,7 @@ import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
 import type { AsyncResult } from '@/types'
-import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, HtlcTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
@@ -471,6 +471,11 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
+  async function addHtlcTransaction(tx: HtlcTransaction) {
+    await upsertTx(tx)
+    addTransaction(tx)
+  }
+
   async function replaceTransaction(tx: ExternalTransaction) {
     await upsertTx(tx)
     const index = transactions.value.findIndex(existingTx => existingTx.hash === tx.hash)
@@ -606,6 +611,7 @@ export const useTransactions = defineStore('transactions', () => {
     addPaymentTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    addHtlcTransaction,
     replaceTransaction,
     updateTransactionStatus,
     updateTransactionTitle,

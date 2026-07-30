@@ -282,9 +282,74 @@ describe('useSyncTransactions', () => {
       state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
-        expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ hash: 'swap-leaf-hash' }),
       )
+    })
+
+    it('records an HTLC creation as Transfer.HTLC when Fastspot does not know the contract', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockRejectedValue(new Error('fastspot down'))
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'mini-app-htlc-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'ab'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(expect.objectContaining({
+        hash: 'mini-app-htlc-hash',
+        transfer: 'htlc',
+        title: 'New HTLC',
+        amount: 500,
+      }))
+      expect(state.addUnknownPaymentToMerchantTransaction).not.toHaveBeenCalled()
+    })
+
+    it('still records a Payment when Fastspot knows the contract but the pair is unsupported', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockResolvedValue({ from: { asset: 'BTC' }, to: { asset: 'NIM', amount: 1, fee: 0 } })
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'real-swap-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ66 SWAP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 700,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'cd'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
     })
 
     it('routes withdrawal txs to addWithdrawalTransaction when recipient is a known top-up sender', async () => {
@@ -384,34 +449,6 @@ describe('useSyncTransactions', () => {
         expect.objectContaining({ currency: 'BTC' }),
         expect.objectContaining({ imported: true }),
       )
-    })
-
-    it('logs swap fetch errors and falls back to addUnknownPaymentToMerchantTransaction', async () => {
-      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
-      state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
-      const swapTx = {
-        transactionHash: 'swap-hash',
-        sender: signer.address,
-        senderType: 'basic',
-        recipient: 'NQ55 SWAP HTLC ADDRESS',
-        recipientType: 'htlc',
-        value: 50_000,
-        fee: 0,
-        state: 'confirmed',
-        timestamp: 1,
-        data: { hashRoot: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
-        proof: { raw: '' },
-      }
-      state.getAccountTransactions.mockImplementation(((address: any) => {
-        if (address?.toUserFriendlyAddress?.() === signer.address)
-          return Promise.resolve({ data: [swapTx] })
-        return Promise.resolve({ data: [] })
-      }) as any)
-      state.getContract.mockRejectedValue(new Error('fastspot down'))
-      const { useSyncTransactions } = await import('./transactions')
-      await useSyncTransactions().updateTransactionHistory()
-      expect(state.logger.error).toHaveBeenCalledWith('Error fetching contract info from Fastspot:', 'fastspot down')
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
     })
 
     it('logs error when contract.from.asset is not NIM', async () => {

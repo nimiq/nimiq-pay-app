@@ -50,6 +50,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    addHtlcTransaction,
     updateTransactionCashbackClaimed,
     updateTransactionStatus,
   } = useTransactions()
@@ -345,8 +346,23 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       contract = await fastspot.getContract(SwapAsset.NIM, tx.recipient)
     }
     catch (error: any) {
-      logger.error('Error fetching contract info from Fastspot:', error.message)
-      addUnknownPaymentToMerchantTransaction(tx)
+      // Fastspot has never heard of this contract, so it is not a swap — it is a Mini App HTLC.
+      logger.log(`📬 HTLC unknown to Fastspot, recording as a Mini App HTLC`, { hash: tx.transactionHash, recipient: tx.recipient, error: error.message })
+      await addHtlcTransaction({
+        transfer: Transfer.HTLC,
+        amount: tx.value,
+        fee: tx.fee,
+        hash: tx.transactionHash,
+        sender: tx.sender,
+        senderType: toAccountType(tx.senderType),
+        recipient: tx.recipient,
+        recipientType: toAccountType(tx.recipientType),
+        recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
+        status: tx.state,
+        timestamp: tx.timestamp,
+        title: 'New HTLC',
+        proofSize: tx.proof.raw.length / 2,
+      })
       return
     }
 
