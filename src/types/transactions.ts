@@ -299,8 +299,8 @@ export type HtlcTransaction = BaseTransaction & {
   recipientData?: Uint8Array
   senderData?: Uint8Array
   rail?: Rail.MiniApp
-  railMerchantId?: string // Mini-app URL
-  merchantName?: string // Mini-app name
+  railMerchantId?: string // Mini App URL
+  merchantName?: string // Mini App name
   validityStartHeight?: number
 
   // Unused properties for type compatibility
@@ -338,8 +338,8 @@ export type StakingTransaction = BaseTransaction & {
   recipientData?: Uint8Array
   senderData?: Uint8Array
   rail?: Rail.MiniApp
-  railMerchantId?: string // Mini-app URL
-  merchantName?: string // Mini-app name
+  railMerchantId?: string // Mini App URL
+  merchantName?: string // Mini App name
 
   // Unused properties for type compatibility
   merchantCategory?: undefined

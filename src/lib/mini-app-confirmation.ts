@@ -18,7 +18,7 @@ function resolveMiniAppLogo(url: string): string {
 }
 
 /**
- * Request user confirmation for sensitive mini-app operations.
+ * Request user confirmation for sensitive Mini App operations.
  * Extracted from MiniAppsModal so it can be reused during session reconnection.
  */
 export async function requestUserConfirmation(request: UserConfirmationRequest): Promise<boolean> {
@@ -58,11 +58,15 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const amountNim = formatCrypto(amount, { currency: Crypto.NIM })
       const feeNim = formatCrypto(fee, { currency: Crypto.NIM })
 
-      const formattedRecipient = recipient === STAKING_CONTRACT_ADDRESS
-        ? 'Staking Contract'
-        : recipient === useLocalWallet().localAddress.toUserFriendlyAddress()
-          ? 'You'
-          : `${recipient.slice(0, 4)}\u2026${recipient.slice(-4)}`
+      // `new-htlc` passes a placeholder rather than an address \u2014 the contract only gets its address
+      // once the funding transaction is built \u2014 so it must not be truncated like one.
+      const formattedRecipient = request.htlcData?.type === 'new-htlc'
+        ? i18n.t('New contract')
+        : recipient === STAKING_CONTRACT_ADDRESS
+          ? 'Staking Contract'
+          : recipient === useLocalWallet().localAddress.toUserFriendlyAddress()
+            ? 'You'
+            : `${recipient.slice(0, 4)}\u2026${recipient.slice(-4)}`
 
       const rows: { title: string, value?: string }[] = [
         { title: 'Recipient', value: formattedRecipient },
@@ -124,6 +128,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
           }
           case 'redeem-regular': {
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (regular)') })
+            rows.push({ title: 'Contract', value: request.htlcContractAddress ?? '' })
             rows.push({ title: 'Hash Root', value: Nimiq.BufferUtils.toHex(request.htlcData.hashRoot) })
             rows.push({ title: 'Pre Image', value: Nimiq.BufferUtils.toHex(request.htlcData.preImage) })
             rows.push({ title: 'Hash Count', value: request.htlcData.hashCount.toString(10) })
@@ -131,14 +136,18 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
           }
           case 'redeem-timeout': {
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (timeout)') })
+            rows.push({ title: 'Contract', value: request.htlcContractAddress ?? '' })
             break
           }
           case 'sign-early': {
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (early)') })
+            rows.push({ title: 'Contract', value: request.htlcContractAddress ?? '' })
+            rows.push({ title: 'Valid From Height', value: request.htlcValidityStartHeight?.toString(10) ?? '' })
             break
           }
           case 'redeem-early': {
             rows.push({ title: 'Action', value: i18n.t('Redeem HTLC (early)') })
+            rows.push({ title: 'Contract', value: request.htlcContractAddress ?? '' })
             rows.push({ title: 'Sender Signature', value: Nimiq.BufferUtils.toHex(request.htlcData.senderSignatureProof.serialize()) })
             rows.push({ title: 'Recipient Signature', value: Nimiq.BufferUtils.toHex(request.htlcData.recipientSignatureProof.serialize()) })
             break
