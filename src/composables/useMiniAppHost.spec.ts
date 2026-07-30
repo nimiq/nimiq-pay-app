@@ -714,7 +714,8 @@ describe('miniAppHost HTLC guards', () => {
     await expect(handleRequest({ network: 'nimiq', name, params: params(ownContract) })
       .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
       code: 4001,
-      message: expect.stringContaining('your own Nimiq Pay contracts'),
+      // Text unique to the ownership refusal — the unverifiable path must not satisfy this.
+      message: expect.stringContaining('Refusing to spend'),
     })
     expect(sendTx).not.toHaveBeenCalled()
   })
@@ -729,15 +730,41 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).not.toHaveBeenCalled()
   })
 
-  it('refuses a redeem whose contract shape cannot be read at all', async () => {
+  it('refuses a redeem whose account lookup fails, as a network error rather than a rejection', async () => {
     const { handleRequest } = await createPermissionHost()
     getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
 
     await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
       .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
-      code: 4001,
-      message: expect.stringContaining('Cannot verify'),
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
     })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  // A light client whose history is not ready answers with an empty result rather than throwing,
+  // so an unreadable shape must not be mistaken for a foreign one.
+  it('refuses a redeem whose contract shape resolves empty instead of treating it as foreign', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockResolvedValue(undefined)
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('refuses a redeem whose creation-transaction query times out', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockRejectedValue(new Error('Operation timed out after 30000 milliseconds'))
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32000 })
+    expect(sendTx).not.toHaveBeenCalled()
   })
 
   it('reads a pruned contract from its creation transaction rather than trusting the account lookup', async () => {

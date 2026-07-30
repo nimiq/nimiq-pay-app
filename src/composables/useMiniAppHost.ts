@@ -1695,25 +1695,31 @@ export class MiniAppHost {
    *
    * Both checks are needed: the `remote_signers` table can be incomplete (that is why
    * `registerOwnHtlcIfMissing` exists), and the on-chain shape catches contracts it has not learnt
-   * about yet. Ownership we cannot establish is refused rather than allowed — a redeem raised
-   * while the contract is unreadable could not be broadcast reliably anyway.
+   * about yet. A shape we cannot read is refused as *unverifiable*, never waved through as
+   * foreign — the same distinction `registerOwnHtlcIfMissing` draws between 'unknown' and
+   * 'foreign', and for the same reason: a light client whose history is not ready yet answers a
+   * shape query with nothing at all, which would otherwise be a bypass.
+   *
+   * Only a contract established as ours is a `PermissionDeniedError`; that genuinely is a refusal
+   * and shares code 4001 with the user tapping Reject. Unverifiable is a `NetworkError`, so the
+   * Mini App cannot mistake it for a cancellation and the user gets a toast saying why.
    */
   private async assertNotOwnHtlc(contractAddress: Address): Promise<void> {
     const address = contractAddress.toUserFriendlyAddress()
     const ownContract = `Refusing to spend ${address}: it is one of your own Nimiq Pay contracts`
-    const unverifiable = `Cannot verify whether ${address} is one of your own Nimiq Pay contracts. Try again once Nimiq Pay is in sync.`
+    const unverifiable = `Cannot verify the owner of ${address}. Try again once Nimiq Pay is in sync.`
 
     if (await useRemoteSigner().isOurRemoteSigner(address))
       throw new PermissionDeniedError(ownContract)
 
     const remotePublicKey = useRemoteSigner().remotePublicKey
     if (!remotePublicKey)
-      throw new PermissionDeniedError(unverifiable)
+      throw new NetworkError(unverifiable)
     const cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
 
     const { data: account } = await useNimiqNetwork().getAccount(contractAddress)
     if (!account)
-      throw new PermissionDeniedError(unverifiable)
+      throw new NetworkError(unverifiable)
 
     // A live contract is readable as an account; a fully drained one is pruned and survives only
     // as its creation transaction.
@@ -1727,11 +1733,15 @@ export class MiniAppHost {
       }
       catch (error) {
         logger.error('Could not read HTLC contract shape — refusing the redeem', { address, error })
-        throw new PermissionDeniedError(unverifiable)
+        throw new NetworkError(unverifiable)
       }
     }
+    if (!shape) {
+      logger.error('HTLC contract shape came back empty — refusing the redeem', { address, accountType: account.type })
+      throw new NetworkError(unverifiable)
+    }
 
-    if (shape && isOwnRemoteHtlcShape(shape, { localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(), cosignerAddress }))
+    if (isOwnRemoteHtlcShape(shape, { localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(), cosignerAddress }))
       throw new PermissionDeniedError(ownContract)
   }
 
