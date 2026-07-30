@@ -756,6 +756,28 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ sender: foreignContract, recipient }))
   })
 
+  it('shows the source contract on the redeem confirmation sheet', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      htlcContractAddress: foreignContract,
+      htlcData: { type: 'redeem-timeout' },
+    }))
+  })
+
+  it('shows the source contract and validity start height when only signing an early redeem', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await handleRequest({ network: 'nimiq', name: 'signRedeemEarlyHtlcTransaction', params: [foreignContract, recipient, 100, 0, 42] })
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      htlcContractAddress: foreignContract,
+      htlcValidityStartHeight: 42,
+    }))
+  })
+
   it.each([
     ['a blake2b root one byte short', 'ab'.repeat(31), 'blake2b', 1],
     ['a sha256 root one byte long', 'ab'.repeat(33), 'sha256', 1],

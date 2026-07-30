@@ -122,6 +122,10 @@ export type UserConfirmationRequest
       data: Omit<PaymentRequestData, 'transfer'>
       stakingData?: StakingData
       htlcData?: HtlcData
+      /** Source contract of an HTLC redeem — the account the funds leave, which `data.recipient` never names. */
+      htlcContractAddress?: string
+      /** Only meaningful for `sign-early`, whose signature is bound to this exact height. */
+      htlcValidityStartHeight?: number
     })
     | (MiniAppBase & {
       type: 'eth-transaction'
@@ -158,7 +162,7 @@ export type UserConfirmationRequest
     })
     | (MiniAppBase & {
       type: 'deviceIdentifier'
-      /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
+      /** Mini App supplied human-readable explanation. Shown verbatim in the prompt. */
       reason: string
     })
 
@@ -209,8 +213,8 @@ function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCo
 }
 
 /**
- * MiniAppHost - SDK for the host native app that runs mini apps in InAppBrowser
- * Provides typed communication with mini apps and handles permissions, signing, transactions
+ * MiniAppHost - SDK for the host native app that runs Mini Apps in InAppBrowser
+ * Provides typed communication with Mini Apps and handles permissions, signing, transactions
  */
 export class MiniAppHost {
   private inAppBrowser: typeof InAppBrowser | null
@@ -1978,6 +1982,8 @@ export class MiniAppHost {
       htlcData: {
         type: 'sign-early',
       },
+      htlcContractAddress: contractAddress.toUserFriendlyAddress(),
+      htlcValidityStartHeight: validityStartHeight,
       network: 'nimiq',
     })
     if (!confirmed) {
@@ -2068,6 +2074,9 @@ export class MiniAppHost {
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
       htlcData: 'htlcData' in txData ? txData.htlcData : undefined,
+      // On a redeem `txData.sender` is the contract being drained; on `new-htlc` it is just our own
+      // funding account, which the sheet already covers with its HTLC Sender/Recipient rows.
+      htlcContractAddress: txData.transfer === Transfer.HTLC && txData.htlcData.type !== 'new-htlc' ? txData.sender : undefined,
       network: 'nimiq',
     })
     if (!confirmed) {

@@ -296,7 +296,7 @@ async function redeemEarly() {
 
 <template>
     <div>
-        <h2>HTLC Mini-App</h2>
+        <h2>HTLC Mini App</h2>
 
         <div v-if="!addresses">
             <button v-if="hasProvider" @click="login" style="background-color: green;">Connect Wallet</button>
