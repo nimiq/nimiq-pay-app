@@ -755,4 +755,42 @@ describe('miniAppHost HTLC guards', () => {
     await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })).resolves.toBe('tx-hash')
     expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ sender: foreignContract, recipient }))
   })
+
+  it.each([
+    ['a blake2b root one byte short', 'ab'.repeat(31), 'blake2b', 1],
+    ['a sha256 root one byte long', 'ab'.repeat(33), 'sha256', 1],
+    ['a 32-byte root declared as sha512', 'ab'.repeat(32), 'sha512', 1],
+    ['a hash count of 0', 'ab'.repeat(32), 'blake2b', 0],
+    ['a hash count of 256', 'ab'.repeat(32), 'blake2b', 256],
+  ])('rejects a new HTLC with %s', async (_label, hashRoot, hashAlgorithm, hashCount) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, hashRoot, hashCount, hashAlgorithm, 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('rejects a regular redeem whose hash root does not match the declared algorithm', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, 'ab'.repeat(32), 'cd'.repeat(31), 1, 'blake2b', 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('accepts a 64-byte sha512 root and the maximum hash count', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(64), 255, 'sha512', 1234567890, 100],
+    })).resolves.toBe('tx-hash')
+  })
 })

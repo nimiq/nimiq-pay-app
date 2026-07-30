@@ -183,6 +183,31 @@ export interface MiniAppHostConfig {
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
 }
 
+/** Wire id and hash-root length of every hash algorithm the HTLC methods accept. */
+const HTLC_HASH_ALGORITHMS: Record<string, { id: number, rootLength: number }> = {
+  blake2b: { id: 1, rootLength: 32 },
+  sha256: { id: 3, rootLength: 32 },
+  sha512: { id: 4, rootLength: 64 },
+}
+
+/**
+ * Resolves the hash algorithm's wire id and validates what the fixed-layout HTLC buffers in
+ * `lib/tx.ts` cannot defend themselves against. Those buffers are written field by field, so a
+ * hash root of the wrong length does not fail — it shifts `hashCount` and `timeout` and still
+ * deserialises, creating a contract whose timeout is nothing like the one the sheet showed. A
+ * `hashCount` outside 1-255 is silently truncated mod 256 by `writeUint8` for the same reason.
+ */
+function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number): number {
+  const algo = typeof algorithm === 'string' ? HTLC_HASH_ALGORITHMS[algorithm] : undefined
+  if (!algo)
+    throw new InvalidTransactionError('Invalid hash algorithm')
+  if (hashRoot.length !== algo.rootLength)
+    throw new InvalidTransactionError(`Invalid hash root: ${algorithm} requires a ${algo.rootLength}-byte root, got ${hashRoot.length} bytes`)
+  if (!Number.isInteger(hashCount) || hashCount < 1 || hashCount > 255)
+    throw new InvalidTransactionError(`Invalid hash count: must be an integer between 1 and 255, got ${hashCount}`)
+  return algo.id
+}
+
 /**
  * MiniAppHost - SDK for the host native app that runs mini apps in InAppBrowser
  * Provides typed communication with mini apps and handles permissions, signing, transactions
@@ -1721,19 +1746,7 @@ export class MiniAppHost {
       htlcRecipient = Nimiq.Address.fromString(params[1])
       hashRoot = Nimiq.BufferUtils.fromHex(params[2])
       hashCount = Number(params[3])
-      switch (params[4]) {
-        case 'blake2b':
-          hashAlgorithm = 1
-          break
-        case 'sha256':
-          hashAlgorithm = 3
-          break
-        case 'sha512':
-          hashAlgorithm = 4
-          break
-        default:
-          throw new Error('Invalid hash algorithm')
-      }
+      hashAlgorithm = parseHtlcHashAlgorithm(params[4], hashRoot, hashCount)
       timeout = Number(params[5])
       value = Number(params[6])
     }
@@ -1742,19 +1755,7 @@ export class MiniAppHost {
       htlcRecipient = Nimiq.Address.fromString((params as any).htlcRecipient)
       hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
       hashCount = Number((params as any).hashCount)
-      switch ((params as any).hashAlgorithm) {
-        case 'blake2b':
-          hashAlgorithm = 1
-          break
-        case 'sha256':
-          hashAlgorithm = 3
-          break
-        case 'sha512':
-          hashAlgorithm = 4
-          break
-        default:
-          throw new Error('Invalid hash algorithm')
-      }
+      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount)
       timeout = Number((params as any).timeout)
       value = Number((params as any).value)
     }
@@ -1796,19 +1797,7 @@ export class MiniAppHost {
       preImage = Nimiq.BufferUtils.fromHex(params[2])
       hashRoot = Nimiq.BufferUtils.fromHex(params[3])
       hashCount = Number(params[4])
-      switch (params[5]) {
-        case 'blake2b':
-          hashAlgorithm = 1
-          break
-        case 'sha256':
-          hashAlgorithm = 3
-          break
-        case 'sha512':
-          hashAlgorithm = 4
-          break
-        default:
-          throw new Error('Invalid hash algorithm')
-      }
+      hashAlgorithm = parseHtlcHashAlgorithm(params[5], hashRoot, hashCount)
       value = Number(params[6])
     }
     else if (typeof params === 'object' && params !== null) {
@@ -1817,19 +1806,7 @@ export class MiniAppHost {
       preImage = Nimiq.BufferUtils.fromHex((params as any).preImage)
       hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
       hashCount = Number((params as any).hashCount)
-      switch ((params as any).hashAlgorithm) {
-        case 'blake2b':
-          hashAlgorithm = 1
-          break
-        case 'sha256':
-          hashAlgorithm = 3
-          break
-        case 'sha512':
-          hashAlgorithm = 4
-          break
-        default:
-          throw new Error('Invalid hash algorithm')
-      }
+      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount)
       value = Number((params as any).value)
     }
     else {
