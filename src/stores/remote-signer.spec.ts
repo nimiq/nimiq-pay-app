@@ -3116,8 +3116,9 @@ describe('useRemoteSigner', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
+      const claim = await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
 
+      expect(claim).toBe('ours')
       expect(state.getAccount).toHaveBeenCalled()
       expect(state.run).toHaveBeenCalledWith(
         expect.any(String),
@@ -3174,8 +3175,9 @@ describe('useRemoteSigner', () => {
 
       const { useRemoteSigner } = await import('./remote-signer')
       const store = useRemoteSigner()
-      await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
+      const claim = await store.registerOwnHtlcIfMissing('NQ44 EXTENSION HTLC ADDRESS')
 
+      expect(claim).toBe('ours')
       expect(state.getAccount).not.toHaveBeenCalled()
       expect(state.run).not.toHaveBeenCalledWith(
         expect.any(String),
@@ -3197,8 +3199,9 @@ describe('useRemoteSigner', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      await store.registerOwnHtlcIfMissing('NQ44 PRUNED HTLC')
+      const claim = await store.registerOwnHtlcIfMissing('NQ44 PRUNED HTLC')
 
+      expect(claim).toBe('ours')
       expect(state.run).toHaveBeenCalledWith(
         expect.any(String),
         ['NQ44 PRUNED HTLC', 0, 98, 'service-public-key', 0, 0, false],
@@ -3216,8 +3219,9 @@ describe('useRemoteSigner', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      await store.registerOwnHtlcIfMissing('NQ55 MINI APP HTLC ADDRESS')
+      const claim = await store.registerOwnHtlcIfMissing('NQ55 MINI APP HTLC ADDRESS')
 
+      expect(claim).toBe('foreign')
       expect(state.run).not.toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['NQ55 MINI APP HTLC ADDRESS']),
@@ -3238,11 +3242,51 @@ describe('useRemoteSigner', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      await store.registerOwnHtlcIfMissing('NQ55 PRUNED MINI APP HTLC')
+      const claim = await store.registerOwnHtlcIfMissing('NQ55 PRUNED MINI APP HTLC')
 
+      expect(claim).toBe('foreign')
       expect(state.run).not.toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['NQ55 PRUNED MINI APP HTLC']),
+      )
+    })
+
+    it('does not register when neither the account nor its creation tx yields a shape', async () => {
+      // getAccount is a non-htlc (pruned) account, and getHtlcCreationData is left at its default
+      // resolved value (undefined, i.e. no creation tx found) — neither source has a shape at all.
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      const claim = await store.registerOwnHtlcIfMissing('NQ66 UNKNOWN SHAPE ADDRESS')
+
+      expect(claim).toBe('foreign')
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ66 UNKNOWN SHAPE ADDRESS']),
+      )
+    })
+
+    it('reports unknown rather than foreign when the creation-tx query throws', async () => {
+      // A thrown query (timeout, client not ready) is not the same as a confirmed foreign shape —
+      // recording it now could never be retracted, so the caller must be able to defer instead.
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+      state.getHtlcCreationData.mockRejectedValue(new Error('Operation timed out after 30000 milliseconds'))
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      const claim = await store.registerOwnHtlcIfMissing('NQ77 MAYBE OWN HTLC ADDRESS')
+
+      expect(claim).toBe('unknown')
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ77 MAYBE OWN HTLC ADDRESS']),
       )
     })
   })

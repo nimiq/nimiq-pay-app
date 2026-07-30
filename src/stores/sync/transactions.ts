@@ -1,7 +1,7 @@
 import type { Client, PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { RemoteSigner } from '@/lib/sql-queries'
-import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { defineStore, storeToRefs } from 'pinia'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
@@ -261,30 +261,44 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           const page = await getLocalTransactions({ sinceHeight: 0, ...(startAt ? { startAt } : {}), limit: LOCAL_HISTORY_PAGE_SIZE })
           if (!isLocalCurrent())
             return
+          // Offer each candidate HTLC for registration once per page — it only accepts our own
+          // contract shape. Not awaited here so plain receipts below publish without waiting; only
+          // HTLC drains await their sender's claim instead of re-deriving it.
+          const ownHtlcClaims = new Map<string, Promise<'ours' | 'foreign' | 'unknown'>>()
+          for (const tx of page) {
+            if (isOwnHtlcDrain(tx, context.owner) && !ownHtlcClaims.has(tx.sender)) {
+              ownHtlcClaims.set(tx.sender, remoteSignerStore.registerOwnHtlcIfMissing(tx.sender, context).catch((error) => {
+                logger.error('Could not classify HTLC drain — deferring to the next refresh', { address: tx.sender, error })
+                return 'unknown' as const
+              }))
+            }
+          }
           // Publish recent receipts before fetching older pages or reconciling HTLCs.
-          const ownHtlcRegistrations = new Map<string, Promise<void>>()
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
             if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
               return
 
-            // Offer the HTLC for registration first — it only accepts our own contract shape.
-            // Anything it declines is a Mini App HTLC and belongs in the history. Deduped per
-            // page so concurrent drains from one HTLC share a single registration.
-            if (isOwnHtlcDrain(tx, context.owner)) {
-              if (!ownHtlcRegistrations.has(tx.sender))
-                ownHtlcRegistrations.set(tx.sender, remoteSignerStore.registerOwnHtlcIfMissing(tx.sender, context))
-              await ownHtlcRegistrations.get(tx.sender)
+            if (tx.senderType === 'htlc') {
+              const claim = await ownHtlcClaims.get(tx.sender)
+              if (!isLocalCurrent())
+                return
+              // 'unknown' means the shape couldn't be read this round (e.g. a timed-out creation-tx
+              // query) — wait for the next refresh rather than risk recording a drain that might turn
+              // out to be ours. A sender absent from this round's candidates (claim undefined, e.g. a
+              // regular, non timeout/early-resolve redeem) still falls back to remote_signers membership.
+              if (claim === 'unknown') {
+                logger.log(`⏳ updateTransactionHistory deferred own-HTLC drain — shape unreadable this round`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+                return
+              }
+              if (claim === 'ours' || (claim === undefined && await remoteSignerStore.isOurRemoteSigner(tx.sender))) {
+                logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+                return
+              }
               if (!isLocalCurrent())
                 return
             }
-            if (tx.senderType === 'htlc' && await remoteSignerStore.isOurRemoteSigner(tx.sender)) {
-              logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
-              return
-            }
-            if (!isLocalCurrent())
-              return
 
             if (nakaBufferAddresses.includes(tx.sender)) {
               logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
@@ -342,9 +356,19 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       if (!isCurrent())
         return
 
-      // Resolved once per refresh: `isOwnRemoteHtlcShape` needs both addresses to tell our own
-      // extension chain apart from a Mini App HTLC. Without a cosigner key we cannot tell them
-      // apart at all, so the remote-signer scan below is skipped rather than risking either error.
+      await discoverRemoteSignersFromBlockchain()
+      if (!isCurrent())
+        return
+      const remoteSigners = await getAllRemoteSigners()
+      if (!isCurrent())
+        return
+
+      // Resolved only now: discoverRemoteSignersFromBlockchain is what waits (up to 10s) for the
+      // cosigner key to arrive on a cold start, so snapshotting any earlier could read
+      // remotePublicKey before it's populated and skip the scan below for no reason.
+      // isOwnRemoteHtlcShape needs both addresses to tell our own extension chain apart from a
+      // Mini App HTLC; without a cosigner key we cannot tell them apart at all, so the scan is
+      // skipped rather than risking either error.
       const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
       const cosignerAddress = useRemoteSigner().remotePublicKey
         ? Nimiq.PublicKey.fromHex(useRemoteSigner().remotePublicKey!).toAddress().toUserFriendlyAddress()
@@ -383,15 +407,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      await discoverRemoteSignersFromBlockchain()
-      if (!isCurrent())
-        return
-      const remoteSigners = await getAllRemoteSigners()
-      if (!isCurrent())
-        return
-
       if (!cosignerAddress) {
-        logger.error('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
+        // Legitimate on every refresh for a brand-new keyless wallet, not an error condition.
+        logger.warn('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
       }
       else if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already

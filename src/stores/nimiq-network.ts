@@ -319,22 +319,22 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
+  // Mirrors DISCOVER_TIMEOUT_MS in remote-signer.ts: the identical getTransactionsByAddress call
+  // can hang on a freshly-booted light client before history is ready.
+  const HTLC_CREATION_DATA_TIMEOUT_MS = 30_000
+
   /**
    * Reads an HTLC's contract parameters from its creation transaction. Needed when the contract has
    * been fully drained and pruned, so `getAccount` no longer returns it — the history index keeps
-   * the creation tx forever.
+   * the creation tx forever. `undefined` means only "the query succeeded and found no creation tx" —
+   * a failed or timed-out query throws instead, so callers can tell a genuinely foreign contract
+   * apart from one that simply couldn't be read yet.
    */
   async function getHtlcCreationData(htlcAddress: Address): Promise<PlainHtlcData | undefined> {
-    try {
-      const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
-      const txs = await client.value?.getTransactionsByAddress(htlcAddress) || []
-      const creation = txs.find(tx => tx.recipient === plainHtlcAddress && tx.recipientType === 'htlc')
-      return creation && 'hashRoot' in creation.data ? creation.data : undefined
-    }
-    catch (error) {
-      logger.error('Error getting HTLC creation data', error)
-      return undefined
-    }
+    const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
+    const txs = await promiseWithTimeout(client.value?.getTransactionsByAddress(htlcAddress) ?? Promise.resolve([]), HTLC_CREATION_DATA_TIMEOUT_MS)
+    const creation = txs.find(tx => tx.recipient === plainHtlcAddress && tx.recipientType === 'htlc')
+    return creation && 'hashRoot' in creation.data ? creation.data : undefined
   }
 
   return {

@@ -436,7 +436,7 @@ describe('useSyncLifecycle', () => {
     })
 
     it('drops a drain from a registered own HTLC and registers it if missing', async () => {
-      state.isOurRemoteSigner.mockResolvedValue(true)
+      state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
       const listener = await captureLocalTxListener()
       await listener({
         transactionHash: 'drain-hash',
@@ -466,7 +466,7 @@ describe('useSyncLifecycle', () => {
       // proof.creator is the local wallet because sendNewHtlcTransaction defaults the Mini App
       // HTLC's sender to it — but registerOwnHtlcIfMissing rejected the contract shape, so the
       // drain belongs in the history rather than being dropped as internal traffic.
-      state.isOurRemoteSigner.mockResolvedValue(false)
+      state.registerOwnHtlcIfMissing.mockResolvedValue('foreign')
       const listener = await captureLocalTxListener()
       await listener({
         transactionHash: 'mini-app-drain-hash',
@@ -483,6 +483,28 @@ describe('useSyncLifecycle', () => {
       })
       expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith('NQ55 MINI APP HTLC ADDRESS', expect.objectContaining({ client: state.client, network: 'testalbatross', owner: 'NQ00 TEST LOCAL ADDRESS' }))
       expect(state.addReceiptTransaction).toHaveBeenCalled()
+    })
+
+    it('defers an own-HTLC drain whose contract shape could not be read this round', async () => {
+      // registerOwnHtlcIfMissing couldn't read the creation tx this round (e.g. a timed-out
+      // query) — the drain must be neither recorded nor claimed as ours; wait for the next refresh.
+      state.registerOwnHtlcIfMissing.mockResolvedValue('unknown')
+      const listener = await captureLocalTxListener()
+      await listener({
+        transactionHash: 'unreadable-drain-hash',
+        sender: 'NQ66 MAYBE OWN HTLC ADDRESS',
+        senderType: 'htlc',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 521,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 9,
+        data: { raw: '' },
+        proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
+      })
+      expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith('NQ66 MAYBE OWN HTLC ADDRESS', expect.objectContaining({ client: state.client, network: 'testalbatross', owner: 'NQ00 TEST LOCAL ADDRESS' }))
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
     it('keeps foreign HTLC drains (creator != local) as Top-Up', async () => {
@@ -624,7 +646,7 @@ describe('useSyncLifecycle', () => {
       })
 
       it('does NOT fire on own-HTLC drain', async () => {
-        state.isOurRemoteSigner.mockResolvedValue(true)
+        state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
         const listener = await captureLocalTxListener()
         await listener({
           transactionHash: 'own-htlc-drain',
