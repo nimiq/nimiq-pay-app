@@ -108,8 +108,11 @@ Applied in three places:
   existing `Payment` fallback for contracts Fastspot *does* know but whose asset pair we cannot
   handle: those are real swaps and should not be relabelled.
 - `handleIncomingTransaction` (`sync/lifecycle.ts:181`) and the local-account loop
-  (`sync/transactions.ts:153`) dedup against `GetTransactionByHash` instead of `GetAllUserReceipts`,
-  so a stored HTLC redeem is no longer overwritten as a Top-Up.
+  (`sync/transactions.ts:125`) dedup against `SelectAllTransactions` instead of `GetAllUserReceipts`,
+  so a stored HTLC redeem is no longer overwritten as a Top-Up. `SelectAllTransactions` covers every
+  displayable transfer including `htlc` after change 2, and keeps this to one query rather than one
+  `GetTransactionByHash` per transaction. `sync/transactions.ts:164` keeps its separate
+  `GetAllUserReceipts` fetch, which genuinely needs receipts only, for `topUpAddresses`.
 
 ### 5. Remote balance — `src/stores/transactions.ts:313`
 
