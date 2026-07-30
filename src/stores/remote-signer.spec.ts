@@ -63,6 +63,7 @@ function createRemoteSignerApiData(address = 'NQ22 TEST OLD HTLC ADDRESS', overr
 const rawState = vi.hoisted(() => {
   const getBalance = vi.fn(() => Promise.resolve({ data: 0, error: undefined }))
   const getAccount = vi.fn((_address?: ReturnType<typeof createAddress>): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: 'No account found' }))
+  const getHtlcCreationData = vi.fn((): Promise<any> => Promise.resolve(undefined))
   const getAccounts = vi.fn((): Promise<{
     data: { type: string, balance: number }[] | undefined
     error: Error | undefined
@@ -117,6 +118,7 @@ const rawState = vi.hoisted(() => {
     getBalance,
     getAccount,
     getAccounts,
+    getHtlcCreationData,
     getStatus,
     getRemoteSigner,
     query,
@@ -257,6 +259,7 @@ vi.mock('@/stores/nimiq-network', () => {
   const useNimiqNetwork = defineStore('nimiq-network', () => ({
     getAccount: state.getAccount,
     getAccounts: state.getAccounts,
+    getHtlcCreationData: state.getHtlcCreationData,
     getBalance: state.getBalance,
     reconnect: state.reconnect,
     createHistoryClient: state.createHistoryClient,
@@ -331,6 +334,7 @@ describe('useRemoteSigner', () => {
     state.getBalance.mockResolvedValue({ data: 0, error: undefined })
     state.getAccount.mockReset()
     state.getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
+    state.getHtlcCreationData.mockReset()
     state.getAccounts.mockReset()
     state.getAccounts.mockResolvedValue({ data: [], error: undefined })
     state.getStatus.mockReset()
@@ -3102,7 +3106,7 @@ describe('useRemoteSigner', () => {
         status: 200,
       })
       state.getAccount.mockResolvedValue({
-        data: { type: 'htlc', balance: 521, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ_R', timeout: 555_000, hashRoot: '0', hashAlgorithm: 'sha256', hashCount: 1, totalAmount: 521 },
+        data: { type: 'htlc', balance: 521, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 555_000, hashRoot: '0'.repeat(64), hashAlgorithm: 'sha256', hashCount: 1, totalAmount: 521 },
         error: undefined,
       })
 
@@ -3179,10 +3183,13 @@ describe('useRemoteSigner', () => {
       )
     })
 
-    it('still registers when getAccount returns a non-htlc account (pruned post-drain)', async () => {
-      state.getAccount.mockResolvedValue({
-        data: { type: 'basic', balance: 100 },
-        error: undefined,
+    it('registers a pruned HTLC whose creation tx shows our own shape', async () => {
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 100 }, error: undefined })
+      state.getHtlcCreationData.mockResolvedValue({
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ99 COSIGNER ADDRESS',
+        hashRoot: '0'.repeat(64),
+        hashCount: 1,
       })
 
       const { useRemoteSigner } = await import('./remote-signer')
@@ -3195,6 +3202,47 @@ describe('useRemoteSigner', () => {
       expect(state.run).toHaveBeenCalledWith(
         expect.any(String),
         ['NQ44 PRUNED HTLC', 0, 98, 'service-public-key', 0, 0, false],
+      )
+    })
+
+    it('does not register a Mini App HTLC whose contract shape is not ours', async () => {
+      state.getAccount.mockResolvedValue({
+        data: { type: 'htlc', balance: 500, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', timeout: 555_000, hashRoot: 'ab'.repeat(32), hashAlgorithm: 'blake2b', hashCount: 1, totalAmount: 500 },
+        error: undefined,
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing('NQ55 MINI APP HTLC ADDRESS')
+
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ55 MINI APP HTLC ADDRESS']),
+      )
+    })
+
+    it('does not register a pruned HTLC whose creation tx is not ours', async () => {
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+      state.getHtlcCreationData.mockResolvedValue({
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ77 SOME COUNTERPARTY',
+        hashRoot: 'ab'.repeat(32),
+        hashCount: 1,
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing('NQ55 PRUNED MINI APP HTLC')
+
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ55 PRUNED MINI APP HTLC']),
       )
     })
   })

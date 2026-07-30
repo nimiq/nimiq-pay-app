@@ -426,6 +426,25 @@ export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
   return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking, Transfer.HTLC].includes(tx.transfer)
 }
 
+export const ZERO_HASH_ROOT = '0'.repeat(64)
+
+/**
+ * Our own remote-signer HTLCs are created by `createDepositData`, which pins every contract field.
+ * Matching the whole shape — rather than the zero hash root alone — is what keeps a Mini App HTLC
+ * from being mistaken for ours. A Mini App would have to name our cosigner as the recipient to pass,
+ * and such a contract is one only our cosigner can resolve early and only our local wallet can
+ * resolve on timeout, so it is ours in every way that matters. `hashAlgorithm` is not matched.
+ */
+export function isOwnRemoteHtlcShape(
+  htlc: { sender: string, recipient: string, hashRoot: string, hashCount: number },
+  { localAddress, cosignerAddress }: { localAddress: string, cosignerAddress: string },
+) {
+  return htlc.sender === localAddress
+    && htlc.recipient === cosignerAddress
+    && htlc.hashRoot === ZERO_HASH_ROOT
+    && htlc.hashCount === 1
+}
+
 const PAYMENT_TRANSFERS = [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap] as const
 
 export function isPaymentTransferType(transfer: Transfer): transfer is Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap {

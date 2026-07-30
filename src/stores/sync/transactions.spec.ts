@@ -950,6 +950,7 @@ describe('useSyncTransactions', () => {
 
       it('drops a timeout-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        state.isOurRemoteSigner.mockResolvedValue(true)
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -965,6 +966,7 @@ describe('useSyncTransactions', () => {
 
       it('drops an early-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('early-resolve'))
+        state.isOurRemoteSigner.mockResolvedValue(true)
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -1023,6 +1025,17 @@ describe('useSyncTransactions', () => {
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
       })
 
+      it('keeps a Mini App HTLC drain that registration refused to claim as ours', async () => {
+        mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        // registerOwnHtlcIfMissing saw a foreign contract shape and declined to register it.
+        state.isOurRemoteSigner.mockResolvedValue(false)
+        const { useSyncTransactions } = await import('./transactions')
+        await useSyncTransactions().updateTransactionHistory()
+        expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+          hash: 'drain-hash',
+        }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+      })
+
       it('keeps a foreign HTLC drain (creator != local) as a Top-Up', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve', 'NQ77 FOREIGN CREATOR'))
         const { useSyncTransactions } = await import('./transactions')
@@ -1074,7 +1087,7 @@ describe('useSyncTransactions', () => {
         fee: 0,
         state: 'confirmed',
         timestamp: 150_000,
-        data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+        data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0000000000000000000000000000000000000000000000000000000000000000', hashCount: 1 },
         proof: { raw: '' },
       }
       const swapLeafTx = {
@@ -1101,6 +1114,36 @@ describe('useSyncTransactions', () => {
       expect(state.addHtlcTransaction).toHaveBeenCalledWith(
         expect.objectContaining({ hash: 'swap-leaf-hash' }),
       )
+    })
+
+    it('does not traverse a Mini App HTLC that mimics the zero hash root', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'mimic-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            // Zero hash root, but the recipient is a real counterparty rather than our cosigner.
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: '0'.repeat(64), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(expect.objectContaining({ hash: 'mimic-hash' }))
     })
 
     it('records an HTLC creation as Transfer.HTLC when Fastspot does not know the contract', async () => {

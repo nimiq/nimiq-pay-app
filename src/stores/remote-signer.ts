@@ -12,6 +12,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSyncState } from '@/stores/sync/state'
+import { isOwnRemoteHtlcShape } from '@/types/transactions'
 
 const logger = useLogger('remote-signer')
 export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
@@ -1088,12 +1089,25 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!remotePublicKey.value)
       return
     const address = Nimiq.Address.fromUserFriendlyAddress(htlcAddress)
-    // Account may already be pruned if the HTLC has been fully drained — in that case we still
-    // register with zero balance/timeout so the cached set short-circuits future drains from
-    // this address instead of looping through getAccount on every periodic refresh.
+    const cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey.value).toAddress().toUserFriendlyAddress()
+    const localUserFriendly = localAddress.value!.toUserFriendlyAddress()
+
+    // The account is gone once the HTLC has been fully drained, so fall back to its creation tx.
+    // Without a readable shape we must not register: a Mini App HTLC in `remote_signers` would make
+    // the app try to extend or reclaim a contract it does not own.
     const { data: account } = await useNimiqNetwork().getAccount(address)
     if (!isCurrent())
       return
+    const shape = account?.type === 'htlc'
+      ? account
+      : await useNimiqNetwork().getHtlcCreationData(address)
+    if (!isCurrent())
+      return
+    if (!shape || !isOwnRemoteHtlcShape(shape, { localAddress: localUserFriendly, cosignerAddress })) {
+      logger.log(`🚫 Not registering HTLC — contract shape is not ours`, { address: htlcAddress, shape })
+      return
+    }
+
     const balance = account?.type === 'htlc' ? account.balance : 0
     const end = account?.type === 'htlc' ? account.timeout : 0
     await insertInactiveRemoteSigner({

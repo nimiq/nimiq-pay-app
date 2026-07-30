@@ -180,6 +180,7 @@ export function stubNimiqGlobal() {
       fromString: (value: string) => createAddress(value),
       fromUserFriendlyAddress: (value: string) => createAddress(value),
     },
+    PublicKey: { fromHex: () => ({ toAddress: () => ({ toUserFriendlyAddress: () => 'NQ11 COSIGNER ADDRESS' }) }) },
     BufferUtils: {
       fromHex: vi.fn(() => new Uint8Array()),
       toUtf8: vi.fn(() => ''),

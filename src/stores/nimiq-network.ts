@@ -1,4 +1,4 @@
-import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTransactionDetails } from '@nimiq/core'
+import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainHtlcData, PlainTransactionDetails } from '@nimiq/core'
 import type { AsyncResult } from '@/types'
 import { until, useTimeoutFn, useTimestamp } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -319,6 +319,24 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
+  /**
+   * Reads an HTLC's contract parameters from its creation transaction. Needed when the contract has
+   * been fully drained and pruned, so `getAccount` no longer returns it — the history index keeps
+   * the creation tx forever.
+   */
+  async function getHtlcCreationData(htlcAddress: Address): Promise<PlainHtlcData | undefined> {
+    try {
+      const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
+      const txs = await client.value?.getTransactionsByAddress(htlcAddress) || []
+      const creation = txs.find(tx => tx.recipient === plainHtlcAddress && tx.recipientType === 'htlc')
+      return creation && 'hashRoot' in creation.data ? creation.data : undefined
+    }
+    catch (error) {
+      logger.error('Error getting HTLC creation data', error)
+      return undefined
+    }
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -333,6 +351,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAccounts,
     getAccountTransactions,
     getAllOutgoingTransactionsFromHtlcs,
+    getHtlcCreationData,
     getBalance,
     networkName,
     networkId,

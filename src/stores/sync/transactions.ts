@@ -23,7 +23,7 @@ import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { isOwnRemoteHtlcShape, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const LOCAL_HISTORY_PAGE_SIZE = 100
@@ -262,16 +262,29 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           if (!isLocalCurrent())
             return
           // Publish recent receipts before fetching older pages or reconciling HTLCs.
+          const ownHtlcRegistrations = new Map<string, Promise<void>>()
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
               return
             if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
               return
 
+            // Offer the HTLC for registration first — it only accepts our own contract shape.
+            // Anything it declines is a Mini App HTLC and belongs in the history. Deduped per
+            // page so concurrent drains from one HTLC share a single registration.
             if (isOwnHtlcDrain(tx, context.owner)) {
+              if (!ownHtlcRegistrations.has(tx.sender))
+                ownHtlcRegistrations.set(tx.sender, remoteSignerStore.registerOwnHtlcIfMissing(tx.sender, context))
+              await ownHtlcRegistrations.get(tx.sender)
+              if (!isLocalCurrent())
+                return
+            }
+            if (tx.senderType === 'htlc' && await remoteSignerStore.isOurRemoteSigner(tx.sender)) {
               logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
               return
             }
+            if (!isLocalCurrent())
+              return
 
             if (nakaBufferAddresses.includes(tx.sender)) {
               logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
@@ -302,14 +315,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
                 await useTransactions().addReceiptTransaction(receipt, context)
             }
           }))
-          // Register own HTLCs once per page after publishing incoming receipts.
-          const ownHtlcSenders = new Set<string>()
-          for (const tx of page) {
-            if (isOwnHtlcDrain(tx, context.owner))
-              ownHtlcSenders.add(tx.sender)
-          }
-          if (ownHtlcSenders.size > 0)
-            await Promise.all([...ownHtlcSenders].map(sender => remoteSignerStore.registerOwnHtlcIfMissing(sender, context)))
           if (!isLocalCurrent())
             return
 
@@ -337,6 +342,14 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       if (!isCurrent())
         return
 
+      // Resolved once per refresh: `isOwnRemoteHtlcShape` needs both addresses to tell our own
+      // extension chain apart from a Mini App HTLC. Without a cosigner key we cannot tell them
+      // apart at all, so the remote-signer scan below is skipped rather than risking either error.
+      const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
+      const cosignerAddress = useRemoteSigner().remotePublicKey
+        ? Nimiq.PublicKey.fromHex(useRemoteSigner().remotePublicKey!).toAddress().toUserFriendlyAddress()
+        : undefined
+
       function categorizeTransactions(txs: PlainTransactionDetails[]) {
         const htlcExtensionTxs: PlainTransactionDetails[] = []
         const htlcSwapTxs: PlainTransactionDetails[] = []
@@ -346,7 +359,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         for (const tx of txs) {
           if (tx.recipientType === 'htlc') {
             const data = tx.data
-            if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
+            if ('hashRoot' in data && cosignerAddress && isOwnRemoteHtlcShape(data, { localAddress: localUserFriendlyForShape, cosignerAddress }))
               htlcExtensionTxs.push(tx)
             else
               htlcSwapTxs.push(tx)
@@ -377,7 +390,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       if (!isCurrent())
         return
 
-      if (remoteSigners && remoteSigners.length) {
+      if (!cosignerAddress) {
+        logger.error('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
+      }
+      else if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already
         // categorized — both filters apply at the outer level AND to recursive traversal results
         // (which can otherwise yield the same hash twice via overlapping extension chains).
