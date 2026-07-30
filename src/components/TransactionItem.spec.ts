@@ -34,7 +34,8 @@ vi.mock('@/composables/usePrice', () => ({
 
 vi.mock('./icons/categories/CategoryIcon.vue', () => ({
   default: defineComponent({
-    template: '<div data-testid="category-icon" />',
+    props: ['category'],
+    template: '<div data-testid="category-icon">{{ category }}</div>',
   }),
 }))
 
@@ -64,6 +65,12 @@ vi.mock('@nimiq/vue3-components', () => ({
 
 vi.mock('@/stores/app', () => ({
   useApp: () => ({ getAlias: () => undefined }),
+}))
+
+vi.mock('@/stores/local-wallet', () => ({
+  useLocalWallet: () => ({
+    localAddress: { toUserFriendlyAddress: () => 'NQ00 TEST LOCAL ADDRESS' },
+  }),
 }))
 
 describe('transactionItem', () => {
@@ -251,5 +258,61 @@ describe('transactionItem', () => {
 
     expect(wrapper.classes()).toContain('line-through')
     expect(wrapper.text()).toContain('Invalid')
+  })
+
+  it('shows a redeem paying the local wallet with the deposit icon', async () => {
+    const { default: TransactionItem } = await import('./TransactionItem.vue')
+    const wrapper = mount(TransactionItem, {
+      props: {
+        tx: {
+          transfer: Transfer.HTLC,
+          title: 'Redeem HTLC (regular)',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: '0xredeem',
+          sender: 'NQ55 MINI APP HTLC ADDRESS',
+          senderType: 'htlc',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        } as any,
+      },
+      global: { stubs: { IonRippleEffect: true } },
+    })
+
+    expect(wrapper.get('[data-testid="category-icon"]').text()).toBe('deposit')
+  })
+
+  it('does not give an HTLC funding the withdraw icon', async () => {
+    const { default: TransactionItem } = await import('./TransactionItem.vue')
+    const wrapper = mount(TransactionItem, {
+      props: {
+        tx: {
+          transfer: Transfer.HTLC,
+          title: 'New HTLC',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: '0xfunding',
+          sender: 'NQ11 TEST REMOTE ADDRESS',
+          senderType: 'htlc',
+          recipient: 'NQ55 MINI APP HTLC ADDRESS',
+          recipientType: 'htlc',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        } as any,
+      },
+      global: { stubs: { IonRippleEffect: true } },
+    })
+
+    const icon = wrapper.get('[data-testid="category-icon"]').text()
+    expect(icon).not.toBe('withdraw')
+    expect(icon).not.toBe('deposit')
   })
 })

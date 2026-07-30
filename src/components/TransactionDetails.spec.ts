@@ -1,5 +1,5 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
 import { FlowName } from '@/lib/flows/steps.types'
@@ -58,6 +58,12 @@ vi.mock('@/stores/app', () => ({
   }),
 }))
 
+vi.mock('@/stores/local-wallet', () => ({
+  useLocalWallet: () => ({
+    localAddress: { toUserFriendlyAddress: () => 'NQ00 TEST LOCAL ADDRESS' },
+  }),
+}))
+
 vi.mock('@/lib/flows', () => ({
   initializeFlow: (...args: unknown[]) => initializeFlow(...args),
 }))
@@ -98,6 +104,10 @@ vi.mock('./TransactionAmounts.vue', () => ({
 }))
 
 describe('transactionDetails', () => {
+  beforeEach(() => {
+    vi.stubGlobal('Nimiq', { AccountType: { HTLC: 'htlc', Basic: 'basic' } })
+  })
+
   it('refreshes polygon transactions through the polygon store', async () => {
     updateNimiqTransaction.mockReset()
     updatePolygonTransaction.mockReset()
@@ -239,5 +249,60 @@ describe('transactionDetails', () => {
     expect(wrapper.text()).toContain('Recipient')
     expect(wrapper.text()).not.toContain('Sender')
     expect(wrapper.text()).not.toContain('Add to address book')
+  })
+
+  it('treats an HTLC redeem paying the local wallet as incoming', async () => {
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.HTLC,
+          title: 'Redeem HTLC (regular)',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: '0xredeem',
+          sender: 'NQ55 MINI APP HTLC ADDRESS',
+          senderType: 'htlc',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        } as any,
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+
+    expect(wrapper.text()).toContain('Sender')
+    expect(wrapper.text()).not.toContain('Recipient')
+  })
+
+  it('treats an HTLC redeem paying a third party as outgoing', async () => {
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.HTLC,
+          title: 'Redeem HTLC (regular)',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: '0xredeem-third-party',
+          sender: 'NQ55 MINI APP HTLC ADDRESS',
+          senderType: 'htlc',
+          recipient: 'NQ77 SOMEONE ELSE',
+          recipientType: 'basic',
+          status: 'confirmed',
+          proofSize: 0,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
+        } as any,
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+
+    expect(wrapper.text()).toContain('Recipient')
   })
 })
