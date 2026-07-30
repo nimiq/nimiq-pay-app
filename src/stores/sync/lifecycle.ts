@@ -1,6 +1,6 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { WalletContext } from '@/stores/remote-signer'
-import type { UserReceiptTransaction } from '@/types/transactions'
+import type { ExternalTransaction } from '@/types/transactions'
 import { useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
@@ -290,7 +290,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (tx.recipientType === 'staking' && tx.data.type === 'add-stake' && (!remoteAddress.value || tx.sender !== remoteAddress.value.toUserFriendlyAddress()))
       return
 
-    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+    // Any already-recorded transfer — see the matching note in updateTransactionHistory.
+    const dbTxs: ExternalTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
     if (!isListenerContextCurrent(context))
       return
     const hash = tx.transactionHash

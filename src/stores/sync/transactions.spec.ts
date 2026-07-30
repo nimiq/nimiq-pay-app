@@ -864,7 +864,7 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql === SQLQuery.GetAllUserReceipts)
+        if (sql === SQLQuery.SelectAllTransactions)
           return Promise.resolve([{ hash: 'known-hash', sender: 'NQ77 KNOWN SENDER' }])
         return Promise.resolve([])
       })
@@ -893,8 +893,8 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql === SQLQuery.GetAllUserReceipts)
-          return Promise.resolve([{ hash: 'known-htlc-hash', sender: 'NQ33 NIMIQ PAY HTLC' }])
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'known-htlc-hash', transfer: Transfer.UserReceipt, sender: 'NQ33 NIMIQ PAY HTLC' }])
         return Promise.resolve([])
       })
       const { buildTopUpReceipt } = await import('@/lib/tx')
@@ -921,6 +921,38 @@ describe('useSyncTransactions', () => {
         hash: 'known-htlc-hash',
         sender: 'NQ44 HTLC OWNER',
       }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+    })
+
+    it('does not backfill an early-resolve drain stored under another transfer type', async () => {
+      const tx = {
+        transactionHash: 'known-htlc-hash',
+        sender: 'NQ55 MINI APP HTLC ADDRESS',
+        senderType: 'htlc',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { raw: '' },
+        proof: { type: 'early-resolve', raw: '' },
+      }
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS')
+          return Promise.resolve({ data: [tx] })
+        return Promise.resolve({ data: [] })
+      }) as any)
+      // Stored under a sender the backfill would "improve" — the stored transfer type is what stops it.
+      state.query.mockImplementation((sql = '') => {
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'known-htlc-hash', transfer: Transfer.HTLC, sender: 'NQ44 HTLC OWNER' }])
+        return Promise.resolve([])
+      })
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
     describe('own-HTLC drain filtering', () => {
@@ -1381,6 +1413,38 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateTransactionHistory()
       expect(state.logger.error).toHaveBeenCalledWith(expect.stringContaining('swap from another asset than NIM'))
       expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+    })
+
+    it('does not overwrite a stored Mini App HTLC redeem with a Top-Up', async () => {
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'redeem-hash',
+            sender: 'NQ55 MINI APP HTLC ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ00 TEST LOCAL ADDRESS',
+            recipientType: 'basic',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '' },
+            proof: { type: 'regular-transfer', raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+      // SelectAllTransactions (`transfer IN (...)`) already holds the redeem we sent ourselves.
+      state.query.mockImplementation((sql = '') => {
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'redeem-hash', transfer: 'htlc', sender: 'NQ55 MINI APP HTLC ADDRESS' }])
+        return Promise.resolve([])
+      })
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
   })
 

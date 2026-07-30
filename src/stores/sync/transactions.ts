@@ -251,7 +251,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
     isUpdatingTransactions.value = true
     try {
-      const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+      // Any already-recorded transfer, not just receipts — otherwise a Mini App HTLC redeem we
+      // stored ourselves gets re-recorded here as a Top-Up and clobbers the original row.
+      const knownTxs: ExternalTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
       if (!isLocalCurrent())
         return
       try {
@@ -308,11 +310,14 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             const hash = tx.transactionHash
-            const savedReceipt = userReceipts.find(dbTx => dbTx.hash === hash)
-            if (savedReceipt) {
-              if (tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
+            const knownTx = knownTxs.find(dbTx => dbTx.hash === hash)
+            if (knownTx) {
+              // Only rows we stored as Top-Ups get their sender backfilled with the HTLC owner: re-adding
+              // a receipt over a transfer stored under another type (e.g. a Mini App HTLC redeem) would
+              // clobber it with a Top-Up, which is exactly what the widened dedup above prevents.
+              if (knownTx.transfer === Transfer.UserReceipt && tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
                 const receipt = await buildTopUpReceipt(tx)
-                if (isLocalCurrent() && receipt.sender !== savedReceipt.sender)
+                if (isLocalCurrent() && receipt.sender !== knownTx.sender)
                   await useTransactions().addReceiptTransaction(receipt, context)
               }
               return
