@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { isOwnRemoteHtlcShape, isPendingAtomicSwapTransaction, Transfer, translateTransactionTitle, ZERO_HASH_ROOT } from './transactions'
+import { isHtlcRedeemToSelf, isOwnRemoteHtlcShape, isPendingAtomicSwapTransaction, Transfer, translateTransactionTitle, ZERO_HASH_ROOT } from './transactions'
 
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: {
@@ -80,5 +80,39 @@ describe('isOwnRemoteHtlcShape', () => {
 
   it('ignores the hash algorithm', () => {
     expect(isOwnRemoteHtlcShape({ ...ourHtlc(), hashAlgorithm: 'sha256' } as any, addresses)).toBe(true)
+  })
+})
+
+describe('isHtlcRedeemToSelf', () => {
+  beforeEach(() => {
+    vi.stubGlobal('Nimiq', { AccountType: { Basic: 0, HTLC: 2 } })
+  })
+
+  it('matches a redeem paying the local wallet', () => {
+    expect(isHtlcRedeemToSelf(
+      { transfer: Transfer.HTLC, senderType: 2, recipient: 'NQ00 LOCAL' } as any,
+      'NQ00 LOCAL',
+    )).toBe(true)
+  })
+
+  it('rejects a redeem paying a third party', () => {
+    expect(isHtlcRedeemToSelf(
+      { transfer: Transfer.HTLC, senderType: 2, recipient: 'NQ77 SOMEONE ELSE' } as any,
+      'NQ00 LOCAL',
+    )).toBe(false)
+  })
+
+  it('rejects an HTLC funding', () => {
+    expect(isHtlcRedeemToSelf(
+      { transfer: Transfer.HTLC, senderType: 2, recipient: 'NQ55 NEW CONTRACT' } as any,
+      'NQ00 LOCAL',
+    )).toBe(false)
+  })
+
+  it('rejects a non-HTLC transfer paying the local wallet', () => {
+    expect(isHtlcRedeemToSelf(
+      { transfer: Transfer.UserReceipt, senderType: 2, recipient: 'NQ00 LOCAL' } as any,
+      'NQ00 LOCAL',
+    )).toBe(false)
   })
 })

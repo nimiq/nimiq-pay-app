@@ -9,7 +9,8 @@ import CryptoAmount from '@/components/CryptoAmount.vue'
 import { usePrice } from '@/composables/usePrice'
 import { useRelativeTime } from '@/composables/useRelativeTime'
 import { Asset, assetToCrypto, assetToPaymentMethod } from '@/lib/assets'
-import { isPaymentTx, isPendingAtomicSwapTransaction, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
+import { useLocalWallet } from '@/stores/local-wallet'
+import { isHtlcRedeemToSelf, isPaymentTx, isPendingAtomicSwapTransaction, MerchantCategory, PaymentMethod, Transfer, translateTransactionState, translateTransactionTitle } from '@/types/transactions'
 import CategoryIcon from './icons/categories/CategoryIcon.vue'
 import CryptoCityLogo from './icons/cryptocity-logo.vue'
 
@@ -42,7 +43,7 @@ const category = computed(() => {
     return tx.merchantCategory || MerchantCategory.Shop
   if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.AccountType.HTLC && tx.recipientType === Nimiq.AccountType.Basic)
     return 'withdraw'
-  if (tx.transfer === Transfer.UserReceipt)
+  if (tx.transfer === Transfer.UserReceipt || isHtlcRedeemToSelf(tx, useLocalWallet().localAddress.toUserFriendlyAddress()))
     return 'deposit'
 
   return MerchantCategory.Shop

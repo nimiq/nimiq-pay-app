@@ -1,4 +1,7 @@
-import type * as Nimiq from '@nimiq/core'
+// Named-namespace type import (not `Nimiq`): the global `Nimiq` binding is a value, and
+// `isHtlcRedeemToSelf` below needs to reference `Nimiq.AccountType.HTLC` as that value — a
+// type-only `import type * as Nimiq` would shadow it and make it uncallable as a value.
+import type * as NimiqCore from '@nimiq/core'
 import type { Asset, Chain } from '@/lib/assets'
 import { i18n } from '@/i18n/i18n-setup'
 
@@ -97,9 +100,9 @@ export enum MerchantCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
-  senderType?: Nimiq.AccountType
+  senderType?: NimiqCore.AccountType
   recipient: string
-  recipientType?: Nimiq.AccountType
+  recipientType?: NimiqCore.AccountType
   status: AppTransactionState
   timestamp: number | undefined
   amount: number
@@ -268,8 +271,8 @@ export type MerchantTransaction = BaseTransaction & {
 
 export type HtlcData = {
   type: 'new-htlc'
-  sender: Nimiq.Address
-  recipient: Nimiq.Address
+  sender: NimiqCore.Address
+  recipient: NimiqCore.Address
   hashRoot: Uint8Array
   hashCount: number
   hashAlgorithm: number
@@ -286,8 +289,8 @@ export type HtlcData = {
   type: 'sign-early'
 } | {
   type: 'redeem-early'
-  senderSignatureProof: Nimiq.SignatureProof
-  recipientSignatureProof: Nimiq.SignatureProof
+  senderSignatureProof: NimiqCore.SignatureProof
+  recipientSignatureProof: NimiqCore.SignatureProof
 }
 
 export type HtlcTransaction = BaseTransaction & {
@@ -417,6 +420,17 @@ export function isOwnRemoteHtlcShape(
     && htlc.hashCount === 1
 }
 
+/**
+ * A Mini App may name any recipient on a redeem, so paying *us* is what makes it incoming.
+ * Takes the local address as a parameter to keep this module free of store imports — the same
+ * reason `isOwnHtlcDrain` in `stores/sync/transactions.ts` does.
+ */
+export function isHtlcRedeemToSelf(tx: Pick<Transaction, 'transfer' | 'senderType' | 'recipient'>, localAddress: string) {
+  return tx.transfer === Transfer.HTLC
+    && tx.senderType === Nimiq.AccountType.HTLC
+    && tx.recipient === localAddress
+}
+
 const PAYMENT_TRANSFERS = [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap] as const
 
 export function isPaymentTransferType(transfer: Transfer): transfer is Transfer.UserPayment | Transfer.UserPaymentToMerchant | Transfer.UserPaymentToAtomicSwap {
@@ -438,9 +452,9 @@ export type PartialSendTxArgs
   = | PartialUserTxArgs
     | Pick<LocalToRemoteTx, 'transfer'>
     | Pick<ExtendRemoteTx, 'transfer'>
-    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: NimiqCore.Address }
     | Pick<RemoteToLocalTx, 'transfer'>
-    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: NimiqCore.Address }
     | PartialStakingTxArgs
     | PartialHtlcTxArgs
 
@@ -452,4 +466,4 @@ export enum PaymentMethod {
   Bluecode = 'bluecode',
 }
 
-export type AppTransactionState = Nimiq.TransactionState | 'mined' | 'failed'
+export type AppTransactionState = NimiqCore.TransactionState | 'mined' | 'failed'
