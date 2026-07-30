@@ -126,26 +126,37 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
       const accountTxs = await getAccountTransactions(localAddress.value!)
 
-      // Register newly-observed own HTLCs once each before scanning, so concurrent drains from
-      // the same HTLC don't issue duplicate getAccount calls during the parallel loop below.
+      // Register newly-observed own HTLCs once each before scanning, so concurrent drains from the
+      // same HTLC don't issue duplicate getAccount calls, and so the per-tx loop below can reuse
+      // each sender's claim instead of re-deriving it.
       const ownHtlcSenders = new Set<string>()
       for (const tx of accountTxs.data) {
         if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress()))
           ownHtlcSenders.add(tx.sender)
       }
-      if (ownHtlcSenders.size > 0)
-        await Promise.all([...ownHtlcSenders].map(sender => useRemoteSigner().registerOwnHtlcIfMissing(sender)))
+      const ownHtlcClaims = new Map<string, 'ours' | 'foreign' | 'unknown'>(
+        await Promise.all([...ownHtlcSenders].map(async (sender): Promise<[string, 'ours' | 'foreign' | 'unknown']> =>
+          [sender, await useRemoteSigner().registerOwnHtlcIfMissing(sender)])),
+      )
 
       await Promise.all(accountTxs.data.map(async (tx) => {
         if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
           return
 
-        // The pre-scan above already offered every candidate to registerOwnHtlcIfMissing, which
-        // only accepts our own contract shape. Anything it declined is a Mini App HTLC and belongs
-        // in the history.
-        if (tx.senderType === 'htlc' && await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
-          logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
-          return
+        if (tx.senderType === 'htlc') {
+          const claim = ownHtlcClaims.get(tx.sender)
+          // 'unknown' means the shape couldn't be read this round (e.g. a timed-out creation-tx
+          // query) — wait for the next refresh rather than risk recording a drain that might turn
+          // out to be ours. A sender absent from this round's candidates (claim undefined, e.g. a
+          // regular, non timeout/early-resolve redeem) still falls back to remote_signers membership.
+          if (claim === 'unknown') {
+            logger.log(`⏳ updateTransactionHistory deferred own-HTLC drain — shape unreadable this round`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+            return
+          }
+          if (claim === 'ours' || (claim === undefined && await useRemoteSigner().isOurRemoteSigner(tx.sender))) {
+            logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+            return
+          }
         }
 
         if (nakaBufferAddresses.includes(tx.sender)) {
@@ -167,9 +178,15 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
       const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
 
-      // Resolved once per refresh: `isOwnRemoteHtlcShape` needs both addresses to tell our own
-      // extension chain apart from a Mini App HTLC. Without a cosigner key we cannot tell them
-      // apart at all, so the remote-signer scan below is skipped rather than risking either error.
+      await discoverRemoteSignersFromBlockchain()
+      const remoteSigners = await getAllRemoteSigners()
+
+      // Resolved only now: discoverRemoteSignersFromBlockchain is what waits (up to 10s) for the
+      // cosigner key to arrive on a cold start, so snapshotting any earlier could read
+      // remotePublicKey before it's populated and skip the scan below for no reason.
+      // isOwnRemoteHtlcShape needs both addresses to tell our own extension chain apart from a
+      // Mini App HTLC; without a cosigner key we cannot tell them apart at all, so the scan is
+      // skipped rather than risking either error.
       const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
       const cosignerAddress = useRemoteSigner().remotePublicKey
         ? Nimiq.PublicKey.fromHex(useRemoteSigner().remotePublicKey!).toAddress().toUserFriendlyAddress()
@@ -208,11 +225,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      await discoverRemoteSignersFromBlockchain()
-      const remoteSigners = await getAllRemoteSigners()
-
       if (!cosignerAddress) {
-        logger.error('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
+        // Legitimate on every refresh for a brand-new keyless wallet, not an error condition.
+        logger.warn('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
       }
       else if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already

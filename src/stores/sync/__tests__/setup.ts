@@ -22,7 +22,7 @@ function makeState() {
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
-  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<void> => Promise.resolve())
+  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<'ours' | 'foreign' | 'unknown'> => Promise.resolve('unknown'))
   const addReceiptTransaction = vi.fn()
   const scheduleIncomingPaymentNotification = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
@@ -59,7 +59,7 @@ function makeState() {
     remoteBalance: 0,
     remoteSigner: undefined as any,
     remoteHeight: 128,
-    remotePublicKey: 'service-public-key',
+    remotePublicKey: 'service-public-key' as string | undefined,
     remoteProofSize: 98,
     headTimestamp: 200_000,
     height: 128,
@@ -272,7 +272,7 @@ export function resetSyncState() {
   state.getAllRemoteSigners.mockResolvedValue([])
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
-  state.registerOwnHtlcIfMissing.mockResolvedValue(undefined)
+  state.registerOwnHtlcIfMissing.mockResolvedValue('unknown')
   state.refreshFromDb.mockResolvedValue(undefined)
   state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: true })
   state.updateSinglePolygonTransaction.mockResolvedValue(undefined)

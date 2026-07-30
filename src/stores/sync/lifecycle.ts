@@ -183,12 +183,18 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (dbTxs.some(dbTx => dbTx.hash === hash))
       return
 
-    // Offer the HTLC for registration first — it only accepts our own contract shape. If it stays
-    // unclaimed the drain came from a Mini App HTLC and must be recorded, not dropped.
+    // Offer the HTLC for registration first — it only accepts our own contract shape. 'foreign'
+    // falls through to the receipt path below. 'unknown' means the shape couldn't be read this
+    // round (e.g. a timed-out creation-tx query): recording now could never be retracted, so wait
+    // rather than guess — the next refresh will retry.
     if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress())) {
-      await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender)
-      if (await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
+      const claim = await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender)
+      if (claim === 'ours') {
         logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
+        return
+      }
+      if (claim === 'unknown') {
+        logger.log(`⏳ handleIncomingTransaction deferred own-HTLC drain — shape unreadable this round`, { hash, sender: tx.sender, amount: tx.value })
         return
       }
     }

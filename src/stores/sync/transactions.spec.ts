@@ -194,7 +194,7 @@ describe('useSyncTransactions', () => {
 
       it('drops a timeout-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
-        state.isOurRemoteSigner.mockResolvedValue(true)
+        state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -203,7 +203,7 @@ describe('useSyncTransactions', () => {
 
       it('drops an early-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('early-resolve'))
-        state.isOurRemoteSigner.mockResolvedValue(true)
+        state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -213,12 +213,22 @@ describe('useSyncTransactions', () => {
       it('keeps a Mini App HTLC drain that registration refused to claim as ours', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
         // registerOwnHtlcIfMissing saw a foreign contract shape and declined to register it.
-        state.isOurRemoteSigner.mockResolvedValue(false)
+        state.registerOwnHtlcIfMissing.mockResolvedValue('foreign')
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
           hash: 'drain-hash',
         }))
+      })
+
+      it('defers an own-HTLC drain whose contract shape could not be read this round', async () => {
+        mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        // registerOwnHtlcIfMissing couldn't read the creation tx this round (e.g. a timed-out
+        // query) — the drain must be neither recorded nor claimed as ours; wait for the next refresh.
+        state.registerOwnHtlcIfMissing.mockResolvedValue('unknown')
+        const { useSyncTransactions } = await import('./transactions')
+        await useSyncTransactions().updateTransactionHistory()
+        expect(state.addReceiptTransaction).not.toHaveBeenCalled()
       })
 
       it('keeps a foreign HTLC drain (creator != local) as a Top-Up', async () => {
@@ -256,6 +266,36 @@ describe('useSyncTransactions', () => {
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
       expect(events).toEqual(['discover', 'getAllRemoteSigners'])
+    })
+
+    it('skips the remote signer scan entirely when no cosigner key is available', async () => {
+      state.remotePublicKey = undefined
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'extension-hash',
+            sender: signer.address,
+            senderType: 'basic',
+            recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 50_000,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 150_000,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0'.repeat(64), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
     })
 
     it('routes swap HTLCs found behind an extension chain to the swap handler', async () => {
