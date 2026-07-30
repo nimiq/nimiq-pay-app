@@ -1,7 +1,9 @@
 import { Buffer } from 'node:buffer'
+import * as NimiqCore from '@nimiq/core'
 import { Interface, parseUnits } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { ZERO_HASH_ROOT } from '@/types/transactions'
 import { MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
@@ -639,5 +641,118 @@ describe('miniAppHost', () => {
         decodedAssetTransfer: expect.anything(),
       }),
     }))
+  })
+})
+
+describe('miniAppHost HTLC guards', () => {
+  const localKeyPair = NimiqCore.KeyPair.generate()
+  const cosignerKeyPair = NimiqCore.KeyPair.generate()
+  const ownContract = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const foreignContract = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const recipient = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const signatureProofHex = NimiqCore.BufferUtils.toHex(NimiqCore.SignatureProof.singleSig(
+    localKeyPair.publicKey,
+    NimiqCore.Signature.create(localKeyPair.privateKey, localKeyPair.publicKey, new Uint8Array([1])),
+  ).serialize())
+
+  /** The contract shape `createDepositData` produces for our own custody HTLCs. */
+  const ownHtlcAccount = {
+    type: 'htlc',
+    balance: 1000,
+    sender: localKeyPair.toAddress().toUserFriendlyAddress(),
+    recipient: cosignerKeyPair.toAddress().toUserFriendlyAddress(),
+    hashRoot: ZERO_HASH_ROOT,
+    hashCount: 1,
+    timeout: 0,
+  }
+  const foreignHtlcAccount = { ...ownHtlcAccount, recipient, hashRoot: 'aa'.repeat(32) }
+
+  let isOurRemoteSigner: ReturnType<typeof vi.fn>
+  let getAccount: ReturnType<typeof vi.fn>
+  let getHtlcCreationData: ReturnType<typeof vi.fn>
+  let sendTx: ReturnType<typeof vi.fn>
+
+  /** Params for each redeem method; all of them take the contract address first. */
+  const redeemCalls = [
+    ['sendRedeemRegularHtlcTransaction', (contract: string) => [contract, recipient, 'ab'.repeat(32), 'cd'.repeat(32), 1, 'blake2b', 100]],
+    ['sendRedeemTimeoutHtlcTransaction', (contract: string) => [contract, recipient, 100]],
+    ['sendRedeemEarlyHtlcTransaction', (contract: string) => [contract, recipient, signatureProofHex, signatureProofHex, 100, 0, 42]],
+    ['signRedeemEarlyHtlcTransaction', (contract: string) => [contract, recipient, 100, 0, 42]],
+  ] as const
+
+  beforeEach(() => {
+    vi.stubGlobal('Nimiq', NimiqCore)
+    isOurRemoteSigner = vi.fn(async () => false)
+    getAccount = vi.fn(async () => ({ data: foreignHtlcAccount, error: undefined }))
+    getHtlcCreationData = vi.fn(async () => undefined)
+    sendTx = vi.fn(async () => ({ outcome: 'submitted', tx: { hash: 'tx-hash' }, serialized: 'serialized-tx' }))
+
+    useLocalWallet.mockReturnValue({
+      localAddress: localKeyPair.toAddress(),
+      localWallet: localKeyPair,
+    })
+    useNimiqNetwork.mockReturnValue({
+      consensus: 'established',
+      height: 0,
+      networkId: 5,
+      getAccount,
+      getHtlcCreationData,
+    })
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey: NimiqCore.BufferUtils.toHex(cosignerKeyPair.publicKey.serialize()),
+      isOurRemoteSigner,
+    })
+    useTransactions.mockReturnValue({ sendTx })
+  })
+
+  it.each(redeemCalls)('refuses %s against a contract listed as our own remote signer', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+    isOurRemoteSigner.mockImplementation(async (address: string) => address === ownContract)
+
+    await expect(handleRequest({ network: 'nimiq', name, params: params(ownContract) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: 4001,
+      message: expect.stringContaining('your own Nimiq Pay contracts'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each(redeemCalls)('refuses %s against a contract whose on-chain shape is ours but which the table has not learnt yet', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: ownHtlcAccount, error: undefined })
+
+    await expect(handleRequest({ network: 'nimiq', name, params: params(ownContract) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: 4001 })
+    expect(isOurRemoteSigner).toHaveBeenCalledWith(ownContract)
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('refuses a redeem whose contract shape cannot be read at all', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: 4001,
+      message: expect.stringContaining('Cannot verify'),
+    })
+  })
+
+  it('reads a pruned contract from its creation transaction rather than trusting the account lookup', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockResolvedValue(ownHtlcAccount)
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [ownContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: 4001 })
+  })
+
+  it('still lets a Mini App redeem its own HTLC', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })).resolves.toBe('tx-hash')
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ sender: foreignContract, recipient }))
   })
 })

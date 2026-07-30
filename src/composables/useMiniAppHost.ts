@@ -24,7 +24,7 @@ import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-networ
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Rail, Transfer } from '@/types/transactions'
+import { isOwnRemoteHtlcShape, Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import {
   TRANSACTION_OUTCOME_UNKNOWN_CODE,
@@ -1659,6 +1659,53 @@ export class MiniAppHost {
     })
   }
 
+  /**
+   * A Mini App must never be able to spend one of *our own* custody HTLCs. Our local wallet is
+   * their HTLC-sender, so once the 14-day timeout has passed a timeout-resolve needs nothing but
+   * our own signature — and `listAccounts` hands the contract address straight to the Mini App.
+   *
+   * Both checks are needed: the `remote_signers` table can be incomplete (that is why
+   * `registerOwnHtlcIfMissing` exists), and the on-chain shape catches contracts it has not learnt
+   * about yet. Ownership we cannot establish is refused rather than allowed — a redeem raised
+   * while the contract is unreadable could not be broadcast reliably anyway.
+   */
+  private async assertNotOwnHtlc(contractAddress: Address): Promise<void> {
+    const address = contractAddress.toUserFriendlyAddress()
+    const ownContract = `Refusing to spend ${address}: it is one of your own Nimiq Pay contracts`
+    const unverifiable = `Cannot verify whether ${address} is one of your own Nimiq Pay contracts. Try again once Nimiq Pay is in sync.`
+
+    if (await useRemoteSigner().isOurRemoteSigner(address))
+      throw new PermissionDeniedError(ownContract)
+
+    const remotePublicKey = useRemoteSigner().remotePublicKey
+    if (!remotePublicKey)
+      throw new PermissionDeniedError(unverifiable)
+    const cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
+
+    const { data: account } = await useNimiqNetwork().getAccount(contractAddress)
+    if (!account)
+      throw new PermissionDeniedError(unverifiable)
+
+    // A live contract is readable as an account; a fully drained one is pruned and survives only
+    // as its creation transaction.
+    let shape: Parameters<typeof isOwnRemoteHtlcShape>[0] | undefined
+    if (account.type === 'htlc') {
+      shape = account
+    }
+    else {
+      try {
+        shape = await useNimiqNetwork().getHtlcCreationData(contractAddress)
+      }
+      catch (error) {
+        logger.error('Could not read HTLC contract shape — refusing the redeem', { address, error })
+        throw new PermissionDeniedError(unverifiable)
+      }
+    }
+
+    if (shape && isOwnRemoteHtlcShape(shape, { localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(), cosignerAddress }))
+      throw new PermissionDeniedError(ownContract)
+  }
+
   private async sendNewHtlcTransaction(params: unknown): Promise<string> {
     // Parse params
     let htlcSender: Address
@@ -1788,6 +1835,7 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for sendRedeemRegularHtlcTransaction method')
     }
+    await this.assertNotOwnHtlc(contractAddress)
     return this.sendPayment({
       transfer: Transfer.HTLC,
       sender: contractAddress.toUserFriendlyAddress(),
@@ -1824,6 +1872,7 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for sendRedeemTimeoutHtlcTransaction method')
     }
+    await this.assertNotOwnHtlc(contractAddress)
     return this.sendPayment({
       transfer: Transfer.HTLC,
       sender: contractAddress.toUserFriendlyAddress(),
@@ -1868,6 +1917,7 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for sendRedeemEarlyHtlcTransaction method')
     }
+    await this.assertNotOwnHtlc(contractAddress)
 
     const partialTx = {
       sender: contractAddress.toUserFriendlyAddress(),
@@ -1925,6 +1975,7 @@ export class MiniAppHost {
     else {
       throw new InternalError('Invalid parameters for signRedeemEarlyHtlcTransaction method')
     }
+    await this.assertNotOwnHtlc(contractAddress)
 
     const analyticsRequestType = 'nimiq_htlc_sign_early'
 
@@ -2100,53 +2151,6 @@ export class MiniAppHost {
     }
     return result.tx.hash
   }
-
-  // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
-  //   let tx: Transaction;
-  //   try {
-  //     tx = typeof txData === 'string' ? Nimiq.Transaction.fromAny(txData) : parseTransactionData(txData);
-  //   } catch (error) {
-  //     throw new InvalidTransactionError(`Failed to parse transaction: ${(error as Error).message}`);
-  //   }
-
-  //   if (!this.config.requestUserConfirmation) {
-  //     throw new InternalError('Confirmation handler not provided');
-  //   }
-
-  //   const confirmed = await this.config.requestUserConfirmation({
-  //     type: 'transaction',
-  //     plain: tx.toPlain(),
-  //   });
-  //   if (!confirmed) {
-  //     throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE);
-  //   }
-
-  //   // Handle claiming transactions
-  //   if (tx.recipient.equals(useLocalWallet().localAddress)) {
-  //     tx.sign(Nimiq.KeyPair.derive(useLocalWallet().localWallet.privateKey))
-  //     return {
-  //       serialized: tx.toHex(),
-  //       plain: tx.toPlain(),
-  //     };
-  //   }
-
-  //   // Handle sending transactions
-  //   const remoteAddress = useRemoteSigner().remoteAddress;
-  //   if (remoteAddress && tx.sender.equals(remoteAddress)) {
-  //     tx.proof = createResolveProof({ tx,  mode: 'early' });
-  //     const res = await getSignedTxByRemote(tx)
-  //     if (res.error) {
-  //       throw new InternalError(`Failed to sign transaction by cosigner: ${res.error}`);
-  //     }
-  //     const signedTx = res.data!.newTx;
-  //     return {
-  //       serialized: signedTx.toHex(),
-  //       plain: signedTx.toPlain(),
-  //     };
-  //   }
-
-  //   throw new PermissionDeniedError('Neither the sender nor recipient match any available account');
-  // }
 }
 
 /** Base class for MiniApp errors with typed error codes */
@@ -2177,55 +2181,3 @@ export class NetworkError extends MiniAppError {
 export class InvalidTransactionError extends MiniAppError {
   readonly type = 'INVALID_TRANSACTION'
 }
-
-// function parseTransactionData(txData: TransactionData): Transaction {
-//   const { height, networkId } = storeToRefs(useNimiqNetwork())
-
-//   if (txData.direction === 'send' && txData.recipient === useLocalWallet().localAddress.toUserFriendlyAddress()) {
-//     throw new Error('Cannot send transaction to own local address');
-//   }
-//   if (txData.direction === 'claim' && txData.sender === useRemoteSigner().remoteAddress!.toUserFriendlyAddress()) {
-//     throw new Error('Cannot claim transaction from own sender address');
-//   }
-
-//   return Nimiq.Transaction.fromPlain(txData.direction === 'send' ? {
-//     sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
-//     senderType: 'htlc',
-//     recipient: txData.recipient,
-//     recipientType: txData.recipientType || 'basic',
-//     value: txData.value,
-//     fee: txData.fee || 0,
-//     validityStartHeight: height.value,
-//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-//     flags: txData.flags || 0,
-//     data: txData.data || { type: 'raw', raw: '' },
-
-//     // Required fields without effect in `fromPlain()`
-//     transactionHash: '',
-//     format: "basic",
-//     feePerByte: 0,
-//     proof: { type: 'raw', raw: '' },
-//     size: 0,
-//     valid: true,
-//   } : {
-//     sender: txData.sender,
-//     senderType: txData.senderType,
-//     recipient: useLocalWallet().localAddress.toUserFriendlyAddress(),
-//     recipientType: 'basic',
-//     value: txData.value,
-//     fee: txData.fee || 0,
-//     validityStartHeight: height.value,
-//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-//     flags: 0,
-//     ...(txData.senderData ? { senderData: txData.senderData as PlainTransactionSenderData} : {}),
-//     data: txData.data || { type: 'raw', raw: '' },
-
-//     // Required fields without effect in `fromPlain()`
-//     transactionHash: '',
-//     format: "basic",
-//     feePerByte: 0,
-//     proof: { type: 'raw', raw: '' },
-//     size: 0,
-//     valid: true,
-//   });
-// }
