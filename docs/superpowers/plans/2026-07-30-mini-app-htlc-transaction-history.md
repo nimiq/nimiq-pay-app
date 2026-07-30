@@ -19,7 +19,7 @@
 - Never touch `*.po` files — they are generated. New user-facing strings are picked up by `pnpm i18n:extract`. No task here adds a new string; the four HTLC titles already exist in `src/types/transactions.ts`.
 - Always write "Mini Apps" (capitalized, two words) in comments and docs. Never "mini-apps", "miniApps", or "mini apps".
 - Comment only complex or non-obvious code, and explain *why*, not *what*.
-- Do not add wrapper functions that only forward with fixed arguments. Do not add helper functions unless they deduplicate a real second call site.
+- Do not add wrapper functions that only forward with fixed arguments. Do not add helper functions unless they deduplicate a real second call site. One agreed exception, ruled on before execution: `getHtlcCreationData` in Task 4 is a single-call-site store action, approved because `src/stores/nimiq-network.ts` is already built from single-purpose client wrappers with that exact try/catch shape, and it keeps raw client access out of `remote-signer.ts`. Do not flag it as a redundant helper.
 - `Nimiq` is a global value binding declared in `src/types/nimiq.d.ts`. It needs no import in `src/`, but every test file that exercises code touching it must `vi.stubGlobal('Nimiq', …)`.
 
 ---
@@ -1382,14 +1382,14 @@ const category = computed(() => {
     return tx.merchantCategory || MerchantCategory.Shop
   if (tx.transfer === Transfer.UserPayment && tx.senderType === Nimiq.AccountType.HTLC && tx.recipientType === Nimiq.AccountType.Basic)
     return 'withdraw'
-  if (isHtlcRedeemToSelf(tx, useLocalWallet().localAddress.toUserFriendlyAddress()))
-    return 'deposit'
-  if (tx.transfer === Transfer.UserReceipt)
+  if (tx.transfer === Transfer.UserReceipt || isHtlcRedeemToSelf(tx, useLocalWallet().localAddress.toUserFriendlyAddress()))
     return 'deposit'
 
   return MerchantCategory.Shop
 })
 ```
+
+Fold the new condition into the existing `'deposit'` branch rather than adding a second branch with the same return value.
 
 - [ ] **Step 8: Wire the guard into `TransactionDetails.vue`**
 
