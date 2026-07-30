@@ -42,4 +42,22 @@ describe('sql transaction query definitions', () => {
     expect(sqlQueriesSource).toContain('BackfillTransactionAsset')
     expect(sqlQueriesSource).toContain('BackfillTransactionChain')
   })
+
+  it('includes Mini App HTLC transactions in paginated transaction reads', () => {
+    expect(selectPaginationLine).toContain('Transfer.HTLC')
+  })
+
+  it('includes Mini App HTLC transactions in asset-specific paginated reads', () => {
+    const line = sqlQueriesSource.split('\n').find(l => l.includes('SelectPaginationTransactionsByAsset ='))
+    expect(line).toContain('Transfer.HTLC')
+  })
+
+  it('includes Mini App HTLC transactions in full transaction reads', () => {
+    expect(selectAllLine).toContain('Transfer.HTLC')
+  })
+
+  it('includes Mini App HTLC transactions in asset-specific full reads', () => {
+    const line = sqlQueriesSource.split('\n').find(l => l.includes('SelectTransactionsByAsset ='))
+    expect(line).toContain('Transfer.HTLC')
+  })
 })
