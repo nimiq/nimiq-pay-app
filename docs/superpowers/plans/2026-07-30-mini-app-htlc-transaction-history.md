@@ -989,7 +989,41 @@ with:
 pnpm vitest run src/stores/sync/
 ```
 
-Expected: PASS, including the two updated pre-existing drain cases.
+Two further pre-existing tests in `src/stores/sync/lifecycle.spec.ts` break here for the same reason, and were ruled on during execution:
+
+- `does NOT fire on own-HTLC drain` (line 324) — add `state.isOurRemoteSigner.mockResolvedValue(true)`. Intent unchanged, name stays.
+- `drops own-HTLC drains identified by proof.creator and registers them` (line 172) — add the same mock, and rename to `drops a drain from a registered own HTLC and registers it if missing`. The old name describes a mechanism this task removes: `proof.creator` now only decides who is offered to `registerOwnHtlcIfMissing`, and `remote_signers` membership decides the drop. Both assertions stay.
+
+Then add the listener-side twin of Step 14's new case, directly after the renamed test — with `isOurRemoteSigner` mocked `true` above, nothing in that file would otherwise exercise the membership gate rejecting a drain, which is the whole point of Step 16:
+
+```ts
+    it('keeps a Mini App HTLC drain that registration refused to claim as ours', async () => {
+      // proof.creator is the local wallet because sendNewHtlcTransaction defaults the Mini App
+      // HTLC's sender to it — but registerOwnHtlcIfMissing rejected the contract shape, so the
+      // drain belongs in the history rather than being dropped as internal traffic.
+      state.isOurRemoteSigner.mockResolvedValue(false)
+      const listener = await captureLocalTxListener()
+      await listener({
+        transactionHash: 'mini-app-drain-hash',
+        sender: 'NQ55 MINI APP HTLC ADDRESS',
+        senderType: 'htlc',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 521,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 9,
+        data: { raw: '' },
+        proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
+      })
+      expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith('NQ55 MINI APP HTLC ADDRESS')
+      expect(state.addReceiptTransaction).toHaveBeenCalled()
+    })
+```
+
+Do not assert on `scheduleIncomingPaymentNotification` there in either direction — whether a Mini App redeem should raise an incoming-payment notification is an open product question, deferred rather than pinned down by fiat in a test.
+
+Expected after those edits: PASS.
 
 - [ ] **Step 18: Lint, typecheck, commit**
 
@@ -1115,7 +1149,15 @@ Update the type-only imports at the top of the file: add `ExternalTransaction`, 
 pnpm vitest run src/stores/sync/
 ```
 
-Expected: PASS. The pre-existing "skips transactions already stored in the database" case at line 159 mocks on `sql.includes('transfer = ')` for receipts and returns `[]` otherwise — it will need its mock switched to `transfer IN (` to keep asserting what it means to assert. Update it.
+Three pre-existing tests break, all from the same stale mock: they branch on `sql.includes('transfer = ')`, which matched `GetAllUserReceipts`, while the code now issues `SelectAllTransactions` whose filter reads `transfer IN (`. Switch each mock to `sql.includes('transfer IN (')`.
+
+- `src/stores/sync/transactions.spec.ts` — `skips transactions already stored in the database` (line 159). Mock only.
+- `src/stores/sync/lifecycle.spec.ts` — `does NOT fire when hash already in DB` (line 349). Mock only; the name is generic and stays accurate.
+- `src/stores/sync/lifecycle.spec.ts` — `skips txs whose hash is already in user_receipts` (line 131). Mock, plus rename to `skips txs already stored under any transfer type, including a Mini App HTLC redeem`, plus change the mocked row from `{ hash: 'h1' }` to `{ hash: 'h1', transfer: 'htlc' }`. "user_receipts" is exactly what this task stops the check from meaning, and the row it returns should be the row the task exists to protect.
+
+Do not add a separate listener-side test for the HTLC case: the code branches only on hash membership, never on transfer type, so it would duplicate the renamed test without adding coverage.
+
+Expected after those edits: PASS.
 
 - [ ] **Step 6: Lint, typecheck, commit**
 
