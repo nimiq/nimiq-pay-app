@@ -2093,4 +2093,39 @@ describe('useTransactions', () => {
     expect(result.outcome).toBe('submitted')
     expect(store.transactions.map(tx => tx.hash)).toContain('htlc-funding-hash')
   })
+
+  describe('remote balance on Mini App HTLC transactions', () => {
+    async function sendHtlc(htlcType: string, recipient: string, recipientType: number) {
+      const { getSignedTx } = await import('@/lib/tx')
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction(`htlc-${htlcType}-hash`, {
+        sender: 'NQ55 MINI APP HTLC ADDRESS',
+        recipient,
+        recipientType,
+        value: 500,
+        fee: 0,
+      })
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx, txSent: true } as any)
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.HTLC,
+        sender: 'NQ55 MINI APP HTLC ADDRESS',
+        recipient,
+        amount: 500,
+        title: 'Redeem HTLC (regular)',
+        htlcData: { type: htlcType },
+      } as any)
+      expect(result.outcome).toBe('submitted')
+    }
+
+    it('does not debit the remote balance when redeeming a Mini App HTLC', async () => {
+      await sendHtlc('redeem-regular', state.localAddress.toUserFriendlyAddress(), 0)
+      expect(state.updateActiveRemoteBalance).not.toHaveBeenCalled()
+    })
+
+    it('debits the remote balance when funding a new Mini App HTLC', async () => {
+      state.remoteBalance = 900
+      await sendHtlc('new-htlc', 'NQ55 MINI APP HTLC ADDRESS', 2)
+      expect(state.updateActiveRemoteBalance).toHaveBeenCalledWith(400)
+    })
+  })
 })

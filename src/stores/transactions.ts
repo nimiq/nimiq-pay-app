@@ -721,10 +721,13 @@ export const useTransactions = defineStore('transactions', () => {
             })
           }
         }
+        // Only the `new-htlc` funding tx is drawn from our remote HTLC. The redeem types drain a
+        // foreign contract and pay the local wallet, so they must not move the remote balance.
         else if (
           remoteSigner.isWalletContextCurrent(sendContext)
           && staged.tx.transfer !== Transfer.LocalToRemote
           && staged.tx.transfer !== Transfer.ExtendRemote
+          && !(partialTx.transfer === Transfer.HTLC && partialTx.htlcData.type !== 'new-htlc')
         ) {
           await updateActiveRemoteBalance(remoteBalance.value - staged.tx.amount)
         }
