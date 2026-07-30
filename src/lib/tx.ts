@@ -143,11 +143,15 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     try {
       switch (partialArgs.htlcData.type) {
         case 'new-htlc': {
+          // Sized from the actual root because Nimiq's `AnyHash` encoding carries 32 bytes for
+          // blake2b/sha256 and 64 for sha512. A hardcoded 32 makes `writeUint64` overflow on
+          // sha512, and would let a short root shift `hashCount` and `timeout` unnoticed. The
+          // caller validates the length against the algorithm before it gets here.
           const data = new Nimiq.SerialBuffer(
             /* sender */ 20
             /* recipient */ + 20
             /* hashAlgorithm */ + 1
-            /* hashRoot */ + 32
+            /* hashRoot */ + partialArgs.htlcData.hashRoot.length
             /* hashCount */ + 1
             /* timeout */ + 8,
           )
