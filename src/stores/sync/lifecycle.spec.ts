@@ -128,10 +128,10 @@ describe('useSyncLifecycle', () => {
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
-    it('skips txs whose hash is already in user_receipts', async () => {
+    it('skips txs already stored under any transfer type, including a Mini App HTLC redeem', async () => {
       state.query.mockImplementation((sql = '') => {
-        if (sql.includes('transfer = '))
-          return Promise.resolve([{ hash: 'h1' }])
+        if (sql.includes('transfer IN ('))
+          return Promise.resolve([{ hash: 'h1', transfer: 'htlc' }])
         return Promise.resolve([])
       })
       const listener = await captureLocalTxListener()
@@ -348,7 +348,7 @@ describe('useSyncLifecycle', () => {
 
       it('does NOT fire when hash already in DB', async () => {
         state.query.mockImplementation((sql = '') => {
-          if (sql.includes('transfer = '))
+          if (sql.includes('transfer IN ('))
             return Promise.resolve([{ hash: 'dup-h' }])
           return Promise.resolve([])
         })

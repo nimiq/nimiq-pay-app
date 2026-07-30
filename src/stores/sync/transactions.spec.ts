@@ -157,8 +157,8 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        // GetAllUserReceipts uses `transfer = 'user-receipt'`, SelectAllTransactions uses `transfer IN (...)`
-        if (sql.includes('transfer = '))
+        // Dedup now reads SelectAllTransactions (`transfer IN (...)`), not GetAllUserReceipts (`transfer = 'user-receipt'`).
+        if (sql.includes('transfer IN ('))
           return Promise.resolve([{ hash: 'known-hash', sender: 'NQ77 KNOWN SENDER' }])
         return Promise.resolve([])
       })
@@ -563,6 +563,38 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateTransactionHistory()
       expect(state.logger.error).toHaveBeenCalledWith(expect.stringContaining('swap from another asset than NIM'))
       expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+    })
+
+    it('does not overwrite a stored Mini App HTLC redeem with a Top-Up', async () => {
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'redeem-hash',
+            sender: 'NQ55 MINI APP HTLC ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ00 TEST LOCAL ADDRESS',
+            recipientType: 'basic',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '' },
+            proof: { type: 'regular-transfer', raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+      // SelectAllTransactions (`transfer IN (...)`) already holds the redeem we sent ourselves.
+      state.query.mockImplementation((sql = '') => {
+        if (sql.includes('transfer IN ('))
+          return Promise.resolve([{ hash: 'redeem-hash', transfer: 'htlc', sender: 'NQ55 MINI APP HTLC ADDRESS' }])
+        return Promise.resolve([])
+      })
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
   })
 

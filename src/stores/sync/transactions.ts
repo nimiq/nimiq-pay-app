@@ -123,7 +123,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
     isUpdatingTransactions.value = true
     try {
-      const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+      // Any already-recorded transfer, not just receipts — otherwise a Mini App HTLC redeem we
+      // stored ourselves gets re-recorded here as a Top-Up and clobbers the original row.
+      const knownTxs: ExternalTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
       const accountTxs = await getAccountTransactions(localAddress.value!)
 
       // Register newly-observed own HTLCs once each before scanning, so concurrent drains from the
@@ -165,7 +167,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
 
         const hash = tx.transactionHash
-        if (userReceipts.some(dbTx => dbTx.hash === hash))
+        if (knownTxs.some(dbTx => dbTx.hash === hash))
           return
 
         logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
