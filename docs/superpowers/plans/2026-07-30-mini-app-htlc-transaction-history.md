@@ -327,7 +327,7 @@ Append to `src/stores/sync/transactions.spec.ts` inside the same `describe` that
 ```ts
     it('records an HTLC creation as Transfer.HTLC when Fastspot does not know the contract', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
-      state.getAllRemoteSigners.mockResolvedValue([signer])
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
       state.getAccountTransactions.mockImplementation(((address: any) => {
         if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
           return Promise.resolve({ data: [{
@@ -361,7 +361,7 @@ Append to `src/stores/sync/transactions.spec.ts` inside the same `describe` that
 
     it('still records a Payment when Fastspot knows the contract but the pair is unsupported', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
-      state.getAllRemoteSigners.mockResolvedValue([signer])
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
       state.getContract.mockResolvedValue({ from: { asset: 'BTC' }, to: { asset: 'NIM', amount: 1, fee: 0 } })
       state.getAccountTransactions.mockImplementation(((address: any) => {
         if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
@@ -458,7 +458,12 @@ No import change is needed in this file: the object literal is checked against `
 pnpm vitest run src/stores/sync/transactions.spec.ts
 ```
 
-Expected: PASS, including the pre-existing own-HTLC-drain and extension-chain cases.
+Two pre-existing tests break here by design, because both depend on the catch block you just changed. Ruled on during execution:
+
+- `routes swap HTLCs found behind an extension chain to the swap handler` (line 248) — its subject is extension-chain traversal, and `addUnknownPaymentToMerchantTransaction` was only a proxy for "handleSwapTxs ran on the leaf". Keep the fixture and the branch, change the assertion to `expect(state.addHtlcTransaction).toHaveBeenCalledWith(expect.objectContaining({ hash: 'swap-leaf-hash' }))`. Note `hash`, not `transactionHash` — `addHtlcTransaction` receives the built `HtlcTransaction`. Do NOT add a `getContract` mock: that would silently move the test onto the unsupported-pair branch.
+- `logs swap fetch errors and falls back to addUnknownPaymentToMerchantTransaction` (line 453) — asserts the removed `logger.error` call and the removed Payment fallback. Delete it; the new "records an HTLC creation…" test covers the same path with stronger assertions. First add `state.getContract.mockRejectedValue(new Error('fastspot down'))` to that new test, so it states the rejection locally instead of relying on the shared default in `setup.ts:278`.
+
+Expected after those two edits: PASS, including the pre-existing own-HTLC-drain cases.
 
 - [ ] **Step 7: Lint, typecheck, commit**
 
@@ -776,7 +781,7 @@ Append inside the same `describe` as Task 3's cases in `src/stores/sync/transact
 ```ts
     it('does not traverse a Mini App HTLC that mimics the zero hash root', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
-      state.getAllRemoteSigners.mockResolvedValue([signer])
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
       state.getAccountTransactions.mockImplementation(((address: any) => {
         if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
           return Promise.resolve({ data: [{
