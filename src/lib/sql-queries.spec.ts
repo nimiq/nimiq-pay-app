@@ -110,4 +110,14 @@ describe('transaction recovery queries', () => {
     db.exec('INSERT INTO transactions (hash, transfer, asset, chain) VALUES (\'stake\', \'staking\', \'NIM\', \'Nimiq\')')
     expect(db.prepare(query).all(...values)).toMatchObject([{ hash: 'stake', transfer: 'staking' }])
   })
+
+  it.each([
+    [SQLQuery.SelectPaginationTransactions, [10, 0]],
+    [SQLQuery.SelectPaginationTransactionsByAsset, ['NIM', 10, 0]],
+    [SQLQuery.SelectAllTransactions, []],
+    [SQLQuery.SelectTransactionsByAsset, ['NIM']],
+  ])('includes Mini App HTLC transactions in transaction reads %#', (query, values) => {
+    db.exec('INSERT INTO transactions (hash, transfer, asset, chain) VALUES (\'htlc\', \'htlc\', \'NIM\', \'Nimiq\')')
+    expect(db.prepare(query).all(...values)).toMatchObject([{ hash: 'htlc', transfer: 'htlc' }])
+  })
 })

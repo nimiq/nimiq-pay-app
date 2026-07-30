@@ -378,7 +378,7 @@ export type SyncTransaction = LocalToRemoteTx | RemoteToLocalTx | RemoteToLocalA
 /**
  * Transactions that are sent by the user and the recipient is another user or the staking contract
  */
-export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction | StakingTransaction
+export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction | StakingTransaction | HtlcTransaction
 
 /**
  * Transaction that the user sent to another user or internally to the HTLC contract
@@ -423,7 +423,7 @@ export type Transaction = ExternalTransaction | SyncTransaction
  * Transactions that are not internal (synchronization) transactions
  */
 export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking].includes(tx.transfer)
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking, Transfer.HTLC].includes(tx.transfer)
 }
 
 const PAYMENT_TRANSFERS = [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap] as const

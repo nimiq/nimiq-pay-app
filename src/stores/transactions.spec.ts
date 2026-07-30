@@ -2066,4 +2066,31 @@ describe('useTransactions', () => {
       expect(state.isSendingTx).toBe(false)
     })
   })
+
+  it('adds a Mini App HTLC transaction to the in-memory list', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    state.activeAsset = Asset.NIM
+    const { signedTx } = createSignedTransaction('htlc-funding-hash', {
+      sender: state.remoteAddress.toUserFriendlyAddress(),
+      recipient: 'NQ55 MINI APP HTLC ADDRESS',
+      recipientType: 2,
+      value: 500,
+      fee: 0,
+    })
+    vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx, txSent: true } as any)
+
+    const store = useTransactions()
+    const result = await store.sendTx({
+      transfer: Transfer.HTLC,
+      sender: state.remoteAddress.toUserFriendlyAddress(),
+      recipient: 'NQ55 MINI APP HTLC ADDRESS',
+      amount: 500,
+      title: 'New HTLC',
+      htlcData: { type: 'new-htlc' },
+    } as any)
+
+    expect(result.outcome).toBe('submitted')
+    expect(store.transactions.map(tx => tx.hash)).toContain('htlc-funding-hash')
+  })
 })
