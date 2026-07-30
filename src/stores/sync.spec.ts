@@ -26,6 +26,7 @@ const state = vi.hoisted(() => {
   const addReceiptTransaction = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
   const addWithdrawalTransaction = vi.fn()
+  const addHtlcTransaction = vi.fn()
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -76,6 +77,7 @@ const state = vi.hoisted(() => {
     addReceiptTransaction,
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
+    addHtlcTransaction,
     logger,
   }
 })
@@ -280,6 +282,7 @@ vi.mock('@/stores/transactions', () => {
     addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction: state.addWithdrawalTransaction,
     addStakingtransaction: vi.fn(),
+    addHtlcTransaction: state.addHtlcTransaction,
     updateTransactionCashbackClaimed: vi.fn(),
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
@@ -317,6 +320,9 @@ describe('useSync remote signer reconciliation', () => {
       BufferUtils: {
         fromHex: vi.fn(() => new Uint8Array()),
         toUtf8: vi.fn(() => ''),
+      },
+      PublicKey: {
+        fromHex: () => ({ toAddress: () => createAddress('NQ11 COSIGNER ADDRESS') }),
       },
     })
 
@@ -375,6 +381,7 @@ describe('useSync remote signer reconciliation', () => {
     state.addReceiptTransaction.mockReset()
     state.addUnknownPaymentToMerchantTransaction.mockReset()
     state.addWithdrawalTransaction.mockReset()
+    state.addHtlcTransaction.mockReset()
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -638,7 +645,7 @@ describe('useSync remote signer reconciliation', () => {
       fee: 0,
       state: 'confirmed',
       timestamp: 150_000,
-      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      data: { sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0'.repeat(64), hashCount: 1 },
       proof: { raw: '' },
     }
     const swapLeafTx = {
@@ -676,8 +683,8 @@ describe('useSync remote signer reconciliation', () => {
     await store.updateTransactionHistory()
 
     expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalled()
-    expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
+    expect(state.addHtlcTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: 'swap-leaf-hash' }),
     )
   })
 
