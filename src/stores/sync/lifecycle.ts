@@ -183,13 +183,14 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (dbTxs.some(dbTx => dbTx.hash === hash))
       return
 
-    // Drop drains from our own HTLCs — they'd be mis-recorded as fresh Top-Ups with the drain
-    // block's recent timestamp. The proof carries the HTLC creator address; for our chain
-    // (including extensions) this is always the local wallet. Foreign HTLC senders stay.
+    // Offer the HTLC for registration first — it only accepts our own contract shape. If it stays
+    // unclaimed the drain came from a Mini App HTLC and must be recorded, not dropped.
     if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress())) {
-      logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
       await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender)
-      return
+      if (await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
+        logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
+        return
+      }
     }
 
     logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)

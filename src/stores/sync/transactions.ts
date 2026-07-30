@@ -24,7 +24,7 @@ import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { isOwnRemoteHtlcShape, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 
@@ -140,7 +140,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
           return
 
-        if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress())) {
+        // The pre-scan above already offered every candidate to registerOwnHtlcIfMissing, which
+        // only accepts our own contract shape. Anything it declined is a Mini App HTLC and belongs
+        // in the history.
+        if (tx.senderType === 'htlc' && await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
           logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
           return
         }
@@ -164,6 +167,14 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
       const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
 
+      // Resolved once per refresh: `isOwnRemoteHtlcShape` needs both addresses to tell our own
+      // extension chain apart from a Mini App HTLC. Without a cosigner key we cannot tell them
+      // apart at all, so the remote-signer scan below is skipped rather than risking either error.
+      const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
+      const cosignerAddress = useRemoteSigner().remotePublicKey
+        ? Nimiq.PublicKey.fromHex(useRemoteSigner().remotePublicKey!).toAddress().toUserFriendlyAddress()
+        : undefined
+
       function categorizeTransactions(txs: PlainTransactionDetails[]) {
         const htlcExtensionTxs: PlainTransactionDetails[] = []
         const htlcSwapTxs: PlainTransactionDetails[] = []
@@ -173,7 +184,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         for (const tx of txs) {
           if (tx.recipientType === 'htlc') {
             const data = tx.data
-            if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
+            if ('hashRoot' in data && cosignerAddress && isOwnRemoteHtlcShape(data, { localAddress: localUserFriendlyForShape, cosignerAddress }))
               htlcExtensionTxs.push(tx)
             else
               htlcSwapTxs.push(tx)
@@ -200,7 +211,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       await discoverRemoteSignersFromBlockchain()
       const remoteSigners = await getAllRemoteSigners()
 
-      if (remoteSigners && remoteSigners.length) {
+      if (!cosignerAddress) {
+        logger.error('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
+      }
+      else if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already
         // categorized — both filters apply at the outer level AND to recursive traversal results
         // (which can otherwise yield the same hash twice via overlapping extension chains).
