@@ -41,6 +41,7 @@ function makeState() {
   const addUnknownPaymentToMerchantTransaction = vi.fn()
   const addWithdrawalTransaction = vi.fn()
   const addStakingtransaction = vi.fn()
+  const addHtlcTransaction = vi.fn()
   const updateTransactionStatus = vi.fn()
   const updateTransactionCashbackClaimed = vi.fn()
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
@@ -133,6 +134,7 @@ function makeState() {
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    addHtlcTransaction,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     refreshFromDb,
@@ -268,6 +270,7 @@ export function resetSyncState() {
     state.addUnknownPaymentToMerchantTransaction,
     state.addWithdrawalTransaction,
     state.addStakingtransaction,
+    state.addHtlcTransaction,
     state.updateTransactionStatus,
     state.updateTransactionCashbackClaimed,
     state.refreshFromDb,
@@ -550,6 +553,7 @@ vi.mock('@/stores/transactions', () => {
     addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction: state.addWithdrawalTransaction,
     addStakingtransaction: state.addStakingtransaction,
+    addHtlcTransaction: state.addHtlcTransaction,
     updateTransactionCashbackClaimed: state.updateTransactionCashbackClaimed,
     updateTransactionStatus: state.updateTransactionStatus,
     refreshFromDb: state.refreshFromDb,
