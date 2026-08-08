@@ -311,8 +311,6 @@ describe('transactionItem', () => {
       global: { stubs: { IonRippleEffect: true } },
     })
 
-    const icon = wrapper.get('[data-testid="category-icon"]').text()
-    expect(icon).not.toBe('withdraw')
-    expect(icon).not.toBe('deposit')
+    expect(wrapper.get('[data-testid="category-icon"]').text()).toBe(MerchantCategory.Shop)
   })
 })

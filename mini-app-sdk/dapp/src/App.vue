@@ -22,7 +22,7 @@ const hostLanguage = computed((): string => {
 const hostFiat = computed((): string => window.nimiqPay?.userFiat ?? 'USD')
 
 interface I18nEntry { greeting: string, tagline: string }
-const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay mini-app starter' }
+const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay Mini App starter' }
 const I18N: Record<string, I18nEntry> = {
   en: DEFAULT_I18N,
   es: { greeting: 'Hola', tagline: 'Plantilla de mini-app para Nimiq Pay' },

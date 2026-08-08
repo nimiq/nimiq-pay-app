@@ -316,9 +316,12 @@ function remoteSigner(address: string, balance: number, active = false) {
 }
 
 describe('useSync remote signer reconciliation', () => {
+  let publicKeyFromHex: ReturnType<typeof vi.fn>
+
   beforeEach(() => {
     vi.resetModules()
     setActivePinia(createPinia())
+    publicKeyFromHex = vi.fn((_hex?: string) => ({ toAddress: () => createAddress('NQ11 COSIGNER ADDRESS') }))
     vi.stubGlobal('Nimiq', {
       Policy: {
         BLOCKS_PER_BATCH: 32,
@@ -332,7 +335,7 @@ describe('useSync remote signer reconciliation', () => {
         toUtf8: vi.fn(() => ''),
       },
       PublicKey: {
-        fromHex: () => ({ toAddress: () => createAddress('NQ11 COSIGNER ADDRESS') }),
+        fromHex: publicKeyFromHex,
       },
     })
 
@@ -722,6 +725,9 @@ describe('useSync remote signer reconciliation', () => {
     expect(state.addHtlcTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ hash: 'swap-leaf-hash' }),
     )
+    // The cosigner address that tells our own extension chain apart from a Mini App HTLC has to be
+    // derived from the remote signer's key, not from any other key that happens to be in scope.
+    expect(publicKeyFromHex).toHaveBeenCalledWith('service-public-key')
   })
 
   it('awaits centralized signer discovery before scanning remote signer history', async () => {
