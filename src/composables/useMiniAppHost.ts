@@ -200,8 +200,12 @@ const HTLC_HASH_ALGORITHMS: Record<string, { id: number, rootLength: number }> =
  * hash root of the wrong length does not fail — it shifts `hashCount` and `timeout` and still
  * deserialises, creating a contract whose timeout is nothing like the one the sheet showed. A
  * `hashCount` outside 1-255 is silently truncated mod 256 by `writeUint8` for the same reason.
+ *
+ * `preImage` is only passed on a redeem. In Nimiq's `PreImage` encoding its length byte *is* the
+ * type discriminant, so the only valid lengths are the algorithm's own root length; anything past
+ * 255 bytes would additionally truncate that byte and leave the proof misdescribing itself.
  */
-function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number): number {
+function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number, preImage?: Uint8Array): number {
   const algo = typeof algorithm === 'string' ? HTLC_HASH_ALGORITHMS[algorithm] : undefined
   if (!algo)
     throw new InvalidTransactionError('Invalid hash algorithm')
@@ -209,6 +213,8 @@ function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCo
     throw new InvalidTransactionError(`Invalid hash root: ${algorithm} requires a ${algo.rootLength}-byte root, got ${hashRoot.length} bytes`)
   if (!Number.isInteger(hashCount) || hashCount < 1 || hashCount > 255)
     throw new InvalidTransactionError(`Invalid hash count: must be an integer between 1 and 255, got ${hashCount}`)
+  if (preImage && preImage.length !== algo.rootLength)
+    throw new InvalidTransactionError(`Invalid pre-image: ${algorithm} requires a ${algo.rootLength}-byte pre-image, got ${preImage.length} bytes`)
   return algo.id
 }
 
@@ -1811,7 +1817,7 @@ export class MiniAppHost {
       preImage = Nimiq.BufferUtils.fromHex(params[2])
       hashRoot = Nimiq.BufferUtils.fromHex(params[3])
       hashCount = Number(params[4])
-      hashAlgorithm = parseHtlcHashAlgorithm(params[5], hashRoot, hashCount)
+      hashAlgorithm = parseHtlcHashAlgorithm(params[5], hashRoot, hashCount, preImage)
       value = Number(params[6])
     }
     else if (typeof params === 'object' && params !== null) {
@@ -1820,7 +1826,7 @@ export class MiniAppHost {
       preImage = Nimiq.BufferUtils.fromHex((params as any).preImage)
       hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
       hashCount = Number((params as any).hashCount)
-      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount)
+      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount, preImage)
       value = Number((params as any).value)
     }
     else {

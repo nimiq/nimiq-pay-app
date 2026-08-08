@@ -3289,5 +3289,31 @@ describe('useRemoteSigner', () => {
         expect.arrayContaining(['NQ77 MAYBE OWN HTLC ADDRESS']),
       )
     })
+
+    it('reports unknown rather than throwing when the cosigner key is not valid hex', async () => {
+      // servicePublicKey comes straight from an API response, and `fromHex` throws on malformed
+      // input — which would escape into whichever caller's refresh loop asked the question.
+      ;(globalThis as any).Nimiq.PublicKey.fromHex = vi.fn(() => {
+        throw new Error('Invalid public key')
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      const claim = await store.registerOwnHtlcIfMissing('NQ88 UNREADABLE KEY ADDRESS')
+
+      expect(claim).toBe('unknown')
+      expect(state.getAccount).not.toHaveBeenCalled()
+      expect(state.run).not.toHaveBeenCalledWith(
+        expect.any(String),
+        expect.arrayContaining(['NQ88 UNREADABLE KEY ADDRESS']),
+      )
+      expect(state.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('public key'),
+        expect.objectContaining({ publicKeyLength: 'service-public-key'.length }),
+      )
+    })
   })
 })
