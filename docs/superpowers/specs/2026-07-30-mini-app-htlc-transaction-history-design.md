@@ -90,6 +90,13 @@ the cosigner and timeout-resolvable by the local wallet — it *is* an app-contr
 as our own costs a history label, never funds. Every other shape (a real hashRoot, or a real
 counterparty as recipient) is correctly rejected.
 
+That residual was later closed at the source rather than tolerated. `sendNewHtlcTransaction` is the
+only route by which a Mini App can create an HTLC, so it now refuses an `htlcRecipient` equal to the
+cosigner address (`assertHtlcRecipientIsNotCosigner`), which makes the colliding shape
+unconstructible from the Mini App side. A cosigner address we cannot derive fails closed. A third
+party can still publish a shape-colliding contract on chain, which remains acceptable for the reason
+above: only our cosigner or our local wallet can resolve it.
+
 Applied in three places:
 
 - `categorizeTransactions:173` — tighten the extension test from `hashRoot === 0` to the full shape.
