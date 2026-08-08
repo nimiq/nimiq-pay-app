@@ -44,6 +44,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
 - Don't run test all the time. Run tests only when you are about to commit or when you are debugging a test failure. Don't run tests after every change, it slows down development and is unnecessary.
+- `pnpm vitest run src/stores/sync/` does **not** cover `src/stores/sync.spec.ts` — that file is a sibling of the directory, not inside it, and exercises the same code through the aggregate `useSync` store with its own inline mocks. A scoped run over the directory looks green while it is broken; this silently hid a regression for two commits. When changing anything under `src/stores/sync/`, run `pnpm vitest run src/stores/sync.spec.ts src/stores/sync/` or the full suite.
 
 ## Nimiq client & sync
 
