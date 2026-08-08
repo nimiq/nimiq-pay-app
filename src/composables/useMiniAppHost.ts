@@ -204,7 +204,11 @@ const HTLC_HASH_ALGORITHMS: Record<string, { id: number, rootLength: number }> =
  * 255 bytes would additionally truncate that byte and leave the proof misdescribing itself.
  */
 function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number, preImage?: Uint8Array): number {
-  const algo = typeof algorithm === 'string' ? HTLC_HASH_ALGORITHMS[algorithm] : undefined
+  // `hasOwn`, not a bare index: 'constructor' and 'toString' would otherwise resolve to inherited
+  // members and be reported as a root-length problem instead of an invalid algorithm.
+  const algo = typeof algorithm === 'string' && Object.hasOwn(HTLC_HASH_ALGORITHMS, algorithm)
+    ? HTLC_HASH_ALGORITHMS[algorithm]
+    : undefined
   if (!algo)
     throw new InvalidTransactionError('Invalid hash algorithm')
   if (hashRoot.length !== algo.rootLength)

@@ -22,7 +22,9 @@ function makeState() {
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
-  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<'ours' | 'foreign' | 'unknown'> => Promise.resolve('unknown'))
+  // 'foreign' — not 'unknown' — is the failure-visible default: in production 'unknown' means
+  // "refuse and skip", so a test that forgets to set this would silently drop everything.
+  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<'ours' | 'foreign' | 'unknown'> => Promise.resolve('foreign'))
   const addReceiptTransaction = vi.fn()
   const scheduleIncomingPaymentNotification = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
@@ -272,7 +274,7 @@ export function resetSyncState() {
   state.getAllRemoteSigners.mockResolvedValue([])
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
-  state.registerOwnHtlcIfMissing.mockResolvedValue('unknown')
+  state.registerOwnHtlcIfMissing.mockResolvedValue('foreign')
   state.refreshFromDb.mockResolvedValue(undefined)
   state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: true })
   state.updateSinglePolygonTransaction.mockResolvedValue(undefined)

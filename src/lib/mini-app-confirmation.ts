@@ -63,7 +63,7 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       const formattedRecipient = request.htlcData?.type === 'new-htlc'
         ? i18n.t('New contract')
         : recipient === STAKING_CONTRACT_ADDRESS
-          ? 'Staking Contract'
+          ? i18n.t('Staking Contract')
           : recipient === useLocalWallet().localAddress.toUserFriendlyAddress()
             ? 'You'
             : `${recipient.slice(0, 4)}\u2026${recipient.slice(-4)}`

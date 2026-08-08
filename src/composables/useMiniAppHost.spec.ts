@@ -729,6 +729,22 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).not.toHaveBeenCalled()
   })
 
+  // An inherited Object member must fail as an unknown algorithm, not as a root-length problem
+  // reported against an undefined expected length.
+  it.each(['constructor', 'toString'])('rejects a new HTLC declaring %s as its hash algorithm', async (hashAlgorithm) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(32), 1, hashAlgorithm, 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32602,
+      message: 'Invalid hash algorithm',
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
   it('rejects a regular redeem whose hash root does not match the declared algorithm', async () => {
     const { handleRequest } = await createPermissionHost()
 
