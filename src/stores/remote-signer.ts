@@ -382,7 +382,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!remotePublicKey.value)
       return 'unknown'
     const address = Nimiq.Address.fromUserFriendlyAddress(htlcAddress)
-    const cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey.value).toAddress().toUserFriendlyAddress()
+    let cosignerAddress: string
+    try {
+      // The key is whatever the API returned; a malformed one leaves us unable to tell our own
+      // contracts apart, which is exactly 'unknown' rather than an exception for the caller.
+      cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey.value).toAddress().toUserFriendlyAddress()
+    }
+    catch (error) {
+      logger.error('⚠️ Cosigner public key is not valid hex — cannot classify this HTLC', { address: htlcAddress, publicKeyLength: remotePublicKey.value.length, error })
+      return 'unknown'
+    }
     const localUserFriendly = localAddress.value!.toUserFriendlyAddress()
 
     // The account is gone once the HTLC has been fully drained, so fall back to its creation tx.

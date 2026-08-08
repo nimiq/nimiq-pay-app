@@ -298,6 +298,29 @@ describe('useSyncTransactions', () => {
       expect(state.addHtlcTransaction).not.toHaveBeenCalled()
     })
 
+    it('skips the remote signer scan when the cosigner key is not valid hex, instead of aborting the refresh', async () => {
+      // servicePublicKey comes straight from an API response, and `fromHex` throws on malformed
+      // input. The whole body of updateTransactionHistory sits under one broad catch, so an
+      // unguarded throw here silently kills every later step of the refresh.
+      ;(globalThis as any).Nimiq.PublicKey.fromHex = vi.fn(() => {
+        throw new Error('Invalid public key')
+      })
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Skipping remote signer scan'))
+      expect(state.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('public key'),
+        expect.objectContaining({ publicKeyLength: 'service-public-key'.length }),
+      )
+      expect(state.logger.error).not.toHaveBeenCalledWith('Error while updating transaction history', expect.anything())
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
+    })
+
     it('routes swap HTLCs found behind an extension chain to the swap handler', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
       state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)

@@ -740,6 +740,50 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['a pre-image one byte short', 'ab'.repeat(31), 'cd'.repeat(32), 'blake2b'],
+    ['a pre-image of 256 bytes, which the length prefix cannot describe', 'ab'.repeat(256), 'cd'.repeat(32), 'blake2b'],
+    ['a 32-byte pre-image declared as sha512', 'ab'.repeat(32), 'cd'.repeat(64), 'sha512'],
+  ])('rejects a regular redeem with %s', async (_label, preImage, hashRoot, hashAlgorithm) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, preImage, hashRoot, 1, hashAlgorithm, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('rejects a regular redeem with a mismatched pre-image passed in object form', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: {
+        contractAddress: foreignContract,
+        recipient,
+        preImage: 'ab'.repeat(31),
+        hashRoot: 'cd'.repeat(32),
+        hashCount: 1,
+        hashAlgorithm: 'blake2b',
+        value: 100,
+      },
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('accepts a regular redeem whose pre-image matches the algorithm root length', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, 'ab'.repeat(64), 'cd'.repeat(64), 1, 'sha512', 100],
+    })).resolves.toBe('tx-hash')
+  })
+
   it('accepts a 64-byte sha512 root and the maximum hash count', async () => {
     const { handleRequest } = await createPermissionHost()
 

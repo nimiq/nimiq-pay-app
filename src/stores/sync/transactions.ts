@@ -190,9 +190,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       // Mini App HTLC; without a cosigner key we cannot tell them apart at all, so the scan is
       // skipped rather than risking either error.
       const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
-      const cosignerAddress = useRemoteSigner().remotePublicKey
-        ? Nimiq.PublicKey.fromHex(useRemoteSigner().remotePublicKey!).toAddress().toUserFriendlyAddress()
-        : undefined
+      const remoteCosignerKey = useRemoteSigner().remotePublicKey
+      let cosignerAddress: string | undefined
+      if (remoteCosignerKey) {
+        try {
+          cosignerAddress = Nimiq.PublicKey.fromHex(remoteCosignerKey).toAddress().toUserFriendlyAddress()
+        }
+        catch (error) {
+          // The key is whatever the API returned. Letting `fromHex` throw here would hit the broad
+          // catch below and abort the entire refresh over one unusable field.
+          logger.error('⚠️ Cosigner public key is not valid hex — skipping the remote signer scan', { publicKeyLength: remoteCosignerKey.length, error })
+        }
+      }
 
       function categorizeTransactions(txs: PlainTransactionDetails[]) {
         const htlcExtensionTxs: PlainTransactionDetails[] = []
