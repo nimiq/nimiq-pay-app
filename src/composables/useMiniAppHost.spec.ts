@@ -649,6 +649,26 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).not.toHaveBeenCalled()
   })
 
+  // A key we cannot parse is exactly as unverifiable as a key we do not have, and must reach the
+  // Mini App as such — not as -32603, which reads like the host crashed.
+  it('refuses a redeem whose cosigner key is not valid hex, as a network error rather than a host crash', async () => {
+    const { handleRequest } = await createPermissionHost()
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey: 'zz'.repeat(32),
+      isOurRemoteSigner,
+    })
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
+    })
+    expect(getAccount).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
   // A light client whose history is not ready answers with an empty result rather than throwing,
   // so an unreadable shape must not be mistaken for a foreign one.
   it('refuses a redeem whose contract shape resolves empty instead of treating it as foreign', async () => {

@@ -1720,7 +1720,17 @@ export class MiniAppHost {
     const remotePublicKey = useRemoteSigner().remotePublicKey
     if (!remotePublicKey)
       throw new NetworkError(unverifiable)
-    const cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
+    let cosignerAddress: string
+    try {
+      // A key we cannot parse is as unverifiable as the missing one handled just above, so it takes
+      // the same exit. Letting `fromHex` throw would surface as -32603 instead, which a Mini App
+      // cannot tell apart from the host crashing.
+      cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
+    }
+    catch (error) {
+      logger.error('⚠️ Cosigner public key is not valid hex — refusing the redeem as unverifiable', { address, publicKeyLength: remotePublicKey.length, error })
+      throw new NetworkError(unverifiable)
+    }
 
     const { data: account } = await useNimiqNetwork().getAccount(contractAddress)
     if (!account)
