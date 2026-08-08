@@ -829,4 +829,57 @@ describe('miniAppHost HTLC guards', () => {
       params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(64), 255, 'sha512', 1234567890, 100],
     })).resolves.toBe('tx-hash')
   })
+
+  const newHtlcParamStyles = [
+    ['positional', (htlcRecipient: string) => [localKeyPair.toAddress().toUserFriendlyAddress(), htlcRecipient, 'ab'.repeat(32), 1, 'blake2b', 1234567890, 100]],
+    ['named', (htlcRecipient: string) => ({ htlcSender: localKeyPair.toAddress().toUserFriendlyAddress(), htlcRecipient, hashRoot: 'ab'.repeat(32), hashCount: 1, hashAlgorithm: 'blake2b', timeout: 1234567890, value: 100 })],
+  ] as const
+
+  // The cosigner as recipient is the load-bearing part of the shape `isOwnRemoteHtlcShape` keys on,
+  // so a Mini App free to name it could mint a contract the app then adopts as custody
+  // infrastructure. `sendNewHtlcTransaction` is the only route by which a Mini App can create an
+  // HTLC, which makes the collision unconstructible once this field is refused.
+  it.each(newHtlcParamStyles)('rejects a new HTLC naming the cosigner as its recipient, in %s params', async (_style, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendNewHtlcTransaction', params: params(cosignerKeyPair.toAddress().toUserFriendlyAddress()) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32602,
+      message: expect.stringContaining('cosigner'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each(newHtlcParamStyles)('still accepts a new HTLC naming any other recipient, in %s params', async (_style, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendNewHtlcTransaction', params: params(recipient) })).resolves.toBe('tx-hash')
+    expect(sendTx).toHaveBeenCalled()
+  })
+
+  // Without the cosigner address the recipient cannot be compared against it, so the request is
+  // refused as unverifiable — never waved through — and reaches the Mini App as a network error
+  // rather than -32603 or an invalid-request code.
+  it.each([
+    ['is missing', undefined],
+    ['is not valid hex', 'zz'.repeat(32)],
+  ])('refuses a new HTLC as unverifiable when the cosigner key %s', async (_label, remotePublicKey) => {
+    const { handleRequest } = await createPermissionHost()
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey,
+      isOurRemoteSigner,
+    })
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(32), 1, 'blake2b', 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Try again once Nimiq Pay is in sync'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
 })

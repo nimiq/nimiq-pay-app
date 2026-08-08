@@ -1717,20 +1717,7 @@ export class MiniAppHost {
     if (await useRemoteSigner().isOurRemoteSigner(address))
       throw new PermissionDeniedError(ownContract)
 
-    const remotePublicKey = useRemoteSigner().remotePublicKey
-    if (!remotePublicKey)
-      throw new NetworkError(unverifiable)
-    let cosignerAddress: string
-    try {
-      // A key we cannot parse is as unverifiable as the missing one handled just above, so it takes
-      // the same exit. Letting `fromHex` throw would surface as -32603 instead, which a Mini App
-      // cannot tell apart from the host crashing.
-      cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
-    }
-    catch (error) {
-      logger.error('⚠️ Cosigner public key is not valid hex — refusing the redeem as unverifiable', { address, publicKeyLength: remotePublicKey.length, error })
-      throw new NetworkError(unverifiable)
-    }
+    const cosignerAddress = this.deriveCosignerAddress(unverifiable)
 
     const { data: account } = await useNimiqNetwork().getAccount(contractAddress)
     if (!account)
@@ -1760,6 +1747,42 @@ export class MiniAppHost {
       throw new PermissionDeniedError(ownContract)
   }
 
+  /**
+   * The cosigner address is derived from a key we may not hold yet, so every guard comparing against
+   * it has to cope with that key being missing or unparseable. Both are *unverifiable* rather than
+   * safe and take the same `NetworkError` exit with the caller's wording — letting `fromHex` throw
+   * would surface as -32603 instead, which a Mini App cannot tell apart from the host crashing.
+   */
+  private deriveCosignerAddress(unverifiable: string): string {
+    const remotePublicKey = useRemoteSigner().remotePublicKey
+    if (!remotePublicKey)
+      throw new NetworkError(unverifiable)
+    try {
+      return Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
+    }
+    catch (error) {
+      logger.error('⚠️ Cosigner public key is not valid hex — refusing as unverifiable', { reason: unverifiable, publicKeyLength: remotePublicKey.length, error })
+      throw new NetworkError(unverifiable)
+    }
+  }
+
+  /**
+   * Our own custody HTLCs are recognised by shape alone (`isOwnRemoteHtlcShape`), and the cosigner
+   * as recipient is the load-bearing part of that shape. A Mini App free to name it could mint a
+   * contract the app then adopts as custody infrastructure — registered in `remote_signers`,
+   * extended, reclaimed, hidden from history. `sendNewHtlcTransaction` is the only route by which a
+   * Mini App can create an HTLC, so refusing this one field makes the collision unconstructible.
+   *
+   * A malformed request, not a refusal, hence `InvalidTransactionError` like the other boundary
+   * validations here. Funding an HTLC spends from the remote custody contract and needs the cosigner
+   * either way, so failing closed when it cannot be derived costs nothing but a clearer message.
+   */
+  private assertHtlcRecipientIsNotCosigner(htlcRecipient: Address): void {
+    const cosignerAddress = this.deriveCosignerAddress('Cannot verify the recipient of this HTLC. Try again once Nimiq Pay is in sync.')
+    if (htlcRecipient.toUserFriendlyAddress() === cosignerAddress)
+      throw new InvalidTransactionError(`Invalid HTLC recipient: ${cosignerAddress} is the Nimiq Pay cosigner and cannot be the recipient of a Mini App HTLC`)
+  }
+
   private async sendNewHtlcTransaction(params: unknown): Promise<string> {
     // Parse params
     let htlcSender: Address
@@ -1773,6 +1796,7 @@ export class MiniAppHost {
     if (Array.isArray(params) && params.length >= 7) {
       htlcSender = params[0] ? Nimiq.Address.fromString(params[0]) : useLocalWallet().localAddress
       htlcRecipient = Nimiq.Address.fromString(params[1])
+      this.assertHtlcRecipientIsNotCosigner(htlcRecipient)
       hashRoot = Nimiq.BufferUtils.fromHex(params[2])
       hashCount = Number(params[3])
       hashAlgorithm = parseHtlcHashAlgorithm(params[4], hashRoot, hashCount)
@@ -1782,6 +1806,7 @@ export class MiniAppHost {
     else if (typeof params === 'object' && params !== null) {
       htlcSender = 'htlcSender' in params ? Nimiq.Address.fromString((params as any).htlcSender) : useLocalWallet().localAddress
       htlcRecipient = Nimiq.Address.fromString((params as any).htlcRecipient)
+      this.assertHtlcRecipientIsNotCosigner(htlcRecipient)
       hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
       hashCount = Number((params as any).hashCount)
       hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount)
