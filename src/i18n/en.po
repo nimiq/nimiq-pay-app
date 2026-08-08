@@ -60,8 +60,8 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:86
-#: src/types/transactions.ts:145
+#: src/lib/mini-app-confirmation.ts:90
+#: src/types/transactions.ts:157
 msgid "Add Stake"
 msgstr ""
 
@@ -296,7 +296,7 @@ msgid "Cashlink claimed successfully"
 msgstr ""
 
 #: src/composables/useNotifications.ts:356
-#: src/types/transactions.ts:140
+#: src/types/transactions.ts:152
 msgid "Cashlink Claiming"
 msgstr ""
 
@@ -370,13 +370,13 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:168
+#: src/types/transactions.ts:184
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:163
-#: src/types/transactions.ts:164
+#: src/types/transactions.ts:179
+#: src/types/transactions.ts:180
 msgid "Confirming"
 msgstr ""
 
@@ -403,7 +403,7 @@ msgstr ""
 msgid "Continue and Pay"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:84
+#: src/components/TransactionDetails.vue:86
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -439,8 +439,8 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:81
-#: src/types/transactions.ts:144
+#: src/lib/mini-app-confirmation.ts:85
+#: src/types/transactions.ts:156
 msgid "Create Staker"
 msgstr ""
 
@@ -490,7 +490,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/types/transactions.ts:150
+#: src/types/transactions.ts:162
 msgid "Delete Validator"
 msgstr ""
 
@@ -623,7 +623,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:167
+#: src/types/transactions.ts:183
 msgid "Expired"
 msgstr ""
 
@@ -643,7 +643,7 @@ msgstr ""
 msgid "Failed to copy address to clipboard"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:88
+#: src/components/TransactionDetails.vue:90
 #: src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr ""
@@ -814,8 +814,8 @@ msgid "Internationalized domain (punycode). Verify it matches the real site."
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:165
-#: src/types/transactions.ts:166
+#: src/types/transactions.ts:181
+#: src/types/transactions.ts:182
 msgid "Invalid"
 msgstr ""
 
@@ -942,7 +942,7 @@ msgstr ""
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:354
+#: src/lib/tx.ts:483
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -1106,12 +1106,21 @@ msgstr ""
 msgid "Network fees"
 msgstr ""
 
-#: src/lib/tx.ts:374
+#: src/lib/tx.ts:503
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:161
+#: src/types/transactions.ts:177
 msgid "New"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:64
+msgid "New contract"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:121
+#: src/types/transactions.ts:164
+msgid "New HTLC"
 msgstr ""
 
 #: src/components/naka/HoldNakaCardToReader.vue:65
@@ -1126,7 +1135,7 @@ msgstr ""
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:98
+#: src/lib/mini-app-confirmation.ts:102
 msgid "No"
 msgstr ""
 
@@ -1134,7 +1143,7 @@ msgstr ""
 msgid "No account found"
 msgstr ""
 
-#: src/lib/tx.ts:258
+#: src/lib/tx.ts:387
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1281,7 +1290,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:142
+#: src/types/transactions.ts:154
 msgid "Payment"
 msgstr ""
 
@@ -1360,7 +1369,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:30
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:162
+#: src/types/transactions.ts:178
 msgid "Pending"
 msgstr ""
 
@@ -1438,7 +1447,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:143
+#: src/types/transactions.ts:155
 msgid "Points Payment"
 msgstr ""
 
@@ -1524,6 +1533,22 @@ msgstr ""
 msgid "Recovery Words"
 msgstr ""
 
+#: src/lib/mini-app-confirmation.ts:143
+#: src/lib/mini-app-confirmation.ts:149
+#: src/types/transactions.ts:167
+msgid "Redeem HTLC (early)"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:130
+#: src/types/transactions.ts:165
+msgid "Redeem HTLC (regular)"
+msgstr ""
+
+#: src/lib/mini-app-confirmation.ts:138
+#: src/types/transactions.ts:166
+msgid "Redeem HTLC (timeout)"
+msgstr ""
+
 #: src/modals/SettingsModal.vue:67
 msgid "Reduce Animations"
 msgstr ""
@@ -1536,8 +1561,8 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:108
-#: src/types/transactions.ts:149
+#: src/lib/mini-app-confirmation.ts:112
+#: src/types/transactions.ts:161
 msgid "Remove Stake"
 msgstr ""
 
@@ -1562,8 +1587,8 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:103
-#: src/types/transactions.ts:148
+#: src/lib/mini-app-confirmation.ts:107
+#: src/types/transactions.ts:160
 msgid "Retire Stake"
 msgstr ""
 
@@ -1665,8 +1690,8 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:90
-#: src/types/transactions.ts:146
+#: src/lib/mini-app-confirmation.ts:94
+#: src/types/transactions.ts:158
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1731,15 +1756,15 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:396
+#: src/lib/tx.ts:525
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
 #: src/composables/useApi.ts:310
 #: src/composables/useApi.ts:317
-#: src/lib/tx.ts:261
-#: src/lib/tx.ts:370
 #: src/lib/tx.ts:39
+#: src/lib/tx.ts:390
+#: src/lib/tx.ts:499
 #: src/lib/tx.ts:61
 msgid "Something went wrong syncing your account"
 msgstr ""
@@ -1770,7 +1795,8 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
-#: src/types/transactions.ts:151
+#: src/lib/mini-app-confirmation.ts:66
+#: src/types/transactions.ts:163
 msgid "Staking Contract"
 msgstr ""
 
@@ -1806,7 +1832,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:387
+#: src/composables/useMiniAppHost.ts:428
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1918,7 +1944,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:351
+#: src/composables/useMiniAppHost.ts:392
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -1930,11 +1956,11 @@ msgstr ""
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:67
+#: src/components/TransactionDetails.vue:69
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:70
+#: src/components/TransactionDetails.vue:72
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -1962,7 +1988,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:139
+#: src/types/transactions.ts:151
 msgid "Top-Up"
 msgstr ""
 
@@ -2027,7 +2053,7 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
-#: src/types/transactions.ts:172
+#: src/types/transactions.ts:188
 msgid "Unknown"
 msgstr ""
 
@@ -2051,8 +2077,8 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:95
-#: src/types/transactions.ts:147
+#: src/lib/mini-app-confirmation.ts:99
+#: src/types/transactions.ts:159
 msgid "Update Staker"
 msgstr ""
 
@@ -2209,7 +2235,7 @@ msgstr ""
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
-#: src/types/transactions.ts:141
+#: src/types/transactions.ts:153
 msgid "Withdrawal"
 msgstr ""
 
@@ -2239,7 +2265,7 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:98
+#: src/lib/mini-app-confirmation.ts:102
 msgid "Yes"
 msgstr ""
 
