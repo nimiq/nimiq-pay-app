@@ -1,7 +1,4 @@
-// Named-namespace type import (not `Nimiq`): the global `Nimiq` binding is a value, and
-// `isHtlcRedeemToSelf` below needs to reference `Nimiq.AccountType.HTLC` as that value — a
-// type-only `import type * as Nimiq` would shadow it and make it uncallable as a value.
-import type * as NimiqCore from '@nimiq/core'
+import type { AccountType, Address, SignatureProof, TransactionState } from '@nimiq/core'
 import type { Asset, Chain } from '@/lib/assets'
 import { i18n } from '@/i18n/i18n-setup'
 
@@ -100,9 +97,9 @@ export enum MerchantCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
-  senderType?: NimiqCore.AccountType
+  senderType?: AccountType
   recipient: string
-  recipientType?: NimiqCore.AccountType
+  recipientType?: AccountType
   status: AppTransactionState
   timestamp: number | undefined
   amount: number
@@ -271,8 +268,8 @@ export type MerchantTransaction = BaseTransaction & {
 
 export type HtlcData = {
   type: 'new-htlc'
-  sender: NimiqCore.Address
-  recipient: NimiqCore.Address
+  sender: Address
+  recipient: Address
   hashRoot: Uint8Array
   hashCount: number
   hashAlgorithm: number
@@ -289,8 +286,8 @@ export type HtlcData = {
   type: 'sign-early'
 } | {
   type: 'redeem-early'
-  senderSignatureProof: NimiqCore.SignatureProof
-  recipientSignatureProof: NimiqCore.SignatureProof
+  senderSignatureProof: SignatureProof
+  recipientSignatureProof: SignatureProof
 }
 
 export type HtlcTransaction = BaseTransaction & {
@@ -406,9 +403,10 @@ export const ZERO_HASH_ROOT = '0'.repeat(64)
 /**
  * Our own remote-signer HTLCs are created by `createDepositData`, which pins every contract field.
  * Matching the whole shape — rather than the zero hash root alone — is what keeps a Mini App HTLC
- * from being mistaken for ours. A Mini App would have to name our cosigner as the recipient to pass,
- * and such a contract is one only our cosigner can resolve early and only our local wallet can
- * resolve on timeout, so it is ours in every way that matters. `hashAlgorithm` is not matched.
+ * from being mistaken for ours. A Mini App cannot construct the colliding shape at all, because
+ * `sendNewHtlcTransaction` refuses our cosigner as the HTLC recipient. A third party can still
+ * publish one on chain, but only our cosigner can resolve it early and only our local wallet can
+ * resolve it on timeout, so it is ours in every way that matters. `hashAlgorithm` is not matched.
  */
 export function isOwnRemoteHtlcShape(
   htlc: { sender: string, recipient: string, hashRoot: string, hashCount: number },
@@ -452,9 +450,9 @@ export type PartialSendTxArgs
   = | PartialUserTxArgs
     | Pick<LocalToRemoteTx, 'transfer'>
     | Pick<ExtendRemoteTx, 'transfer'>
-    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: NimiqCore.Address }
+    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Address }
     | Pick<RemoteToLocalTx, 'transfer'>
-    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: NimiqCore.Address }
+    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Address }
     | PartialStakingTxArgs
     | PartialHtlcTxArgs
 
@@ -466,4 +464,4 @@ export enum PaymentMethod {
   Bluecode = 'bluecode',
 }
 
-export type AppTransactionState = NimiqCore.TransactionState | 'mined' | 'failed'
+export type AppTransactionState = TransactionState | 'mined' | 'failed'

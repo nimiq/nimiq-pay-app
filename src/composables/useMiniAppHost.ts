@@ -2117,8 +2117,8 @@ export class MiniAppHost {
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
       htlcData: 'htlcData' in txData ? txData.htlcData : undefined,
-      // On a redeem `txData.sender` is the contract being drained; on `new-htlc` it is just our own
-      // funding account, which the sheet already covers with its HTLC Sender/Recipient rows.
+      // The contract address is derived from the funding transaction, so on `new-htlc` it does not
+      // exist yet and there is nothing to show. On a redeem `txData.sender` is the contract drained.
       htlcContractAddress: txData.transfer === Transfer.HTLC && txData.htlcData.type !== 'new-htlc' ? txData.sender : undefined,
       network: 'nimiq',
     })
