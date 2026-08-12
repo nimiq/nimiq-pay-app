@@ -2,6 +2,19 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.19.1 — 2026-08-12
+
+### Cashlinks you can just scan
+Scanning a Cashlink now works end to end: the scanner closes on its own once the funds are claimed, and the claim shows up in your history and notifications with the sender's name instead of an unlabeled entry.
+
+_How to use:_ Tap the scan button on the home screen and point your camera at a Cashlink code. Once it's claimed, the scanner closes automatically and you'll find the payment in your transaction list.
+
+### Smoother stablecoin transfers
+Fixed the connections used for stablecoin balances and fee estimates, so sending and receiving is more reliable and fees are calculated correctly.
+
+### Ready for the network upgrade
+Updated to the latest Nimiq network version so your wallet stays fully in sync and compatible after the network upgrade.
+
 ## 2.19.0 — 2026-07-23
 
 ### Mini Apps competition showcase

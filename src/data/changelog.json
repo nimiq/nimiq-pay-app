@@ -1,5 +1,24 @@
 [
   {
+    "version": "2.19.1",
+    "date": "2026-08-12",
+    "highlights": [
+      {
+        "title": "Cashlinks you can just scan",
+        "description": "Scanning a Cashlink now works end to end: the scanner closes on its own once the funds are claimed, and the claim shows up in your history and notifications with the sender's name instead of an unlabeled entry.",
+        "howTo": "Tap the scan button on the home screen and point your camera at a Cashlink code. Once it's claimed, the scanner closes automatically and you'll find the payment in your transaction list."
+      },
+      {
+        "title": "Smoother stablecoin transfers",
+        "description": "Fixed the connections used for stablecoin balances and fee estimates, so sending and receiving is more reliable and fees are calculated correctly."
+      },
+      {
+        "title": "Ready for the network upgrade",
+        "description": "Updated to the latest Nimiq network version so your wallet stays fully in sync and compatible after the network upgrade."
+      }
+    ]
+  },
+  {
     "version": "2.19.0",
     "date": "2026-07-23",
     "highlights": [
