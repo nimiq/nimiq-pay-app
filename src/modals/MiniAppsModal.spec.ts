@@ -77,6 +77,7 @@ const {
   getFaviconUrl,
   hostDestroy,
   isDevState,
+  miniAppActiveState,
   loggerError,
   loggerLog,
   openWebView,
@@ -103,6 +104,7 @@ const {
   trackFeatureOpened: vi.fn(),
   trackDAppOpened: vi.fn(),
   isDevState: { value: false },
+  miniAppActiveState: { value: false },
   capacitorHttpGet: vi.fn((_options?: { url: string }): Promise<{ status: number, data: unknown }> => Promise.resolve({ status: 200, data: {} })),
 }))
 
@@ -176,9 +178,8 @@ vi.mock('@/composables/useToast', () => ({
 }))
 
 vi.mock('@/composables/useMiniAppHost', async () => {
-  const { ref } = await import('vue')
   return {
-    isMiniAppActive: ref(false),
+    isMiniAppActive: miniAppActiveState,
     MiniAppHost: class {
       destroy = hostDestroy
     },
@@ -293,6 +294,18 @@ function toUrlTestId(url: string) {
   return url.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
 }
 
+function getHardwareBackHandler() {
+  let handler: ((processNextHandler: () => void) => void) | undefined
+  document.dispatchEvent(new CustomEvent('ionBackButton', {
+    detail: {
+      register: (_priority: number, registeredHandler: typeof handler) => {
+        handler = registeredHandler
+      },
+    },
+  }))
+  return handler
+}
+
 describe('mini apps modal', () => {
   beforeEach(() => {
     // Reset module-scoped guard so prior tests can't leak `openingMiniAppUrl` and
@@ -327,12 +340,59 @@ describe('mini apps modal', () => {
     trackFeatureOpened.mockReset()
     trackDAppOpened.mockReset()
     isDevState.value = false
+    miniAppActiveState.value = false
     capacitorHttpGet.mockReset()
     capacitorHttpGet.mockImplementation(options => Promise.resolve(
       options?.url.includes('miniappscompetition-submissions') ? competitionFeedResponse() : miniAppsResponse(),
     ))
 
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('window.__provider = true') })))
+  })
+
+  it('keeps the Mini Apps modal open when hardware back closes an active Mini App', () => {
+    miniAppActiveState.value = true
+    const wrapper = mountModal()
+    const processNextHandler = vi.fn()
+    const hardwareBackHandler = getHardwareBackHandler()
+
+    expect(hardwareBackHandler).toBeDefined()
+    hardwareBackHandler!(processNextHandler)
+
+    expect(processNextHandler).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('keeps the Mini Apps modal open on hardware back from the Apps list', () => {
+    const wrapper = mountModal()
+    const processNextHandler = vi.fn()
+    const hardwareBackHandler = getHardwareBackHandler()
+
+    expect(hardwareBackHandler).toBeDefined()
+    hardwareBackHandler!(processNextHandler)
+
+    expect(processNextHandler).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('moves back one competition flow step on hardware back', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const processNextHandler = vi.fn()
+    const hardwareBackHandler = getHardwareBackHandler()
+
+    await wrapper.find('[data-testid="competition-spotlight"]').trigger('click')
+    await wrapper.find('[data-testid="competition-entry-0"]').trigger('click')
+    await flushPromises()
+
+    hardwareBackHandler!(processNextHandler)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="mini-apps-flow-competition"]').attributes('aria-hidden')).toBe('false')
+
+    hardwareBackHandler!(processNextHandler)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
+    expect(processNextHandler).not.toHaveBeenCalled()
+    wrapper.unmount()
   })
 
   it('moves from Mini Apps to entries and detail, then returns one flow step at a time', async () => {

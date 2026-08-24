@@ -4,11 +4,11 @@ import type { DAppOpenSource } from '@/lib/analytics'
 import type { CompetitionMiniApp } from '@/stores/competition-mini-apps'
 import type { MiniAppMenuContext, MiniAppType } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
-import { IonBackButton, IonButtons, IonSearchbar, IonSkeletonText } from '@ionic/vue'
+import { IonBackButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
 import { useStorageAsync } from '@vueuse/core'
 import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import CompetitionAppDetail from '@/components/competition/CompetitionAppDetail.vue'
 import CompetitionSpotlight from '@/components/competition/CompetitionSpotlight.vue'
 import MiniAppsCompetitionView from '@/components/competition/MiniAppsCompetitionView.vue'
@@ -17,6 +17,7 @@ import MiniAppRow from '@/components/MiniAppRow.vue'
 import MiniAppTypeFilter from '@/components/MiniAppTypeFilter.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
+import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { trackFeatureOpened } from '@/lib/analytics'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
@@ -52,6 +53,15 @@ const flowOffset = computed(() => ({
 })[flowStep.value])
 const isOpeningSelectedCompetitionApp = computed(() => !!selectedCompetitionApp.value
   && isOpeningUrl(selectedCompetitionApp.value.url))
+
+// Keep native webview and nested competition navigation ahead of Ionic's modal dismissal.
+const { unregister: unregisterHardwareBack } = useBackButton(101, () => {
+  if (isMiniAppActive.value)
+    return
+  if (flowStep.value !== 'apps')
+    backInMiniAppsFlow()
+})
+onBeforeUnmount(unregisterHardwareBack)
 
 onMounted(() => warmUpWeb3ProviderScript())
 
