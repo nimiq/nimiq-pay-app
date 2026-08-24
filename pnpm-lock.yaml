@@ -8,9 +8,6 @@ overrides:
   jeep-sqlite: 2.5.6
 
 patchedDependencies:
-  '@capgo/capacitor-inappbrowser':
-    hash: 88bef105a0b04db4dbdf24b5ff58c8b9376405af2f75cbf751cda0ea5ce69998
-    path: patches/@capgo__capacitor-inappbrowser.patch
   randombytes@2.1.0:
     hash: f5b3c7befe85e7d7bca014c768e4b1ee51688d5e69d8d710ce6f804b0598bbb2
     path: patches/randombytes@2.1.0.patch
@@ -62,8 +59,8 @@ importers:
         specifier: ^8.3.8
         version: 8.3.8(@capacitor/core@8.3.4)
       '@capgo/capacitor-inappbrowser':
-        specifier: ^8.10.7
-        version: 8.10.7(patch_hash=88bef105a0b04db4dbdf24b5ff58c8b9376405af2f75cbf751cda0ea5ce69998)(@capacitor/core@8.3.4)
+        specifier: ^8.15.3
+        version: 8.15.3(@capacitor/core@8.3.4)
       '@internationalized/number':
         specifier: ^3.6.6
         version: 3.6.6
@@ -550,8 +547,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capgo/capacitor-inappbrowser@8.10.7':
-    resolution: {integrity: sha512-qjhKz9XJ6B6XTh6Xfd5mKEHrnxcdUuf+fiTn+0QPSLdDiLOJh0hI3RdveKOnXa1E2FSuyjAGSb15GYTK9mgRAA==}
+  '@capgo/capacitor-inappbrowser@8.15.3':
+    resolution: {integrity: sha512-oyK7fBEUh8z6qqEgTtD4y4diBer4RHoREQtVNUCvwl1L7JV/+H6fwZI9K6py17MxPURgsMobsFjvcuC+Irja8w==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -7988,7 +7985,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.3.4
 
-  '@capgo/capacitor-inappbrowser@8.10.7(patch_hash=88bef105a0b04db4dbdf24b5ff58c8b9376405af2f75cbf751cda0ea5ce69998)(@capacitor/core@8.3.4)':
+  '@capgo/capacitor-inappbrowser@8.15.3(@capacitor/core@8.3.4)':
     dependencies:
       '@capacitor/core': 8.3.4
 
