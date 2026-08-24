@@ -40,6 +40,13 @@ const IonButtonStub = defineComponent({
   template: '<button :disabled="disabled" v-bind="$attrs" @click="$emit(\'click\')"><slot /></button>',
 })
 
+const IonSearchbarStub = defineComponent({
+  inheritAttrs: false,
+  props: { modelValue: { type: String, default: '' } },
+  emits: ['update:modelValue'],
+  template: '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)">',
+})
+
 function translate(value: string, params: Record<string, unknown> = {}) {
   return Object.entries(params).reduce((text, [key, replacement]) => text.replace(`{${key}}`, String(replacement)), value)
 }
@@ -81,6 +88,7 @@ function mountView() {
       mocks: { $t: translate },
       stubs: {
         IonButton: IonButtonStub,
+        IonSearchbar: IonSearchbarStub,
       },
     },
   })
@@ -140,6 +148,125 @@ describe('competition view', () => {
       url: 'https://roundtrip.example/',
     })
     expect(scroller.scrollTop).toBe(128)
+  })
+
+  it.each([
+    ['name', 'runner'],
+    ['tagline', 'race'],
+    ['description', 'arcade'],
+    ['category', 'games'],
+    ['team name', 'speed team'],
+    ['team member', 'grace'],
+  ])('searches submissions by %s in the selected cycle', async (_field, query) => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp({ app_name: 'Roundtrip', url: 'https://roundtrip.example/' }),
+      remoteApp({
+        app_name: 'Nimiq Runner',
+        tagline: 'Race across Nimiq City.',
+        description: 'A fast arcade challenge.',
+        category: 'Games',
+        team_name: 'Speed Team',
+        team_members: ['Grace'],
+        url: 'https://runner.example/',
+      }),
+    ]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-search"]').setValue(query)
+
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('1')
+    expect(wrapper.find('[data-testid="competition-results-status"]').text()).toBe('Matching submissions: 1')
+    expect(wrapper.text()).toContain('Nimiq Runner')
+    expect(wrapper.text()).not.toContain('Roundtrip')
+  })
+
+  it('filters submissions by category in the selected cycle', async () => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp({ app_name: 'Roundtrip', category: 'Productivity', url: 'https://roundtrip.example/' }),
+      remoteApp({ app_name: 'Nimiq Runner', category: 'Games', url: 'https://runner.example/' }),
+    ]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    const gamesFilter = wrapper.findAll('[data-testid^="competition-category-"]')
+      .find(filter => filter.text() === 'Games')
+    expect(gamesFilter).toBeDefined()
+    expect(wrapper.find('[role="radiogroup"]').exists()).toBe(false)
+    expect(gamesFilter!.attributes('aria-pressed')).toBe('false')
+    await gamesFilter!.trigger('click')
+
+    expect(gamesFilter!.attributes('aria-pressed')).toBe('true')
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('1')
+    expect(wrapper.text()).toContain('Nimiq Runner')
+    expect(wrapper.text()).not.toContain('Roundtrip')
+  })
+
+  it('combines search with the selected category', async () => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp({ app_name: 'Nimiq Ledger', category: 'Productivity', url: 'https://ledger.example/' }),
+      remoteApp({ app_name: 'Nimiq Runner', category: 'Games', url: 'https://runner.example/' }),
+      remoteApp({ app_name: 'Roundtrip', category: 'Productivity', url: 'https://roundtrip.example/' }),
+    ]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    const productivityFilter = wrapper.findAll('[data-testid^="competition-category-"]')
+      .find(filter => filter.text() === 'Productivity')
+    await productivityFilter!.trigger('click')
+    await wrapper.find('[data-testid="competition-search"]').setValue('nimiq')
+
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('1')
+    expect(wrapper.text()).toContain('Nimiq Ledger')
+    expect(wrapper.text()).not.toContain('Nimiq Runner')
+    expect(wrapper.text()).not.toContain('Roundtrip')
+  })
+
+  it('clears search and category when switching cycles', async () => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp({ cycle: 'cycle1', app_name: 'Older Utility', category: 'Productivity', url: 'https://utility.example/' }),
+      remoteApp({ cycle: 'cycle1', app_name: 'Older Game', category: 'Games', url: 'https://game.example/' }),
+      remoteApp({ cycle: 'cycle2', app_name: 'Nimiq Runner', category: 'Games', url: 'https://runner.example/' }),
+    ]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    const gamesFilter = wrapper.findAll('[data-testid^="competition-category-"]')
+      .find(filter => filter.text() === 'Games')
+    await gamesFilter!.trigger('click')
+    await wrapper.find('[data-testid="competition-search"]').setValue('runner')
+    await wrapper.findAll('[role="tab"]').find(tab => tab.text() === 'Cycle 1')!.trigger('click')
+
+    expect(wrapper.find<HTMLInputElement>('[data-testid="competition-search"]').element.value).toBe('')
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('2')
+    expect(wrapper.text()).toContain('Older Utility')
+    expect(wrapper.text()).toContain('Older Game')
+  })
+
+  it('shows a matching-results empty state when filters exclude every submission', async () => {
+    state.httpGet.mockResolvedValue(response([remoteApp()]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-search"]').setValue('missing')
+
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('0')
+    expect(wrapper.text()).toContain('No matching submissions')
+    expect(wrapper.text()).not.toContain('No entries in this cycle yet')
+  })
+
+  it('excludes matching submissions from other cycles', async () => {
+    state.httpGet.mockResolvedValue(response([
+      remoteApp({ cycle: 'cycle1', app_name: 'Race Archive', url: 'https://archive.example/' }),
+      remoteApp({ cycle: 'cycle2', app_name: 'Current App', url: 'https://current.example/' }),
+    ]))
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-search"]').setValue('race')
+
+    expect(wrapper.find('[data-testid="competition-submission-count"]').text()).toBe('0')
+    expect(wrapper.text()).not.toContain('Race Archive')
   })
 
   it('shows retry after initial failure and recovers', async () => {

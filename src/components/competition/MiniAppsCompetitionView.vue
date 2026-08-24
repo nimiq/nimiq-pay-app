@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CompetitionMiniApp } from '@/stores/competition-mini-apps'
-import { IonButton } from '@ionic/vue'
+import { IonButton, IonSearchbar } from '@ionic/vue'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, shallowRef, useTemplateRef, watch } from 'vue'
@@ -18,11 +18,29 @@ const { apps, cycles, isLoading, hasLoaded, hasRefreshError } = storeToRefs(stor
 const appStore = useApp()
 const { showAnimations } = storeToRefs(appStore)
 const activeCycle = shallowRef<string>()
+const searchQuery = shallowRef('')
+const activeCategory = shallowRef('all')
 const scrollContainer = useTemplateRef<HTMLDivElement>('scrollContainer')
 
-const activeApps = computed(() => activeCycle.value
+const cycleApps = computed(() => activeCycle.value
   ? apps.value.filter(app => app.cycle === activeCycle.value)
   : [])
+const categories = computed(() => [...new Set(cycleApps.value.map(app => app.category))]
+  .sort((a, b) => a.localeCompare(b)))
+const activeApps = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase()
+
+  return cycleApps.value.filter((app) => {
+    const matchesCategory = activeCategory.value === 'all' || app.category === activeCategory.value
+    if (!matchesCategory || !query)
+      return matchesCategory
+
+    return [app.name, app.tagline, app.description, app.category, app.teamName, ...app.teamMembers]
+      .join(' ')
+      .toLocaleLowerCase()
+      .includes(query)
+  })
+})
 const isInitialLoading = computed(() => (isLoading.value || !hasLoaded.value) && apps.value.length === 0)
 const showError = computed(() => hasLoaded.value && hasRefreshError.value && apps.value.length === 0)
 
@@ -30,6 +48,11 @@ watch(cycles, (availableCycles) => {
   if (!activeCycle.value || !availableCycles.includes(activeCycle.value))
     activeCycle.value = availableCycles[0]
 }, { immediate: true })
+
+watch(activeCycle, () => {
+  searchQuery.value = ''
+  activeCategory.value = 'all'
+})
 
 onMounted(() => {
   void store.load()
@@ -105,12 +128,53 @@ function selectCycle(cycle: string) {
         </nav>
 
         <div class="px-6">
+          <div v-if="activeCycle" class="mt-6 flex flex-col gap-3">
+            <IonSearchbar
+              v-model="searchQuery"
+              data-testid="competition-search"
+              :placeholder="$t('Search submissions')"
+              :aria-label="$t('Search submissions')"
+              :debounce="0"
+              inputmode="search"
+              enterkeyhint="search"
+              class="competition-searchbar p-0 border-2 text-left border-space/15 rounded-full"
+            />
+
+            <nav
+              v-if="categories.length"
+              :aria-label="$t('Filter submissions by category')"
+              class="hide-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 pb-1"
+            >
+              <button
+                v-for="(category, index) in ['all', ...categories]"
+                :key="category"
+                type="button"
+                :data-testid="`competition-category-${index}`"
+                :aria-pressed="activeCategory === category"
+                class="min-h-11 shrink-0 rounded-full px-4 text-sm font-bold transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                :class="activeCategory === category ? 'bg-space text-white' : 'bg-space/[0.06] text-space/70'"
+                @click="activeCategory = category"
+              >
+                {{ category === 'all' ? $t('All') : category }}
+              </button>
+            </nav>
+          </div>
+
           <div v-if="activeCycle" class="mt-8 flex items-center gap-2">
             <h2 class="text-xl font-bold text-space">
               {{ $t('Submissions') }}
             </h2>
-            <span data-testid="competition-submission-count" class="rounded-md bg-space/[0.06] px-2 py-1 text-sm font-bold text-space/50">
+            <span data-testid="competition-submission-count" aria-hidden="true" class="rounded-md bg-space/[0.06] px-2 py-1 text-sm font-bold text-space/50">
               {{ activeApps.length }}
+            </span>
+            <span
+              data-testid="competition-results-status"
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              class="sr-only"
+            >
+              {{ $t('Matching submissions: {count}', { count: activeApps.length }) }}
             </span>
           </div>
 
@@ -123,6 +187,15 @@ function selectCycle(cycle: string) {
               :show-animations="showAnimations"
               @select="emit('select', $event)"
             />
+          </div>
+
+          <div v-else-if="cycleApps.length" class="flex min-h-64 flex-col items-center justify-center text-center">
+            <h2 class="text-xl font-bold text-space">
+              {{ $t('No matching submissions') }}
+            </h2>
+            <p class="mt-2 text-space/70">
+              {{ $t('Try another search or category.') }}
+            </p>
           </div>
 
           <div v-else class="flex min-h-64 flex-col items-center justify-center text-center">
@@ -146,6 +219,15 @@ function selectCycle(cycle: string) {
 
 .competition-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.competition-searchbar {
+  --background: transparent;
+  --border-radius: 9999px;
+  --box-shadow: none;
+  --placeholder-color: theme('colors.space.DEFAULT / 60%');
+  --icon-color: theme('colors.space.DEFAULT / 40%');
+  --clear-button-color: theme('colors.space.DEFAULT / 40%');
 }
 
 .competition-marquee {

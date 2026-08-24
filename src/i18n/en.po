@@ -97,6 +97,7 @@ msgstr ""
 msgid "Alias (optional)"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:89
 #: src/components/NimWithdraw.vue:63
 msgid "All"
 msgstr ""
@@ -312,7 +313,7 @@ msgstr ""
 msgid "Check"
 msgstr ""
 
-#: src/components/competition/MiniAppsCompetitionView.vue:87
+#: src/components/competition/MiniAppsCompetitionView.vue:137
 msgid "Check back when the next entries arrive."
 msgstr ""
 
@@ -675,6 +676,10 @@ msgstr ""
 #: src/components/PaymentPreview.vue:117
 #: src/components/PaymentPreview.vue:123
 msgid "Fees may apply {fee}"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:76
+msgid "Filter submissions by category"
 msgstr ""
 
 #: src/components/TestnetFaucet.vue:18
@@ -1056,6 +1061,10 @@ msgstr ""
 msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:108
+msgid "Matching submissions: {count}"
+msgstr ""
+
 #: src/components/competition/MiniAppsCompetitionView.vue:40
 msgid "Meet the builders creating new experiences for Nimiq Pay."
 msgstr ""
@@ -1162,8 +1171,12 @@ msgstr ""
 msgid "No changelog yet. Check back after the next update."
 msgstr ""
 
-#: src/components/competition/MiniAppsCompetitionView.vue:84
+#: src/components/competition/MiniAppsCompetitionView.vue:134
 msgid "No entries in this cycle yet"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:125
+msgid "No matching submissions"
 msgstr ""
 
 #: src/components/naka/HoldNakaCardToReader.vue:82
@@ -1624,6 +1637,11 @@ msgstr ""
 msgid "Search for a country"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:66
+#: src/components/competition/MiniAppsCompetitionView.vue:67
+msgid "Search submissions"
+msgstr ""
+
 #: src/components/ValidateWords.vue:31
 msgid "See words"
 msgstr ""
@@ -1786,7 +1804,7 @@ msgstr ""
 msgid "Store screenshot safely"
 msgstr ""
 
-#: src/components/competition/MiniAppsCompetitionView.vue:64
+#: src/components/competition/MiniAppsCompetitionView.vue:96
 msgid "Submissions"
 msgstr ""
 
@@ -2005,6 +2023,10 @@ msgstr ""
 #: src/components/competition/MiniAppsCompetitionView.vue:19
 #: src/components/ValidateWords.vue:28
 msgid "Try again"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:128
+msgid "Try another search or category."
 msgstr ""
 
 #: src/views/LockdownScreen.vue:23
