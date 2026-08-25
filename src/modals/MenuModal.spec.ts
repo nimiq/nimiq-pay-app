@@ -11,8 +11,8 @@ const isCampaignActive = ref(false)
 const liveChatEnabled = ref(false)
 const liveChatShown = ref(false)
 const hasCard = ref(true)
-const registration = ref<{ nakaIdentification?: string } | null>({ nakaIdentification: 'kyc-started' })
 const isNakaAvailable = ref(true)
+const nakaEnabled = ref(true)
 const miniAppsEnabled = ref(false)
 
 vi.mock('@capacitor/browser', () => ({
@@ -94,7 +94,7 @@ vi.mock('@/lib', () => ({
     return miniAppsEnabled.value
   },
   get isNakaEnabled() {
-    return true
+    return nakaEnabled.value
   },
 }))
 
@@ -135,7 +135,6 @@ vi.mock('@/stores/livechat', () => ({
 vi.mock('@/stores/naka', () => ({
   useNaka: () => ({
     hasCard,
-    registration,
   }),
 }))
 
@@ -154,15 +153,15 @@ describe('menuModal', () => {
     liveChatEnabled.value = false
     liveChatShown.value = false
     hasCard.value = true
-    registration.value = { nakaIdentification: 'kyc-started' }
     isNakaAvailable.value = true
+    nakaEnabled.value = true
     miniAppsEnabled.value = false
     showModal.mockReset()
     closeModal.mockReset()
     initializeFlow.mockReset()
   })
 
-  it('keeps NAKA menu entries available on USDT when card and support state are present', async () => {
+  it('keeps the NAKA card available on USDT', async () => {
     activeAsset.value = Asset.USDT
     isNimiqAsset.value = false
 
@@ -179,9 +178,36 @@ describe('menuModal', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('NAKA Card')
-    expect(wrapper.text()).toContain('NAKA Support')
+    expect(wrapper.text()).toContain('Support')
     expect(wrapper.text()).toContain('Payments')
     expect(wrapper.text()).not.toContain('Activate NAKA Card')
+  })
+
+  it('opens support for users without NAKA', async () => {
+    nakaEnabled.value = false
+    hasCard.value = false
+    isNakaAvailable.value = false
+
+    const { default: MenuModal } = await import('./MenuModal.vue')
+    const wrapper = mount(MenuModal, {
+      global: {
+        plugins: [createPinia()],
+        mocks: {
+          $t: (value: string) => value,
+        },
+      },
+    })
+
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Support')
+    expect(wrapper.text()).not.toContain('NAKA')
+
+    await wrapper.findAll('.menu-item').find(item => item.text() === 'Support')!.trigger('click')
+
+    expect(liveChatEnabled.value).toBe(true)
+    expect(liveChatShown.value).toBe(true)
+    expect(closeModal).toHaveBeenCalledOnce()
   })
 
   it('passes analytics metadata when opening mini apps from the menu', async () => {
