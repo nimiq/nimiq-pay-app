@@ -1,11 +1,13 @@
 import type { WtMessage } from '@/lib/walkie-talkie'
+import { App } from '@capacitor/app'
+import { Device } from '@capacitor/device'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { isTestnet } from '@/lib'
 import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, getStatus } from '@/lib/walkie-talkie'
-import { kvPreferences } from './app'
+import { kvPreferences, useApp } from './app'
 import { useLocalWallet } from './local-wallet'
-import { useNaka } from './naka'
 
 export const useLiveChat = defineStore('livechat', () => {
   const enabled = ref(false)
@@ -72,14 +74,20 @@ export const useLiveChat = defineStore('livechat', () => {
     }
   }
 
-  function buildTraitsPreamble(): string {
-    const { registration, card } = useNaka()
-    const name = registration?.nakaIdentification?.firstName?.split(' ')[0] || '-'
-    const kyc = registration?.nakaIdentification?.status || '-'
-    const pan = card?.maskedPan || '-'
-    const cardStatus = card?.statusId || '-'
-    const cardLock = card?.lockLevel ? 'yes' : 'no'
-    return `[Name: ${name} | KYC: ${kyc} | Card: ${pan} | Card Status: ${cardStatus} | Card Lock: ${cardLock}]`
+  async function buildSupportPreamble(walletAddress: string): Promise<string> {
+    const { activeAsset, language } = useApp()
+    const compactAddress = walletAddress.replaceAll(' ', '')
+    const name = `${compactAddress.slice(0, 4)}...${compactAddress.slice(-4)}`
+    const [appInfoResult, deviceInfoResult] = await Promise.allSettled([
+      App.getInfo(),
+      Device.getInfo(),
+    ])
+    const appInfo = appInfoResult.status === 'fulfilled' ? appInfoResult.value : undefined
+    const deviceInfo = deviceInfoResult.status === 'fulfilled' ? deviceInfoResult.value : undefined
+    const os = deviceInfo ? `${deviceInfo.operatingSystem} ${deviceInfo.osVersion}`.trim() : 'unknown'
+    const device = deviceInfo ? [deviceInfo.manufacturer, deviceInfo.model].filter(Boolean).join(' ') || 'unknown' : 'unknown'
+
+    return `[Name: ${name} | Address: ${walletAddress} | App Version: ${appInfo?.version || 'unknown'} | Build: ${appInfo?.build || 'unknown'} | Platform: ${deviceInfo?.platform || 'unknown'} | OS: ${os || 'unknown'} | Device: ${device} | Network: ${isTestnet ? 'testnet' : 'mainnet'} | Asset: ${activeAsset} | Language: ${language}]`
   }
 
   async function sendMessage(text: string) {
@@ -87,7 +95,8 @@ export const useLiveChat = defineStore('livechat', () => {
     if (!trimmed)
       return
 
-    const userId = useLocalWallet().localAddress.toUserFriendlyAddress().replaceAll(' ', '')
+    const walletAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const userId = walletAddress.replaceAll(' ', '')
 
     // Optimistically append user message
     const message: WtMessage = {
@@ -105,7 +114,7 @@ export const useLiveChat = defineStore('livechat', () => {
 
     try {
       if (!sessionId.value) {
-        const preamble = buildTraitsPreamble()
+        const preamble = await buildSupportPreamble(walletAddress)
         const result = await apiStartSession(userId, preamble)
         sessionId.value = result.session_id
         const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
