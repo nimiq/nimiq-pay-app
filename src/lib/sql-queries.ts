@@ -37,6 +37,7 @@ export enum SQLQuery {
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetTransactionByHash = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
   UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = ? WHERE hash = ?',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
   UpdateCashbackStatus = 'UPDATE transactions SET isCashbackClaimed = ? WHERE hash = ?',
@@ -77,10 +78,23 @@ export enum SQLQuery {
   // Swap HTLCs
   CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
   AddHtlcIdColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id TEXT',
+  AddTxHashColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN tx_hash TEXT',
+  AddRefundHashColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_hash TEXT',
+  AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
+  AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
+  BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
+  ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
+  ClearSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = NULL WHERE address = ?',
+  SetSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = ? WHERE address = ?',
+  ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
+  DeleteSwapHtlcByTxHash = 'DELETE FROM swap_htlcs WHERE address = ? OR tx_hash = ?',
+  GetSwapHtlcByAddress = 'SELECT * FROM swap_htlcs WHERE address = ? OR htlc_id = ? LIMIT 1',
   GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
-  GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
+  GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? OR tx_hash = ? LIMIT 1',
   PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
   // Swap Quotes
@@ -169,6 +183,16 @@ export const migrations: Migration[] = [
     toVersion: 8,
     statements: [
       SQLQuery.AddHtlcIdColumnToSwapHtlcs,
+    ],
+  },
+  {
+    toVersion: 9,
+    statements: [
+      SQLQuery.AddTxHashColumnToSwapHtlcs,
+      SQLQuery.AddRefundHashColumnToSwapHtlcs,
+      SQLQuery.AddRefundTimestampColumnToSwapHtlcs,
+      SQLQuery.AddRefundBlockColumnToSwapHtlcs,
+      SQLQuery.BackfillSwapHtlcTxHash,
     ],
   },
 ]

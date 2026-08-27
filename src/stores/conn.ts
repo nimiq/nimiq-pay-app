@@ -1,4 +1,4 @@
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
+import type { capSQLiteSet, SQLiteDBConnection } from '@capacitor-community/sqlite'
 import type { AsyncOption } from '@/types'
 import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
 import { computedAsync } from '@vueuse/core'
@@ -146,6 +146,16 @@ export const useConn = defineStore('conn', () => {
       await sqlite.saveToStore(DB_NAME)
   }
 
+  async function runBatch(statements: capSQLiteSet[]) {
+    const err = await waitForUnlock()
+    if (err)
+      throw new Error(err)
+
+    await db.value!.executeSet(statements, true)
+    if (isWeb)
+      await sqlite.saveToStore(DB_NAME)
+  }
+
   return {
     init,
     db,
@@ -157,6 +167,7 @@ export const useConn = defineStore('conn', () => {
     close,
 
     run,
+    runBatch,
     query,
 
     locked,

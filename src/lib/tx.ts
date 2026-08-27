@@ -32,7 +32,14 @@ const { networkId, height } = storeToRefs(nimiqNetwork)
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
+interface GetSignedTxOptions {
+  beforeSwapBroadcast?: (tx: Transaction, swap: Swap) => Promise<void>
+}
+
+export async function getSignedTx(
+  partialArgs: PartialSendTxArgs,
+  options: GetSignedTxOptions = {},
+): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
   logger.log(partialArgs.transfer)
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
@@ -132,6 +139,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
     // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
     logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof), proofLength: tx.proof.length })
+    await options.beforeSwapBroadcast?.(tx, swap)
     const res = await getSignedTxByRemote(tx)
     if (res.error)
       return res

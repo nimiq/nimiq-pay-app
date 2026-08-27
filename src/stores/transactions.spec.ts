@@ -28,6 +28,7 @@ const state = vi.hoisted(() => ({
   },
   query: vi.fn(async () => []),
   run: vi.fn(async () => undefined),
+  runBatch: vi.fn(async () => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
   updateRemoteSigner: vi.fn(async () => undefined),
   logger: {
@@ -76,6 +77,7 @@ vi.mock('@/stores/conn', () => {
   const useConn = defineStore('conn', () => ({
     query: state.query,
     run: state.run,
+    runBatch: state.runBatch,
   }))
 
   return { useConn }
@@ -150,6 +152,8 @@ describe('useTransactions', () => {
     state.query.mockResolvedValue([])
     state.run.mockReset()
     state.run.mockResolvedValue(undefined)
+    state.runBatch.mockReset()
+    state.runBatch.mockResolvedValue(undefined)
     state.updateActiveRemoteBalance.mockReset()
     state.updateActiveRemoteBalance.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
@@ -642,6 +646,145 @@ describe('useTransactions', () => {
       localAddress: 'NQ00 TEST LOCAL ADDRESS',
       localBalance: 100_000,
     }))
+  })
+
+  it('persists NIM swap recovery before requesting the cosigner signature', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const contractAddress = createAddress('NQ55 SWAP HTLC ADDRESS')
+    const swap = {
+      id: 'swap-id',
+      status: 'pending',
+      contracts: {
+        NIM: {
+          id: 'nim-contract-id',
+          htlc: { timeoutTime: 123456 },
+        },
+      },
+    }
+    const unsignedTx = {
+      getContractCreationAddress: () => contractAddress,
+      value: 42n,
+    }
+
+    vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options: any) => {
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.anything())
+      await options.beforeSwapBroadcast(unsignedTx, swap)
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, [
+        'NQ55 SWAP HTLC ADDRESS',
+        42,
+        123456,
+        'swap-id',
+        'pending',
+        null,
+      ])
+      return { data: undefined, error: 'stop after pre-broadcast hook' } as any
+    })
+
+    const result = await useTransactions().sendTx({
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+    } as any)
+
+    expect(result.error).toBe('stop after pre-broadcast hook')
+  })
+
+  it('releases the send lock when pre-broadcast recovery persistence fails', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const swap = {
+      contracts: { NIM: { htlc: { timeoutTime: 123456 } } },
+      id: 'swap-id',
+      status: 'pending',
+    }
+    const unsignedTx = {
+      getContractCreationAddress: () => createAddress('NQ55 SWAP HTLC ADDRESS'),
+      value: 42n,
+    }
+    state.run.mockRejectedValueOnce(new Error('db unavailable'))
+    vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options: any) => {
+      await options.beforeSwapBroadcast(unsignedTx, swap)
+      return { data: undefined, error: 'unreachable' } as any
+    })
+
+    await expect(useTransactions().sendTx({
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+    } as any)).rejects.toThrow('db unavailable')
+
+    expect(state.isSendingTx).toBe(false)
+  })
+
+  it('durably marks a Polygon swap refunded when its transaction is not loaded', async () => {
+    const storedTx = {
+      hash: '0xrelayhash',
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+      meta: JSON.stringify({ secret: undefined }),
+      invoiced: null,
+    }
+    state.query.mockImplementation(((sql: string) => Promise.resolve(
+      sql === SQLQuery.GetTransactionByHash ? storedTx : [],
+    )) as any)
+
+    const { useTransactions } = await import('./transactions')
+    await expect(useTransactions().setPolygonSwapHtlcRefunded('0xrelayhash')).resolves.toBe(true)
+
+    expect(state.query).toHaveBeenCalledWith(SQLQuery.GetTransactionByHash, ['0xrelayhash'], { single: true })
+    const upsert = (state.run.mock.calls as unknown as Array<[string, unknown[]]>).find(([sql]) => sql === SQLQuery.UpsertTx)
+    expect(upsert).toBeDefined()
+    expect(upsert?.[1]?.[26]).toBe(JSON.stringify({ refunded: true }))
+  })
+
+  it('atomically persists a Polygon swap transaction with its recovery hash', async () => {
+    const { useTransactions } = await import('./transactions')
+    const tx = {
+      hash: '0xrelayhash',
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+      meta: {},
+    } as any
+
+    await useTransactions().addPolygonSwapTransactionWithRecovery(tx, '0xhtlcid')
+
+    expect(state.runBatch).toHaveBeenCalledOnce()
+    expect(state.runBatch).toHaveBeenCalledWith([
+      {
+        statement: SQLQuery.SetSwapHtlcTxHash,
+        values: ['0xrelayhash', '0xhtlcid'],
+      },
+      expect.objectContaining({ statement: SQLQuery.UpsertTx }),
+    ])
+  })
+
+  it('deduplicates a Polygon replacement already loaded by history sync', async () => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    const pendingTx = {
+      hash: '0xoriginal',
+      timestamp: 1,
+      status: 'pending',
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      asset: Asset.USDT,
+      chain: Chain.Polygon,
+      meta: { source: 'relay' },
+    } as any
+    const replacementTx = {
+      ...pendingTx,
+      hash: '0xreplacement',
+      timestamp: 2,
+      status: 'confirmed',
+      meta: { source: 'history' },
+    }
+    await store.addPaymentToMerchantTransaction(pendingTx)
+    await store.addPaymentToMerchantTransaction(replacementTx)
+
+    await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')
+
+    expect(store.transactions.map(tx => tx.hash)).toEqual(['0xreplacement'])
+    expect(store.transactions[0]?.meta).toEqual({ source: 'relay' })
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {

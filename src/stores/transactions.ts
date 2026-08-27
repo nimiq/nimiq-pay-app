@@ -48,7 +48,7 @@ export enum TransactionListState {
 }
 
 export const useTransactions = defineStore('transactions', () => {
-  const { query, run } = useConn()
+  const { query, run, runBatch } = useConn()
   const { client } = storeToRefs(useNimiqNetwork())
   const { activeAsset, showHiddenTransactions } = storeToRefs(useApp())
 
@@ -95,50 +95,50 @@ export const useTransactions = defineStore('transactions', () => {
     return filteredTxs
   }
 
+  function getUpsertTxValues(tx: Transaction) {
+    // Store the untranslated title so it follows the user's current language at display time.
+    return [
+      tx.hash,
+      tx.timestamp,
+      tx.sender,
+      tx.senderType,
+      tx.recipient,
+      tx.recipientType,
+      tx.amount,
+      tx.fee,
+      tx.status,
+      tx.raw,
+      tx.title,
+      tx.transfer,
+      tx.message,
+      tx.rail,
+      tx.railMerchantId,
+      tx.merchantName,
+      tx.merchantCategory,
+      tx.paymentRef,
+      tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap
+        ? tx.paymentMethod
+        : null,
+      tx.fiatAmount,
+      tx.fiatFeeAmount,
+      tx.fiatCurrency,
+      tx.isCashbackClaimed,
+      tx.asset || Asset.NIM,
+      tx.chain || Chain.Nimiq,
+      tx.invoiced
+        ? JSON.stringify(tx.invoiced)
+        : null,
+      tx.meta
+        ? JSON.stringify(tx.meta)
+        : null,
+      tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+    ]
+  }
+
   async function upsertTx(tx: Transaction) {
     logger.log(`📚 Upsert-ing transaction`, tx)
-    await run(
-      SQLQuery.UpsertTx,
-      // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
-      // time to whatever language the user has selected at that time.
-      [
-        tx.hash,
-        tx.timestamp,
-        tx.sender,
-        tx.senderType,
-        tx.recipient,
-        tx.recipientType,
-        tx.amount,
-        tx.fee,
-        tx.status,
-        tx.raw,
-        tx.title,
-        tx.transfer,
-        tx.message,
-        tx.rail,
-        tx.railMerchantId,
-        tx.merchantName,
-        tx.merchantCategory,
-        tx.paymentRef,
-        tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap
-          ? tx.paymentMethod
-          : null,
-        tx.fiatAmount,
-        tx.fiatFeeAmount,
-        tx.fiatCurrency,
-        tx.isCashbackClaimed,
-        tx.asset || Asset.NIM,
-        tx.chain || Chain.Nimiq,
-        tx.invoiced
-          ? JSON.stringify(tx.invoiced)
-          : null,
-        tx.meta
-          ? JSON.stringify(tx.meta)
-          : null,
-        tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
-        tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
-      ],
-    )
+    await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
   }
 
   async function clearTxHistory() {
@@ -154,9 +154,12 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
     }
     isSendingTx.value = true
-    const res = await _sendTx(partialTx)
-    isSendingTx.value = false
-    return res
+    try {
+      return await _sendTx(partialTx)
+    }
+    finally {
+      isSendingTx.value = false
+    }
   }
 
   async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
@@ -174,7 +177,26 @@ export const useTransactions = defineStore('transactions', () => {
     if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim)
       client.value!.waitForConsensusEstablished()
 
-    const res = await getSignedTx(partialTx)
+    let swapHtlcAddress: string | undefined
+    const res = await getSignedTx(partialTx, {
+      beforeSwapBroadcast: partialTx.transfer === Transfer.UserPaymentToAtomicSwap
+        ? async (tx, swap) => {
+          const nimContract = swap.contracts.NIM!
+          swapHtlcAddress = tx.getContractCreationAddress().toUserFriendlyAddress()
+          await run(
+            SQLQuery.InsertSwapHtlc,
+            [
+              swapHtlcAddress,
+              Number(tx.value),
+              (nimContract.htlc as NimHtlcDetails).timeoutTime,
+              swap.id,
+              swap.status,
+              null,
+            ],
+          )
+        }
+        : undefined,
+    })
     if (res.error) {
       logger.error('Error while signing transaction', res.error, {
         transfer: partialTx.transfer,
@@ -205,19 +227,7 @@ export const useTransactions = defineStore('transactions', () => {
         signedTx.toHex(),
       )
 
-      // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later.
-      // NIM rows reclaim by HTLC address (TIMEOUT_RESOLVE proof), so htlc_id is null — only Polygon needs it.
-      await run(
-        SQLQuery.InsertSwapHtlc,
-        [
-          signedTx.recipient.toUserFriendlyAddress(),
-          Number(signedTx.value),
-          (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
-          swap.id,
-          swap.status,
-          null,
-        ],
-      )
+      swapHtlcAddress ||= signedTx.recipient.toUserFriendlyAddress()
     }
 
     // Check if the tx is already in the transaction list
@@ -238,7 +248,7 @@ export const useTransactions = defineStore('transactions', () => {
           const serverSwap = await patchedSwap?.catch(() => undefined)
           if (!serverSwap || !serverSwap.preimage) {
             // Delete the swap HTLC from the database
-            await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
+            await run(SQLQuery.DeleteSwapHtlc, [swapHtlcAddress])
           }
           trackSwapFailed({
             error_reason: 'Transaction invalidated by mempool',
@@ -350,7 +360,7 @@ export const useTransactions = defineStore('transactions', () => {
       })
 
       // Delete the swap HTLC from the database
-      await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
+      await run(SQLQuery.DeleteSwapHtlc, [swapHtlcAddress || tx.recipient])
       // Delete the swap quote from the database
       await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
     }
@@ -406,6 +416,39 @@ export const useTransactions = defineStore('transactions', () => {
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
     await upsertTx(tx)
     addTransaction(tx)
+  }
+
+  async function addPolygonSwapTransactionWithRecovery(tx: MerchantTransaction, recoveryAddress: string) {
+    await runBatch([
+      {
+        statement: SQLQuery.SetSwapHtlcTxHash,
+        values: [tx.hash, recoveryAddress],
+      },
+      {
+        statement: SQLQuery.UpsertTx,
+        values: getUpsertTxValues(tx),
+      },
+    ])
+    addTransaction(tx)
+  }
+
+  async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
+    const statements = [{ statement: SQLQuery.UpdateTxHash, values: [newHash, oldHash] }]
+    if (recoveryAddress) {
+      statements.unshift({
+        statement: SQLQuery.ReplaceSwapHtlcTxHash,
+        values: [newHash, recoveryAddress, oldHash],
+      })
+    }
+    await runBatch(statements)
+
+    const replacedTx = transactions.value.find(tx => tx.hash === oldHash)
+    if (replacedTx) {
+      const otherTransactions = transactions.value.filter(tx => tx.hash !== oldHash && tx.hash !== newHash)
+      transactions.value = [{ ...replacedTx, hash: newHash }, ...otherTransactions].sort(
+        (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+      )
+    }
   }
 
   async function addUnknownPaymentToMerchantTransaction(
@@ -548,16 +591,29 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
-  // Polygon swap rows key by tx hash because tx.recipient is the shared HTLC contract address.
   async function setPolygonSwapHtlcRefunded(txHash: string) {
-    const tx = transactions.value.find(tx => tx.hash === txHash)
-    if (!tx)
-      return
-    tx.meta = {
-      ...tx.meta,
-      refunded: true,
+    const loadedIndex = transactions.value.findIndex(tx => tx.hash === txHash)
+    const storedTx = loadedIndex >= 0
+      ? transactions.value[loadedIndex]
+      : await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [txHash], { single: true })
+    if (!storedTx)
+      return false
+    const meta = typeof storedTx.meta === 'string' ? JSON.parse(storedTx.meta) : storedTx.meta
+    const refundedTx = {
+      ...storedTx,
+      invoiced: typeof storedTx.invoiced === 'string' ? JSON.parse(storedTx.invoiced) : storedTx.invoiced,
+      meta: {
+        ...meta,
+        refunded: true,
+      },
     }
-    await upsertTx(tx)
+    await upsertTx(refundedTx)
+    if (loadedIndex >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[loadedIndex] = refundedTx
+      transactions.value = nextTransactions
+    }
+    return true
   }
 
   async function setNakaTxRefunded(amount: number) {
@@ -599,6 +655,8 @@ export const useTransactions = defineStore('transactions', () => {
     sendTx,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
+    addPolygonSwapTransactionWithRecovery,
+    replacePolygonTransactionHash,
     addUnknownPaymentToMerchantTransaction,
     addPaymentTransaction,
     addWithdrawalTransaction,

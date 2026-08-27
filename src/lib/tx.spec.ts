@@ -3,6 +3,12 @@ import { buildTopUpReceipt } from './tx'
 
 const state = vi.hoisted(() => ({
   getAccountTransactions: vi.fn(),
+  parseBitcoinLightningInvoice: vi.fn(),
+  confirmSwap: vi.fn(),
+  getSwap: vi.fn(),
+  sendRemoteTransaction: vi.fn(),
+  localWalletStore: {} as Record<string, any>,
+  remoteSignerStore: { remoteProofSize: 98 } as Record<string, any>,
 }))
 
 vi.mock('pinia', () => ({
@@ -10,7 +16,7 @@ vi.mock('pinia', () => ({
 }))
 
 vi.mock('@/composables/useApi', () => ({
-  useRemoteSignerApi: vi.fn(),
+  useRemoteSignerApi: () => ({ sendTransaction: state.sendRemoteTransaction }),
 }))
 
 vi.mock('@/composables/useLogger', () => ({
@@ -22,7 +28,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 }))
 
 vi.mock('@/stores/local-wallet', () => ({
-  useLocalWallet: vi.fn(),
+  useLocalWallet: () => state.localWalletStore,
 }))
 
 vi.mock('@/stores/nimiq-network', () => ({
@@ -38,15 +44,18 @@ vi.mock('@/stores/nimiq-network', () => ({
 }))
 
 vi.mock('@/stores/remote-signer', () => ({
-  useRemoteSigner: () => ({ remoteProofSize: 98 }),
+  useRemoteSigner: () => state.remoteSignerStore,
 }))
 
 vi.mock('../composables/useBitcoinLightning', () => ({
-  parseBitcoinLightningInvoice: vi.fn(),
+  parseBitcoinLightningInvoice: state.parseBitcoinLightningInvoice,
 }))
 
 vi.mock('../composables/useFastspotv1', () => ({
-  useFastspotApiV1: vi.fn(),
+  useFastspotApiV1: () => ({
+    confirmSwap: state.confirmSwap,
+    getSwap: state.getSwap,
+  }),
 }))
 
 function transactionWithData(raw: string, overrides: Record<string, unknown> = {}) {
@@ -117,5 +126,122 @@ describe('buildTopUpReceipt', () => {
     expect(receipt.title).toBe('Top-Up')
     expect(receipt.message).toBe('Hello')
     expect(state.getAccountTransactions).not.toHaveBeenCalled()
+  })
+})
+
+describe('getSignedTx', () => {
+  beforeEach(() => {
+    const address = (value: string) => ({
+      serialize: () => new Uint8Array(20),
+      toHex: () => value,
+      toUserFriendlyAddress: () => value,
+    })
+
+    class SerialBuffer extends Uint8Array {
+      writePos = 0
+      write() {}
+      writeUint8() {}
+      writeUint64() {}
+    }
+
+    class Transaction {
+      sender: unknown
+      recipient: unknown
+      recipientType: number
+      value: bigint
+      networkId: number
+      proof = new Uint8Array()
+
+      constructor(sender: unknown, _senderType: number, _senderData: Uint8Array, recipient: unknown, recipientType: number, _recipientData: Uint8Array, value: bigint, _fee: bigint, _flags: number, _height: number, networkId: number) {
+        this.sender = sender
+        this.recipient = recipient
+        this.recipientType = recipientType
+        this.value = value
+        this.networkId = networkId
+      }
+
+      getContractCreationAddress() {
+        return address('NQ55 SWAP HTLC ADDRESS')
+      }
+
+      serializeContent() {
+        return new Uint8Array()
+      }
+
+      toPlain() {
+        return { sender: 'NQ11 REMOTE', recipient: 'NQ00 CONTRACT CREATION', value: Number(this.value) }
+      }
+    }
+
+    state.localWalletStore = {
+      localAddress: address('NQ22 LOCAL'),
+      localWallet: {
+        privateKey: {},
+        publicKey: {},
+      },
+    }
+    state.remoteSignerStore = {
+      remoteAddress: address('NQ11 REMOTE'),
+      remoteHeight: 1,
+      remoteProofSize: 2,
+    }
+    state.parseBitcoinLightningInvoice.mockReset()
+    state.parseBitcoinLightningInvoice.mockResolvedValue({ payment_hash: 'swap-hash' })
+    state.confirmSwap.mockReset()
+    state.confirmSwap.mockResolvedValue({
+      id: 'swap-id',
+      hash: 'swap-hash',
+      status: 'pending',
+      contracts: {
+        NIM: {
+          id: 'nim-contract-id',
+          redeemAddress: 'NQ33 REDEEM',
+          htlc: {
+            data: 'expected-htlc-data',
+            timeoutTime: 123456,
+          },
+        },
+      },
+    })
+    state.sendRemoteTransaction.mockReset()
+    vi.stubGlobal('Nimiq', {
+      AccountType: { Basic: 0, HTLC: 2 },
+      Address: {
+        fromString: address,
+        fromUserFriendlyAddress: address,
+      },
+      BufferUtils: {
+        fromHex: () => new Uint8Array(32),
+        toHex: (value: unknown) => value instanceof SerialBuffer ? 'expected-htlc-data' : 'proof',
+      },
+      SerialBuffer,
+      Signature: { create: () => ({}) },
+      SignatureProof: { singleSig: () => ({ serialize: () => new Uint8Array([1, 2]) }) },
+      Transaction,
+    })
+  })
+
+  it('awaits recovery persistence before calling the cosigner', async () => {
+    const { getSignedTx } = await import('./tx')
+    const calls: string[] = []
+    state.sendRemoteTransaction.mockImplementation(async () => {
+      calls.push('cosigner')
+      throw new Error('stop after cosigner call')
+    })
+
+    await expect(getSignedTx({
+      transfer: 'user-payment-to-atomic-swap',
+      recipient: 'lnbc1invoice',
+      amount: 42,
+      paymentRef: 'swap-id',
+    } as any, {
+      beforeSwapBroadcast: async (tx, swap) => {
+        calls.push('persist')
+        expect(tx.getContractCreationAddress().toUserFriendlyAddress()).toBe('NQ55 SWAP HTLC ADDRESS')
+        expect(swap.id).toBe('swap-id')
+      },
+    })).rejects.toThrow('stop after cosigner call')
+
+    expect(calls).toEqual(['persist', 'cosigner'])
   })
 })

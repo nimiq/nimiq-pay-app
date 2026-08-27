@@ -42,4 +42,21 @@ describe('sql transaction query definitions', () => {
     expect(sqlQueriesSource).toContain('BackfillTransactionAsset')
     expect(sqlQueriesSource).toContain('BackfillTransactionChain')
   })
+
+  it('adds durable funding and refund hashes to swap recovery rows', () => {
+    expect(sqlQueriesSource).toContain('ALTER TABLE swap_htlcs ADD COLUMN tx_hash TEXT')
+    expect(sqlQueriesSource).toContain('ALTER TABLE swap_htlcs ADD COLUMN refund_hash TEXT')
+    expect(sqlQueriesSource).toContain('ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER')
+    expect(sqlQueriesSource).toContain('ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER')
+    expect(sqlQueriesSource).toContain('SET tx_hash = address WHERE htlc_id IS NOT NULL')
+    expect(sqlQueriesSource).toContain('toVersion: 9')
+  })
+
+  it('keeps the refund event scan block when clearing a rejected relay hash', () => {
+    expect(sqlQueriesSource).toContain('ClearSwapHtlcRefundHash = \'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?\'')
+  })
+
+  it('adopts replacement transaction hashes without unique-key collisions', () => {
+    expect(sqlQueriesSource).toContain('UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?')
+  })
 })

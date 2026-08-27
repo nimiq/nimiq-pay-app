@@ -14,6 +14,7 @@ import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
+import { getSwapHtlcTxHash } from '@/types/swapHtlcs'
 import { Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
@@ -278,10 +279,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
     try {
       const result = await polygonUsdt.refundPolygonSwapHtlc(htlc)
-      if (!result.refunded && result.preimage) {
-        logger.log('Skipping Polygon refund — Lightning preimage arrived late', htlc)
-        await polygonUsdt.updateSingleTransaction(htlc.address)
-      }
+      if (result.refunded || !result.preimage)
+        return
+
+      logger.log('Skipping Polygon refund — Lightning preimage arrived late', htlc)
+      const txHash = getSwapHtlcTxHash(htlc)
+      if (txHash)
+        await polygonUsdt.updateSingleTransaction(txHash)
+      else
+        await useConn().run(SQLQuery.DeleteSwapHtlc, [htlc.address])
     }
     catch (error) {
       // Leave the row in place so the next sweep retries. refund(...) reverts on already-refunded
