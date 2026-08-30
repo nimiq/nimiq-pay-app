@@ -6,7 +6,7 @@
   "license": "GPL-3.0-only",
   "description": "Self-custody mobile wallet for paying with NIM and USDT",
   "scripts": {
-    "dev:android": "ionic cap run android --livereload --external --watch",
+    "dev:android": "node scripts/dev-android.mjs",
     "dev:a": "pnpm run dev:android",
     "dev:ios": "ionic cap run ios --livereload --external --watch",
     "dev:i": "pnpm run dev:ios",
