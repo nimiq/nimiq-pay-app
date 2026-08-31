@@ -138,6 +138,7 @@
     "vue-tsc": "^3.2.8",
     "webpack-i18n-tools": "github:nimiq/webpack-i18n-tools"
   },
+  "packageManager": "pnpm@10.34.5",
   "pnpm": {
     "overrides": {
       "jeep-sqlite": "2.5.6"
