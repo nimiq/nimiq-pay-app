@@ -62,6 +62,16 @@ describe('useApp withdrawal storage', () => {
     expect(app.withdrawalAddress).toBe('0x1111111111111111111111111111111111111111')
   })
 
+  it('stores the preferred withdrawal amount denomination', async () => {
+    const { useApp } = await import('./app')
+    const app = useApp()
+
+    expect(app.withdrawalDenomination).toBe('fiat')
+
+    app.withdrawalDenomination = 'crypto'
+    expect(app.withdrawalDenomination).toBe('crypto')
+  })
+
   it('keeps more than three withdrawal addresses for history reconstruction', async () => {
     const { useApp } = await import('./app')
     const app = useApp()

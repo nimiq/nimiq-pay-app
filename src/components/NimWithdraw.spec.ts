@@ -5,6 +5,7 @@ import { StepName } from '@/lib/flows/steps.types'
 import { Transfer } from '@/types/transactions'
 
 const withdrawalAddress = ref('')
+const withdrawalDenomination = ref<'fiat' | 'crypto'>('fiat')
 const selectedFiat = ref('EUR')
 const isNimiqAsset = ref(false)
 const usdtBalance = ref(0)
@@ -53,6 +54,7 @@ vi.mock('@/stores/app', () => ({
   },
   useApp: () => ({
     withdrawalAddress,
+    withdrawalDenomination,
     selectedFiat,
     isNimiqAsset,
     activeAsset: computed(() => isNimiqAsset.value ? 'NIM' : 'USDT'),
@@ -227,7 +229,10 @@ async function mountComponent(
     },
     global: {
       mocks: {
-        $t: (value: string) => value,
+        $t: (value: string, params?: Record<string, string | number>) => Object.entries(params || {}).reduce(
+          (message, [key, replacement]) => message.replace(`{${key}}`, String(replacement)),
+          value,
+        ),
       },
       stubs: {
         Transition: false,
@@ -244,6 +249,7 @@ describe('nimWithdraw', () => {
 
   beforeEach(() => {
     withdrawalAddress.value = ''
+    withdrawalDenomination.value = 'fiat'
     selectedFiat.value = 'EUR'
     isNimiqAsset.value = false
     usdtBalance.value = 500_000_000
@@ -444,6 +450,20 @@ describe('nimWithdraw', () => {
     await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
     await flushPromises()
     expect((wrapper.get('[data-testid="amount-input"]').element as HTMLInputElement).value).toBe('5000000')
+  })
+
+  it('remembers the amount denomination when the withdraw screen is reopened', async () => {
+    isNimiqAsset.value = true
+
+    const wrapper = await mountComponent('')
+    await wrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').trigger('click')
+
+    expect(withdrawalDenomination.value).toBe('crypto')
+
+    wrapper.unmount()
+    const reopenedWrapper = await mountComponent('')
+
+    expect(reopenedWrapper.get('[data-testid="nim-withdraw-denomination-toggle"]').attributes('aria-label')).toBe('Enter amount in EUR')
   })
 
   it('fills the exact NIM balance (no dust) when tapping All in crypto mode (APP-169)', async () => {

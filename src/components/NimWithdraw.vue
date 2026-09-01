@@ -40,7 +40,7 @@ const emit = defineEmits(stepEmits)
 
 const logger = useLogger('NimWithdraw')
 
-const { withdrawalAddress, selectedFiat, isNimiqAsset, activeAsset } = storeToRefs(useApp())
+const { withdrawalAddress, withdrawalDenomination: denomination, selectedFiat, isNimiqAsset, activeAsset } = storeToRefs(useApp())
 
 // APP-91: derive purely from `withdrawalAddress` — the previous ref + bidirectional watcher
 // raced with the address-selection sub-flow finalize and sent to the wrong recipient.
@@ -91,8 +91,6 @@ watch(fiatAmountModel, () => fiatAmount.value = fiatAmountModel.value / 10 ** fi
 // APP-169: the user can enter the amount either in fiat or directly in the crypto unit (NIM/USDT).
 // In crypto mode the entered minor-unit value (luna/USDT units) is the source of truth; in fiat mode
 // it stays derived from the fiat value as before.
-type Denomination = 'fiat' | 'crypto'
-const denomination = ref<Denomination>('fiat')
 const cryptoAmountModel = ref(0)
 
 // JS and their precision issues...

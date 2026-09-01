@@ -59,6 +59,8 @@ export enum Crypto {
   USDT = 'USDT',
 }
 
+export type WithdrawalDenomination = 'fiat' | 'crypto'
+
 export const DECIMALS: Record<Crypto, number> = {
   [Crypto.NIM]: 5,
   [Crypto.BTC]: 8,
@@ -111,6 +113,7 @@ export const useApp = defineStore('app', () => {
   const hasDoneBackup = useStorageAsync('hasDoneBackup', false, kv(), sharedOptions)
   const selectedFiat = useStorageAsync<Fiat>('selectedFiat', Fiat.USD, kv(), sharedOptions)
   const activeAsset = useStorageAsync<Asset>('activeAsset', DEFAULT_ASSET, kv(), sharedOptions)
+  const withdrawalDenomination = useStorageAsync<WithdrawalDenomination>('withdrawalDenomination', 'fiat', kv(), sharedOptions)
   const isNimiqAsset = computed(() => activeAsset.value === Asset.NIM)
   const withdrawalAddressByAsset = useStorageAsync<Record<Asset, string>>('withdrawalAddressByAsset', {
     [Asset.NIM]: '',
@@ -278,6 +281,7 @@ export const useApp = defineStore('app', () => {
     hasDoneBackup,
     selectedFiat,
     activeAsset,
+    withdrawalDenomination,
     isNimiqAsset,
     language,
     pointsToken,
