@@ -49,11 +49,12 @@ const category = computed(() => {
 })
 
 const hasSettledListAppearance = computed(() => ['included', 'mined', 'confirmed'].includes(props.tx.status))
+const isInvalid = computed(() => ['failed', 'invalidated'].includes(props.tx.status))
 const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 </script>
 
 <template>
-  <button :aria-label="`Transaction ${asset}`" class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': !hasSettledListAppearance, 'line-through': tx.meta?.refunded, 'opacity-30': tx.meta?.hidden }">
+  <button :aria-label="`Transaction ${asset}`" class="w-full flex items-center text-[15px] gap-x-3 font-semibold py-3 rounded ion-activatable ripple-parent relative overflow-hidden" :class="{ 'opacity-60': !hasSettledListAppearance, 'line-through': tx.meta?.refunded || isInvalid, 'opacity-30': tx.meta?.hidden }">
     <CategoryIcon :category="category" />
     <div class="flex flex-col items-start gap-1">
       <h3 class="text-base font-semibold">

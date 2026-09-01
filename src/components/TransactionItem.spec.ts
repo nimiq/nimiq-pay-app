@@ -175,4 +175,35 @@ describe('transactionItem', () => {
     expect(wrapper.classes()).not.toContain('opacity-60')
     expect(wrapper.text()).not.toContain('Confirming')
   })
+
+  it.each(['failed', 'invalidated'] as const)('strikes through %s transactions', async (status) => {
+    const { default: TransactionItem } = await import('./TransactionItem.vue')
+    const wrapper = mount(TransactionItem, {
+      props: {
+        tx: {
+          transfer: Transfer.UserPayment,
+          title: 'Payment',
+          timestamp: Date.now(),
+          amount: 2500000,
+          fee: 0,
+          hash: '0xhash',
+          sender: '0xsender',
+          recipient: '0xrecipient',
+          status,
+          proofSize: 0,
+          message: '',
+          asset: Asset.USDT,
+          chain: Chain.Polygon,
+        },
+      },
+      global: {
+        stubs: {
+          IonRippleEffect: true,
+        },
+      },
+    })
+
+    expect(wrapper.classes()).toContain('line-through')
+    expect(wrapper.text()).toContain('Invalid')
+  })
 })

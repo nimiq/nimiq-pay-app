@@ -1,8 +1,7 @@
 import type { PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
-import type { RemoteSignerTransactionState } from '@/composables/useApi'
 import type { RemoteSigner } from '@/lib/sql-queries'
-import type { ExternalTransaction, StakingTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { until } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -58,7 +57,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     if (!hasLocalWallet.value)
       return
 
-    let state: TransactionState | RemoteSignerTransactionState, timestamp: number | undefined
+    let state: AppTransactionState, timestamp: number | undefined
     if (!client.value || consensus.value !== 'established') {
       const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash })
       if (error || !tx || tx.state === 'unknown') {
@@ -72,7 +71,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       try {
         try {
           const tx = await client.value!.getTransaction(hash)
-          state = tx.state
+          state = tx.executionResult === false ? 'failed' : tx.state
           timestamp = tx.timestamp
         }
         catch {
@@ -84,19 +83,19 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           state = tx.state
           timestamp = tx.timestamp
         }
-        if (state !== 'pending'
-          && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === hash)
-            || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === hash)
-          )) {
-          logger.log(`Removing transaction ${hash} from pending transactions`)
-          pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== hash)
-          pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== hash)
-        }
       }
       catch (error) {
         logger.error(`[updateSingleTransaction] Error while getting transaction: ${hash}`, error)
         return
       }
+    }
+    if (state !== 'pending'
+      && (pendingTransactions.value.some(pendingTx => pendingTx.transactionHash === hash)
+        || pendingRemoteDrainTxs.value.some(pendingTx => pendingTx.hash === hash)
+      )) {
+      logger.log(`Removing transaction ${hash} from pending transactions`)
+      pendingTransactions.value = pendingTransactions.value.filter(pendingTx => pendingTx.transactionHash !== hash)
+      pendingRemoteDrainTxs.value = pendingRemoteDrainTxs.value.filter(pendingTx => pendingTx.hash !== hash)
     }
     updateTransactionStatus({ hash, status: state, timestamp })
   }
@@ -309,7 +308,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       }
       else {
         try {
-          let state: TransactionState | RemoteSignerTransactionState, timestamp: number, amount: number
+          let state: AppTransactionState, timestamp: number, amount: number
           if (!client.value || consensus.value !== 'established') {
             const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash: dbTx.hash })
             if (error || !tx || tx.state === 'unknown') {
@@ -322,7 +321,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           }
           else {
             const tx = await client.value!.getTransaction(dbTx.hash)
-            state = tx.state
+            state = tx.executionResult === false ? 'failed' : tx.state
             timestamp = tx.timestamp || 0
             amount = tx.value
           }

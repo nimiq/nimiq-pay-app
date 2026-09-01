@@ -165,6 +165,7 @@ export enum RemoteSignerTransactionState {
   New = 'new',
   Included = 'included',
   Confirmed = 'confirmed',
+  Failed = 'failed',
   Unknown = 'unknown',
 }
 

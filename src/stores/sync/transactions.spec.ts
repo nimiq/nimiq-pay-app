@@ -40,6 +40,19 @@ describe('useSyncTransactions', () => {
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 12 })
     })
 
+    it('persists failed when client.getTransaction reports unsuccessful execution', async () => {
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'confirmed',
+        executionResult: false,
+        timestamp: 12,
+      })) as any
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateSingleTransaction('h1')
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 12 })
+    })
+
     it('falls back to remote-signer API when client.getTransaction throws', async () => {
       state.client.getTransaction = vi.fn(() => Promise.reject(new Error('rpc'))) as any
       state.getTransactionState.mockResolvedValue({ data: { state: 'included', timestamp: 5 }, error: undefined })
@@ -47,6 +60,40 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateSingleTransaction('h1')
       expect(state.getTransactionState).toHaveBeenCalledWith({ hash: 'h1' })
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'included', timestamp: 5 })
+    })
+
+    it('persists failed state from remote-signer API and clears pending transactions', async () => {
+      state.consensus = 'syncing'
+      state.getTransactionState.mockResolvedValue({
+        data: { state: 'failed', timestamp: 12 },
+        error: undefined,
+      })
+      const { useSyncTransactions } = await import('./transactions')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'h1' } as any)
+      syncState.pendingRemoteDrainTxs.push({ hash: 'h1' } as any)
+
+      await useSyncTransactions().updateSingleTransaction('h1')
+
+      expect(state.getTransactionState).toHaveBeenCalledWith({ hash: 'h1' })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 12 })
+      expect(syncState.pendingTransactions).toHaveLength(0)
+      expect(syncState.pendingRemoteDrainTxs).toHaveLength(0)
+    })
+
+    it('persists failed state from remote-signer API fallback', async () => {
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('rpc'))) as any
+      state.getTransactionState.mockResolvedValue({
+        data: { state: 'failed', timestamp: 5 },
+        error: undefined,
+      })
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateSingleTransaction('h1')
+
+      expect(state.getTransactionState).toHaveBeenCalledWith({ hash: 'h1' })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5 })
     })
 
     it('removes hash from pendingTransactions when state !== \'pending\'', async () => {
@@ -535,6 +582,21 @@ describe('useSyncTransactions', () => {
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionsInDb()
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 5 })
+    })
+
+    it('persists failed when client history reports unsuccessful execution', async () => {
+      state.query.mockResolvedValue([{ hash: 'h1', status: 'pending', timestamp: undefined }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'confirmed',
+        executionResult: false,
+        timestamp: 5,
+        value: 1,
+      })) as any
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionsInDb()
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5 })
     })
 
     it('skips updateTransactionStatus when state and timestamp are unchanged', async () => {
