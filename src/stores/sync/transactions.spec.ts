@@ -214,6 +214,56 @@ describe('useSyncTransactions', () => {
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
+    it('updates an already-saved Nimiq Pay HTLC deposit with its owner', async () => {
+      const tx = {
+        transactionHash: 'known-htlc-hash',
+        sender: 'NQ33 NIMIQ PAY HTLC',
+        senderType: 'htlc',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { raw: '' },
+        proof: { type: 'early-resolve', raw: '' },
+      }
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS')
+          return Promise.resolve({ data: [tx] })
+        return Promise.resolve({ data: [] })
+      }) as any)
+      state.query.mockImplementation((sql = '') => {
+        if (sql.includes('transfer = '))
+          return Promise.resolve([{ hash: 'known-htlc-hash', sender: 'NQ33 NIMIQ PAY HTLC' }])
+        return Promise.resolve([])
+      })
+      const { buildTopUpReceipt } = await import('@/lib/tx')
+      vi.mocked(buildTopUpReceipt).mockResolvedValueOnce({
+        transfer: Transfer.UserReceipt,
+        amount: 100,
+        sender: 'NQ44 HTLC OWNER',
+        senderType: 'basic',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        hash: 'known-htlc-hash',
+        status: 'confirmed',
+        timestamp: 1,
+        title: 'Top-Up',
+        message: '',
+        fee: 0,
+        proofSize: 98,
+      } as any)
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+        hash: 'known-htlc-hash',
+        sender: 'NQ44 HTLC OWNER',
+      }))
+    })
+
     describe('own-HTLC drain filtering', () => {
       function ownHtlcDrain(proofType: 'timeout-resolve' | 'early-resolve', creator = 'NQ00 TEST LOCAL ADDRESS') {
         return {

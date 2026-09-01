@@ -118,4 +118,36 @@ describe('buildTopUpReceipt', () => {
     expect(receipt.message).toBe('Hello')
     expect(state.getAccountTransactions).not.toHaveBeenCalled()
   })
+
+  it('uses the HTLC owner as sender when Nimiq Pay cosigned the deposit', async () => {
+    const receipt = await buildTopUpReceipt(transactionWithData('', {
+      sender: 'NQ33 NIMIQ PAY HTLC',
+      senderType: 'htlc',
+      proof: {
+        type: 'early-resolve',
+        publicKey: 'c1534c708122968212c6709526801d18218ce9303590f2bca473213d99b24aaf',
+        creator: 'NQ44 HTLC OWNER',
+        raw: '',
+      },
+    }))
+
+    expect(receipt.sender).toBe('NQ44 HTLC OWNER')
+    expect(receipt.senderType).toBe(0)
+  })
+
+  it('keeps an HTLC sender when its cosigner is unknown', async () => {
+    const receipt = await buildTopUpReceipt(transactionWithData('', {
+      sender: 'NQ33 FOREIGN HTLC',
+      senderType: 'htlc',
+      proof: {
+        type: 'early-resolve',
+        publicKey: 'unknown-cosigner',
+        creator: 'NQ44 HTLC OWNER',
+        raw: '',
+      },
+    }))
+
+    expect(receipt.sender).toBe('NQ33 FOREIGN HTLC')
+    expect(receipt.senderType).toBe(2)
+  })
 })

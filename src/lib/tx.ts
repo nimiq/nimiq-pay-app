@@ -7,6 +7,7 @@ import { storeToRefs } from 'pinia'
 import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { nimiqPayCosignerPublicKeys } from '@/lib'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -474,11 +475,16 @@ export async function buildTopUpReceipt(tx: PlainTransactionDetails): Promise<Us
         && (candidate.blockHeight === undefined || tx.blockHeight === undefined || candidate.blockHeight <= tx.blockHeight),
       )
     : undefined
+  const nimiqPayHtlcOwner = tx.senderType === 'htlc'
+    && tx.proof.type === 'early-resolve'
+    && nimiqPayCosignerPublicKeys.includes(tx.proof.publicKey)
+    ? tx.proof.creator
+    : undefined
   return {
     transfer: Transfer.UserReceipt,
     amount: tx.value,
-    sender: cashlinkFundingTx?.sender || tx.sender,
-    senderType: toAccountType(cashlinkFundingTx?.senderType || tx.senderType),
+    sender: cashlinkFundingTx?.sender || nimiqPayHtlcOwner || tx.sender,
+    senderType: toAccountType(cashlinkFundingTx?.senderType || (nimiqPayHtlcOwner ? 'basic' : tx.senderType)),
     recipient: tx.recipient,
     recipientType: toAccountType(tx.recipientType),
     hash: tx.transactionHash,

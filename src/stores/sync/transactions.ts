@@ -149,8 +149,15 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
 
         const hash = tx.transactionHash
-        if (userReceipts.some(dbTx => dbTx.hash === hash))
+        const savedReceipt = userReceipts.find(dbTx => dbTx.hash === hash)
+        if (savedReceipt) {
+          if (tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
+            const receipt = await buildTopUpReceipt(tx)
+            if (receipt.sender !== savedReceipt.sender)
+              await useTransactions().addReceiptTransaction(receipt)
+          }
           return
+        }
 
         logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
         if (tx.senderType === 'staking')

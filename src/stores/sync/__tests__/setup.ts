@@ -318,7 +318,7 @@ vi.mock('@/lib', () => ({
 
 vi.mock('@/lib/tx', () => ({
   toAccountType: (type: string) => type,
-  buildTopUpReceipt: (tx: any) => ({
+  buildTopUpReceipt: vi.fn((tx: any) => ({
     transfer: 'user-receipt',
     amount: tx.value,
     sender: tx.sender,
@@ -332,7 +332,7 @@ vi.mock('@/lib/tx', () => ({
     message: '',
     fee: tx.fee,
     proofSize: 98,
-  }),
+  })),
 }))
 
 vi.mock('@/stores/app', () => {
