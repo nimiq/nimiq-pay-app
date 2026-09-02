@@ -28,7 +28,7 @@ const state = vi.hoisted(() => ({
   },
   query: vi.fn(async () => []),
   run: vi.fn(async () => undefined),
-  runBatch: vi.fn(async () => undefined),
+  runBatch: vi.fn(async (_statements: Array<{ statement: string, values: unknown[] }>) => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
   updateRemoteSigner: vi.fn(async () => undefined),
   logger: {
@@ -759,13 +759,14 @@ describe('useTransactions', () => {
     ])
   })
 
-  it('deduplicates a Polygon replacement already loaded by history sync', async () => {
+  it('deduplicates a Polygon replacement while preserving its confirmed state and relay metadata', async () => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()
     const pendingTx = {
       hash: '0xoriginal',
       timestamp: 1,
       status: 'pending',
+      fee: 1,
       transfer: Transfer.UserPaymentToAtomicSwap,
       asset: Asset.USDT,
       chain: Chain.Polygon,
@@ -776,6 +777,8 @@ describe('useTransactions', () => {
       hash: '0xreplacement',
       timestamp: 2,
       status: 'confirmed',
+      fee: 2,
+      raw: '0xraw',
       meta: { source: 'history' },
     }
     await store.addPaymentToMerchantTransaction(pendingTx)
@@ -784,7 +787,24 @@ describe('useTransactions', () => {
     await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')
 
     expect(store.transactions.map(tx => tx.hash)).toEqual(['0xreplacement'])
-    expect(store.transactions[0]?.meta).toEqual({ source: 'relay' })
+    expect(store.transactions[0]).toMatchObject({
+      hash: '0xreplacement',
+      status: 'confirmed',
+      timestamp: 2,
+      fee: 2,
+      raw: '0xraw',
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      meta: { source: 'relay' },
+    })
+
+    const statements = state.runBatch.mock.lastCall?.[0] || []
+    const mergedUpsert = statements.find(({ statement }) => statement === SQLQuery.UpsertTx)
+    expect(mergedUpsert?.values[0]).toBe('0xreplacement')
+    expect(mergedUpsert?.values[1]).toBe(2)
+    expect(mergedUpsert?.values[7]).toBe(2)
+    expect(mergedUpsert?.values[8]).toBe('confirmed')
+    expect(mergedUpsert?.values[9]).toBe('0xraw')
+    expect(mergedUpsert?.values[26]).toBe(JSON.stringify({ source: 'relay' }))
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {
