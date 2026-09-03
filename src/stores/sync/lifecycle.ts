@@ -35,7 +35,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { handleFunds, checkRemoteValidity, extendValidity, checkHtlcState, checkExpiredSwapHtlcs, maybeCheckHtlcState } = useSyncHtlc()
   const { verifyRemoteSignersDb } = useSyncRemoteSigners()
   const { updateSingleTransaction, updateTransactionHistory, updateTransactionsInDb } = useSyncTransactions()
-  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, nodesAreSynced } = storeToRefs(useSyncState())
+  const syncState = useSyncState()
+  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, nodesAreSynced } = storeToRefs(syncState)
 
   const { resume: startPeriodicTransactionRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
@@ -67,6 +68,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     logger.log('Starting wallet sync process', { hasLocalWallet: hasLocalWallet.value })
     if (!hasLocalWallet.value)
       return
+
+    // Pinia survives an in-app logout/login, but pending work belongs to one wallet only.
+    syncState.setWalletContext(localAddress.value.toUserFriendlyAddress())
 
     if (isMockEnabled) {
       logger.log('🎭 Mock mode: skipping wallet sync, loading mock data')

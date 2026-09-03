@@ -101,6 +101,7 @@ export interface BaseTransaction {
   fee: number
   hash: string
   proofSize: number
+  validityStartHeight?: number
   asset?: Asset
   chain?: Chain
   message?: string

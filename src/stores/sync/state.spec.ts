@@ -96,4 +96,21 @@ describe('useSyncState', () => {
     store.pendingHtlcCreationTransactions.push({ transactionHash: 'c' } as any)
     expect(store.isTransactionPending).toBe(true)
   })
+
+  it('clears wallet-scoped pending state when the wallet changes', async () => {
+    const { useSyncState } = await import('./state')
+    const store = useSyncState()
+    store.setWalletContext('NQ00 TEST LOCAL ADDRESS')
+    store.pendingTransactions.push({ transactionHash: 'pending' } as any)
+    store.pendingPaymentTransactions.push({ transactionHash: 'payment' } as any)
+    store.pendingRemoteDrainTxs.push({ hash: 'drain' } as any)
+    store.pendingHtlcCreationTransactions.push({ transactionHash: 'creation' } as any)
+
+    store.setWalletContext('NQ01 NEXT LOCAL ADDRESS')
+
+    expect(store.pendingTransactions).toEqual([])
+    expect(store.pendingPaymentTransactions).toEqual([])
+    expect(store.pendingRemoteDrainTxs).toEqual([])
+    expect(store.pendingHtlcCreationTransactions).toEqual([])
+  })
 })

@@ -41,6 +41,18 @@ export const useSyncState = defineStore('sync-state', () => {
   const isVerifyingRemoteSignersDb = ref(false)
   const isUpdatingBalancesNow = ref(false)
   const shouldUpdateBalancesAgain = ref(false)
+  let walletContext: string | undefined
+
+  function setWalletContext(address: string) {
+    if (walletContext === address)
+      return
+    // Pending arrays are memory-only and must never leak into another logged-in wallet.
+    pendingTransactions.value = []
+    pendingPaymentTransactions.value = []
+    pendingRemoteDrainTxs.value = []
+    pendingHtlcCreationTransactions.value = []
+    walletContext = address
+  }
 
   // Touch the local-wallet store here so sync-state stays tied to wallet lifetime in Pinia devtools.
   useLocalWallet()
@@ -54,6 +66,7 @@ export const useSyncState = defineStore('sync-state', () => {
     isVerifyingRemoteSignersDb,
     isUpdatingBalancesNow,
     shouldUpdateBalancesAgain,
+    setWalletContext,
     nodesAreSynced,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,

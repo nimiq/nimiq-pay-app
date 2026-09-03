@@ -11,6 +11,22 @@ const selectPaginationLine = sqlQueriesSource.split('\n').find(line => line.incl
 const selectAllLine = sqlQueriesSource.split('\n').find(line => line.includes('SelectAllTransactions ='))
 
 describe('sql transaction query definitions', () => {
+  it('keeps included HTLC creations recoverable until confirmation', () => {
+    const query = sqlQueriesSource.split('\n').find(line => line.includes('SelectPendingHtlcCreations ='))
+    expect(query).toContain('\'new\'')
+    expect(query).toContain('\'included\'')
+    expect(query).toContain('sender')
+    expect(query).toContain('senderType')
+    expect(query).toContain('validityStartHeight')
+  })
+
+  it('adds HTLC creation validity height through an additive migration', () => {
+    expect(createTxsTableLine).not.toContain('validityStartHeight')
+    expect(sqlQueriesSource).toContain('AddValidityStartHeightToTxsTable')
+    expect(sqlQueriesSource).toContain('toVersion: 9')
+    expect(sqlQueriesSource.split('\n').find(line => line.includes('UpsertTx ='))).toContain('validityStartHeight')
+  })
+
   it('keeps the base transactions table aligned with the v1 schema', () => {
     expect(createTxsTableLine).not.toContain('asset TEXT')
     expect(createTxsTableLine).not.toContain('chain TEXT')

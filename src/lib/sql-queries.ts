@@ -36,7 +36,7 @@ export enum SQLQuery {
   SelectAllTransactions = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetTransactionByHash = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = ? WHERE hash = ?',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
   UpdateCashbackStatus = 'UPDATE transactions SET isCashbackClaimed = ? WHERE hash = ?',
@@ -48,11 +48,13 @@ export enum SQLQuery {
   AddRecipientDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN recipientData TEXT',
   AddAssetToTxsTable = 'ALTER TABLE transactions ADD COLUMN asset TEXT',
   AddChainToTxsTable = 'ALTER TABLE transactions ADD COLUMN chain TEXT',
+  AddValidityStartHeightToTxsTable = 'ALTER TABLE transactions ADD COLUMN validityStartHeight INTEGER',
   BackfillTransactionAsset = 'UPDATE transactions SET asset = COALESCE(asset, \'NIM\')',
   BackfillTransactionChain = 'UPDATE transactions SET chain = COALESCE(chain, \'Nimiq\')',
   GetTransactionAssetByHash = 'SELECT asset FROM transactions WHERE hash = ? LIMIT 1',
   SelectTransactionsByAsset = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE asset = ? AND transfer IN (\'${Transfer.UserPaymentToMerchant}\', \'${Transfer.UserPaymentToAtomicSwap}\', \'${Transfer.UserPayment}\', \'${Transfer.UserReceipt}\', \'${Transfer.Staking}\') ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   SelectPendingTransactionsByAsset = 'SELECT hash, status, timestamp, asset FROM transactions WHERE asset = ? AND (status != \'confirmed\' OR timestamp IS NULL)',
+  SelectPendingHtlcCreations = `SELECT hash, sender, senderType, recipient, status, validityStartHeight FROM transactions WHERE status IN ('new', 'pending', 'included') AND transfer IN (\'${Transfer.LocalToRemote}\', \'${Transfer.ExtendRemote}\')`, // eslint-disable-line ts/prefer-literal-enum-member
 
   // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',
@@ -60,6 +62,8 @@ export enum SQLQuery {
   GetAllRemoteSigners = 'SELECT * FROM remote_signers',
   DeactivateRemoteSigners = 'UPDATE remote_signers SET active = 0',
   InsertRemoteSigner = 'INSERT OR REPLACE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  // Recovery must not overwrite an existing signer's metadata or active state.
+  InsertInactiveRemoteSigner = 'INSERT OR IGNORE INTO remote_signers (address, balance, proofSize, publicKey, start, end, active) VALUES (?, ?, ?, ?, ?, ?, ?)',
   UpdateActiveWallet = 'UPDATE remote_signers SET start = ?, end = ?, proofSize = ?, publicKey = ?, balance = ? WHERE address = ?',
   UpdateRemoteBalance = 'UPDATE remote_signers SET balance = ? WHERE address = ?',
   PurgeRemoteSigners = 'DELETE FROM remote_signers',
@@ -169,6 +173,12 @@ export const migrations: Migration[] = [
     toVersion: 8,
     statements: [
       SQLQuery.AddHtlcIdColumnToSwapHtlcs,
+    ],
+  },
+  {
+    toVersion: 9,
+    statements: [
+      SQLQuery.AddValidityStartHeightToTxsTable,
     ],
   },
 ]

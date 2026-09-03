@@ -12,6 +12,8 @@ export function createAddress(value: string) {
 function makeState() {
   const getBalance = vi.fn((_address?: unknown): Promise<{ data: any, error: any }> => Promise.resolve({ data: 0, error: undefined }))
   const getAccountTransactions = vi.fn((_address?: unknown): Promise<{ data: any[] }> => Promise.resolve({ data: [] }))
+  const getLocalTransactions = vi.fn(async (_options?: { sinceHeight?: number, startAt?: string, limit?: number }): Promise<any[]> => (await getAccountTransactions(createAddress('NQ00 TEST LOCAL ADDRESS'))).data)
+  const findTransactionInHistory = vi.fn((_address?: unknown, _hash?: string): Promise<any> => Promise.resolve(undefined))
   const getAllOutgoingTransactionsFromHtlcs = vi.fn((_address?: unknown): Promise<any[]> => Promise.resolve([]))
   const query = vi.fn((_sql?: string, _params?: any[]): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn((_sql?: string, _params?: any[]): Promise<void> => Promise.resolve())
@@ -19,6 +21,7 @@ function makeState() {
   const discoverRemoteSignersFromBlockchain = vi.fn((): Promise<void> => Promise.resolve())
   const updateSignersTableBalance = vi.fn((): Promise<void> => Promise.resolve())
   const updateRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
+  const activateRemoteSignerFromTransaction = vi.fn((_tx?: any): Promise<void> => Promise.resolve())
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
@@ -92,6 +95,8 @@ function makeState() {
     } as any,
     getBalance,
     getAccountTransactions,
+    getLocalTransactions,
+    findTransactionInHistory,
     getAllOutgoingTransactionsFromHtlcs,
     query,
     run,
@@ -99,6 +104,7 @@ function makeState() {
     discoverRemoteSignersFromBlockchain,
     updateSignersTableBalance,
     updateRemoteSigner,
+    activateRemoteSignerFromTransaction,
     getAllRemoteSigners,
     addRemoteSigner,
     isOurRemoteSigner,
@@ -147,7 +153,7 @@ export function remoteSignerFixture(address: string, balance: number, active = f
 
 export function stubNimiqGlobal() {
   vi.stubGlobal('Nimiq', {
-    Policy: { BLOCKS_PER_BATCH: 32 },
+    Policy: { BLOCKS_PER_BATCH: 32, TRANSACTION_VALIDITY_WINDOW_BLOCKS: 120 },
     Address: {
       fromString: (value: string) => createAddress(value),
       fromUserFriendlyAddress: (value: string) => createAddress(value),
@@ -215,6 +221,8 @@ export function resetSyncState() {
   for (const fn of [
     state.getBalance,
     state.getAccountTransactions,
+    state.getLocalTransactions,
+    state.findTransactionInHistory,
     state.getAllOutgoingTransactionsFromHtlcs,
     state.query,
     state.run,
@@ -222,6 +230,7 @@ export function resetSyncState() {
     state.discoverRemoteSignersFromBlockchain,
     state.updateSignersTableBalance,
     state.updateRemoteSigner,
+    state.activateRemoteSignerFromTransaction,
     state.getAllRemoteSigners,
     state.addRemoteSigner,
     state.isOurRemoteSigner,
@@ -258,6 +267,8 @@ export function resetSyncState() {
 
   state.getBalance.mockResolvedValue({ data: 0, error: undefined })
   state.getAccountTransactions.mockResolvedValue({ data: [] })
+  state.getLocalTransactions.mockImplementation(async () => (await state.getAccountTransactions(state.localAddress)).data)
+  state.findTransactionInHistory.mockResolvedValue(undefined)
   state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([])
   state.query.mockResolvedValue([])
   state.run.mockResolvedValue(undefined)
@@ -265,6 +276,7 @@ export function resetSyncState() {
   state.discoverRemoteSignersFromBlockchain.mockResolvedValue(undefined)
   state.updateSignersTableBalance.mockResolvedValue(undefined)
   state.updateRemoteSigner.mockResolvedValue(undefined)
+  state.activateRemoteSignerFromTransaction.mockResolvedValue(undefined)
   state.getAllRemoteSigners.mockResolvedValue([])
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
@@ -450,8 +462,11 @@ vi.mock('@/stores/remote-signer', () => {
     registerOwnHtlcIfMissing: state.registerOwnHtlcIfMissing,
     blockHeightToTimestamp: state.blockHeightToTimestamp,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    getLocalTransactions: state.getLocalTransactions,
+    findTransactionInHistory: state.findTransactionInHistory,
     updateSignersTableBalance: state.updateSignersTableBalance,
     updateRemoteSigner: state.updateRemoteSigner,
+    activateRemoteSignerFromTransaction: state.activateRemoteSignerFromTransaction,
     init: state.initRemoteSigner,
     resolveHomeBalanceState: state.resolveHomeBalanceState,
   }))

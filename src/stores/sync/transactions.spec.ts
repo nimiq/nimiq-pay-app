@@ -154,7 +154,27 @@ describe('useSyncTransactions', () => {
       }) as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
+      expect(state.getLocalTransactions).toHaveBeenCalledWith({ sinceHeight: 0, limit: 100 })
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+    })
+
+    it('loads full local history through bounded cursor pages', async () => {
+      const firstPage = Array.from({ length: 100 }, (_, index) => ({
+        transactionHash: `local-${index}`,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ99 OTHER',
+        senderType: 'basic',
+        recipientType: 'basic',
+        data: { raw: '' },
+        proof: { raw: '' },
+      }))
+      state.getLocalTransactions.mockImplementation((options?: { startAt?: string }) => Promise.resolve(options?.startAt ? [] : firstPage))
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.getLocalTransactions).toHaveBeenNthCalledWith(1, { sinceHeight: 0, limit: 100 })
+      expect(state.getLocalTransactions).toHaveBeenNthCalledWith(2, { sinceHeight: 0, startAt: 'local-99', limit: 100 })
     })
 
     it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {

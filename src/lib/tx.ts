@@ -33,7 +33,11 @@ const { networkId, height } = storeToRefs(nimiqNetwork)
  *
  * @param partialArgs
  */
-export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
+interface GetSignedTxOptions {
+  beforeRemoteBroadcast?: (tx: Transaction) => Promise<void>
+}
+
+export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSignedTxOptions = {}): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
   logger.log(partialArgs.transfer)
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
@@ -346,6 +350,8 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs): AsyncResult<{
       tx.networkId,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
+    // The cosigner can broadcast the extension while handling this request, so recovery must exist first.
+    await options.beforeRemoteBroadcast?.(tx)
     const res = await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
     if (res.error)
       return res

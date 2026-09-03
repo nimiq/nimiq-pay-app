@@ -1,4 +1,4 @@
-import type { PlainTransactionDetails } from '@nimiq/core'
+import type { Transaction as NimiqTransaction, PlainTransactionDetails } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
@@ -17,6 +17,7 @@ import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -28,6 +29,7 @@ import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@
 
 const logger = useLogger('transactions.ts')
 const { isSendingTx } = storeToRefs(useLocks())
+const BROADCAST_TIMEOUT_MS = 30_000
 
 export function getSwapHtlcKey(tx: Pick<ExternalTransaction, 'chain' | 'hash' | 'recipient'>) {
   return tx.chain === Chain.Polygon ? tx.hash : tx.recipient
@@ -49,11 +51,12 @@ export enum TransactionListState {
 
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
-  const { client } = storeToRefs(useNimiqNetwork())
+  const { client, networkId } = storeToRefs(useNimiqNetwork())
   const { activeAsset, showHiddenTransactions } = storeToRefs(useApp())
 
-  const { updateActiveRemoteBalance } = useRemoteSigner()
-  const { remoteBalance } = storeToRefs(useRemoteSigner())
+  const remoteSigner = useRemoteSigner()
+  const { updateActiveRemoteBalance } = remoteSigner
+  const { remoteBalance } = storeToRefs(remoteSigner)
 
   const transactions = shallowRef<ExternalTransaction[]>([])
 
@@ -65,7 +68,7 @@ export const useTransactions = defineStore('transactions', () => {
   // mis-recording them as receipts would bump the original deposit to the top of the home list with
   // a recent (drain block) timestamp. Foreign HTLC senders (other Nimiq Pay users paying us) stay.
   async function filterDisplayableTxs<T extends Pick<ExternalTransaction, 'transfer' | 'sender' | 'hash'>>(txs: T[]): Promise<T[]> {
-    const ourSigners = await useRemoteSigner().getOurRemoteSignerAddresses()
+    const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
     const dropped: string[] = []
     const result = txs.filter((tx) => {
       if (tx.transfer === Transfer.UserReceipt && ourSigners.has(tx.sender)) {
@@ -137,6 +140,7 @@ export const useTransactions = defineStore('transactions', () => {
           : null,
         tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
         tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+        tx.validityStartHeight ?? null,
       ],
     )
   }
@@ -154,43 +158,120 @@ export const useTransactions = defineStore('transactions', () => {
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
     }
     isSendingTx.value = true
-    const res = await _sendTx(partialTx)
-    isSendingTx.value = false
-    return res
+    try {
+      return await _sendTx(partialTx)
+    }
+    finally {
+      isSendingTx.value = false
+    }
   }
 
   async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
+    const localWallet = useLocalWallet()
+    const sync = useSync()
+    const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
     logger.log('✈️  Preparing new transaction', {
       partialTx,
-      remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-      remoteBalance: useRemoteSigner().remoteBalance,
-      remoteHeight: useRemoteSigner().remoteHeight,
-      remotePublicKey: useRemoteSigner().remotePublicKey,
-      remoteProofSize: useRemoteSigner().remoteProofSize,
-      localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-      localBalance: useLocalWallet().localBalance,
+      remoteAddress: remoteSigner.remoteAddress?.toUserFriendlyAddress(),
+      remoteBalance: remoteSigner.remoteBalance,
+      remoteHeight: remoteSigner.remoteHeight,
+      remotePublicKey: remoteSigner.remotePublicKey,
+      remoteProofSize: remoteSigner.remoteProofSize,
+      localAddress: localWallet.localAddress.toUserFriendlyAddress(),
+      localBalance: localWallet.localBalance,
     })
     // Require consensus for all transactions that involve the local wallet
     if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim)
       client.value!.waitForConsensusEstablished()
 
-    const res = await getSignedTx(partialTx)
+    function buildPendingTransaction(transaction: NimiqTransaction) {
+      const plain = transaction.toPlain()
+      const { fee, transactionHash: hash, recipient, sender, value: amount } = plain
+      const raw = Nimiq.BufferUtils.toHex(transaction.serializeContent())
+      const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
+      const tx = { ...partialTx, fee, recipient, recipientType: transaction.recipientType, status: 'pending', hash, sender, senderType: transaction.senderType, amount, raw, message, proofSize: transaction.proof.length, validityStartHeight: plain.validityStartHeight, asset: Asset.NIM, chain: Chain.Nimiq } as TransactionSentByUser
+      if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
+        tx.paymentMethod = PaymentMethod.NIM
+      if (!tx.timestamp)
+        tx.timestamp = Date.now()
+      return { plain, tx }
+    }
+
+    let stagedHtlcCreation: (ReturnType<typeof buildPendingTransaction> & { serialized: string }) | undefined
+    function trackPendingHtlcCreation(transaction: PlainTransactionDetails) {
+      const index = sync.pendingHtlcCreationTransactions.findIndex(tx => tx.transactionHash === transaction.transactionHash)
+      if (index >= 0)
+        sync.pendingHtlcCreationTransactions.splice(index, 1, transaction)
+      else
+        sync.pendingHtlcCreationTransactions.push(transaction)
+    }
+
+    async function stageHtlcCreation(transaction: NimiqTransaction) {
+      // Finish durable recovery writes before any path can broadcast the HTLC creation.
+      const staged = buildPendingTransaction(transaction)
+      const htlcData = staged.plain.data
+      await remoteSigner.upsertInactiveRemoteSigner({
+        active: false,
+        balance: 0,
+        publicKey: remoteSigner.remotePublicKey!,
+        start: await remoteSigner.blockHeightToTimestamp(staged.plain.validityStartHeight),
+        address: Nimiq.Address.fromUserFriendlyAddress(staged.plain.recipient),
+        end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+        proofSize: remoteSigner.remoteProofSize,
+      })
+      await upsertTx(staged.tx)
+      trackPendingHtlcCreation(staged.plain as PlainTransactionDetails)
+      stagedHtlcCreation = { ...staged, serialized: transaction.toHex() }
+    }
+
+    function retainUnknownStagedHtlc() {
+      if (!stagedHtlcCreation)
+        return
+      // Once the cosigner sees an extension it may broadcast it, even if its response is lost.
+      logger.warn('HTLC extension outcome unknown; retaining recovery state', stagedHtlcCreation.plain.transactionHash)
+      return { data: { tx: stagedHtlcCreation.tx, serialized: stagedHtlcCreation.serialized }, error: undefined }
+    }
+
+    let res: Awaited<ReturnType<typeof getSignedTx>>
+    try {
+      res = await getSignedTx(partialTx, partialTx.transfer === Transfer.ExtendRemote
+        ? { beforeRemoteBroadcast: stageHtlcCreation }
+        : undefined)
+    }
+    catch (error) {
+      const stagedResult = retainUnknownStagedHtlc()
+      if (stagedResult)
+        return stagedResult
+      throw error
+    }
     if (res.error) {
       logger.error('Error while signing transaction', res.error, {
         transfer: partialTx.transfer,
-        remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-        remoteBalance: useRemoteSigner().remoteBalance,
-        remoteHeight: useRemoteSigner().remoteHeight,
-        remotePublicKey: useRemoteSigner().remotePublicKey,
-        remoteProofSize: useRemoteSigner().remoteProofSize,
-        localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-        localBalance: useLocalWallet().localBalance,
+        remoteAddress: remoteSigner.remoteAddress?.toUserFriendlyAddress(),
+        remoteBalance: remoteSigner.remoteBalance,
+        remoteHeight: remoteSigner.remoteHeight,
+        remotePublicKey: remoteSigner.remotePublicKey,
+        remoteProofSize: remoteSigner.remoteProofSize,
+        localAddress: localWallet.localAddress.toUserFriendlyAddress(),
+        localBalance: localWallet.localBalance,
       })
+      const stagedResult = retainUnknownStagedHtlc()
+      if (stagedResult)
+        return stagedResult
       return res
     }
+    const { signedTx, swap, txSent } = res.data!
+    const signedHash = signedTx.hash()
     // TODO: check if tx is valid before continuing
-    logger.log('✈️ Signed transaction', { signedTx: res.data!.signedTx.toPlain(), swap: res.data!.swap, txSent: res.data!.txSent })
-    const { signedTx, swap } = res.data!
+    logger.log('✈️ Signed transaction', { signedTx: signedTx.toPlain(), swap, txSent })
+    if (stagedHtlcCreation && signedHash !== stagedHtlcCreation.plain.transactionHash) {
+      // Keep recovery tied to the exact transaction persisted before the cosigner request.
+      logger.error('Cosigner changed staged HTLC transaction', {
+        stagedHash: stagedHtlcCreation.plain.transactionHash,
+        returnedHash: signedHash,
+      })
+      return retainUnknownStagedHtlc()!
+    }
 
     let patchedSwap: Promise<Swap> | undefined
     let swapStartedAt = 0
@@ -221,83 +302,79 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     // Check if the tx is already in the transaction list
-    if (transactions.value.some(tx => tx.hash === signedTx.hash())) {
+    if (transactions.value.some(tx => tx.hash === signedHash)) {
       logger.error('Transaction already sent', signedTx)
       return { data: undefined, error: i18n.t('Transaction already sent') }
     }
 
-    if (!res.data!.txSent) {
-      logger.error('Transaction not sent by the cosigner, sending again', signedTx.toPlain())
-      await client.value!.waitForConsensusEstablished()
-      const details = await client.value!.sendTransaction(signedTx)
-      if (details.state === 'invalidated') {
-        // Transaction was rejected by the mempool
-        logger.error('Transaction invalid', details)
-
-        if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-          const serverSwap = await patchedSwap?.catch(() => undefined)
-          if (!serverSwap || !serverSwap.preimage) {
-            // Delete the swap HTLC from the database
-            await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
-          }
-          trackSwapFailed({
-            error_reason: 'Transaction invalidated by mempool',
-            asset: Asset.NIM,
-          })
-        }
-
-        return { data: undefined, error: i18n.t('Transaction invalid') }
-      }
-    }
-
-    if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
-      await client.value!.waitForConsensusEstablished()
-      const details = useSync().pendingPaymentTransactions.find(tx => tx.transactionHash === signedTx.hash()) || await client.value!.sendTransaction(signedTx)
-
-      if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote) {
-        if (details) {
-          const plain = details
-          const htlcData = details.data
-          await useRemoteSigner().updateRemoteSigner({
-            active: true,
-            balance: plain.value,
-            publicKey: useRemoteSigner().remotePublicKey!,
-            start: plain.timestamp || await useRemoteSigner().blockHeightToTimestamp(plain.validityStartHeight),
-            address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
-            end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-            // proofSize: tx.proofSize,
-            // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-            proofSize: useRemoteSigner().remoteProofSize,
-          })
-          if (partialTx.transfer === Transfer.LocalToRemote) {
-            useSync().pendingHtlcCreationTransactions.push(details)
-          }
-        }
-        else {
-          logger.error('Transaction details are undefined, cannot update remote signer', partialTx)
-        }
-      }
-    }
-
-    if (signedTx.networkId !== useNimiqNetwork().networkId) {
-      logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: useNimiqNetwork().networkId, signedTx })
+    if (signedTx.networkId !== networkId.value) {
+      logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: networkId.value, signedTx })
       return { data: undefined, error: i18n.t('Transaction invalid for PoS network') }
     }
-    logger.log('✈️ Sent transaction', signedTx.toPlain())
-    const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
-    const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
-    const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
-    const status = 'pending'
 
-    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length, asset: Asset.NIM, chain: Chain.Nimiq } as TransactionSentByUser
-    if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-      tx.paymentMethod = PaymentMethod.NIM
+    if (createsHtlc && !stagedHtlcCreation) {
+      // Persist recovery anchors before broadcast in case the RPC result is lost.
+      await stageHtlcCreation(signedTx)
+    }
+    const { plain, tx } = stagedHtlcCreation || buildPendingTransaction(signedTx)
+    const { transactionHash: hash } = plain
 
-    if (!tx.timestamp)
-      tx.timestamp = Date.now()
+    // The cosigner may already have broadcast this transaction; reuse observed details first.
+    let details = sync.pendingPaymentTransactions.find(tx => tx.transactionHash === hash)
+    if (!details && !txSent) {
+      logger.error('Transaction not sent by the cosigner, sending again', plain)
+      await client.value!.waitForConsensusEstablished()
+      try {
+        details = await promiseWithTimeout(client.value!.sendTransaction(signedTx), BROADCAST_TIMEOUT_MS)
+      }
+      catch (error) {
+        if (!createsHtlc)
+          throw error
+        const errorName = error instanceof Error ? error.name : typeof error
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        logger.error('HTLC creation broadcast result unknown; retaining recovery state', hash, errorName, errorMessage)
+        // An RPC failure cannot prove rejection, so keep the pending HTLC recoverable.
+        trackPendingHtlcCreation(plain as PlainTransactionDetails)
+        return { data: { tx, serialized: signedTx.toHex() }, error: undefined }
+      }
+    }
+
+    if (details?.state === 'invalidated' || details?.executionResult === false) {
+      logger.error('Transaction invalid', details)
+      if (createsHtlc)
+        await updateTransactionStatus({ hash, status: 'failed', timestamp: details.timestamp })
+
+      if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        const serverSwap = await patchedSwap?.catch(() => undefined)
+        if (!serverSwap || !serverSwap.preimage)
+          await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
+        trackSwapFailed({
+          error_reason: 'Transaction invalidated by mempool',
+          asset: Asset.NIM,
+        })
+      }
+
+      return { data: undefined, error: i18n.t('Transaction invalid') }
+    }
+
+    if (createsHtlc) {
+      if (details?.state === 'included' || details?.state === 'confirmed') {
+        // Inclusion is authoritative enough to use the signer; pending results can still fail.
+        await remoteSigner.activateRemoteSignerFromTransaction(details)
+      }
+      else if (!details && !txSent) {
+        logger.error('Transaction details are undefined, cannot update remote signer', partialTx)
+      }
+
+      trackPendingHtlcCreation((details || plain) as PlainTransactionDetails)
+    }
+
+    logger.log('✈️ Sent transaction', plain)
     logger.log(`✈️ Sent transaction`, tx)
 
-    await upsertTx(tx)
+    // HTLC creations were already persisted before broadcast.
+    if (!createsHtlc)
+      await upsertTx(tx)
 
     if (isExternalTx(tx))
       // Not using unshift to keep reactivity
@@ -305,10 +382,10 @@ export const useTransactions = defineStore('transactions', () => {
 
     if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
       // Only clear the active signer if this transaction drained the active signer.
-      const activeRemoteAddress = useRemoteSigner().remoteAddress
+      const activeRemoteAddress = remoteSigner.remoteAddress
       const senderAddress = Nimiq.Address.fromUserFriendlyAddress(tx.sender)
       if (activeRemoteAddress?.equals(senderAddress))
-        await useRemoteSigner().updateRemoteSigner(undefined)
+        await remoteSigner.updateRemoteSigner(undefined)
     }
     else if (tx.transfer !== Transfer.LocalToRemote && tx.transfer !== Transfer.ExtendRemote) {
       await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
@@ -395,7 +472,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function addReceiptTransaction(tx: UserReceiptTransaction) {
     // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
-    if (tx.senderType === Nimiq.AccountType.HTLC && await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
+    if (tx.senderType === Nimiq.AccountType.HTLC && await remoteSigner.isOurRemoteSigner(tx.sender)) {
       logger.log(`🚫 addReceiptTransaction skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
       return
     }
@@ -434,7 +511,7 @@ export const useTransactions = defineStore('transactions', () => {
       fee: tx.fee,
       // proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
       // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-      proofSize: useRemoteSigner().remoteProofSize,
+      proofSize: remoteSigner.remoteProofSize,
       isCashbackClaimed: true,
       merchantName: '',
       paymentMethod: PaymentMethod.NIM,

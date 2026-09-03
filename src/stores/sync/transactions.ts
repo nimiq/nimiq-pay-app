@@ -26,6 +26,7 @@ import { useTransactions } from '@/stores/transactions'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
+const LOCAL_HISTORY_PAGE_SIZE = 100
 
 // HTLC drains back to local carry the original creator's address inside the proof.
 // For our own HTLCs (including extension chains) the creator is always the local wallet.
@@ -42,7 +43,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { client, consensus } = storeToRefs(useNimiqNetwork())
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteAddress } = storeToRefs(useRemoteSigner())
-  const { getAllRemoteSigners, discoverRemoteSignersFromBlockchain } = useRemoteSigner()
+  const { getAllRemoteSigners, discoverRemoteSignersFromBlockchain, getLocalTransactions } = useRemoteSigner()
   const { isUpdatingTransactions } = storeToRefs(useLocks())
   const { pendingTransactions, pendingRemoteDrainTxs, isTransactionPending } = storeToRefs(useSyncState())
   const {
@@ -122,19 +123,40 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     isUpdatingTransactions.value = true
     try {
       const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
-      const accountTxs = await getAccountTransactions(localAddress.value!)
+      const localTransactions: PlainTransactionDetails[] = []
+      try {
+        // Keep completed pages usable if a later history page stalls or fails.
+        const seenCursors = new Set<string>()
+        let startAt: string | undefined
+        while (true) {
+          const page = await getLocalTransactions({ sinceHeight: 0, ...(startAt ? { startAt } : {}), limit: LOCAL_HISTORY_PAGE_SIZE })
+          localTransactions.push(...page)
+          if (page.length < LOCAL_HISTORY_PAGE_SIZE)
+            break
+          const nextCursor = page.at(-1)?.transactionHash
+          if (!nextCursor || seenCursors.has(nextCursor)) {
+            logger.error('Local transaction history pagination made no progress')
+            break
+          }
+          seenCursors.add(nextCursor)
+          startAt = nextCursor
+        }
+      }
+      catch (error) {
+        logger.error('Error getting local account transactions', error)
+      }
 
       // Register newly-observed own HTLCs once each before scanning, so concurrent drains from
       // the same HTLC don't issue duplicate getAccount calls during the parallel loop below.
       const ownHtlcSenders = new Set<string>()
-      for (const tx of accountTxs.data) {
+      for (const tx of localTransactions) {
         if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress()))
           ownHtlcSenders.add(tx.sender)
       }
       if (ownHtlcSenders.size > 0)
         await Promise.all([...ownHtlcSenders].map(sender => useRemoteSigner().registerOwnHtlcIfMissing(sender)))
 
-      await Promise.all(accountTxs.data.map(async (tx) => {
+      await Promise.all(localTransactions.map(async (tx) => {
         if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
           return
 

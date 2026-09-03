@@ -13,6 +13,41 @@ function createAddress(value: string) {
   }
 }
 
+function createSignedHtlcCreation(hash = 'creation-hash') {
+  const plain = {
+    transactionHash: hash,
+    sender: 'NQ00 TEST LOCAL ADDRESS',
+    senderType: 0,
+    recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+    recipientType: 2,
+    value: 696_900_000,
+    fee: 0,
+    timestamp: 123_100,
+    validityStartHeight: 100,
+    data: {
+      type: 'htlc',
+      sender: 'NQ00 TEST LOCAL ADDRESS',
+      recipient: 'NQ99 COSIGNER ADDRESS',
+      timeout: 999_500,
+    },
+    proof: { raw: '' },
+    valid: true,
+  }
+  return {
+    plain,
+    signedTx: {
+      toPlain: () => plain,
+      hash: () => hash,
+      toHex: () => 'serialized-htlc-creation',
+      serializeContent: () => new Uint8Array(),
+      networkId: 5,
+      recipientType: 2,
+      senderType: 0,
+      proof: { length: 98 },
+    },
+  }
+}
+
 const state = vi.hoisted(() => ({
   activeAsset: 'USDT',
   isSendingTx: false,
@@ -24,12 +59,17 @@ const state = vi.hoisted(() => ({
   networkId: 5,
   client: {
     waitForConsensusEstablished: vi.fn(async () => undefined),
-    sendTransaction: vi.fn(async () => undefined),
+    sendTransaction: vi.fn(async (): Promise<unknown> => undefined),
   },
   query: vi.fn(async () => []),
-  run: vi.fn(async () => undefined),
+  run: vi.fn(async (..._args: unknown[]) => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
+  activateRemoteSignerFromTransaction: vi.fn(async () => undefined),
   updateRemoteSigner: vi.fn(async () => undefined),
+  upsertInactiveRemoteSigner: vi.fn(async () => 'added' as const),
+  blockHeightToTimestamp: vi.fn(async (height: number) => height * 1000),
+  pendingHtlcCreationTransactions: [] as any[],
+  pendingPaymentTransactions: [] as any[],
   logger: {
     log: vi.fn(),
     warn: vi.fn(),
@@ -113,9 +153,14 @@ vi.mock('@/stores/nimiq-network', () => {
 vi.mock('@/stores/remote-signer', () => {
   const useRemoteSigner = defineStore('remote-signer', () => ({
     updateActiveRemoteBalance: state.updateActiveRemoteBalance,
+    activateRemoteSignerFromTransaction: state.activateRemoteSignerFromTransaction,
     updateRemoteSigner: state.updateRemoteSigner,
+    upsertInactiveRemoteSigner: state.upsertInactiveRemoteSigner,
+    blockHeightToTimestamp: state.blockHeightToTimestamp,
     remoteAddress: computed(() => state.remoteAddress),
     remoteBalance: computed(() => state.remoteBalance),
+    remotePublicKey: computed(() => 'service-public-key'),
+    remoteProofSize: computed(() => 98),
     isOurRemoteSigner: async (address: string) => state.ourRemoteSignerAddresses.has(address),
     getOurRemoteSignerAddresses: async () => state.ourRemoteSignerAddresses,
   }))
@@ -125,7 +170,8 @@ vi.mock('@/stores/remote-signer', () => {
 
 vi.mock('@/stores/sync', () => {
   const useSync = defineStore('sync', () => ({
-    pendingPaymentTransactions: computed(() => []),
+    pendingPaymentTransactions: computed(() => state.pendingPaymentTransactions),
+    pendingHtlcCreationTransactions: state.pendingHtlcCreationTransactions,
   }))
 
   return { useSync }
@@ -144,7 +190,7 @@ describe('useTransactions', () => {
     state.networkId = 5
     state.client = {
       waitForConsensusEstablished: vi.fn(async () => undefined),
-      sendTransaction: vi.fn(async () => undefined),
+      sendTransaction: vi.fn(async (): Promise<unknown> => undefined),
     }
     state.query.mockReset()
     state.query.mockResolvedValue([])
@@ -152,8 +198,16 @@ describe('useTransactions', () => {
     state.run.mockResolvedValue(undefined)
     state.updateActiveRemoteBalance.mockReset()
     state.updateActiveRemoteBalance.mockResolvedValue(undefined)
+    state.activateRemoteSignerFromTransaction.mockReset()
+    state.activateRemoteSignerFromTransaction.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
     state.updateRemoteSigner.mockResolvedValue(undefined)
+    state.upsertInactiveRemoteSigner.mockReset()
+    state.upsertInactiveRemoteSigner.mockResolvedValue('added')
+    state.blockHeightToTimestamp.mockReset()
+    state.blockHeightToTimestamp.mockImplementation(async height => height * 1000)
+    state.pendingHtlcCreationTransactions = []
+    state.pendingPaymentTransactions = []
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -642,6 +696,251 @@ describe('useTransactions', () => {
       localAddress: 'NQ00 TEST LOCAL ADDRESS',
       localBalance: 100_000,
     }))
+  })
+
+  it('persists local-to-remote recovery state before waiting for broadcast', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    let resolveBroadcast!: (details: typeof plain) => void
+    state.client.sendTransaction.mockReturnValue(new Promise<typeof plain>(resolve => resolveBroadcast = resolve))
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+
+    const sendPromise = useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+    await vi.waitFor(() => {
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
+        active: false,
+        balance: 0,
+        address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+      }))
+      expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
+    })
+
+    const upsertCall = state.run.mock.calls.find(call => call[0] === SQLQuery.UpsertTx)!
+    expect(upsertCall).toBeDefined()
+    expect((upsertCall[1] as unknown[]).at(-1)).toBe(plain.validityStartHeight)
+    expect(state.run.mock.invocationCallOrder[state.run.mock.calls.indexOf(upsertCall)]).toBeLessThan(state.client.sendTransaction.mock.invocationCallOrder[0])
+    expect(state.upsertInactiveRemoteSigner.mock.invocationCallOrder[0]).toBeLessThan(state.run.mock.invocationCallOrder[state.run.mock.calls.indexOf(upsertCall)])
+    expect(state.upsertInactiveRemoteSigner.mock.invocationCallOrder[0]).toBeLessThan(state.client.sendTransaction.mock.invocationCallOrder[0])
+
+    resolveBroadcast(plain)
+    await sendPromise
+  })
+
+  it('persists extension recovery state before asking the cosigner to sign or broadcast', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { signedTx } = createSignedHtlcCreation('extension-hash')
+    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
+      if (!options?.beforeRemoteBroadcast)
+        return { data: undefined, error: 'Missing recovery hook' }
+
+      await options.beforeRemoteBroadcast(signedTx)
+      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+      return { data: undefined, error: 'Cosigner response lost' }
+    }) as any)
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+
+    expect(result.error).toBeUndefined()
+    expect(result.data?.tx).toMatchObject({ hash: 'extension-hash', status: 'pending' })
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: 'extension-hash' }),
+    ])
+  })
+
+  it('retains staged extension recovery when the cosigner request throws', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { signedTx } = createSignedHtlcCreation('extension-hash')
+    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
+      await options!.beforeRemoteBroadcast!(signedTx)
+      throw new Error('connection closed')
+    }) as any)
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+
+    expect(result.error).toBeUndefined()
+    expect(result.data?.tx).toMatchObject({ hash: 'extension-hash', status: 'pending' })
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: 'extension-hash' }),
+    ])
+  })
+
+  it('retains the staged extension when the cosigner response changes its transaction', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const staged = createSignedHtlcCreation('staged-extension-hash')
+    const changed = createSignedHtlcCreation('changed-extension-hash')
+    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
+      await options!.beforeRemoteBroadcast!(staged.signedTx)
+      return { data: { signedTx: changed.signedTx, txSent: true }, error: undefined }
+    }) as any)
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+
+    expect(result.error).toBeUndefined()
+    expect(result.data?.tx).toMatchObject({ hash: 'staged-extension-hash', status: 'pending' })
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: 'staged-extension-hash' }),
+    ])
+  })
+
+  it('aborts broadcast and releases the send lock when recovery persistence fails', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { signedTx } = createSignedHtlcCreation()
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.upsertInactiveRemoteSigner.mockRejectedValue(new Error('database unavailable'))
+
+    await expect(useTransactions().sendTx({ transfer: Transfer.LocalToRemote })).rejects.toThrow('database unavailable')
+
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+    expect(state.isSendingTx).toBe(false)
+  })
+
+  it('activates a successfully included local-to-remote HTLC without waiting for server discovery', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    const included = { ...plain, state: 'included' }
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockResolvedValue(included as any)
+
+    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
+    expect(state.pendingHtlcCreationTransactions).toEqual([included])
+  })
+
+  it('keeps a pending local-to-remote HTLC inactive until the chain includes it', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    const pending = { ...plain, state: 'pending' }
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockResolvedValue(pending as any)
+
+    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([pending])
+  })
+
+  it('marks a staged local-to-remote transaction failed only after invalidation', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'invalidated' } as any)
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    expect(result.error).toBeTruthy()
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['failed', plain.timestamp, plain.transactionHash])
+    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
+    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+  })
+
+  it.each([Transfer.LocalToRemote, Transfer.ExtendRemote])('broadcasts %s only once', async (transfer) => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation(`${transfer}-hash`)
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockResolvedValue(plain as any)
+
+    await useTransactions().sendTx({ transfer } as any)
+
+    expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not rebroadcast when listener details already exist', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    const observed = { ...plain, state: 'pending' }
+    state.pendingPaymentTransactions = [observed]
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+
+    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([observed])
+  })
+
+  it('tracks an extension already broadcast by the cosigner until the chain includes it', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation('extension-hash')
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: true }, error: undefined } as any)
+
+    await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+
+    expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([plain])
+  })
+
+  it('releases the send lock and retains recovery state when broadcasting never settles', async () => {
+    vi.useFakeTimers()
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockReturnValue(new Promise(() => {}))
+
+    let settled = false
+    void useTransactions().sendTx({ transfer: Transfer.LocalToRemote }).then(() => settled = true)
+    await vi.waitFor(() => expect(state.client.sendTransaction).toHaveBeenCalledOnce())
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    expect(settled).toBe(true)
+    expect(state.isSendingTx).toBe(false)
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: plain.transactionHash }),
+    ])
+    vi.useRealTimers()
+  })
+
+  it('keeps staged recovery state when the broadcast result is unknown', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { signedTx } = createSignedHtlcCreation()
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+    expect(result.data?.tx).toMatchObject({ hash: 'creation-hash', status: 'pending' })
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
+    expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.any(Array))
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: 'creation-hash' }),
+    ])
+  })
+
+  it('keeps staged extension recovery state when the broadcast result is unknown', async () => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { signedTx } = createSignedHtlcCreation('extension-hash')
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+
+    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+
+    expect(result.error).toBeUndefined()
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
+    expect(state.pendingHtlcCreationTransactions).toEqual([
+      expect.objectContaining({ transactionHash: 'extension-hash' }),
+    ])
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {

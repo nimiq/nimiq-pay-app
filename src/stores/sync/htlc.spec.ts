@@ -3,7 +3,7 @@ import './__tests__/setup'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Transfer } from '@/types/transactions'
-import { resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
+import { createAddress, remoteSignerFixture, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
 describe('useSyncHtlc', () => {
   beforeEach(() => {
@@ -388,6 +388,373 @@ describe('useSyncHtlc', () => {
       expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
     })
 
+    it('marks an included HTLC creation active without waiting for confirmation', async () => {
+      state.remoteBalance = 100
+      state.htlcStart = 100_000
+      state.headTimestamp = 200_000
+      state.htlcEnd = 300_000
+      state.isHtlcActive = false
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'included', transactionHash: 'h1' })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.isHtlcActive).toBe(true)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
+        expect.objectContaining({ transactionHash: 'h1', state: 'included' }),
+      ])
+    })
+
+    it('activates an accepted unknown broadcast while stored balance is still zero', async () => {
+      state.remoteBalance = 0
+      state.isHtlcActive = false
+      const included = {
+        transactionHash: 'h1',
+        state: 'included',
+        value: 100,
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', timeout: 300_000 },
+      }
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.activateRemoteSignerFromTransaction.mockImplementation(async () => {
+        state.remoteBalance = 100
+        state.htlcStart = 200_000
+        state.htlcEnd = 300_000
+      })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push(included as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
+        expect.objectContaining({ transactionHash: 'h1', state: 'included' }),
+      ])
+      expect(state.isHtlcActive).toBe(true)
+    })
+
+    it('keeps included creations monitored while another creation remains pending', async () => {
+      state.remoteBalance = 100
+      state.client.getTransaction = vi.fn((hash: string) => Promise.resolve({
+        state: hash === 'included-hash' ? 'included' : 'pending',
+        transactionHash: hash,
+      })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push(
+        { transactionHash: 'included-hash' } as any,
+        { transactionHash: 'pending-hash' } as any,
+      )
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
+        expect.objectContaining({ transactionHash: 'included-hash', state: 'included' }),
+        expect.objectContaining({ transactionHash: 'pending-hash' }),
+      ])
+      expect(state.isHtlcActive).toBe(false)
+    })
+
+    it('clears an invalidated unknown broadcast and marks its transaction failed', async () => {
+      state.remoteBalance = 0
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'invalidated', transactionHash: 'h1', timestamp: 200_000 })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 200_000 })
+    })
+
+    it('clears an active signer when an included creation is later invalidated', async () => {
+      state.remoteAddress = createAddress('NQ22 TEST NEW HTLC ADDRESS') as any
+      state.remoteBalance = 100
+      state.isHtlcActive = true
+      state.query.mockResolvedValue([{ hash: 'h1', recipient: 'NQ22 TEST NEW HTLC ADDRESS', status: 'included' }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'invalidated',
+        transactionHash: 'h1',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        timestamp: 200_000,
+      })) as any
+      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
+        state.remoteAddress = signer?.address
+        state.remoteBalance = signer?.balance ?? 0
+      })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.updateRemoteSigner).toHaveBeenCalledWith(undefined)
+      expect(state.isHtlcActive).toBe(false)
+    })
+
+    it('restores the extension transaction sender instead of guessing another funded signer', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const unrelatedAddress = 'NQ33 TEST UNRELATED HTLC ADDRESS'
+      state.remoteAddress = createAddress('NQ22 TEST NEW HTLC ADDRESS') as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'h1',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'invalidated',
+        transactionHash: 'h1',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        timestamp: 200_000,
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(unrelatedAddress, 900, false), address: createAddress(unrelatedAddress) },
+        { ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) },
+      ])
+      state.getBalance.mockImplementation(async (address: any) => ({
+        data: address.toUserFriendlyAddress() === previousAddress ? 77 : 900,
+        error: undefined,
+      }))
+      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
+        state.remoteAddress = signer?.address
+        state.remoteBalance = signer?.balance ?? 0
+      })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
+        active: true,
+        balance: 77,
+        address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+      }))
+      expect(state.remoteAddress?.toUserFriendlyAddress()).toBe(previousAddress)
+      expect(state.getBalance).toHaveBeenCalledTimes(1)
+    })
+
+    it('retains rollback state when the predecessor balance lookup fails', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      state.remoteAddress = createAddress('NQ22 TEST NEW HTLC ADDRESS') as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'h1',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'invalidated',
+        transactionHash: 'h1',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) },
+      ])
+      state.getBalance.mockResolvedValue({ data: undefined, error: new Error('rpc') })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+    })
+
+    it('rolls back an optimistically active extension when a reorg returns it to pending', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      state.remoteAddress = createAddress('NQ22 TEST NEW HTLC ADDRESS') as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'h1',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'pending',
+        transactionHash: 'h1',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([{ ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) }])
+      state.getBalance.mockResolvedValue({ data: 77, error: undefined })
+      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
+        state.remoteAddress = signer?.address
+        state.remoteBalance = signer?.balance ?? 0
+      })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.remoteAddress?.toUserFriendlyAddress()).toBe(previousAddress)
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'pending', timestamp: undefined })
+      expect(state.isHtlcActive).toBe(false)
+    })
+
+    it('clears an expired broadcast and persists its authoritative state', async () => {
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'expired', transactionHash: 'h1', timestamp: 200_000 })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'expired', timestamp: 200_000 })
+    })
+
+    it('expires an absent broadcast after its validity window', async () => {
+      state.remoteBalance = 0
+      state.height = 250
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('not found'))) as any
+      state.findTransactionInHistory.mockResolvedValue(undefined)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({
+        transactionHash: 'h1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+      } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
+      expect(state.findTransactionInHistory).toHaveBeenCalledWith(expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }), 'h1')
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'expired', timestamp: undefined })
+    })
+
+    it('uses complete sender history before expiring an empty accepted HTLC', async () => {
+      state.remoteBalance = 0
+      state.height = 250
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('temporary rpc failure'))) as any
+      const confirmed = {
+        transactionHash: 'h1',
+        state: 'confirmed',
+        executionResult: true,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        value: 100,
+        timestamp: 200_000,
+        validityStartHeight: 100,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      }
+      state.findTransactionInHistory.mockResolvedValue(confirmed)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({
+        transactionHash: 'h1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+      } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(confirmed)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 200_000 })
+      expect(state.updateTransactionStatus).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'expired' }))
+    })
+
+    it('retains expired-window recovery when sender history is unavailable', async () => {
+      state.height = 250
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('temporary rpc failure'))) as any
+      state.findTransactionInHistory.mockRejectedValue(new Error('history unavailable'))
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({
+        transactionHash: 'h1',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+      } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+    })
+
+    it('stops waiting for a pending HTLC lookup and retains recovery state', async () => {
+      vi.useFakeTimers()
+      state.client.getTransaction = vi.fn(() => new Promise(() => {})) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
+
+      let settled = false
+      void useSyncHtlc().checkHtlcState().then(() => settled = true)
+      await vi.waitFor(() => expect(state.client.getTransaction).toHaveBeenCalledWith('h1'))
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(settled).toBe(true)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
+        expect.objectContaining({ transactionHash: 'h1' }),
+      ])
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+    })
+
+    it('rehydrates a pending HTLC creation from DB before checking chain state', async () => {
+      const included = {
+        transactionHash: 'persisted-hash',
+        state: 'included',
+        value: 100,
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', timeout: 300_000 },
+      }
+      state.query.mockResolvedValue([{ hash: included.transactionHash }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.query).toHaveBeenCalledWith(SQLQuery.SelectPendingHtlcCreations)
+      expect(state.client.getTransaction).toHaveBeenCalledWith(included.transactionHash)
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
+    })
+
+    it('retains an accepted HTLC when signer activation is not ready yet', async () => {
+      const included = {
+        transactionHash: 'h1',
+        state: 'included',
+        value: 100,
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', timeout: 300_000 },
+      }
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.activateRemoteSignerFromTransaction.mockRejectedValue(new Error('Cosigner key unavailable'))
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
+
+      await expect(useSyncHtlc().checkHtlcState()).resolves.toBeUndefined()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+    })
+
     it('marks isHtlcActive false and keeps unconfirmed pending entries when at least one not confirmed', async () => {
       state.remoteBalance = 100
       state.htlcStart = 100_000
@@ -558,6 +925,16 @@ describe('useSyncHtlc', () => {
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().maybeCheckHtlcState()
       expect(state.isHtlcActive).toBe(true)
+      expect(state.htlcCheckLock).toBe(false)
+    })
+
+    it('clears the lock when reconciliation throws', async () => {
+      state.height = 130
+      state.query.mockRejectedValue(new Error('database unavailable'))
+      const { useSyncHtlc } = await import('./htlc')
+
+      await expect(useSyncHtlc().maybeCheckHtlcState()).rejects.toThrow('database unavailable')
+
       expect(state.htlcCheckLock).toBe(false)
     })
   })
