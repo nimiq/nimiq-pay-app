@@ -433,17 +433,9 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
-    const replacedTx = transactions.value.find(tx => tx.hash === oldHash)
-    const existingReplacementTx = transactions.value.find(tx => tx.hash === newHash)
-    const mergedTx: Transaction | undefined = replacedTx && {
-      ...replacedTx,
-      hash: newHash,
-      raw: existingReplacementTx?.raw ?? replacedTx.raw,
-      status: existingReplacementTx?.status ?? replacedTx.status,
-      timestamp: existingReplacementTx?.timestamp ?? replacedTx.timestamp,
-      fee: existingReplacementTx?.fee ?? replacedTx.fee,
-    }
+    // Merge persisted state before the hash update removes a conflicting replacement row.
     const statements: Parameters<typeof runBatch>[0] = [
+      { statement: SQLQuery.MergeReplacementTxState, values: [newHash, newHash, newHash, newHash, oldHash] },
       { statement: SQLQuery.UpdateTxHash, values: [newHash, oldHash] },
     ]
     if (recoveryAddress) {
@@ -452,20 +444,18 @@ export const useTransactions = defineStore('transactions', () => {
         values: [newHash, recoveryAddress, oldHash],
       })
     }
-    if (existingReplacementTx && mergedTx) {
-      statements.push({
-        statement: SQLQuery.UpsertTx,
-        values: getUpsertTxValues(mergedTx),
-      })
-    }
     await runBatch(statements)
 
-    if (mergedTx) {
-      const otherTransactions = transactions.value.filter(tx => tx.hash !== oldHash && tx.hash !== newHash)
-      transactions.value = [mergedTx, ...otherTransactions].sort(
-        (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
-      )
-    }
+    const mergedTx = await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [newHash], { single: true })
+    if (!mergedTx)
+      return
+
+    mergedTx.invoiced = mergedTx.invoiced ? JSON.parse(mergedTx.invoiced as unknown as string) : undefined
+    mergedTx.meta = mergedTx.meta ? JSON.parse(mergedTx.meta as unknown as string) : undefined
+    const otherTransactions = transactions.value.filter(tx => tx.hash !== oldHash && tx.hash !== newHash)
+    transactions.value = [mergedTx, ...otherTransactions].sort(
+      (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+    )
   }
 
   async function addUnknownPaymentToMerchantTransaction(

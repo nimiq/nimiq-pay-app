@@ -1,9 +1,10 @@
+import { DatabaseSync } from 'node:sqlite'
 import { mount } from '@vue/test-utils'
 import { createPinia, defineStore, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, nextTick, ref, watch } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
-import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
+import { DEFAULT_LIMIT, migrations, SQLQuery } from '@/lib/sql-queries'
 import { Transfer } from '@/types/transactions'
 
 function createAddress(value: string) {
@@ -26,7 +27,7 @@ const state = vi.hoisted(() => ({
     waitForConsensusEstablished: vi.fn(async () => undefined),
     sendTransaction: vi.fn(async () => undefined),
   },
-  query: vi.fn(async () => []),
+  query: vi.fn(async (_statement: string, _values: unknown[] = [], _options?: { single?: boolean }): Promise<any> => []),
   run: vi.fn(async () => undefined),
   runBatch: vi.fn(async (_statements: Array<{ statement: string, values: unknown[] }>) => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
@@ -759,52 +760,154 @@ describe('useTransactions', () => {
     ])
   })
 
-  it('deduplicates a Polygon replacement while preserving its confirmed state and relay metadata', async () => {
-    const { useTransactions } = await import('./transactions')
-    const store = useTransactions()
-    const pendingTx = {
-      hash: '0xoriginal',
-      timestamp: 1,
-      status: 'pending',
-      fee: 1,
-      transfer: Transfer.UserPaymentToAtomicSwap,
-      asset: Asset.USDT,
-      chain: Chain.Polygon,
-      meta: { source: 'relay' },
-    } as any
-    const replacementTx = {
-      ...pendingTx,
-      hash: '0xreplacement',
-      timestamp: 2,
-      status: 'confirmed',
-      fee: 2,
-      raw: '0xraw',
-      meta: { source: 'history' },
-    }
-    await store.addPaymentToMerchantTransaction(pendingTx)
-    await store.addPaymentToMerchantTransaction(replacementTx)
+  describe('polygon replacement persistence', () => {
+    let db: DatabaseSync
 
-    await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')
+    beforeEach(() => {
+      db = new DatabaseSync(':memory:')
+      for (const migration of migrations) {
+        for (const statement of migration.statements)
+          db.exec(statement)
+      }
+      db.prepare(`INSERT INTO transactions
+        (hash, status, timestamp, fee, raw, transfer, asset, chain, meta_json, invoiced_json, paymentRef)
+        VALUES (?, 'pending', 1, 1, '0xoriginalraw', ?, ?, ?, ?, ?, 'swap-id')`).run(
+        '0xoriginal',
+        Transfer.UserPaymentToAtomicSwap,
+        Asset.USDT,
+        Chain.Polygon,
+        JSON.stringify({ source: 'relay' }),
+        JSON.stringify({ amount: 5, currency: 'EUR' }),
+      )
+      db.exec(`INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, tx_hash)
+        VALUES ('0xhtlcid', 1, 123, 'swap-id', 'pending', '0xoriginal')`)
 
-    expect(store.transactions.map(tx => tx.hash)).toEqual(['0xreplacement'])
-    expect(store.transactions[0]).toMatchObject({
-      hash: '0xreplacement',
-      status: 'confirmed',
-      timestamp: 2,
-      fee: 2,
-      raw: '0xraw',
-      transfer: Transfer.UserPaymentToAtomicSwap,
-      meta: { source: 'relay' },
+      state.query.mockImplementation(async (statement, values, options) => {
+        const query = db.prepare(statement)
+        return options?.single
+          ? query.get(...values as Array<string | number | null>)
+          : query.all(...values as Array<string | number | null>)
+      })
+      state.runBatch.mockImplementation(async (statements) => {
+        db.exec('BEGIN')
+        try {
+          for (const { statement, values } of statements)
+            db.prepare(statement).run(...values.map(value => value ?? null) as Array<string | number | null>)
+          db.exec('COMMIT')
+        }
+        catch (error) {
+          db.exec('ROLLBACK')
+          throw error
+        }
+      })
     })
 
-    const statements = state.runBatch.mock.lastCall?.[0] || []
-    const mergedUpsert = statements.find(({ statement }) => statement === SQLQuery.UpsertTx)
-    expect(mergedUpsert?.values[0]).toBe('0xreplacement')
-    expect(mergedUpsert?.values[1]).toBe(2)
-    expect(mergedUpsert?.values[7]).toBe(2)
-    expect(mergedUpsert?.values[8]).toBe('confirmed')
-    expect(mergedUpsert?.values[9]).toBe('0xraw')
-    expect(mergedUpsert?.values[26]).toBe(JSON.stringify({ source: 'relay' }))
+    afterEach(() => db.close())
+
+    it.each([
+      { cached: 'neither', count: 0 },
+      { cached: 'original', count: 1 },
+      { cached: 'both', count: 2 },
+    ])('preserves persisted replacement state with $cached transaction(s) cached', async ({ cached, count }) => {
+      if (cached === 'neither')
+        state.activeAsset = Asset.NIM
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+
+      db.prepare(`INSERT INTO transactions (hash, status, timestamp, fee, raw, transfer, asset, chain)
+        VALUES ('0xreplacement', 'confirmed', 2, 2, '0xraw', ?, ?, ?)`).run(
+        Transfer.UserPayment,
+        Asset.USDT,
+        Chain.Polygon,
+      )
+      if (cached === 'both')
+        await store.refreshFromDb()
+      expect(store.transactions).toHaveLength(count)
+
+      await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')
+
+      expect(db.prepare('SELECT hash, status, timestamp, fee, raw, transfer, paymentRef, meta_json, invoiced_json FROM transactions').all()).toEqual([{
+        hash: '0xreplacement',
+        status: 'confirmed',
+        timestamp: 2,
+        fee: 2,
+        raw: '0xraw',
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+        meta_json: '{"source":"relay"}',
+        invoiced_json: '{"amount":5,"currency":"EUR"}',
+      }])
+      expect(store.transactions).toHaveLength(1)
+      expect(store.transactions[0]).toMatchObject({
+        hash: '0xreplacement',
+        status: 'confirmed',
+        timestamp: 2,
+        fee: 2,
+        raw: '0xraw',
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+        meta: { source: 'relay' },
+        invoiced: { amount: 5, currency: 'EUR' },
+      })
+      expect(db.prepare('SELECT tx_hash FROM swap_htlcs').get()).toEqual({ tx_hash: '0xreplacement' })
+    })
+
+    it('renames an original without a replacement and tolerates a repeated callback', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+
+      await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement')
+      await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement')
+
+      expect(db.prepare('SELECT hash, status, timestamp, fee, raw, meta_json FROM transactions').all()).toEqual([{
+        hash: '0xreplacement',
+        status: 'pending',
+        timestamp: 1,
+        fee: 1,
+        raw: '0xoriginalraw',
+        meta_json: '{"source":"relay"}',
+      }])
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['0xreplacement'])
+      expect(store.transactions[0]?.meta).toEqual({ source: 'relay' })
+    })
+
+    it('keeps original fields when the replacement has no enrichment', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      db.exec('INSERT INTO transactions (hash, status) VALUES (\'0xreplacement\', \'confirmed\')')
+
+      await store.replacePolygonTransactionHash('0xoriginal', '0xreplacement')
+
+      expect(db.prepare('SELECT hash, status, timestamp, fee, raw FROM transactions').all()).toEqual([{
+        hash: '0xreplacement',
+        status: 'confirmed',
+        timestamp: 1,
+        fee: 1,
+        raw: '0xoriginalraw',
+      }])
+      expect(store.transactions[0]).toMatchObject({ status: 'confirmed', timestamp: 1, fee: 1, raw: '0xoriginalraw' })
+    })
+
+    it('rolls back recovery and transaction changes when the hash update fails', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      db.exec('INSERT INTO transactions (hash, status) VALUES (\'0xreplacement\', \'confirmed\')')
+      db.exec(`CREATE TRIGGER reject_hash_update BEFORE UPDATE OF hash ON transactions
+        BEGIN SELECT RAISE(ABORT, 'hash update failed'); END`)
+
+      await expect(store.replacePolygonTransactionHash('0xoriginal', '0xreplacement', '0xhtlcid')).rejects.toThrow('hash update failed')
+
+      expect(db.prepare('SELECT hash, status FROM transactions ORDER BY hash').all()).toEqual([
+        { hash: '0xoriginal', status: 'pending' },
+        { hash: '0xreplacement', status: 'confirmed' },
+      ])
+      expect(db.prepare('SELECT tx_hash FROM swap_htlcs').get()).toEqual({ tx_hash: '0xoriginal' })
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['0xoriginal'])
+    })
   })
 
   it('does not clear the active remote signer when draining an inactive remote signer', async () => {

@@ -38,6 +38,12 @@ export enum SQLQuery {
   GetTransactionByHash = 'SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
   UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
+  MergeReplacementTxState = `UPDATE transactions SET
+    status = COALESCE((SELECT status FROM transactions WHERE hash = ?), status),
+    timestamp = COALESCE((SELECT timestamp FROM transactions WHERE hash = ?), timestamp),
+    fee = COALESCE((SELECT fee FROM transactions WHERE hash = ?), fee),
+    raw = COALESCE((SELECT raw FROM transactions WHERE hash = ?), raw)
+    WHERE hash = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = ? WHERE hash = ?',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
   UpdateCashbackStatus = 'UPDATE transactions SET isCashbackClaimed = ? WHERE hash = ?',
