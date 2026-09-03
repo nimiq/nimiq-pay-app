@@ -833,19 +833,48 @@ describe('useTransactions', () => {
     expect(state.pendingHtlcCreationTransactions).toEqual([pending])
   })
 
-  it('marks a staged local-to-remote transaction failed only after invalidation', async () => {
+  it.each([
+    { transfer: Transfer.LocalToRemote, outcome: { state: 'invalidated' } },
+    { transfer: Transfer.LocalToRemote, outcome: { state: 'included', executionResult: false } },
+    { transfer: Transfer.ExtendRemote, outcome: { state: 'invalidated' } },
+    { transfer: Transfer.ExtendRemote, outcome: { state: 'included', executionResult: false } },
+  ])('clears a rejected $transfer from pending recovery after $outcome', async ({ transfer, outcome }) => {
     const { getSignedTx } = await import('@/lib/tx')
     const { useTransactions } = await import('./transactions')
     const { plain, signedTx } = createSignedHtlcCreation()
     vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'invalidated' } as any)
+    state.client.sendTransaction.mockResolvedValue({ ...plain, ...outcome } as any)
+
+    const result = await useTransactions().sendTx({ transfer } as any)
+
+    expect(result.error).toBeTruthy()
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['failed', plain.timestamp, plain.transactionHash])
+    expect(state.pendingHtlcCreationTransactions).toEqual([])
+    expect(state.isSendingTx).toBe(false)
+    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
+    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])('preserves other pending HTLCs after rejection (already removed: %s)', async (alreadyRemoved) => {
+    const { getSignedTx } = await import('@/lib/tx')
+    const { useTransactions } = await import('./transactions')
+    const { plain, signedTx } = createSignedHtlcCreation()
+    const otherPending = createSignedHtlcCreation('other-pending-hash').plain
+    state.pendingHtlcCreationTransactions.push(otherPending)
+    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+    state.client.sendTransaction.mockImplementation(async () => {
+      if (alreadyRemoved) {
+        const index = state.pendingHtlcCreationTransactions.findIndex(tx => tx.transactionHash === plain.transactionHash)
+        state.pendingHtlcCreationTransactions.splice(index, 1)
+      }
+      return { ...plain, state: 'invalidated' }
+    })
 
     const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
 
     expect(result.error).toBeTruthy()
-    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['failed', plain.timestamp, plain.transactionHash])
-    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
-    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+    expect(state.pendingHtlcCreationTransactions).toEqual([otherPending])
   })
 
   it.each([Transfer.LocalToRemote, Transfer.ExtendRemote])('broadcasts %s only once', async (transfer) => {

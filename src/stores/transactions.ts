@@ -341,8 +341,12 @@ export const useTransactions = defineStore('transactions', () => {
 
     if (details?.state === 'invalidated' || details?.executionResult === false) {
       logger.error('Transaction invalid', details)
-      if (createsHtlc)
+      if (createsHtlc) {
         await updateTransactionStatus({ hash, status: 'failed', timestamp: details.timestamp })
+        const index = sync.pendingHtlcCreationTransactions.findIndex(tx => tx.transactionHash === hash)
+        if (index >= 0)
+          sync.pendingHtlcCreationTransactions.splice(index, 1)
+      }
 
       if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
         const serverSwap = await patchedSwap?.catch(() => undefined)
