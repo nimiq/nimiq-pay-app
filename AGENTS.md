@@ -52,6 +52,10 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Data & schema
 
+### SQLite statement batches
+
+Every `executeSet` / `runSet` entry needs `values`, including `values: []` for statements without parameters. The TypeScript type allows omission, but Android throws `ExecuteSet: No value for values`.
+
 ### Transaction messages
 
 Transaction messages are limited to 64 bytes: up to 64 ASCII characters, or fewer multibyte Unicode characters

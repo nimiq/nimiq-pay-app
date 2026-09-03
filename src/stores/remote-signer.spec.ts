@@ -448,7 +448,7 @@ describe('useRemoteSigner', () => {
     expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(creation.recipient)
     expect(store.remoteBalance).toBe(696_900_000)
     expect(state.runSet).toHaveBeenCalledWith([
-      { statement: expect.any(String) },
+      { statement: expect.any(String), values: [] },
       {
         statement: expect.any(String),
         values: [creation.recipient, 696_900_000, 98, 'service-public-key', 123_100, 999_500, true],

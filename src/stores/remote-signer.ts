@@ -92,7 +92,8 @@ function useRemoteSignerDb() {
         const addressString = address.toUserFriendlyAddress()
         logger.log('✒️ Updating Remote Signer in db', { address: addressString, balance, proofSize, publicKey, start, end, active })
         await runSet([
-          { statement: SQLQuery.DeactivateRemoteSigners },
+          // Android requires values even when the statement has no parameters.
+          { statement: SQLQuery.DeactivateRemoteSigners, values: [] },
           { statement: SQLQuery.InsertRemoteSigner, values: [addressString, balance, proofSize, publicKey, start, end, active] },
         ])
         if (isCurrent())
