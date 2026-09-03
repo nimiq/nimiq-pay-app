@@ -143,8 +143,7 @@ async function scanForMissingHtlcs() {
   htlcStatus.value = 'Scanning local transaction history…'
   try {
     const result = await discoverRemoteSignersFromBlockchain()
-    // Discovery stores inactive candidates; normal reconciliation safely selects or drains them.
-    await verifyRemoteSignersDb({ skipDiscovery: true })
+    await verifyRemoteSignersDb({ discoveryResult: result })
     const completeness = result.localComplete ? '' : ' History scan was incomplete.'
     const errors = result.errors.length ? ` ${result.errors.join('; ')}` : ''
     htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known.${completeness}${errors}`
@@ -200,11 +199,10 @@ async function addValidatedHtlc(result: ImportableRemoteSigner) {
   htlcStatus.value = 'Adding HTLC…'
   try {
     const importResult = await importValidatedRemoteSigner(result)
-    // Manual import follows the same activation and reclaim path as automatic discovery.
-    await verifyRemoteSignersDb({ skipDiscovery: true })
+    await verifyRemoteSignersDb()
     htlcStatus.value = importResult === 'added'
-      ? 'HTLC added and wallet reconciliation started.'
-      : 'HTLC was already known; wallet reconciliation started.'
+      ? 'HTLC added. Wallet reconciliation requested.'
+      : 'HTLC was already known. Wallet reconciliation requested.'
   }
   catch (error) {
     setHtlcRecoveryError(error)

@@ -352,6 +352,7 @@ describe('useSyncTransactions', () => {
       state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
         await Promise.resolve()
         events.push('discover')
+        return { added: 0, alreadyKnown: 0, localComplete: true, errors: [] }
       })
       state.getAllRemoteSigners.mockImplementation(async () => {
         events.push('getAllRemoteSigners')

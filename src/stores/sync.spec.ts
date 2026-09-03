@@ -18,7 +18,7 @@ const state = vi.hoisted(() => {
   const query = vi.fn((_sql?: string): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn(() => Promise.resolve())
   const sendTx = vi.fn(() => Promise.resolve({ data: { tx: { hash: 'drain-hash' } }, error: undefined }))
-  const discoverRemoteSignersFromBlockchain = vi.fn(() => Promise.resolve())
+  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[] }))
   const updateSignersTableBalance = vi.fn(() => Promise.resolve())
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
   const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
@@ -363,7 +363,7 @@ describe('useSync remote signer reconciliation', () => {
     state.sendTx.mockReset()
     state.sendTx.mockResolvedValue({ data: { tx: { hash: 'drain-hash' } }, error: undefined })
     state.discoverRemoteSignersFromBlockchain.mockReset()
-    state.discoverRemoteSignersFromBlockchain.mockResolvedValue(undefined)
+    state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
     state.updateSignersTableBalance.mockReset()
     state.updateSignersTableBalance.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
@@ -686,6 +686,7 @@ describe('useSync remote signer reconciliation', () => {
     state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
       await Promise.resolve()
       events.push('discover')
+      return { added: 0, alreadyKnown: 0, localComplete: true, errors: [] }
     })
     state.getAllRemoteSigners.mockImplementation(async () => {
       events.push('getAllRemoteSigners')

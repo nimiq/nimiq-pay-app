@@ -1,4 +1,5 @@
 import type { RemoteSigner } from '@/lib/sql-queries'
+import type { RemoteSignerDiscoveryResult } from '@/stores/remote-signer'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -146,7 +147,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     return await drainRemoteSigner(recoverable[0])
   }
 
-  async function verifyRemoteSignersDb({ skipDiscovery = false }: { skipDiscovery?: boolean } = {}) {
+  async function verifyRemoteSignersDb({ discoveryResult }: { discoveryResult?: RemoteSignerDiscoveryResult } = {}) {
     // No client in mock mode — discoverRemoteSignersFromBlockchain would await it forever
     // and wedge pull-to-refresh.
     if (isMockEnabled)
@@ -163,8 +164,12 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     isVerifyingRemoteSignersDb.value = true
     try {
-      if (!skipDiscovery)
-        await discoverRemoteSignersFromBlockchain()
+      const result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
+      // Unseen HTLCs can change which signer should stay active or be reclaimed.
+      if (!result.localComplete) {
+        logger.log('Remote signer discovery incomplete. Delaying reconciliation', result.errors)
+        return
+      }
       await useRemoteSigner().updateSignersTableBalance()
       const recoveryStarted = await ensureSingleRemoteActive()
       if (recoveryStarted || isTransactionPending.value || isSendingTx.value) {

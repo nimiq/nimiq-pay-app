@@ -324,7 +324,7 @@ describe('dev modal HTLC recovery', () => {
     expect(wrapper.find('[data-testid="htlc-add"]').exists()).toBe(false)
   })
 
-  it('imports only after confirmation and immediately reconciles wallets', async () => {
+  it('imports only after confirmation and requests discovery before reconciliation', async () => {
     const wrapper = await mountModal()
     await enterAddressAndValidate(wrapper)
 
@@ -339,7 +339,7 @@ describe('dev modal HTLC recovery', () => {
 
     expect(state.alertMessage).toBe('This HTLC belongs to this wallet and currently holds 6969 NIM. Adding it does not move funds immediately, but wallet reconciliation may automatically reclaim it.')
     expect(state.importValidatedRemoteSigner).toHaveBeenCalledWith(importable)
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ skipDiscovery: true })
+    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith()
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('added')
   })
 
@@ -360,7 +360,7 @@ describe('dev modal HTLC recovery', () => {
 
     importing.resolve('added')
     await flushPromises()
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ skipDiscovery: true })
+    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith()
   })
 
   it('runs the bounded automatic scan only on demand', async () => {
@@ -370,7 +370,28 @@ describe('dev modal HTLC recovery', () => {
     await flushPromises()
 
     expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ skipDiscovery: true })
+    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({
+      discoveryResult: { added: 0, alreadyKnown: 0, localComplete: true, errors: [] },
+    })
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Scan complete')
+  })
+
+  it('preserves incomplete scan results for reconciliation and displays the failure', async () => {
+    const discoveryResult = {
+      added: 1,
+      alreadyKnown: 0,
+      localComplete: false,
+      errors: ['Local history lookup timed out'],
+    }
+    state.discoverRemoteSignersFromBlockchain.mockResolvedValueOnce(discoveryResult)
+    const wrapper = await mountModal()
+
+    await wrapper.get('[data-testid="htlc-scan"]').trigger('click')
+    await flushPromises()
+
+    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ discoveryResult })
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('History scan was incomplete')
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Local history lookup timed out')
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-scan"]').element.disabled).toBe(false)
   })
 })

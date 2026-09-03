@@ -138,6 +138,7 @@ describe('useSyncRemoteSigners', () => {
       const events: string[] = []
       state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
         events.push('discover')
+        return { added: 0, alreadyKnown: 0, localComplete: true, errors: [] }
       })
       state.updateSignersTableBalance.mockImplementation(async () => {
         events.push('balance')
@@ -150,10 +151,68 @@ describe('useSyncRemoteSigners', () => {
     it('can reconcile an already completed discovery without scanning again', async () => {
       const { useSyncRemoteSigners } = await import('./remote-signers')
 
-      await useSyncRemoteSigners().verifyRemoteSignersDb({ skipDiscovery: true })
+      await useSyncRemoteSigners().verifyRemoteSignersDb({
+        discoveryResult: { added: 1, alreadyKnown: 0, localComplete: true, errors: [] },
+      })
 
       expect(state.discoverRemoteSignersFromBlockchain).not.toHaveBeenCalled()
       expect(state.updateSignersTableBalance).toHaveBeenCalledOnce()
+    })
+
+    it.each([
+      ['one inactive signer', [false]],
+      ['an active and an inactive signer', [true, false]],
+      ['multiple active signers', [true, true]],
+    ] as const)('does not reconcile %s after incomplete discovery', async (_, activeFlags) => {
+      const signers = activeFlags.map((active, index) => remoteSignerFixture(`NQ${index} RECOVERED SIGNER`, 700_000, active))
+      state.discoverRemoteSignersFromBlockchain.mockResolvedValueOnce({
+        added: signers.length,
+        alreadyKnown: 0,
+        localComplete: false,
+        errors: ['Local history lookup timed out'],
+      })
+      state.query.mockImplementation(async (sql = '') => {
+        if (sql.includes('WHERE active = 1'))
+          return signers.filter(signer => signer.active)
+        if (sql.includes('WHERE balance > 0'))
+          return signers
+        return []
+      })
+      state.getBalance.mockResolvedValue({ data: 700_000, error: undefined })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncState } = await import('./state')
+      const store = useSyncRemoteSigners()
+
+      await store.verifyRemoteSignersDb()
+
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(state.updateSignersTableBalance).not.toHaveBeenCalled()
+      expect(useSyncState().isVerifyingRemoteSignersDb).toBe(false)
+
+      await store.verifyRemoteSignersDb()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledTimes(2)
+      if (signers.length === 1)
+        expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({ active: true }))
+      else
+        expect(state.sendTx).toHaveBeenCalledOnce()
+    })
+
+    it('defers reconciliation for an incomplete discovery supplied by the manual scan', async () => {
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncState } = await import('./state')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({
+        discoveryResult: { added: 1, alreadyKnown: 0, localComplete: false, errors: ['HTLC history lookup failed'] },
+      })
+
+      expect(state.discoverRemoteSignersFromBlockchain).not.toHaveBeenCalled()
+      expect(state.updateSignersTableBalance).not.toHaveBeenCalled()
+      expect(state.query).not.toHaveBeenCalled()
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(useSyncState().isVerifyingRemoteSignersDb).toBe(false)
     })
 
     it('activates a single funded inactive signer', async () => {
