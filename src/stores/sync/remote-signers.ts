@@ -146,7 +146,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     return await drainRemoteSigner(recoverable[0])
   }
 
-  async function verifyRemoteSignersDb() {
+  async function verifyRemoteSignersDb({ skipDiscovery = false }: { skipDiscovery?: boolean } = {}) {
     // No client in mock mode — discoverRemoteSignersFromBlockchain would await it forever
     // and wedge pull-to-refresh.
     if (isMockEnabled)
@@ -163,7 +163,8 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     isVerifyingRemoteSignersDb.value = true
     try {
-      await discoverRemoteSignersFromBlockchain()
+      if (!skipDiscovery)
+        await discoverRemoteSignersFromBlockchain()
       await useRemoteSigner().updateSignersTableBalance()
       const recoveryStarted = await ensureSingleRemoteActive()
       if (recoveryStarted || isTransactionPending.value || isSendingTx.value) {

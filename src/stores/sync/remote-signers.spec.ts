@@ -147,6 +147,15 @@ describe('useSyncRemoteSigners', () => {
       expect(events).toEqual(['discover', 'balance'])
     })
 
+    it('can reconcile an already completed discovery without scanning again', async () => {
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ skipDiscovery: true })
+
+      expect(state.discoverRemoteSignersFromBlockchain).not.toHaveBeenCalled()
+      expect(state.updateSignersTableBalance).toHaveBeenCalledOnce()
+    })
+
     it('activates a single funded inactive signer', async () => {
       const fundedSigner = remoteSignerFixture('NQ22 TEST FUNDED REMOTE ADDRESS', 700_000, false)
       state.query.mockImplementation((sql = '') => {
