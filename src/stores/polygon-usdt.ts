@@ -10,6 +10,7 @@ import { Contract, getAddress, Interface, isError, JsonRpcProvider, Signature, T
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { toSeconds } from '@/composables/useTime'
 import { i18n } from '@/i18n/i18n-setup'
 import { isTestnet } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed, trackTopUpReceived } from '@/lib/analytics'
@@ -1241,7 +1242,7 @@ export async function hasPolygonHtlcRefundEvent(
   return logs.length > 0
 }
 
-function buildOutgoingTransaction(
+export function buildOutgoingTransaction(
   request: PolygonSendRequest,
   title: TransactionTitle,
   sender: string,
@@ -1257,7 +1258,7 @@ function buildOutgoingTransaction(
     fee,
     hash,
     status,
-    timestamp,
+    timestamp: timestamp === undefined ? undefined : toSeconds(timestamp),
     title,
     proofSize: 0,
     message: request.message,

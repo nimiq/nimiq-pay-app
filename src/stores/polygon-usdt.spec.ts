@@ -60,6 +60,29 @@ vi.mock('@/lib/sql-queries', () => ({
   SQLQuery: {},
 }))
 
+describe('outgoing Polygon transaction timestamps', () => {
+  it.each([
+    { name: 'pending payment', transfer: Transfer.UserPayment, status: 'pending', timestamp: 1788429600123, expected: 1788429600 },
+    { name: 'pending swap', transfer: Transfer.UserPaymentToAtomicSwap, status: 'pending', timestamp: 1788429600123, expected: 1788429600 },
+    { name: 'confirmed payment', transfer: Transfer.UserPayment, status: 'confirmed', timestamp: 1788429600, expected: 1788429600 },
+    { name: 'unknown block time', transfer: Transfer.UserPayment, status: 'pending', timestamp: undefined, expected: undefined },
+  ] as const)('uses epoch seconds for $name', async ({ transfer, status, timestamp, expected }) => {
+    const { buildOutgoingTransaction } = await import('./polygon-usdt')
+
+    const tx = buildOutgoingTransaction(
+      { recipient: '0x00000000000000000000000000000000000000bb', amount: 1000000, fee: 1000, transfer },
+      'Payment',
+      '0x00000000000000000000000000000000000000aa',
+      '0xrelayhash',
+      timestamp,
+      1000,
+      status,
+    )
+
+    expect(tx).toMatchObject({ timestamp: expected, status, transfer, asset: Asset.USDT, chain: Chain.Polygon })
+  })
+})
+
 describe('polygon-usdt quote helpers', () => {
   beforeEach(() => {
     loggerError.mockReset()
