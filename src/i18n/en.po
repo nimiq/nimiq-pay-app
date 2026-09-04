@@ -31,11 +31,11 @@ msgstr ""
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:83
+#: src/modals/MenuModal.vue:81
 msgid "About"
 msgstr ""
 
-#: src/modals/MenuModal.vue:40
+#: src/modals/MenuModal.vue:38
 #: src/views/HomeView.vue:190
 msgid "Activate Cashback & Rewards"
 msgstr ""
@@ -150,7 +150,7 @@ msgstr ""
 msgid "App screenshots"
 msgstr ""
 
-#: src/modals/MenuModal.vue:59
+#: src/modals/MenuModal.vue:57
 msgid "App Settings"
 msgstr ""
 
@@ -168,7 +168,7 @@ msgid "Auto-deposit threshold"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:71
+#: src/modals/MenuModal.vue:69
 msgid "Backup Account"
 msgstr ""
 
@@ -669,7 +669,7 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: src/modals/MenuModal.vue:48
+#: src/modals/MenuModal.vue:46
 msgid "Features"
 msgstr ""
 
@@ -1048,7 +1048,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:90
+#: src/modals/MenuModal.vue:88
 msgid "Log Out"
 msgstr ""
 
@@ -1073,7 +1073,7 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: src/modals/MenuModal.vue:54
+#: src/modals/MenuModal.vue:52
 msgid "Mini Apps"
 msgstr ""
 
@@ -1092,10 +1092,6 @@ msgstr ""
 
 #: src/modals/MenuModal.vue:20
 msgid "NAKA Card"
-msgstr ""
-
-#: src/modals/MenuModal.vue:33
-msgid "NAKA Support"
 msgstr ""
 
 #: src/lib/flows/steps.ts:751
@@ -1692,7 +1688,7 @@ msgstr ""
 msgid "Set an amount"
 msgstr ""
 
-#: src/modals/MenuModal.vue:65
+#: src/modals/MenuModal.vue:63
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1813,6 +1809,7 @@ msgid "Submitted {date}"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:82
+#: src/modals/MenuModal.vue:31
 msgid "Support"
 msgstr ""
 
@@ -2153,7 +2150,7 @@ msgstr ""
 
 #: src/composables/useNotifications.ts:276
 #: src/modals/ChangelogModal.vue:17
-#: src/modals/MenuModal.vue:77
+#: src/modals/MenuModal.vue:75
 msgid "What's New"
 msgstr ""
 

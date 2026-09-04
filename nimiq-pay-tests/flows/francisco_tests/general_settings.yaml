@@ -1,0 +1,23 @@
+appId: ${APP_ID}
+---
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: Open menu
+- extendedWaitUntil:
+    visible: Settings
+    timeout: 5000
+- tapOn: Settings
+- extendedWaitUntil:
+    visible: Settings
+    timeout: 5000
+
+- assertVisible: Language
+- assertVisible: Currency
+- assertVisible: Minimum NIM Decimals
+- assertVisible:
+    text: 'Auto-deposit threshold.*'
+- assertVisible: Receive Push Notifications
+- assertVisible: Reduce Animations
+- assertVisible: Change PIN
+
+- stopApp

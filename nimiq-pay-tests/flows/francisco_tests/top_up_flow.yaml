@@ -1,0 +1,15 @@
+appId: ${APP_ID}
+---
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: Top Up
+- waitForAnimationToEnd
+
+- assertVisible: Top up address
+- assertVisible:
+    text: 'NQ.*'
+- assertVisible: Copy address
+
+- back
+- waitForAnimationToEnd
+- stopApp

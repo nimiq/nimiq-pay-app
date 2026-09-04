@@ -1,0 +1,35 @@
+appId: com.nimiq.pay.debug
+---
+- launchApp:
+    clearState: true
+
+- tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: Choose a PIN
+    timeout: 10000
+- inputText: '1111'
+- extendedWaitUntil:
+    visible: Confirm your PIN
+    timeout: 10000
+- inputText: '1111'
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: Biometric Authentication
+    commands:
+      - tapOn: "Skip for now"
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: Enable notifications
+    commands:
+      - tapOn: "Skip for now"
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: Pay
+    timeout: 10000
+
+- stopApp
