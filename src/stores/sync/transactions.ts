@@ -52,6 +52,11 @@ export function isOwnHtlcDrain(tx: PlainTransactionDetails, localUserFriendly: s
     && tx.proof.creator === localUserFriendly
 }
 
+// Fastspot answers an unknown contract with `urn:x-fast:problem:contract-not-found`, whose detail
+// the API client re-throws as this message. Matching it is the only way to tell a definite "not a
+// swap" from a transport or server failure, because every non-ok response arrives as a bare Error.
+const FASTSPOT_CONTRACT_NOT_FOUND = /^No \S+ contract found under the given id\b/
+
 export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
   const { query, run } = useConn()
@@ -609,8 +614,16 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         return
     }
     catch (error: any) {
+      // Recording is permanent — the hash is skipped by every later refresh — so only a contract
+      // Fastspot explicitly does not know may be written. Anything else (offline, 5xx, a gateway
+      // page that fails to parse) leaves the tx untouched for the next refresh to retry.
+      if (!FASTSPOT_CONTRACT_NOT_FOUND.test(error?.message ?? '')) {
+        logger.error(`📬 Could not ask Fastspot about this HTLC — deferring to the next refresh`, { hash: tx.transactionHash, recipient: tx.recipient, error: error?.message })
+        return
+      }
+
       // Fastspot has never heard of this contract, so it is not a swap — it is a Mini App HTLC.
-      logger.log(`📬 HTLC unknown to Fastspot, recording as a Mini App HTLC`, { hash: tx.transactionHash, recipient: tx.recipient, error: error.message })
+      logger.log(`📬 HTLC unknown to Fastspot, recording as a Mini App HTLC`, { hash: tx.transactionHash, recipient: tx.recipient })
       if (isCurrent()) {
         await addHtlcTransaction({
           transfer: Transfer.HTLC,
