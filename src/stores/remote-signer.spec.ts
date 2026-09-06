@@ -556,9 +556,11 @@ describe('useRemoteSigner', () => {
       )
     })
 
-    it('does not register when neither the account nor its creation tx yields a shape', async () => {
+    it('reports unknown rather than foreign when neither the account nor its creation tx yields a shape', async () => {
       // getAccount is a non-htlc (pruned) account, and getHtlcCreationData is left at its default
       // resolved value (undefined, i.e. no creation tx found) — neither source has a shape at all.
+      // Callers only ask about contracts they just saw a drain from, so a creation tx must exist:
+      // an empty answer is a history index that isn't ready, not a foreign contract.
       state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
 
       const { useRemoteSigner } = await import('./remote-signer')
@@ -568,7 +570,7 @@ describe('useRemoteSigner', () => {
 
       const claim = await store.registerOwnHtlcIfMissing('NQ66 UNKNOWN SHAPE ADDRESS')
 
-      expect(claim).toBe('foreign')
+      expect(claim).toBe('unknown')
       expect(state.run).not.toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['NQ66 UNKNOWN SHAPE ADDRESS']),

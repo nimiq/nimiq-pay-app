@@ -372,7 +372,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   //
   // Callers need to tell three outcomes apart, not just "registered or not": 'ours' (already known,
   // or just registered), 'foreign' (a readable shape that is not ours — safe to treat as external),
-  // and 'unknown' (the shape could not be read this round, e.g. a timed-out creation-tx query).
+  // and 'unknown' (the shape could not be read this round — a timed-out creation-tx query, or one
+  // that came back empty because the history index isn't ready yet).
   // Reporting an unreadable shape as 'foreign' would record — and on the listener path, notify on —
   // a drain that might turn out to be ours once the query succeeds on a later refresh, and that
   // could never be retracted.
@@ -409,7 +410,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         return 'unknown'
       }
     }
-    if (!shape || !isOwnRemoteHtlcShape(shape, { localAddress: localUserFriendly, cosignerAddress })) {
+    // The caller only offers drains whose proof creator is our local address, so the contract
+    // provably has a creation tx: finding none means the history query came back incomplete
+    // (fresh light client), not that the contract is foreign.
+    if (!shape) {
+      logger.log(`⏳ No HTLC shape available yet — deferring rather than guessing`, { address: htlcAddress, accountType: account?.type ?? 'pruned' })
+      return 'unknown'
+    }
+    if (!isOwnRemoteHtlcShape(shape, { localAddress: localUserFriendly, cosignerAddress })) {
       logger.log(`🚫 Not registering HTLC — contract shape is not ours`, { address: htlcAddress, shape })
       return 'foreign'
     }

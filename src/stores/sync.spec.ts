@@ -672,11 +672,12 @@ describe('useSync remote signer reconciliation', () => {
     }) as any)
     state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
 
-    // Force the swap handler down its catch path so we can observe the leaf
-    // reaching it without wiring up a Fastspot mock.
+    // Force the swap handler down its catch path so we can observe the leaf reaching it without
+    // wiring up a Fastspot mock. The wording matters: only Fastspot's `contract-not-found` detail
+    // is treated as a definite "not a swap".
     vi.doMock('@/composables/useFastspotv1', () => ({
       useFastspotApiV1: vi.fn(() => Promise.resolve({
-        getContract: vi.fn(() => Promise.reject(new Error('mocked fastspot failure'))),
+        getContract: vi.fn(() => Promise.reject(new Error('No NIM contract found under the given id NQ55 SWAP LEAF ADDRESS.'))),
       })),
     }))
 

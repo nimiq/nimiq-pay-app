@@ -4,7 +4,7 @@ import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
-import { createAddress, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
+import { createAddress, FASTSPOT_NOT_FOUND, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
 describe('useSyncTransactions', () => {
   beforeEach(() => {
@@ -396,7 +396,7 @@ describe('useSyncTransactions', () => {
     it('records an HTLC creation as Transfer.HTLC when Fastspot does not know the contract', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
       state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
-      state.getContract.mockRejectedValue(new Error('fastspot down'))
+      state.getContract.mockRejectedValue(new Error(FASTSPOT_NOT_FOUND))
       state.getAccountTransactions.mockImplementation(((address: any) => {
         if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
           return Promise.resolve({ data: [{
@@ -425,6 +425,39 @@ describe('useSyncTransactions', () => {
         title: 'New HTLC',
         amount: 500,
       }))
+      expect(state.addUnknownPaymentToMerchantTransaction).not.toHaveBeenCalled()
+    })
+
+    it('records nothing when the Fastspot lookup fails for any reason other than an unknown contract', async () => {
+      // A 5xx, a timeout or an offline device all arrive as a bare Error, exactly like the
+      // not-found case. Writing on those would pin a real swap as a Mini App HTLC forever, since
+      // the hash is skipped by every later refresh.
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockRejectedValue(new Error('Failed to fetch'))
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'unreachable-fastspot-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'ab'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
       expect(state.addUnknownPaymentToMerchantTransaction).not.toHaveBeenCalled()
     })
 
