@@ -98,6 +98,10 @@ describe('useSyncTransactions', () => {
     it.each(['failed', 'invalidated'] as const)('does not fetch a transaction already marked %s', async (status) => {
       const { useTransactions } = await import('@/stores/transactions')
       ;(useTransactions().transactions as any[]).push({ hash: 'h1', status } as any)
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'h1' } as any, { transactionHash: 'other' } as any)
+      syncState.pendingRemoteDrainTxs.push({ hash: 'h1' } as any, { hash: 'other-drain' } as any)
       state.consensus = 'syncing'
       state.getTransactionState.mockResolvedValue({ data: { state: 'included', timestamp: 12 }, error: undefined })
       const { useSyncTransactions } = await import('./transactions')
@@ -107,6 +111,34 @@ describe('useSyncTransactions', () => {
       expect(state.client.getTransaction).not.toHaveBeenCalled()
       expect(state.getTransactionState).not.toHaveBeenCalled()
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(syncState.pendingTransactions.map(tx => tx.transactionHash)).toEqual(['other'])
+      expect(syncState.pendingRemoteDrainTxs.map(tx => tx.hash)).toEqual(['other-drain'])
+      expect(syncState.isTransactionPending).toBe(true)
+    })
+
+    it('releases the send barrier after batch refresh records a failed payment', async () => {
+      const { useTransactions } = await import('../transactions')
+      const { useSyncState } = await import('./state')
+      const { useSyncTransactions } = await import('./transactions')
+      const transactions = useTransactions().transactions as unknown as { hash: string, status: string }[]
+      transactions.push({ hash: 'failed-payment', status: 'pending' })
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'failed-payment', state: 'pending' } as any)
+      state.query.mockResolvedValue([{ hash: 'failed-payment', status: 'pending' }])
+      state.client.getTransaction.mockResolvedValue({ state: 'included', executionResult: false, timestamp: 5, value: 1 })
+      state.updateTransactionStatus.mockImplementation(({ status }: { status: string }) => {
+        transactions[0].status = status
+      })
+
+      const refreshing = useSyncTransactions()
+      await refreshing.updateTransactionsInDb()
+      expect(transactions[0].status).toBe('failed')
+      state.client.getTransaction.mockClear()
+      await refreshing.updateSingleTransaction('failed-payment')
+
+      expect(syncState.isTransactionPending).toBe(false)
+      expect(state.client.getTransaction).not.toHaveBeenCalled()
+      expect(state.getTransactionState).not.toHaveBeenCalled()
     })
 
     it.each([false, true])('checks cosigner executionResult=%s before updating pending status', async (executionResult) => {

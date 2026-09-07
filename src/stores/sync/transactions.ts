@@ -105,10 +105,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
   }
 
   async function updateSingleTransaction(hash: string) {
-    const current = useTransactions().transactions.find(transaction => transaction.hash === hash)
-    if (current && ['failed', 'invalidated'].includes(current.status))
-      return
-
     if (!hasLocalWallet.value)
       return
 
@@ -116,6 +112,13 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     if (!pendingContext)
       return
     const context: PendingTransactionContext = pendingContext
+
+    const current = useTransactions().transactions.find(transaction => transaction.hash === hash)
+    if (current && ['failed', 'invalidated'].includes(current.status)) {
+      // Batch refresh can persist failure before the pending-send entry is reconciled.
+      removeCurrentPendingHash(hash, context)
+      return
+    }
 
     const currentPending = pendingTransactions.value.find(transaction => transaction.transactionHash === hash)
       ?? pendingRemoteDrainTxs.value.find(transaction => transaction.hash === hash)
