@@ -1,4 +1,8 @@
 appId: com.nimiq.pay.debug
+
+tags:
+  - franciscoTest
+
 ---
 - launchApp:
     clearState: true
