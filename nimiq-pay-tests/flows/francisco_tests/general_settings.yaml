@@ -1,4 +1,8 @@
 appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
 ---
 - runFlow: ../../subflows/create_account.yaml
 
