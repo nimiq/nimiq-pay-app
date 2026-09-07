@@ -1,0 +1,89 @@
+name: Nimiq Pay - Maestro Suite Android
+
+# Controls when the workflow will run
+on:
+# Triggers the workflow on push or pull request events but only for the "main" branch
+  # uncoment this to run when a pullrequest merge to
+  # to develop, master or testing
+  #push:
+    #branches:
+      #- develop
+      #- master
+      #- testing
+      #- main
+  #pull_request:
+    #branches: [ "main" ]
+  schedule:
+    # runs every day at midnight, UTC time
+     - cron: '0 0 * * 2'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+
+jobs:
+# This workflow contains a single job called "run end to end tests"
+  run_e2e_tests:
+  # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+   # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'latest'
+    # Runs a single command using the runners shell
+      - name: Install dependencies
+        run: npm install
+    # Runs a single command using the runners shell
+      - name: Nimiq Pay App Android
+        continue-on-error: true
+        env:
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          MAINNET_LOGIN_WORD1: ${{ secrets.MAINNET_LOGIN_WORD1 }}
+          MAINNET_LOGIN_WORD2: ${{ secrets.MAINNET_LOGIN_WORD2 }}
+          MAINNET_LOGIN_WORD3: ${{ secrets.MAINNET_LOGIN_WORD3 }}
+          MAINNET_LOGIN_WORD4: ${{ secrets.MAINNET_LOGIN_WORD4 }}
+          MAINNET_LOGIN_WORD5: ${{ secrets.MAINNET_LOGIN_WORD5 }}
+          MAINNET_LOGIN_WORD6: ${{ secrets.MAINNET_LOGIN_WORD6 }}
+          MAINNET_LOGIN_WORD7: ${{ secrets.MAINNET_LOGIN_WORD7 }}
+          MAINNET_LOGIN_WORD8: ${{ secrets.MAINNET_LOGIN_WORD8 }}
+          MAINNET_LOGIN_WORD9: ${{ secrets.MAINNET_LOGIN_WORD9 }}
+          MAINNET_LOGIN_WORD10: ${{ secrets.MAINNET_LOGIN_WORD10 }}
+          MAINNET_LOGIN_WORD11: ${{ secrets.MAINNET_LOGIN_WORD11 }}
+          MAINNET_LOGIN_WORD12: ${{ secrets.MAINNET_LOGIN_WORD12 }}
+
+          MAINNET_PASSWORD: ${{ secrets.MAINNET_PASSWORD }}
+
+        run:
+          npm run testBrowserstackAndroid
+
+      - name: "Publish Nimiq Pay App Android Results"
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
+          external_repository: franciscodiaz4/nimiq-pay-android-results
+          publish_dir: 'nimiq-pay-tests/tests_output'
+          keep_files: true
+
+
+  slackNotification:
+    if: always()
+    needs: run_e2e_tests
+    name: Automation Tests Status
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_ICON: https://github.com/rtCamp.png?size=48
+        SLACK_MESSAGE: "Nimiq Pay Maestro Android Results: ${{ job.status }} URL: https://nimiq-pay-android-results.netlify.app/"
+        SLACK_TITLE: Automation Tests Status
+        SLACK_USERNAME: Francisco_Diaz
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}

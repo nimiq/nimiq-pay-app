@@ -58,3 +58,13 @@ maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 \
 
   maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 \
   nimiq-pay-tests/flows/francisco_tests/top_up_flow.yaml
+
+
+# Upload Pay App in APK to BrowserStack
+pnpm release:browserstack:apk
+
+# Upload Maestro Test Suite to BrowserStack
+pnpm upload:browserstack:maestro
+
+# Runs Tests on BrowserStack
+pnpm run:browserstack:maestro
