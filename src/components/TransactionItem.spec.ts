@@ -114,7 +114,7 @@ describe('transactionItem', () => {
     expect(wrapper.get('[data-testid="crypto-amount"]').text()).toBe('USDT')
   })
 
-  it('treats mined transactions like confirmed ones in the list', async () => {
+  it.each(['included', 'mined'] as const)('shows %s transactions as confirming until final', async (status) => {
     const { default: TransactionItem } = await import('./TransactionItem.vue')
     const wrapper = mount(TransactionItem, {
       props: {
@@ -127,7 +127,7 @@ describe('transactionItem', () => {
           hash: '0xhash',
           sender: '0xsender',
           recipient: '0xrecipient',
-          status: 'mined',
+          status,
           proofSize: 0,
           message: '',
           asset: Asset.USDT,
@@ -141,35 +141,31 @@ describe('transactionItem', () => {
       },
     })
 
-    expect(wrapper.classes()).not.toContain('opacity-60')
-    expect(wrapper.text()).not.toContain('Confirming')
+    expect(wrapper.classes()).toContain('opacity-60')
+    expect(wrapper.text()).toContain('Confirming')
   })
 
-  it('keeps included transactions undimmed in the list', async () => {
+  it.each(['included', 'mined', 'confirmed'] as const)('keeps incoming %s receipts settled in the list', async (status) => {
     const { default: TransactionItem } = await import('./TransactionItem.vue')
     const wrapper = mount(TransactionItem, {
       props: {
         tx: {
-          transfer: Transfer.UserPayment,
-          title: 'Payment',
+          transfer: Transfer.UserReceipt,
+          title: 'Top-Up',
           timestamp: Date.now(),
-          amount: 2500000,
+          amount: 1800000,
           fee: 0,
-          hash: '0xhash',
-          sender: '0xsender',
-          recipient: '0xrecipient',
-          status: 'included',
+          hash: 'incoming',
+          sender: 'sender',
+          recipient: 'recipient',
+          status,
           proofSize: 0,
           message: '',
-          asset: Asset.USDT,
-          chain: Chain.Polygon,
+          asset: Asset.NIM,
+          chain: Chain.Nimiq,
         },
       },
-      global: {
-        stubs: {
-          IonRippleEffect: true,
-        },
-      },
+      global: { stubs: { IonRippleEffect: true } },
     })
 
     expect(wrapper.classes()).not.toContain('opacity-60')

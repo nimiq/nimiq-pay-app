@@ -18,6 +18,7 @@ const {
   loggerWarn,
   parseChainId,
   requestUserConfirmation,
+  sendTx,
   signTransaction,
   syncTransactionHistory,
   trackWeb3Request,
@@ -43,6 +44,7 @@ const {
   loggerWarn: vi.fn(),
   parseChainId: vi.fn(),
   requestUserConfirmation: vi.fn(async () => true),
+  sendTx: vi.fn(),
   signTransaction: vi.fn(async () => '0xsigned'),
   syncTransactionHistory: vi.fn(async () => {}),
   trackWeb3Request: vi.fn(),
@@ -176,6 +178,9 @@ function createReconnectHost(chainId = '0x89') {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.unstubAllGlobals()
+  vi.stubGlobal('Nimiq', {
+    AccountType: { Basic: 0, Staking: 3 },
+  })
 
   addressesEqual.mockImplementation((left?: string, right?: string) =>
     left?.toLowerCase() === right?.toLowerCase())
@@ -216,8 +221,44 @@ beforeEach(() => {
     remoteHeight: 0,
     remoteAddress: undefined,
   })
-  useTransactions.mockReturnValue({
-    sendTx: vi.fn(),
+  sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
+  useTransactions.mockReturnValue({ sendTx })
+})
+
+describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendBasicTransaction', ['NQ22 RECIPIENT', 10], 'nimiq_send_transaction'],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10], 'nimiq_staking_create_staker'],
+  ])('returns -32001 without a hash for uncertain %s', async (name, params, requestType) => {
+    sendTx.mockResolvedValue({
+      outcome: 'unknown',
+      stagedTx: { hash: 'staged-hash' },
+      stagedHash: 'staged-hash',
+      error: 'response lost',
+    })
+    const { handleRequest } = await createPermissionHost()
+
+    const response = await handleRequest({
+      network: 'nimiq',
+      name,
+      params,
+    }).then(
+      value => ({ resolved: value }),
+      error => ({ rejected: JSON.parse(JSON.stringify(error)) }),
+    )
+
+    expect(response).toEqual({
+      rejected: {
+        code: -32001,
+        message: 'The transaction outcome is unknown. It may have been submitted; do not retry.',
+      },
+    })
+    expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({
+      requestType,
+      approved: true,
+      success: false,
+    }))
+    expect(loggerLog).toHaveBeenCalledWith(expect.stringContaining('outcome unknown'), expect.objectContaining({ stagedHash: 'staged-hash' }))
   })
 })
 

@@ -8,6 +8,7 @@ import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { isDev, isTestnet } from '@/lib/index'
 import { isMockEnabled } from '@/lib/mock-mode'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { toSeconds } from './useTime'
 
@@ -203,10 +204,21 @@ const remoteSignerWsApi = (function () {
   function request<T = any, E = undefined>(event: string, args: any = {}): AsyncResultApi<T, E> {
     const id = `${idCounter++}`
     const requestObject = { event, data: { ...args, id } }
-    return new Promise((resolve) => {
+    const response = new Promise<ResultApi<T, E>>((resolve) => {
       pendingRequests.set(id, { id, requestObject, resolve })
       send(JSON.stringify(requestObject))
     })
+    // Sends retain their recovery anchor; only read requests can be discarded on timeout.
+    if (event.startsWith('wallet-send-'))
+      return response
+    return promiseWithTimeout(response, 30_000)
+      .catch((): ResultApi<T, E> => ({
+        data: undefined,
+        hasError: true,
+        status: 504,
+        error: { message: i18n.t('Something went wrong'), statusCode: 504, error: 'TIMEOUT' } as E,
+      }))
+      .finally(() => pendingRequests.delete(id))
   }
 
   watch(data, (newData) => {
@@ -292,7 +304,7 @@ export function useRemoteSignerApi() {
 
   interface StatusRes { status: RemoteStatus, blockHeight: number, servicePublicKey: string, network: string }
   interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number }
-  interface GetTransactionStateRes { hash: string, state: RemoteSignerTransactionState, timestamp: number, value: number }
+  interface GetTransactionStateRes { hash: string, state: RemoteSignerTransactionState, executionResult?: boolean, timestamp: number, value: number }
 
   interface RemoteErrorRes {
     statusCode: number

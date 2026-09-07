@@ -1,5 +1,4 @@
 import type { Slots } from 'vue'
-import type { Result } from '../../types'
 import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import type { FeatureName } from '@/lib/analytics'
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
@@ -343,25 +342,26 @@ const paymentFlow: FlowInit = async () => {
       case PaymentMethod.NIM:
       case PaymentMethod.NakaCard: {
         const { useTransactions } = await import('@/stores/transactions')
-        const { error, data } = await useTransactions().sendTx({
+        const result = await useTransactions().sendTx({
           ...payment.request,
           title: payment.request.merchantName
             ? markAsUnknownTransactionTitle(payment.request.merchantName)
             : 'Payment', // translated at display time
-        } as PartialSendTxArgs).catch((error) => {
-          logger.error('🤑  Transaction failed:', error)
-          return {
-            data: undefined,
-            error: i18n.t(
-              'Transaction failed: {error}',
-              { error: (error instanceof Error ? error.message : String(error)) || i18n.t('Unknown error') },
-            ),
-          } satisfies Result<never, string>
-        })
-        if (error)
-          return failPayment(error)
-        if (payment.method === PaymentMethod.NakaCard && data) {
-          await payment.confirmPayment(data.serialized)
+        } as PartialSendTxArgs)
+        switch (result.outcome) {
+          case 'rejected':
+            return failPayment(result.error)
+          case 'unknown': {
+            const { useToast } = await import('@/composables/useToast')
+            useToast().setToast({
+              message: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+            })
+            return
+          }
+          case 'submitted':
+            if (payment.method === PaymentMethod.NakaCard)
+              await payment.confirmPayment(result.serialized)
+            break
         }
         break
       }
@@ -507,11 +507,20 @@ selectionStep ◄────┘
     ])
 
     const title = 'Withdrawal' // translated at display time
-    const { error } = useApp().isNimiqAsset
-      ? await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
-      : await usePolygonUsdt().sendPayment({ transfer: Transfer.UserPayment, recipient, amount, fee: 0 }, title, { quote: polygonQuote })
-    if (error)
-      return err(`${i18n.t('Something went wrong')}.\n${error}`)
+    if (useApp().isNimiqAsset) {
+      const result = await sendTx({ transfer: Transfer.UserPayment, recipient, amount, fee: 0, title })
+      if (result.outcome === 'rejected')
+        return err(`${i18n.t('Something went wrong')}.\n${result.error}`)
+      if (result.outcome === 'unknown') {
+        setToast({ message: i18n.t('The transaction may have been sent and is still pending. Do not retry.') })
+        return
+      }
+    }
+    else {
+      const { error } = await usePolygonUsdt().sendPayment({ transfer: Transfer.UserPayment, recipient, amount, fee: 0 }, title, { quote: polygonQuote })
+      if (error)
+        return err(`${i18n.t('Something went wrong')}.\n${error}`)
+    }
 
     setToast({ message: i18n.t('Withdrawal successful') })
   }

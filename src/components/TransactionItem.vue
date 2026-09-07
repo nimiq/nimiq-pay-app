@@ -48,7 +48,9 @@ const category = computed(() => {
   return MerchantCategory.Shop
 })
 
-const hasSettledListAppearance = computed(() => ['included', 'mined', 'confirmed'].includes(props.tx.status))
+const hasSettledListAppearance = computed(() =>
+  props.tx.status === 'confirmed' || (!isPaymentTx(props.tx) && ['included', 'mined'].includes(props.tx.status)),
+)
 const isInvalid = computed(() => ['failed', 'invalidated'].includes(props.tx.status))
 const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 </script>

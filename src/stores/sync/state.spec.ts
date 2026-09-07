@@ -97,16 +97,39 @@ describe('useSyncState', () => {
     expect(store.isTransactionPending).toBe(true)
   })
 
-  it('clears wallet-scoped pending state when the wallet changes', async () => {
+  it('increments wallet generation while preserving only same-context pending state', async () => {
     const { useSyncState } = await import('./state')
     const store = useSyncState()
-    store.setWalletContext('NQ00 TEST LOCAL ADDRESS')
+    const owner = 'NQ00 TEST LOCAL ADDRESS'
+    const otherOwner = 'NQ01 NEXT LOCAL ADDRESS'
+    const pending = { transactionHash: 'pending' } as any
+
+    const first = store.setWalletContext(owner, 'testnet')
+    store.pendingTransactions.push(pending)
+    const second = store.setWalletContext(owner, 'testnet')
+
+    expect(second).toBe(first + 1)
+    expect(store.walletContextGeneration).toBe(second)
+    expect(store.pendingTransactions).toEqual([pending])
+
+    store.setWalletContext(owner, 'mainnet')
+    expect(store.pendingTransactions).toEqual([])
+
+    store.pendingTransactions.push(pending)
+    store.setWalletContext(otherOwner, 'mainnet')
+    expect(store.pendingTransactions).toEqual([])
+  })
+
+  it('clears every pending collection when the wallet context changes', async () => {
+    const { useSyncState } = await import('./state')
+    const store = useSyncState()
+    store.setWalletContext('NQ00 TEST LOCAL ADDRESS', 'testnet')
     store.pendingTransactions.push({ transactionHash: 'pending' } as any)
     store.pendingPaymentTransactions.push({ transactionHash: 'payment' } as any)
     store.pendingRemoteDrainTxs.push({ hash: 'drain' } as any)
     store.pendingHtlcCreationTransactions.push({ transactionHash: 'creation' } as any)
 
-    store.setWalletContext('NQ01 NEXT LOCAL ADDRESS')
+    store.setWalletContext('NQ01 NEXT LOCAL ADDRESS', 'testnet')
 
     expect(store.pendingTransactions).toEqual([])
     expect(store.pendingPaymentTransactions).toEqual([])

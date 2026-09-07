@@ -48,7 +48,7 @@ const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(usePolygonUsdt())
-const { isTransactionPending, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { isTransactionPending, pendingHtlcCreationTransactions, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
 // const { updateUser: updateNakaUser } = useNaka()
@@ -117,7 +117,7 @@ watchEffect(async () => {
   // Local funds are just accumulating (shown as "pending"), not processing, only while they're
   // below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
   // with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
-  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value) || isTransactionPending.value) {
+  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value) || isProcessingRemote.value || pendingHtlcCreationTransactions.value.length > 0) {
     statusMessageText.value = i18n.tc(
       'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
       blocksUntilNextMacroBlock.value,

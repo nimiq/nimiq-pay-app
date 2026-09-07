@@ -26,6 +26,8 @@ import { useTransactions } from '@/stores/transactions'
 import { Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import {
+  TRANSACTION_OUTCOME_UNKNOWN_CODE,
+  TRANSACTION_OUTCOME_UNKNOWN_MESSAGE,
   USER_REJECTED_REQUEST_CODE,
   USER_REJECTED_REQUEST_MESSAGE,
 } from '../../web3-provider/src/provider-errors'
@@ -433,6 +435,8 @@ export class MiniAppHost {
       return 4200
     if (error instanceof InvalidTransactionError)
       return -32602
+    if (error instanceof TransactionOutcomeUnknownError)
+      return TRANSACTION_OUTCOME_UNKNOWN_CODE
     if (error instanceof NetworkError)
       return -32000
     return -32603 // InternalError / default
@@ -1725,12 +1729,14 @@ export class MiniAppHost {
     }
 
     const result = await useTransactions().sendTx(partialTx)
-    if (result.error || !result.data) {
-      trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: false })
-      throw new InternalError(`Failed to send payment transaction: ${result.error || 'no transaction data'}`)
+    trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: result.outcome === 'submitted' })
+    if (result.outcome === 'rejected')
+      throw new InternalError(`Failed to send payment transaction: ${result.error}`)
+    if (result.outcome === 'unknown') {
+      logger.log('[MiniAppHost] Transaction outcome unknown', { stagedHash: result.stagedHash })
+      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE)
     }
-    trackWeb3Request({ requestType: txData.analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
-    return result.data.tx.hash
+    return result.tx.hash
   }
 
   // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
@@ -1796,6 +1802,10 @@ class InternalError extends MiniAppError {
 
 export class PermissionDeniedError extends MiniAppError {
   readonly type = 'PERMISSION_DENIED'
+}
+
+class TransactionOutcomeUnknownError extends MiniAppError {
+  readonly type = 'TRANSACTION_OUTCOME_UNKNOWN'
 }
 
 export class NetworkError extends MiniAppError {

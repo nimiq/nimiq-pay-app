@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { vi } from 'vitest'
-import { computed } from 'vue'
+import { computed, shallowReactive } from 'vue'
 
 export function createAddress(value: string) {
   return {
@@ -13,15 +13,25 @@ function makeState() {
   const getBalance = vi.fn((_address?: unknown): Promise<{ data: any, error: any }> => Promise.resolve({ data: 0, error: undefined }))
   const getAccountTransactions = vi.fn((_address?: unknown): Promise<{ data: any[] }> => Promise.resolve({ data: [] }))
   const getLocalTransactions = vi.fn(async (_options?: { sinceHeight?: number, startAt?: string, limit?: number }): Promise<any[]> => (await getAccountTransactions(createAddress('NQ00 TEST LOCAL ADDRESS'))).data)
+  const getAllTransactionsForAddress = vi.fn((_address?: unknown): Promise<{ transactions: any[], complete: boolean }> => Promise.resolve({ transactions: [], complete: true }))
+  const getWalletContext = vi.fn((): { address: any, client: any, network: string, owner: string, generation: number } | undefined => undefined)
+  const isWalletContextCurrent = vi.fn((_context: { client: unknown, network: string, owner: string, generation: number }): boolean => false)
   const findTransactionInHistory = vi.fn((_address?: unknown, _hash?: string): Promise<any> => Promise.resolve(undefined))
   const getAllOutgoingTransactionsFromHtlcs = vi.fn((_address?: unknown): Promise<any[]> => Promise.resolve([]))
   const query = vi.fn((_sql?: string, _params?: any[]): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn((_sql?: string, _params?: any[]): Promise<void> => Promise.resolve())
-  const sendTx = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: { tx: { hash: 'drain-hash' } }, error: undefined }))
+  const sendTx = vi.fn((_args?: any, _context?: any): Promise<any> => Promise.resolve({
+    outcome: 'submitted',
+    tx: { hash: 'drain-hash' },
+    serialized: 'serialized-drain',
+  }))
   const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[] }))
+  const registerValidatedRemoteSigner = vi.fn((candidate?: any): Promise<any> => Promise.resolve(candidate))
   const updateSignersTableBalance = vi.fn((): Promise<void> => Promise.resolve())
-  const updateRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
-  const activateRemoteSignerFromTransaction = vi.fn((_tx?: any): Promise<void> => Promise.resolve())
+  const updateRemoteSigner = vi.fn((_signer?: any, _context?: any): Promise<void> => Promise.resolve())
+  const updateRemoteSignerBalance = vi.fn((_balance?: number, _address?: any, _context?: any): Promise<boolean> => Promise.resolve(true))
+  const deactivateRemoteSigner = vi.fn((_address?: any, _context?: any, _clearBalance?: boolean): Promise<boolean> => Promise.resolve(true))
+  const activateRemoteSignerFromTransaction = vi.fn((_tx?: any, _context?: any): Promise<void> => Promise.resolve())
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
@@ -34,6 +44,7 @@ function makeState() {
   const updateTransactionStatus = vi.fn()
   const updateTransactionCashbackClaimed = vi.fn()
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
+  const restorePendingOutgoingTransactions = vi.fn((): Promise<boolean> => Promise.resolve(true))
   const setNakaTxRefunded = vi.fn()
   const setSwapHtlcRefunded = vi.fn()
   const setPolygonSwapHtlcRefunded = vi.fn()
@@ -67,6 +78,8 @@ function makeState() {
     height: 128,
     lastMacroBlockHeight: 128,
     networkId: 5,
+    networkName: 'testalbatross',
+    walletContextGeneration: 0,
     consensus: 'established' as 'connecting' | 'established' | 'syncing',
     isSendingTx: false,
     isProcessingRemote: false,
@@ -96,14 +109,20 @@ function makeState() {
     getBalance,
     getAccountTransactions,
     getLocalTransactions,
+    getAllTransactionsForAddress,
+    getWalletContext,
+    isWalletContextCurrent,
     findTransactionInHistory,
     getAllOutgoingTransactionsFromHtlcs,
     query,
     run,
     sendTx,
     discoverRemoteSignersFromBlockchain,
+    registerValidatedRemoteSigner,
     updateSignersTableBalance,
     updateRemoteSigner,
+    updateRemoteSignerBalance,
+    deactivateRemoteSigner,
     activateRemoteSignerFromTransaction,
     getAllRemoteSigners,
     addRemoteSigner,
@@ -117,6 +136,7 @@ function makeState() {
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     refreshFromDb,
+    restorePendingOutgoingTransactions,
     setNakaTxRefunded,
     setSwapHtlcRefunded,
     setPolygonSwapHtlcRefunded,
@@ -137,7 +157,7 @@ function makeState() {
   }
 }
 
-export const state = makeState()
+export const state = shallowReactive(makeState())
 
 export function remoteSignerFixture(address: string, balance: number, active = false) {
   return {
@@ -191,6 +211,8 @@ export function resetSyncState() {
   state.height = 128
   state.lastMacroBlockHeight = 128
   state.networkId = 5
+  state.networkName = 'testalbatross'
+  state.walletContextGeneration = 0
   state.consensus = 'established'
   state.isSendingTx = false
   state.isProcessingRemote = false
@@ -222,14 +244,20 @@ export function resetSyncState() {
     state.getBalance,
     state.getAccountTransactions,
     state.getLocalTransactions,
+    state.getAllTransactionsForAddress,
+    state.getWalletContext,
+    state.isWalletContextCurrent,
     state.findTransactionInHistory,
     state.getAllOutgoingTransactionsFromHtlcs,
     state.query,
     state.run,
     state.sendTx,
     state.discoverRemoteSignersFromBlockchain,
+    state.registerValidatedRemoteSigner,
     state.updateSignersTableBalance,
     state.updateRemoteSigner,
+    state.updateRemoteSignerBalance,
+    state.deactivateRemoteSigner,
     state.activateRemoteSignerFromTransaction,
     state.getAllRemoteSigners,
     state.addRemoteSigner,
@@ -243,6 +271,7 @@ export function resetSyncState() {
     state.updateTransactionStatus,
     state.updateTransactionCashbackClaimed,
     state.refreshFromDb,
+    state.restorePendingOutgoingTransactions,
     state.setNakaTxRefunded,
     state.setSwapHtlcRefunded,
     state.setPolygonSwapHtlcRefunded,
@@ -268,20 +297,42 @@ export function resetSyncState() {
   state.getBalance.mockResolvedValue({ data: 0, error: undefined })
   state.getAccountTransactions.mockResolvedValue({ data: [] })
   state.getLocalTransactions.mockImplementation(async () => (await state.getAccountTransactions(state.localAddress)).data)
+  state.getAllTransactionsForAddress.mockResolvedValue({ transactions: [], complete: true })
+  state.getWalletContext.mockImplementation(() => state.localAddress && state.client
+    ? {
+        address: state.localAddress,
+        client: state.client,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
+        generation: state.walletContextGeneration,
+      }
+    : undefined)
+  state.isWalletContextCurrent.mockImplementation((context) => {
+    const current = state.getWalletContext()
+    return !!current
+      && current.client === context.client
+      && current.network === context.network
+      && current.owner === context.owner
+      && current.generation === context.generation
+  })
   state.findTransactionInHistory.mockResolvedValue(undefined)
   state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([])
   state.query.mockResolvedValue([])
   state.run.mockResolvedValue(undefined)
-  state.sendTx.mockResolvedValue({ data: { tx: { hash: 'drain-hash' } }, error: undefined })
+  state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' })
   state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+  state.registerValidatedRemoteSigner.mockImplementation(candidate => Promise.resolve(candidate))
   state.updateSignersTableBalance.mockResolvedValue(undefined)
   state.updateRemoteSigner.mockResolvedValue(undefined)
+  state.updateRemoteSignerBalance.mockResolvedValue(true)
+  state.deactivateRemoteSigner.mockResolvedValue(true)
   state.activateRemoteSignerFromTransaction.mockResolvedValue(undefined)
   state.getAllRemoteSigners.mockResolvedValue([])
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
   state.registerOwnHtlcIfMissing.mockResolvedValue(undefined)
   state.refreshFromDb.mockResolvedValue(undefined)
+  state.restorePendingOutgoingTransactions.mockResolvedValue(true)
   state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: true })
   state.updateSinglePolygonTransaction.mockResolvedValue(undefined)
   state.claimCashback.mockResolvedValue({ error: undefined, errorType: undefined })
@@ -409,6 +460,7 @@ vi.mock('@/stores/nimiq-network', () => {
     consensus: computed(() => state.consensus),
     headTimestamp: computed(() => state.headTimestamp),
     networkId: computed(() => state.networkId),
+    networkName: computed(() => state.networkName),
   }))
   return {
     CashlinkExtraDataHex: { CLAIMING: 'claiming' },
@@ -462,11 +514,18 @@ vi.mock('@/stores/remote-signer', () => {
     registerOwnHtlcIfMissing: state.registerOwnHtlcIfMissing,
     blockHeightToTimestamp: state.blockHeightToTimestamp,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    registerValidatedRemoteSigner: state.registerValidatedRemoteSigner,
+    getWalletContext: state.getWalletContext,
+    isWalletContextCurrent: state.isWalletContextCurrent,
     getLocalTransactions: state.getLocalTransactions,
+    getAllTransactionsForAddress: state.getAllTransactionsForAddress,
     findTransactionInHistory: state.findTransactionInHistory,
     updateSignersTableBalance: state.updateSignersTableBalance,
     updateRemoteSigner: state.updateRemoteSigner,
+    updateRemoteSignerBalance: state.updateRemoteSignerBalance,
+    deactivateRemoteSigner: state.deactivateRemoteSigner,
     activateRemoteSignerFromTransaction: state.activateRemoteSignerFromTransaction,
+    getSignerWriteRevision: () => 0,
     init: state.initRemoteSigner,
     resolveHomeBalanceState: state.resolveHomeBalanceState,
   }))
@@ -475,6 +534,7 @@ vi.mock('@/stores/remote-signer', () => {
 
 vi.mock('@/stores/transactions', () => {
   const useTransactions = defineStore('transactions', () => ({
+    transactions: [] as any[],
     sendTx: state.sendTx,
     addReceiptTransaction: state.addReceiptTransaction,
     addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
@@ -483,6 +543,7 @@ vi.mock('@/stores/transactions', () => {
     updateTransactionCashbackClaimed: state.updateTransactionCashbackClaimed,
     updateTransactionStatus: state.updateTransactionStatus,
     refreshFromDb: state.refreshFromDb,
+    restorePendingOutgoingTransactions: state.restorePendingOutgoingTransactions,
     setNakaTxRefunded: state.setNakaTxRefunded,
     setSwapHtlcRefunded: state.setSwapHtlcRefunded,
     setPolygonSwapHtlcRefunded: state.setPolygonSwapHtlcRefunded,

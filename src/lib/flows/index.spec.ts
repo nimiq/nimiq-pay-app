@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import { PaymentMethod, Transfer } from '@/types/transactions'
 import { FlowName, StepName } from './steps.types'
 
 const state = vi.hoisted(() => ({
@@ -23,6 +24,10 @@ const state = vi.hoisted(() => ({
   clearPinInputTs: vi.fn(),
   updatePinInputTs: vi.fn(),
   setEntropy: vi.fn(async () => {}),
+  sendTx: vi.fn(),
+  confirmNakaPayment: vi.fn(async () => ({})),
+  setToast: vi.fn(),
+  trackPaymentCompleted: vi.fn(),
 }))
 
 vi.mock('@ionic/vue', () => ({
@@ -86,14 +91,26 @@ vi.mock('@/stores/polygon-usdt', () => ({
 }))
 
 vi.mock('@/lib', () => ({
-  isNakaEnabled: false,
+  isNakaEnabled: true,
+}))
+
+vi.mock('@/stores/naka', () => ({
+  useNaka: () => ({ isCardActive: true, isCardLocked: false }),
+}))
+
+vi.mock('@/stores/transactions', () => ({
+  useTransactions: () => ({ sendTx: state.sendTx }),
+}))
+
+vi.mock('@/composables/useToast', () => ({
+  useToast: () => ({ setToast: state.setToast }),
 }))
 
 vi.mock('@/lib/analytics', () => ({
   buildPaymentAnalyticsProps: vi.fn(() => ({})),
   finishPaymentAnalytics: vi.fn(analyticsState => analyticsState),
   trackPaymentCancelled: vi.fn(),
-  trackPaymentCompleted: vi.fn(),
+  trackPaymentCompleted: state.trackPaymentCompleted,
   trackPaymentFailed: vi.fn(),
   trackFeatureOpened: state.trackFeatureOpened,
   trackWalletCreated: state.trackWalletCreated,
@@ -129,6 +146,8 @@ vi.mock('./steps', () => {
     holdNakaCardToReaderStep: vi.fn(async () => step),
     bluecodeNotAvailableStep: vi.fn(async () => step),
     paymentAmountInputStep: vi.fn(async () => step),
+    nimWithdrawalAmountSelectionStep: vi.fn(async () => step),
+    nimWithdrawalConfirmStep: vi.fn(async () => step),
   }
 })
 
@@ -164,6 +183,11 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.decrypt.mockClear()
     state.phoneNumberVerified = false
     state.showModal.mockClear()
+    state.sendTx.mockReset()
+    state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
+    state.confirmNakaPayment.mockClear()
+    state.setToast.mockClear()
+    state.trackPaymentCompleted.mockClear()
   })
 
   it('warms the Polygon transfer fee snapshot without blocking payment flow initialization for USDT', async () => {
@@ -238,5 +262,105 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.routerReplace).toHaveBeenCalledWith('/app')
     expect(state.trackWalletImported).toHaveBeenCalled()
     expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
+  })
+
+  it('does not confirm an uncertain Naka payment when final serialization is available', async () => {
+    state.isNimiqAsset = true
+    state.sendTx.mockResolvedValue({
+      outcome: 'unknown',
+      stagedTx: { hash: 'staged-payment' },
+      stagedHash: 'staged-payment',
+      serialized: 'serialized-uncertain-payment',
+      error: 'response lost',
+    })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+
+    await flow.onDone({
+      [StepName.HoldNakaCardToReader]: {
+        request: {
+          transfer: Transfer.UserPaymentToMerchant,
+          recipient: 'NQ22 MERCHANT',
+          amount: 10,
+          paymentMethod: PaymentMethod.NakaCard,
+        },
+        confirmPayment: state.confirmNakaPayment,
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+      },
+    }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
+    expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+    expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('Do not retry'),
+    }))
+  })
+
+  it('does not confirm or complete an uncertain Naka payment without final serialization', async () => {
+    state.isNimiqAsset = true
+    state.sendTx.mockResolvedValue({
+      outcome: 'unknown',
+      stagedTx: { hash: 'staged-payment' },
+      stagedHash: 'staged-payment',
+      error: 'response lost',
+    })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+
+    await flow.onDone({
+      [StepName.HoldNakaCardToReader]: {
+        request: {
+          transfer: Transfer.UserPaymentToMerchant,
+          recipient: 'NQ22 MERCHANT',
+          amount: 10,
+          paymentMethod: PaymentMethod.NakaCard,
+        },
+        confirmPayment: state.confirmNakaPayment,
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+      },
+    }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
+    expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+    expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('Do not retry'),
+    }))
+    expect(state.sendTx).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not report an uncertain withdrawal as failed or successful', async () => {
+    state.isNimiqAsset = true
+    state.sendTx.mockResolvedValue({
+      outcome: 'unknown',
+      stagedTx: { hash: 'staged-withdrawal' },
+      stagedHash: 'staged-withdrawal',
+      error: 'response lost',
+    })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.NimWithdraw)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+    const setToast = vi.fn()
+
+    await flow.onDone({
+      [StepName.NimWithdrawalAmountSelectionStep]: {
+        amount: 10,
+        recipient: 'NQ22 RECIPIENT',
+      },
+    }, { err, setToast })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('Do not retry'),
+    }))
+    expect(setToast).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Withdrawal successful' }))
   })
 })

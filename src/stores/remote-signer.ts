@@ -1,4 +1,4 @@
-import type { Address, Client, PlainTransactionDetails } from '@nimiq/core'
+import type { Address, Client, PlainAccount, PlainTransactionDetails } from '@nimiq/core'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import { until, useIntervalFn } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -11,6 +11,7 @@ import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
+import { useSyncState } from '@/stores/sync/state'
 
 const logger = useLogger('remote-signer')
 export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
@@ -35,7 +36,7 @@ export type RemoteSignerValidationResult
     | ({ status: 'known' } & RemoteSignerValidationDetails)
     | { status: 'invalid', address?: string, reason: string }
 
-export type ImportableRemoteSigner = Extract<RemoteSignerValidationResult, { status: 'importable' }>
+export type ValidatedRemoteSigner = Extract<RemoteSignerValidationResult, { status: 'importable' | 'known' }>
 
 export interface RemoteSignerDiscoveryResult {
   added: number
@@ -50,12 +51,36 @@ interface LocalHistoryOptions {
   limit?: number
 }
 
-interface WalletContext {
+export interface WalletContext {
   address: Address
   client: Client
   network: string
   owner: string
+  generation: number
 }
+
+export interface AddressHistoryResult {
+  transactions: PlainTransactionDetails[]
+  complete: boolean
+}
+
+export interface AddressSpecificSignerMetadata {
+  address: Address
+  addressString: string
+  publicKey: string
+  proofSize: number
+  cosignerRecipient: string
+  creationTransactionHash: string
+  creationState: PlainTransactionDetails['state']
+  validityStartHeight: number
+  start: number
+  end: number
+}
+
+export type AddressSpecificSignerMetadataResult
+  = | { status: 'valid', metadata: AddressSpecificSignerMetadata }
+    | { status: 'rejected', reason: string }
+    | { status: 'unavailable', reason: string }
 
 interface WalletIdentity {
   network: string
@@ -70,10 +95,29 @@ export function parseAddress<T extends RemoteSigner | RemoteSigner[] | undefined
   return { ...remoteSigners, address: Nimiq.Address.fromUserFriendlyAddress(remoteSigners.address as unknown as string) }
 }
 
+function isSuccessfulHistoricalHtlcTransaction(
+  transaction: Pick<PlainTransactionDetails, 'executionResult' | 'state'>,
+) {
+  return transaction.executionResult !== false
+    && (transaction.state === 'included' || transaction.state === 'confirmed')
+}
+
+type StoredRemoteSigner = Omit<RemoteSigner, 'address' | 'active'> & { address: string, active: number }
+
 function useRemoteSignerDb() {
   const { run, runSet, query } = useConn()
   let signerWriteQueue = Promise.resolve()
+  let signerWriteRevision = 0
+
+  function restoreSigner({ address, balance, proofSize, publicKey, start, end, active }: StoredRemoteSigner) {
+    return run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
+  }
+
   return {
+    getSignerWriteRevision() {
+      return signerWriteRevision
+    },
+
     async getAllRemoteSigners() {
       return parseAddress(await query<RemoteSigner[]>(SQLQuery.GetAllRemoteSigners))
     },
@@ -83,10 +127,17 @@ function useRemoteSignerDb() {
       return parseAddress(await query<RemoteSigner | undefined>(SQLQuery.GetActiveRemoteSigner, [], { single: true }))
     },
 
-    async setRemoteSigner({ active, balance, end, proofSize, start, publicKey, address }: RemoteSigner, isCurrent: () => boolean = () => true) {
+    async setRemoteSigner(
+      { active, balance, end, proofSize, start, publicKey, address }: RemoteSigner,
+      isCurrent: () => boolean = () => true,
+      expectedRevision?: number,
+    ) {
+      const writeRevision = ++signerWriteRevision
+      const ownsRevision = () => expectedRevision === undefined
+        || (writeRevision === expectedRevision + 1 && signerWriteRevision === writeRevision)
       // Serialize wallet changes so an obsolete write cannot finish after the current one.
       const write = signerWriteQueue.then(async () => {
-        if (!isCurrent())
+        if (!isCurrent() || !ownsRevision())
           return false
 
         const addressString = address.toUserFriendlyAddress()
@@ -96,6 +147,7 @@ function useRemoteSignerDb() {
           { statement: SQLQuery.DeactivateRemoteSigners, values: [] },
           { statement: SQLQuery.InsertRemoteSigner, values: [addressString, balance, proofSize, publicKey, start, end, active] },
         ])
+        // Later same-wallet writes are queued behind this commit, not evidence that it was stale.
         if (isCurrent())
           return true
 
@@ -111,35 +163,153 @@ function useRemoteSignerDb() {
      * Adds a new remote signer to the database, but doesn't set it as active.
      * Used when we get an old remote signer from the blockchain.
      */
-    async insertInactiveRemoteSigner({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
-      logger.log('✒️ Adding Remote Signer', { address: address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end })
-      const result = await run(SQLQuery.InsertInactiveRemoteSigner, [address.toUserFriendlyAddress(), balance, proofSize, publicKey, start, end, false])
-      return (result.changes?.changes ?? 0) > 0
+    async insertInactiveRemoteSigner(
+      { balance, end, proofSize, start, publicKey, address }: RemoteSigner,
+      isCurrent: () => boolean = () => true,
+    ) {
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(async () => {
+        if (!isCurrent())
+          return false
+        const addressString = address.toUserFriendlyAddress()
+        logger.log('✒️ Adding Remote Signer', { address: addressString, balance, proofSize, publicKey, start, end })
+        const result = await run(SQLQuery.InsertInactiveRemoteSigner, [addressString, balance, proofSize, publicKey, start, end, false])
+        const inserted = (result.changes?.changes ?? 0) > 0
+        if (!inserted || isCurrent())
+          return inserted
+        await run(SQLQuery.DeleteRemoteSigner, [addressString])
+        return false
+      })
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      return write
+    },
+
+    async upsertTargetRemoteSigner(
+      signer: RemoteSigner,
+      isCurrent: () => boolean = () => true,
+    ) {
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(async () => {
+        if (!isCurrent())
+          return false
+        const address = signer.address.toUserFriendlyAddress()
+        const previous = await query<StoredRemoteSigner | undefined>(SQLQuery.GetRemoteSignerByAddress, [address], { single: true })
+        if (!isCurrent())
+          return false
+        await run(SQLQuery.UpsertTargetRemoteSigner, [
+          address,
+          signer.balance,
+          signer.proofSize,
+          signer.publicKey,
+          signer.start,
+          signer.end,
+        ])
+        if (isCurrent())
+          return true
+        if (previous) {
+          await restoreSigner(previous)
+        }
+        else {
+          await run(SQLQuery.DeleteRemoteSigner, [address])
+        }
+        return false
+      })
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      return write
     },
 
     async deactivateAllRemoteSigners() {
-      await run(SQLQuery.DeactivateRemoteSigners)
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(() => run(SQLQuery.DeactivateRemoteSigners))
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      await write
     },
 
-    async updateBalance(newBalance: number, address: Address) {
-      logger.log(`✒️ Updating balance of remote signer ${address.toUserFriendlyAddress()} to ${newBalance}`)
-      await run(SQLQuery.UpdateRemoteBalance, [newBalance, address.toUserFriendlyAddress()])
+    async purgeRemoteSigners() {
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(() => run(SQLQuery.PurgeRemoteSigners))
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      await write
+    },
+
+    async deactivateRemoteSignerInDb(
+      address: Address,
+      isCurrent: () => boolean = () => true,
+      clearBalance = false,
+    ) {
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(async () => {
+        if (!isCurrent())
+          return false
+        const addressString = address.toUserFriendlyAddress()
+        const previous = await query<StoredRemoteSigner | undefined>(SQLQuery.GetRemoteSignerByAddress, [addressString], { single: true })
+        if (!isCurrent())
+          return false
+        if (clearBalance) {
+          await runSet([
+            { statement: SQLQuery.UpdateRemoteBalance, values: [0, addressString] },
+            { statement: SQLQuery.DeactivateRemoteSigner, values: [addressString] },
+          ])
+        }
+        else {
+          await run(SQLQuery.DeactivateRemoteSigner, [addressString])
+        }
+        if (isCurrent())
+          return true
+        if (previous) {
+          await restoreSigner(previous)
+        }
+        return false
+      })
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      return write
+    },
+
+    async updateBalance(
+      newBalance: number,
+      address: Address,
+      isCurrent: () => boolean = () => true,
+    ) {
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(async () => {
+        if (!isCurrent())
+          return false
+        const addressString = address.toUserFriendlyAddress()
+        const previous = await query<StoredRemoteSigner | undefined>(SQLQuery.GetRemoteSignerByAddress, [addressString], { single: true })
+        if (!isCurrent())
+          return false
+        logger.log(`✒️ Updating balance of remote signer ${addressString} to ${newBalance}`)
+        await run(SQLQuery.UpdateRemoteBalance, [newBalance, addressString])
+        if (isCurrent())
+          return true
+        if (previous) {
+          await restoreSigner(previous)
+        }
+        return false
+      })
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      return write
     },
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
-      logger.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
-      await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
+      signerWriteRevision += 1
+      const write = signerWriteQueue.then(async () => {
+        logger.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
+        await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
+      })
+      signerWriteQueue = write.then(() => undefined, () => undefined)
+      await write
     },
   }
 }
 
 export const useRemoteSigner = defineStore('remote-signer', () => {
-  const { createHistoryClient, getAccount, getAccounts, getBalance } = useNimiqNetwork()
+  const { createHistoryClient, getAccount, getBalance } = useNimiqNetwork()
   const { headTimestamp, height, client, consensus, networkName } = storeToRefs(useNimiqNetwork())
   const { getStatus, getRemoteSigner } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote } = storeToRefs(useLocks())
-  const { getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, insertInactiveRemoteSigner } = useRemoteSignerDb()
+  const { getSignerWriteRevision, getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, deactivateRemoteSignerInDb, insertInactiveRemoteSigner, upsertTargetRemoteSigner, purgeRemoteSigners } = useRemoteSignerDb()
 
   function getWalletIdentity(): WalletIdentity | undefined {
     if (!localAddress.value)
@@ -163,12 +333,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       client: client.value,
       network: networkName.value,
       owner: localAddress.value.toUserFriendlyAddress(),
+      generation: useSyncState().walletContextGeneration,
     }
   }
 
   function isWalletContextCurrent(context: WalletContext) {
     const current = getWalletContext()
-    return current?.client === context.client && current.network === context.network && current.owner === context.owner
+    return current !== undefined && sameWalletContext(current, context)
   }
 
   const remoteSigner = ref<RemoteSigner>()
@@ -238,51 +409,241 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     invalidateRemoteSignerAddressCache()
   }
 
-  async function updateRemoteSigner(signer: RemoteSigner | undefined, expectedContext?: WalletContext) {
+  async function updateRemoteSigner(
+    signer: RemoteSigner | undefined,
+    expectedContext?: WalletContext,
+    expectedSignerRevision?: number,
+  ): Promise<boolean> {
     if (expectedContext && !isWalletContextCurrent(expectedContext))
-      return
+      return false
     logger.log('📡 Updating remote signer', { ...signer, address: signer?.address.toUserFriendlyAddress() })
     if (signer) {
-      const stored = await setRemoteSigner(signer, () => !expectedContext || isWalletContextCurrent(expectedContext))
+      const stored = await setRemoteSigner(
+        signer,
+        () => !expectedContext || isWalletContextCurrent(expectedContext),
+        expectedSignerRevision,
+      )
       if (!stored)
-        return
+        return false
     }
     else {
       await deactivateAllRemoteSigners()
     }
     if (expectedContext && !isWalletContextCurrent(expectedContext))
-      return
+      return false
     remoteSigner.value = signer
     remoteBalance.value = signer?.balance ?? 0
     homeBalanceState.value = signer ? 'resolved-remote' : 'loading'
     invalidateRemoteSignerAddressCache()
+    return true
   }
 
-  async function activateRemoteSignerFromTransaction(transaction: Pick<PlainTransactionDetails, 'data' | 'recipient' | 'timestamp' | 'validityStartHeight' | 'value'>) {
-    const data = transaction.data
-    const context = getWalletContext()
-    const owner = context?.owner
-    const publicKey = remotePublicKey.value
-    let cosigner: string | undefined
+  function clearRemoteSignerStateIfAddress(address: Address) {
+    if (!remoteSigner.value?.address.equals(address))
+      return
+    remoteSigner.value = undefined
+    remoteBalance.value = 0
+    homeBalanceState.value = 'loading'
+  }
+
+  async function updateRemoteSignerBalance(
+    newBalance: number,
+    address: Address,
+    expectedContext?: WalletContext,
+  ): Promise<boolean> {
+    if (expectedContext && !isWalletContextCurrent(expectedContext))
+      return false
+    return updateBalance(
+      newBalance,
+      address,
+      () => !expectedContext || isWalletContextCurrent(expectedContext),
+    )
+  }
+
+  async function deactivateRemoteSigner(
+    address: Address,
+    expectedContext?: WalletContext,
+    clearBalance = false,
+  ): Promise<boolean> {
+    if (expectedContext && !isWalletContextCurrent(expectedContext))
+      return false
+    const stored = await deactivateRemoteSignerInDb(
+      address,
+      () => !expectedContext || isWalletContextCurrent(expectedContext),
+      clearBalance,
+    )
+    if (!stored)
+      return false
+    clearRemoteSignerStateIfAddress(address)
+    invalidateRemoteSignerAddressCache()
+    return true
+  }
+
+  async function resolveAddressSpecificSignerMetadata(
+    address: Address,
+    context: WalletContext,
+  ): Promise<AddressSpecificSignerMetadataResult> {
+    if (!isWalletContextCurrent(context))
+      return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
+
+    let response: Awaited<ReturnType<typeof getRemoteSigner>>
     try {
-      cosigner = publicKey && Nimiq.PublicKey.fromHex(publicKey).toAddress().toUserFriendlyAddress()
+      response = await promiseWithTimeout(getRemoteSigner({ address }), DISCOVER_TIMEOUT_MS)
     }
-    catch {}
-    if (data.type !== 'htlc' || !publicKey || data.sender !== owner || data.recipient !== cosigner)
+    catch (error) {
+      return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) }
+    }
+    if (!isWalletContextCurrent(context))
+      return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
+    if (response.error || !response.data) {
+      const reason = response.error?.message || 'Cosigner metadata unavailable'
+      return response.error?.statusCode === 404
+        ? { status: 'rejected', reason }
+        : { status: 'unavailable', reason }
+    }
+
+    const remoteSignerApi = response.data
+    const addressString = address.toUserFriendlyAddress()
+    let remoteSignerAddress: string
+    try {
+      remoteSignerAddress = Nimiq.Address.fromString(remoteSignerApi.address).toUserFriendlyAddress()
+    }
+    catch {
+      return { status: 'rejected', reason: 'Cosigner returned an invalid HTLC address' }
+    }
+    if (remoteSignerAddress !== addressString)
+      return { status: 'rejected', reason: 'Cosigner returned a different HTLC address' }
+
+    let creationTransactionHash: string | null | undefined = remoteSignerApi.creatingTransactionHash
+    if (creationTransactionHash != null && (typeof creationTransactionHash !== 'string' || !creationTransactionHash.trim()))
+      return { status: 'rejected', reason: 'Cosigner returned an invalid creation transaction hash' }
+    if (!Number.isSafeInteger(remoteSignerApi.serviceSignatureProofSize) || remoteSignerApi.serviceSignatureProofSize <= 0)
+      return { status: 'rejected', reason: 'Cosigner returned an invalid proof size' }
+    if (!Number.isSafeInteger(remoteSignerApi.validityStart) || remoteSignerApi.validityStart < 0)
+      return { status: 'rejected', reason: 'Cosigner returned an invalid validity start' }
+    if (!Number.isSafeInteger(remoteSignerApi.validityEnd) || remoteSignerApi.validityEnd <= 0)
+      return { status: 'rejected', reason: 'Cosigner returned an invalid validity end' }
+
+    if (typeof remoteSignerApi.servicePublicKey !== 'string' || !remoteSignerApi.servicePublicKey.trim())
+      return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
+    let cosignerRecipient: string
+    try {
+      cosignerRecipient = Nimiq.PublicKey.fromHex(remoteSignerApi.servicePublicKey).toAddress().toUserFriendlyAddress()
+    }
+    catch {
+      return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
+    }
+
+    let creationTransaction: PlainTransactionDetails | undefined
+    try {
+      if (creationTransactionHash == null) {
+        // Block-based cosigner registration can omit the hash; recover it from chain history.
+        const history = await getAllTransactionsForAddress(address)
+        creationTransaction = history.transactions.find(transaction =>
+          transaction.recipient === addressString
+          && transaction.recipientType === 'htlc'
+          && (transaction.flags & 0b1) === 0b1
+          && isSuccessfulHistoricalHtlcTransaction(transaction),
+        )
+        creationTransactionHash = creationTransaction?.transactionHash
+      }
+      else {
+        creationTransaction = await promiseWithTimeout(context.client.getTransaction(creationTransactionHash), DISCOVER_TIMEOUT_MS)
+      }
+    }
+    catch (error) {
+      return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) }
+    }
+    if (!isWalletContextCurrent(context))
+      return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
+    if (!creationTransaction || !creationTransactionHash)
+      return { status: 'unavailable', reason: 'HTLC creation transaction unavailable' }
+    if (creationTransaction.transactionHash !== creationTransactionHash)
+      return { status: 'rejected', reason: 'HTLC creation transaction hash does not match cosigner metadata' }
+    if (!isSuccessfulHistoricalHtlcTransaction(creationTransaction))
+      return { status: 'rejected', reason: 'HTLC creation transaction was not successful' }
+
+    let creationRecipient: string
+    try {
+      creationRecipient = Nimiq.Address.fromString(creationTransaction.recipient).toUserFriendlyAddress()
+    }
+    catch {
+      return { status: 'rejected', reason: 'HTLC creation recipient is invalid' }
+    }
+    const data = creationTransaction.data
+    const creationTimestamp = creationTransaction.timestamp
+    if (creationRecipient !== addressString
+      || typeof creationTimestamp !== 'number'
+      || !Number.isSafeInteger(creationTimestamp)
+      || creationTimestamp < 0
+      || data.type !== 'htlc'
+      || data.timeout !== remoteSignerApi.validityEnd
+      || data.sender !== context.owner
+      || data.recipient !== cosignerRecipient) {
+      return { status: 'rejected', reason: 'HTLC creation details do not match cosigner metadata' }
+    }
+
+    return {
+      status: 'valid',
+      metadata: {
+        address,
+        addressString,
+        publicKey: remoteSignerApi.servicePublicKey,
+        proofSize: remoteSignerApi.serviceSignatureProofSize,
+        cosignerRecipient,
+        creationTransactionHash,
+        creationState: creationTransaction.state,
+        // Cosigner validityStart is its spending gate, not the creation transaction height.
+        validityStartHeight: creationTransaction.validityStartHeight,
+        start: creationTimestamp,
+        end: remoteSignerApi.validityEnd,
+      },
+    }
+  }
+
+  async function activateRemoteSignerFromTransaction(
+    transaction: Pick<PlainTransactionDetails, 'data' | 'recipient' | 'timestamp' | 'transactionHash' | 'validityStartHeight' | 'value'>,
+    expectedContext?: WalletContext,
+    expectedSignerRevision = getSignerWriteRevision(),
+  ) {
+    const context = expectedContext ?? getWalletContext()
+    if (!context || !isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
 
-    const start = transaction.timestamp || await blockHeightToTimestamp(transaction.validityStartHeight)
-    if (!context || !isWalletContextCurrent(context) || remotePublicKey.value !== publicKey)
+    let address: Address
+    try {
+      address = Nimiq.Address.fromString(transaction.recipient)
+    }
+    catch {
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
-    await updateRemoteSigner({
+    }
+    const result = await resolveAddressSpecificSignerMetadata(address, context)
+    if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision || result.status !== 'valid')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+
+    const { metadata } = result
+    const data = transaction.data
+    if (transaction.transactionHash !== metadata.creationTransactionHash
+      || data.type !== 'htlc'
+      || data.sender !== context.owner
+      || data.recipient !== metadata.cosignerRecipient
+      || data.timeout !== metadata.end
+      || transaction.validityStartHeight !== metadata.validityStartHeight) {
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+    }
+    if (!isWalletContextCurrent(context))
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+    const stored = await updateRemoteSigner({
       active: true,
       balance: transaction.value,
-      publicKey,
-      start,
-      address: Nimiq.Address.fromUserFriendlyAddress(transaction.recipient),
-      end: data.timeout,
-      proofSize: remoteProofSize.value,
-    }, context)
+      publicKey: metadata.publicKey,
+      start: metadata.start,
+      address: metadata.address,
+      end: metadata.end,
+      proofSize: metadata.proofSize,
+    }, context, expectedSignerRevision)
+    if (!stored && isWalletContextCurrent(context))
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
   }
 
   async function updateActiveWallet() {
@@ -365,7 +726,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     let tx: PlainTransactionDetails | undefined
     try {
-      tx = await context.client.getTransaction(remoteSignerApi.creatingTransactionHash)
+      tx = await promiseWithTimeout(context.client.getTransaction(remoteSignerApi.creatingTransactionHash), DISCOVER_TIMEOUT_MS)
     }
     catch {
       logger.log('CreatingTransactionHash not found, using validityStartHeight')
@@ -470,11 +831,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   /**
    * Fetches all the remote signers from the database and updates their balance from the blockchain
    */
-  async function updateSignersTableBalance(expectedIdentity = getWalletIdentity()) {
-    if (!expectedIdentity)
+  async function updateSignersTableBalance(expectedContext = getWalletContext()) {
+    if (!expectedContext || consensus.value !== 'established')
       return
     const remoteSigners = await getAllRemoteSigners()
-    if (!isWalletIdentityCurrent(expectedIdentity))
+    if (!isWalletContextCurrent(expectedContext) || consensus.value !== 'established')
       return
     if (!remoteSigners)
       return
@@ -486,13 +847,18 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     for (let offset = 0; offset < remoteSigners.length; offset += REMOTE_SIGNER_BALANCE_BATCH_SIZE) {
       const remoteSignerBatch = remoteSigners.slice(offset, offset + REMOTE_SIGNER_BALANCE_BATCH_SIZE)
       const addresses = remoteSignerBatch.map(remoteSigner => remoteSigner.address)
-      const { data: accounts, error } = await getAccounts(addresses)
-      if (!isWalletIdentityCurrent(expectedIdentity))
-        return
-      if (error || !accounts) {
+      let accounts: PlainAccount[]
+      try {
+        accounts = await promiseWithTimeout(expectedContext.client.getAccounts(addresses), DISCOVER_TIMEOUT_MS)
+      }
+      catch (error) {
+        if (!isWalletContextCurrent(expectedContext) || consensus.value !== 'established')
+          return
         logger.error('Error getting accounts for Remote Signers', error)
         continue
       }
+      if (!isWalletContextCurrent(expectedContext) || consensus.value !== 'established')
+        return
 
       // Assuming accounts are in the same order as addresses
       for (let i = 0; i < accounts.length; i++) {
@@ -500,10 +866,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         const remoteSigner = remoteSignerBatch[i]
         const newBalance = account.type === 'htlc' ? account.balance : 0
         if (remoteSigner.balance !== newBalance) {
-          if (!isWalletIdentityCurrent(expectedIdentity))
+          if (!isWalletContextCurrent(expectedContext) || consensus.value !== 'established')
             return
           logger.log(`✒️ Updating balance of remote signer ${remoteSigner.address.toUserFriendlyAddress()} to ${newBalance}`)
-          await updateBalance(newBalance, remoteSigner.address)
+          if (!await updateRemoteSignerBalance(newBalance, remoteSigner.address, expectedContext))
+            return
         }
       }
     }
@@ -551,9 +918,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return (await getOurRemoteSignerAddresses()).has(address)
   }
 
-  async function upsertInactiveRemoteSigner(signer: RemoteSigner): Promise<'added' | 'already-known'> {
-    if (!await insertInactiveRemoteSigner(signer))
+  async function upsertInactiveRemoteSigner(
+    signer: RemoteSigner,
+    expectedContext?: WalletContext,
+  ): Promise<'added' | 'already-known'> {
+    if (!await insertInactiveRemoteSigner(
+      signer,
+      () => !expectedContext || isWalletContextCurrent(expectedContext),
+    )) {
       return 'already-known'
+    }
 
     invalidateRemoteSignerAddressCache()
     return 'added'
@@ -583,13 +957,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (
       statusError
       || remoteStatus?.status !== RemoteStatus.Good
-      || !remoteStatus.servicePublicKey
-      || remoteStatus.network.toLowerCase() !== networkName.value.toLowerCase()
+      || remoteStatus.network.toLowerCase() !== context.network.toLowerCase()
     ) {
       return invalid('Cosigner unavailable or on a different network')
     }
 
-    // Require both live chain ownership and the current cosigner's record before importing.
     const { data: account, error: accountError } = await getAccount(address)
     if (!isWalletContextCurrent(context))
       return invalid('Wallet or network changed during validation')
@@ -597,71 +969,36 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return invalid('Address is not an active HTLC')
     if (account.balance <= 0)
       return invalid('HTLC has no balance')
-
-    const owner = context.owner
-    if (account.sender !== owner)
+    if (account.sender !== context.owner)
       return invalid('HTLC belongs to another wallet')
 
-    let cosignerRecipient: string
-    try {
-      cosignerRecipient = Nimiq.PublicKey.fromHex(remoteStatus.servicePublicKey).toAddress().toUserFriendlyAddress()
-    }
-    catch {
-      return invalid('Invalid cosigner public key')
-    }
-    if (account.recipient !== cosignerRecipient)
-      return invalid('HTLC belongs to another cosigner')
-
-    const { data: remoteSignerApi, error: remoteSignerError } = await getRemoteSigner({ address })
+    const metadataResult = await resolveAddressSpecificSignerMetadata(address, context)
     if (!isWalletContextCurrent(context))
       return invalid('Wallet or network changed during validation')
-    if (remoteSignerError || !remoteSignerApi)
-      return invalid('Cosigner does not recognize this HTLC')
-
-    let remoteSignerAddress: string
-    try {
-      remoteSignerAddress = Nimiq.Address.fromString(remoteSignerApi.address).toUserFriendlyAddress()
-    }
-    catch {
-      return invalid('Cosigner returned an invalid HTLC address')
-    }
-    if (remoteSignerAddress !== normalizedAddress || remoteSignerApi.servicePublicKey !== remoteStatus.servicePublicKey)
-      return invalid('Cosigner wallet details do not match')
-
-    let creationTransaction: PlainTransactionDetails | undefined
-    if (remoteSignerApi.creatingTransactionHash) {
-      try {
-        creationTransaction = await context.client.getTransaction(remoteSignerApi.creatingTransactionHash)
-      }
-      catch {
-        // The live HTLC and cosigner record still prove ownership when history is unavailable.
-      }
-      if (creationTransaction?.executionResult === false)
-        return invalid('HTLC creation transaction failed')
-      if (!isWalletContextCurrent(context))
-        return invalid('Wallet or network changed during validation')
-    }
+    if (metadataResult.status !== 'valid')
+      return invalid(metadataResult.reason)
+    const { metadata } = metadataResult
+    if (account.recipient !== metadata.cosignerRecipient || account.timeout !== metadata.end)
+      return invalid('HTLC account does not match cosigner metadata')
 
     const signer: RemoteSigner = {
       active: false,
-      address,
+      address: metadata.address,
       balance: account.balance,
-      end: account.timeout,
-      proofSize: remoteSignerApi.serviceSignatureProofSize,
-      publicKey: remoteSignerApi.servicePublicKey,
-      start: creationTransaction?.timestamp || await blockHeightToTimestamp(remoteSignerApi.validityStart),
+      end: metadata.end,
+      proofSize: metadata.proofSize,
+      publicKey: metadata.publicKey,
+      start: metadata.start,
     }
-    if (!isWalletContextCurrent(context))
-      return invalid('Wallet or network changed during validation')
     const details: RemoteSignerValidationDetails = {
       address: normalizedAddress,
       balance: account.balance,
-      timeout: account.timeout,
-      expired: account.timeout < headTimestamp.value,
-      owner,
-      cosignerRecipient,
-      creationTransactionHash: remoteSignerApi.creatingTransactionHash,
-      creationState: creationTransaction?.state || 'unavailable',
+      timeout: metadata.end,
+      expired: metadata.end < headTimestamp.value,
+      owner: context.owner,
+      cosignerRecipient: metadata.cosignerRecipient,
+      creationTransactionHash: metadata.creationTransactionHash,
+      creationState: metadata.creationState,
       signer,
     }
 
@@ -673,22 +1010,41 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       : { status: 'importable', ...details }
   }
 
-  async function importValidatedRemoteSigner(result: ImportableRemoteSigner): Promise<'added' | 'already-known'> {
-    // Confirmation can sit open indefinitely, so validate again against the current wallet and chain.
-    const current = await validateRemoteSignerAddress(result.address)
+  async function registerValidatedRemoteSigner(
+    candidate: ValidatedRemoteSigner,
+  ): Promise<RemoteSignerValidationDetails> {
+    const context = getWalletContext()
+    if (!context)
+      throw new Error('Local wallet unavailable')
+
+    const current = await validateRemoteSignerAddress(candidate.address)
     if (current.status === 'invalid')
       throw new Error(current.reason)
-    if (current.status === 'known')
-      return 'already-known'
-    return upsertInactiveRemoteSigner(current.signer)
+    if (!isWalletContextCurrent(context))
+      throw new Error('Wallet or network changed during validation')
+
+    const stored = await upsertTargetRemoteSigner(
+      current.signer,
+      () => isWalletContextCurrent(context),
+    )
+    if (!stored)
+      throw new Error('Wallet or network changed during validation')
+
+    clearRemoteSignerStateIfAddress(current.signer.address)
+    invalidateRemoteSignerAddressCache()
+    return current
   }
 
   // Self-healing: when we observe a drain whose proof.creator is our local address (verified upstream),
   // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
   // without re-reading the proof. Covers extension HTLCs that `discoverRemoteSignersFromBlockchain`
   // misses because it only walks first-hop HTLCs.
-  async function registerOwnHtlcIfMissing(htlcAddress: string): Promise<void> {
-    if (await isOurRemoteSigner(htlcAddress))
+  async function registerOwnHtlcIfMissing(
+    htlcAddress: string,
+    expectedContext?: WalletContext,
+  ): Promise<void> {
+    const isCurrent = () => !expectedContext || isWalletContextCurrent(expectedContext)
+    if (!isCurrent() || await isOurRemoteSigner(htlcAddress) || !isCurrent())
       return
     if (!remotePublicKey.value)
       return
@@ -697,6 +1053,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     // register with zero balance/timeout so the cached set short-circuits future drains from
     // this address instead of looping through getAccount on every periodic refresh.
     const { data: account } = await useNimiqNetwork().getAccount(address)
+    if (!isCurrent())
+      return
     const balance = account?.type === 'htlc' ? account.balance : 0
     const end = account?.type === 'htlc' ? account.timeout : 0
     await insertInactiveRemoteSigner({
@@ -707,7 +1065,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       start: 0,
       publicKey: remotePublicKey.value,
       proofSize: remoteProofSize.value,
-    })
+    }, isCurrent)
+    if (!isCurrent())
+      return
     invalidateRemoteSignerAddressCache()
     logger.log(`📝 Registered previously-unknown own HTLC`, { address: htlcAddress, end, balance, accountType: account?.type ?? 'pruned' })
   }
@@ -730,7 +1090,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   let discoverRequest: DiscoveryRequest | undefined
 
   function sameWalletContext(a: WalletContext, b: WalletContext) {
-    return a.client === b.client && a.network === b.network && a.owner === b.owner
+    return a.client === b.client
+      && a.network === b.network
+      && a.owner === b.owner
+      && a.generation === b.generation
   }
 
   async function resetLocalHistoryRequest(request: LocalHistoryRequest) {
@@ -834,18 +1197,38 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return getTransactionsForAddress(context.address, options)
   }
 
-  async function getAllTransactionsForAddress(address: Address) {
+  async function getAllTransactionsForAddress(address: Address): Promise<AddressHistoryResult> {
+    const context = getWalletContext()
     const transactions: PlainTransactionDetails[] = []
+    if (!context)
+      return { transactions, complete: false }
+
+    const seenTransactions = new Set<string>()
     const seenCursors = new Set<string>()
     let startAt: string | undefined
     while (true) {
-      const page = await getTransactionsForAddress(address, { startAt, limit: HISTORY_PAGE_SIZE })
-      transactions.push(...page)
+      let page: PlainTransactionDetails[]
+      try {
+        page = await getTransactionsForAddress(address, { startAt, limit: HISTORY_PAGE_SIZE })
+      }
+      catch {
+        return { transactions, complete: false }
+      }
+      if (!isWalletContextCurrent(context))
+        return { transactions, complete: false }
+
+      for (const transaction of page) {
+        if (seenTransactions.has(transaction.transactionHash))
+          continue
+        seenTransactions.add(transaction.transactionHash)
+        transactions.push(transaction)
+      }
       if (page.length < HISTORY_PAGE_SIZE)
-        return transactions
+        return { transactions, complete: true }
+
       const nextCursor = page.at(-1)?.transactionHash
       if (!nextCursor || seenCursors.has(nextCursor))
-        throw new Error(`History pagination made no progress for ${address.toUserFriendlyAddress()}`)
+        return { transactions, complete: false }
       seenCursors.add(nextCursor)
       startAt = nextCursor
     }
@@ -870,13 +1253,12 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function discoverRemoteSignersFromBlockchain(): Promise<RemoteSignerDiscoveryResult> {
-    if (!localAddress.value)
-      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet unavailable'] }
+    if (!localAddress.value || !client.value)
+      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] }
 
-    await until(client).not.toBeUndefined()
     const context = getWalletContext()
     if (!context)
-      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet unavailable'] }
+      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] }
     if (discoverRequest && sameWalletContext(discoverRequest.context, context))
       return discoverRequest.promise
 
@@ -890,7 +1272,15 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   async function runDiscoverRemoteSignersFromBlockchain(context: WalletContext): Promise<RemoteSignerDiscoveryResult> {
     const result: RemoteSignerDiscoveryResult = { added: 0, alreadyKnown: 0, localComplete: false, errors: [] }
-    await context.client.waitForConsensusEstablished()
+    try {
+      await promiseWithTimeout(context.client.waitForConsensusEstablished(), DISCOVER_TIMEOUT_MS)
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      logger.error('discoverRemoteSignersFromBlockchain: consensus unavailable', message)
+      result.errors.push(message)
+      return result
+    }
     if (!isWalletContextCurrent(context))
       return { ...result, errors: ['Wallet changed during discovery'] }
 
@@ -899,7 +1289,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const seenSignerAddresses = new Set<string>()
     const seenCursors = new Set<string>()
     let sawHtlcTransaction = false
-    let accountLookupFailed = false
+    let evidenceIncomplete = false
     let startAt: string | undefined
 
     // Old funding HTLCs may be beyond the first page, so scan until history is exhausted.
@@ -915,16 +1305,17 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         result.errors.push(`${errorName}: ${errorMessage}`)
         break
       }
+      if (!isWalletContextCurrent(context))
+        return { ...result, errors: ['Wallet changed during discovery'] }
 
       logger.log('All Transactions from Blockchain', transactions)
       sawHtlcTransaction ||= transactions.some(transaction => transaction.recipientType === 'htlc')
-      // Only successful first-hop deposits owned by this wallet can be its remote signers.
       const candidates = transactions.filter((transaction) => {
         if (seenTransactions.has(transaction.transactionHash))
           return false
         seenTransactions.add(transaction.transactionHash)
         const data = transaction.data
-        return transaction.executionResult === true
+        return isSuccessfulHistoricalHtlcTransaction(transaction)
           && transaction.sender === owner
           && transaction.senderType === 'basic'
           && transaction.recipientType === 'htlc'
@@ -933,120 +1324,115 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && data.sender === owner
       })
 
-      if (candidates.length > 0 && !remotePublicKey.value) {
+      for (const transaction of candidates) {
+        let address: Address
         try {
-          await until(remotePublicKey).not.toBeUndefined({ timeout: 10_000, throwOnTimeout: true })
+          address = Nimiq.Address.fromString(transaction.recipient)
         }
         catch {
-          result.errors.push('Remote public key unavailable')
-          break
+          logger.warn('Ignoring HTLC creation with invalid recipient address', transaction.transactionHash)
+          continue
         }
+        const rootResult = await resolveAddressSpecificSignerMetadata(address, context)
         if (!isWalletContextCurrent(context))
           return { ...result, errors: ['Wallet changed during discovery'] }
-      }
-
-      let cosignerAddress: string | undefined
-      if (remotePublicKey.value) {
-        try {
-          cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey.value).toAddress().toUserFriendlyAddress()
-        }
-        catch {
-          result.errors.push('Invalid remote public key')
-          break
-        }
-      }
-
-      for (const transaction of candidates) {
-        const data = transaction.data
-        if (data.type !== 'htlc' || data.recipient !== cosignerAddress)
+        if (rootResult.status === 'unavailable') {
+          evidenceIncomplete = true
+          result.errors.push(`HTLC metadata unavailable: ${transaction.recipient}`)
           continue
+        }
+        if (rootResult.status === 'rejected'
+          || rootResult.metadata.creationTransactionHash !== transaction.transactionHash) {
+          logger.warn('Ignoring HTLC creation with mismatched signer metadata', transaction.transactionHash)
+          continue
+        }
 
-        // Each extension spends one HTLC into another; walk that chain from the first deposit.
-        const creations = [transaction]
-        const addressesToScan = [transaction.recipient]
-        const scannedAddresses = new Set<string>()
-        while (addressesToScan.length > 0) {
-          const signerAddress = addressesToScan.shift()!
-          if (scannedAddresses.has(signerAddress))
+        const signersToScan = [rootResult.metadata]
+        while (signersToScan.length > 0) {
+          const metadata = signersToScan.shift()!
+          if (seenSignerAddresses.has(metadata.addressString))
             continue
-          scannedAddresses.add(signerAddress)
+          seenSignerAddresses.add(metadata.addressString)
 
-          let outgoing: PlainTransactionDetails[]
-          try {
-            outgoing = await getAllTransactionsForAddress(Nimiq.Address.fromString(signerAddress))
-          }
-          catch (error) {
-            accountLookupFailed = true
-            result.errors.push(`HTLC history lookup failed: ${signerAddress}`)
-            logger.error('discoverRemoteSignersFromBlockchain: HTLC history failed', error)
-            continue
-          }
+          const { data: account, error } = await getAccount(metadata.address)
           if (!isWalletContextCurrent(context))
             return { ...result, errors: ['Wallet changed during discovery'] }
+          if (error && error !== NO_ACCOUNT_ERROR) {
+            evidenceIncomplete = true
+            result.errors.push(`HTLC account lookup failed: ${metadata.addressString}`)
+          }
+          else if (account?.type === 'htlc'
+            && account.balance > 0
+            && account.sender === owner
+            && account.recipient === metadata.cosignerRecipient
+            && account.timeout === metadata.end) {
+            if (!isWalletContextCurrent(context))
+              return { ...result, errors: ['Wallet changed during discovery'] }
+            const insertResult = await upsertInactiveRemoteSigner({
+              active: false,
+              balance: account.balance,
+              address: metadata.address,
+              publicKey: metadata.publicKey,
+              start: metadata.start,
+              end: metadata.end,
+              proofSize: metadata.proofSize,
+            }, context)
+            if (!isWalletContextCurrent(context))
+              return { ...result, errors: ['Wallet changed during discovery'] }
+            if (insertResult === 'added')
+              result.added += 1
+            else
+              result.alreadyKnown += 1
+          }
 
-          // Only follow successful Nimiq Pay extensions from the exact parent HTLC.
-          for (const extension of outgoing) {
+          const history = await getAllTransactionsForAddress(metadata.address)
+          if (!isWalletContextCurrent(context))
+            return { ...result, errors: ['Wallet changed during discovery'] }
+          if (!history.complete) {
+            evidenceIncomplete = true
+            result.errors.push(`HTLC history lookup incomplete: ${metadata.addressString}`)
+          }
+
+          for (const extension of history.transactions) {
             const extensionData = extension.data
-            if (extension.executionResult !== true
-              || extension.sender !== signerAddress
+            if (!isSuccessfulHistoricalHtlcTransaction(extension)
+              || extension.sender !== metadata.addressString
               || extension.senderType !== 'htlc'
               || extension.recipientType !== 'htlc'
               || (extension.flags & 0b1) !== 0b1
               || extensionData.type !== 'htlc'
-              || extensionData.sender !== owner
-              || extensionData.recipient !== cosignerAddress) {
+              || extensionData.sender !== owner) {
               continue
             }
-            creations.push(extension)
-            addressesToScan.push(extension.recipient)
-          }
-        }
 
-        for (const creation of creations) {
-          if (seenSignerAddresses.has(creation.recipient))
-            continue
-          seenSignerAddresses.add(creation.recipient)
-          const address = Nimiq.Address.fromString(creation.recipient)
-          const { data: account, error } = await getAccount(address)
-          if (!isWalletContextCurrent(context))
-            return { ...result, errors: ['Wallet changed during discovery'] }
-          if (error) {
-            if (error !== NO_ACCOUNT_ERROR) {
-              accountLookupFailed = true
-              result.errors.push(`HTLC account lookup failed: ${creation.recipient}`)
+            let childAddress: Address
+            try {
+              childAddress = Nimiq.Address.fromString(extension.recipient)
             }
-            continue
+            catch {
+              logger.warn('Ignoring HTLC extension with invalid recipient address', extension.transactionHash)
+              continue
+            }
+            const childResult = await resolveAddressSpecificSignerMetadata(childAddress, context)
+            if (!isWalletContextCurrent(context))
+              return { ...result, errors: ['Wallet changed during discovery'] }
+            if (childResult.status === 'unavailable') {
+              evidenceIncomplete = true
+              result.errors.push(`HTLC metadata unavailable: ${extension.recipient}`)
+              continue
+            }
+            if (childResult.status === 'rejected'
+              || childResult.metadata.creationTransactionHash !== extension.transactionHash) {
+              logger.warn('Ignoring HTLC extension with mismatched signer metadata', extension.transactionHash)
+              continue
+            }
+            signersToScan.push(childResult.metadata)
           }
-          if (
-            account?.type !== 'htlc'
-            || account.balance <= 0
-            || account.sender !== owner
-            || account.recipient !== cosignerAddress
-          ) {
-            continue
-          }
-
-          const start = creation.timestamp || await blockHeightToTimestamp(creation.validityStartHeight)
-          if (!isWalletContextCurrent(context))
-            return { ...result, errors: ['Wallet changed during discovery'] }
-          const insertResult = await upsertInactiveRemoteSigner({
-            active: false,
-            balance: account.balance,
-            address,
-            publicKey: remotePublicKey.value!,
-            start,
-            end: account.timeout,
-            proofSize: remoteProofSize.value,
-          })
-          if (insertResult === 'added')
-            result.added += 1
-          else
-            result.alreadyKnown += 1
         }
       }
 
       if (transactions.length < HISTORY_PAGE_SIZE) {
-        result.localComplete = !accountLookupFailed
+        result.localComplete = !evidenceIncomplete
         break
       }
 
@@ -1066,8 +1452,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function updateActiveRemoteBalance(newBalance: number) {
-    remoteBalance.value = newBalance
-    await updateBalance(newBalance, remoteSigner.value!.address)
+    const address = remoteAddress.value
+    const context = getWalletContext()
+    if (!address || !context)
+      return
+    const stored = await updateBalance(newBalance, address, () => isWalletContextCurrent(context))
+    if (stored && isWalletContextCurrent(context) && remoteAddress.value?.equals(address))
+      remoteBalance.value = newBalance
   }
 
   interface HeadListener {
@@ -1098,27 +1489,18 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
     try {
       logger.log('📡 Initializing Remote Signer Store')
+      const signerRevision = getSignerWriteRevision()
       const activeRemoteSigner = await getActiveRemoteSigner()
       if (!isCurrentInit())
         return
-      remoteSigner.value = activeRemoteSigner
-      remoteBalance.value = activeRemoteSigner?.balance ?? 0
-      homeBalanceState.value = activeRemoteSigner ? 'resolved-remote' : 'loading'
-      logger.log('📡 Remote Signer from DB', remoteSigner.value ? { ...remoteSigner.value, address: remoteSigner.value.address.toUserFriendlyAddress() } : null)
-      await updateSignersTableBalance(identity)
-      if (!isCurrentInit())
-        return
-
-      if (!remoteSigner.value) {
-        logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
-        void discoverRemoteSignersFromBlockchain()
+      // Reconciliation may have activated another signer while SQLite returned this snapshot.
+      if (signerRevision === getSignerWriteRevision()) {
+        remoteSigner.value = activeRemoteSigner
+        remoteBalance.value = activeRemoteSigner?.balance ?? 0
+        homeBalanceState.value = activeRemoteSigner ? 'resolved-remote' : 'loading'
       }
-
-      void updateRemoteFromApi()
-      await until(client).not.toBeUndefined()
+      logger.log('📡 Remote Signer from DB', remoteSigner.value ? { ...remoteSigner.value, address: remoteSigner.value.address.toUserFriendlyAddress() } : null)
       const context = getWalletContext()
-      if (!isCurrentInit() || !context || context.owner !== identity.owner || context.network !== identity.network)
-        return
 
       // Failed removals keep their handles so later initialization can retry cleanup.
       const stillStale: HeadListener[] = []
@@ -1143,7 +1525,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         }
         catch (error) {
           logger.error('Failed to remove previous remote signer head listener', error)
-          if (headListener === previous && sameWalletContext(previous.context, context))
+          if (headListener === previous && context && sameWalletContext(previous.context, context))
             return
           if (!staleHeadListeners.includes(previous))
             staleHeadListeners.push(previous)
@@ -1153,6 +1535,22 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         if (!isCurrentInit())
           return
       }
+
+      if (!context || consensus.value !== 'established' || !isWalletContextCurrent(context))
+        return
+
+      await updateSignersTableBalance(context)
+      if (!isCurrentInit() || consensus.value !== 'established' || !isWalletContextCurrent(context))
+        return
+
+      if (!remoteSigner.value) {
+        logger.log('📡 We don\'t have a remote signer in the database. Getting it from the API')
+        void discoverRemoteSignersFromBlockchain()
+      }
+
+      void updateRemoteFromApi()
+      if (!isCurrentInit() || consensus.value !== 'established' || !isWalletContextCurrent(context))
+        return
       const listenerId = await context.client.addHeadChangedListener(async () => {
         if (!isWalletContextCurrent(context))
           return
@@ -1188,7 +1586,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       currentHeight = height.value
     }
     else {
-      await until(remoteHeight).not.toBe(-1)
+      await until(remoteHeight).not.toBe(-1, { timeout: DISCOVER_TIMEOUT_MS, throwOnTimeout: true })
       currentHeight = remoteHeight.value
     }
     return Math.floor((Date.now() - (currentHeight - blockHeight) * 1e3) / 1e3) * 1e3
@@ -1209,7 +1607,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     remoteHeight,
     blockHeightToTimestamp,
     resolveHomeBalanceState,
+    getWalletContext,
+    isWalletContextCurrent,
     getLocalTransactions,
+    getAllTransactionsForAddress,
     findTransactionInHistory,
 
     isHtlcActive,
@@ -1221,12 +1622,17 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     updateActiveRemoteBalance,
     updateActiveWallet,
     updateRemoteSigner,
+    updateRemoteSignerBalance,
+    deactivateRemoteSigner,
     activateRemoteSignerFromTransaction,
+    getSignerWriteRevision,
+    resolveAddressSpecificSignerMetadata,
     updateSignersTableBalance,
     discoverRemoteSignersFromBlockchain,
     validateRemoteSignerAddress,
-    importValidatedRemoteSigner,
+    registerValidatedRemoteSigner,
     upsertInactiveRemoteSigner,
+    purgeRemoteSigners,
 
     getAllRemoteSigners,
     isOurRemoteSigner,

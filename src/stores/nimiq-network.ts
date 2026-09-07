@@ -16,6 +16,7 @@ const logger = useLogger('useNimiqNetwork')
 const timestamp = useTimestamp({ interval: 1e3 })
 const { setToast, clearToast } = useToast()
 const NIMIQ_SYNC_MODE = 'pico'
+const ACCOUNT_LOOKUP_TIMEOUT_MS = 30_000
 
 export const CashlinkExtraData = {
   FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
@@ -235,7 +236,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
     try {
-      const account = await client.value?.getAccount(address)
+      const account = client.value
+        ? await promiseWithTimeout(client.value.getAccount(address), ACCOUNT_LOOKUP_TIMEOUT_MS)
+        : undefined
       if (!account)
         return { data: undefined, error: NO_ACCOUNT_ERROR }
       return { data: account, error: undefined }
@@ -280,7 +283,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
     try {
-      const account = await client.value?.getAccount(address)
+      const account = client.value
+        ? await promiseWithTimeout(client.value.getAccount(address), ACCOUNT_LOOKUP_TIMEOUT_MS)
+        : undefined
       if (!account)
         return { data: 0, error: NO_ACCOUNT_ERROR } // No user facing
       return { data: account.balance, error: undefined }

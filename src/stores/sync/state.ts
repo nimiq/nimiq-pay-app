@@ -1,6 +1,6 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
-import type { TransactionSentByUser } from '@/types/transactions'
+import type { RecoverablePlainTransactionDetails, TransactionSentByUser } from '@/types/transactions'
 import { computedAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
@@ -33,25 +33,31 @@ export const useSyncState = defineStore('sync-state', () => {
     return blocksLeft < 50 ? blocksLeft : 0
   })
 
-  const pendingTransactions: Ref<PlainTransactionDetails[]> = ref([])
+  const pendingTransactions: Ref<RecoverablePlainTransactionDetails[]> = ref([])
   const pendingPaymentTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
-  const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
+  const pendingHtlcCreationTransactions: Ref<RecoverablePlainTransactionDetails[]> = ref([])
   const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
   const isVerifyingRemoteSignersDb = ref(false)
   const isUpdatingBalancesNow = ref(false)
   const shouldUpdateBalancesAgain = ref(false)
-  let walletContext: string | undefined
+  const walletContextGeneration = ref(0)
+  let walletContext: { address: string, network: string } | undefined
 
-  function setWalletContext(address: string) {
-    if (walletContext === address)
-      return
-    // Pending arrays are memory-only and must never leak into another logged-in wallet.
-    pendingTransactions.value = []
-    pendingPaymentTransactions.value = []
-    pendingRemoteDrainTxs.value = []
-    pendingHtlcCreationTransactions.value = []
-    walletContext = address
+  function setWalletContext(address: string, network: string) {
+    walletContextGeneration.value += 1
+    if (
+      !walletContext
+      || walletContext.address !== address
+      || walletContext.network !== network
+    ) {
+      pendingTransactions.value = []
+      pendingPaymentTransactions.value = []
+      pendingRemoteDrainTxs.value = []
+      pendingHtlcCreationTransactions.value = []
+    }
+    walletContext = { address, network }
+    return walletContextGeneration.value
   }
 
   // Touch the local-wallet store here so sync-state stays tied to wallet lifetime in Pinia devtools.
@@ -66,6 +72,7 @@ export const useSyncState = defineStore('sync-state', () => {
     isVerifyingRemoteSignersDb,
     isUpdatingBalancesNow,
     shouldUpdateBalancesAgain,
+    walletContextGeneration,
     setWalletContext,
     nodesAreSynced,
     htlcCanBeExtended,

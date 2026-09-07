@@ -1,5 +1,7 @@
-import { shallowMount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, shallowMount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+enableAutoUnmount(afterEach)
 
 const { env } = vi.hoisted(() => ({
   env: { isMockEnabled: false },
@@ -34,8 +36,14 @@ vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (text: string) => text } }))
 
 describe('qr scanner mock controls', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     env.isMockEnabled = false
     vi.resetModules()
+  })
+
+  afterEach(async () => {
+    await vi.runOnlyPendingTimersAsync()
+    vi.useRealTimers()
   })
 
   async function mountScanner() {

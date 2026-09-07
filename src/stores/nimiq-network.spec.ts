@@ -44,6 +44,19 @@ describe('useNimiqNetwork', () => {
     vi.useRealTimers()
   })
 
+  it('returns an account error instead of hanging balance recovery', async () => {
+    vi.useFakeTimers()
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = { getAccount: vi.fn(() => new Promise(() => {})) } as any
+    let result: unknown
+    void store.getBalance({} as any).then(value => result = value)
+
+    await vi.advanceTimersByTimeAsync(30_001)
+
+    expect(result).toMatchObject({ error: 'Error getting balance' })
+  })
+
   it('waits for an active reconnect instead of resolving early', async () => {
     let resolveDisconnect!: () => void
     const client = {

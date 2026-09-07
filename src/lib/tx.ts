@@ -1,6 +1,5 @@
 import type { AccountType, Address, PlainTransactionDetails, Transaction } from '@nimiq/core'
 import type { NimHtlcDetails, PreSwap, Swap } from '@nimiq/fastspot-api-v1'
-import type { AsyncResult } from '@/types'
 import type { PartialSendTxArgs, UserReceiptTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { storeToRefs } from 'pinia'
@@ -8,6 +7,7 @@ import { useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { nimiqPayCosignerPublicKeys } from '@/lib'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { CashlinkExtraDataHex, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -18,6 +18,7 @@ import { useFastspotApiV1 } from '../composables/useFastspotv1'
 const logger = useLogger('tx.ts')
 const nimiqNetwork = useNimiqNetwork()
 const { networkId, height } = storeToRefs(nimiqNetwork)
+const COSIGNER_SEND_TIMEOUT_MS = 30_000
 
 /**
  * Signs any transaction in the wallet.
@@ -33,15 +34,20 @@ const { networkId, height } = storeToRefs(nimiqNetwork)
  *
  * @param partialArgs
  */
-interface GetSignedTxOptions {
-  beforeRemoteBroadcast?: (tx: Transaction) => Promise<void>
+export interface GetSignedTxOptions {
+  beforeRemoteBroadcast?: (tx: Transaction, swap?: Swap) => Promise<void>
 }
 
-export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSignedTxOptions = {}): AsyncResult<{ signedTx: Transaction, swap?: Swap, txSent?: boolean }, string> {
+export type SignedTransactionResult
+  = | { outcome: 'signed', signedTx: Transaction, swap?: Swap, txSent?: boolean }
+    | { outcome: 'rejected', error: string }
+    | { outcome: 'unknown', error: string }
+
+export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSignedTxOptions = {}): Promise<SignedTransactionResult> {
   logger.log(partialArgs.transfer)
   if ((partialArgs.transfer === Transfer.UserPayment || partialArgs.transfer === Transfer.UserPaymentToMerchant)) {
     if (!useRemoteSigner().remoteAddress)
-      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
     const tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.AccountType.HTLC,
@@ -56,14 +62,11 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* networkId */ networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    const res = await getSignedTxByRemote(tx)
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
+    return getSignedTxByRemote(tx, {}, options)
   }
   else if (partialArgs.transfer === Transfer.UserPaymentToAtomicSwap) {
     if (!useRemoteSigner().remoteAddress)
-      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     // Confirm swap with Fastspot
     const localWallet = useLocalWallet().localAddress
@@ -88,12 +91,12 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
 
     // Verify swap hash
     if (swap.hash !== decoded.payment_hash)
-      return { error: i18n.t('Invalid swap hash'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('Invalid swap hash') }
 
     // Construct swap NIM HTLC data
     const nimContract = swap.contracts[SwapAsset.NIM]
     if (!nimContract)
-      return { error: i18n.t('No NIM HTLC found in swap'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('No NIM HTLC found in swap') }
 
     const nimHtlc = nimContract.htlc as NimHtlcDetails
 
@@ -117,7 +120,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     // Verify data gainst data given in swap
     logger.log('Verifying Swap data')
     if (Nimiq.BufferUtils.toHex(data) !== nimHtlc.data)
-      return { error: i18n.t('Invalid NIM HTLC data in swap'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('Invalid NIM HTLC data in swap') }
 
     // Setup HTLC creation transaction
     const tx = new Nimiq.Transaction(
@@ -137,10 +140,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     // Get it signed by cosigner
     tx.proof = createResolveProof({ mode: 'early', tx })
     logger.log('New resolve proof', { proof: Nimiq.BufferUtils.toHex(tx.proof), proofLength: tx.proof.length })
-    const res = await getSignedTxByRemote(tx)
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent, swap }, error: undefined }
+    return getSignedTxByRemote(tx, { swap }, options)
   }
   else if (partialArgs.transfer === Transfer.Staking) {
     let data: Uint8Array
@@ -186,13 +186,13 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
             /* networkId */ networkId.value,
           )
           tx.sign(useLocalWallet().localWallet, undefined)
-          return { data: { signedTx: tx }, error: undefined }
+          return { outcome: 'signed', signedTx: tx }
         }
       }
     }
     catch (e) {
       logger.error('Error creating staking transaction', e)
-      return { data: undefined, error: e instanceof Error ? e.message : String(e) }
+      return { outcome: 'rejected', error: e instanceof Error ? e.message : String(e) }
     }
 
     const tx = new Nimiq.Transaction(
@@ -222,10 +222,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
     // Now we create the HTLC early resolve proof
     tx.proof = createResolveProof({ mode: 'early', tx })
     // Finally, we get the cosigner to sign the transaction
-    const res = await getSignedTxByRemote(tx)
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
+    return getSignedTxByRemote(tx, {}, options)
   }
   else if (partialArgs.transfer === Transfer.LocalToRemote) {
     let tx = new Nimiq.Transaction(
@@ -256,14 +253,14 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       tx.networkId,
     )
     tx.sign(useLocalWallet().localWallet, undefined)
-    return { data: { signedTx: tx }, error: undefined }
+    return { outcome: 'signed', signedTx: tx }
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocal) {
     if (!useRemoteSigner().isHtlcActive)
-      return { error: i18n.t('No account has been created yet, or it is currently processing funds'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('No account has been created yet, or it is currently processing funds') }
     const sender = useRemoteSigner().remoteAddress
     if (!sender)
-      return { error: i18n.t('Something went wrong syncing your account'), data: undefined }
+      return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
 
     const tx = new Nimiq.Transaction(
       /* sender */ sender,
@@ -279,10 +276,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* networkId */ networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    const res = await getSignedTxByRemote(tx)
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
+    return getSignedTxByRemote(tx, {}, options)
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalImmediateReclaim) {
     const tx = new Nimiq.Transaction(
@@ -298,11 +292,8 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* validityStartHeight */ getValidityStartHeight(),
       /* networkId */ networkId.value,
     )
-    tx.proof = createResolveProof({ mode: 'early', tx })
-    const res = await getSignedTxByRemote(tx, { address: partialArgs.sender })
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
+    tx.proof = createResolveProof({ mode: 'early', tx, cosignerProofSize: partialArgs.proofSize })
+    return getSignedTxByRemote(tx, { address: partialArgs.sender }, options)
   }
   else if (partialArgs.transfer === Transfer.RemoteToLocalAfterTimeout) {
     const tx = new Nimiq.Transaction(
@@ -319,7 +310,7 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       /* networkId */ networkId.value,
     )
     tx.proof = createResolveProof({ mode: 'timeout', tx })
-    return { data: { signedTx: tx }, error: undefined }
+    return { outcome: 'signed', signedTx: tx }
   }
   else if (partialArgs.transfer === Transfer.ExtendRemote) {
     let tx = new Nimiq.Transaction(
@@ -350,76 +341,92 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       tx.networkId,
     )
     tx.proof = createResolveProof({ mode: 'early', tx })
-    // The cosigner can broadcast the extension while handling this request, so recovery must exist first.
-    await options.beforeRemoteBroadcast?.(tx)
-    const res = await getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! })
-    if (res.error)
-      return res
-    return { data: { signedTx: res.data!.newTx, txSent: res.data!.txSent }, error: undefined }
+    return getSignedTxByRemote(tx, { address: useRemoteSigner().remoteAddress! }, options)
   }
   else {
-    return { data: undefined, error: i18n.t('Invalid transfer type') }
+    return { outcome: 'rejected', error: i18n.t('Invalid transfer type') }
   }
 }
 
 interface GetSignedTxByRemoteArgs {
   // The address of the HTLC contract
   address?: Address
+  swap?: Swap
 }
 
-export async function getSignedTxByRemote(tx: Transaction, { address = useRemoteSigner().remoteAddress! }: GetSignedTxByRemoteArgs = {}) {
+export async function getSignedTxByRemote(
+  tx: Transaction,
+  { address = useRemoteSigner().remoteAddress, swap }: GetSignedTxByRemoteArgs = {},
+  options: GetSignedTxOptions = {},
+): Promise<SignedTransactionResult> {
   logger.log('Signing transaction by remote')
-  if (!useRemoteSigner().remoteAddress) {
+  if (!address) {
     logger.error('Cannot sign transaction by remote: missing remote address', {
-      requestedAddress: address?.toUserFriendlyAddress(),
       tx: tx.toPlain(),
     })
-    return { data: undefined, error: i18n.t('Something went wrong syncing your account') }
+    return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
   }
   if (tx.networkId !== networkId.value) {
     logger.error('Network ID mismatch', { tx, networkId: tx.networkId, expectedNetworkId: networkId.value })
-    return { data: undefined, error: i18n.t('Network ID mismatch') }
-  }
-  logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
-  const { data: receipt, error, hasError, status } = await useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx })
-  logger.log({ receipt, error })
-  if (hasError) {
-    const plainTx = tx.toPlain()
-    logger.error('Cosigner failed to sign transaction', {
-      status,
-      error,
-      address: address.toUserFriendlyAddress(),
-      hash: tx.hash(),
-      sender: plainTx.sender,
-      senderType: plainTx.senderType,
-      recipient: plainTx.recipient,
-      recipientType: plainTx.recipientType,
-      value: plainTx.value,
-      fee: plainTx.fee,
-      validityStartHeight: plainTx.validityStartHeight,
-      networkId: tx.networkId,
-      expectedNetworkId: networkId.value,
-    })
-    return { data: undefined, error: error?.message || i18n.t('Something went wrong signing the transaction') }
+    return { outcome: 'rejected', error: i18n.t('Network ID mismatch') }
   }
 
-  const newTx = new Nimiq.Transaction(
-    Nimiq.Address.fromString(receipt.details.sender),
-    typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType),
-    new Uint8Array(0),
-    Nimiq.Address.fromString(receipt.details.recipient),
-    typeof receipt.details.recipientType === 'number' ? receipt.details.recipientType : toAccountType(receipt.details.recipientType),
-    Nimiq.BufferUtils.fromHex(typeof receipt.details.data === 'string' ? receipt.details.data : receipt.details.data.raw),
-    BigInt(receipt.details.value),
-    BigInt(receipt.details.fee),
-    receipt.details.flags,
-    receipt.details.validityStartHeight,
-    networkId.value,
-  )
-  newTx.proof = Nimiq.BufferUtils.fromHex(typeof receipt.details.proof === 'string' ? receipt.details.proof : receipt.details.proof.raw)
-  return {
-    data: { newTx, txSent: receipt.txSent },
-    error: undefined,
+  try {
+    await options.beforeRemoteBroadcast?.(tx, swap)
+  }
+  catch (error) {
+    return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
+  }
+
+  logger.log('Requesting Cosigner signature', { tx: tx.toPlain(), address: address.toUserFriendlyAddress() })
+  try {
+    const response = await promiseWithTimeout(
+      useRemoteSignerApi().sendTransaction({ address: address.toUserFriendlyAddress().replaceAll(' ', ''), tx }),
+      COSIGNER_SEND_TIMEOUT_MS,
+    )
+    logger.log({ receipt: response.data, error: response.error })
+    if (response.hasError) {
+      const plainTx = tx.toPlain()
+      logger.error('Cosigner failed to sign transaction', {
+        status: response.status,
+        error: response.error,
+        address: address.toUserFriendlyAddress(),
+        hash: tx.hash(),
+        sender: plainTx.sender,
+        senderType: plainTx.senderType,
+        recipient: plainTx.recipient,
+        recipientType: plainTx.recipientType,
+        value: plainTx.value,
+        fee: plainTx.fee,
+        validityStartHeight: plainTx.validityStartHeight,
+        networkId: tx.networkId,
+        expectedNetworkId: networkId.value,
+      })
+      return {
+        outcome: response.status >= 500 ? 'unknown' : 'rejected',
+        error: response.error?.message || i18n.t('Something went wrong signing the transaction'),
+      }
+    }
+
+    const receipt = response.data
+    const signedTx = new Nimiq.Transaction(
+      Nimiq.Address.fromString(receipt.details.sender),
+      typeof receipt.details.senderType === 'number' ? receipt.details.senderType : toAccountType(receipt.details.senderType),
+      new Uint8Array(0),
+      Nimiq.Address.fromString(receipt.details.recipient),
+      typeof receipt.details.recipientType === 'number' ? receipt.details.recipientType : toAccountType(receipt.details.recipientType),
+      Nimiq.BufferUtils.fromHex(typeof receipt.details.data === 'string' ? receipt.details.data : receipt.details.data.raw),
+      BigInt(receipt.details.value),
+      BigInt(receipt.details.fee),
+      receipt.details.flags,
+      receipt.details.validityStartHeight,
+      networkId.value,
+    )
+    signedTx.proof = Nimiq.BufferUtils.fromHex(typeof receipt.details.proof === 'string' ? receipt.details.proof : receipt.details.proof.raw)
+    return { outcome: 'signed', signedTx, swap, txSent: receipt.txSent }
+  }
+  catch (error) {
+    return { outcome: 'unknown', error: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -442,20 +449,22 @@ function createDepositData() {
 interface CreateResolveProofArgs {
   mode: 'timeout' | 'early'
   tx: Transaction
+  cosignerProofSize?: number
 }
 
-export function createResolveProof({ tx, mode }: CreateResolveProofArgs) {
-  logger.log('Creating resolve proof', { mode, tx: tx.toPlain(), remoteProofSize: useRemoteSigner().remoteProofSize })
+export function createResolveProof({ tx, mode, cosignerProofSize }: CreateResolveProofArgs) {
+  const effectiveCosignerProofSize = cosignerProofSize ?? useRemoteSigner().remoteProofSize
+  logger.log('Creating resolve proof', { mode, tx: tx.toPlain(), remoteProofSize: effectiveCosignerProofSize })
   const { privateKey, publicKey } = useLocalWallet().localWallet
   const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
   const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig).serialize()
   const isEarly = mode === 'early'
-  const proofLen = 1 + sigProof.length + (isEarly ? useRemoteSigner().remoteProofSize : 0)
+  const proofLen = 1 + sigProof.length + (isEarly ? effectiveCosignerProofSize : 0)
   // TODO: check if sigProofLength is different from remoteProofSize
   logger.log({ proofLen, isEarly, sigProofLength: sigProof.length })
   const proof = new Nimiq.SerialBuffer(proofLen)
   proof.writeUint8(isEarly ? /* EARLY_RESOLVE */ 1 : /* TIMEOUT_RESOLVE */ 2)
-  proof.writePos += isEarly ? useRemoteSigner().remoteProofSize : 0
+  proof.writePos += isEarly ? effectiveCosignerProofSize : 0
   proof.write(sigProof)
   return proof
 }

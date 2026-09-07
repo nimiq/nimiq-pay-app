@@ -1,6 +1,7 @@
-import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core'
+import type { Client, PlainAccount, PlainTransactionDetails } from '@nimiq/core'
+import type { WalletContext } from '@/stores/remote-signer'
 import type { SwapHtlc } from '@/types/swapHtlcs'
-import { until } from '@vueuse/core'
+import type { RecoverablePlainTransactionDetails } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
@@ -27,20 +28,29 @@ interface PendingHtlcCreationRow {
   senderType: PlainTransactionDetails['senderType'] | number
   recipient: string
   status: PlainTransactionDetails['state']
-  validityStartHeight?: number
+  validityStartHeight?: number | null
+}
+
+type HtlcRollbackMode = 'terminal' | 'nonterminal'
+
+interface HtlcReconciliationContext {
+  owner: string
+  network: string
+  client: Client | undefined
+  generation: number
 }
 
 export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { getBalance } = useNimiqNetwork()
-  const { client, height: localHeight, consensus, headTimestamp, networkId } = storeToRefs(useNimiqNetwork())
+  const { client, height: localHeight, consensus, headTimestamp, networkId, networkName } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, localWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote, isSendingTx, htlcCheckLock } = storeToRefs(useLocks())
   const remoteSignerStore = useRemoteSigner()
   const { remoteHeight, remoteBalance, remoteAddress, hasHtlcExpired, end, start, isHtlcActive, isHtlcPending, isRemoteOk } = storeToRefs(remoteSignerStore)
-  const { activateRemoteSignerFromTransaction, findTransactionInHistory, getAllRemoteSigners, updateRemoteSigner } = remoteSignerStore
+  const { activateRemoteSignerFromTransaction, deactivateRemoteSigner, findTransactionInHistory, getAllRemoteSigners, getWalletContext, isWalletContextCurrent, updateRemoteSigner } = remoteSignerStore
   const { sendTx, updateTransactionStatus } = useTransactions()
   const { htlcThreshold } = storeToRefs(useApp())
-  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended } = storeToRefs(useSyncState())
+  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration } = storeToRefs(useSyncState())
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -80,11 +90,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
     if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
       isProcessingRemote.value = true
-      const { error } = await sendTx({ transfer: Transfer.LocalToRemote })
-      if (error) {
+      const result = await sendTx({ transfer: Transfer.LocalToRemote })
+      if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
+        if (result.reason === 'busy') {
+          logger.log('Delaying deposit until the pending transaction resolves')
+          return
+        }
         setToast({ message: i18n.t('Error while creating deposit'), type: 'error', duration: 5000 })
-        logger.error('Error while creating HTLC', error)
+        logger.error('Error while creating HTLC', result.error)
       }
       return
     }
@@ -110,18 +124,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       }
       logger.log('Preparing to top up deposit by liquidating active HTLC', liquidationContext)
       isProcessingRemote.value = true
-      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocal })
-      if (error) {
+      const result = await sendTx({ transfer: Transfer.RemoteToLocal })
+      if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
+        if (result.reason === 'busy') {
+          logger.log('Delaying deposit until the pending transaction resolves')
+          return
+        }
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
-        logger.error('Error while liquidating HTLC', error, liquidationContext)
-        return
-      }
-      if (data) {
-        pendingRemoteDrainTxs.value.push(data.tx)
-      }
-      else {
-        logger.error('No transaction returned from sendTx when liquidating HTLC')
+        logger.error('Error while liquidating HTLC', result.error, liquidationContext)
       }
       return
     }
@@ -139,14 +150,14 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         return
       }
       isProcessingRemote.value = true
-      const { error } = await sendTx({ transfer: Transfer.ExtendRemote })
-      if (error) {
+      const result = await sendTx({ transfer: Transfer.ExtendRemote })
+      if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while extending deposit'), type: 'error', duration: 5000 })
-        logger.error('Error while extending HTLC validity', error)
-        const { data, error: claimError } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
-        if (claimError || !data)
-          logger.error('Error while claiming funds from Remote after extending error', { claimError, data })
+        logger.error('Error while extending HTLC validity', result.error)
+        const claimResult = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+        if (claimResult.outcome === 'rejected')
+          logger.error('Error while claiming funds from Remote after extending error', { claimError: claimResult.error })
       }
     }
   }
@@ -164,23 +175,79 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         return
       }
       isProcessingRemote.value = true
-      const { data, error } = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
-      if (error) {
+      const result = await sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout, amount: remoteBalance.value, sender: remoteAddress.value! })
+      if (result.outcome === 'rejected') {
         isProcessingRemote.value = false
         setToast({ message: i18n.t('Error while recovering deposit'), type: 'error', duration: 5000 })
-        logger.error('Error while recovering funds from Remote', error)
-      }
-      else if (data) {
-        pendingRemoteDrainTxs.value.push(data.tx)
-      }
-      else {
-        logger.error('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
+        logger.error('Error while recovering funds from Remote', result.error)
       }
     }
   }
 
-  async function rollbackActiveHtlcCreation(transaction: PlainTransactionDetails, pending: PlainTransactionDetails, owner: string) {
-    if (localAddress.value?.toUserFriendlyAddress() !== owner)
+  function getHtlcReconciliationContext(): HtlcReconciliationContext | undefined {
+    if (!localAddress.value)
+      return undefined
+    return {
+      owner: localAddress.value.toUserFriendlyAddress(),
+      network: networkName.value,
+      client: client.value,
+      generation: walletContextGeneration.value,
+    }
+  }
+
+  function isHtlcContextCurrent(context: HtlcReconciliationContext) {
+    const current = getHtlcReconciliationContext()
+    return current?.owner === context.owner
+      && current.network === context.network
+      && current.client === context.client
+      && current.generation === context.generation
+  }
+
+  function getCurrentWalletContext(context: HtlcReconciliationContext): WalletContext | undefined {
+    const walletContext = getWalletContext()
+    if (!walletContext
+      || walletContext.owner !== context.owner
+      || walletContext.network !== context.network
+      || walletContext.client !== context.client
+      || walletContext.generation !== context.generation
+      || !isWalletContextCurrent(walletContext)) {
+      return undefined
+    }
+    return walletContext
+  }
+
+  function removePendingHtlcCreation(hash: string, context: HtlcReconciliationContext) {
+    if (!isHtlcContextCurrent(context))
+      return false
+    const index = pendingHtlcCreationTransactions.value.findIndex(tx => tx.transactionHash === hash)
+    if (index >= 0)
+      pendingHtlcCreationTransactions.value.splice(index, 1)
+    return true
+  }
+
+  function upsertPendingHtlcCreation(
+    transaction: RecoverablePlainTransactionDetails,
+    context: HtlcReconciliationContext,
+  ) {
+    if (!isHtlcContextCurrent(context))
+      return false
+    const index = pendingHtlcCreationTransactions.value.findIndex(
+      pending => pending.transactionHash === transaction.transactionHash,
+    )
+    if (index >= 0)
+      pendingHtlcCreationTransactions.value.splice(index, 1, transaction)
+    else
+      pendingHtlcCreationTransactions.value.push(transaction)
+    return true
+  }
+
+  async function rollbackActiveHtlcCreation(
+    transaction: Pick<RecoverablePlainTransactionDetails, 'recipient' | 'sender' | 'senderType'>,
+    pending: Pick<RecoverablePlainTransactionDetails, 'recipient' | 'sender' | 'senderType'>,
+    context: WalletContext,
+    mode: HtlcRollbackMode,
+  ): Promise<boolean> {
+    if (!isWalletContextCurrent(context))
       return false
     const recipient = transaction.recipient || pending.recipient
     if (!recipient || remoteAddress.value?.toUserFriendlyAddress() !== recipient)
@@ -193,161 +260,268 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         const address = typeof signer.address === 'string' ? signer.address : signer.address.toUserFriendlyAddress()
         return address === sender
       })
-      if (localAddress.value?.toUserFriendlyAddress() !== owner)
+      if (!isWalletContextCurrent(context))
         return false
       if (predecessor) {
         const address = typeof predecessor.address === 'string' ? Nimiq.Address.fromString(predecessor.address) : predecessor.address
-        const { data: balance, error } = await getBalance(address)
-        if (localAddress.value?.toUserFriendlyAddress() !== owner)
+        const { data: balance, error } = await promiseWithTimeout(
+          getBalance(address),
+          HTLC_LOOKUP_TIMEOUT_MS,
+        )
+        if (!isWalletContextCurrent(context))
           return false
-        if (error)
+        if (error && error !== NO_ACCOUNT_ERROR)
           return false
-        if (balance > 0) {
+        if (!error && typeof balance === 'number' && balance > 0) {
           // An extension spends the previous HTLC, so its sender is the only safe rollback target.
-          await updateRemoteSigner({ ...predecessor, address, active: true, balance })
-          return true
+          await updateRemoteSigner({ ...predecessor, address, active: true, balance }, context)
+          return isWalletContextCurrent(context)
         }
       }
     }
 
-    await updateRemoteSigner(undefined)
-    return true
+    if (mode !== 'terminal')
+      return false
+    return deactivateRemoteSigner(Nimiq.Address.fromString(recipient), context, true)
   }
 
-  async function checkHtlcState() {
-    if (isSendingTx.value) {
-      logger.log('There is a pending transaction. Delaying checkHtlcState')
-      return
+  async function activateAcceptedHtlcCreation(
+    transaction: PlainTransactionDetails,
+    context: HtlcReconciliationContext,
+    walletContext: WalletContext,
+  ) {
+    if (!transaction.recipient)
+      throw new Error('Accepted HTLC creation has no recipient')
+    const signerRevision = remoteSignerStore.getSignerWriteRevision()
+    const account = await promiseWithTimeout(
+      walletContext.client.getAccount(transaction.recipient) as Promise<PlainAccount>,
+      HTLC_LOOKUP_TIMEOUT_MS,
+    )
+    if (!isHtlcContextCurrent(context) || !isWalletContextCurrent(walletContext))
+      return false
+    // Confirmation proves creation, not that the HTLC still holds its original funds.
+    if (transaction.state === 'confirmed' && account.balance === 0) {
+      if (remoteAddress.value?.toUserFriendlyAddress() !== transaction.recipient)
+        return true
+      return deactivateRemoteSigner(Nimiq.Address.fromString(transaction.recipient), walletContext, true)
     }
-    const owner = localAddress.value?.toUserFriendlyAddress()
-    if (!owner)
-      return
+    if (!('timeout' in account) || typeof account.balance !== 'number' || typeof account.timeout !== 'number')
+      throw new Error('Accepted HTLC account is unavailable')
 
-    if (pendingHtlcCreationTransactions.value.length === 0) {
-      // Restore pre-broadcast recovery rows before handleFunds can create another HTLC after restart.
-      const persisted = await useConn().query<PendingHtlcCreationRow[]>(SQLQuery.SelectPendingHtlcCreations)
-      if (localAddress.value?.toUserFriendlyAddress() !== owner)
-        return
-      pendingHtlcCreationTransactions.value = persisted.map(({ hash, sender, senderType, recipient, status, validityStartHeight }) => ({
+    const activationTransaction = {
+      ...transaction,
+      value: account.balance,
+      data: transaction.data?.type === 'htlc'
+        ? { ...transaction.data, timeout: account.timeout }
+        : transaction.data,
+    }
+    await activateRemoteSignerFromTransaction(activationTransaction, walletContext, signerRevision)
+    return isHtlcContextCurrent(context) && isWalletContextCurrent(walletContext)
+  }
+
+  let htlcReconciliationPromise: Promise<void> | undefined
+  let htlcReconciliationQueued = false
+
+  async function runHtlcReconciliation(context: HtlcReconciliationContext) {
+    const pendingAtQueryStart = new Map(
+      pendingHtlcCreationTransactions.value.map(transaction => [transaction.transactionHash, transaction]),
+    )
+    const persisted = await useConn().query<PendingHtlcCreationRow[]>(SQLQuery.SelectPendingHtlcCreations)
+    if (!isHtlcContextCurrent(context))
+      return
+    for (const { hash, sender, senderType, recipient, status, validityStartHeight } of persisted) {
+      const currentPending = pendingHtlcCreationTransactions.value.find(
+        transaction => transaction.transactionHash === hash,
+      )
+      if (currentPending !== pendingAtQueryStart.get(hash)) {
+        htlcReconciliationQueued = true
+        continue
+      }
+      if (!upsertPendingHtlcCreation({
         transactionHash: hash,
         sender,
         senderType,
         recipient,
         state: status,
         validityStartHeight,
-      }) as PlainTransactionDetails)
+      } as RecoverablePlainTransactionDetails, context)) {
+        return
+      }
     }
 
-    if (pendingHtlcCreationTransactions.value.length > 0) {
-      await until(client).not.toBeUndefined()
-      await client.value!.waitForConsensusEstablished()
-      if (localAddress.value?.toUserFriendlyAddress() !== owner)
+    if (isSendingTx.value) {
+      logger.log('There is a pending transaction. Delaying checkHtlcState')
+      return
+    }
+    if (!context.client || consensus.value !== 'established')
+      return
+    const walletContext = getCurrentWalletContext(context)
+    if (!walletContext)
+      return
+
+    for (const pending of [...pendingHtlcCreationTransactions.value]) {
+      if (!isHtlcContextCurrent(context))
         return
-      // Only definitive chain evidence clears recovery state; lookup failures remain retryable.
-      const stillPending: PlainTransactionDetails[] = []
-      for (const pending of pendingHtlcCreationTransactions.value) {
-        let transaction: PlainTransactionDetails | undefined
+      let transaction: PlainTransactionDetails | undefined
+      try {
+        transaction = await promiseWithTimeout(context.client.getTransaction(pending.transactionHash), HTLC_LOOKUP_TIMEOUT_MS)
+      }
+      catch (error) {
+        logger.error('Error checking pending HTLC transactions', error)
+        if (!isHtlcContextCurrent(context))
+          return
+        const validityStartHeight = pending.validityStartHeight
+        if (typeof validityStartHeight !== 'number') {
+          logger.warn('Cannot expire pending HTLC creation without validity height', {
+            hash: pending.transactionHash,
+            validityStartHeight,
+          })
+          continue
+        }
+        const validityExpired = localHeight.value
+          > validityStartHeight + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
+        if (!validityExpired || !pending.sender)
+          continue
         try {
-          transaction = await promiseWithTimeout(client.value!.getTransaction(pending.transactionHash), HTLC_LOOKUP_TIMEOUT_MS)
+          // Only a complete sender-history scan can distinguish an absent creation from an accepted HTLC that was later drained.
+          transaction = await findTransactionInHistory(Nimiq.Address.fromString(pending.sender), pending.transactionHash)
+          if (!isHtlcContextCurrent(context))
+            return
+          if (!transaction) {
+            const currentWalletContext = getCurrentWalletContext(context)
+            if (!currentWalletContext)
+              return
+            const rollbackCompleted = await rollbackActiveHtlcCreation(pending, pending, currentWalletContext, 'terminal')
+            if (!rollbackCompleted)
+              continue
+            if (!isHtlcContextCurrent(context))
+              return
+            await updateTransactionStatus({ hash: pending.transactionHash, status: 'expired', timestamp: pending.timestamp })
+            if (!removePendingHtlcCreation(pending.transactionHash, context))
+              return
+            continue
+          }
+        }
+        catch (historyError) {
+          logger.error('Error checking expired HTLC transaction history', historyError)
+          continue
+        }
+      }
+      if (!transaction)
+        continue
+      if (!isHtlcContextCurrent(context))
+        return
+
+      let rejectedState: 'failed' | 'expired' | undefined
+      if (transaction.executionResult === false || transaction.state === 'invalidated')
+        rejectedState = 'failed'
+      else if (transaction.state === 'expired')
+        rejectedState = 'expired'
+      if (rejectedState) {
+        try {
+          const currentWalletContext = getCurrentWalletContext(context)
+          if (!currentWalletContext)
+            return
+          const rollbackCompleted = await rollbackActiveHtlcCreation(transaction, pending, currentWalletContext, 'terminal')
+          if (!rollbackCompleted)
+            continue
+          if (!isHtlcContextCurrent(context))
+            return
+          await updateTransactionStatus({ hash: pending.transactionHash, status: rejectedState, timestamp: transaction.timestamp })
+          if (!removePendingHtlcCreation(pending.transactionHash, context))
+            return
         }
         catch (error) {
-          logger.error('Error checking pending HTLC transactions', error)
-          const validityStartHeight = pending.validityStartHeight
-          const validityExpired = validityStartHeight !== undefined
-            && localHeight.value > validityStartHeight + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
-          if (!validityExpired || !pending.sender) {
-            stillPending.push(pending)
-            continue
-          }
-          try {
-            // Only a complete sender-history scan can distinguish an absent creation from an accepted HTLC that was later drained.
-            transaction = await findTransactionInHistory(Nimiq.Address.fromString(pending.sender), pending.transactionHash)
-            if (!transaction) {
-              const rolledBack = await rollbackActiveHtlcCreation(pending, pending, owner)
-              if (!rolledBack) {
-                stillPending.push(pending)
-                continue
-              }
-              await updateTransactionStatus({ hash: pending.transactionHash, status: 'expired', timestamp: pending.timestamp })
-              continue
-            }
-          }
-          catch (historyError) {
-            logger.error('Error checking expired HTLC transaction history', historyError)
-            stillPending.push(pending)
-            continue
-          }
+          logger.error('Error rolling back rejected HTLC transaction', error)
         }
-        if (!transaction) {
-          stillPending.push(pending)
-          continue
-        }
-        if (localAddress.value?.toUserFriendlyAddress() !== owner)
-          return
-
-        let rejectedState: 'failed' | 'expired' | undefined
-        if (transaction.executionResult === false || transaction.state === 'invalidated')
-          rejectedState = 'failed'
-        else if (transaction.state === 'expired')
-          rejectedState = 'expired'
-        if (rejectedState) {
-          try {
-            const rolledBack = await rollbackActiveHtlcCreation(transaction, pending, owner)
-            if (!rolledBack) {
-              stillPending.push(pending)
-              continue
-            }
-            await updateTransactionStatus({ hash: pending.transactionHash, status: rejectedState, timestamp: transaction.timestamp })
-          }
-          catch (error) {
-            logger.error('Error rolling back rejected HTLC transaction', error)
-            stillPending.push(pending)
-          }
-          continue
-        }
-        if (transaction.state === 'included' || transaction.state === 'confirmed') {
-          try {
-            if (!transaction.recipient || remoteAddress.value?.toUserFriendlyAddress() !== transaction.recipient)
-              await activateRemoteSignerFromTransaction(transaction)
-            await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
-            if (transaction.state === 'included')
-              stillPending.push({ ...pending, ...transaction })
-          }
-          catch (error) {
-            // Keep DB status pending so restart recovery retries after cosigner metadata becomes ready.
-            logger.error('Error activating pending HTLC transaction', error)
-            stillPending.push({ ...pending, state: 'pending' })
-          }
-          continue
-        }
-        if (transaction.state === 'new' || transaction.state === 'pending') {
-          try {
-            // Creation is not accepted yet, so keep any funded predecessor as active signer.
-            const rolledBack = await rollbackActiveHtlcCreation(transaction, pending, owner)
-            if (!rolledBack) {
-              stillPending.push(pending)
-              continue
-            }
-            if (pending.state !== transaction.state)
-              await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
-          }
-          catch (error) {
-            logger.error('Error rolling back pending HTLC transaction', error)
-            stillPending.push(pending)
-            continue
-          }
-        }
-        stillPending.push({ ...pending, ...transaction })
+        continue
       }
-      if (localAddress.value?.toUserFriendlyAddress() === owner)
-        pendingHtlcCreationTransactions.value = stillPending
+      if (transaction.state === 'included' || transaction.state === 'confirmed') {
+        try {
+          const currentWalletContext = getCurrentWalletContext(context)
+          if (!currentWalletContext)
+            return
+          if (transaction.state === 'included' || transaction.recipient) {
+            const activated = await activateAcceptedHtlcCreation(transaction, context, currentWalletContext)
+            if (!activated)
+              return
+          }
+          if (!isHtlcContextCurrent(context))
+            return
+          await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
+          if (!removePendingHtlcCreation(pending.transactionHash, context))
+            return
+        }
+        catch (error) {
+          // Keep DB status selectable so restart recovery retries after account or cosigner metadata becomes ready.
+          logger.error('Error activating pending HTLC transaction', error)
+          if (!upsertPendingHtlcCreation({ ...pending, state: 'pending' }, context))
+            return
+        }
+        continue
+      }
+      if (transaction.state === 'new' || transaction.state === 'pending') {
+        try {
+          // Creation is not accepted yet, so keep any funded predecessor as active signer.
+          const currentWalletContext = getCurrentWalletContext(context)
+          if (!currentWalletContext)
+            return
+          const rollbackCompleted = await rollbackActiveHtlcCreation(transaction, pending, currentWalletContext, 'nonterminal')
+          if (!rollbackCompleted)
+            continue
+          if (!isHtlcContextCurrent(context))
+            return
+          if (pending.state !== transaction.state)
+            await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
+        }
+        catch (error) {
+          logger.error('Error rolling back pending HTLC transaction', error)
+          continue
+        }
+      }
+      if (!upsertPendingHtlcCreation({ ...pending, ...transaction }, context))
+        return
     }
 
-    const hasUnacceptedCreation = pendingHtlcCreationTransactions.value.some(transaction => transaction.state !== 'included')
+    if (!isHtlcContextCurrent(context))
+      return
+    const hasUnacceptedCreation = pendingHtlcCreationTransactions.value.some(
+      transaction => transaction.state !== 'included',
+    )
     isHtlcActive.value = !hasUnacceptedCreation
       && remoteBalance.value > 0
       && start.value <= headTimestamp.value
       && end.value > headTimestamp.value
+  }
+
+  async function checkHtlcState() {
+    if (htlcReconciliationPromise) {
+      htlcReconciliationQueued = true
+      return htlcReconciliationPromise
+    }
+
+    htlcReconciliationPromise = (async () => {
+      let reconciliationError: unknown
+      do {
+        htlcReconciliationQueued = false
+        try {
+          const context = getHtlcReconciliationContext()
+          if (context)
+            await runHtlcReconciliation(context)
+          reconciliationError = undefined
+        }
+        catch (error) {
+          logger.error('Error reconciling HTLC state', error)
+          reconciliationError = error
+        }
+      } while (htlcReconciliationQueued)
+      if (reconciliationError)
+        throw reconciliationError
+    })().finally(() => {
+      htlcReconciliationPromise = undefined
+    })
+
+    return htlcReconciliationPromise
   }
 
   let lastExpiredSwapHtlcCheckTimestamp = 0
@@ -449,16 +623,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     if (localHeight.value % 10 !== 0)
       return
-    if (htlcCheckLock.value)
-      return
-
-    htlcCheckLock.value = true
-    try {
-      await checkHtlcState()
-    }
-    finally {
-      htlcCheckLock.value = false
-    }
+    await checkHtlcState()
   }
 
   return {

@@ -142,10 +142,42 @@ describe('useSyncBalances', () => {
     const { useSyncBalances } = await import('./balances')
     await useSyncBalances().updateBalances()
     expect(state.client.getAccount).toHaveBeenCalledWith('NQ44 EXTENSION HTLC ADDRESS')
-    expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
-      active: true,
-      balance: 123_000,
-    }))
+    expect(state.updateRemoteSigner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        active: true,
+        balance: 123_000,
+      }),
+      expect.objectContaining({
+        client: state.client,
+        generation: 0,
+        network: 'testalbatross',
+        owner: 'NQ00 TEST LOCAL ADDRESS',
+      }),
+    )
+  })
+
+  it('does not enqueue an HTLC extension signer after wallet context invalidation', async () => {
+    const extensionTx = {
+      transactionHash: 'extension-hash',
+      recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      timestamp: 150_000,
+      validityStartHeight: 150,
+    }
+    let finishHistory!: (transactions: any[]) => void
+    state.remoteBalance = 10_000
+    state.getAllOutgoingTransactionsFromHtlcs.mockReturnValueOnce(new Promise(resolve => finishHistory = resolve))
+    state.getAllRemoteSigners.mockResolvedValue([])
+    state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 123_000, timeout: 300_000 })) as any
+    const { useSyncBalances } = await import('./balances')
+
+    const update = useSyncBalances().updateBalances()
+    await vi.waitFor(() => expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalledOnce())
+    state.walletContextGeneration += 1
+    finishHistory([extensionTx])
+    await update
+
+    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
   })
 
   it('logs HTLC extension errors and continues balance updates', async () => {

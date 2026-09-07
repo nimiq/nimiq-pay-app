@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PlainTransactionDetails } from '@nimiq/core'
-import type { ImportableRemoteSigner, RemoteSignerValidationResult } from '@/stores/remote-signer'
+import type { RemoteSignerValidationResult, ValidatedRemoteSigner } from '@/stores/remote-signer'
 import { Clipboard } from '@capacitor/clipboard'
 import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonSegment, IonSegmentButton, IonSelect, IonSelectOption, IonToggle, toastController } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
@@ -21,6 +21,7 @@ import { useNaka, useNakaDb } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
+import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
 
@@ -34,8 +35,8 @@ const { consensus, head, height, peerCount, client, networkName, headTimestamp }
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const remoteSignerStore = useRemoteSigner()
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(remoteSignerStore)
-const { discoverRemoteSignersFromBlockchain, importValidatedRemoteSigner, validateRemoteSignerAddress } = remoteSignerStore
-const { verifyRemoteSignersDb } = useSync()
+const { discoverRemoteSignersFromBlockchain, validateRemoteSignerAddress } = remoteSignerStore
+const { recoverRemoteSigner, verifyRemoteSignersDb } = useSync()
 const { showHiddenTransactions } = storeToRefs(useApp())
 const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
@@ -90,9 +91,10 @@ async function onNetworkSegmentChange(value: unknown) {
   // (per-network public key) — leaving them in place causes the next session to load a
   // foreign-network signer as "active" and stall sync.
   const naka = useNaka()
+  useSyncState().walletContextGeneration += 1
   const [, , , deactivateResult] = await Promise.allSettled([
     clearTxHistory(),
-    run(SQLQuery.PurgeRemoteSigners),
+    remoteSignerStore.purgeRemoteSigners(),
     Promise.all([run(SQLQuery.PurgeSwapHtlcs), run(SQLQuery.PurgeSwapQuotes)]),
     naka.deactivateCardOnDevice(),
     useNakaDb().purgeNakaCards(),
@@ -180,14 +182,22 @@ async function validateHtlcAddress() {
   }
 }
 
-async function addValidatedHtlc(result: ImportableRemoteSigner) {
+const recoveryMessages = {
+  'submitted': 'Recovery transaction submitted for this HTLC.',
+  'unknown': 'Recovery outcome is unknown. The transaction remains pending; do not retry.',
+  'wallet-busy': 'HTLC registered. Recovery deferred: another transaction is unresolved.',
+  'history-incomplete': 'HTLC registered. Recovery deferred: target transaction history is incomplete.',
+  'outgoing-transaction': 'HTLC registered. Recovery deferred: an outgoing transaction already exists for this HTLC.',
+} as const
+
+async function recoverValidatedHtlc(result: ValidatedRemoteSigner) {
   const balance = result.balance / 1e5
   const alert = await alertController.create({
-    header: 'Add this HTLC?',
-    message: `This HTLC belongs to this wallet and currently holds ${balance} NIM. Adding it does not move funds immediately, but wallet reconciliation may automatically reclaim it.`,
+    header: 'Recover this HTLC?',
+    message: `This HTLC belongs to this wallet and currently holds ${balance} NIM. Nimiq Pay will register only this address and attempt one recovery transaction. If recovery cannot start safely, the signer will remain inactive for later reconciliation.`,
     buttons: [
       { text: 'Cancel', role: 'cancel' },
-      { text: 'Add', role: 'confirm' },
+      { text: 'Recover', role: 'confirm' },
     ],
   })
   await alert.present()
@@ -196,13 +206,15 @@ async function addValidatedHtlc(result: ImportableRemoteSigner) {
     return
 
   isHtlcRecoveryBusy.value = true
-  htlcStatus.value = 'Adding HTLC…'
+  htlcStatus.value = 'Recovering HTLC…'
   try {
-    const importResult = await importValidatedRemoteSigner(result)
-    await verifyRemoteSignersDb()
-    htlcStatus.value = importResult === 'added'
-      ? 'HTLC added. Wallet reconciliation requested.'
-      : 'HTLC was already known. Wallet reconciliation requested.'
+    const recoveryResult = await recoverRemoteSigner(result)
+    if (recoveryResult.status === 'deferred')
+      htlcStatus.value = recoveryMessages[recoveryResult.reason]
+    else if (recoveryResult.status === 'rejected')
+      htlcStatus.value = `Recovery rejected: ${recoveryResult.reason}`
+    else
+      htlcStatus.value = recoveryMessages[recoveryResult.status]
   }
   catch (error) {
     setHtlcRecoveryError(error)
@@ -445,7 +457,7 @@ onMounted(async () => {
       </IonCardHeader>
       <IonCardContent class="flex flex-col gap-2">
         <p>
-          Scan the local wallet history, or validate one exact HTLC address before adding it.
+          Scan the local wallet history, or validate one exact HTLC address before recovering it.
         </p>
         <IonButton
           data-testid="htlc-scan"
@@ -489,12 +501,12 @@ onMounted(async () => {
           <p>Status: <code>{{ htlcValidation.status }}</code></p>
         </div>
         <IonButton
-          v-if="htlcValidation?.status === 'importable'"
-          data-testid="htlc-add"
+          v-if="htlcValidation && htlcValidation.status !== 'invalid'"
+          data-testid="htlc-recover"
           :disabled="isHtlcRecoveryBusy"
-          @click="addValidatedHtlc(htlcValidation)"
+          @click="recoverValidatedHtlc(htlcValidation)"
         >
-          Add to app
+          Recover HTLC
         </IonButton>
       </IonCardContent>
     </IonCard>

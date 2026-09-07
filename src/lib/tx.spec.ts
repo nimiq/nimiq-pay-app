@@ -1,13 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Transfer } from '@/types/transactions'
+import { parseBitcoinLightningInvoice } from '../composables/useBitcoinLightning'
+import { useFastspotApiV1 } from '../composables/useFastspotv1'
 import { buildTopUpReceipt, getSignedTx } from './tx'
 
 const state = vi.hoisted(() => ({
   getAccountTransactions: vi.fn(),
+  remoteAddress: { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ11 OLD HTLC' } as any,
+  remoteProofSize: 98,
   sendRemoteTransaction: vi.fn(),
 }))
 
-vi.mock('pinia', () => ({
+vi.mock('pinia', async importOriginal => ({
+  ...await importOriginal<typeof import('pinia')>(),
   storeToRefs: <T>(store: T) => store,
 }))
 
@@ -23,11 +28,16 @@ vi.mock('@/i18n/i18n-setup', () => ({
   i18n: { t: (value: string) => value },
 }))
 
+vi.mock('@/lib', () => ({
+  nimiqPayCosignerPublicKeys: ['c1534c708122968212c6709526801d18218ce9303590f2bca473213d99b24aaf'],
+}))
+
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => {
-    const address = { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ00 LOCAL' }
+    const address = { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ00 LOCAL', toHex: () => 'local-hex' }
     return {
       localAddress: address,
+      localBalance: 100,
       localWallet: { privateKey: {}, publicKey: {}, toAddress: () => address },
     }
   },
@@ -47,10 +57,12 @@ vi.mock('@/stores/nimiq-network', () => ({
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
-    remoteAddress: { serialize: () => new Uint8Array(20), toUserFriendlyAddress: () => 'NQ11 OLD HTLC' },
+    remoteAddress: state.remoteAddress,
     remoteBalance: 100,
+    remoteHeight: 1,
     remotePublicKey: 'service-public-key',
-    remoteProofSize: 98,
+    remoteProofSize: state.remoteProofSize,
+    isHtlcActive: true,
   }),
 }))
 
@@ -128,22 +140,32 @@ describe('getSignedTx', () => {
       toUserFriendlyAddress: () => value,
     })
     vi.stubGlobal('Nimiq', {
-      AccountType: { Basic: 0, HTLC: 2 },
+      AccountType: { Basic: 0, HTLC: 2, Staking: 3 },
       Address: { fromString: address },
-      BufferUtils: { fromHex: () => new Uint8Array() },
+      BufferUtils: { fromHex: () => new Uint8Array(), fromUtf8: () => new Uint8Array() },
+      Policy: { STAKING_CONTRACT_ADDRESS: 'NQ00 STAKING' },
       PublicKey: { fromHex: () => ({ toAddress: () => address('NQ99 COSIGNER') }) },
       SerialBuffer: FakeSerialBuffer,
       Signature: { create: () => new Uint8Array() },
       SignatureProof: { singleSig: () => ({ serialize: () => new Uint8Array(1) }) },
+      StakingDataBuilder: { addStake: () => new Uint8Array() },
       Transaction: FakeTransaction,
     })
+    state.remoteAddress = address('NQ11 OLD HTLC')
+    state.remoteProofSize = 98
     state.sendRemoteTransaction.mockReset()
   })
 
-  it('persists an extension before the cosigner request can broadcast it', async () => {
-    const order: string[] = []
+  it.each([
+    ['remote payment', { transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 }],
+    ['extension', { transfer: Transfer.ExtendRemote }],
+    ['remote drain', { transfer: Transfer.RemoteToLocal }],
+    ['immediate reclaim', { transfer: Transfer.RemoteToLocalImmediateReclaim, sender: { toUserFriendlyAddress: () => 'NQ11 OLD HTLC' }, amount: 10, proofSize: 104 }],
+    ['remotely signed staking', { transfer: Transfer.Staking, amount: 10, stakingData: { type: 'add-stake' } }],
+  ])('stages %s before submitting the cosigner request', async (_label, partialTx) => {
+    const events: string[] = []
     state.sendRemoteTransaction.mockImplementation(async ({ tx }: any) => {
-      order.push('cosigner')
+      events.push('cosigner')
       return {
         data: { details: tx.toPlain(), txSent: true },
         error: undefined,
@@ -152,13 +174,127 @@ describe('getSignedTx', () => {
       }
     })
 
-    const result = await getSignedTx(
-      { transfer: Transfer.ExtendRemote } as any,
-      { beforeRemoteBroadcast: async () => { order.push('persist') } },
+    const success = await getSignedTx(partialTx as any, {
+      beforeRemoteBroadcast: async () => { events.push('stage') },
+    })
+
+    expect(events).toEqual(['stage', 'cosigner'])
+    expect(success.outcome).toBe('signed')
+  })
+
+  it('uses the target proof size for immediate reclaim without an active signer', async () => {
+    const target = {
+      serialize: () => new Uint8Array(20),
+      toUserFriendlyAddress: () => 'NQ22 INACTIVE HTLC',
+    }
+    state.remoteAddress = undefined
+    state.remoteProofSize = 98
+    state.sendRemoteTransaction.mockImplementation(async ({ address, tx }: any) => ({
+      data: { details: tx.toPlain(), txSent: true },
+      error: undefined,
+      hasError: false,
+      status: 200,
+      target: address,
+    }))
+
+    const result = await getSignedTx({
+      transfer: Transfer.RemoteToLocalImmediateReclaim,
+      sender: target as any,
+      amount: 10,
+      proofSize: 104,
+    })
+
+    expect(result.outcome).toBe('signed')
+    expect(state.sendRemoteTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      address: 'NQ22INACTIVEHTLC',
+      tx: expect.objectContaining({ proof: expect.objectContaining({ length: 106 }) }),
+    }))
+  })
+
+  it('classifies an explicit cosigner error as rejected', async () => {
+    const expectedError = 'cosigner rejected'
+    state.sendRemoteTransaction.mockResolvedValue({
+      data: undefined,
+      error: { message: expectedError },
+      hasError: true,
+      status: 400,
+    })
+
+    const explicitError = await getSignedTx(
+      { transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 } as any,
+      { beforeRemoteBroadcast: async () => {} },
     )
 
-    expect(result.error).toBeUndefined()
-    expect(order).toEqual(['persist', 'cosigner'])
+    expect(explicitError).toEqual({ outcome: 'rejected', error: expectedError })
+  })
+
+  it('classifies a structured cosigner server error after submission as unknown', async () => {
+    state.sendRemoteTransaction.mockResolvedValue({
+      data: undefined,
+      error: { message: 'response creation failed', statusCode: 500, error: 'Internal Server Error' },
+      hasError: true,
+      status: 500,
+    })
+
+    const result = await getSignedTx(
+      { transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 } as any,
+      { beforeRemoteBroadcast: async () => {} },
+    )
+
+    expect(result).toEqual({ outcome: 'unknown', error: 'response creation failed' })
+  })
+
+  it('classifies a submitted cosigner request timeout as unknown', async () => {
+    vi.useFakeTimers()
+    state.sendRemoteTransaction.mockReturnValue(new Promise(() => {}))
+
+    const result = getSignedTx(
+      { transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 } as any,
+      { beforeRemoteBroadcast: async () => {} },
+    )
+    await vi.advanceTimersByTimeAsync(30_000)
+    const timeout = await result
+
+    expect(timeout.outcome).toBe('unknown')
+    vi.useRealTimers()
+  })
+
+  it.each(['timeout', 'persistence failure'])('passes swap refund metadata before cosigner submission: %s', async (scenario) => {
+    vi.useFakeTimers()
+    try {
+      const swap = { id: 'swap-id', status: 'pending', hash: 'payment-hash', contracts: { NIM: { redeemAddress: 'NQ22 REDEEM', htlc: { data: 'swap-data', timeoutTime: 123 } } } }
+      vi.mocked(useFastspotApiV1).mockResolvedValue({ confirmSwap: vi.fn().mockResolvedValue(swap) } as any)
+      vi.mocked(parseBitcoinLightningInvoice).mockResolvedValue({ payment_hash: 'payment-hash' } as any)
+      Nimiq.Address.fromUserFriendlyAddress = Nimiq.Address.fromString
+      Nimiq.BufferUtils.toHex = () => 'swap-data'
+      const staged: unknown[][] = []
+      state.sendRemoteTransaction.mockReturnValue(new Promise(() => {}))
+      const sending = getSignedTx({ transfer: Transfer.UserPaymentToAtomicSwap, paymentRef: 'swap-id', recipient: 'invoice', amount: 42 } as any, {
+        beforeRemoteBroadcast: async (tx, metadata) => {
+          staged.push([tx, metadata, state.sendRemoteTransaction.mock.calls.length])
+          if (scenario === 'persistence failure')
+            throw new Error('persistence failed')
+        },
+      })
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(staged).toEqual([[expect.objectContaining({ value: 42n }), swap, 0]])
+      expect((await sending).outcome).toBe(scenario === 'timeout' ? 'unknown' : 'rejected')
+      expect(state.sendRemoteTransaction).toHaveBeenCalledTimes(scenario === 'timeout' ? 1 : 0)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('classifies staging failure as rejected without submitting to the cosigner', async () => {
+    const result = await getSignedTx(
+      { transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 } as any,
+      { beforeRemoteBroadcast: async () => { throw new Error('persistence failed') } },
+    )
+
+    expect(result).toEqual({ outcome: 'rejected', error: 'persistence failed' })
+    expect(state.sendRemoteTransaction).not.toHaveBeenCalled()
   })
 })
 

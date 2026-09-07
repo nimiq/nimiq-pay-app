@@ -17,6 +17,14 @@ describe('useSyncHtlc', () => {
     vi.useRealTimers()
   })
 
+  function deferred<T>() {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((resolvePromise) => {
+      resolve = resolvePromise
+    })
+    return { promise, resolve }
+  }
+
   // nodesAreSynced is an async computed; touch it then flush microtasks so it resolves to true.
   async function primeNodesAreSynced() {
     const { useSyncState } = await import('./state')
@@ -71,10 +79,32 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).not.toHaveBeenCalled()
     })
 
+    it.each([0, 50_000])('quietly retries after a busy send with remote balance %s', async (balance) => {
+      state.localBalance = 100_000
+      state.height = 1000
+      state.remoteHeight = 1000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      state.getBalance.mockResolvedValue({ data: balance, error: undefined })
+      state.sendTx.mockResolvedValueOnce({ outcome: 'rejected', reason: 'busy', error: 'pending' })
+      const { useSyncHtlc } = await import('./htlc')
+      await primeNodesAreSynced()
+      const store = useSyncHtlc()
+
+      await store.handleFunds()
+
+      expect(state.setToast).not.toHaveBeenCalled()
+      expect(state.logger.error).not.toHaveBeenCalled()
+      expect(state.isProcessingRemote).toBe(false)
+
+      await store.handleFunds()
+      expect(state.sendTx).toHaveBeenCalledTimes(2)
+    })
+
     it('shows toast and resets isProcessingRemote on HTLC creation error', async () => {
       state.localBalance = 100_000
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
-      state.sendTx.mockResolvedValue({ data: undefined, error: new Error('boom') })
+      state.sendTx.mockResolvedValue({ outcome: 'rejected', error: 'boom' })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().handleFunds()
       expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
@@ -102,7 +132,7 @@ describe('useSyncHtlc', () => {
       state.isHtlcActive = true
       state.isRemoteOk = true
       state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
-      state.sendTx.mockResolvedValue({ data: undefined, error: 'cosigner rejected' })
+      state.sendTx.mockResolvedValue({ outcome: 'rejected', error: 'cosigner rejected' })
       const { useSyncHtlc } = await import('./htlc')
       await primeNodesAreSynced()
 
@@ -265,6 +295,28 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.ExtendRemote })
     })
 
+    it('does not reclaim after an uncertain extension outcome', async () => {
+      state.remoteBalance = 250
+      state.isHtlcActive = true
+      state.htlcStart = 100_000
+      state.htlcEnd = 300_000
+      state.headTimestamp = 199_000
+      state.sendTx.mockResolvedValue({
+        outcome: 'unknown',
+        stagedTx: { hash: 'extension-hash' },
+        stagedHash: 'extension-hash',
+        error: 'response lost',
+      })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().extendValidity()
+
+      expect(state.sendTx).toHaveBeenCalledTimes(1)
+      expect(state.sendTx).not.toHaveBeenCalledWith(
+        expect.objectContaining({ transfer: Transfer.RemoteToLocalAfterTimeout }),
+      )
+    })
+
     it('falls back to RemoteToLocalAfterTimeout claim when extend tx errors', async () => {
       state.remoteBalance = 250
       state.isHtlcActive = true
@@ -272,8 +324,8 @@ describe('useSyncHtlc', () => {
       state.htlcEnd = 300_000
       state.headTimestamp = 199_000
       state.sendTx
-        .mockResolvedValueOnce({ data: undefined, error: new Error('extend boom') })
-        .mockResolvedValueOnce({ data: { tx: { hash: 'claim-hash' } }, error: undefined })
+        .mockResolvedValueOnce({ outcome: 'rejected', error: 'extend boom' })
+        .mockResolvedValueOnce({ outcome: 'submitted', tx: { hash: 'claim-hash' }, serialized: 'claim' })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().extendValidity()
       expect(state.sendTx).toHaveBeenNthCalledWith(1, { transfer: Transfer.ExtendRemote })
@@ -290,8 +342,8 @@ describe('useSyncHtlc', () => {
       state.htlcEnd = 300_000
       state.headTimestamp = 199_000
       state.sendTx
-        .mockResolvedValueOnce({ data: undefined, error: new Error('extend boom') })
-        .mockResolvedValueOnce({ data: undefined, error: new Error('claim boom') })
+        .mockResolvedValueOnce({ outcome: 'rejected', error: 'extend boom' })
+        .mockResolvedValueOnce({ outcome: 'rejected', error: 'claim boom' })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().extendValidity()
       expect(state.logger.error).toHaveBeenCalledWith('Error while claiming funds from Remote after extending error', expect.any(Object))
@@ -337,24 +389,449 @@ describe('useSyncHtlc', () => {
     it('shows toast and resets isProcessingRemote on send failure', async () => {
       state.remoteBalance = 750
       state.hasHtlcExpired = true
-      state.sendTx.mockResolvedValue({ data: undefined, error: new Error('boom') })
+      state.sendTx.mockResolvedValue({ outcome: 'rejected', error: 'boom' })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkRemoteValidity()
       expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
       expect(state.isProcessingRemote).toBe(false)
     })
 
-    it('logs error when sendTx returns no transaction data', async () => {
+    it('keeps recovery pending without showing a retry error when outcome is unknown', async () => {
       state.remoteBalance = 750
       state.hasHtlcExpired = true
-      state.sendTx.mockResolvedValue({ data: undefined, error: undefined })
+      state.sendTx.mockResolvedValue({
+        outcome: 'unknown',
+        stagedTx: { hash: 'recovery-hash' },
+        stagedHash: 'recovery-hash',
+        error: 'response lost',
+      })
       const { useSyncHtlc } = await import('./htlc')
+
       await useSyncHtlc().checkRemoteValidity()
-      expect(state.logger.error).toHaveBeenCalledWith('No transaction returned from sendTx when recovering HTLC in checkRemoteValidity')
+
+      expect(state.setToast).not.toHaveBeenCalled()
+      expect(state.isProcessingRemote).toBe(true)
     })
   })
 
   describe('checkHtlcState', () => {
+    it('queues one fresh reconciliation after many overlapping triggers', async () => {
+      const predecessorAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const childAddress = 'NQ22 TEST CHILD HTLC ADDRESS'
+      const childHash = 'child-hash'
+      const predecessorBalance = deferred<{ data: number, error: undefined }>()
+      let chainState: 'included' | 'pending' = 'pending'
+      state.remoteAddress = createAddress(childAddress) as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: childHash,
+        recipient: childAddress,
+        sender: predecessorAddress,
+        senderType: 2,
+        status: 'pending',
+      }])
+      state.client.getTransaction = vi.fn(async () => chainState === 'pending'
+        ? {
+            state: 'pending',
+            transactionHash: childHash,
+            sender: predecessorAddress,
+            senderType: 'htlc',
+            recipient: childAddress,
+          }
+        : {
+            state: 'included',
+            transactionHash: childHash,
+            sender: 'NQ00 TEST LOCAL ADDRESS',
+            recipient: childAddress,
+            value: 100,
+            validityStartHeight: 100,
+            timestamp: 200_000,
+            data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+          }) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(predecessorAddress, 10, false), address: createAddress(predecessorAddress) },
+      ])
+      state.getBalance.mockReturnValue(predecessorBalance.promise)
+      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
+        state.remoteAddress = signer?.address
+        state.remoteBalance = signer?.balance ?? 0
+      })
+      state.activateRemoteSignerFromTransaction.mockImplementation(async (transaction: any) => {
+        state.remoteAddress = createAddress(transaction.recipient) as any
+        state.remoteBalance = transaction.value
+        state.htlcStart = transaction.timestamp
+        state.htlcEnd = transaction.data.timeout
+      })
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const htlc = useSyncHtlc()
+
+      const firstRun = htlc.checkHtlcState()
+      await vi.waitFor(() => expect(state.getBalance).toHaveBeenCalled())
+      const overlappingRuns = [htlc.checkHtlcState(), htlc.checkHtlcState(), htlc.checkHtlcState()]
+      chainState = 'included'
+      predecessorBalance.resolve({ data: 77, error: undefined })
+      await Promise.all([firstRun, ...overlappingRuns])
+
+      const selectPendingQuery = state.query.mock.calls.filter(([query]) => query === SQLQuery.SelectPendingHtlcCreations)
+      expect(selectPendingQuery).toHaveLength(2)
+      expect(state.client.getTransaction).toHaveBeenCalledTimes(2)
+      expect(state.remoteAddress?.toUserFriendlyAddress()).toBe(childAddress)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it('times out a stalled predecessor balance lookup and runs the queued reconciliation', async () => {
+      vi.useFakeTimers()
+      const predecessorAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const childAddress = 'NQ22 TEST CHILD HTLC ADDRESS'
+      const childHash = 'balance-timeout-child-hash'
+      let chainState: 'included' | 'pending' = 'pending'
+      state.remoteAddress = createAddress(childAddress) as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: childHash,
+        recipient: childAddress,
+        sender: predecessorAddress,
+        senderType: 2,
+        status: 'pending',
+      }])
+      state.client.getTransaction = vi.fn(async () => chainState === 'pending'
+        ? {
+            state: 'pending',
+            transactionHash: childHash,
+            sender: predecessorAddress,
+            senderType: 'htlc',
+            recipient: childAddress,
+          }
+        : {
+            state: 'included',
+            transactionHash: childHash,
+            sender: 'NQ00 TEST LOCAL ADDRESS',
+            recipient: childAddress,
+            value: 100,
+            validityStartHeight: 100,
+            timestamp: 200_000,
+            data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+          }) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(predecessorAddress, 10, false), address: createAddress(predecessorAddress) },
+      ])
+      state.getBalance.mockReturnValue(new Promise(() => {}))
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const htlc = useSyncHtlc()
+      let settled = false
+
+      const firstRun = htlc.checkHtlcState().then(() => settled = true)
+      await vi.waitFor(() => expect(state.getBalance).toHaveBeenCalled())
+      const queuedRun = htlc.checkHtlcState()
+      chainState = 'included'
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(settled).toBe(true)
+      await Promise.all([firstRun, queuedRun])
+      expect(state.query).toHaveBeenCalledTimes(2)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it('runs a queued reconciliation after the current run fails', async () => {
+      let rejectFirstQuery!: (error: Error) => void
+      const firstQuery = new Promise<any[]>((_, reject) => rejectFirstQuery = reject)
+      state.query
+        .mockImplementationOnce(() => firstQuery)
+        .mockResolvedValueOnce([])
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      const htlc = useSyncHtlc()
+
+      const firstRun = htlc.checkHtlcState()
+      await vi.waitFor(() => expect(state.query).toHaveBeenCalledWith(SQLQuery.SelectPendingHtlcCreations))
+      const queuedRun = htlc.checkHtlcState()
+      rejectFirstQuery(new Error('query failed'))
+
+      await expect(Promise.all([firstRun, queuedRun])).resolves.toEqual([undefined, undefined])
+      expect(state.query).toHaveBeenCalledTimes(2)
+      expect(state.logger.error).toHaveBeenCalledWith('Error reconciling HTLC state', expect.any(Error))
+    })
+
+    it('stops monitoring an included creation after its signer is active', async () => {
+      const childHash = 'included-reorg-hash'
+      const childAddress = 'NQ22 TEST CHILD HTLC ADDRESS'
+      let chainState: 'included' | 'pending' = 'included'
+      let dbStatus: 'included' | 'pending' = 'included'
+      const included = {
+        transactionHash: childHash,
+        state: 'included',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: childAddress,
+        value: 100,
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      }
+      state.query.mockImplementation(async () =>
+        dbStatus === 'included' && state.remoteAddress?.toUserFriendlyAddress() === childAddress
+          ? []
+          : [{
+              hash: childHash,
+              sender: included.sender,
+              recipient: childAddress,
+              status: dbStatus,
+              validityStartHeight: 100,
+            }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve(
+        chainState === 'included' ? included : { ...included, state: 'pending' },
+      )) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
+      state.activateRemoteSignerFromTransaction.mockImplementation(async () => {
+        state.remoteAddress = createAddress(childAddress)
+        state.remoteBalance = 100
+      })
+      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
+        state.remoteAddress = signer?.address
+        state.remoteBalance = signer?.balance ?? 0
+      })
+      state.updateTransactionStatus.mockImplementation(async ({ status }: { status: 'included' | 'pending' }) => {
+        dbStatus = status
+      })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const htlc = useSyncHtlc()
+
+      await htlc.checkHtlcState()
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({
+        hash: childHash,
+        status: 'included',
+        timestamp: included.timestamp,
+      })
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+
+      state.activateRemoteSignerFromTransaction.mockClear()
+      await htlc.checkHtlcState()
+
+      expect(state.client.getAccount).toHaveBeenCalledOnce()
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+
+      chainState = 'pending'
+      await htlc.checkHtlcState()
+
+      expect(state.client.getTransaction).toHaveBeenCalledOnce()
+      expect(state.deactivateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.remoteAddress?.toUserFriendlyAddress()).toBe(childAddress)
+      expect(dbStatus).toBe('included')
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it('does not resurrect a removed hash from a stale hydration race and performs a fresh queued query', async () => {
+      const staleHash = 'stale-hydration-hash'
+      const firstQuery = deferred<any[]>()
+      let queryCount = 0
+      state.client = undefined as any
+      state.query.mockImplementation(() => {
+        queryCount += 1
+        return queryCount === 1 ? firstQuery.promise : Promise.resolve([])
+      })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      const htlc = useSyncHtlc()
+      syncState.pendingHtlcCreationTransactions.push({ transactionHash: staleHash, state: 'pending' } as any)
+
+      const firstRun = htlc.checkHtlcState()
+      await vi.waitFor(() => expect(state.query).toHaveBeenCalledTimes(1))
+      syncState.pendingHtlcCreationTransactions.splice(0, 1)
+      const queuedRun = htlc.checkHtlcState()
+      firstQuery.resolve([{ hash: staleHash, status: 'pending' }])
+      await Promise.all([firstRun, queuedRun])
+
+      expect(state.query).toHaveBeenCalledTimes(2)
+      expect(syncState.pendingHtlcCreationTransactions).not.toContainEqual(
+        expect.objectContaining({ transactionHash: staleHash }),
+      )
+    })
+
+    it('does not overwrite a concurrent pending insertion with a stale whole-array commit', async () => {
+      const lookup = deferred<any>()
+      state.client.getTransaction = vi.fn(() => lookup.promise) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      const original = { transactionHash: 'original-hash', recipient: 'NQ11 TEST REMOTE ADDRESS' } as any
+      const concurrent = { transactionHash: 'concurrent-hash' } as any
+      syncState.pendingHtlcCreationTransactions.push(original)
+
+      const reconciliation = useSyncHtlc().checkHtlcState()
+      await vi.waitFor(() => expect(state.client.getTransaction).toHaveBeenCalledWith('original-hash'))
+      syncState.pendingHtlcCreationTransactions = [original, concurrent]
+      lookup.resolve({ state: 'confirmed', transactionHash: 'original-hash', recipient: 'NQ11 TEST REMOTE ADDRESS' })
+      await reconciliation
+
+      expect(syncState.pendingHtlcCreationTransactions).toEqual([concurrent])
+    })
+
+    it.each([
+      ['owner', () => state.localAddress = createAddress('NQ44 REPLACEMENT OWNER') as any],
+      ['network', () => state.networkName = 'mainalbatross'],
+      ['client', () => state.client = { ...state.client, getTransaction: vi.fn() } as any],
+      ['generation', () => state.walletContextGeneration += 1],
+    ])('ignores stale %s context after an in-flight lookup', async (_dimension, replaceContext) => {
+      const lookup = deferred<any>()
+      const originalClient = state.client
+      originalClient.getTransaction = vi.fn(() => lookup.promise) as any
+      const included = {
+        transactionHash: 'stale-context-hash',
+        state: 'included',
+        value: 100,
+        recipient: 'NQ22 TEST CHILD HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      }
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: included.transactionHash } as any)
+
+      const reconciliation = useSyncHtlc().checkHtlcState()
+      await vi.waitFor(() => expect(originalClient.getTransaction).toHaveBeenCalledWith(included.transactionHash))
+      replaceContext()
+      lookup.resolve(included)
+      await reconciliation
+
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: included.transactionHash }),
+      )
+    })
+
+    it('hydrates a stale pending barrier before client readiness without waiting', async () => {
+      state.client = undefined as any
+      state.query.mockResolvedValue([{ hash: 'offline-hash', status: 'pending' }])
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'offline-hash' }),
+      )
+    })
+
+    it('hydrates a queued pending barrier before consensus readiness without waiting', async () => {
+      state.consensus = 'syncing'
+      state.query.mockResolvedValue([{ hash: 'syncing-hash', status: 'pending' }])
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'syncing-hash' }),
+      )
+      expect(state.client.waitForConsensusEstablished).not.toHaveBeenCalled()
+      expect(state.client.getTransaction).not.toHaveBeenCalled()
+    })
+
+    it.each(['included', 'confirmed'])('clears a %s creation retry barrier using the live account balance', async (status) => {
+      const included = {
+        transactionHash: 'included-hash',
+        state: status,
+        value: 100,
+        recipient: 'NQ22 TEST CHILD HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      }
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 77, timeout: 400_000 })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: included.transactionHash } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transactionHash: included.transactionHash,
+          timestamp: included.timestamp,
+          value: 77,
+          data: expect.objectContaining({ timeout: 400_000 }),
+        }),
+        expect.objectContaining({
+          client: state.client,
+          generation: state.walletContextGeneration,
+          network: state.networkName,
+          owner: state.localAddress.toUserFriendlyAddress(),
+        }),
+        0,
+      )
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it.each(['NQ11 TEST REMOTE ADDRESS', 'NQ22 TEST OLD HTLC ADDRESS'])('resolves a drained confirmed creation at %s without restoring historical funds', async (recipient) => {
+      const confirmed = {
+        transactionHash: 'drained-creation',
+        state: 'confirmed',
+        recipient,
+        value: 11011200000,
+        timestamp: 200_000,
+      }
+      state.remoteBalance = 11011700000
+      state.client.getTransaction = vi.fn().mockResolvedValue(confirmed)
+      state.client.getAccount = vi.fn().mockResolvedValue({ type: 'basic', balance: 0 })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: confirmed.transactionHash } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      if (recipient === state.remoteAddress?.toUserFriendlyAddress()) {
+        expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(
+          expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+          expect.any(Object),
+          true,
+        )
+        expect(state.deactivateRemoteSigner.mock.calls[0]?.[0].toUserFriendlyAddress()).toBe(recipient)
+      }
+      else {
+        expect(state.deactivateRemoteSigner).not.toHaveBeenCalled()
+        expect(state.remoteBalance).toBe(11011700000)
+      }
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: confirmed.transactionHash, status: 'confirmed', timestamp: confirmed.timestamp })
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it.each(['included', 'confirmed'])('keeps a %s creation barrier when live account evidence fails', async (status) => {
+      const included = {
+        transactionHash: 'included-account-failure-hash',
+        state: status,
+        value: 100,
+        recipient: 'NQ22 TEST CHILD HTLC ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      }
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.reject(new Error('account unavailable'))) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: included.transactionHash } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: included.transactionHash, state: 'pending' }),
+      )
+    })
+
     it('skips when isSendingTx', async () => {
       state.isSendingTx = true
       const { useSyncHtlc } = await import('./htlc')
@@ -394,7 +871,16 @@ describe('useSyncHtlc', () => {
       state.headTimestamp = 200_000
       state.htlcEnd = 300_000
       state.isHtlcActive = false
-      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'included', transactionHash: 'h1' })) as any
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'included',
+        transactionHash: 'h1',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        value: 100,
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+      })) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
       const { useSyncHtlc } = await import('./htlc')
       const { useSyncState } = await import('./state')
       useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'h1' } as any)
@@ -402,9 +888,7 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkHtlcState()
 
       expect(state.isHtlcActive).toBe(true)
-      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
-        expect.objectContaining({ transactionHash: 'h1', state: 'included' }),
-      ])
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
 
     it('activates an accepted unknown broadcast while stored balance is still zero', async () => {
@@ -420,6 +904,7 @@ describe('useSyncHtlc', () => {
         data: { type: 'htlc', timeout: 300_000 },
       }
       state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
       state.activateRemoteSignerFromTransaction.mockImplementation(async () => {
         state.remoteBalance = 100
         state.htlcStart = 200_000
@@ -431,19 +916,30 @@ describe('useSyncHtlc', () => {
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
-      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
-        expect.objectContaining({ transactionHash: 'h1', state: 'included' }),
-      ])
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included, expect.objectContaining({
+        client: state.client,
+        generation: state.walletContextGeneration,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }), 0)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
       expect(state.isHtlcActive).toBe(true)
     })
 
-    it('keeps included creations monitored while another creation remains pending', async () => {
+    it('clears an included creation while another creation remains pending', async () => {
       state.remoteBalance = 100
-      state.client.getTransaction = vi.fn((hash: string) => Promise.resolve({
-        state: hash === 'included-hash' ? 'included' : 'pending',
-        transactionHash: hash,
-      })) as any
+      state.client.getTransaction = vi.fn((hash: string) => Promise.resolve(hash === 'included-hash'
+        ? {
+            state: 'included',
+            transactionHash: hash,
+            recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+            value: 100,
+            validityStartHeight: 100,
+            timestamp: 200_000,
+            data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
+          }
+        : { state: 'pending', transactionHash: hash })) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
       const { useSyncHtlc } = await import('./htlc')
       const { useSyncState } = await import('./state')
       useSyncState().pendingHtlcCreationTransactions.push(
@@ -454,8 +950,7 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkHtlcState()
 
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
-        expect.objectContaining({ transactionHash: 'included-hash', state: 'included' }),
-        expect.objectContaining({ transactionHash: 'pending-hash' }),
+        expect.objectContaining({ transactionHash: 'pending-hash', state: 'pending' }),
       ])
       expect(state.isHtlcActive).toBe(false)
     })
@@ -484,16 +979,148 @@ describe('useSyncHtlc', () => {
         recipient: 'NQ22 TEST NEW HTLC ADDRESS',
         timestamp: 200_000,
       })) as any
-      state.updateRemoteSigner.mockImplementation(async (signer?: any) => {
-        state.remoteAddress = signer?.address
-        state.remoteBalance = signer?.balance ?? 0
+      state.deactivateRemoteSigner.mockImplementation(async (address: any) => {
+        if (state.remoteAddress?.equals(address)) {
+          state.remoteAddress = undefined
+          state.remoteBalance = 0
+        }
+        return true
       })
       const { useSyncHtlc } = await import('./htlc')
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.updateRemoteSigner).toHaveBeenCalledWith(undefined)
+      expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(
+        expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+        expect.objectContaining({
+          client: state.client,
+          generation: state.walletContextGeneration,
+          network: state.networkName,
+          owner: state.localAddress.toUserFriendlyAddress(),
+        }),
+        true,
+      )
+      expect(state.deactivateRemoteSigner.mock.calls[0]?.[0].toUserFriendlyAddress()).toBe('NQ22 TEST NEW HTLC ADDRESS')
+      expect(state.updateRemoteSigner).not.toHaveBeenCalledWith(undefined, expect.anything())
       expect(state.isHtlcActive).toBe(false)
+    })
+
+    it('deactivates the exact child after authoritative rejection and a missing predecessor account', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const childAddress = 'NQ22 TEST NEW HTLC ADDRESS'
+      state.remoteAddress = createAddress(childAddress) as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'no-account-child',
+        recipient: childAddress,
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'invalidated',
+        transactionHash: 'no-account-child',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: childAddress,
+        timestamp: 200_000,
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) },
+      ])
+      state.getBalance.mockResolvedValue({ data: undefined, error: 'No account found' })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(
+        expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+        expect.objectContaining({
+          client: state.client,
+          generation: state.walletContextGeneration,
+          network: state.networkName,
+          owner: state.localAddress.toUserFriendlyAddress(),
+        }),
+        true,
+      )
+      const deactivatedAddress = state.deactivateRemoteSigner.mock.calls[0]?.[0]
+      expect(deactivatedAddress.toUserFriendlyAddress()).toBe(childAddress)
+      expect(state.updateRemoteSigner).not.toHaveBeenCalledWith(undefined, expect.anything())
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'no-account-child', status: 'failed', timestamp: 200_000 })
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
+    })
+
+    it('deactivates the exact child after authoritative expiry and an empty predecessor', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const childAddress = 'NQ22 TEST NEW HTLC ADDRESS'
+      state.remoteAddress = createAddress(childAddress) as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'empty-predecessor-child',
+        recipient: childAddress,
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'expired',
+        transactionHash: 'empty-predecessor-child',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: childAddress,
+        timestamp: 200_000,
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) },
+      ])
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      const deactivatedAddress = state.deactivateRemoteSigner.mock.calls[0]?.[0]
+      expect(deactivatedAddress.toUserFriendlyAddress()).toBe(childAddress)
+      expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(deactivatedAddress, expect.any(Object), true)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'empty-predecessor-child', status: 'expired', timestamp: 200_000 })
+      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(0)
+    })
+
+    it('retains a nonterminal child when its predecessor account is missing', async () => {
+      const previousAddress = 'NQ11 TEST PREVIOUS HTLC ADDRESS'
+      const childAddress = 'NQ22 TEST NEW HTLC ADDRESS'
+      state.remoteAddress = createAddress(childAddress) as any
+      state.remoteBalance = 100
+      state.query.mockResolvedValue([{
+        hash: 'pending-no-account-child',
+        recipient: childAddress,
+        sender: previousAddress,
+        senderType: 2,
+        status: 'included',
+      }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({
+        state: 'pending',
+        transactionHash: 'pending-no-account-child',
+        sender: previousAddress,
+        senderType: 'htlc',
+        recipient: childAddress,
+      })) as any
+      state.getAllRemoteSigners.mockResolvedValue([
+        { ...remoteSignerFixture(previousAddress, 10, false), address: createAddress(previousAddress) },
+      ])
+      state.getBalance.mockResolvedValue({ data: undefined, error: 'No account found' })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.deactivateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'pending-no-account-child' }),
+      )
     })
 
     it('restores the extension transaction sender instead of guessing another funded signer', async () => {
@@ -536,6 +1163,11 @@ describe('useSyncHtlc', () => {
         active: true,
         balance: 77,
         address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+      }), expect.objectContaining({
+        client: state.client,
+        generation: state.walletContextGeneration,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
       }))
       expect(state.remoteAddress?.toUserFriendlyAddress()).toBe(previousAddress)
       expect(state.getBalance).toHaveBeenCalledTimes(1)
@@ -641,6 +1273,37 @@ describe('useSyncHtlc', () => {
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'expired', timestamp: undefined })
     })
 
+    it.each([
+      ['null', null],
+      ['omitted', undefined],
+    ])('retains a legacy HTLC creation with %s validity height', async (_name, validityStartHeight) => {
+      const legacyHash = `legacy-${_name}-height`
+      state.height = 10_000
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('not found'))) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({
+        transactionHash: legacyHash,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 TEST NEW HTLC ADDRESS',
+        validityStartHeight,
+      } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.findTransactionInHistory).not.toHaveBeenCalled()
+      expect(state.logger.warn).toHaveBeenCalledWith('Cannot expire pending HTLC creation without validity height', {
+        hash: legacyHash,
+        validityStartHeight,
+      })
+      expect(state.updateTransactionStatus).not.toHaveBeenCalledWith(
+        expect.objectContaining({ hash: legacyHash, status: 'expired' }),
+      )
+      expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: legacyHash }),
+      )
+    })
+
     it('uses complete sender history before expiring an empty accepted HTLC', async () => {
       state.remoteBalance = 0
       state.height = 250
@@ -668,7 +1331,9 @@ describe('useSyncHtlc', () => {
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(confirmed)
+      expect(state.client.getAccount).toHaveBeenCalledWith(confirmed.recipient)
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 200_000 })
       expect(state.updateTransactionStatus).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'expired' }))
     })
@@ -723,6 +1388,7 @@ describe('useSyncHtlc', () => {
       }
       state.query.mockResolvedValue([{ hash: included.transactionHash }])
       state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
       const { SQLQuery } = await import('@/lib/sql-queries')
       const { useSyncHtlc } = await import('./htlc')
 
@@ -730,7 +1396,39 @@ describe('useSyncHtlc', () => {
 
       expect(state.query).toHaveBeenCalledWith(SQLQuery.SelectPendingHtlcCreations)
       expect(state.client.getTransaction).toHaveBeenCalledWith(included.transactionHash)
-      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included, expect.objectContaining({
+        client: state.client,
+        generation: state.walletContextGeneration,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }), 0)
+    })
+
+    it('durably activates an included HTLC even when memory already has its address', async () => {
+      const included = {
+        transactionHash: 'persisted-hash',
+        state: 'included',
+        value: 100,
+        recipient: 'NQ11 TEST REMOTE ADDRESS',
+        validityStartHeight: 100,
+        timestamp: 200_000,
+        data: { type: 'htlc', timeout: 300_000 },
+      }
+      state.query.mockResolvedValue([{ hash: included.transactionHash }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included, expect.objectContaining({
+        client: state.client,
+        generation: state.walletContextGeneration,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }), 0)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
 
     it('retains an accepted HTLC when signer activation is not ready yet', async () => {
@@ -744,6 +1442,7 @@ describe('useSyncHtlc', () => {
         data: { type: 'htlc', timeout: 300_000 },
       }
       state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ type: 'htlc', balance: 100, timeout: 300_000 })) as any
       state.activateRemoteSignerFromTransaction.mockRejectedValue(new Error('Cosigner key unavailable'))
       const { useSyncHtlc } = await import('./htlc')
       const { useSyncState } = await import('./state')
@@ -751,7 +1450,15 @@ describe('useSyncHtlc', () => {
 
       await expect(useSyncHtlc().checkHtlcState()).resolves.toBeUndefined()
 
-      expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included, expect.objectContaining({
+        client: state.client,
+        generation: state.walletContextGeneration,
+        network: state.networkName,
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }), 0)
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
+        expect.objectContaining({ transactionHash: 'h1', state: 'pending' }),
+      ])
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
     })
 
@@ -905,17 +1612,25 @@ describe('useSyncHtlc', () => {
       expect(state.htlcCheckLock).toBe(false)
     })
 
-    it('skips when htlcCheckLock is held', async () => {
+    it('keeps the swap lock separate from queued creation reconciliation', async () => {
       state.height = 100
       state.htlcCheckLock = true
       state.remoteBalance = 100
+      state.htlcStart = 100_000
+      state.headTimestamp = 200_000
+      state.htlcEnd = 300_000
+      state.isHtlcActive = false
+      const { SQLQuery } = await import('@/lib/sql-queries')
       const { useSyncHtlc } = await import('./htlc')
+
       await useSyncHtlc().maybeCheckHtlcState()
-      // Lock was already held; no balance side-effects expected
-      expect(state.client.waitForConsensusEstablished).not.toHaveBeenCalled()
+
+      expect(state.query).toHaveBeenCalledWith(SQLQuery.SelectPendingHtlcCreations)
+      expect(state.isHtlcActive).toBe(true)
+      expect(state.htlcCheckLock).toBe(true)
     })
 
-    it('runs checkHtlcState and clears the lock', async () => {
+    it('runs checkHtlcState without taking the swap lock', async () => {
       state.height = 100
       state.remoteBalance = 100
       state.htlcStart = 100_000
@@ -928,7 +1643,7 @@ describe('useSyncHtlc', () => {
       expect(state.htlcCheckLock).toBe(false)
     })
 
-    it('clears the lock when reconciliation throws', async () => {
+    it('leaves the swap lock untouched when reconciliation throws', async () => {
       state.height = 130
       state.query.mockRejectedValue(new Error('database unavailable'))
       const { useSyncHtlc } = await import('./htlc')

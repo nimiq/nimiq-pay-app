@@ -1,9 +1,10 @@
 import { mount } from '@vue/test-utils'
-import { createPinia, defineStore, setActivePinia } from 'pinia'
+import { createPinia, defineStore, disposePinia, getActivePinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { computed, defineComponent, nextTick, ref, watch } from 'vue'
+import { computed, customRef, defineComponent, nextTick, ref, shallowReactive, watch } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
-import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
+import { DEFAULT_LIMIT, migrations, SQLQuery } from '@/lib/sql-queries'
+import { getSignedTx } from '@/lib/tx'
 import { Transfer } from '@/types/transactions'
 
 function createAddress(value: string) {
@@ -11,6 +12,38 @@ function createAddress(value: string) {
     toUserFriendlyAddress: () => value,
     equals: (other?: { toUserFriendlyAddress: () => string }) => other?.toUserFriendlyAddress() === value,
   }
+}
+
+function createSignedTransaction(hash = 'payment-hash', overrides: Record<string, unknown> = {}) {
+  const plain = {
+    transactionHash: hash,
+    sender: 'NQ11 TEST ACTIVE REMOTE ADDRESS',
+    senderType: 2,
+    recipient: 'NQ22 TEST RECIPIENT',
+    recipientType: 0,
+    value: 42,
+    fee: 1,
+    timestamp: 123_100,
+    validityStartHeight: 100,
+    state: 'pending',
+    data: { raw: '' },
+    proof: { raw: '' },
+    valid: true,
+    ...overrides,
+  }
+  const signedTx = {
+    toPlain: () => plain,
+    hash: () => plain.transactionHash,
+    toHex: () => `serialized-${plain.transactionHash}`,
+    serializeContent: () => new Uint8Array(),
+    networkId: 5,
+    recipientType: plain.recipientType,
+    senderType: plain.senderType,
+    proof: { length: 98 },
+    recipient: createAddress(plain.recipient),
+    value: BigInt(plain.value),
+  }
+  return { plain, signedTx }
 }
 
 function createSignedHtlcCreation(hash = 'creation-hash') {
@@ -48,7 +81,7 @@ function createSignedHtlcCreation(hash = 'creation-hash') {
   }
 }
 
-const state = vi.hoisted(() => ({
+const rawState = vi.hoisted(() => ({
   activeAsset: 'USDT',
   isSendingTx: false,
   localAddress: createAddress('NQ00 TEST LOCAL ADDRESS'),
@@ -57,17 +90,28 @@ const state = vi.hoisted(() => ({
   remoteBalance: 0,
   ourRemoteSignerAddresses: new Set<string>(),
   networkId: 5,
+  networkName: 'testalbatross',
+  height: 128,
+  headTimestamp: 200_000,
+  walletContextGeneration: 0,
   client: {
     waitForConsensusEstablished: vi.fn(async () => undefined),
-    sendTransaction: vi.fn(async (): Promise<unknown> => undefined),
-  },
-  query: vi.fn(async () => []),
+    sendTransaction: vi.fn(async (): Promise<unknown> => ({ state: 'pending' })),
+  } as any,
+  pendingTransactions: [] as any[],
+  pendingRemoteDrainTxs: [] as any[],
+  query: vi.fn(async (..._args: any[]): Promise<any[]> => []),
   run: vi.fn(async (..._args: unknown[]) => undefined),
   updateActiveRemoteBalance: vi.fn(async () => undefined),
   activateRemoteSignerFromTransaction: vi.fn(async () => undefined),
+  deactivateRemoteSigner: vi.fn(async (_address?: any, _context?: any, _clearBalance?: boolean) => true),
   updateRemoteSigner: vi.fn(async () => undefined),
   upsertInactiveRemoteSigner: vi.fn(async () => 'added' as const),
   blockHeightToTimestamp: vi.fn(async (height: number) => height * 1000),
+  trackSwapCompleted: vi.fn(),
+  trackSwapFailed: vi.fn(),
+  provideFundingProof: vi.fn(async () => ({})),
+  getSwap: vi.fn(async (): Promise<any> => { throw new Error('bookkeeping failed') }),
   pendingHtlcCreationTransactions: [] as any[],
   pendingPaymentTransactions: [] as any[],
   logger: {
@@ -77,12 +121,14 @@ const state = vi.hoisted(() => ({
   },
 }))
 
+const state = shallowReactive(rawState)
+
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => state.logger,
 }))
 
 vi.mock('@/composables/useFastspotV2', () => ({
-  useFastspotApiV2: () => ({}),
+  useFastspotApiV2: () => ({ provideFundingProof: state.provideFundingProof, getSwap: state.getSwap }),
 }))
 
 vi.mock('@/composables/useTransactionSearch', () => ({
@@ -96,6 +142,11 @@ vi.mock('@/composables/useTransactionSearch', () => ({
 vi.mock('@/lib', () => ({
   isDev: false,
   nakaBufferAddresses: [],
+}))
+
+vi.mock('@/lib/analytics', () => ({
+  trackSwapCompleted: state.trackSwapCompleted,
+  trackSwapFailed: state.trackSwapFailed,
 }))
 
 vi.mock('@/lib/tx', () => ({
@@ -123,10 +174,16 @@ vi.mock('@/stores/conn', () => {
 
 vi.mock('@/stores/locks', () => {
   const useLocks = defineStore('locks', () => ({
-    isSendingTx: computed({
-      get: () => state.isSendingTx,
-      set: value => state.isSendingTx = value,
-    }),
+    isSendingTx: customRef<boolean>((track, trigger) => ({
+      get: () => {
+        track()
+        return state.isSendingTx
+      },
+      set: (value) => {
+        state.isSendingTx = value
+        trigger()
+      },
+    })),
   }))
 
   return { useLocks }
@@ -145,6 +202,9 @@ vi.mock('@/stores/nimiq-network', () => {
   const useNimiqNetwork = defineStore('nimiq-network', () => ({
     client: computed(() => state.client),
     networkId: computed(() => state.networkId),
+    networkName: computed(() => state.networkName),
+    height: computed(() => state.height),
+    headTimestamp: computed(() => state.headTimestamp),
   }))
 
   return { useNimiqNetwork }
@@ -154,9 +214,24 @@ vi.mock('@/stores/remote-signer', () => {
   const useRemoteSigner = defineStore('remote-signer', () => ({
     updateActiveRemoteBalance: state.updateActiveRemoteBalance,
     activateRemoteSignerFromTransaction: state.activateRemoteSignerFromTransaction,
+    deactivateRemoteSigner: state.deactivateRemoteSigner,
     updateRemoteSigner: state.updateRemoteSigner,
     upsertInactiveRemoteSigner: state.upsertInactiveRemoteSigner,
     blockHeightToTimestamp: state.blockHeightToTimestamp,
+    getWalletContext: () => state.localAddress && state.client
+      ? {
+          address: state.localAddress,
+          client: state.client,
+          network: state.networkName,
+          owner: state.localAddress.toUserFriendlyAddress(),
+          generation: state.walletContextGeneration,
+        }
+      : undefined,
+    isWalletContextCurrent: (context: any) => !!state.localAddress
+      && context.client === state.client
+      && context.network === state.networkName
+      && context.owner === state.localAddress.toUserFriendlyAddress()
+      && context.generation === state.walletContextGeneration,
     remoteAddress: computed(() => state.remoteAddress),
     remoteBalance: computed(() => state.remoteBalance),
     remotePublicKey: computed(() => 'service-public-key'),
@@ -177,8 +252,35 @@ vi.mock('@/stores/sync', () => {
   return { useSync }
 })
 
+vi.mock('@/stores/sync/state', () => {
+  const useSyncState = defineStore('sync-state', () => ({
+    pendingTransactions: state.pendingTransactions,
+    pendingPaymentTransactions: state.pendingPaymentTransactions,
+    pendingRemoteDrainTxs: state.pendingRemoteDrainTxs,
+    pendingHtlcCreationTransactions: state.pendingHtlcCreationTransactions,
+    walletContextGeneration: computed({
+      get: () => state.walletContextGeneration,
+      set: value => state.walletContextGeneration = value,
+    }),
+    isTransactionPending: customRef<boolean>(track => ({
+      get: () => {
+        track()
+        return state.pendingTransactions.length > 0
+          || state.pendingRemoteDrainTxs.length > 0
+          || state.pendingHtlcCreationTransactions.length > 0
+      },
+      set: () => {},
+    })),
+  }))
+
+  return { useSyncState }
+})
+
 describe('useTransactions', () => {
   beforeEach(() => {
+    const previousPinia = getActivePinia()
+    if (previousPinia)
+      disposePinia(previousPinia)
     setActivePinia(createPinia())
     state.activeAsset = Asset.USDT
     state.isSendingTx = false
@@ -188,10 +290,16 @@ describe('useTransactions', () => {
     state.remoteBalance = 0
     state.ourRemoteSignerAddresses = new Set<string>()
     state.networkId = 5
+    state.networkName = 'testalbatross'
+    state.height = 128
+    state.headTimestamp = 200_000
+    state.walletContextGeneration = 0
     state.client = {
       waitForConsensusEstablished: vi.fn(async () => undefined),
-      sendTransaction: vi.fn(async (): Promise<unknown> => undefined),
+      sendTransaction: vi.fn(async (): Promise<unknown> => ({ state: 'pending' })),
     }
+    state.pendingTransactions = []
+    state.pendingRemoteDrainTxs = []
     state.query.mockReset()
     state.query.mockResolvedValue([])
     state.run.mockReset()
@@ -200,17 +308,26 @@ describe('useTransactions', () => {
     state.updateActiveRemoteBalance.mockResolvedValue(undefined)
     state.activateRemoteSignerFromTransaction.mockReset()
     state.activateRemoteSignerFromTransaction.mockResolvedValue(undefined)
+    state.deactivateRemoteSigner.mockReset()
+    state.deactivateRemoteSigner.mockResolvedValue(true)
     state.updateRemoteSigner.mockReset()
     state.updateRemoteSigner.mockResolvedValue(undefined)
     state.upsertInactiveRemoteSigner.mockReset()
     state.upsertInactiveRemoteSigner.mockResolvedValue('added')
     state.blockHeightToTimestamp.mockReset()
     state.blockHeightToTimestamp.mockImplementation(async height => height * 1000)
+    state.trackSwapCompleted.mockReset()
+    state.trackSwapFailed.mockReset()
+    state.provideFundingProof.mockReset()
+    state.provideFundingProof.mockResolvedValue({})
+    state.getSwap.mockReset()
+    state.getSwap.mockRejectedValue(new Error('bookkeeping failed'))
     state.pendingHtlcCreationTransactions = []
     state.pendingPaymentTransactions = []
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
+    vi.mocked(getSignedTx).mockReset()
     vi.stubGlobal('Nimiq', {
       Address: {
         fromUserFriendlyAddress: (value: string) => createAddress(value),
@@ -636,6 +753,60 @@ describe('useTransactions', () => {
       expect(store.transactions.map(tx => tx.hash)).not.toContain('hash-our-drain')
     })
 
+    it('does not persist a receipt after context replacement during own-HTLC lookup', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useTransactions()
+      await nextTick()
+      let finishLookup!: (isOurs: boolean) => void
+      vi.spyOn(useRemoteSigner(), 'isOurRemoteSigner').mockReturnValueOnce(
+        new Promise(resolve => finishLookup = resolve),
+      )
+      const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-lookup-receipt' })
+      const persistence = store.addReceiptTransaction(receipt as any)
+      state.walletContextGeneration += 1
+      finishLookup(false)
+      await persistence
+
+      expect(state.run).not.toHaveBeenCalled()
+      expect(store.transactions).toEqual([])
+    })
+
+    it('does not publish a receipt after context replacement during native persistence', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await nextTick()
+      let finishWrite!: () => void
+      state.run.mockReturnValueOnce(new Promise(resolve => finishWrite = () => resolve(undefined)))
+      const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-native-receipt' })
+      const persistence = store.addReceiptTransaction(receipt as any)
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array)))
+      state.walletContextGeneration += 1
+      finishWrite()
+      await persistence
+
+      expect(store.transactions).toEqual([])
+      expect(state.run).toHaveBeenCalledTimes(1)
+    })
+
+    it('stores a Polygon receipt while the Nimiq client is unavailable', async () => {
+      state.client = undefined
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const receipt = makeUserReceiptRow({
+        sender: '0xsender',
+        senderType: 0,
+        hash: 'polygon-receipt',
+        asset: Asset.USDT,
+        chain: Chain.Polygon,
+      })
+      await store.addReceiptTransaction(receipt as any)
+
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['polygon-receipt'])
+    })
+
     it('addReceiptTransaction stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
       const { useTransactions } = await import('./transactions')
       let store!: ReturnType<typeof useTransactions>
@@ -675,345 +846,1167 @@ describe('useTransactions', () => {
     })
   })
 
-  it('logs wallet and signer context when signing a transaction fails', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    state.localBalance = 100_000
-    state.remoteBalance = 50_000
-    vi.mocked(getSignedTx).mockResolvedValue({
-      data: undefined,
-      error: 'cosigner rejected',
-    } as any)
+  describe('send certainty', () => {
+    function mockRemoteSigning(
+      signedTx: ReturnType<typeof createSignedTransaction>['signedTx'],
+      result: { outcome: 'signed', signedTx: any, txSent?: boolean, swap?: any } | { outcome: 'rejected' | 'unknown', error: string } = { outcome: 'signed', signedTx },
+    ) {
+      vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options) => {
+        try {
+          await options?.beforeRemoteBroadcast?.(signedTx as any, result.outcome === 'signed' ? result.swap : undefined)
+        }
+        catch (error) {
+          return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
+        }
+        return result as any
+      })
+    }
 
-    const store = useTransactions()
-    const result = await store.sendTx({ transfer: Transfer.RemoteToLocal } as any)
+    it('restores payment, staking, and remote-drain rows without replacing concurrent pending entries', async () => {
+      const { useTransactions } = await import('./transactions')
+      const existingPayment = { transactionHash: 'existing-payment' }
+      const concurrentPayment = { transactionHash: 'concurrent-payment' }
+      const existingDrain = { hash: 'existing-drain' }
+      const concurrentDrain = { hash: 'concurrent-drain' }
+      state.pendingTransactions.push(existingPayment)
+      state.pendingRemoteDrainTxs.push(existingDrain)
+      let resolveQuery!: (rows: any[]) => void
+      state.query.mockReturnValue(new Promise(resolve => resolveQuery = resolve))
 
-    expect(result.error).toBe('cosigner rejected')
-    expect(state.logger.error).toHaveBeenCalledWith('Error while signing transaction', 'cosigner rejected', expect.objectContaining({
-      transfer: Transfer.RemoteToLocal,
-      remoteAddress: 'NQ11 TEST ACTIVE REMOTE ADDRESS',
-      remoteBalance: 50_000,
-      localAddress: 'NQ00 TEST LOCAL ADDRESS',
-      localBalance: 100_000,
-    }))
-  })
+      const restoration = useTransactions().restorePendingOutgoingTransactions()
+      await vi.waitFor(() => expect(state.query).toHaveBeenCalledWith(
+        SQLQuery.SelectPendingOutgoingTransactions,
+        ['NQ00 TEST LOCAL ADDRESS'],
+      ))
+      state.pendingTransactions.push(concurrentPayment)
+      state.pendingRemoteDrainTxs.push(concurrentDrain)
+      resolveQuery([
+        {
+          hash: 'payment-hash',
+          timestamp: 1,
+          sender: 'NQ00 TEST LOCAL ADDRESS',
+          senderType: 2,
+          recipient: 'NQ22 RECIPIENT',
+          recipientType: 0,
+          amount: 10,
+          fee: 1,
+          status: 'pending',
+          transfer: Transfer.UserPayment,
+          validityStartHeight: 100,
+        },
+        {
+          hash: 'staking-hash',
+          timestamp: 2,
+          sender: 'NQ00 TEST LOCAL ADDRESS',
+          senderType: 2,
+          recipient: 'NQ00 STAKING',
+          recipientType: 3,
+          amount: 20,
+          fee: 0,
+          status: 'new',
+          transfer: Transfer.Staking,
+          validityStartHeight: 101,
+        },
+        {
+          hash: 'drain-hash',
+          timestamp: 3,
+          sender: 'NQ11 OLD HTLC',
+          senderType: 2,
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 0,
+          amount: 30,
+          fee: 0,
+          status: 'pending',
+          transfer: Transfer.RemoteToLocalImmediateReclaim,
+          validityStartHeight: 102,
+        },
+      ])
 
-  it('persists local-to-remote recovery state before waiting for broadcast', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    let resolveBroadcast!: (details: typeof plain) => void
-    state.client.sendTransaction.mockReturnValue(new Promise<typeof plain>(resolve => resolveBroadcast = resolve))
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-
-    const sendPromise = useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
-    await vi.waitFor(() => {
-      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
-      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
-        active: false,
-        balance: 0,
-        address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
-      }))
-      expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
+      await expect(restoration).resolves.toBe(true)
+      expect(state.pendingTransactions.map(tx => tx.transactionHash)).toEqual([
+        'existing-payment',
+        'concurrent-payment',
+        'payment-hash',
+        'staking-hash',
+      ])
+      expect(state.pendingRemoteDrainTxs.map(tx => tx.hash)).toEqual([
+        'existing-drain',
+        'concurrent-drain',
+        'drain-hash',
+      ])
     })
 
-    const upsertCall = state.run.mock.calls.find(call => call[0] === SQLQuery.UpsertTx)!
-    expect(upsertCall).toBeDefined()
-    expect((upsertCall[1] as unknown[]).at(-1)).toBe(plain.validityStartHeight)
-    expect(state.run.mock.invocationCallOrder[state.run.mock.calls.indexOf(upsertCall)]).toBeLessThan(state.client.sendTransaction.mock.invocationCallOrder[0])
-    expect(state.upsertInactiveRemoteSigner.mock.invocationCallOrder[0]).toBeLessThan(state.run.mock.invocationCallOrder[state.run.mock.calls.indexOf(upsertCall)])
-    expect(state.upsertInactiveRemoteSigner.mock.invocationCallOrder[0]).toBeLessThan(state.client.sendTransaction.mock.invocationCallOrder[0])
+    it('rejects stale ordinary and drain rows changed during restoration', async () => {
+      const { useTransactions } = await import('./transactions')
+      const pendingPayment = { transactionHash: 'stale-payment' }
+      const pendingDrain = { hash: 'stale-drain' }
+      state.pendingTransactions.push(pendingPayment)
+      state.pendingRemoteDrainTxs.push(pendingDrain)
+      let resolveRows!: (rows: any[]) => void
+      state.query.mockImplementation(query => query === SQLQuery.SelectPendingOutgoingTransactions
+        ? new Promise(resolve => resolveRows = resolve)
+        : Promise.resolve([]))
 
-    resolveBroadcast(plain)
-    await sendPromise
-  })
+      const restoration = useTransactions().restorePendingOutgoingTransactions()
+      await vi.waitFor(() => expect(state.query).toHaveBeenCalledWith(
+        SQLQuery.SelectPendingOutgoingTransactions,
+        ['NQ00 TEST LOCAL ADDRESS'],
+      ))
+      state.pendingTransactions.splice(0)
+      state.pendingRemoteDrainTxs.splice(0, 1, { hash: 'replacement-drain' } as any)
+      resolveRows([
+        {
+          hash: 'stale-payment',
+          timestamp: 1,
+          sender: 'NQ00 TEST LOCAL ADDRESS',
+          senderType: 0,
+          recipient: 'NQ22 RECIPIENT',
+          recipientType: 0,
+          amount: 10,
+          fee: 1,
+          status: 'pending',
+          transfer: Transfer.UserPayment,
+          validityStartHeight: 100,
+        },
+        {
+          hash: 'stale-drain',
+          timestamp: 2,
+          sender: 'NQ11 OLD HTLC',
+          senderType: 2,
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 0,
+          amount: 20,
+          fee: 0,
+          status: 'pending',
+          transfer: Transfer.RemoteToLocalImmediateReclaim,
+          validityStartHeight: 101,
+        },
+      ])
 
-  it('persists extension recovery state before asking the cosigner to sign or broadcast', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { signedTx } = createSignedHtlcCreation('extension-hash')
-    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
-      if (!options?.beforeRemoteBroadcast)
-        return { data: undefined, error: 'Missing recovery hook' }
+      await expect(restoration).resolves.toBe(false)
+      expect(state.pendingTransactions).toEqual([])
+      expect(state.pendingRemoteDrainTxs).toEqual([{ hash: 'replacement-drain' }])
+    })
 
-      await options.beforeRemoteBroadcast(signedTx)
-      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
-      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
-      return { data: undefined, error: 'Cosigner response lost' }
-    }) as any)
+    it('restores a staged payment from a persisted imported signer without creation history', async () => {
+      const { DatabaseSync } = await import('node:sqlite')
+      const { useTransactions } = await import('./transactions')
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      db.prepare(SQLQuery.InsertRemoteSigner).run(
+        'NQ11 TEST ACTIVE REMOTE ADDRESS',
+        42,
+        98,
+        'service-public-key',
+        1,
+        2,
+        1,
+      )
+      state.run.mockImplementation(async (...args: unknown[]) => {
+        const [sql, values = []] = args as [string, unknown[]?]
+        db.prepare(sql).run(...values.map(value => value ?? null) as any[])
+      })
+      state.query.mockImplementation(async (sql, values: any[] = []) =>
+        db.prepare(sql).all(...values.map(value => value ?? null)) as any[],
+      )
+      const { signedTx } = createSignedTransaction('remote-payment-after-restart')
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: true })
 
-    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+      try {
+        const result = await useTransactions().sendTx({
+          transfer: Transfer.UserPayment,
+          recipient: 'NQ22 TEST RECIPIENT',
+          amount: 42,
+          title: 'Payment',
+        } as any)
+        expect(result.outcome).toBe('submitted')
+        db.prepare(`INSERT INTO transactions
+          (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, transfer, asset, chain)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(
+            'foreign-signer-payment',
+            123_100,
+            'NQ33 FOREIGN REMOTE SIGNER',
+            2,
+            'NQ22 TEST RECIPIENT',
+            0,
+            99,
+            1,
+            'pending',
+            Transfer.UserPayment,
+            Asset.NIM,
+            Chain.Nimiq,
+          )
 
-    expect(result.error).toBeUndefined()
-    expect(result.data?.tx).toMatchObject({ hash: 'extension-hash', status: 'pending' })
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: 'extension-hash' }),
-    ])
-  })
+        state.pendingTransactions.splice(0)
+        await expect(useTransactions().restorePendingOutgoingTransactions()).resolves.toBe(true)
 
-  it('retains staged extension recovery when the cosigner request throws', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { signedTx } = createSignedHtlcCreation('extension-hash')
-    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
-      await options!.beforeRemoteBroadcast!(signedTx)
-      throw new Error('connection closed')
-    }) as any)
-
-    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
-
-    expect(result.error).toBeUndefined()
-    expect(result.data?.tx).toMatchObject({ hash: 'extension-hash', status: 'pending' })
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: 'extension-hash' }),
-    ])
-  })
-
-  it('retains the staged extension when the cosigner response changes its transaction', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const staged = createSignedHtlcCreation('staged-extension-hash')
-    const changed = createSignedHtlcCreation('changed-extension-hash')
-    vi.mocked(getSignedTx).mockImplementation((async (_partialTx: unknown, options?: { beforeRemoteBroadcast?: (tx: unknown) => Promise<void> }) => {
-      await options!.beforeRemoteBroadcast!(staged.signedTx)
-      return { data: { signedTx: changed.signedTx, txSent: true }, error: undefined }
-    }) as any)
-
-    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
-
-    expect(result.error).toBeUndefined()
-    expect(result.data?.tx).toMatchObject({ hash: 'staged-extension-hash', status: 'pending' })
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: 'staged-extension-hash' }),
-    ])
-  })
-
-  it('aborts broadcast and releases the send lock when recovery persistence fails', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { signedTx } = createSignedHtlcCreation()
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.upsertInactiveRemoteSigner.mockRejectedValue(new Error('database unavailable'))
-
-    await expect(useTransactions().sendTx({ transfer: Transfer.LocalToRemote })).rejects.toThrow('database unavailable')
-
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
-    expect(state.isSendingTx).toBe(false)
-  })
-
-  it('activates a successfully included local-to-remote HTLC without waiting for server discovery', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    const included = { ...plain, state: 'included' }
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockResolvedValue(included as any)
-
-    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
-
-    expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(included)
-    expect(state.pendingHtlcCreationTransactions).toEqual([included])
-  })
-
-  it('keeps a pending local-to-remote HTLC inactive until the chain includes it', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    const pending = { ...plain, state: 'pending' }
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockResolvedValue(pending as any)
-
-    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
-
-    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([pending])
-  })
-
-  it.each([
-    { transfer: Transfer.LocalToRemote, outcome: { state: 'invalidated' } },
-    { transfer: Transfer.LocalToRemote, outcome: { state: 'included', executionResult: false } },
-    { transfer: Transfer.ExtendRemote, outcome: { state: 'invalidated' } },
-    { transfer: Transfer.ExtendRemote, outcome: { state: 'included', executionResult: false } },
-  ])('clears a rejected $transfer from pending recovery after $outcome', async ({ transfer, outcome }) => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockResolvedValue({ ...plain, ...outcome } as any)
-
-    const result = await useTransactions().sendTx({ transfer } as any)
-
-    expect(result.error).toBeTruthy()
-    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['failed', plain.timestamp, plain.transactionHash])
-    expect(state.pendingHtlcCreationTransactions).toEqual([])
-    expect(state.isSendingTx).toBe(false)
-    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
-    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
-    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
-  })
-
-  it.each([false, true])('preserves other pending HTLCs after rejection (already removed: %s)', async (alreadyRemoved) => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    const otherPending = createSignedHtlcCreation('other-pending-hash').plain
-    state.pendingHtlcCreationTransactions.push(otherPending)
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockImplementation(async () => {
-      if (alreadyRemoved) {
-        const index = state.pendingHtlcCreationTransactions.findIndex(tx => tx.transactionHash === plain.transactionHash)
-        state.pendingHtlcCreationTransactions.splice(index, 1)
+        expect(state.pendingTransactions.map(tx => tx.transactionHash)).toEqual([
+          'remote-payment-after-restart',
+        ])
       }
-      return { ...plain, state: 'invalidated' }
+      finally {
+        db.close()
+      }
     })
 
-    const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+    it('restores only our unresolved stake withdrawals and blocks another send', async () => {
+      const { DatabaseSync } = await import('node:sqlite')
+      const { useTransactions } = await import('./transactions')
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      const insert = db.prepare(`INSERT INTO transactions
+        (hash, sender, senderType, recipient, status, transfer, asset, chain, validityStartHeight)
+        VALUES (?, 'staking-contract', 3, ?, ?, 'staking', 'NIM', 'Nimiq', 100)`)
+      insert.run('our-pending-withdrawal', 'NQ00 TEST LOCAL ADDRESS', 'pending')
+      insert.run('foreign-withdrawal', 'NQ33 OTHER WALLET', 'pending')
+      insert.run('resolved-withdrawal', 'NQ00 TEST LOCAL ADDRESS', 'confirmed')
+      state.query.mockImplementation(async (sql, values: any[] = []) => db.prepare(sql).all(...values) as any[])
+      try {
+        const store = useTransactions()
+        await expect(store.restorePendingOutgoingTransactions()).resolves.toBe(true)
+        expect(state.pendingTransactions.map(tx => tx.transactionHash)).toEqual(['our-pending-withdrawal'])
+        const result = await store.sendTx({ transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 42 } as any)
+        expect(result.outcome).toBe('rejected')
+        expect(getSignedTx).not.toHaveBeenCalled()
+      }
+      finally {
+        db.close()
+      }
+    })
 
-    expect(result.error).toBeTruthy()
-    expect(state.pendingHtlcCreationTransactions).toEqual([otherPending])
-  })
+    it('blocks sending when a persisted HTLC creation has not been hydrated by startup yet', async () => {
+      const { DatabaseSync } = await import('node:sqlite')
+      const { useTransactions } = await import('./transactions')
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      db.prepare(`INSERT INTO transactions
+        (hash, sender, recipient, status, transfer, asset, chain, validityStartHeight)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+        .run(
+          'pending-htlc-after-reload',
+          'NQ00 TEST LOCAL ADDRESS',
+          'NQ11 TEST ACTIVE REMOTE ADDRESS',
+          'pending',
+          Transfer.LocalToRemote,
+          Asset.NIM,
+          Chain.Nimiq,
+          100,
+        )
+      state.query.mockImplementation(async (sql, values: any[] = []) =>
+        db.prepare(sql).all(...values.map(value => value ?? null)) as any[],
+      )
 
-  it.each([Transfer.LocalToRemote, Transfer.ExtendRemote])('broadcasts %s only once', async (transfer) => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation(`${transfer}-hash`)
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockResolvedValue(plain as any)
+      try {
+        const result = await useTransactions().sendTx({
+          transfer: Transfer.UserPayment,
+          recipient: 'NQ22 TEST RECIPIENT',
+          amount: 42,
+          title: 'Payment',
+        } as any)
 
-    await useTransactions().sendTx({ transfer } as any)
+        expect(result).toEqual({
+          outcome: 'rejected',
+          reason: 'busy',
+          error: 'A transaction is still pending. Wait for it to resolve before sending another.',
+        })
+        expect(state.pendingHtlcCreationTransactions).toContainEqual(expect.objectContaining({
+          transactionHash: 'pending-htlc-after-reload',
+          state: 'pending',
+        }))
+        expect(getSignedTx).not.toHaveBeenCalled()
+        expect(state.client.waitForConsensusEstablished).not.toHaveBeenCalled()
+      }
+      finally {
+        db.close()
+      }
+    })
 
-    expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
-  })
+    it('returns false when pending restoration fails and blocks signing', async () => {
+      const { useTransactions } = await import('./transactions')
+      state.query.mockImplementation(query => query === SQLQuery.SelectPendingOutgoingTransactions
+        ? Promise.reject(new Error('database unavailable'))
+        : Promise.resolve([]))
 
-  it('does not rebroadcast when listener details already exist', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    const observed = { ...plain, state: 'pending' }
-    state.pendingPaymentTransactions = [observed]
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
+      await expect(useTransactions().restorePendingOutgoingTransactions()).resolves.toBe(false)
+      const result = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocal } as any)
 
-    await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+      expect(result).toEqual({ outcome: 'rejected', error: 'Could not verify pending transactions' })
+      expect(getSignedTx).not.toHaveBeenCalled()
+    })
 
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([observed])
-  })
+    it.each(['owner', 'network', 'client', 'generation'] as const)(
+      'returns false when %s changes during pending restoration',
+      async (field) => {
+        const { useTransactions } = await import('./transactions')
+        state.query.mockImplementation(async (query) => {
+          if (query !== SQLQuery.SelectPendingOutgoingTransactions)
+            return []
+          if (field === 'owner')
+            state.localAddress = createAddress('NQ01 NEXT OWNER')
+          else if (field === 'network')
+            state.networkName = 'mainalbatross'
+          else if (field === 'client')
+            state.client = { waitForConsensusEstablished: vi.fn(), sendTransaction: vi.fn() }
+          else
+            state.walletContextGeneration += 1
+          return []
+        })
 
-  it('tracks an extension already broadcast by the cosigner until the chain includes it', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation('extension-hash')
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: true }, error: undefined } as any)
+        await expect(useTransactions().restorePendingOutgoingTransactions()).resolves.toBe(false)
+      },
+    )
 
-    await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+    it('rejects without a client', async () => {
+      const { useTransactions } = await import('./transactions')
+      state.client = undefined as any
 
-    expect(state.client.sendTransaction).not.toHaveBeenCalled()
-    expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
-    expect(state.pendingHtlcCreationTransactions).toEqual([plain])
-  })
+      const result = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocal } as any)
 
-  it('releases the send lock and retains recovery state when broadcasting never settles', async () => {
-    vi.useFakeTimers()
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { plain, signedTx } = createSignedHtlcCreation()
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockReturnValue(new Promise(() => {}))
+      expect(result).toEqual({ outcome: 'rejected', error: 'Nimiq network unavailable' })
+      expect(getSignedTx).not.toHaveBeenCalled()
+    })
 
-    let settled = false
-    void useTransactions().sendTx({ transfer: Transfer.LocalToRemote }).then(() => settled = true)
-    await vi.waitFor(() => expect(state.client.sendTransaction).toHaveBeenCalledOnce())
-    await vi.advanceTimersByTimeAsync(30_000)
+    it('does not sign before consensus is established', async () => {
+      const { useTransactions } = await import('./transactions')
+      let establishConsensus!: () => void
+      state.client.waitForConsensusEstablished.mockReturnValue(new Promise<void>(resolve => establishConsensus = resolve))
+      const send = useTransactions().sendTx({ transfer: Transfer.RemoteToLocal } as any)
+      await vi.waitFor(() => expect(state.client.waitForConsensusEstablished).toHaveBeenCalledOnce())
 
-    expect(settled).toBe(true)
-    expect(state.isSendingTx).toBe(false)
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: plain.transactionHash }),
-    ])
-    vi.useRealTimers()
-  })
+      expect(getSignedTx).not.toHaveBeenCalled()
+      establishConsensus()
+      mockRemoteSigning(createSignedTransaction().signedTx)
+      await send
+    })
 
-  it('keeps staged recovery state when the broadcast result is unknown', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { signedTx } = createSignedHtlcCreation()
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+    it('bounds consensus readiness and releases the send lock', async () => {
+      vi.useFakeTimers()
+      const { useTransactions } = await import('./transactions')
+      state.client.waitForConsensusEstablished.mockReturnValue(new Promise(() => {}))
 
-    const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+      const send = useTransactions().sendTx({ transfer: Transfer.RemoteToLocal } as any)
+      await vi.advanceTimersByTimeAsync(30_000)
 
-    expect(result.data?.tx).toMatchObject({ hash: 'creation-hash', status: 'pending' })
-    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
-    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
-    expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.any(Array))
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: 'creation-hash' }),
-    ])
-  })
+      await expect(send).resolves.toEqual(expect.objectContaining({ outcome: 'rejected' }))
+      expect(getSignedTx).not.toHaveBeenCalled()
+      expect(state.isSendingTx).toBe(false)
+      vi.useRealTimers()
+    })
 
-  it('keeps staged extension recovery state when the broadcast result is unknown', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const { signedTx } = createSignedHtlcCreation('extension-hash')
-    vi.mocked(getSignedTx).mockResolvedValue({ data: { signedTx, txSent: false }, error: undefined } as any)
-    state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+    it.each(['owner', 'network', 'client', 'generation'] as const)(
+      'rejects when %s changes before signing',
+      async (field) => {
+        const { useTransactions } = await import('./transactions')
+        state.client.waitForConsensusEstablished.mockImplementation(async () => {
+          if (field === 'owner')
+            state.localAddress = createAddress('NQ01 NEXT OWNER')
+          else if (field === 'network')
+            state.networkName = 'mainalbatross'
+          else if (field === 'client')
+            state.client = { waitForConsensusEstablished: vi.fn(), sendTransaction: vi.fn() }
+          else
+            state.walletContextGeneration += 1
+        })
 
-    const result = await useTransactions().sendTx({ transfer: Transfer.ExtendRemote } as any)
+        const result = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocal } as any)
 
-    expect(result.error).toBeUndefined()
-    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
-    expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledTimes(1)
-    expect(state.pendingHtlcCreationTransactions).toEqual([
-      expect.objectContaining({ transactionHash: 'extension-hash' }),
-    ])
-  })
+        expect(result).toEqual({ outcome: 'rejected', error: 'Wallet or network changed before sending' })
+        expect(getSignedTx).not.toHaveBeenCalled()
+      },
+    )
 
-  it('does not clear the active remote signer when draining an inactive remote signer', async () => {
-    const { getSignedTx } = await import('@/lib/tx')
-    const { useTransactions } = await import('./transactions')
-    const inactiveSignerAddress = createAddress('NQ22 TEST INACTIVE REMOTE ADDRESS')
-    const txPlain = {
-      transactionHash: 'inactive-drain-hash',
-      sender: inactiveSignerAddress.toUserFriendlyAddress(),
-      senderType: 2,
-      recipient: state.localAddress.toUserFriendlyAddress(),
-      recipientType: 0,
-      value: 123,
-      fee: 0,
-      timestamp: 1000,
-      validityStartHeight: 1,
-      data: { raw: '' },
-      proof: { raw: '' },
-      valid: true,
-    }
-    const signedTx = {
-      toPlain: () => txPlain,
-      hash: () => txPlain.transactionHash,
-      toHex: () => 'serialized-tx',
-      serializeContent: () => new Uint8Array(),
-      networkId: 5,
-      recipientType: 0,
-      senderType: 2,
-      proof: { length: 98 },
-    }
-    vi.mocked(getSignedTx).mockResolvedValue({
-      data: { signedTx, txSent: true },
-      error: undefined,
-    } as any)
-    state.client.sendTransaction.mockResolvedValue(txPlain as any)
+    it('persists, marks pending, then broadcasts an ordinary remote payment', async () => {
+      const { useTransactions } = await import('./transactions')
+      const order: string[] = []
+      const { signedTx } = createSignedTransaction('ordinary-payment')
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.UpsertTx)
+          order.push('persist')
+      })
+      const originalPush = state.pendingTransactions.push.bind(state.pendingTransactions)
+      vi.spyOn(state.pendingTransactions, 'push').mockImplementation((...items) => {
+        order.push('pending')
+        return originalPush(...items)
+      })
+      state.client.sendTransaction.mockImplementation(async () => {
+        order.push('broadcast')
+        return { state: 'pending' }
+      })
+      mockRemoteSigning(signedTx)
 
-    const store = useTransactions()
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPayment,
+        recipient: 'NQ22 TEST RECIPIENT',
+        amount: 42,
+        title: 'Payment',
+      } as any)
 
-    await store.sendTx({
-      transfer: Transfer.RemoteToLocalImmediateReclaim,
-      amount: 123,
-      sender: inactiveSignerAddress,
-    } as any)
+      expect(order).toEqual(['persist', 'pending', 'broadcast'])
+      expect(result.outcome).toBe('submitted')
+    })
 
-    expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+    it('marks HTLC recovery pending immediately after persistence', async () => {
+      const { useTransactions } = await import('./transactions')
+      const order: string[] = []
+      const { signedTx } = createSignedHtlcCreation()
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.UpsertTx)
+          order.push('persist')
+      })
+      const originalPush = state.pendingHtlcCreationTransactions.push.bind(state.pendingHtlcCreationTransactions)
+      vi.spyOn(state.pendingHtlcCreationTransactions, 'push').mockImplementation((...items) => {
+        order.push('pending')
+        return originalPush(...items)
+      })
+      state.upsertInactiveRemoteSigner.mockImplementation(async () => {
+        order.push('inactive-signer')
+        return 'added'
+      })
+      state.client.sendTransaction.mockImplementation(async () => {
+        order.push('broadcast')
+        return { state: 'pending' }
+      })
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(order).toEqual(['persist', 'pending', 'inactive-signer', 'broadcast'])
+      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          client: state.client,
+          generation: 0,
+          network: 'testalbatross',
+          owner: 'NQ00 TEST LOCAL ADDRESS',
+        }),
+      )
+      expect(result.outcome).toBe('submitted')
+    })
+
+    it('classifies a staged pre-broadcast persistence failure as rejected', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction()
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.UpsertTx)
+          throw new Error('persistence failed')
+      })
+      vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options) => {
+        try {
+          await options?.beforeRemoteBroadcast?.(signedTx as any)
+          return { outcome: 'signed', signedTx } as any
+        }
+        catch (error) {
+          return { outcome: 'rejected', error: (error as Error).message }
+        }
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result).toEqual({ outcome: 'rejected', error: 'persistence failed' })
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('cleans up an explicit cosigner rejection', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('rejected-payment')
+      mockRemoteSigning(signedTx, { outcome: 'rejected', error: 'cosigner rejected' })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result).toEqual({ outcome: 'rejected', error: 'cosigner rejected' })
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['failed', 123_100, 'rejected-payment'])
+      expect(state.pendingTransactions).toEqual([])
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it.each(['owner', 'network', 'client', 'generation'] as const)(
+      'keeps a staged swap unknown when %s changes after the cosigner cannot confirm submission',
+      async (field) => {
+        const { useTransactions } = await import('./transactions')
+        const { signedTx } = createSignedTransaction(`stale-signing-${field}`)
+        const swap = {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        }
+        let finishSigning!: () => void
+        vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options) => {
+          await options?.beforeRemoteBroadcast?.(signedTx as any, swap as any)
+          await new Promise<void>(resolve => finishSigning = resolve)
+          return { outcome: 'signed', signedTx, txSent: false, swap } as any
+        })
+
+        const send = useTransactions().sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'payment-ref',
+        } as any)
+        await vi.waitFor(() => expect(state.pendingTransactions).toContainEqual(
+          expect.objectContaining({ transactionHash: `stale-signing-${field}` }),
+        ))
+
+        if (field === 'owner')
+          state.localAddress = createAddress('NQ01 NEXT OWNER')
+        else if (field === 'network')
+          state.networkName = 'mainalbatross'
+        else if (field === 'client')
+          state.client = { waitForConsensusEstablished: vi.fn(), sendTransaction: vi.fn() }
+        else
+          state.walletContextGeneration += 1
+        finishSigning()
+
+        await expect(send).resolves.toMatchObject({
+          outcome: 'unknown',
+          stagedHash: `stale-signing-${field}`,
+          error: 'Wallet or network changed before sending',
+        })
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+        expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.any(Array))
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
+        expect(state.trackSwapFailed).not.toHaveBeenCalled()
+        expect(state.pendingTransactions).toContainEqual(
+          expect.objectContaining({ transactionHash: `stale-signing-${field}` }),
+        )
+      },
+    )
+
+    it('keeps staged state unknown when context changes during authoritative non-submission persistence failure', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('stale-non-submission-persistence')
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: false,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.InsertSwapHtlc) {
+          state.walletContextGeneration += 1
+          throw new Error('swap persistence failed')
+        }
+      })
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+
+      expect(result).toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'stale-non-submission-persistence',
+        error: 'swap persistence failed',
+      })
+      expect(state.pendingTransactions).toContainEqual(expect.objectContaining({
+        transactionHash: 'stale-non-submission-persistence',
+      }))
+    })
+
+    it.each(['owner', 'network', 'client', 'generation'] as const)(
+      'retains terminal swap recovery when %s changes during local broadcast',
+      async (field) => {
+        const { useTransactions } = await import('./transactions')
+        const { signedTx } = createSignedTransaction(`stale-broadcast-${field}`)
+        let finishBroadcast!: (details: any) => void
+        state.client.sendTransaction.mockReturnValue(new Promise(resolve => finishBroadcast = resolve))
+        mockRemoteSigning(signedTx, {
+          outcome: 'signed',
+          signedTx,
+          txSent: false,
+          swap: {
+            id: 'swap-id',
+            status: 'pending',
+            contracts: {
+              NIM: {
+                id: 'nim-contract',
+                htlc: { timeoutTime: 123 },
+              },
+            },
+          },
+        } as any)
+
+        const send = useTransactions().sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'payment-ref',
+        } as any)
+        await vi.waitFor(() => expect(state.client.sendTransaction).toHaveBeenCalledOnce())
+
+        if (field === 'owner')
+          state.localAddress = createAddress('NQ01 NEXT OWNER')
+        else if (field === 'network')
+          state.networkName = 'mainalbatross'
+        else if (field === 'client')
+          state.client = { waitForConsensusEstablished: vi.fn(), sendTransaction: vi.fn() }
+        else
+          state.walletContextGeneration += 1
+        finishBroadcast({ state: 'invalidated', timestamp: 321 })
+
+        await expect(send).resolves.toEqual({ outcome: 'rejected', error: 'Transaction invalid' })
+        expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.any(Array))
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+        expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
+        expect(state.trackSwapFailed).not.toHaveBeenCalled()
+        expect(state.pendingTransactions).toContainEqual(
+          expect.objectContaining({ transactionHash: `stale-broadcast-${field}` }),
+        )
+      },
+    )
+
+    it('keeps staged recovery without authorizing local retry on cosigner server uncertainty', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('cosigner-server-error')
+      mockRemoteSigning(signedTx, { outcome: 'unknown', error: 'response creation failed' })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result).toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'cosigner-server-error',
+        error: 'response creation failed',
+      })
+      expect(getSignedTx).toHaveBeenCalledTimes(1)
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+      expect(state.pendingTransactions).toHaveLength(1)
+    })
+
+    it('keeps final serialization on local transport uncertainty', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('local-timeout')
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+
+      const timeoutResult = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout } as any)
+
+      expect(timeoutResult).toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'local-timeout',
+        serialized: 'serialized-local-timeout',
+      })
+      expect(state.pendingRemoteDrainTxs).toHaveLength(1)
+    })
+
+    it('bounds an ordinary local broadcast while retaining its durable retry barrier', async () => {
+      vi.useFakeTimers()
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      const { signedTx } = createSignedTransaction('ordinary-broadcast-timeout')
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockReturnValue(new Promise(() => {}))
+
+      const send = store.sendTx({
+        transfer: Transfer.UserPayment,
+        recipient: 'NQ22 TEST RECIPIENT',
+        amount: 42,
+        title: 'Payment',
+      } as any)
+      for (let index = 0; index < 20; index += 1)
+        await Promise.resolve()
+      expect(state.client.sendTransaction).toHaveBeenCalledOnce()
+      let result: Awaited<typeof send> | undefined
+      let settled = false
+      void send.then((value) => {
+        result = value
+        settled = true
+      })
+
+      vi.advanceTimersByTime(29_999)
+      for (let index = 0; index < 20; index += 1)
+        await Promise.resolve()
+      expect(settled).toBe(false)
+      expect(state.isSendingTx).toBe(true)
+      expect(state.pendingTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'ordinary-broadcast-timeout' }),
+      )
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+
+      vi.advanceTimersByTime(1)
+      for (let index = 0; index < 20; index += 1)
+        await Promise.resolve()
+      expect(settled).toBe(true)
+      expect(result).toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'ordinary-broadcast-timeout',
+        serialized: 'serialized-ordinary-broadcast-timeout',
+      })
+      expect(state.isSendingTx).toBe(false)
+      expect(state.pendingTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'ordinary-broadcast-timeout' }),
+      )
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+
+      vi.useRealTimers()
+      state.client.sendTransaction.mockRejectedValue(new Error('unexpected retry'))
+      await expect(store.sendTx({ transfer: Transfer.UserPayment } as any)).resolves.toMatchObject({
+        outcome: 'rejected',
+        error: expect.stringContaining('still pending'),
+      })
+      expect(getSignedTx).toHaveBeenCalledTimes(1)
+      expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
+    }, 1_000)
+
+    it.each([undefined, { state: 'new' }])('classifies broadcast response %s as unknown', async (details) => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('unconfirmed-broadcast')
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockResolvedValue(details as any)
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout } as any)
+
+      expect(result.outcome).toBe('unknown')
+    })
+
+    it('anchors uncertainty to the staged hash when the cosigner changes the transaction', async () => {
+      const { useTransactions } = await import('./transactions')
+      const staged = createSignedTransaction('staged-hash')
+      const changed = createSignedTransaction('changed-hash')
+      vi.mocked(getSignedTx).mockImplementation(async (_partialTx, options) => {
+        await options?.beforeRemoteBroadcast?.(staged.signedTx as any)
+        return { outcome: 'signed', signedTx: changed.signedTx, txSent: true } as any
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result).toMatchObject({ outcome: 'unknown', stagedHash: 'staged-hash' })
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['invalidated', 'failed'],
+      ['expired', 'expired'],
+    ] as const)('keeps authoritative %s rejection when status persistence fails', async (chainState, expectedStatus) => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('rejected-chain')
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockResolvedValue({ state: chainState, timestamp: 321 } as any)
+      state.run.mockImplementation(async (...args: unknown[]) => {
+        const [query, values] = args as [unknown, unknown[]?]
+        if (query === SQLQuery.UpdateTxStatus && values?.[0] === expectedStatus)
+          throw new Error('status write failed')
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout } as any)
+
+      expect(result).toEqual({ outcome: 'rejected', error: 'Transaction invalid' })
+      expect(state.pendingRemoteDrainTxs).toHaveLength(1)
+    })
+
+    it.each([
+      ['invalidated', undefined, 'failed'],
+      ['expired', undefined, 'expired'],
+      ['failed execution', false, 'failed'],
+    ] as const)('cleans stale swap rows after authoritative %s rejection', async (chainState, executionResult, expectedStatus) => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction(`rejected-swap-${expectedStatus}`)
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: false,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+      state.client.sendTransaction.mockResolvedValue({
+        state: chainState === 'failed execution' ? 'pending' : chainState,
+        executionResult,
+        timestamp: 321,
+      } as any)
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+
+      expect(result).toEqual({ outcome: 'rejected', error: 'Transaction invalid' })
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, [expectedStatus, 321, `rejected-swap-${expectedStatus}`])
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ22 TEST RECIPIENT'])
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, ['payment-ref'])
+      expect(state.trackSwapFailed).toHaveBeenCalledWith({
+        error_reason: 'Transaction invalid',
+        asset: Asset.NIM,
+      })
+      expect(state.pendingTransactions).toEqual([])
+    })
+
+    it('preserves submitted evidence when included HTLC activation fails', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { plain, signedTx } = createSignedHtlcCreation()
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'included' } as any)
+      state.activateRemoteSignerFromTransaction.mockRejectedValue(new Error('activation failed'))
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.pendingHtlcCreationTransactions).toHaveLength(1)
+    })
+
+    it('clears an included HTLC retry barrier after status persistence and activation', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { plain, signedTx } = createSignedHtlcCreation()
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'included' } as any)
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ generation: 0 }))
+      expect(state.pendingHtlcCreationTransactions).toEqual([])
+      expect(state.pendingTransactions).toEqual([])
+      expect(state.pendingRemoteDrainTxs).toEqual([])
+    })
+
+    it('removes an HTLC monitoring barrier after actual confirmation', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { plain, signedTx } = createSignedHtlcCreation()
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'confirmed' } as any)
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ generation: 0 }))
+      expect(state.pendingHtlcCreationTransactions).toEqual([])
+      expect(state.pendingTransactions).toEqual([])
+      expect(state.pendingRemoteDrainTxs).toEqual([])
+    })
+
+    it('suppresses stale-context signer activation after authoritative inclusion', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { plain, signedTx } = createSignedHtlcCreation()
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockImplementation(async () => {
+        state.walletContextGeneration += 1
+        return { ...plain, state: 'included' }
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(state.pendingHtlcCreationTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: plain.transactionHash }),
+      )
+    })
+
+    it('uses a local head estimate for provisional HTLC timestamps', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedHtlcCreation()
+      const plainWithoutTimestamp = { ...signedTx.toPlain(), timestamp: undefined }
+      const txWithoutTimestamp = { ...signedTx, toPlain: () => plainWithoutTimestamp }
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx: txWithoutTimestamp } as any)
+      state.client.sendTransaction.mockResolvedValue({ ...plainWithoutTimestamp, state: 'pending' } as any)
+
+      await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
+
+      expect(state.upsertInactiveRemoteSigner).toHaveBeenCalledWith(
+        expect.objectContaining({ start: 172_000 }),
+        expect.objectContaining({ generation: 0 }),
+      )
+      expect(state.blockHeightToTimestamp).not.toHaveBeenCalled()
+    })
+
+    it('persists swap refund metadata before a cosigner timeout', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('timed-out-swap')
+      const swap = { id: 'swap-id', status: 'pending', contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } } }
+      let writesBeforeTimeout: unknown[] = []
+      vi.mocked(getSignedTx).mockImplementation(async (_args, options) => {
+        await options?.beforeRemoteBroadcast?.(signedTx as any, swap as any)
+        writesBeforeTimeout = [...state.run.mock.calls]
+        return { outcome: 'unknown', error: 'Operation timed out' }
+      })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPaymentToAtomicSwap, paymentRef: 'swap-id' } as any)
+
+      expect(writesBeforeTimeout).toContainEqual([SQLQuery.InsertSwapHtlc, [
+        'NQ22 TEST RECIPIENT',
+        42,
+        123,
+        'swap-id',
+        'pending',
+        null,
+      ]])
+      expect(result).toMatchObject({ outcome: 'unknown', stagedHash: 'timed-out-swap', error: 'Operation timed out' })
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(state.pendingTransactions).toContainEqual(expect.objectContaining({ transactionHash: 'timed-out-swap' }))
+      expect(state.provideFundingProof).not.toHaveBeenCalled()
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('keeps staged state unknown when Fastspot funding proof setup throws', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('setup-failed')
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: false,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+      state.provideFundingProof.mockImplementationOnce(() => {
+        throw new Error('setup failed')
+      })
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+
+      expect(result).toMatchObject({ outcome: 'unknown', stagedHash: 'setup-failed' })
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.any(Array))
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+      expect(state.pendingTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'setup-failed' }),
+      )
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('rejects before cosigner submission when swap HTLC persistence fails', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('swap-insert-failed')
+      let rejectFundingProof!: (error: Error) => void
+      const fundingProof = new Promise<object>((_, reject) => rejectFundingProof = reject)
+      const catchSpy = vi.spyOn(fundingProof, 'catch')
+      state.provideFundingProof.mockReturnValue(fundingProof)
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.InsertSwapHtlc)
+          throw new Error('swap insert failed')
+      })
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: false,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+
+      expect(result).toMatchObject({ outcome: 'rejected', error: 'swap insert failed' })
+      expect(state.pendingTransactions).toHaveLength(0)
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.arrayContaining(['failed', 'swap-insert-failed']))
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+      expect(state.provideFundingProof).not.toHaveBeenCalled()
+      expect(catchSpy).not.toHaveBeenCalled()
+      rejectFundingProof(new Error('funding proof failed'))
+      await fundingProof.catch(() => undefined)
+    })
+
+    it('does not contact Fastspot after swap persistence finishes in a stale context', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('stale-swap-insert')
+      let rejectFundingProof!: (error: Error) => void
+      const fundingProof = new Promise<object>((_, reject) => rejectFundingProof = reject)
+      const catchSpy = vi.spyOn(fundingProof, 'catch')
+      state.provideFundingProof.mockReturnValue(fundingProof)
+      let finishInsert!: () => void
+      state.run.mockImplementation(async (query) => {
+        if (query === SQLQuery.InsertSwapHtlc)
+          await new Promise<void>(resolve => finishInsert = resolve)
+      })
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: false,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+
+      const send = useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.any(Array)))
+      state.walletContextGeneration += 1
+      finishInsert()
+
+      await expect(send).resolves.toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'stale-swap-insert',
+        error: 'Wallet or network changed before sending',
+      })
+      expect(state.provideFundingProof).not.toHaveBeenCalled()
+      expect(catchSpy).not.toHaveBeenCalled()
+      expect(state.pendingTransactions).toContainEqual(
+        expect.objectContaining({ transactionHash: 'stale-swap-insert' }),
+      )
+      rejectFundingProof(new Error('funding proof failed'))
+      await fundingProof.catch(() => undefined)
+    })
+
+    it('keeps staged state unknown when local broadcast throws after the cosigner cannot confirm submission', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('local-broadcast-failed')
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: false })
+      state.client.sendTransaction.mockRejectedValue(new Error('connection closed'))
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result).toMatchObject({
+        outcome: 'unknown',
+        stagedHash: 'local-broadcast-failed',
+        serialized: 'serialized-local-broadcast-failed',
+      })
+      expect(state.pendingTransactions).toHaveLength(1)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
+    })
+
+    it('does not rebroadcast when the cosigner confirms submission', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('cosigner-sent')
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: true })
+
+      const result = await useTransactions().sendTx({ transfer: Transfer.UserPayment } as any)
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('deactivates only the submitted drain sender without clearing its stored balance', async () => {
+      const { useTransactions } = await import('./transactions')
+      const targetAddress = 'NQ22 TEST INACTIVE REMOTE ADDRESS'
+      const { signedTx } = createSignedTransaction('submitted-target-drain', { sender: targetAddress })
+      mockRemoteSigning(signedTx, { outcome: 'signed', signedTx, txSent: true })
+      state.deactivateRemoteSigner.mockResolvedValue(false)
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.RemoteToLocalImmediateReclaim,
+        sender: createAddress(targetAddress) as any,
+        amount: 42,
+        proofSize: 104,
+      })
+
+      expect(result.outcome).toBe('submitted')
+      expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(
+        expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
+        expect.objectContaining({
+          client: state.client,
+          generation: 0,
+          network: 'testalbatross',
+          owner: 'NQ00 TEST LOCAL ADDRESS',
+        }),
+      )
+      expect(state.deactivateRemoteSigner.mock.calls[0]![0].toUserFriendlyAddress()).toBe(targetAddress)
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+    })
+
+    it.each(['rejected', 'unknown'] as const)('leaves the immediate reclaim signer unchanged for %s outcome', async (outcome) => {
+      const { useTransactions } = await import('./transactions')
+      const targetAddress = 'NQ22 TEST INACTIVE REMOTE ADDRESS'
+      const { signedTx } = createSignedTransaction(`${outcome}-target-drain`, { sender: targetAddress })
+      mockRemoteSigning(signedTx, { outcome, error: `${outcome} drain` })
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.RemoteToLocalImmediateReclaim,
+        sender: createAddress(targetAddress) as any,
+        amount: 42,
+        proofSize: 104,
+      })
+
+      expect(result.outcome).toBe(outcome)
+      expect(state.deactivateRemoteSigner).not.toHaveBeenCalled()
+      expect(state.updateRemoteSigner).not.toHaveBeenCalled()
+    })
+
+    it('keeps cosigner acceptance authoritative when atomic-swap bookkeeping fails', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('accepted-swap')
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: {
+            NIM: {
+              id: 'nim-contract',
+              htlc: { timeoutTime: 123 },
+            },
+          },
+        },
+      } as any)
+
+      const result = await useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'payment-ref',
+      } as any)
+
+      expect(result).toMatchObject({ outcome: 'submitted' })
+      expect(state.pendingTransactions.map(tx => tx.transactionHash)).toContain('accepted-swap')
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.InsertSwapHtlc, expect.any(Array))
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapQuote, expect.anything())
+      expect(state.trackSwapFailed).not.toHaveBeenCalled()
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('returns rejected for a second concurrent send and only broadcasts once', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('locked-send')
+      let resolveBroadcast!: (value: any) => void
+      vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
+      state.client.sendTransaction.mockReturnValue(new Promise(resolve => resolveBroadcast = resolve))
+
+      const first = useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout } as any)
+      await vi.waitFor(() => expect(state.client.sendTransaction).toHaveBeenCalledOnce())
+      expect(state.isSendingTx).toBe(true)
+      const secondResult = await useTransactions().sendTx({ transfer: Transfer.RemoteToLocalAfterTimeout } as any)
+
+      expect(secondResult.outcome).toBe('rejected')
+      expect(state.client.sendTransaction).toHaveBeenCalledTimes(1)
+      resolveBroadcast({ state: 'pending' })
+      await first
+      expect(state.isSendingTx).toBe(false)
+    })
   })
 })

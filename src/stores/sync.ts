@@ -20,7 +20,7 @@ export const useSync = defineStore('sync', () => {
   const { updateBalances } = useSyncBalances()
   const { handleFunds } = useSyncHtlc()
   const { syncWallets } = useSyncLifecycle()
-  const { verifyRemoteSignersDb } = useSyncRemoteSigners()
+  const { recoverRemoteSigner, verifyRemoteSignersDb } = useSyncRemoteSigners()
   const { updateSingleTransaction, updateTransactionHistory } = useSyncTransactions()
   const {
     pendingTransactions,
@@ -45,6 +45,7 @@ export const useSync = defineStore('sync', () => {
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,
     handleFunds,
+    recoverRemoteSigner,
     verifyRemoteSignersDb,
   }
 })

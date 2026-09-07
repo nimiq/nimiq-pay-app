@@ -5,10 +5,14 @@ import { defineComponent, h, reactive } from 'vue'
 const state = vi.hoisted(() => ({
   alertMessage: '',
   alertRole: 'confirm',
+  clearTxHistory: vi.fn(),
   discoverRemoteSignersFromBlockchain: vi.fn(),
   getTransactionsByAddress: vi.fn(),
-  importValidatedRemoteSigner: vi.fn(),
+  purgeRemoteSigners: vi.fn(),
   query: vi.fn(),
+  recoverRemoteSigner: vi.fn(),
+  run: vi.fn(),
+  setNetworkOverride: vi.fn(),
   validateRemoteSignerAddress: vi.fn(),
   verifyRemoteSignersDb: vi.fn(),
 }))
@@ -43,6 +47,7 @@ const stores = {
     networkName: 'MainAlbatross',
     headTimestamp: 456,
   }),
+  syncState: reactive({ walletContextGeneration: 0 }),
   remoteSigner: reactive({
     remoteAddress: address,
     remoteBalance: 0,
@@ -152,7 +157,7 @@ vi.mock('@/lib', () => ({
   isDev: true,
   isTestnet: false,
   networkOverride: null,
-  setNetworkOverride: vi.fn(),
+  setNetworkOverride: state.setNetworkOverride,
 }))
 
 vi.mock('@/lib/mock-mode', () => ({
@@ -178,7 +183,7 @@ vi.mock('@/lib/sql-queries', () => ({
 
 vi.mock('@/stores/app', () => ({ useApp: () => stores.app }))
 vi.mock('@/stores/conn', () => ({
-  useConn: () => ({ query: state.query, run: vi.fn() }),
+  useConn: () => ({ query: state.query, run: state.run }),
 }))
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => stores.featureFlags }))
 vi.mock('@/stores/local-wallet', () => ({ useLocalWallet: () => stores.localWallet }))
@@ -194,16 +199,20 @@ vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
     ...stores.remoteSigner,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
-    importValidatedRemoteSigner: state.importValidatedRemoteSigner,
+    purgeRemoteSigners: state.purgeRemoteSigners,
     validateRemoteSignerAddress: state.validateRemoteSignerAddress,
   }),
 }))
 vi.mock('@/stores/sync', () => ({
   MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA: 1,
-  useSync: () => ({ verifyRemoteSignersDb: state.verifyRemoteSignersDb }),
+  useSync: () => ({
+    recoverRemoteSigner: state.recoverRemoteSigner,
+    verifyRemoteSignersDb: state.verifyRemoteSignersDb,
+  }),
 }))
+vi.mock('@/stores/sync/state', () => ({ useSyncState: () => stores.syncState }))
 vi.mock('@/stores/transactions', () => ({
-  useTransactions: () => ({ clearTxHistory: vi.fn(), sendTx: vi.fn() }),
+  useTransactions: () => ({ clearTxHistory: state.clearTxHistory, sendTx: vi.fn() }),
 }))
 vi.mock('@/types/transactions', () => ({
   Transfer: {
@@ -251,6 +260,8 @@ describe('dev modal HTLC recovery', () => {
   beforeEach(() => {
     state.alertMessage = ''
     state.alertRole = 'confirm'
+    stores.syncState.walletContextGeneration = 0
+    state.clearTxHistory.mockReset().mockResolvedValue(undefined)
     state.discoverRemoteSignersFromBlockchain.mockReset().mockResolvedValue({
       added: 0,
       alreadyKnown: 0,
@@ -258,8 +269,14 @@ describe('dev modal HTLC recovery', () => {
       errors: [],
     })
     state.getTransactionsByAddress.mockReset().mockResolvedValue([])
-    state.importValidatedRemoteSigner.mockReset().mockResolvedValue('added')
+    state.purgeRemoteSigners.mockReset().mockResolvedValue(undefined)
     state.query.mockReset().mockResolvedValue([])
+    state.recoverRemoteSigner.mockReset().mockResolvedValue({
+      status: 'submitted',
+      transactionHash: 'recovery-hash',
+    })
+    state.run.mockReset().mockResolvedValue(undefined)
+    state.setNetworkOverride.mockReset()
     state.validateRemoteSignerAddress.mockReset().mockResolvedValue(importable)
     state.verifyRemoteSignersDb.mockReset().mockResolvedValue(undefined)
   })
@@ -286,15 +303,15 @@ describe('dev modal HTLC recovery', () => {
     validation.resolve(importable)
     await flushPromises()
 
-    expect(wrapper.find('[data-testid="htlc-add"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="htlc-recover"]').exists()).toBe(true)
   })
 
-  it('shows the add action only for a verified importable HTLC', async () => {
+  it('shows the recovery action only for a verified HTLC', async () => {
     const wrapper = await mountModal()
     await enterAddressAndValidate(wrapper)
 
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('6969 NIM')
-    expect(wrapper.find('[data-testid="htlc-add"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="htlc-recover"]').exists()).toBe(true)
     expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain(importable.address)
     expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain('999500')
     expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain(importable.owner)
@@ -311,56 +328,128 @@ describe('dev modal HTLC recovery', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('HTLC has no balance')
-    expect(wrapper.find('[data-testid="htlc-add"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="htlc-recover"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="htlc-details"]').exists()).toBe(false)
   })
 
-  it('shows known HTLC details without an add action', async () => {
-    state.validateRemoteSignerAddress.mockResolvedValueOnce({ ...importable, status: 'known' })
+  it('offers targeted recovery for an already-known HTLC', async () => {
+    const known = { ...importable, status: 'known' as const }
+    state.validateRemoteSignerAddress.mockResolvedValueOnce(known)
     const wrapper = await mountModal()
     await enterAddressAndValidate(wrapper)
 
     expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain('known')
-    expect(wrapper.find('[data-testid="htlc-add"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="htlc-recover"]').exists()).toBe(true)
+
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
+    await flushPromises()
+
+    expect(state.recoverRemoteSigner).toHaveBeenCalledWith(known)
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
   })
 
-  it('imports only after confirmation and requests discovery before reconciliation', async () => {
+  it('recovers only after confirmation without global reconciliation', async () => {
     const wrapper = await mountModal()
     await enterAddressAndValidate(wrapper)
 
     state.alertRole = 'cancel'
-    await wrapper.get('[data-testid="htlc-add"]').trigger('click')
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
     await flushPromises()
-    expect(state.importValidatedRemoteSigner).not.toHaveBeenCalled()
+    expect(state.recoverRemoteSigner).not.toHaveBeenCalled()
 
     state.alertRole = 'confirm'
-    await wrapper.get('[data-testid="htlc-add"]').trigger('click')
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
     await flushPromises()
 
-    expect(state.alertMessage).toBe('This HTLC belongs to this wallet and currently holds 6969 NIM. Adding it does not move funds immediately, but wallet reconciliation may automatically reclaim it.')
-    expect(state.importValidatedRemoteSigner).toHaveBeenCalledWith(importable)
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith()
-    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('added')
+    expect(state.alertMessage).toBe('This HTLC belongs to this wallet and currently holds 6969 NIM. Nimiq Pay will register only this address and attempt one recovery transaction. If recovery cannot start safely, the signer will remain inactive for later reconciliation.')
+    expect(state.recoverRemoteSigner).toHaveBeenCalledWith(importable)
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toBe('Recovery transaction submitted for this HTLC.')
   })
 
-  it('disables recovery controls while importing', async () => {
-    const importing = deferred<'added'>()
-    state.importValidatedRemoteSigner.mockReturnValueOnce(importing.promise)
+  it.each([
+    ['wallet-busy', 'HTLC registered. Recovery deferred: another transaction is unresolved.'],
+    ['history-incomplete', 'HTLC registered. Recovery deferred: target transaction history is incomplete.'],
+    ['outgoing-transaction', 'HTLC registered. Recovery deferred: an outgoing transaction already exists for this HTLC.'],
+  ] as const)('maps %s recovery deferral and keeps target details visible', async (reason, message) => {
+    state.recoverRemoteSigner.mockResolvedValueOnce({ status: 'deferred', reason })
     const wrapper = await mountModal()
     await enterAddressAndValidate(wrapper)
 
-    await wrapper.get('[data-testid="htlc-add"]').trigger('click')
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
     await flushPromises()
 
-    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Adding')
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toBe(message)
+    expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain(importable.address)
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
+  })
+
+  it('warns not to retry an unknown recovery and keeps target details visible', async () => {
+    state.recoverRemoteSigner.mockResolvedValueOnce({
+      status: 'unknown',
+      transactionHash: 'unknown-recovery-hash',
+    })
+    const wrapper = await mountModal()
+    await enterAddressAndValidate(wrapper)
+
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toBe('Recovery outcome is unknown. The transaction remains pending; do not retry.')
+    expect(wrapper.get('[data-testid="htlc-details"]').text()).toContain(importable.address)
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
+  })
+
+  it('shows the returned rejection reason', async () => {
+    state.recoverRemoteSigner.mockResolvedValueOnce({
+      status: 'rejected',
+      reason: 'Wallet or network unavailable',
+    })
+    const wrapper = await mountModal()
+    await enterAddressAndValidate(wrapper)
+
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Wallet or network unavailable')
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
+  })
+
+  it('disables scan, input, validation, and recovery controls while recovering', async () => {
+    const recovering = deferred<{ status: 'submitted', transactionHash: string }>()
+    state.recoverRemoteSigner.mockReturnValueOnce(recovering.promise)
+    const wrapper = await mountModal()
+    await enterAddressAndValidate(wrapper)
+
+    await wrapper.get('[data-testid="htlc-recover"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Recovering')
     expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-scan"]').element.disabled).toBe(true)
     expect(wrapper.get<HTMLInputElement>('[data-testid="htlc-address"]').element.disabled).toBe(true)
     expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-validate"]').element.disabled).toBe(true)
-    expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-add"]').element.disabled).toBe(true)
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-recover"]').element.disabled).toBe(true)
 
-    importing.resolve('added')
+    recovering.resolve({ status: 'submitted', transactionHash: 'recovery-hash' })
     await flushPromises()
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith()
+    expect(state.verifyRemoteSignersDb).not.toHaveBeenCalled()
+  })
+
+  it('invalidates wallet context before queued signer purge on network switch', async () => {
+    state.purgeRemoteSigners.mockImplementationOnce(async () => {
+      expect(stores.syncState.walletContextGeneration).toBe(1)
+    })
+    const wrapper = await mountModal()
+    const segment = wrapper.findAll('div').find(node => node.attributes('value') === 'default')
+    if (!segment)
+      throw new Error('Network segment not found')
+
+    await segment.trigger('ion-change', { detail: { value: 'testnet' } })
+    await flushPromises()
+
+    expect(state.purgeRemoteSigners).toHaveBeenCalledOnce()
+    expect(state.run).not.toHaveBeenCalledWith('purge-remote-signers')
+    expect(state.setNetworkOverride).toHaveBeenCalledWith('testnet')
   })
 
   it('runs the bounded automatic scan only on demand', async () => {
