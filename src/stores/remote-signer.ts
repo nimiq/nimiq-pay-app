@@ -1378,16 +1378,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             evidenceIncomplete = true
             result.errors.push(`HTLC account lookup failed: ${metadata.addressString}`)
           }
-          else if (account?.type === 'htlc'
-            && account.balance > 0
-            && account.sender === owner
-            && account.recipient === metadata.cosignerRecipient
-            && account.timeout === metadata.end) {
-            if (!isWalletContextCurrent(context))
-              return { ...result, errors: ['Wallet changed during discovery'] }
+          else if (error === NO_ACCOUNT_ERROR
+            || account?.type === 'basic'
+            || (account?.type === 'htlc'
+              && account.sender === owner
+              && account.recipient === metadata.cosignerRecipient
+              && account.timeout === metadata.end)) {
+            // Keep validated, drained HTLCs so wallet restores can import their outgoing history.
             const insertResult = await upsertInactiveRemoteSigner({
               active: false,
-              balance: account.balance,
+              balance: account?.type === 'htlc' ? account.balance : 0,
               address: metadata.address,
               publicKey: metadata.publicKey,
               start: metadata.start,

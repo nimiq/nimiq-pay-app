@@ -62,7 +62,7 @@ function createRemoteSignerApiData(address = 'NQ22 TEST OLD HTLC ADDRESS', overr
 
 const rawState = vi.hoisted(() => {
   const getBalance = vi.fn(() => Promise.resolve({ data: 0, error: undefined }))
-  const getAccount = vi.fn((): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: 'No account found' }))
+  const getAccount = vi.fn((_address?: ReturnType<typeof createAddress>): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: 'No account found' }))
   const getAccounts = vi.fn((): Promise<{
     data: { type: string, balance: number }[] | undefined
     error: Error | undefined
@@ -1336,11 +1336,12 @@ describe('useRemoteSigner', () => {
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
     expect(result).toEqual({
-      added: 1,
+      added: 2,
       alreadyKnown: 0,
       localComplete: false,
       errors: [`HTLC history lookup incomplete: ${root.recipient}`],
     })
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [root.recipient, 0, 98, 'service-public-key', 123_100, 999_500, false])
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [extension.recipient, 500, 98, 'service-public-key', 124_100, 1_000_500, false])
   })
 
@@ -1700,7 +1701,11 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toEqual({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(state.run).toHaveBeenCalledWith(
+      expect.any(String),
+      [root.recipient, 0, 96, 'service-public-key-a', 123_100, 999_500, false],
+    )
     expect(state.run).toHaveBeenCalledWith(
       expect.any(String),
       [extension.recipient, 500, 104, 'service-public-key-b', 124_100, 1_000_500, false],
@@ -1958,7 +1963,12 @@ describe('useRemoteSigner', () => {
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [oldAddress, 696_900_000, 98, 'service-public-key', 123_100, 999_500, false])
   })
 
-  it('discovers a funded signer through an empty first-hop HTLC extension chain', async () => {
+  it.each([
+    ['pruned', undefined],
+    ['zero-balance', createLiveHtlcAccount({ balance: 0 })],
+    ['basic', { type: 'basic', balance: 0 }],
+    ['basic with new funds', { type: 'basic', balance: 100 }],
+  ])('retains a %s predecessor for history when discovering a funded extension', async (_name, account) => {
     const root = createHtlcCreation()
     const extension = createHtlcCreation({
       transactionHash: 'extension-hash',
@@ -1982,14 +1992,17 @@ describe('useRemoteSigner', () => {
         return Promise.resolve([extension])
       return Promise.resolve([])
     })
-    state.getAccount.mockImplementation((async (address: ReturnType<typeof createAddress>) => address.toUserFriendlyAddress() === extension.recipient
-      ? { data: createLiveHtlcAccount({ balance: 500, totalAmount: 500, timeout: 1_000_500 }), error: undefined }
-      : { data: undefined, error: 'No account found' }) as any)
+    state.getAccount.mockImplementation(async (address) => {
+      if (address?.toUserFriendlyAddress() === extension.recipient)
+        return { data: createLiveHtlcAccount({ balance: 500, totalAmount: 500, timeout: 1_000_500 }), error: undefined }
+      return { data: account, error: account ? undefined : 'No account found' }
+    })
 
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toEqual({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [root.recipient, 0, 98, 'service-public-key', 123_100, 999_500, false])
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [extension.recipient, 500, 98, 'service-public-key', 124_100, 1_000_500, false])
   })
 
@@ -2017,8 +2030,9 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result.added).toBe(1)
+    expect(result.added).toBe(2)
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [root.recipient, 400, 98, 'service-public-key', 123_100, 999_500, false])
+    expect(state.run).toHaveBeenCalledWith(expect.any(String), [extension.recipient, 0, 98, 'service-public-key', 123_100, 999_500, false])
   })
 
   it.each([
