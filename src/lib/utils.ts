@@ -1,6 +1,59 @@
-import type { ConsensusState } from '@nimiq/core'
+import type { ConsensusState, Transaction } from '@nimiq/core'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
+
+export function getLegacyHtlcValidityStartHeight(
+  row: { hash: string, sender: string, recipient: string, raw?: string | null },
+  expectedNetworkId: number,
+): number | undefined {
+  if (!row.raw || !/^(?:[\da-f]{2})+$/i.test(row.raw))
+    return undefined
+  let transaction: Transaction | undefined
+  try {
+    // Legacy raw is signing content, not a signed transaction. Accept only an exact Core round-trip.
+    const bytes = Nimiq.BufferUtils.fromHex(row.raw)
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const dataLength = view.getUint16(0)
+    const recipientDataEnd = 2 + dataLength
+    // Basic/HTLC senders have no sender data. Reject other formats rather than guessing their layout.
+    if (bytes.length !== recipientDataEnd + 65)
+      return undefined
+    const fields = new DataView(bytes.buffer, bytes.byteOffset + recipientDataEnd, 65)
+    const senderType = fields.getUint8(20)
+    if ((senderType !== Nimiq.AccountType.Basic && senderType !== Nimiq.AccountType.HTLC)
+      || fields.getUint8(41) !== Nimiq.AccountType.HTLC
+      || fields.getUint8(62) !== expectedNetworkId
+      || fields.getUint8(63) !== 1
+      || fields.getUint8(64) !== 0) {
+      return undefined
+    }
+    transaction = new Nimiq.Transaction(
+      Nimiq.Address.fromString(row.sender),
+      senderType,
+      new Uint8Array(),
+      Nimiq.Address.fromString(row.recipient),
+      Nimiq.AccountType.HTLC,
+      bytes.slice(2, recipientDataEnd),
+      fields.getBigUint64(42),
+      fields.getBigUint64(50),
+      1,
+      fields.getUint32(58),
+      expectedNetworkId,
+    )
+    if (transaction.hash() !== row.hash
+      || transaction.recipient.toUserFriendlyAddress() !== row.recipient
+      || Nimiq.BufferUtils.toHex(transaction.serializeContent()).toLowerCase() !== row.raw.toLowerCase()) {
+      return undefined
+    }
+    return transaction.validityStartHeight
+  }
+  catch {
+    return undefined
+  }
+  finally {
+    transaction?.free()
+  }
+}
 
 /**
  * Execute a promise or throw an error if it takes longer than the specified timeout.

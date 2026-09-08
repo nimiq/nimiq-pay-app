@@ -4,6 +4,7 @@ import { flushPromises } from '@vue/test-utils'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SQLQuery } from '@/lib/sql-queries'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 import { createAddress, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
@@ -752,8 +753,7 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        // GetAllUserReceipts uses `transfer = 'user-receipt'`, SelectAllTransactions uses `transfer IN (...)`
-        if (sql.includes('transfer = '))
+        if (sql === SQLQuery.GetAllUserReceipts)
           return Promise.resolve([{ hash: 'known-hash', sender: 'NQ77 KNOWN SENDER' }])
         return Promise.resolve([])
       })
@@ -782,7 +782,7 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql.includes('transfer = '))
+        if (sql === SQLQuery.GetAllUserReceipts)
           return Promise.resolve([{ hash: 'known-htlc-hash', sender: 'NQ33 NIMIQ PAY HTLC' }])
         return Promise.resolve([])
       })
@@ -1014,7 +1014,7 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql.includes('transfer = '))
+        if (sql === SQLQuery.GetUserReceiptSenders)
           return Promise.resolve([{ sender: 'NQ77 KNOWN TOP UP' }])
         return Promise.resolve([])
       })

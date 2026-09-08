@@ -17,7 +17,7 @@ import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useRemoteSigner } from '@/stores/remote-signer'
+import { sameWalletContext, useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncBalances } from '@/stores/sync/balances'
 import { useSyncHtlc } from '@/stores/sync/htlc'
 import { useSyncRemoteSigners } from '@/stores/sync/remote-signers'
@@ -332,13 +332,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     await listener.client.removeListener(listener.id)
   }
 
-  function isSameOnlineSyncContext(first: OnlineSyncContext, second: OnlineSyncContext) {
-    return first.client === second.client
-      && first.owner === second.owner
-      && first.network === second.network
-      && first.generation === second.generation
-  }
-
   async function syncAfterReadiness() {
     if (readinessSyncPromise) {
       readinessSyncQueued = true
@@ -349,7 +342,7 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       do {
         readinessSyncQueued = false
         const context = getOnlineSyncContext()
-        if (!context || (completedOnlineSyncContext && isSameOnlineSyncContext(context, completedOnlineSyncContext)))
+        if (!context || (completedOnlineSyncContext && sameWalletContext(context, completedOnlineSyncContext)))
           continue
         const isCurrentReadiness = () => !isSyncingWallets.value && isOnlineSyncContextCurrent(context)
         try {

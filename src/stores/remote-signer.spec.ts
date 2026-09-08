@@ -158,6 +158,12 @@ function mockAddressSpecificSignerMetadata(...transactions: any[]) {
       status: 200,
     })
   })
+  state.client.getAccount = vi.fn((address: string) => {
+    const transaction = transactions.find(tx => tx.recipient === address)
+    return Promise.resolve(transaction
+      ? createLiveHtlcAccount({ balance: transaction.value, timeout: transaction.data.timeout, sender: transaction.data.sender, recipient: transaction.data.recipient })
+      : { type: 'basic', balance: 0 })
+  })
   state.client.getTransaction.mockImplementation((hash: string) => Promise.resolve(
     transactions.find(transaction => transaction.transactionHash === hash),
   ))
@@ -308,6 +314,7 @@ describe('useRemoteSigner', () => {
     state.localAddress = createAddress('NQ00 TEST LOCAL ADDRESS')
     state.hasLocalWallet = true
     state.client = {
+      getAccount: vi.fn(() => Promise.resolve(createLiveHtlcAccount())),
       waitForConsensusEstablished: vi.fn(() => Promise.resolve()),
       getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
       getTransaction: vi.fn(() => Promise.resolve(undefined)),
@@ -615,6 +622,99 @@ describe('useRemoteSigner', () => {
     ])
   })
 
+  it.each(['included', 'confirmed'])('uses live balance for direct %s creation activation', async (status) => {
+    const creation = createHtlcCreation({ state: status })
+    mockAddressSpecificSignerMetadata(creation)
+    state.client.getAccount.mockResolvedValue(createLiveHtlcAccount({ balance: 7 }))
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.activateRemoteSignerFromTransaction(creation as any)
+
+    expect(store.remoteBalance).toBe(7)
+    expect(state.runSet).toHaveBeenCalledWith([
+      { statement: expect.any(String), values: [] },
+      { statement: expect.any(String), values: [creation.recipient, 7, 98, 'service-public-key', 123_100, 999_500, true] },
+    ])
+  })
+
+  it.each(['none', 'same', 'successor'])('resolves a drained confirmed creation with %s signer active', async (active) => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+    if (active !== 'none') {
+      await store.updateRemoteSigner({
+        active: true,
+        address: createAddress(active === 'same' ? creation.recipient : 'NQ23 SUCCESSOR'),
+        balance: 7,
+        end: 999_500,
+        proofSize: 98,
+        publicKey: 'service-public-key',
+        start: 123_100,
+      } as any, store.getWalletContext()!)
+    }
+    state.runSet.mockClear()
+    state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
+
+    await store.activateRemoteSignerFromTransaction(creation as any)
+
+    expect(store.remoteBalance).toBe(active === 'successor' ? 7 : 0)
+    if (active === 'successor')
+      expect(store.remoteAddress?.toUserFriendlyAddress()).toBe('NQ23 SUCCESSOR')
+    if (active !== 'same')
+      expect(state.runSet).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { type: 'basic', balance: 0 },
+    createLiveHtlcAccount({ balance: 0 }),
+    createLiveHtlcAccount({ balance: -1 }),
+    createLiveHtlcAccount({ timeout: 1 }),
+    createLiveHtlcAccount({ sender: 'NQ23 FOREIGN' }),
+  ])('retains included activation when account is unavailable: %j', async (account) => {
+    const creation = createHtlcCreation({ state: 'included' })
+    mockAddressSpecificSignerMetadata(creation)
+    state.client.getAccount.mockResolvedValue(account)
+    const { useRemoteSigner } = await import('./remote-signer')
+
+    await expect(useRemoteSigner().activateRemoteSignerFromTransaction(creation as any)).rejects.toThrow('account is unavailable')
+    expect(state.runSet).not.toHaveBeenCalled()
+  })
+
+  it('keeps reconciliation pending when the shared live-account read fails', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    state.client.getAccount.mockRejectedValue(new Error('offline'))
+    const { useSyncState } = await import('./sync/state')
+    const { useSyncHtlc } = await import('./sync/htlc')
+    const sync = useSyncState()
+    sync.pendingHtlcCreationTransactions.push({ ...creation, state: 'pending' } as any)
+
+    await useSyncHtlc().checkHtlcState()
+
+    expect(sync.pendingHtlcCreationTransactions).toHaveLength(1)
+    expect(state.runSet).not.toHaveBeenCalled()
+    expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+  })
+
+  it('resolves a drained history-only creation even when activation metadata is unavailable', async () => {
+    const creation = createHtlcCreation()
+    state.client.getTransaction.mockRejectedValue(new Error('not found'))
+    state.client.getTransactionsByAddress.mockResolvedValue([creation])
+    state.client.getAccount.mockResolvedValue({ type: 'basic', balance: 0 })
+    const { useSyncState } = await import('./sync/state')
+    const { useSyncHtlc } = await import('./sync/htlc')
+    const sync = useSyncState()
+    sync.pendingHtlcCreationTransactions.push({ ...creation, state: 'pending', validityStartHeight: null } as any)
+
+    await useSyncHtlc().checkHtlcState()
+
+    expect(sync.pendingHtlcCreationTransactions).toEqual([])
+    expect(state.runSet).not.toHaveBeenCalled()
+    expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: creation.transactionHash, status: 'confirmed', timestamp: creation.timestamp })
+  })
+
   it('does not let delayed activation overwrite newer same-context signer state', async () => {
     const creation = createHtlcCreation({ state: 'included' })
     let finishMetadata!: (result: any) => void
@@ -821,6 +921,7 @@ describe('useRemoteSigner', () => {
       hasError: false,
       status: 200,
     })
+    state.client.getAccount.mockResolvedValue(createLiveHtlcAccount({ recipient: creation.data.recipient }))
     state.client.getTransaction.mockResolvedValue(creation)
 
     const { useRemoteSigner } = await import('./remote-signer')

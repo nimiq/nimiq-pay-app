@@ -59,6 +59,13 @@ export interface WalletContext {
   generation: number
 }
 
+export function sameWalletContext(a: WalletContext, b: WalletContext) {
+  return a.client === b.client
+    && a.network === b.network
+    && a.owner === b.owner
+    && a.generation === b.generation
+}
+
 export interface AddressHistoryResult {
   transactions: PlainTransactionDetails[]
   complete: boolean
@@ -109,6 +116,13 @@ function useRemoteSignerDb() {
   let signerWriteQueue = Promise.resolve()
   let signerWriteRevision = 0
 
+  // Serialize wallet changes so an obsolete write cannot finish after the current one.
+  function enqueueSignerWrite<T>(write: () => Promise<T>) {
+    const queuedWrite = signerWriteQueue.then(write)
+    signerWriteQueue = queuedWrite.then(() => undefined, () => undefined)
+    return queuedWrite
+  }
+
   function restoreSigner({ address, balance, proofSize, publicKey, start, end, active }: StoredRemoteSigner) {
     return run(SQLQuery.InsertRemoteSigner, [address, balance, proofSize, publicKey, start, end, active])
   }
@@ -135,8 +149,7 @@ function useRemoteSignerDb() {
       const writeRevision = ++signerWriteRevision
       const ownsRevision = () => expectedRevision === undefined
         || (writeRevision === expectedRevision + 1 && signerWriteRevision === writeRevision)
-      // Serialize wallet changes so an obsolete write cannot finish after the current one.
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         if (!isCurrent() || !ownsRevision())
           return false
 
@@ -155,7 +168,6 @@ function useRemoteSignerDb() {
         await run(SQLQuery.DeactivateRemoteSigners)
         return false
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       return write
     },
 
@@ -168,7 +180,7 @@ function useRemoteSignerDb() {
       isCurrent: () => boolean = () => true,
     ) {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         if (!isCurrent())
           return false
         const addressString = address.toUserFriendlyAddress()
@@ -180,7 +192,6 @@ function useRemoteSignerDb() {
         await run(SQLQuery.DeleteRemoteSigner, [addressString])
         return false
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       return write
     },
 
@@ -189,7 +200,7 @@ function useRemoteSignerDb() {
       isCurrent: () => boolean = () => true,
     ) {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         if (!isCurrent())
           return false
         const address = signer.address.toUserFriendlyAddress()
@@ -214,21 +225,18 @@ function useRemoteSignerDb() {
         }
         return false
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       return write
     },
 
     async deactivateAllRemoteSigners() {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(() => run(SQLQuery.DeactivateRemoteSigners))
-      signerWriteQueue = write.then(() => undefined, () => undefined)
+      const write = enqueueSignerWrite(() => run(SQLQuery.DeactivateRemoteSigners))
       await write
     },
 
     async purgeRemoteSigners() {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(() => run(SQLQuery.PurgeRemoteSigners))
-      signerWriteQueue = write.then(() => undefined, () => undefined)
+      const write = enqueueSignerWrite(() => run(SQLQuery.PurgeRemoteSigners))
       await write
     },
 
@@ -238,7 +246,7 @@ function useRemoteSignerDb() {
       clearBalance = false,
     ) {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         if (!isCurrent())
           return false
         const addressString = address.toUserFriendlyAddress()
@@ -261,7 +269,6 @@ function useRemoteSignerDb() {
         }
         return false
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       return write
     },
 
@@ -271,7 +278,7 @@ function useRemoteSignerDb() {
       isCurrent: () => boolean = () => true,
     ) {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         if (!isCurrent())
           return false
         const addressString = address.toUserFriendlyAddress()
@@ -287,17 +294,15 @@ function useRemoteSignerDb() {
         }
         return false
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       return write
     },
 
     async updateActiveWallet({ balance, end, proofSize, start, publicKey, address }: RemoteSigner) {
       signerWriteRevision += 1
-      const write = signerWriteQueue.then(async () => {
+      const write = enqueueSignerWrite(async () => {
         logger.log(`✒️ Updating active wallet ${address.toUserFriendlyAddress()} to`, { start, end, proofSize, publicKey, balance })
         await run(SQLQuery.UpdateActiveWallet, [start, end, proofSize, publicKey, balance, address.toUserFriendlyAddress()])
       })
-      signerWriteQueue = write.then(() => undefined, () => undefined)
       await write
     },
   }
@@ -602,7 +607,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function activateRemoteSignerFromTransaction(
-    transaction: Pick<PlainTransactionDetails, 'data' | 'recipient' | 'timestamp' | 'transactionHash' | 'validityStartHeight' | 'value'>,
+    transaction: Pick<PlainTransactionDetails, 'data' | 'recipient' | 'timestamp' | 'transactionHash' | 'validityStartHeight' | 'value' | 'state' | 'executionResult'>,
     expectedContext?: WalletContext,
     expectedSignerRevision = getSignerWriteRevision(),
   ) {
@@ -618,9 +623,25 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
     }
     const result = await resolveAddressSpecificSignerMetadata(address, context)
-    if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision || result.status !== 'valid')
+    if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
 
+    const account = await promiseWithTimeout(
+      context.client.getAccount(transaction.recipient),
+      DISCOVER_TIMEOUT_MS,
+    )
+    if (!isWalletContextCurrent(context) || getSignerWriteRevision() !== expectedSignerRevision)
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+    // Drained creations need no activation metadata, which may already be unavailable in the cosigner.
+    if (transaction.state === 'confirmed' && transaction.executionResult !== false && account.balance === 0) {
+      if (remoteAddress.value?.toUserFriendlyAddress() === transaction.recipient
+        && !await deactivateRemoteSigner(address, context, true)) {
+        throw new Error('Cannot resolve drained HTLC transaction')
+      }
+      return
+    }
+    if (result.status !== 'valid')
+      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
     const { metadata } = result
     const data = transaction.data
     if (transaction.transactionHash !== metadata.creationTransactionHash
@@ -631,11 +652,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       || transaction.validityStartHeight !== metadata.validityStartHeight) {
       throw new Error('Cannot activate remote signer from invalid HTLC transaction')
     }
-    if (!isWalletContextCurrent(context))
-      throw new Error('Cannot activate remote signer from invalid HTLC transaction')
+    if (account.type !== 'htlc' || account.balance <= 0
+      || !Number.isSafeInteger(account.balance) || account.timeout !== metadata.end
+      || account.sender !== context.owner || account.recipient !== metadata.cosignerRecipient) {
+      throw new Error('Accepted HTLC account is unavailable')
+    }
     const stored = await updateRemoteSigner({
       active: true,
-      balance: transaction.value,
+      balance: account.balance,
       publicKey: metadata.publicKey,
       start: metadata.start,
       address: metadata.address,
@@ -1088,13 +1112,6 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   let inFlightLocalHistory: LocalHistoryRequest | undefined
   let replacementHistoryClient: { baseClient: Client, client: Client, network: string } | undefined
   let discoverRequest: DiscoveryRequest | undefined
-
-  function sameWalletContext(a: WalletContext, b: WalletContext) {
-    return a.client === b.client
-      && a.network === b.network
-      && a.owner === b.owner
-      && a.generation === b.generation
-  }
 
   async function resetLocalHistoryRequest(request: LocalHistoryRequest) {
     if (!request.resetPromise) {

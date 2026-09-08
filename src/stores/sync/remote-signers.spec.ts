@@ -137,7 +137,7 @@ describe('useSyncRemoteSigners', () => {
       expect(state.sendTx).not.toHaveBeenCalled()
     })
 
-    it.each(['new', 'pending', 'included', 'confirmed'] as const)(
+    it.each(['new', 'pending', 'included'] as const)(
       'defers when exact target history contains a %s outgoing transaction',
       async (transactionState) => {
         const target = targetedCandidate('NQ22 TARGET SIGNER')
@@ -153,6 +153,25 @@ describe('useSyncRemoteSigners', () => {
         expect(state.sendTx).not.toHaveBeenCalled()
       },
     )
+
+    it.each([0, 123])('uses current residual balance %s after a confirmed outgoing transfer', async (balance) => {
+      const target = targetedCandidate('NQ22 TARGET SIGNER')
+      state.getAllTransactionsForAddress.mockResolvedValue({
+        complete: true,
+        transactions: [{ sender: target.address, state: 'confirmed', executionResult: true }],
+      })
+      state.getBalance.mockResolvedValue({ data: balance, error: undefined })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().recoverRemoteSigner(target)
+
+      if (balance > 0) {
+        expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({ amount: balance, sender: target.signer.address }), expect.any(Object))
+      }
+      else {
+        expect(state.sendTx).not.toHaveBeenCalled()
+      }
+    })
 
     it('ignores failed, invalidated, and unrelated outgoing history', async () => {
       const target = targetedCandidate('NQ22 TARGET SIGNER')

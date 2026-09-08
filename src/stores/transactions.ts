@@ -24,7 +24,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useSyncState } from '@/stores/sync/state'
+import { upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('transactions.ts')
@@ -189,14 +189,6 @@ export const useTransactions = defineStore('transactions', () => {
     return transfer === Transfer.RemoteToLocal
       || transfer === Transfer.RemoteToLocalAfterTimeout
       || transfer === Transfer.RemoteToLocalImmediateReclaim
-  }
-
-  function upsertPlainPendingByHash(collection: RecoverablePlainTransactionDetails[], transaction: RecoverablePlainTransactionDetails) {
-    const index = collection.findIndex(tx => tx.transactionHash === transaction.transactionHash)
-    if (index >= 0)
-      collection.splice(index, 1, transaction)
-    else
-      collection.push(transaction)
   }
 
   function upsertSentPendingByHash(collection: TransactionSentByUser[], transaction: TransactionSentByUser) {
@@ -675,44 +667,40 @@ export const useTransactions = defineStore('transactions', () => {
         return staleContextResult(i18n.t('Wallet or network changed before sending'))
 
       if (details?.state === 'included' || details?.state === 'confirmed') {
-        let bookkeepingSucceeded = false
-        try {
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          await updateTransactionStatus({
-            hash: staged.tx.hash,
-            status: details.state,
-            timestamp: details.timestamp,
-          })
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          bookkeepingSucceeded = true
-        }
-        catch (error) {
-          logger.error('Failed to persist accepted transaction status', error)
-        }
-        if (!remoteSigner.isWalletContextCurrent(sendContext))
-          return staleContextResult(i18n.t('Wallet or network changed before sending'))
-
-        let activationSucceeded = true
+        let canClearPending = true
         if (createsHtlc) {
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
           try {
             await remoteSigner.activateRemoteSignerFromTransaction(details, sendContext)
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
           }
           catch (error) {
-            activationSucceeded = false
+            canClearPending = false
             logger.error('Failed to activate included HTLC signer', error)
           }
         }
-        if (bookkeepingSucceeded && activationSucceeded) {
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          removePendingHash(staged.tx.hash, sendContext)
+        if (canClearPending) {
+          try {
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await updateTransactionStatus({
+              hash: staged.tx.hash,
+              status: details.state,
+              timestamp: details.timestamp,
+            })
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          }
+          catch (error) {
+            canClearPending = false
+            logger.error('Failed to persist accepted transaction status', error)
+          }
         }
+        if (!remoteSigner.isWalletContextCurrent(sendContext))
+          return staleContextResult(i18n.t('Wallet or network changed before sending'))
+
+        if (canClearPending)
+          removePendingHash(staged.tx.hash, sendContext)
       }
 
       logger.log('✈️ Sent transaction', staged.plain)
@@ -974,14 +962,14 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: AppTransactionState, timestamp: number | undefined }) {
-    await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
+    await run(SQLQuery.UpdateTxStatus, [status, timestamp ?? null, hash])
     const index = transactions.value.findIndex(tx => tx.hash === hash)
     if (index >= 0) {
       const nextTransactions = [...transactions.value]
       nextTransactions[index] = {
         ...nextTransactions[index],
         status,
-        timestamp,
+        timestamp: timestamp ?? nextTransactions[index].timestamp,
       }
       transactions.value = nextTransactions.sort(
         (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),

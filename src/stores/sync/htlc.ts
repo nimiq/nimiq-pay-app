@@ -7,14 +7,14 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
-import { promiseWithTimeout } from '@/lib/utils'
+import { getLegacyHtlcValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useSyncState } from '@/stores/sync/state'
+import { upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
 
@@ -24,6 +24,8 @@ const HTLC_LOOKUP_TIMEOUT_MS = 30_000
 
 interface PendingHtlcCreationRow {
   hash: string
+  timestamp?: number
+  raw?: string | null
   sender: string
   senderType: PlainTransactionDetails['senderType'] | number
   recipient: string
@@ -231,14 +233,26 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   ) {
     if (!isHtlcContextCurrent(context))
       return false
-    const index = pendingHtlcCreationTransactions.value.findIndex(
-      pending => pending.transactionHash === transaction.transactionHash,
-    )
-    if (index >= 0)
-      pendingHtlcCreationTransactions.value.splice(index, 1, transaction)
-    else
-      pendingHtlcCreationTransactions.value.push(transaction)
+    upsertPlainPendingByHash(pendingHtlcCreationTransactions.value, transaction)
     return true
+  }
+
+  async function backfillPendingHtlcValidityStartHeight(
+    pending: RecoverablePlainTransactionDetails,
+    validityStartHeight: number,
+    context: HtlcReconciliationContext,
+  ) {
+    try {
+      await useConn().run(SQLQuery.BackfillTxValidityStartHeight, [validityStartHeight, pending.transactionHash])
+      if (!isHtlcContextCurrent(context))
+        return false
+      pending.validityStartHeight = validityStartHeight
+      return true
+    }
+    catch (error) {
+      logger.error('Failed to persist recovered HTLC validity height', error)
+      return false
+    }
   }
 
   async function rollbackActiveHtlcCreation(
@@ -285,40 +299,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     return deactivateRemoteSigner(Nimiq.Address.fromString(recipient), context, true)
   }
 
-  async function activateAcceptedHtlcCreation(
-    transaction: PlainTransactionDetails,
-    context: HtlcReconciliationContext,
-    walletContext: WalletContext,
-  ) {
-    if (!transaction.recipient)
-      throw new Error('Accepted HTLC creation has no recipient')
-    const signerRevision = remoteSignerStore.getSignerWriteRevision()
-    const account = await promiseWithTimeout(
-      walletContext.client.getAccount(transaction.recipient) as Promise<PlainAccount>,
-      HTLC_LOOKUP_TIMEOUT_MS,
-    )
-    if (!isHtlcContextCurrent(context) || !isWalletContextCurrent(walletContext))
-      return false
-    // Confirmation proves creation, not that the HTLC still holds its original funds.
-    if (transaction.state === 'confirmed' && account.balance === 0) {
-      if (remoteAddress.value?.toUserFriendlyAddress() !== transaction.recipient)
-        return true
-      return deactivateRemoteSigner(Nimiq.Address.fromString(transaction.recipient), walletContext, true)
-    }
-    if (!('timeout' in account) || typeof account.balance !== 'number' || typeof account.timeout !== 'number')
-      throw new Error('Accepted HTLC account is unavailable')
-
-    const activationTransaction = {
-      ...transaction,
-      value: account.balance,
-      data: transaction.data?.type === 'htlc'
-        ? { ...transaction.data, timeout: account.timeout }
-        : transaction.data,
-    }
-    await activateRemoteSignerFromTransaction(activationTransaction, walletContext, signerRevision)
-    return isHtlcContextCurrent(context) && isWalletContextCurrent(walletContext)
-  }
-
   let htlcReconciliationPromise: Promise<void> | undefined
   let htlcReconciliationQueued = false
 
@@ -329,7 +309,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     const persisted = await useConn().query<PendingHtlcCreationRow[]>(SQLQuery.SelectPendingHtlcCreations)
     if (!isHtlcContextCurrent(context))
       return
-    for (const { hash, sender, senderType, recipient, status, validityStartHeight } of persisted) {
+    const persistedByHash = new Map(persisted.map(row => [row.hash, row]))
+    for (const { hash, timestamp, sender, senderType, recipient, status, validityStartHeight } of persisted) {
       const currentPending = pendingHtlcCreationTransactions.value.find(
         transaction => transaction.transactionHash === hash,
       )
@@ -338,12 +319,14 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         continue
       }
       if (!upsertPendingHtlcCreation({
+        ...currentPending,
         transactionHash: hash,
+        timestamp: timestamp ?? currentPending?.timestamp,
         sender,
         senderType,
         recipient,
         state: status,
-        validityStartHeight,
+        validityStartHeight: validityStartHeight ?? currentPending?.validityStartHeight,
       } as RecoverablePlainTransactionDetails, context)) {
         return
       }
@@ -362,6 +345,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     for (const pending of [...pendingHtlcCreationTransactions.value]) {
       if (!isHtlcContextCurrent(context))
         return
+      if (typeof pending.validityStartHeight !== 'number') {
+        const row = persistedByHash.get(pending.transactionHash)
+        const recoveredHeight = row && getLegacyHtlcValidityStartHeight(row, networkId.value)
+        if (typeof recoveredHeight === 'number' && !await backfillPendingHtlcValidityStartHeight(pending, recoveredHeight, context)) {
+          if (!isHtlcContextCurrent(context))
+            return
+          continue
+        }
+      }
       let transaction: PlainTransactionDetails | undefined
       try {
         transaction = await promiseWithTimeout(context.client.getTransaction(pending.transactionHash), HTLC_LOOKUP_TIMEOUT_MS)
@@ -371,16 +363,10 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         if (!isHtlcContextCurrent(context))
           return
         const validityStartHeight = pending.validityStartHeight
-        if (typeof validityStartHeight !== 'number') {
-          logger.warn('Cannot expire pending HTLC creation without validity height', {
-            hash: pending.transactionHash,
-            validityStartHeight,
-          })
-          continue
-        }
-        const validityExpired = localHeight.value
+        const hasValidityHeight = typeof validityStartHeight === 'number'
+        const validityExpired = hasValidityHeight && localHeight.value
           > validityStartHeight + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
-        if (!validityExpired || !pending.sender)
+        if ((hasValidityHeight && !validityExpired) || !pending.sender)
           continue
         try {
           // Only a complete sender-history scan can distinguish an absent creation from an accepted HTLC that was later drained.
@@ -388,6 +374,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           if (!isHtlcContextCurrent(context))
             return
           if (!transaction) {
+            if (!validityExpired) {
+              logger.warn('Cannot expire pending HTLC creation without validity height', {
+                hash: pending.transactionHash,
+                validityStartHeight,
+              })
+              continue
+            }
             const currentWalletContext = getCurrentWalletContext(context)
             if (!currentWalletContext)
               return
@@ -411,6 +404,14 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         continue
       if (!isHtlcContextCurrent(context))
         return
+
+      if (typeof pending.validityStartHeight !== 'number'
+        && typeof transaction.validityStartHeight === 'number'
+        && !await backfillPendingHtlcValidityStartHeight(pending, transaction.validityStartHeight, context)) {
+        if (!isHtlcContextCurrent(context))
+          return
+        continue
+      }
 
       let rejectedState: 'failed' | 'expired' | undefined
       if (transaction.executionResult === false || transaction.state === 'invalidated')
@@ -442,9 +443,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           if (!currentWalletContext)
             return
           if (transaction.state === 'included' || transaction.recipient) {
-            const activated = await activateAcceptedHtlcCreation(transaction, context, currentWalletContext)
-            if (!activated)
-              return
+            await activateRemoteSignerFromTransaction(transaction, currentWalletContext)
           }
           if (!isHtlcContextCurrent(context))
             return

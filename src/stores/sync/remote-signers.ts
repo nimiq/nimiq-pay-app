@@ -28,10 +28,11 @@ function hasOutgoingTransactionForExactTarget(
   transactions: PlainTransactionDetails[],
   targetAddress: string,
 ) {
+  // Confirmed transfers are complete; they must not block recovery of the remaining balance.
   return transactions.some(transaction =>
     transaction.sender === targetAddress
     && transaction.executionResult !== false
-    && ['new', 'pending', 'included', 'confirmed'].includes(transaction.state),
+    && ['new', 'pending', 'included'].includes(transaction.state),
   )
 }
 

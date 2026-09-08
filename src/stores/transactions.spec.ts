@@ -1,3 +1,4 @@
+import type { RecoverablePlainTransactionDetails } from '@/types/transactions'
 import { mount } from '@vue/test-utils'
 import { createPinia, defineStore, disposePinia, getActivePinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -253,6 +254,14 @@ vi.mock('@/stores/sync', () => {
 })
 
 vi.mock('@/stores/sync/state', () => {
+  function upsertPlainPendingByHash(collection: RecoverablePlainTransactionDetails[], transaction: RecoverablePlainTransactionDetails) {
+    const index = collection.findIndex(tx => tx.transactionHash === transaction.transactionHash)
+    if (index >= 0)
+      collection.splice(index, 1, transaction)
+    else
+      collection.push(transaction)
+  }
+
   const useSyncState = defineStore('sync-state', () => ({
     pendingTransactions: state.pendingTransactions,
     pendingPaymentTransactions: state.pendingPaymentTransactions,
@@ -273,7 +282,7 @@ vi.mock('@/stores/sync/state', () => {
     })),
   }))
 
-  return { useSyncState }
+  return { upsertPlainPendingByHash, useSyncState }
 })
 
 describe('useTransactions', () => {
@@ -384,6 +393,16 @@ describe('useTransactions', () => {
 
     expect(store.activeAssetTransactions[0].status).toBe('confirmed')
     expect(seenStatuses).toEqual(['confirmed'])
+  })
+
+  it.each([undefined, 0, 999])('preserves or replaces transaction timestamp with %s', async (timestamp) => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    await store.addWithdrawalTransaction({ hash: 'timestamp', timestamp: 123, asset: Asset.NIM } as any)
+    await store.updateTransactionStatus({ hash: 'timestamp', status: 'expired', timestamp })
+    expect(store.transactions.find(tx => tx.hash === 'timestamp')?.timestamp).toBe(timestamp ?? 123)
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['expired', timestamp ?? null, 'timestamp'])
   })
 
   it('loads active-asset transaction pages with an asset-specific query', async () => {
@@ -1648,17 +1667,18 @@ describe('useTransactions', () => {
       expect(state.pendingTransactions).toEqual([])
     })
 
-    it('preserves submitted evidence when included HTLC activation fails', async () => {
+    it.each(['included', 'confirmed'])('preserves durable pending evidence when %s HTLC activation fails', async (status) => {
       const { useTransactions } = await import('./transactions')
       const { plain, signedTx } = createSignedHtlcCreation()
       vi.mocked(getSignedTx).mockResolvedValue({ outcome: 'signed', signedTx } as any)
-      state.client.sendTransaction.mockResolvedValue({ ...plain, state: 'included' } as any)
+      state.client.sendTransaction.mockResolvedValue({ ...plain, state: status } as any)
       state.activateRemoteSignerFromTransaction.mockRejectedValue(new Error('activation failed'))
 
       const result = await useTransactions().sendTx({ transfer: Transfer.LocalToRemote })
 
       expect(result.outcome).toBe('submitted')
       expect(state.pendingHtlcCreationTransactions).toHaveLength(1)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, expect.anything())
     })
 
     it('clears an included HTLC retry barrier after status persistence and activation', async () => {

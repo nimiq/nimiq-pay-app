@@ -12,6 +12,14 @@ const MAX_BLOCK_HEIGHT_MISMATCH = Nimiq.Policy.BLOCKS_PER_BATCH
 export const HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS = 120 * Nimiq.Policy.BLOCKS_PER_BATCH
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS
 
+export function upsertPlainPendingByHash(collection: RecoverablePlainTransactionDetails[], transaction: RecoverablePlainTransactionDetails) {
+  const index = collection.findIndex(tx => tx.transactionHash === transaction.transactionHash)
+  if (index >= 0)
+    collection.splice(index, 1, transaction)
+  else
+    collection.push(transaction)
+}
+
 export const useSyncState = defineStore('sync-state', () => {
   const { height: localHeight, lastMacroBlockHeight, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { remoteHeight, end, start } = storeToRefs(useRemoteSigner())

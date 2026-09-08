@@ -613,7 +613,6 @@ describe('useSyncHtlc', () => {
       state.activateRemoteSignerFromTransaction.mockClear()
       await htlc.checkHtlcState()
 
-      expect(state.client.getAccount).toHaveBeenCalledOnce()
       expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
 
       chainState = 'pending'
@@ -737,7 +736,7 @@ describe('useSyncHtlc', () => {
       expect(state.client.getTransaction).not.toHaveBeenCalled()
     })
 
-    it.each(['included', 'confirmed'])('clears a %s creation retry barrier using the live account balance', async (status) => {
+    it.each(['included', 'confirmed'])('delegates a %s creation to shared live-account activation', async (status) => {
       const included = {
         transactionHash: 'included-hash',
         state: status,
@@ -759,8 +758,8 @@ describe('useSyncHtlc', () => {
         expect.objectContaining({
           transactionHash: included.transactionHash,
           timestamp: included.timestamp,
-          value: 77,
-          data: expect.objectContaining({ timeout: 400_000 }),
+          value: 100,
+          data: expect.objectContaining({ timeout: 300_000 }),
         }),
         expect.objectContaining({
           client: state.client,
@@ -768,7 +767,6 @@ describe('useSyncHtlc', () => {
           network: state.networkName,
           owner: state.localAddress.toUserFriendlyAddress(),
         }),
-        0,
       )
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
@@ -790,19 +788,7 @@ describe('useSyncHtlc', () => {
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
-      if (recipient === state.remoteAddress?.toUserFriendlyAddress()) {
-        expect(state.deactivateRemoteSigner).toHaveBeenCalledWith(
-          expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }),
-          expect.any(Object),
-          true,
-        )
-        expect(state.deactivateRemoteSigner.mock.calls[0]?.[0].toUserFriendlyAddress()).toBe(recipient)
-      }
-      else {
-        expect(state.deactivateRemoteSigner).not.toHaveBeenCalled()
-        expect(state.remoteBalance).toBe(11011700000)
-      }
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(confirmed, expect.any(Object))
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: confirmed.transactionHash, status: 'confirmed', timestamp: confirmed.timestamp })
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
@@ -818,14 +804,14 @@ describe('useSyncHtlc', () => {
         data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 300_000 },
       }
       state.client.getTransaction = vi.fn(() => Promise.resolve(included)) as any
-      state.client.getAccount = vi.fn(() => Promise.reject(new Error('account unavailable'))) as any
+      state.activateRemoteSignerFromTransaction.mockRejectedValue(new Error('account unavailable'))
       const { useSyncHtlc } = await import('./htlc')
       const { useSyncState } = await import('./state')
       useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: included.transactionHash } as any)
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalled()
       expect(state.updateTransactionStatus).not.toHaveBeenCalled()
       expect(useSyncState().pendingHtlcCreationTransactions).toContainEqual(
         expect.objectContaining({ transactionHash: included.transactionHash, state: 'pending' }),
@@ -921,7 +907,7 @@ describe('useSyncHtlc', () => {
         generation: state.walletContextGeneration,
         network: state.networkName,
         owner: state.localAddress.toUserFriendlyAddress(),
-      }), 0)
+      }))
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
       expect(state.isHtlcActive).toBe(true)
     })
@@ -1252,6 +1238,115 @@ describe('useSyncHtlc', () => {
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'expired', timestamp: 200_000 })
     })
 
+    it('preserves the restored timestamp through reconciliation and expiry', async () => {
+      state.height = 250
+      state.query.mockResolvedValue([{
+        hash: 'timestamp',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 CHILD',
+        status: 'pending',
+        timestamp: 123_456,
+        validityStartHeight: 100,
+      }])
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.findTransactionInHistory.mockResolvedValue(undefined)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingHtlcCreationTransactions.push({ transactionHash: 'timestamp', timestamp: 123_456 } as any)
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'timestamp', status: 'expired', timestamp: 123_456 })
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it.each(['included', 'confirmed', 'invalidated'])('resolves legacy creation from %s sender history without a height', async (status) => {
+      const transaction = { transactionHash: 'legacy', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ22 CHILD', state: status, timestamp: 123_456, validityStartHeight: 100 }
+      state.query.mockResolvedValue([{ hash: 'legacy', sender: transaction.sender, recipient: transaction.recipient, status: 'pending', validityStartHeight: null }])
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.findTransactionInHistory.mockResolvedValue(transaction as any)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      const { SQLQuery } = await import('@/lib/sql-queries')
+
+      await useSyncHtlc().checkHtlcState()
+
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.BackfillTxValidityStartHeight, [100, 'legacy'])
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'legacy', status: status === 'invalidated' ? 'failed' : status, timestamp: 123_456 })
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+    })
+
+    it.each(['complete', 'incomplete', 'write-failed', 'context-changed', 'boundary'])('backfills decoded legacy height with %s recovery', async (scenario) => {
+      const { getLegacyHtlcValidityStartHeight } = await import('@/lib/utils')
+      vi.mocked(getLegacyHtlcValidityStartHeight).mockReturnValueOnce(100)
+      state.height = scenario === 'boundary' ? 100 + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS : 10_000
+      state.query.mockResolvedValue([{
+        hash: 'legacy-raw',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 CHILD',
+        status: 'pending',
+        timestamp: 123,
+        validityStartHeight: null,
+        raw: 'verified-content',
+      }])
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.findTransactionInHistory.mockResolvedValue(undefined)
+      if (scenario === 'incomplete')
+        state.findTransactionInHistory.mockRejectedValue(new Error('incomplete'))
+      if (scenario === 'write-failed')
+        state.run.mockRejectedValueOnce(new Error('disk failure'))
+      if (scenario === 'context-changed')
+        state.run.mockImplementationOnce(async () => { state.walletContextGeneration += 1 })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().checkHtlcState()
+
+      if (scenario === 'complete') {
+        expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'legacy-raw', status: 'expired', timestamp: 123 })
+        expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+      }
+      else {
+        expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+        expect(useSyncState().pendingHtlcCreationTransactions).toHaveLength(1)
+      }
+    })
+
+    it('uses the persisted legacy height after restart without decoding again', async () => {
+      const { getLegacyHtlcValidityStartHeight } = await import('@/lib/utils')
+      vi.mocked(getLegacyHtlcValidityStartHeight).mockClear().mockReturnValueOnce(100)
+      const row = {
+        hash: 'restart-legacy',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 CHILD',
+        status: 'pending',
+        timestamp: 123,
+        validityStartHeight: null as number | null,
+        raw: 'verified-content',
+      }
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      state.query.mockImplementation(async () => [{ ...row }])
+      state.run.mockImplementation(async (sql, values) => {
+        if (sql === SQLQuery.BackfillTxValidityStartHeight)
+          row.validityStartHeight = values![0] as number
+      })
+      state.height = 100
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.findTransactionInHistory.mockResolvedValue(undefined)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      await useSyncHtlc().checkHtlcState()
+      expect(row.validityStartHeight).toBe(100)
+
+      setActivePinia(createPinia())
+      state.height = 10_000
+      await useSyncHtlc().checkHtlcState()
+
+      expect(getLegacyHtlcValidityStartHeight).toHaveBeenCalledOnce()
+      expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: row.hash, status: 'expired', timestamp: 123 })
+    })
+
     it('expires an absent broadcast after its validity window', async () => {
       state.remoteBalance = 0
       state.height = 250
@@ -1291,7 +1386,7 @@ describe('useSyncHtlc', () => {
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.findTransactionInHistory).not.toHaveBeenCalled()
+      expect(state.findTransactionInHistory).toHaveBeenCalled()
       expect(state.logger.warn).toHaveBeenCalledWith('Cannot expire pending HTLC creation without validity height', {
         hash: legacyHash,
         validityStartHeight,
@@ -1331,8 +1426,7 @@ describe('useSyncHtlc', () => {
 
       await useSyncHtlc().checkHtlcState()
 
-      expect(state.client.getAccount).toHaveBeenCalledWith(confirmed.recipient)
-      expect(state.activateRemoteSignerFromTransaction).not.toHaveBeenCalled()
+      expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(confirmed, expect.any(Object))
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
       expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'confirmed', timestamp: 200_000 })
       expect(state.updateTransactionStatus).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'expired' }))
@@ -1401,7 +1495,7 @@ describe('useSyncHtlc', () => {
         generation: state.walletContextGeneration,
         network: state.networkName,
         owner: state.localAddress.toUserFriendlyAddress(),
-      }), 0)
+      }))
     })
 
     it('durably activates an included HTLC even when memory already has its address', async () => {
@@ -1427,7 +1521,7 @@ describe('useSyncHtlc', () => {
         generation: state.walletContextGeneration,
         network: state.networkName,
         owner: state.localAddress.toUserFriendlyAddress(),
-      }), 0)
+      }))
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([])
     })
 
@@ -1455,7 +1549,7 @@ describe('useSyncHtlc', () => {
         generation: state.walletContextGeneration,
         network: state.networkName,
         owner: state.localAddress.toUserFriendlyAddress(),
-      }), 0)
+      }))
       expect(useSyncState().pendingHtlcCreationTransactions).toEqual([
         expect.objectContaining({ transactionHash: 'h1', state: 'pending' }),
       ])

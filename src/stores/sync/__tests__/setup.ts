@@ -379,6 +379,11 @@ vi.mock('@/lib', () => ({
   nakaBufferAddresses: [] as string[],
 }))
 
+vi.mock('@/lib/utils', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/utils')>(),
+  getLegacyHtlcValidityStartHeight: vi.fn(() => undefined),
+}))
+
 vi.mock('@/lib/tx', () => ({
   toAccountType: (type: string) => type,
   buildTopUpReceipt: vi.fn((tx: any) => ({
@@ -488,6 +493,11 @@ vi.mock('@/stores/remote-signer', () => {
     return { ...remoteSigners, address: { toUserFriendlyAddress: () => remoteSigners.address } }
   }
 
+  const sameWalletContext = (a: any, b: any) => a.client === b.client
+    && a.network === b.network
+    && a.owner === b.owner
+    && a.generation === b.generation
+
   const useRemoteSigner = defineStore('remote-signer', () => ({
     remoteHeight: computed(() => state.remoteHeight),
     remoteBalance: computed({
@@ -529,7 +539,7 @@ vi.mock('@/stores/remote-signer', () => {
     init: state.initRemoteSigner,
     resolveHomeBalanceState: state.resolveHomeBalanceState,
   }))
-  return { parseAddress, useRemoteSigner }
+  return { parseAddress, sameWalletContext, useRemoteSigner }
 })
 
 vi.mock('@/stores/transactions', () => {

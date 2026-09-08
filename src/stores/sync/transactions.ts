@@ -304,7 +304,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       const allTransactions = await query<ExternalTransaction[]>(SQLQuery.SelectAllTransactions)
       if (!isCurrent())
         return
-      const topUpAddresses = [...new Set(((await query<UserReceiptTransaction[]>(SQLQuery.GetAllUserReceipts))).map(tx => tx.sender))]
+      const topUpAddresses = new Set((await query<{ sender: string }[]>(SQLQuery.GetUserReceiptSenders)).map(tx => tx.sender))
       if (!isCurrent())
         return
 
@@ -325,7 +325,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           else if (tx.recipientType === 'staking' || tx.senderType === 'staking') {
             stakingTxs.push(tx)
           }
-          else if (topUpAddresses.includes(tx.recipient)) {
+          else if (topUpAddresses.has(tx.recipient)) {
             withdrawalTxs.push(tx)
           }
           else {

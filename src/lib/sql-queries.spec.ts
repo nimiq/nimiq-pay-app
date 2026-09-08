@@ -14,6 +14,17 @@ beforeEach(() => {
 afterEach(() => db.close())
 
 describe('transaction recovery queries', () => {
+  it('preserves absent timestamps and backfills legacy height only once', () => {
+    db.prepare('INSERT INTO transactions (hash, timestamp) VALUES (?, ?)').run('legacy', 123)
+    db.prepare(SQLQuery.UpdateTxStatus).run('failed', null, 'legacy')
+    expect(db.prepare('SELECT timestamp FROM transactions').get()).toEqual({ timestamp: 123 })
+    db.prepare(SQLQuery.UpdateTxStatus).run('confirmed', 0, 'legacy')
+    expect(db.prepare('SELECT timestamp FROM transactions').get()).toEqual({ timestamp: 0 })
+    db.prepare(SQLQuery.BackfillTxValidityStartHeight).run(100, 'legacy')
+    db.prepare(SQLQuery.BackfillTxValidityStartHeight).run(200, 'legacy')
+    expect(db.prepare('SELECT validityStartHeight FROM transactions').get()).toEqual({ validityStartHeight: 100 })
+  })
+
   it('tracks unconfirmed NIM payments through reinclusion and stops at final states', () => {
     const insert = db.prepare(`INSERT INTO transactions (hash, transfer, status, asset, paymentMethod)
       VALUES (?, 'user-payment', ?, ?, ?)`)
