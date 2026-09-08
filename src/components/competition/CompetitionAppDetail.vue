@@ -90,7 +90,7 @@ function fallbackToIcon(event: Event) {
       <p class="mt-5 text-lg font-bold leading-snug text-space">
         {{ app.tagline }}
       </p>
-      <p class="mt-3 text-base leading-relaxed text-space/70">
+      <p class="mt-3 whitespace-pre-line text-base leading-relaxed text-space/70">
         {{ app.description }}
       </p>
 
