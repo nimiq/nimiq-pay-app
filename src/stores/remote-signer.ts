@@ -910,6 +910,11 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   let cachedRemoteSignerContext: string | undefined
   // Invalidations during an awaited DB read must prevent that stale snapshot from becoming the cache.
   let remoteSignerCacheGeneration = 0
+  let remoteSignerAddressLookup: {
+    context: string | undefined
+    generation: number
+    promise: Promise<Set<string>>
+  } | undefined
 
   function getRemoteSignerCacheContext() {
     const identity = getWalletIdentity()
@@ -927,15 +932,25 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (cachedRemoteSignerAddresses && cachedRemoteSignerContext === context)
       return cachedRemoteSignerAddresses
     const generation = remoteSignerCacheGeneration
-    const signers = await getAllRemoteSigners()
-    if (getRemoteSignerCacheContext() !== context)
-      throw new Error('Wallet changed during remote signer lookup')
-    if (remoteSignerCacheGeneration !== generation)
-      return getOurRemoteSignerAddresses()
-    cachedRemoteSignerAddresses = new Set(signers.map(signer => signer.address.toUserFriendlyAddress()))
-    cachedRemoteSignerContext = context
-    logger.log(`🔄 ourRemoteSignerAddresses cache rebuilt: ${cachedRemoteSignerAddresses.size} signer(s)`, [...cachedRemoteSignerAddresses])
-    return cachedRemoteSignerAddresses
+    if (remoteSignerAddressLookup?.context === context && remoteSignerAddressLookup?.generation === generation)
+      return remoteSignerAddressLookup.promise
+
+    const promise = getAllRemoteSigners().then((signers) => {
+      if (getRemoteSignerCacheContext() !== context)
+        throw new Error('Wallet changed during remote signer lookup')
+      if (remoteSignerCacheGeneration !== generation)
+        return getOurRemoteSignerAddresses()
+      cachedRemoteSignerAddresses = new Set(signers.map(signer => signer.address.toUserFriendlyAddress()))
+      cachedRemoteSignerContext = context
+      logger.log(`🔄 ourRemoteSignerAddresses cache rebuilt: ${cachedRemoteSignerAddresses.size} signer(s)`, [...cachedRemoteSignerAddresses])
+      return cachedRemoteSignerAddresses
+    }).finally(() => {
+      // An older lookup must not clear a replacement started after invalidation or a wallet switch.
+      if (remoteSignerAddressLookup?.promise === promise)
+        remoteSignerAddressLookup = undefined
+    })
+    remoteSignerAddressLookup = { context, generation, promise }
+    return promise
   }
 
   async function isOurRemoteSigner(address: string): Promise<boolean> {

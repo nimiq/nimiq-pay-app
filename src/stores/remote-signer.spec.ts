@@ -2861,6 +2861,64 @@ describe('useRemoteSigner', () => {
     expect(state.run).not.toHaveBeenCalled()
   })
 
+  it('shares a pending remote-signer lookup and caches its result', async () => {
+    let resolveSnapshot!: (value: any[]) => void
+    state.query.mockImplementationOnce(() => new Promise(resolve => resolveSnapshot = resolve))
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    const lookups = Array.from({ length: 23 }, () => store.getOurRemoteSignerAddresses())
+    expect(state.query).toHaveBeenCalledOnce()
+    resolveSnapshot([])
+    const results = await Promise.all(lookups)
+
+    expect(results.every(result => result === results[0])).toBe(true)
+    expect(await store.getOurRemoteSignerAddresses()).toBe(results[0])
+    expect(state.query).toHaveBeenCalledOnce()
+  })
+
+  it('retries a shared remote-signer lookup after a DB failure', async () => {
+    state.query.mockRejectedValueOnce(new Error('DB read failed')).mockResolvedValue([])
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    const results = await Promise.allSettled([
+      store.getOurRemoteSignerAddresses(),
+      store.getOurRemoteSignerAddresses(),
+    ])
+    expect(results).toEqual([
+      { status: 'rejected', reason: new Error('DB read failed') },
+      { status: 'rejected', reason: new Error('DB read failed') },
+    ])
+    expect(state.query).toHaveBeenCalledOnce()
+    expect(await store.getOurRemoteSignerAddresses()).toEqual(new Set())
+    expect(state.query).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps a new wallet lookup pending when the old wallet lookup rejects', async () => {
+    let resolveOldSnapshot!: (value: any[]) => void
+    let resolveNewSnapshot!: (value: any[]) => void
+    state.query
+      .mockImplementationOnce(() => new Promise(resolve => resolveOldSnapshot = resolve))
+      .mockImplementationOnce(() => new Promise(resolve => resolveNewSnapshot = resolve))
+    const { useLocalWallet } = await import('@/stores/local-wallet')
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    const oldLookup = store.getOurRemoteSignerAddresses()
+    ;(useLocalWallet() as any).localAddress = createAddress('NQ01 NEXT LOCAL ADDRESS')
+    const newLookup = store.getOurRemoteSignerAddresses()
+    const oldRejection = expect(oldLookup).rejects.toThrow('Wallet changed during remote signer lookup')
+    resolveOldSnapshot([])
+    await oldRejection
+    const sharedLookup = store.getOurRemoteSignerAddresses()
+    expect(state.query).toHaveBeenCalledTimes(2)
+    resolveNewSnapshot([])
+    expect(await sharedLookup).toBe(await newLookup)
+    expect(await store.getOurRemoteSignerAddresses()).toBe(await newLookup)
+    expect(state.query).toHaveBeenCalledTimes(2)
+  })
+
   it('does not publish a remote-signer cache snapshot invalidated during its DB read', async () => {
     const signer = {
       active: false,
@@ -2878,12 +2936,13 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const store = useRemoteSigner()
 
-    const addresses = store.getOurRemoteSignerAddresses()
+    const addresses = Promise.all(Array.from({ length: 23 }, () => store.getOurRemoteSignerAddresses()))
     await vi.waitFor(() => expect(state.query).toHaveBeenCalledOnce())
     await store.upsertInactiveRemoteSigner({ ...signer, address: createAddress(signer.address) } as any)
     resolveOldSnapshot([])
 
-    expect(await addresses).toContain(signer.address)
+    const results = await addresses
+    expect(results.every(result => result.has(signer.address) && result === results[0])).toBe(true)
     expect(state.query).toHaveBeenCalledTimes(2)
   })
 
