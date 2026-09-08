@@ -76,13 +76,15 @@ describe('transaction recovery queries', () => {
     ])
   })
 
-  it('hydrates included creations only until activation completes', () => {
+  it('keeps included creations selectable until finality', () => {
     db.exec(`INSERT INTO transactions (hash, recipient, status, transfer, validityStartHeight)
       VALUES ('creation', 'signer', 'included', 'local-to-remote', 100)`)
     expect(db.prepare(SQLQuery.SelectPendingHtlcCreations).all()).toMatchObject([
       { hash: 'creation', validityStartHeight: 100, status: 'included' },
     ])
     db.prepare(SQLQuery.InsertRemoteSigner).run('signer', 10, 98, 'key', 1, 2, 1)
+    expect(db.prepare(SQLQuery.SelectPendingHtlcCreations).all()).toHaveLength(1)
+    db.exec('UPDATE transactions SET status = \'confirmed\' WHERE hash = \'creation\'')
     expect(db.prepare(SQLQuery.SelectPendingHtlcCreations).all()).toEqual([])
   })
 

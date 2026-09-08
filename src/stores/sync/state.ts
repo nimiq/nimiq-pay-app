@@ -45,7 +45,13 @@ export const useSyncState = defineStore('sync-state', () => {
   const pendingPaymentTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
   const pendingHtlcCreationTransactions: Ref<RecoverablePlainTransactionDetails[]> = ref([])
-  const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
+  // Included creations remain tracked for reorgs, but their funds are already usable.
+  const hasPendingHtlcCreation = computed(() => pendingHtlcCreationTransactions.value.some(
+    transaction => transaction.state !== 'included' && transaction.state !== 'confirmed',
+  ))
+  const isTransactionPending = computed(() => pendingTransactions.value.length > 0
+    || pendingRemoteDrainTxs.value.length > 0
+    || hasPendingHtlcCreation.value)
   const isVerifyingRemoteSignersDb = ref(false)
   const isUpdatingBalancesNow = ref(false)
   const shouldUpdateBalancesAgain = ref(false)
@@ -77,6 +83,7 @@ export const useSyncState = defineStore('sync-state', () => {
     pendingRemoteDrainTxs,
     pendingHtlcCreationTransactions,
     isTransactionPending,
+    hasPendingHtlcCreation,
     isVerifyingRemoteSignersDb,
     isUpdatingBalancesNow,
     shouldUpdateBalancesAgain,

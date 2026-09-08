@@ -403,7 +403,8 @@ export async function getSignedTxByRemote(
         expectedNetworkId: networkId.value,
       })
       return {
-        outcome: response.status >= 500 ? 'unknown' : 'rejected',
+        // A replay rejection cannot rule out a broadcast by the original request.
+        outcome: response.replayed || response.status >= 500 ? 'unknown' : 'rejected',
         error: response.error?.message || i18n.t('Something went wrong signing the transaction'),
       }
     }

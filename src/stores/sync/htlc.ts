@@ -7,7 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { SQLQuery } from '@/lib/sql-queries'
-import { getLegacyHtlcValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
+import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -294,7 +294,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       }
     }
 
-    if (mode !== 'terminal')
+    if (mode !== 'terminal' && senderType !== 'basic' && Number(senderType) !== Nimiq.AccountType.Basic)
       return false
     return deactivateRemoteSigner(Nimiq.Address.fromString(recipient), context, true)
   }
@@ -347,7 +347,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         return
       if (typeof pending.validityStartHeight !== 'number') {
         const row = persistedByHash.get(pending.transactionHash)
-        const recoveredHeight = row && getLegacyHtlcValidityStartHeight(row, networkId.value)
+        const recoveredHeight = row && getLegacyTransactionValidityStartHeight(row, networkId.value)
         if (typeof recoveredHeight === 'number' && !await backfillPendingHtlcValidityStartHeight(pending, recoveredHeight, context)) {
           if (!isHtlcContextCurrent(context))
             return
@@ -442,13 +442,20 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           const currentWalletContext = getCurrentWalletContext(context)
           if (!currentWalletContext)
             return
-          if (transaction.state === 'included' || transaction.recipient) {
+          // Keep finality monitoring separate from activation of an already superseded signer.
+          const alreadyActivated = pending.state === 'included' && remoteAddress.value
+            && (remoteAddress.value.toUserFriendlyAddress() === transaction.recipient
+              || (typeof transaction.timestamp === 'number' && start.value >= transaction.timestamp))
+          if (!alreadyActivated && (transaction.state === 'included' || transaction.recipient)) {
             await activateRemoteSignerFromTransaction(transaction, currentWalletContext)
           }
           if (!isHtlcContextCurrent(context))
             return
           await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
-          if (!removePendingHtlcCreation(pending.transactionHash, context))
+          const updated = transaction.state === 'confirmed'
+            ? removePendingHtlcCreation(pending.transactionHash, context)
+            : upsertPendingHtlcCreation(transaction, context)
+          if (!updated)
             return
         }
         catch (error) {
@@ -460,7 +467,12 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         continue
       }
       if (transaction.state === 'new' || transaction.state === 'pending') {
+        if (!upsertPendingHtlcCreation({ ...pending, ...transaction }, context))
+          return
         try {
+          // Persist the reorg before rollback so a restart cannot restore an included, spendable state.
+          if (pending.state !== transaction.state)
+            await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
           // Creation is not accepted yet, so keep any funded predecessor as active signer.
           const currentWalletContext = getCurrentWalletContext(context)
           if (!currentWalletContext)
@@ -470,8 +482,6 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             continue
           if (!isHtlcContextCurrent(context))
             return
-          if (pending.state !== transaction.state)
-            await updateTransactionStatus({ hash: pending.transactionHash, status: transaction.state, timestamp: transaction.timestamp })
         }
         catch (error) {
           logger.error('Error rolling back pending HTLC transaction', error)

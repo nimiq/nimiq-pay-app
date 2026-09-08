@@ -18,7 +18,10 @@ const consensus = ref<'established' | 'connecting'>('established')
 const usdtBalance = ref(0)
 const polygonConsensus = ref<'established' | 'connecting'>('established')
 const isTransactionPending = ref(false)
-const pendingHtlcCreationTransactions = ref<unknown[]>([])
+const pendingHtlcCreationTransactions = ref<{ transactionHash: string, state?: string }[]>([])
+const hasPendingHtlcCreation = computed(() => pendingHtlcCreationTransactions.value.some(
+  transaction => transaction.state !== 'included' && transaction.state !== 'confirmed',
+))
 const htlcCanBeExtended = ref(false)
 const blocksUntilNextMacroBlock = ref(1)
 const isProcessingRemote = ref(false)
@@ -265,7 +268,7 @@ vi.mock('@/stores/remote-signer', () => ({
 vi.mock('@/stores/sync', () => ({
   useSync: () => ({
     isTransactionPending,
-    pendingHtlcCreationTransactions,
+    hasPendingHtlcCreation,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,
     syncWallets,
@@ -381,6 +384,16 @@ describe('mainView', () => {
 
     expect(wrapper.text()).not.toContain('Processing funds')
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('true')
+  })
+
+  it('keeps payment available while an included HTLC is monitored for finality', async () => {
+    remoteBalance.value = 10 * 1e5
+    isHtlcActive.value = true
+    pendingHtlcCreationTransactions.value = [{ transactionHash: 'creation', state: 'included' }]
+    const wrapper = await mountComponent()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Processing funds')
+    expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
   })
 
   it.each(['drain', 'creation'])('shows processing during HTLC %s even while the previous signer is active', async (phase) => {

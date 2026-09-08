@@ -180,7 +180,7 @@ export enum RemoteStatus {
 const remoteSignerWsApi = (function () {
   logger.log('[remoteSignerWsApi] Initializing WebSocket connection to', baseCosignerUrl.toString())
 
-  const pendingRequests = new Map<string, { id: string, requestObject: any, resolve: (result: ResultApi<any, any>) => void }>()
+  const pendingRequests = new Map<string, { id: string, requestObject: any, replayed: boolean, resolve: (result: ResultApi<any, any>) => void }>()
   let idCounter = 0
   const { data, send } = useWebSocket<string>(baseCosignerUrl, {
     autoReconnect: true,
@@ -190,6 +190,7 @@ const remoteSignerWsApi = (function () {
     onConnected(ws) {
       logger.log('[remoteSignerWsApi] Connected:', ws.url)
       for (const request of pendingRequests.values()) {
+        request.replayed = true
         send(JSON.stringify(request.requestObject))
       }
     },
@@ -205,7 +206,7 @@ const remoteSignerWsApi = (function () {
     const id = `${idCounter++}`
     const requestObject = { event, data: { ...args, id } }
     const response = new Promise<ResultApi<T, E>>((resolve) => {
-      pendingRequests.set(id, { id, requestObject, resolve })
+      pendingRequests.set(id, { id, requestObject, replayed: false, resolve })
       send(JSON.stringify(requestObject))
     })
     // Sends retain their recovery anchor; only read requests can be discarded on timeout.
@@ -280,6 +281,7 @@ const remoteSignerWsApi = (function () {
             data: undefined,
             hasError: true,
             error: responseObject.data,
+            replayed: pendingRequest.replayed,
             status: responseObject.data.statusCode ?? 500,
           })
           pendingRequests.delete(responseObject.data.id)

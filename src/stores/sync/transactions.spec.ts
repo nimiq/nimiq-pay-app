@@ -332,6 +332,23 @@ describe('useSyncTransactions', () => {
       expect(syncState.pendingTransactions).toHaveLength(0)
     })
 
+    it('recovers and persists a legacy outgoing height before expiring an absent transaction', async () => {
+      const { getLegacyTransactionValidityStartHeight } = await import('@/lib/utils')
+      vi.mocked(getLegacyTransactionValidityStartHeight).mockReturnValueOnce(100)
+      state.query.mockResolvedValue({ hash: 'legacy', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ22 RECIPIENT', raw: 'serialized-content' } as any)
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.height = 1000
+      state.getTransactionState.mockResolvedValue({ data: { state: 'unknown' }, error: undefined })
+      state.getAllTransactionsForAddress.mockResolvedValue({ transactions: [], complete: true })
+      const { useSyncTransactions } = await import('./transactions')
+      const { useSyncState } = await import('./state')
+      useSyncState().pendingTransactions.push({ transactionHash: 'legacy', sender: 'NQ00 TEST LOCAL ADDRESS', validityStartHeight: null } as any)
+      await useSyncTransactions().updateSingleTransaction('legacy')
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.BackfillTxValidityStartHeight, [100, 'legacy'])
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith(expect.objectContaining({ hash: 'legacy', status: 'expired' }))
+      expect(useSyncState().isTransactionPending).toBe(false)
+    })
+
     it.each([null, undefined])('retains an absent pending transaction with %s validity height', async (validityStartHeight) => {
       state.consensus = 'syncing'
       state.height = 1_000

@@ -1691,7 +1691,7 @@ describe('useTransactions', () => {
 
       expect(result.outcome).toBe('submitted')
       expect(state.activateRemoteSignerFromTransaction).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ generation: 0 }))
-      expect(state.pendingHtlcCreationTransactions).toEqual([])
+      expect(state.pendingHtlcCreationTransactions).toEqual([expect.objectContaining({ state: 'included' })])
       expect(state.pendingTransactions).toEqual([])
       expect(state.pendingRemoteDrainTxs).toEqual([])
     })

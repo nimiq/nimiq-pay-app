@@ -13,7 +13,7 @@ import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
 import { buildTopUpReceipt, toAccountType } from '@/lib/tx'
-import { promiseWithTimeout } from '@/lib/utils'
+import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -54,8 +54,8 @@ export function isOwnHtlcDrain(tx: PlainTransactionDetails, localUserFriendly: s
 
 export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
-  const { query } = useConn()
-  const { client, consensus, height, networkName } = storeToRefs(useNimiqNetwork())
+  const { query, run } = useConn()
+  const { client, consensus, height, networkName, networkId } = storeToRefs(useNimiqNetwork())
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const remoteSignerStore = useRemoteSigner()
   const { remoteAddress } = storeToRefs(remoteSignerStore)
@@ -188,6 +188,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       return reconcile(found)
     if (!history.complete)
       return
+    if (typeof pending.validityStartHeight !== 'number') {
+      const row = await query<{ hash: string, sender: string, recipient: string, raw?: string }>(SQLQuery.GetTransactionByHash, [hash], { single: true })
+      if (!isPendingTransactionContextCurrent(context))
+        return
+      const recoveredHeight = row && getLegacyTransactionValidityStartHeight(row, networkId.value)
+      if (typeof recoveredHeight === 'number') {
+        await run(SQLQuery.BackfillTxValidityStartHeight, [recoveredHeight, hash])
+        if (!isPendingTransactionContextCurrent(context))
+          return
+        pending.validityStartHeight = recoveredHeight
+      }
+    }
     if (typeof pending.validityStartHeight !== 'number') {
       logger.warn('Cannot expire pending transaction without validity height', {
         hash,

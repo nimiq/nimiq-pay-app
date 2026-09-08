@@ -57,6 +57,16 @@ describe('cosigner WebSocket requests', () => {
     expect(socket.send).not.toHaveBeenCalled()
   })
 
+  it('marks a rejection after reconnect as replayed', async () => {
+    const { useRemoteSignerApi } = await import('./useApi')
+    const request = useRemoteSignerApi().sendRawTransaction({ address: 'NQ00 OWNER', rawTx: 'serialized' })
+    const { data: { id } } = JSON.parse(socket.send.mock.calls[0][0])
+    socket.options.onConnected({ url: 'wss://cosigner' })
+    socket.data.value = JSON.stringify({ event: 'error', data: { id, statusCode: 412 } })
+    await nextTick()
+    await expect(request).resolves.toMatchObject({ hasError: true, status: 412, replayed: true })
+  })
+
   it('preserves unresolved sends for the send pipeline to reconcile', async () => {
     const { useRemoteSignerApi } = await import('./useApi')
     let result: unknown

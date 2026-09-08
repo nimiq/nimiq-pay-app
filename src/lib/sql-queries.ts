@@ -83,7 +83,7 @@ export enum SQLQuery {
     WHERE status IN ('new', 'pending', 'included')
       AND COALESCE(asset, 'NIM') = 'NIM' AND COALESCE(paymentMethod, 'nim') = 'nim'
       AND transfer IN ('${Transfer.UserPayment}', '${Transfer.UserPaymentToMerchant}', '${Transfer.UserPaymentToAtomicSwap}')`,
-  SelectPendingHtlcCreations = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, status, validityStartHeight, raw FROM transactions WHERE (status IN ('new', 'pending') OR (status = 'included' AND NOT EXISTS (SELECT 1 FROM remote_signers WHERE remote_signers.address = transactions.recipient AND active = 1))) AND transfer IN (\'${Transfer.LocalToRemote}\', \'${Transfer.ExtendRemote}\')`, // eslint-disable-line ts/prefer-literal-enum-member
+  SelectPendingHtlcCreations = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, status, validityStartHeight, raw FROM transactions WHERE status IN ('new', 'pending', 'included') AND transfer IN (\'${Transfer.LocalToRemote}\', \'${Transfer.ExtendRemote}\')`, // eslint-disable-line ts/prefer-literal-enum-member
 
   // Remote Signers
   CreateRemoteSignersTable = 'CREATE TABLE IF NOT EXISTS remote_signers (address TEXT PRIMARY KEY, balance INTEGER, proofSize INTEGER, publicKey TEXT, start INTEGER, end INTEGER, active INTEGER)',

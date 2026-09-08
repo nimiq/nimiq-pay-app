@@ -228,6 +228,12 @@ describe('getSignedTx', () => {
     expect(explicitError).toEqual({ outcome: 'rejected', error: expectedError })
   })
 
+  it('preserves uncertainty when a replay gets a precondition rejection', async () => {
+    state.sendRemoteTransaction.mockResolvedValue({ data: undefined, error: { message: 'Service status is not good' }, hasError: true, status: 412, replayed: true })
+    const result = await getSignedTx({ transfer: Transfer.UserPayment, recipient: 'NQ22 RECIPIENT', amount: 10 } as any)
+    expect(result.outcome).toBe('unknown')
+  })
+
   it('classifies a structured cosigner server error after submission as unknown', async () => {
     state.sendRemoteTransaction.mockResolvedValue({
       data: undefined,

@@ -1002,13 +1002,14 @@ describe('useSyncLifecycle', () => {
     })
 
     it('serializes coalesced height and readiness retry triggers', async () => {
+      const { SQLQuery } = await import('@/lib/sql-queries')
       state.consensus = 'connecting'
       state.height = 129
       let activeQueries = 0
       let maxActiveQueries = 0
       const resolvers: Array<() => void> = []
       state.query.mockImplementation((sql = '') => {
-        if (!sql.includes('NOT EXISTS (SELECT 1 FROM remote_signers'))
+        if (sql !== SQLQuery.SelectPendingHtlcCreations)
           return Promise.resolve([])
         activeQueries += 1
         maxActiveQueries = Math.max(maxActiveQueries, activeQueries)

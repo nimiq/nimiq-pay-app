@@ -2,7 +2,7 @@ import type { ConsensusState, Transaction } from '@nimiq/core'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
 
-export function getLegacyHtlcValidityStartHeight(
+export function getLegacyTransactionValidityStartHeight(
   row: { hash: string, sender: string, recipient: string, raw?: string | null },
   expectedNetworkId: number,
 ): number | undefined {
@@ -15,28 +15,38 @@ export function getLegacyHtlcValidityStartHeight(
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
     const dataLength = view.getUint16(0)
     const recipientDataEnd = 2 + dataLength
-    // Basic/HTLC senders have no sender data. Reject other formats rather than guessing their layout.
-    if (bytes.length !== recipientDataEnd + 65)
+    // The Core round-trip below validates the decoded fields and canonical encoding.
+    if (bytes.length < recipientDataEnd + 65)
       return undefined
     const fields = new DataView(bytes.buffer, bytes.byteOffset + recipientDataEnd, 65)
     const senderType = fields.getUint8(20)
-    if ((senderType !== Nimiq.AccountType.Basic && senderType !== Nimiq.AccountType.HTLC)
-      || fields.getUint8(41) !== Nimiq.AccountType.HTLC
-      || fields.getUint8(62) !== expectedNetworkId
-      || fields.getUint8(63) !== 1
-      || fields.getUint8(64) !== 0) {
+    if (fields.getUint8(62) !== expectedNetworkId) {
       return undefined
     }
+    // Sender data uses an unsigned base-128 length, unlike the recipient's uint16 length.
+    let senderDataOffset = recipientDataEnd + 64
+    let senderDataLength = 0
+    let shift = 0
+    let lengthByte: number
+    do {
+      if (senderDataOffset >= bytes.length || shift > 28)
+        return undefined
+      lengthByte = bytes[senderDataOffset++]!
+      senderDataLength += (lengthByte & 0x7F) * 2 ** shift
+      shift += 7
+    } while (lengthByte & 0x80)
+    if (senderDataOffset + senderDataLength !== bytes.length)
+      return undefined
     transaction = new Nimiq.Transaction(
       Nimiq.Address.fromString(row.sender),
       senderType,
-      new Uint8Array(),
+      bytes.slice(senderDataOffset),
       Nimiq.Address.fromString(row.recipient),
-      Nimiq.AccountType.HTLC,
+      fields.getUint8(41),
       bytes.slice(2, recipientDataEnd),
       fields.getBigUint64(42),
       fields.getBigUint64(50),
-      1,
+      fields.getUint8(63),
       fields.getUint32(58),
       expectedNetworkId,
     )

@@ -699,8 +699,11 @@ export const useTransactions = defineStore('transactions', () => {
         if (!remoteSigner.isWalletContextCurrent(sendContext))
           return staleContextResult(i18n.t('Wallet or network changed before sending'))
 
-        if (canClearPending)
+        if (canClearPending) {
           removePendingHash(staged.tx.hash, sendContext)
+          if (createsHtlc && details.state === 'included')
+            upsertPlainPendingByHash(syncState.pendingHtlcCreationTransactions, details)
+        }
       }
 
       logger.log('✈️ Sent transaction', staged.plain)
