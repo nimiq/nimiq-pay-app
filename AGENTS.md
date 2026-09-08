@@ -47,6 +47,9 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Nimiq client & sync
 
+- `executionResult` is not failure-only: `true` means execution succeeded, `false` means execution failed. Missing/`undefined` means no result was provided; never assume success from absence.
+- In core-rs-albatross commit `13b24b5de83aeb52c02304c1237acef68a228d10`, `getTransaction(hash)` fetches blockchain history and provides `executionResult` for both outcomes. `sendTransaction()` can return state `new` without an execution result when inclusion has not been observed. If a direct `getTransaction()` response lacks it, check the exact method, package version, and response before drawing conclusions. Source: https://github.com/nimiq/core-rs-albatross/blob/13b24b5de83aeb52c02304c1237acef68a228d10/web-client/src/common/transaction.rs#L1223-L1281
+
 - Register incoming transaction listeners before slow signer verification. Local receipts must not wait for pending HTLCs, older history pages, or an unchanged remote signer address.
 
 - Confirmed HTLC creation value is historical, not the current balance. Read the live account before recovery activation; resolve drained creations without restoring their funds or replacing a newer signer.
