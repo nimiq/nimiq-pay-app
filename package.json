@@ -54,7 +54,7 @@
     "@capawesome/capacitor-android-edge-to-edge-support": "^8.0.8",
     "@capawesome/capacitor-posthog": "^8.5.0",
     "@capgo/camera-preview": "^8.3.8",
-    "@capgo/capacitor-inappbrowser": "^8.15.3",
+    "@capgo/capacitor-inappbrowser": "^8.16.6",
     "@internationalized/number": "^3.6.6",
     "@nimiq/fastspot-api-v1": "npm:@nimiq/fastspot-api@^1.10.3",
     "@nimiq/fastspot-api-v2": "npm:@nimiq/fastspot-api@2.0.0-beta.2",

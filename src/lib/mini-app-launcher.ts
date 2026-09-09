@@ -256,6 +256,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       toolbarType: ToolBarType.NAVIGATION,
       preventDeeplink: true,
       showReloadButton: true,
+      handleDownloads: true,
       activeNativeNavigationForWebview: true,
       isPresentAfterPageLoad: true,
       preShowScript: scriptContent,
