@@ -778,8 +778,8 @@ describe('miniAppHost HTLC guards', () => {
 
   it.each([
     ['a pre-image one byte short', 'ab'.repeat(31), 'cd'.repeat(32), 'blake2b'],
+    ['a pre-image between the two defined lengths', 'ab'.repeat(48), 'cd'.repeat(64), 'sha512'],
     ['a pre-image of 256 bytes, which the length prefix cannot describe', 'ab'.repeat(256), 'cd'.repeat(32), 'blake2b'],
-    ['a 32-byte pre-image declared as sha512', 'ab'.repeat(32), 'cd'.repeat(64), 'sha512'],
   ])('rejects a regular redeem with %s', async (_label, preImage, hashRoot, hashAlgorithm) => {
     const { handleRequest } = await createPermissionHost()
 
@@ -810,13 +810,15 @@ describe('miniAppHost HTLC guards', () => {
     expect(sendTx).not.toHaveBeenCalled()
   })
 
-  it('accepts a regular redeem whose pre-image matches the algorithm root length', async () => {
+  // Pre-image length is independent of the hash algorithm: the proof hashes it before comparing
+  // against the root, so both defined `PreImage` lengths are valid under a 64-byte sha512 root.
+  it.each([32, 64])('accepts a regular sha512 redeem with a %i-byte pre-image', async (preImageBytes) => {
     const { handleRequest } = await createPermissionHost()
 
     await expect(handleRequest({
       network: 'nimiq',
       name: 'sendRedeemRegularHtlcTransaction',
-      params: [foreignContract, recipient, 'ab'.repeat(64), 'cd'.repeat(64), 1, 'sha512', 100],
+      params: [foreignContract, recipient, 'ab'.repeat(preImageBytes), 'cd'.repeat(64), 1, 'sha512', 100],
     })).resolves.toBe('tx-hash')
   })
 
