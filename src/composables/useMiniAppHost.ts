@@ -201,9 +201,11 @@ const HTLC_HASH_ALGORITHMS: Record<string, { id: number, rootLength: number }> =
  * deserialises, creating a contract whose timeout is nothing like the one the sheet showed. A
  * `hashCount` outside 1-255 is silently truncated mod 256 by `writeUint8` for the same reason.
  *
- * `preImage` is only passed on a redeem. In Nimiq's `PreImage` encoding its length byte *is* the
- * type discriminant, so the only valid lengths are the algorithm's own root length; anything past
- * 255 bytes would additionally truncate that byte and leave the proof misdescribing itself.
+ * `preImage` is only passed on a redeem, and its length is independent of the algorithm: the proof
+ * hashes it `hashCount` times before comparing against the root, so a 32-byte secret under a
+ * SHA-512 root is valid. In Nimiq's `PreImage` encoding the length byte *is* the type
+ * discriminant, and only 32 and 64 are defined; anything past 255 bytes would additionally
+ * truncate that byte and leave the proof misdescribing itself.
  */
 function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number, preImage?: Uint8Array): number {
   // `hasOwn`, not a bare index: 'constructor' and 'toString' would otherwise resolve to inherited
@@ -217,8 +219,8 @@ function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCo
     throw new InvalidTransactionError(`Invalid hash root: ${algorithm} requires a ${algo.rootLength}-byte root, got ${hashRoot.length} bytes`)
   if (!Number.isInteger(hashCount) || hashCount < 1 || hashCount > 255)
     throw new InvalidTransactionError(`Invalid hash count: must be an integer between 1 and 255, got ${hashCount}`)
-  if (preImage && preImage.length !== algo.rootLength)
-    throw new InvalidTransactionError(`Invalid pre-image: ${algorithm} requires a ${algo.rootLength}-byte pre-image, got ${preImage.length} bytes`)
+  if (preImage && preImage.length !== 32 && preImage.length !== 64)
+    throw new InvalidTransactionError(`Invalid pre-image: must be 32 or 64 bytes, got ${preImage.length} bytes`)
   return algo.id
 }
 
