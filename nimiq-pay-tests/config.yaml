@@ -4,4 +4,3 @@
 env:
   APP_ID: com.nimiq.pay.debug
 
-testOutputDir: nimiq-pay-tests/tests_output
