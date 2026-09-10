@@ -1,0 +1,12 @@
+{
+  "name": "htlc-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "../../node_modules/.bin/vite --host 127.0.0.1",
+    "build": "../../node_modules/.bin/vue-tsc --noEmit && ../../node_modules/.bin/vite build",
+    "typecheck": "../../node_modules/.bin/vue-tsc --noEmit",
+    "lint": "../../node_modules/.bin/eslint src vite.config.ts",
+    "test": "../../node_modules/.bin/vitest run"
+  }
+}

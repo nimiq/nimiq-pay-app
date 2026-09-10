@@ -10,6 +10,7 @@
     "dev:ios": "ionic cap run ios --livereload --external --watch",
     "dev:i": "pnpm run dev:ios",
     "dev": "vite",
+    "dev:htlc-lab": "pnpm --dir tools/htlc-lab dev",
     "devtools": "vue-devtools",
     "dt": "pnpm run devtools",
     "build:web": "pnpm i18n:extract && vue-tsc && vite build",
