@@ -221,7 +221,22 @@ beforeEach(() => {
   })
 })
 
-describe('MiniAppHost Ethereum rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
+describe('MiniAppHost rejection messages', () => { // eslint-disable-line test/prefer-lowercase-title
+  it('preserves the Nimiq error type and existing RPC fields through serialization', async () => {
+    const { handleRequest } = await createPermissionHost({ confirmed: false })
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'listAccounts',
+      object: {},
+      params: {},
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: 4001,
+      type: 'PERMISSION_DENIED',
+      message: 'User rejected the request.',
+    })
+  })
+
   it('preserves the rejection message after bridge-safe serialization', async () => {
     const { handleRequest } = await createPermissionHost({ confirmed: false })
 

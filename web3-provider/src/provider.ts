@@ -95,6 +95,7 @@ const provider = new Web3Provider({
           provider.sendError(id!, {
             code: error.code ?? -32603,
             message: error.message ?? 'Unknown error',
+            ...(params.network === 'nimiq' && typeof error.type === 'string' ? { type: error.type } : {}),
           })
           throw error
         })
@@ -115,6 +116,7 @@ const provider = new Web3Provider({
           .catch((error: any) => provider.sendError(params.id!, {
             code: error.code ?? -32603,
             message: error.message ?? 'Unknown error',
+            ...(params.network === 'nimiq' && typeof error.type === 'string' ? { type: error.type } : {}),
           }))
         return
       }
@@ -198,8 +200,7 @@ const provider = new Web3Provider({
       case 'listAccounts': {
         if (params.network !== 'nimiq') {
           console.warn(`[Provider] Unexpected network '${params.network}' for listAccounts; forwarding without cache.`)
-          forwardToNative()
-          break
+          return forwardToNative().catch(() => {})
         }
         fetchAccounts('nimiq')
         break
@@ -208,16 +209,15 @@ const provider = new Web3Provider({
       case 'requestAccounts': {
         if (params.network !== 'ethereum') {
           console.warn(`[Provider] Unexpected network '${params.network}' for requestAccounts; forwarding without cache.`)
-          forwardToNative()
-          break
+          return forwardToNative().catch(() => {})
         }
         fetchAccounts('ethereum')
         break
       }
 
       default: {
-        forwardToNative()
-        break
+        // sendError already rejects the caller's promise; consume the native chain.
+        return forwardToNative().catch(() => {})
       }
     }
   },

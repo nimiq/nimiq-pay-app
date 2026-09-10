@@ -307,11 +307,12 @@ export class MiniAppHost {
             if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
               this.showErrorToast(error.message)
             }
-            throw this.createRpcError(this.errorCode(error), error.message)
+            // Add the Nimiq type while preserving RPC fields used by older SDKs.
+            throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
           this.showErrorToast(message)
-          throw this.createRpcError(-32603, message)
+          throw this.createRpcError(-32603, message, params.network === 'nimiq' ? 'INTERNAL_ERROR' : undefined)
         }
       },
       requestChainApproval: async (request: ChainApprovalRequest): Promise<boolean> => {
@@ -439,8 +440,8 @@ export class MiniAppHost {
   }
 
   // Plain object — Error objects don't serialize correctly over birpc
-  private createRpcError(code: number, message: string): { code: number, message: string } {
-    return { code, message }
+  private createRpcError(code: number, message: string, type?: string): { code: number, message: string, type?: string } {
+    return { code, message, ...(type ? { type } : {}) }
   }
 
   private getEthPermissions(): EthAccountsPermission[] {
