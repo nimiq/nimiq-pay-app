@@ -47,16 +47,33 @@ adb uninstall com.nimiq.pay.debug
 
 # Running Tests
 Single Test
-maestro test nimiq-pay-tests/flows/francisco_tests/get_started_pin_1111.yaml
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
 
 Test with a subflow 
-maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 \
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
   nimiq-pay-tests/flows/francisco_tests/general_settings.yaml
 
-  maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 \
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
   nimiq-pay-tests/flows/francisco_tests/withdraw_flow.yaml
 
-  maestro test -e APP_ID=com.nimiq.pay.debug -e PIN=1111 \
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
   nimiq-pay-tests/flows/francisco_tests/top_up_flow.yaml
 
 
@@ -68,3 +85,18 @@ pnpm upload:browserstack:maestro
 
 # Runs Tests on BrowserStack
 pnpm run:browserstack:maestro
+
+
+# Run with HTML Reporter
+
+maestro test \
+  --format=HTML-DETAILED \
+  --output=nimiq-pay-tests/tests_output/maestro_report.html \
+  -e APP_ID=com.nimiq.pay.debug \
+  -e PIN=1111 \
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
+  nimiq-pay-tests/flows/francisco_tests/create_new_account_with_pageObject.yaml
+
+# Open HTML Report File 
+open nimiq-pay-tests/tests_output/maestro_report.html
+
