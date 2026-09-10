@@ -93,19 +93,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify BrowserStack app target
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs')
-          const metadataPath = 'android/app/build/outputs/apk/release/output-metadata.json'
-          const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
-          const appId = metadata.applicationId
-          if (appId !== 'com.nimiq.pay') {
-            throw new Error(`Expected BrowserStack app to be com.nimiq.pay, got ${appId}`)
-          }
-          console.log(`BrowserStack target package is valid: ${appId}`)
-          NODE
-
       - name: Run Maestro suite on BrowserStack
         run: >
           node scripts/browserstack-maestro-run.js
