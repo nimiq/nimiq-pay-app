@@ -12,12 +12,26 @@ if (!BS_USERNAME || !BS_ACCESS_KEY) {
 }
 
 const apkPath = path.resolve(process.cwd(), 'android/app/build/outputs/apk/release/app-release-unsigned.apk')
+const metadataPath = path.resolve(process.cwd(), 'android/app/build/outputs/apk/release/output-metadata.json')
 
 if (!fs.existsSync(apkPath)) {
   console.error(`⚠️ File not found: ${apkPath}`)
   exit(1)
 }
 
+if (!fs.existsSync(metadataPath)) {
+  console.error(`⚠️ APK metadata not found: ${metadataPath}`)
+  exit(1)
+}
+
+const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'))
+const appId = metadata.applicationId
+if (appId !== 'com.nimiq.pay') {
+  console.error(`⚠️ Wrong Android package ID for BrowserStack: ${appId}. Expected com.nimiq.pay`)
+  exit(1)
+}
+
+console.log(`✅ Verified Android package ID: ${appId}`)
 console.log('📤 Uploading APK to BrowserStack...')
 
 try {
