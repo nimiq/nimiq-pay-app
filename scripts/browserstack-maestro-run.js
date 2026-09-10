@@ -52,6 +52,8 @@ Options:
   --device <value>         BrowserStack device string, required, e.g. "Google Pixel 7 Pro-13.0"
   --flow <value>           Flow path inside the uploaded suite to execute (default: flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml)
   --project <value>        BrowserStack project name (default: Nimiq Pay)
+  --format <value>         Maestro report format (default: HTML-DETAILED)
+  --output <value>         Maestro report output path (default: nimiq-pay-tests/tests_output/maestro_report.html)
   --username <value>       BrowserStack username (or BROWSERSTACK_USERNAME env var)
   --access-key <value>     BrowserStack access key (or BROWSERSTACK_ACCESS_KEY env var)
   --help                   Show this help message
@@ -73,6 +75,8 @@ const suite = getArgValue(args, '--suite', env.BROWSERSTACK_TEST_SUITE_ID)
 const device = getArgValue(args, '--device', env.BROWSERSTACK_DEVICE)
 const flow = getArgValue(args, '--flow', 'flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml')
 const project = getArgValue(args, '--project', 'Maestro Nimiq Pay')
+const format = getArgValue(args, '--format', 'HTML-DETAILED')
+const output = getArgValue(args, '--output', 'nimiq-pay-tests/tests_output/maestro_report.html')
 
 if (!BS_USERNAME || !BS_ACCESS_KEY) {
   console.error('⛔ BrowserStack credentials not found. Set BROWSERSTACK_USERNAME and BROWSERSTACK_ACCESS_KEY or pass --username/--access-key.')
@@ -111,6 +115,8 @@ const requestBody = JSON.stringify(payload)
 const url = 'https://api-cloud.browserstack.com/app-automate/maestro/v2/android/build'
 
 console.log('🚀 Starting BrowserStack Maestro build...')
+console.log(`🧾 Maestro report format: ${format}`)
+console.log(`📄 Maestro report output: ${output}`)
 console.log(JSON.stringify(payload, null, 2))
 
 try {
