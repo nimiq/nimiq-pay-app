@@ -1,9 +1,11 @@
-name: Nimiq Pay - Maestro Suite Android
+name: Nimiq Pay - Maestro Suite Android - BrowserStack Uploads All
+
+#This workflow builds and uploads the Android APK to BrowserStack, uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
 
 on:
-  push:
-    branches:
-      - feature/maestro-improvements
+  #push:
+    #branches:
+      #- feature/maestro-improvements
   workflow_dispatch:
 
 jobs:
@@ -103,16 +105,5 @@ jobs:
           --format HTML-DETAILED
           --output nimiq-pay-tests/tests_output/maestro_report.html
 
-  publish_results:
-    needs: run_browserstack_maestro
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Publish Maestro results
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
-          external_repository: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
-          publish_dir: nimiq-pay-tests/tests_output
-          keep_files: true
+
 
