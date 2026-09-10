@@ -1,0 +1,50 @@
+name: Nimiq Pay - Maestro Suite Android (Suite Only)
+
+#This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
+#Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
+
+
+on:
+  push:
+    branches:
+      - feature/maestro-improvements
+  workflow_dispatch:
+
+jobs:
+  upload_maestro_suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload Maestro suite to BrowserStack
+        run: node scripts/browserstack-maestro-upload.js --custom-id francisco_tests
+
+  run_browserstack_maestro:
+    needs: upload_maestro_suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      BROWSERSTACK_DEVICE: "Samsung Galaxy Tab S9-13.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Maestro suite on BrowserStack
+        run: >
+          node scripts/browserstack-maestro-run.js
+          --app NimiqPayAndroidApk
+          --suite francisco_tests
+          --device "Samsung Galaxy Tab S9-13.0"
+          --flow flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml
+          --format HTML-DETAILED
+          --output nimiq-pay-tests/tests_output/maestro_report.html
+
