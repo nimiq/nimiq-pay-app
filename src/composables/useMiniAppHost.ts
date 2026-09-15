@@ -1668,6 +1668,11 @@ export class MiniAppHost {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
     }
+    // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
+    const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
+    if (spendsFromRemote && !useRemoteSigner().remoteAddress)
+      throw new NetworkError(i18n.t('Something went wrong syncing your account'))
+
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
       name: this.config.title,

@@ -182,6 +182,15 @@ describe('getSignedTx', () => {
     expect(success.outcome).toBe('signed')
   })
 
+  it('rejects remotely signed staking without an active signer', async () => {
+    state.remoteAddress = undefined
+
+    const result = await getSignedTx({ transfer: Transfer.Staking, amount: 10, stakingData: { type: 'add-stake' } } as any)
+
+    expect(result).toEqual({ outcome: 'rejected', error: 'Something went wrong syncing your account' })
+    expect(state.sendRemoteTransaction).not.toHaveBeenCalled()
+  })
+
   it('uses the target proof size for immediate reclaim without an active signer', async () => {
     const target = {
       serialize: () => new Uint8Array(20),

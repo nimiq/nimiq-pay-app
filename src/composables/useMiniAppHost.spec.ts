@@ -219,7 +219,7 @@ beforeEach(() => {
   })
   useRemoteSigner.mockReturnValue({
     remoteHeight: 0,
-    remoteAddress: undefined,
+    remoteAddress: { toUserFriendlyAddress: () => 'NQ11 REMOTE' },
   })
   sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
   useTransactions.mockReturnValue({ sendTx })
@@ -259,6 +259,42 @@ describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test
       success: false,
     }))
     expect(loggerLog).toHaveBeenCalledWith(expect.stringContaining('outcome unknown'), expect.objectContaining({ stagedHash: 'staged-hash' }))
+  })
+})
+
+describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([
+    ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendStakeTransaction', [10]],
+  ])('rejects %s before confirmation without an active remote signer', async (name, params) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name,
+      params,
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: -32000,
+      message: 'Something went wrong syncing your account',
+      type: 'NETWORK_ERROR',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('still prompts for remove-stake without an active remote signer', async () => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRemoveStakeTransaction',
+      params: [10],
+    })).resolves.toBe('payment-hash')
+    expect(confirmationPrompt).toHaveBeenCalledTimes(1)
   })
 })
 
