@@ -15,6 +15,8 @@ const logger = useLogger('useNimiqNetwork')
 
 const timestamp = useTimestamp({ interval: 1e3 })
 const { setToast, clearToast } = useToast()
+const NIMIQ_SYNC_MODE = 'pico'
+const ACCOUNT_LOOKUP_TIMEOUT_MS = 30_000
 
 export const CashlinkExtraData = {
   FUNDING: new Uint8Array([0, 130, 128, 146, 135]), // 'CASH'.split('').map(c => c.charCodeAt(0) + 63)
@@ -42,6 +44,21 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
   const networkName = ref('')
   const networkId = ref(0)
 
+  function buildClientConfig() {
+    const config = new Nimiq.ClientConfiguration()
+    config.network(networkName.value)
+    if (networkName.value === 'testalbatross') {
+      config.seedNodes([
+        '/dns4/seed1.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed2.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed3.pos.nimiq-testnet.com/tcp/8443/wss',
+        '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
+      ])
+    }
+    config.syncMode(NIMIQ_SYNC_MODE)
+    return config.build()
+  }
+
   async function init(options: { launchNimiqClient?: boolean } = { launchNimiqClient: true }) {
     networkName.value = isTestnet ? 'testalbatross' : 'MainAlbatross'
 
@@ -61,25 +78,13 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!options.launchNimiqClient)
       return
 
-    const config = new Nimiq.ClientConfiguration()
-    config.network(networkName.value)
-    if (networkName.value === 'testalbatross') {
-      config.seedNodes([
-        '/dns4/seed1.pos.nimiq-testnet.com/tcp/8443/wss',
-        '/dns4/seed2.pos.nimiq-testnet.com/tcp/8443/wss',
-        '/dns4/seed3.pos.nimiq-testnet.com/tcp/8443/wss',
-        '/dns4/seed4.pos.nimiq-testnet.com/tcp/8443/wss',
-      ])
-    }
-    const syncMode = 'pico'
-    config.syncMode(syncMode)
-
     // config.logLevel('debug')
-    logger.log('Creating Nimiq client with config', config.build())
+    const clientConfig = buildClientConfig()
+    logger.log('Creating Nimiq client with config', clientConfig)
     const consensusStartedAt = Date.now()
     let consensusTracked = false
     try {
-      client.value = await promiseWithTimeout(Nimiq.Client.create(config.build()), 30 * 1e3)
+      client.value = await promiseWithTimeout(Nimiq.Client.create(clientConfig), 30 * 1e3)
       logger.log('Nimiq client created')
     }
     catch (error) {
@@ -100,7 +105,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
           consensusTracked = true
           const durationMs = Date.now() - consensusStartedAt
           logger.log(`Consensus established in ${durationMs}ms`)
-          trackConsensusEstablished({ duration_ms: durationMs, network: networkName.value, sync_mode: syncMode })
+          trackConsensusEstablished({ duration_ms: durationMs, network: networkName.value, sync_mode: NIMIQ_SYNC_MODE })
         }
         isAppStarting.value = false
         clearToast()
@@ -136,23 +141,65 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     })
   }
 
-  async function reconnect() {
-    if (isNetworkReconnecting.value) {
+  let reconnectPromise: Promise<void> | undefined
+
+  function reconnect() {
+    if (reconnectPromise) {
       logger.log('Already reconnecting')
-      return
+      return reconnectPromise
     }
-    isNetworkReconnecting.value = true
-    logger.log('Reconnecting to network')
-    await client.value?.disconnectNetwork()
+    reconnectPromise = (async () => {
+      isNetworkReconnecting.value = true
+      try {
+        logger.log('Reconnecting to network')
+        await client.value?.disconnectNetwork()
 
-    logger.log('Disconnecting from network, waiting for peer count to be 0', { peerCount: peerCount.value, consensus: consensus.value, height: height.value })
-    await until(peerCount).toBe(0, { timeout: 60 * 1e3 })
-    logger.log('Disconnected from network, connecting again...')
-    await client.value?.connectNetwork()
+        logger.log('Disconnecting from network, waiting for peer count to be 0', { peerCount: peerCount.value, consensus: consensus.value, height: height.value })
+        await until(peerCount).toBe(0, { timeout: 60 * 1e3 })
+        logger.log('Disconnected from network, connecting again...')
+        await client.value?.connectNetwork()
 
-    await until(consensus).toBe('established')
-    logger.log('Connected to network')
-    isNetworkReconnecting.value = false
+        await until(consensus).toBe('established')
+        logger.log('Connected to network')
+      }
+      finally {
+        isNetworkReconnecting.value = false
+        reconnectPromise = undefined
+      }
+    })()
+    return reconnectPromise
+  }
+
+  async function disconnectHistoryClient(historyClient: Client, errorMessage: string) {
+    try {
+      await promiseWithTimeout(historyClient.disconnectNetwork(), 5 * 1e3)
+    }
+    catch (error) {
+      logger.error(errorMessage, error)
+    }
+  }
+
+  async function createHistoryClient() {
+    // A separate client is the only safe retry when the original WASM history promise never settles.
+    const creation = Nimiq.Client.create(buildClientConfig())
+    let historyClient: Client
+    try {
+      historyClient = await promiseWithTimeout(creation, 30 * 1e3)
+    }
+    catch (error) {
+      // Client.create cannot be cancelled, so dispose a client that appears after our timeout.
+      void creation.then(client => disconnectHistoryClient(client, 'Failed to disconnect late history client'))
+        .catch(disconnectError => logger.error('Failed to disconnect late history client', disconnectError))
+      throw error
+    }
+    try {
+      await promiseWithTimeout(historyClient.waitForConsensusEstablished(), 30 * 1e3)
+      return historyClient
+    }
+    catch (error) {
+      await disconnectHistoryClient(historyClient, 'Failed to disconnect unusable history client')
+      throw error
+    }
   }
 
   async function claimCashlink(cashlink: string, address: Address) {
@@ -189,9 +236,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!address)
       return { data: undefined, error: i18n.t('Address missing') }
     try {
-      const account = await client.value?.getAccount(address)
+      const account = client.value
+        ? await promiseWithTimeout(client.value.getAccount(address), ACCOUNT_LOOKUP_TIMEOUT_MS)
+        : undefined
       if (!account)
-        return { data: undefined, error: i18n.t('No account found') }
+        return { data: undefined, error: NO_ACCOUNT_ERROR }
       return { data: account, error: undefined }
     }
     catch (error) {
@@ -234,7 +283,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     if (!address)
       return { data: 0, error: 'Address missing' } // No user facing
     try {
-      const account = await client.value?.getAccount(address)
+      const account = client.value
+        ? await promiseWithTimeout(client.value.getAccount(address), ACCOUNT_LOOKUP_TIMEOUT_MS)
+        : undefined
       if (!account)
         return { data: 0, error: NO_ACCOUNT_ERROR } // No user facing
       return { data: account.balance, error: undefined }
@@ -286,5 +337,6 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     networkName,
     networkId,
     reconnect,
+    createHistoryClient,
   }
 })

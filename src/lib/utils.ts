@@ -1,6 +1,69 @@
-import type { ConsensusState } from '@nimiq/core'
+import type { ConsensusState, Transaction } from '@nimiq/core'
 import { i18n } from '@/i18n/i18n-setup'
 import { Crypto, DECIMALS, useApp } from '@/stores/app'
+
+export function getLegacyTransactionValidityStartHeight(
+  row: { hash: string, sender: string, recipient: string, raw?: string | null },
+  expectedNetworkId: number,
+): number | undefined {
+  if (!row.raw || !/^(?:[\da-f]{2})+$/i.test(row.raw))
+    return undefined
+  let transaction: Transaction | undefined
+  try {
+    // Legacy raw is signing content, not a signed transaction. Accept only an exact Core round-trip.
+    const bytes = Nimiq.BufferUtils.fromHex(row.raw)
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const dataLength = view.getUint16(0)
+    const recipientDataEnd = 2 + dataLength
+    // The Core round-trip below validates the decoded fields and canonical encoding.
+    if (bytes.length < recipientDataEnd + 65)
+      return undefined
+    const fields = new DataView(bytes.buffer, bytes.byteOffset + recipientDataEnd, 65)
+    const senderType = fields.getUint8(20)
+    if (fields.getUint8(62) !== expectedNetworkId) {
+      return undefined
+    }
+    // Sender data uses an unsigned base-128 length, unlike the recipient's uint16 length.
+    let senderDataOffset = recipientDataEnd + 64
+    let senderDataLength = 0
+    let shift = 0
+    let lengthByte: number
+    do {
+      if (senderDataOffset >= bytes.length || shift > 28)
+        return undefined
+      lengthByte = bytes[senderDataOffset++]!
+      senderDataLength += (lengthByte & 0x7F) * 2 ** shift
+      shift += 7
+    } while (lengthByte & 0x80)
+    if (senderDataOffset + senderDataLength !== bytes.length)
+      return undefined
+    transaction = new Nimiq.Transaction(
+      Nimiq.Address.fromString(row.sender),
+      senderType,
+      bytes.slice(senderDataOffset),
+      Nimiq.Address.fromString(row.recipient),
+      fields.getUint8(41),
+      bytes.slice(2, recipientDataEnd),
+      fields.getBigUint64(42),
+      fields.getBigUint64(50),
+      fields.getUint8(63),
+      fields.getUint32(58),
+      expectedNetworkId,
+    )
+    if (transaction.hash() !== row.hash
+      || transaction.recipient.toUserFriendlyAddress() !== row.recipient
+      || Nimiq.BufferUtils.toHex(transaction.serializeContent()).toLowerCase() !== row.raw.toLowerCase()) {
+      return undefined
+    }
+    return transaction.validityStartHeight
+  }
+  catch {
+    return undefined
+  }
+  finally {
+    transaction?.free()
+  }
+}
 
 /**
  * Execute a promise or throw an error if it takes longer than the specified timeout.

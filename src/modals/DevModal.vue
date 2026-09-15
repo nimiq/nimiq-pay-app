@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { PlainTransactionDetails } from '@nimiq/core'
-import type { Ref } from 'vue'
+import type { RemoteSignerValidationResult, ValidatedRemoteSigner } from '@/stores/remote-signer'
 import { Clipboard } from '@capacitor/clipboard'
-import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonItem, IonLabel, IonSegment, IonSegmentButton, IonSelect, IonSelectOption, IonToggle, toastController } from '@ionic/vue'
+import { alertController, IonButton, IonCard, IonCardContent, IonCardHeader, IonCardTitle, IonInput, IonItem, IonLabel, IonSegment, IonSegmentButton, IonSelect, IonSelectOption, IonToggle, toastController } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import { useLogger } from '@/composables/useLogger'
@@ -20,7 +20,8 @@ import { useLocks } from '@/stores/locks'
 import { useNaka, useNakaDb } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA } from '@/stores/sync'
+import { MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA, useSync } from '@/stores/sync'
+import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { Transfer } from '@/types/transactions'
 
@@ -32,14 +33,21 @@ const router = useRouter()
 
 const { consensus, head, height, peerCount, client, networkName, headTimestamp } = storeToRefs(useNimiqNetwork())
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
-const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(useRemoteSigner())
+const remoteSignerStore = useRemoteSigner()
+const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(remoteSignerStore)
+const { discoverRemoteSignersFromBlockchain, validateRemoteSignerAddress } = remoteSignerStore
+const { recoverRemoteSigner, verifyRemoteSignersDb } = useSync()
 const { showHiddenTransactions } = storeToRefs(useApp())
 const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
 const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 const { clearTxHistory, sendTx } = useTransactions()
 const { query, run } = useConn()
-const txInMemPool: Ref<PlainTransactionDetails | undefined> = ref()
-const htlcsFromBlockchain: Ref<{ address: string, validityStart: number, value: number }[]> = ref([])
+const txInMemPool = shallowRef<PlainTransactionDetails>()
+
+const htlcAddress = shallowRef('')
+const htlcValidation = shallowRef<RemoteSignerValidationResult>()
+const htlcStatus = shallowRef('Enter an HTLC address or scan local transaction history.')
+const isHtlcRecoveryBusy = shallowRef(false)
 
 const NETWORK_CHOICES = ['default', 'mainnet', 'testnet'] as const
 type NetworkChoice = typeof NETWORK_CHOICES[number]
@@ -83,9 +91,10 @@ async function onNetworkSegmentChange(value: unknown) {
   // (per-network public key) — leaving them in place causes the next session to load a
   // foreign-network signer as "active" and stall sync.
   const naka = useNaka()
+  useSyncState().walletContextGeneration += 1
   const [, , , deactivateResult] = await Promise.allSettled([
     clearTxHistory(),
-    run(SQLQuery.PurgeRemoteSigners),
+    remoteSignerStore.purgeRemoteSigners(),
     Promise.all([run(SQLQuery.PurgeSwapHtlcs), run(SQLQuery.PurgeSwapQuotes)]),
     naka.deactivateCardOnDevice(),
     useNakaDb().purgeNakaCards(),
@@ -121,22 +130,101 @@ async function handleClearTx() {
   router.go(0)
 }
 
-async function getAllHtlcs() {
-  const transactions = await client.value?.getTransactionsByAddress(localAddress.value)
-  logger.log('All Transactions from Blockchain', transactions?.map(tx => tx))
-  const htlcTransactions = transactions?.filter(tx => tx.data.type === 'htlc')
-  htlcsFromBlockchain.value = htlcTransactions?.map((tx) => {
-    return {
-      address: tx.recipient,
-      validityStart: tx.validityStartHeight,
-      value: tx.value / 1e5,
+function onHtlcAddressInput(value: string | null | undefined) {
+  htlcAddress.value = value || ''
+  htlcValidation.value = undefined
+  htlcStatus.value = 'Validate the address before adding it.'
+}
+
+function setHtlcRecoveryError(error: unknown) {
+  htlcStatus.value = error instanceof Error ? error.message : String(error)
+}
+
+async function scanForMissingHtlcs() {
+  isHtlcRecoveryBusy.value = true
+  htlcStatus.value = 'Scanning local transaction history…'
+  try {
+    const result = await discoverRemoteSignersFromBlockchain()
+    await verifyRemoteSignersDb({ discoveryResult: result })
+    const completeness = result.localComplete ? '' : ' History scan was incomplete.'
+    const errors = result.errors.length ? ` ${result.errors.join('; ')}` : ''
+    htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known.${completeness}${errors}`
+  }
+  catch (error) {
+    setHtlcRecoveryError(error)
+  }
+  finally {
+    isHtlcRecoveryBusy.value = false
+  }
+}
+
+async function validateHtlcAddress() {
+  isHtlcRecoveryBusy.value = true
+  htlcStatus.value = 'Validating HTLC…'
+  try {
+    const result = await validateRemoteSignerAddress(htlcAddress.value)
+    htlcValidation.value = result
+    if (result.status === 'invalid') {
+      htlcStatus.value = result.reason
+      return
     }
-  }) || []
+
+    const balance = result.balance / 1e5
+    htlcStatus.value = result.status === 'known'
+      ? `HTLC is already known and holds ${balance} NIM.`
+      : `Verified HTLC holds ${balance} NIM.`
+  }
+  catch (error) {
+    setHtlcRecoveryError(error)
+  }
+  finally {
+    isHtlcRecoveryBusy.value = false
+  }
+}
+
+const recoveryMessages = {
+  'submitted': 'Recovery transaction submitted for this HTLC.',
+  'unknown': 'Recovery outcome is unknown. The transaction remains pending; do not retry.',
+  'wallet-busy': 'HTLC registered. Recovery deferred: another transaction is unresolved.',
+  'history-incomplete': 'HTLC registered. Recovery deferred: target transaction history is incomplete.',
+  'outgoing-transaction': 'HTLC registered. Recovery deferred: an outgoing transaction already exists for this HTLC.',
+} as const
+
+async function recoverValidatedHtlc(result: ValidatedRemoteSigner) {
+  const balance = result.balance / 1e5
+  const alert = await alertController.create({
+    header: 'Recover this HTLC?',
+    message: `This HTLC belongs to this wallet and currently holds ${balance} NIM. Nimiq Pay will register only this address and attempt one recovery transaction. If recovery cannot start safely, the signer will remain inactive for later reconciliation.`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { text: 'Recover', role: 'confirm' },
+    ],
+  })
+  await alert.present()
+  const { role } = await alert.onDidDismiss()
+  if (role !== 'confirm')
+    return
+
+  isHtlcRecoveryBusy.value = true
+  htlcStatus.value = 'Recovering HTLC…'
+  try {
+    const recoveryResult = await recoverRemoteSigner(result)
+    if (recoveryResult.status === 'deferred')
+      htlcStatus.value = recoveryMessages[recoveryResult.reason]
+    else if (recoveryResult.status === 'rejected')
+      htlcStatus.value = `Recovery rejected: ${recoveryResult.reason}`
+    else
+      htlcStatus.value = recoveryMessages[recoveryResult.status]
+  }
+  catch (error) {
+    setHtlcRecoveryError(error)
+  }
+  finally {
+    isHtlcRecoveryBusy.value = false
+  }
 }
 
 onMounted(async () => {
-  getAllHtlcs()
-
   const remoteSignerTable = await query('SELECT * FROM remote_signers')
 
   logger.log('Remote Signers Table', remoteSignerTable.length, remoteSignerTable)
@@ -365,15 +453,61 @@ onMounted(async () => {
 
     <IonCard class="w-full">
       <IonCardHeader>
-        <IonCardTitle>Previous HTLC from blockchain</IonCardTitle>
+        <IonCardTitle>Missing HTLC recovery</IonCardTitle>
       </IonCardHeader>
-      <IonCardContent>
-        <p v-for="htlc in htlcsFromBlockchain" :key="htlc.address" class="flex flex-col">
-          <span>Address: {{ htlc.address }}</span>
-          <span>Value (not current one): {{ htlc.value }} NIM</span>
-          <span>Valid from: {{ htlc.validityStart }}</span>
-          <span>-----</span>
+      <IonCardContent class="flex flex-col gap-2">
+        <p>
+          Scan the local wallet history, or validate one exact HTLC address before recovering it.
         </p>
+        <IonButton
+          data-testid="htlc-scan"
+          :disabled="isHtlcRecoveryBusy"
+          @click="scanForMissingHtlcs"
+        >
+          Scan wallet history
+        </IonButton>
+        <IonInput
+          data-testid="htlc-address"
+          aria-label="HTLC address"
+          fill="outline"
+          label="HTLC address"
+          label-placement="stacked"
+          :disabled="isHtlcRecoveryBusy"
+          :value="htlcAddress"
+          @ion-input="onHtlcAddressInput($event.detail.value)"
+        />
+        <IonButton
+          data-testid="htlc-validate"
+          :disabled="isHtlcRecoveryBusy || !htlcAddress.trim()"
+          @click="validateHtlcAddress"
+        >
+          Validate address
+        </IonButton>
+        <p data-testid="htlc-status" class="text-sm">
+          {{ htlcStatus }}
+        </p>
+        <div
+          v-if="htlcValidation && htlcValidation.status !== 'invalid'"
+          data-testid="htlc-details"
+          class="text-xs"
+        >
+          <p>Address: <code>{{ htlcValidation.address }}</code></p>
+          <p>Balance: <code>{{ htlcValidation.balance / 1e5 }} NIM</code></p>
+          <p>Timeout: <code>{{ htlcValidation.timeout }}</code></p>
+          <p>Expired: <code>{{ htlcValidation.expired }}</code></p>
+          <p>Owner: <code>{{ htlcValidation.owner }}</code></p>
+          <p>Cosigner: <code>{{ htlcValidation.cosignerRecipient }}</code></p>
+          <p>Creation: <code>{{ htlcValidation.creationState || 'unavailable' }}</code></p>
+          <p>Status: <code>{{ htlcValidation.status }}</code></p>
+        </div>
+        <IonButton
+          v-if="htlcValidation && htlcValidation.status !== 'invalid'"
+          data-testid="htlc-recover"
+          :disabled="isHtlcRecoveryBusy"
+          @click="recoverValidatedHtlc(htlcValidation)"
+        >
+          Recover HTLC
+        </IonButton>
       </IonCardContent>
     </IonCard>
 

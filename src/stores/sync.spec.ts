@@ -17,8 +17,8 @@ const state = vi.hoisted(() => {
   const getAllOutgoingTransactionsFromHtlcs = vi.fn(() => Promise.resolve([]))
   const query = vi.fn((_sql?: string): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn(() => Promise.resolve())
-  const sendTx = vi.fn(() => Promise.resolve({ data: { tx: { hash: 'drain-hash' } }, error: undefined }))
-  const discoverRemoteSignersFromBlockchain = vi.fn(() => Promise.resolve())
+  const sendTx = vi.fn(() => Promise.resolve({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' }))
+  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[] }))
   const updateSignersTableBalance = vi.fn(() => Promise.resolve())
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
   const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
@@ -204,6 +204,7 @@ vi.mock('@/stores/nimiq-network', () => {
     consensus: computed(() => state.consensus),
     headTimestamp: computed(() => state.headTimestamp),
     networkId: computed(() => 5),
+    networkName: computed(() => 'testalbatross'),
   }))
 
   return {
@@ -264,6 +265,14 @@ vi.mock('@/stores/remote-signer', () => {
     addRemoteSigner: state.addRemoteSigner,
     blockHeightToTimestamp: vi.fn((height: number) => Promise.resolve(height * 1000)),
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    getWalletContext: () => ({
+      address: state.localAddress,
+      client: state.client,
+      network: 'testalbatross',
+      owner: state.localAddress.toUserFriendlyAddress(),
+      generation: 0,
+    }),
+    isWalletContextCurrent: (context: any) => context.address === state.localAddress && context.client === state.client,
     updateSignersTableBalance: state.updateSignersTableBalance,
     updateRemoteSigner: state.updateRemoteSigner,
     init: vi.fn(() => Promise.resolve()),
@@ -283,6 +292,7 @@ vi.mock('@/stores/transactions', () => {
     updateTransactionCashbackClaimed: vi.fn(),
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
+    restorePendingOutgoingTransactions: vi.fn(() => Promise.resolve(true)),
     setNakaTxRefunded: vi.fn(),
     setSwapHtlcRefunded: vi.fn(),
   }))
@@ -336,7 +346,8 @@ describe('useSync remote signer reconciliation', () => {
     state.consensus = 'established'
     state.isSendingTx = false
     state.isProcessingRemote = false
-    state.isSyncingWallets = false
+    // These tests drive reconciliation methods directly; suppress lifecycle's independent readiness pass.
+    state.isSyncingWallets = true
     state.isUpdatingTransactions = false
     state.headChangePendingDrainLock = false
     state.headChangeUpdatesLock = false
@@ -361,9 +372,9 @@ describe('useSync remote signer reconciliation', () => {
     state.run.mockReset()
     state.run.mockResolvedValue(undefined)
     state.sendTx.mockReset()
-    state.sendTx.mockResolvedValue({ data: { tx: { hash: 'drain-hash' } }, error: undefined })
+    state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' })
     state.discoverRemoteSignersFromBlockchain.mockReset()
-    state.discoverRemoteSignersFromBlockchain.mockResolvedValue(undefined)
+    state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
     state.updateSignersTableBalance.mockReset()
     state.updateSignersTableBalance.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
@@ -509,10 +520,18 @@ describe('useSync remote signer reconciliation', () => {
     resolveAccount({ type: 'htlc', balance: 123_000, timeout: 300_000 })
     await updatePromise
 
-    expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
-      active: true,
-      balance: 123_000,
-    }))
+    expect(state.updateRemoteSigner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        active: true,
+        balance: 123_000,
+      }),
+      expect.objectContaining({
+        client: state.client,
+        generation: 0,
+        network: 'testalbatross',
+        owner: 'NQ00 TEST LOCAL ADDRESS',
+      }),
+    )
   })
 
   it('logs HTLC extension discovery errors and allows later balance updates', async () => {
@@ -563,10 +582,18 @@ describe('useSync remote signer reconciliation', () => {
     await store.verifyRemoteSignersDb()
 
     expect(state.discoverRemoteSignersFromBlockchain.mock.invocationCallOrder[0]).toBeLessThan(state.updateSignersTableBalance.mock.invocationCallOrder[0])
-    expect(state.updateRemoteSigner).toHaveBeenCalledWith(expect.objectContaining({
-      active: true,
-      balance: 700_000,
-    }))
+    expect(state.updateRemoteSigner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        active: true,
+        balance: 700_000,
+      }),
+      expect.objectContaining({
+        client: state.client,
+        generation: 0,
+        network: 'testalbatross',
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }),
+    )
   })
 
   it('recovers one inactive funded remote signer per verification pass without replacing the active signer first', async () => {
@@ -592,10 +619,19 @@ describe('useSync remote signer reconciliation', () => {
 
     expect(state.updateRemoteSigner).not.toHaveBeenCalled()
     expect(state.sendTx).toHaveBeenCalledTimes(1)
-    expect(state.sendTx).toHaveBeenCalledWith(expect.objectContaining({
-      transfer: Transfer.RemoteToLocalImmediateReclaim,
-      amount: 900_000,
-    }))
+    expect(state.sendTx).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transfer: Transfer.RemoteToLocalImmediateReclaim,
+        amount: 900_000,
+        proofSize: 98,
+      }),
+      expect.objectContaining({
+        client: state.client,
+        generation: 0,
+        network: 'testalbatross',
+        owner: state.localAddress.toUserFriendlyAddress(),
+      }),
+    )
   })
 
   it('does not start duplicate drains after active-signer cleanup queues recovery transactions', async () => {
@@ -686,6 +722,7 @@ describe('useSync remote signer reconciliation', () => {
     state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
       await Promise.resolve()
       events.push('discover')
+      return { added: 0, alreadyKnown: 0, localComplete: true, errors: [] }
     })
     state.getAllRemoteSigners.mockImplementation(async () => {
       events.push('getAllRemoteSigners')

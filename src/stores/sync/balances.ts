@@ -1,5 +1,6 @@
 import type { PlainAccount, PlainTransactionDetails } from '@nimiq/core'
 import type { RemoteSigner } from '@/lib/sql-queries'
+import type { WalletContext } from '@/stores/remote-signer'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -18,11 +19,12 @@ function isHtlcExtensionTx(tx: PlainTransactionDetails) {
 
 export const useSyncBalances = defineStore('sync-balances', () => {
   const { getAllOutgoingTransactionsFromHtlcs, getBalance } = useNimiqNetwork()
-  const { client, height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
+  const { height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
   const { localAddress, localBalance, pendingNimSince } = storeToRefs(useLocalWallet())
   const { isSendingTx } = storeToRefs(useLocks())
-  const { remoteBalance, remoteAddress, remotePublicKey, remoteSigner } = storeToRefs(useRemoteSigner())
-  const { getAllRemoteSigners, blockHeightToTimestamp } = useRemoteSigner()
+  const remoteSignerStore = useRemoteSigner()
+  const { remoteBalance, remoteAddress, remotePublicKey, remoteSigner } = storeToRefs(remoteSignerStore)
+  const { getAllRemoteSigners, blockHeightToTimestamp } = remoteSignerStore
   const { isUpdatingBalancesNow, shouldUpdateBalancesAgain } = storeToRefs(useSyncState())
 
   /**
@@ -52,6 +54,7 @@ export const useSyncBalances = defineStore('sync-balances', () => {
   }
 
   async function updateBalancesOnce() {
+    const context = remoteSignerStore.getWalletContext()
     if (localHeight.value % 10 === 0)
       usePoints().updatePointsBalance()
 
@@ -77,17 +80,24 @@ export const useSyncBalances = defineStore('sync-balances', () => {
       logger.log('Local address not found')
     }
 
-    if (!remoteAddress.value) {
+    const checkedRemoteAddress = remoteAddress.value
+    if (!checkedRemoteAddress) {
       if (localHeight.value % Nimiq.Policy.BLOCKS_PER_BATCH === 0)
         logger.warn('Remote address not found')
       return
     }
+    if (!context || !remoteSignerStore.isWalletContextCurrent(context))
+      return
 
     const oldBalance = remoteBalance.value
     let newBalance = oldBalance
     let canCheckHtlcExtensions = true
     if (consensus.value === 'established') {
-      const { data, error } = await getBalance(remoteAddress.value)
+      const { data, error } = await getBalance(checkedRemoteAddress)
+      if (!remoteSignerStore.isWalletContextCurrent(context)
+        || remoteAddress.value?.toUserFriendlyAddress() !== checkedRemoteAddress.toUserFriendlyAddress()) {
+        return
+      }
       if (error) {
         logger.error('Error while getting remote balance', error)
         canCheckHtlcExtensions = false
@@ -105,14 +115,21 @@ export const useSyncBalances = defineStore('sync-balances', () => {
       logger.log(`Remote balance for ${remoteAddress.value.toUserFriendlyAddress()} is ${remoteBalance.value}, old was: ${oldBalance}`)
 
     if (canCheckHtlcExtensions && newBalance === 0)
-      await checkMissingHtlcExtensions()
+      await checkMissingHtlcExtensions(context, checkedRemoteAddress)
   }
 
-  async function checkMissingHtlcExtensions() {
+  async function checkMissingHtlcExtensions(
+    context: WalletContext,
+    checkedRemoteAddress: WalletContext['address'],
+  ) {
+    const isCurrent = () => remoteSignerStore.isWalletContextCurrent(context)
+      && remoteAddress.value?.toUserFriendlyAddress() === checkedRemoteAddress.toUserFriendlyAddress()
     const [txs, remoteSigners] = await Promise.all([
-      getAllOutgoingTransactionsFromHtlcs(remoteAddress.value!),
+      getAllOutgoingTransactionsFromHtlcs(checkedRemoteAddress),
       getAllRemoteSigners(),
     ])
+    if (!isCurrent())
+      return
 
     let foundNewExtension = false
     for (const tx of txs) {
@@ -124,17 +141,24 @@ export const useSyncBalances = defineStore('sync-balances', () => {
 
       try {
         logger.log('Found an HTLC extension that is not in the remote signer table', tx)
-        const account = await client.value!.getAccount(tx.recipient) as PlainAccount
-        await useRemoteSigner().updateRemoteSigner({
+        const account = await context.client.getAccount(tx.recipient) as PlainAccount
+        if (!isCurrent())
+          return
+        const start = tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight)
+        if (!isCurrent())
+          return
+        await remoteSignerStore.updateRemoteSigner({
           active: true,
           balance: account.balance,
           address: Nimiq.Address.fromString(tx.recipient),
           publicKey: remotePublicKey.value!,
-          start: tx.timestamp || await blockHeightToTimestamp(tx.validityStartHeight),
+          start,
           end: 'timeout' in account ? account.timeout : Number.MAX_VALUE,
           // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
-          proofSize: useRemoteSigner().remoteProofSize,
-        })
+          proofSize: remoteSignerStore.remoteProofSize,
+        }, context)
+        if (!isCurrent())
+          return
         foundNewExtension = true
       }
       catch (error) {

@@ -1,4 +1,4 @@
-import type { SQLiteDBConnection } from '@capacitor-community/sqlite'
+import type { capSQLiteSet, SQLiteDBConnection } from '@capacitor-community/sqlite'
 import type { AsyncOption } from '@/types'
 import { CapacitorSQLite, SQLiteConnection, CapacitorSQLite as sqlitePlugin } from '@capacitor-community/sqlite'
 import { computedAsync } from '@vueuse/core'
@@ -141,9 +141,21 @@ export const useConn = defineStore('conn', () => {
     if (err)
       throw new Error(err)
 
-    await db.value!.run(query, args, !isWeb)
+    const result = await db.value!.run(query, args, !isWeb)
     if (isWeb)
       await sqlite.saveToStore(DB_NAME)
+    return result
+  }
+
+  async function runSet(set: capSQLiteSet[]) {
+    const err = await waitForUnlock()
+    if (err)
+      throw new Error(err)
+
+    const result = await db.value!.executeSet(set)
+    if (isWeb)
+      await sqlite.saveToStore(DB_NAME)
+    return result
   }
 
   return {
@@ -157,6 +169,7 @@ export const useConn = defineStore('conn', () => {
     close,
 
     run,
+    runSet,
     query,
 
     locked,

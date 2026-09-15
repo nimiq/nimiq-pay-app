@@ -48,7 +48,11 @@ const category = computed(() => {
   return MerchantCategory.Shop
 })
 
-const hasSettledListAppearance = computed(() => ['included', 'mined', 'confirmed'].includes(props.tx.status))
+// Successful execution clears the indicator while sync continues tracking finality.
+const hasSettledListAppearance = computed(() =>
+  props.tx.status === 'confirmed'
+  || (['included', 'mined'].includes(props.tx.status) && (!isPaymentTx(props.tx) || props.tx.executionResult === true)),
+)
 const isInvalid = computed(() => ['failed', 'invalidated'].includes(props.tx.status))
 const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 </script>

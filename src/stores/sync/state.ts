@@ -1,6 +1,6 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
-import type { TransactionSentByUser } from '@/types/transactions'
+import type { RecoverablePlainTransactionDetails, TransactionSentByUser } from '@/types/transactions'
 import { computedAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
@@ -11,6 +11,14 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 const MAX_BLOCK_HEIGHT_MISMATCH = Nimiq.Policy.BLOCKS_PER_BATCH
 export const HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS = 120 * Nimiq.Policy.BLOCKS_PER_BATCH
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS
+
+export function upsertPlainPendingByHash(collection: RecoverablePlainTransactionDetails[], transaction: RecoverablePlainTransactionDetails) {
+  const index = collection.findIndex(tx => tx.transactionHash === transaction.transactionHash)
+  if (index >= 0)
+    collection.splice(index, 1, transaction)
+  else
+    collection.push(transaction)
+}
 
 export const useSyncState = defineStore('sync-state', () => {
   const { height: localHeight, lastMacroBlockHeight, headTimestamp } = storeToRefs(useNimiqNetwork())
@@ -33,14 +41,38 @@ export const useSyncState = defineStore('sync-state', () => {
     return blocksLeft < 50 ? blocksLeft : 0
   })
 
-  const pendingTransactions: Ref<PlainTransactionDetails[]> = ref([])
+  const pendingTransactions: Ref<RecoverablePlainTransactionDetails[]> = ref([])
   const pendingPaymentTransactions: Ref<PlainTransactionDetails[]> = ref([])
   const pendingRemoteDrainTxs: Ref<TransactionSentByUser[]> = ref([])
-  const pendingHtlcCreationTransactions: Ref<PlainTransactionDetails[]> = ref([])
-  const isTransactionPending = computed(() => pendingTransactions.value.length > 0 || pendingRemoteDrainTxs.value.length > 0 || pendingHtlcCreationTransactions.value.length > 0)
+  const pendingHtlcCreationTransactions: Ref<RecoverablePlainTransactionDetails[]> = ref([])
+  // Included creations remain tracked for reorgs, but their funds are already usable.
+  const hasPendingHtlcCreation = computed(() => pendingHtlcCreationTransactions.value.some(
+    transaction => transaction.state !== 'included' && transaction.state !== 'confirmed',
+  ))
+  const isTransactionPending = computed(() => pendingTransactions.value.length > 0
+    || pendingRemoteDrainTxs.value.length > 0
+    || hasPendingHtlcCreation.value)
   const isVerifyingRemoteSignersDb = ref(false)
   const isUpdatingBalancesNow = ref(false)
   const shouldUpdateBalancesAgain = ref(false)
+  const walletContextGeneration = ref(0)
+  let walletContext: { address: string, network: string } | undefined
+
+  function setWalletContext(address: string, network: string) {
+    walletContextGeneration.value += 1
+    if (
+      !walletContext
+      || walletContext.address !== address
+      || walletContext.network !== network
+    ) {
+      pendingTransactions.value = []
+      pendingPaymentTransactions.value = []
+      pendingRemoteDrainTxs.value = []
+      pendingHtlcCreationTransactions.value = []
+    }
+    walletContext = { address, network }
+    return walletContextGeneration.value
+  }
 
   // Touch the local-wallet store here so sync-state stays tied to wallet lifetime in Pinia devtools.
   useLocalWallet()
@@ -51,9 +83,12 @@ export const useSyncState = defineStore('sync-state', () => {
     pendingRemoteDrainTxs,
     pendingHtlcCreationTransactions,
     isTransactionPending,
+    hasPendingHtlcCreation,
     isVerifyingRemoteSignersDb,
     isUpdatingBalancesNow,
     shouldUpdateBalancesAgain,
+    walletContextGeneration,
+    setWalletContext,
     nodesAreSynced,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,

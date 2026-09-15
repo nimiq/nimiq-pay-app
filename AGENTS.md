@@ -47,10 +47,25 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Nimiq client & sync
 
+- `executionResult` is not failure-only: `true` means execution succeeded, `false` means execution failed. Missing/`undefined` means no result was provided; never assume success from absence.
+- In core-rs-albatross commit `13b24b5de83aeb52c02304c1237acef68a228d10`, `getTransaction(hash)` fetches blockchain history and provides `executionResult` for both outcomes. `sendTransaction()` can return state `new` without an execution result when inclusion has not been observed. If a direct `getTransaction()` response lacks it, check the exact method, package version, and response before drawing conclusions. Source: https://github.com/nimiq/core-rs-albatross/blob/13b24b5de83aeb52c02304c1237acef68a228d10/web-client/src/common/transaction.rs#L1223-L1281
+
+- Register incoming transaction listeners before slow signer verification. Local receipts must not wait for pending HTLCs, older history pages, or an unchanged remote signer address.
+
+- Confirmed HTLC creation value is historical, not the current balance. Read the live account before recovery activation; resolve drained creations without restoring their funds or replacing a newer signer.
+
+- Cosigner block-based wallet registration can return `creatingTransactionHash: null`. Recover creation from blockchain history and validate its HTLC details before activation.
+- Cosigner `validityStart` is the height at which spending is allowed (includes confirmation delay). It is not the creating transaction's `validityStartHeight`; never compare them for equality.
+- Cosigner `txSent: false` includes broadcast RPC timeouts. Keep the staged transaction unresolved; false does not prove it was never broadcast.
+
 - Client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. logout → login) must capture the ID and remove the previous one first; see the `watch(remoteAddress, ...)` block in `src/stores/sync.ts` for the canonical pattern.
 - On login/sync paths, hydrate UI state from the local DB cache (e.g. `useTransactions().refreshFromDb()`) before any network call. Never show an empty list while waiting for consensus when the data is already on disk.
 
 ## Data & schema
+
+### SQLite statement batches
+
+Every `executeSet` / `runSet` entry needs `values`, including `values: []` for statements without parameters. The TypeScript type allows omission, but Android throws `ExecuteSet: No value for values`.
 
 ### Transaction messages
 

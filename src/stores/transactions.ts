@@ -1,9 +1,9 @@
-import type { PlainTransactionDetails } from '@nimiq/core'
+import type { Transaction as NimiqTransaction, PlainTransactionDetails } from '@nimiq/core'
 import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
-import type { AsyncResult } from '@/types'
-import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, StakingTransaction, Transaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { WalletContext } from '@/stores/remote-signer'
+import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, StakingTransaction, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
@@ -17,17 +17,50 @@ import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
+import { promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { useSync } from '@/stores/sync'
+import { upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
 import { isExternalTx, MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('transactions.ts')
-const { isSendingTx } = storeToRefs(useLocks())
+const BROADCAST_TIMEOUT_MS = 30_000
+const SEND_CONSENSUS_TIMEOUT_MS = 30_000
+
+interface PendingOutgoingRow {
+  hash: string
+  timestamp: number | undefined
+  sender: string
+  senderType: PlainTransactionDetails['senderType'] | number
+  recipient: string
+  recipientType: PlainTransactionDetails['recipientType'] | number
+  amount: number
+  fee: number
+  status: AppTransactionState
+  transfer: Transfer
+  validityStartHeight?: number | null
+}
+
+interface PendingHtlcCreationRow {
+  hash: string
+  timestamp: number | undefined
+  sender: string
+  senderType: PlainTransactionDetails['senderType'] | number
+  recipient: string
+  recipientType: PlainTransactionDetails['recipientType'] | number
+  status: PlainTransactionDetails['state']
+  validityStartHeight?: number | null
+}
+
+interface StagedSend {
+  plain: RecoverablePlainTransactionDetails
+  tx: TransactionSentByUser
+  serialized?: string
+}
 
 export function getSwapHtlcKey(tx: Pick<ExternalTransaction, 'chain' | 'hash' | 'recipient'>) {
   return tx.chain === Chain.Polygon ? tx.hash : tx.recipient
@@ -49,11 +82,14 @@ export enum TransactionListState {
 
 export const useTransactions = defineStore('transactions', () => {
   const { query, run } = useConn()
-  const { client } = storeToRefs(useNimiqNetwork())
+  const { client, networkId, networkName, height, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { activeAsset, showHiddenTransactions } = storeToRefs(useApp())
+  const { isSendingTx } = storeToRefs(useLocks())
+  const syncState = useSyncState()
 
-  const { updateActiveRemoteBalance } = useRemoteSigner()
-  const { remoteBalance } = storeToRefs(useRemoteSigner())
+  const remoteSigner = useRemoteSigner()
+  const { updateActiveRemoteBalance } = remoteSigner
+  const { remoteBalance } = storeToRefs(remoteSigner)
 
   const transactions = shallowRef<ExternalTransaction[]>([])
 
@@ -65,7 +101,7 @@ export const useTransactions = defineStore('transactions', () => {
   // mis-recording them as receipts would bump the original deposit to the top of the home list with
   // a recent (drain block) timestamp. Foreign HTLC senders (other Nimiq Pay users paying us) stay.
   async function filterDisplayableTxs<T extends Pick<ExternalTransaction, 'transfer' | 'sender' | 'hash'>>(txs: T[]): Promise<T[]> {
-    const ourSigners = await useRemoteSigner().getOurRemoteSignerAddresses()
+    const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
     const dropped: string[] = []
     const result = txs.filter((tx) => {
       if (tx.transfer === Transfer.UserReceipt && ourSigners.has(tx.sender)) {
@@ -137,6 +173,7 @@ export const useTransactions = defineStore('transactions', () => {
           : null,
         tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
         tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+        tx.validityStartHeight ?? null,
       ],
     )
   }
@@ -148,214 +185,634 @@ export const useTransactions = defineStore('transactions', () => {
     await usePolygonUsdt().resetHistoryState()
   }
 
-  async function sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
-    if (isSendingTx.value) {
-      logger.error('A transaction is already in progress')
-      return { data: undefined, error: i18n.t('A transaction is already in progress') }
-    }
-    isSendingTx.value = true
-    const res = await _sendTx(partialTx)
-    isSendingTx.value = false
-    return res
+  function isRemoteDrainTransfer(transfer: Transfer) {
+    return transfer === Transfer.RemoteToLocal
+      || transfer === Transfer.RemoteToLocalAfterTimeout
+      || transfer === Transfer.RemoteToLocalImmediateReclaim
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
-    logger.log('✈️  Preparing new transaction', {
-      partialTx,
-      remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-      remoteBalance: useRemoteSigner().remoteBalance,
-      remoteHeight: useRemoteSigner().remoteHeight,
-      remotePublicKey: useRemoteSigner().remotePublicKey,
-      remoteProofSize: useRemoteSigner().remoteProofSize,
-      localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-      localBalance: useLocalWallet().localBalance,
-    })
-    // Require consensus for all transactions that involve the local wallet
-    if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim)
-      client.value!.waitForConsensusEstablished()
+  function upsertSentPendingByHash(collection: TransactionSentByUser[], transaction: TransactionSentByUser) {
+    const index = collection.findIndex(tx => tx.hash === transaction.hash)
+    if (index >= 0)
+      collection.splice(index, 1, transaction)
+    else
+      collection.push(transaction)
+  }
 
-    const res = await getSignedTx(partialTx)
-    if (res.error) {
-      logger.error('Error while signing transaction', res.error, {
-        transfer: partialTx.transfer,
-        remoteAddress: useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
-        remoteBalance: useRemoteSigner().remoteBalance,
-        remoteHeight: useRemoteSigner().remoteHeight,
-        remotePublicKey: useRemoteSigner().remotePublicKey,
-        remoteProofSize: useRemoteSigner().remoteProofSize,
-        localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(),
-        localBalance: useLocalWallet().localBalance,
-      })
-      return res
-    }
-    // TODO: check if tx is valid before continuing
-    logger.log('✈️ Signed transaction', { signedTx: res.data!.signedTx.toPlain(), swap: res.data!.swap, txSent: res.data!.txSent })
-    const { signedTx, swap } = res.data!
+  async function restorePendingOutgoingTransactions(): Promise<boolean> {
+    const owner = useLocalWallet().localAddress?.toUserFriendlyAddress()
+    const restoreNetwork = networkName.value
+    const restoreClient = client.value
+    const restoreGeneration = syncState.walletContextGeneration
+    if (!owner)
+      return false
 
-    let patchedSwap: Promise<Swap> | undefined
-    let swapStartedAt = 0
-    if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-      swapStartedAt = Date.now()
-      // Signal the signed transaction to Fastspot as early as possible
-      logger.log('Signaling signed transaction to Fastspot', { swap })
-      const { provideFundingProof } = await useFastspotApiV2()
-      patchedSwap = provideFundingProof(
-        partialTx.paymentRef!,
-        swap!.contracts.NIM!.id,
-        signedTx.toHex(),
+    try {
+      const pendingTransactionsAtQueryStart = new Map(
+        syncState.pendingTransactions.map(transaction => [transaction.transactionHash, transaction]),
       )
-
-      // Enter the swap HTLC into the database, to make sure we have it in case we need to refund it later.
-      // NIM rows reclaim by HTLC address (TIMEOUT_RESOLVE proof), so htlc_id is null — only Polygon needs it.
-      await run(
-        SQLQuery.InsertSwapHtlc,
-        [
-          signedTx.recipient.toUserFriendlyAddress(),
-          Number(signedTx.value),
-          (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
-          swap.id,
-          swap.status,
-          null,
-        ],
+      const pendingDrainsAtQueryStart = new Map(
+        syncState.pendingRemoteDrainTxs.map(transaction => [transaction.hash, transaction]),
       )
-    }
+      const pendingHtlcsAtQueryStart = new Map(
+        syncState.pendingHtlcCreationTransactions.map(transaction => [transaction.transactionHash, transaction]),
+      )
+      const [rows, pendingHtlcRows] = await Promise.all([
+        query<PendingOutgoingRow[]>(SQLQuery.SelectPendingOutgoingTransactions, [owner]),
+        query<PendingHtlcCreationRow[]>(SQLQuery.SelectPendingHtlcCreations),
+      ])
+      const contextChanged = useLocalWallet().localAddress?.toUserFriendlyAddress() !== owner
+        || networkName.value !== restoreNetwork
+        || client.value !== restoreClient
+        || syncState.walletContextGeneration !== restoreGeneration
+      if (contextChanged)
+        return false
 
-    // Check if the tx is already in the transaction list
-    if (transactions.value.some(tx => tx.hash === signedTx.hash())) {
-      logger.error('Transaction already sent', signedTx)
-      return { data: undefined, error: i18n.t('Transaction already sent') }
-    }
-
-    if (!res.data!.txSent) {
-      logger.error('Transaction not sent by the cosigner, sending again', signedTx.toPlain())
-      await client.value!.waitForConsensusEstablished()
-      const details = await client.value!.sendTransaction(signedTx)
-      if (details.state === 'invalidated') {
-        // Transaction was rejected by the mempool
-        logger.error('Transaction invalid', details)
-
-        if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-          const serverSwap = await patchedSwap?.catch(() => undefined)
-          if (!serverSwap || !serverSwap.preimage) {
-            // Delete the swap HTLC from the database
-            await run(SQLQuery.DeleteSwapHtlc, [signedTx.recipient.toUserFriendlyAddress()])
-          }
-          trackSwapFailed({
-            error_reason: 'Transaction invalidated by mempool',
-            asset: Asset.NIM,
-          })
-        }
-
-        return { data: undefined, error: i18n.t('Transaction invalid') }
-      }
-    }
-
-    if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote || partialTx.transfer === Transfer.RemoteToLocalAfterTimeout || partialTx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
-      await client.value!.waitForConsensusEstablished()
-      const details = useSync().pendingPaymentTransactions.find(tx => tx.transactionHash === signedTx.hash()) || await client.value!.sendTransaction(signedTx)
-
-      if (partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote) {
-        if (details) {
-          const plain = details
-          const htlcData = details.data
-          await useRemoteSigner().updateRemoteSigner({
-            active: true,
-            balance: plain.value,
-            publicKey: useRemoteSigner().remotePublicKey!,
-            start: plain.timestamp || await useRemoteSigner().blockHeightToTimestamp(plain.validityStartHeight),
-            address: Nimiq.Address.fromUserFriendlyAddress(plain.recipient),
-            end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
-            // proofSize: tx.proofSize,
-            // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-            proofSize: useRemoteSigner().remoteProofSize,
-          })
-          if (partialTx.transfer === Transfer.LocalToRemote) {
-            useSync().pendingHtlcCreationTransactions.push(details)
+      for (const row of rows) {
+        if (isRemoteDrainTransfer(row.transfer)) {
+          const currentPending = syncState.pendingRemoteDrainTxs.find(transaction => transaction.hash === row.hash)
+          if (currentPending !== pendingDrainsAtQueryStart.get(row.hash)) {
+            return false
           }
         }
         else {
-          logger.error('Transaction details are undefined, cannot update remote signer', partialTx)
-        }
-      }
-    }
-
-    if (signedTx.networkId !== useNimiqNetwork().networkId) {
-      logger.error('Transaction invalid for PoS network', { networkId: signedTx.networkId, expectedNetworkId: useNimiqNetwork().networkId, signedTx })
-      return { data: undefined, error: i18n.t('Transaction invalid for PoS network') }
-    }
-    logger.log('✈️ Sent transaction', signedTx.toPlain())
-    const { fee, transactionHash: hash, recipient, sender, value: amount } = signedTx.toPlain()
-    const raw = Nimiq.BufferUtils.toHex(signedTx.serializeContent())
-    const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
-    const status = 'pending'
-
-    const tx = { ...partialTx, fee, recipient, recipientType: signedTx.recipientType, status, hash, sender, senderType: signedTx.senderType, amount, raw, message, proofSize: signedTx.proof.length, asset: Asset.NIM, chain: Chain.Nimiq } as TransactionSentByUser
-    if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-      tx.paymentMethod = PaymentMethod.NIM
-
-    if (!tx.timestamp)
-      tx.timestamp = Date.now()
-    logger.log(`✈️ Sent transaction`, tx)
-
-    await upsertTx(tx)
-
-    if (isExternalTx(tx))
-      // Not using unshift to keep reactivity
-      transactions.value = [tx, ...transactions.value]
-
-    if (tx.transfer === Transfer.RemoteToLocal || tx.transfer === Transfer.RemoteToLocalAfterTimeout || tx.transfer === Transfer.RemoteToLocalImmediateReclaim) {
-      // Only clear the active signer if this transaction drained the active signer.
-      const activeRemoteAddress = useRemoteSigner().remoteAddress
-      const senderAddress = Nimiq.Address.fromUserFriendlyAddress(tx.sender)
-      if (activeRemoteAddress?.equals(senderAddress))
-        await useRemoteSigner().updateRemoteSigner(undefined)
-    }
-    else if (tx.transfer !== Transfer.LocalToRemote && tx.transfer !== Transfer.ExtendRemote) {
-      await updateActiveRemoteBalance(remoteBalance.value - tx.amount)
-    }
-
-    if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-      // Wait for swap to complete
-      const secret = (await patchedSwap.catch(() => undefined))?.preimage || await new Promise<string>((resolve) => {
-        let timeoutId: number
-        async function checkSecret() {
-          const { getSwap } = await useFastspotApiV2()
-          const swap = await getSwap((partialTx as MerchantTransaction).paymentRef)
-          if ('preimage' in swap && swap.preimage) {
-            window.clearTimeout(timeoutId)
-            resolve(swap.preimage)
-          }
-          else {
-            timeoutId = window.setTimeout(checkSecret, 1e3) // Check every second
+          const currentPending = syncState.pendingTransactions.find(transaction => transaction.transactionHash === row.hash)
+          if (currentPending !== pendingTransactionsAtQueryStart.get(row.hash)) {
+            return false
           }
         }
-
-        // Start checking for the secret
-        checkSecret()
-      })
-
-      // Store secret in the transaction and database
-      tx.meta = { secret }
-      tx.status = 'confirmed' // If we already have a secret, that means the BTC LN were already received
-      await upsertTx(tx)
-      // The transaction we are looking for is most likey still the first one, so not much overhead
-      const index = transactions.value.findIndex(tx => tx.hash === hash)
-      transactions.value[index].meta = {
-        secret,
       }
 
-      trackSwapCompleted({
-        swap_duration_ms: Date.now() - swapStartedAt,
+      for (const row of rows) {
+        if (isRemoteDrainTransfer(row.transfer)) {
+          upsertSentPendingByHash(syncState.pendingRemoteDrainTxs, {
+            ...row,
+            hash: row.hash,
+            timestamp: row.timestamp,
+            transfer: row.transfer,
+          } as TransactionSentByUser)
+        }
+        else {
+          upsertPlainPendingByHash(syncState.pendingTransactions, {
+            transactionHash: row.hash,
+            timestamp: row.timestamp,
+            sender: row.sender,
+            senderType: row.senderType as PlainTransactionDetails['senderType'],
+            recipient: row.recipient,
+            recipientType: row.recipientType as PlainTransactionDetails['recipientType'],
+            value: row.amount,
+            fee: row.fee,
+            state: row.status as PlainTransactionDetails['state'],
+            validityStartHeight: row.validityStartHeight,
+            data: { raw: '' },
+            proof: { raw: '' },
+          } as RecoverablePlainTransactionDetails)
+        }
+      }
+      for (const row of pendingHtlcRows) {
+        const currentPending = syncState.pendingHtlcCreationTransactions.find(
+          transaction => transaction.transactionHash === row.hash,
+        )
+        if (currentPending !== pendingHtlcsAtQueryStart.get(row.hash)) {
+          return false
+        }
+        upsertPlainPendingByHash(syncState.pendingHtlcCreationTransactions, {
+          transactionHash: row.hash,
+          timestamp: row.timestamp,
+          sender: row.sender,
+          senderType: row.senderType as PlainTransactionDetails['senderType'],
+          recipient: row.recipient,
+          recipientType: row.recipientType as PlainTransactionDetails['recipientType'],
+          state: row.status,
+          validityStartHeight: row.validityStartHeight,
+          data: { raw: '' },
+          proof: { raw: '' },
+        } as RecoverablePlainTransactionDetails)
+      }
+      return true
+    }
+    catch (error) {
+      logger.error('Failed to restore pending outgoing transactions', error)
+      return false
+    }
+  }
+
+  function removePendingHash(hash: string, sendContext: WalletContext) {
+    if (!remoteSigner.isWalletContextCurrent(sendContext))
+      return
+
+    for (const collection of [syncState.pendingTransactions, syncState.pendingHtlcCreationTransactions]) {
+      const index = collection.findIndex(tx => tx.transactionHash === hash)
+      if (index >= 0)
+        collection.splice(index, 1)
+    }
+    const drainIndex = syncState.pendingRemoteDrainTxs.findIndex(tx => tx.hash === hash)
+    if (drainIndex >= 0)
+      syncState.pendingRemoteDrainTxs.splice(drainIndex, 1)
+  }
+
+  function unknownResult(staged: StagedSend, error: unknown): TransactionSendResult {
+    return {
+      outcome: 'unknown',
+      stagedTx: staged.tx,
+      stagedHash: staged.tx.hash,
+      error: error instanceof Error ? error.message : String(error),
+      ...(staged.serialized ? { serialized: staged.serialized } : {}),
+    }
+  }
+
+  async function sendTx(
+    partialTx: PartialSendTxArgs,
+    expectedContext?: WalletContext,
+  ): Promise<TransactionSendResult> {
+    if (isSendingTx.value) {
+      logger.log('A transaction is already in progress')
+      return { outcome: 'rejected', reason: 'busy', error: i18n.t('A transaction is already in progress') }
+    }
+
+    isSendingTx.value = true
+    try {
+      if (expectedContext && !remoteSigner.isWalletContextCurrent(expectedContext)) {
+        return {
+          outcome: 'rejected',
+          error: i18n.t('Wallet or network changed before sending'),
+        }
+      }
+      if (!await restorePendingOutgoingTransactions())
+        return { outcome: 'rejected', error: i18n.t('Could not verify pending transactions') }
+      if (syncState.isTransactionPending) {
+        return {
+          outcome: 'rejected',
+          reason: 'busy',
+          error: i18n.t('A transaction is still pending. Wait for it to resolve before sending another.'),
+        }
+      }
+
+      const sendContext = expectedContext ?? remoteSigner.getWalletContext()
+      if (!sendContext)
+        return { outcome: 'rejected', error: i18n.t('Nimiq network unavailable') }
+      if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+        return {
+          outcome: 'rejected',
+          error: i18n.t('Wallet or network changed before sending'),
+        }
+      }
+
+      await promiseWithTimeout(
+        sendContext.client.waitForConsensusEstablished(),
+        SEND_CONSENSUS_TIMEOUT_MS,
+      )
+      if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+        return {
+          outcome: 'rejected',
+          error: i18n.t('Wallet or network changed before sending'),
+        }
+      }
+
+      return await _sendTx(partialTx, sendContext)
+    }
+    catch (error) {
+      return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
+    }
+    finally {
+      isSendingTx.value = false
+    }
+  }
+
+  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext): Promise<TransactionSendResult> {
+    const localWallet = useLocalWallet()
+    const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
+    let stagedSend: StagedSend | undefined
+    let broadcastPhase: 'not-started' | 'possible' | 'accepted' = 'not-started'
+
+    logger.log('✈️  Preparing new transaction', {
+      partialTx,
+      remoteAddress: remoteSigner.remoteAddress?.toUserFriendlyAddress(),
+      remoteBalance: remoteSigner.remoteBalance,
+      remoteHeight: remoteSigner.remoteHeight,
+      remotePublicKey: remoteSigner.remotePublicKey,
+      remoteProofSize: remoteSigner.remoteProofSize,
+      localAddress: localWallet.localAddress.toUserFriendlyAddress(),
+      localBalance: localWallet.localBalance,
+    })
+
+    function buildPendingTransaction(transaction: NimiqTransaction) {
+      const transactionPlain = transaction.toPlain() as RecoverablePlainTransactionDetails
+      const timestamp = transactionPlain.timestamp ?? (createsHtlc
+        && typeof transactionPlain.validityStartHeight === 'number'
+        && height.value >= 0
+        && headTimestamp.value > 0
+        ? headTimestamp.value - (height.value - transactionPlain.validityStartHeight) * 1000
+        : Date.now())
+      const plain = { ...transactionPlain, timestamp } as RecoverablePlainTransactionDetails
+      const { fee, transactionHash: hash, recipient, sender, value: amount } = plain
+      const raw = Nimiq.BufferUtils.toHex(transaction.serializeContent())
+      const message = partialTx.transfer === Transfer.UserPaymentToMerchant || partialTx.transfer === Transfer.UserPaymentToAtomicSwap ? partialTx.message : ''
+      const tx = {
+        ...partialTx,
+        fee,
+        recipient,
+        recipientType: transaction.recipientType,
+        status: 'pending',
+        hash,
+        sender,
+        senderType: transaction.senderType,
+        amount,
+        raw,
+        message,
+        proofSize: transaction.proof.length,
+        validityStartHeight: plain.validityStartHeight,
+        timestamp,
         asset: Asset.NIM,
-      })
-
-      // Delete the swap HTLC from the database
-      await run(SQLQuery.DeleteSwapHtlc, [tx.recipient])
-      // Delete the swap quote from the database
-      await run(SQLQuery.DeleteSwapQuote, [tx.paymentRef])
+        chain: Chain.Nimiq,
+      } as TransactionSentByUser
+      if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
+        tx.paymentMethod = PaymentMethod.NIM
+      return { plain, tx }
     }
 
-    return { data: { tx, serialized: signedTx.toHex() }, error: undefined }
+    async function stageTransaction(transaction: NimiqTransaction, includeSerialization: boolean) {
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        throw new Error(i18n.t('Wallet or network changed before sending'))
+
+      const staged = buildPendingTransaction(transaction)
+      stagedSend = {
+        ...staged,
+        ...(includeSerialization ? { serialized: transaction.toHex() } : {}),
+      }
+      await upsertTx(staged.tx)
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        throw new Error(i18n.t('Wallet or network changed before sending'))
+
+      if (createsHtlc)
+        upsertPlainPendingByHash(syncState.pendingHtlcCreationTransactions, staged.plain)
+      else if (isRemoteDrainTransfer(staged.tx.transfer))
+        upsertSentPendingByHash(syncState.pendingRemoteDrainTxs, staged.tx)
+      else
+        upsertPlainPendingByHash(syncState.pendingTransactions, staged.plain)
+
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        throw new Error(i18n.t('Wallet or network changed before sending'))
+      if (createsHtlc) {
+        const htlcData = staged.plain.data
+        await remoteSigner.upsertInactiveRemoteSigner({
+          active: false,
+          balance: 0,
+          publicKey: remoteSigner.remotePublicKey!,
+          start: staged.tx.timestamp ?? Date.now(),
+          address: Nimiq.Address.fromUserFriendlyAddress(staged.plain.recipient),
+          end: 'timeout' in htlcData ? htlcData.timeout : Number.MAX_VALUE,
+          proofSize: remoteSigner.remoteProofSize,
+        }, sendContext)
+      }
+
+      if (isExternalTx(staged.tx) && remoteSigner.isWalletContextCurrent(sendContext))
+        addTransaction(staged.tx)
+    }
+
+    function staleContextResult(errorMessage: string): TransactionSendResult {
+      if (broadcastPhase === 'accepted' && stagedSend) {
+        return {
+          outcome: 'submitted',
+          tx: stagedSend.tx,
+          serialized: stagedSend.serialized!,
+        }
+      }
+      if (stagedSend)
+        return unknownResult(stagedSend, errorMessage)
+      return { outcome: 'rejected', error: errorMessage }
+    }
+
+    async function cleanupRejectedStaged(errorMessage: string) {
+      if (!stagedSend)
+        return { outcome: 'rejected', error: errorMessage } as const
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        return unknownResult(stagedSend, errorMessage)
+      try {
+        await updateTransactionStatus({
+          hash: stagedSend.tx.hash,
+          status: 'failed',
+          timestamp: stagedSend.tx.timestamp,
+        })
+        if (!remoteSigner.isWalletContextCurrent(sendContext))
+          return unknownResult(stagedSend, errorMessage)
+        removePendingHash(stagedSend.tx.hash, sendContext)
+        return { outcome: 'rejected', error: errorMessage } as const
+      }
+      catch (error) {
+        logger.error('Failed to persist rejected transaction status', error)
+        return unknownResult(stagedSend, errorMessage)
+      }
+    }
+
+    try {
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        return { outcome: 'rejected', error: i18n.t('Wallet or network changed before sending') }
+
+      const signing = await getSignedTx(partialTx, {
+        beforeRemoteBroadcast: async (transaction, swap) => {
+          await stageTransaction(transaction, false)
+          // The cosigner can broadcast before replying, so refunds must already be recoverable.
+          if (swap) {
+            await run(SQLQuery.InsertSwapHtlc, [
+              transaction.recipient.toUserFriendlyAddress(),
+              Number(transaction.value),
+              (swap.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
+              swap.id,
+              swap.status,
+              null,
+            ])
+          }
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            throw new Error(i18n.t('Wallet or network changed before sending'))
+          broadcastPhase = 'possible'
+        },
+      })
+
+      if (signing.outcome === 'rejected')
+        return cleanupRejectedStaged(signing.error)
+      if (signing.outcome === 'unknown')
+        return unknownResult(stagedSend!, signing.error)
+
+      const { signedTx, swap, txSent } = signing
+      const returnedHash = signedTx.hash()
+      if (txSent === true)
+        broadcastPhase = 'accepted'
+      // txSent: false also covers a cosigner broadcast timeout; preserve possible submission.
+
+      if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+        if (stagedSend && returnedHash !== stagedSend.tx.hash)
+          return unknownResult(stagedSend, i18n.t('Cosigner returned a different transaction'))
+        if (broadcastPhase === 'accepted' && stagedSend) {
+          return {
+            outcome: 'submitted',
+            tx: stagedSend.tx,
+            serialized: signedTx.toHex(),
+          }
+        }
+        return staleContextResult(i18n.t('Wallet or network changed before sending'))
+      }
+      if (!stagedSend) {
+        await stageTransaction(signedTx, true)
+      }
+      else if (returnedHash !== stagedSend.tx.hash) {
+        return unknownResult(stagedSend, i18n.t('Cosigner returned a different transaction'))
+      }
+      else {
+        stagedSend.serialized = signedTx.toHex()
+      }
+      if (!stagedSend)
+        throw new Error(i18n.t('Transaction could not be staged'))
+      const staged = stagedSend
+      if (signedTx.networkId !== networkId.value)
+        throw new Error(i18n.t('Transaction invalid for PoS network'))
+
+      let patchedSwap: Promise<Swap> | undefined
+      let swapStartedAt = 0
+      if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        swapStartedAt = Date.now()
+        logger.log('Signaling signed transaction to Fastspot', { swap })
+        const { provideFundingProof } = await useFastspotApiV2()
+        if (!remoteSigner.isWalletContextCurrent(sendContext))
+          return staleContextResult(i18n.t('Wallet or network changed before sending'))
+        if (txSent !== true)
+          broadcastPhase = 'possible'
+        patchedSwap = provideFundingProof(
+          partialTx.paymentRef!,
+          swap.contracts.NIM!.id,
+          signedTx.toHex(),
+        )
+        void patchedSwap.catch(() => undefined)
+      }
+
+      let details = syncState.pendingPaymentTransactions.find(tx => tx.transactionHash === staged.tx.hash)
+      if (!details && txSent !== true) {
+        if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+          if ((broadcastPhase as string) === 'possible')
+            return unknownResult(staged, i18n.t('Wallet or network changed before sending'))
+          return cleanupRejectedStaged(i18n.t('Wallet or network changed before sending'))
+        }
+        broadcastPhase = 'possible'
+        details = await promiseWithTimeout(
+          sendContext.client.sendTransaction(signedTx),
+          BROADCAST_TIMEOUT_MS,
+        )
+        if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+          if (
+            details?.executionResult === false
+            || details?.state === 'invalidated'
+            || details?.state === 'expired'
+          ) {
+            return { outcome: 'rejected', error: i18n.t('Transaction invalid') }
+          }
+          if (
+            details?.state === 'pending'
+            || details?.state === 'included'
+            || details?.state === 'confirmed'
+          ) {
+            broadcastPhase = 'accepted'
+          }
+          return staleContextResult(i18n.t('Wallet or network changed before sending'))
+        }
+      }
+
+      if (
+        details?.executionResult === false
+        || details?.state === 'invalidated'
+        || details?.state === 'expired'
+      ) {
+        logger.warn('Transaction rejected', { hash: staged.tx.hash, state: details.state, executionResult: details.executionResult ?? null })
+        const errorMessage = i18n.t('Transaction invalid')
+        if (!remoteSigner.isWalletContextCurrent(sendContext))
+          return { outcome: 'rejected', error: errorMessage }
+        try {
+          await updateTransactionStatus({
+            hash: staged.tx.hash,
+            status: details.state === 'expired' ? 'expired' : 'failed',
+            timestamp: details.timestamp,
+          })
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return { outcome: 'rejected', error: errorMessage }
+          removePendingHash(staged.tx.hash, sendContext)
+        }
+        catch (error) {
+          logger.error('Failed to persist rejected transaction status', error)
+        }
+        if (swap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+          try {
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return { outcome: 'rejected', error: errorMessage }
+            await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return { outcome: 'rejected', error: errorMessage }
+            await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
+          }
+          catch (error) {
+            logger.error('Failed to clean rejected swap bookkeeping', error)
+          }
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return { outcome: 'rejected', error: errorMessage }
+          trackSwapFailed({ error_reason: errorMessage, asset: Asset.NIM })
+        }
+        return { outcome: 'rejected', error: errorMessage }
+      }
+
+      const accepted = txSent === true
+        || details?.state === 'pending'
+        || details?.state === 'included'
+        || details?.state === 'confirmed'
+      if (!accepted)
+        return unknownResult(staged, i18n.t('Transaction submission could not be confirmed'))
+      broadcastPhase = 'accepted'
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        return staleContextResult(i18n.t('Wallet or network changed before sending'))
+
+      if (details?.state === 'included' || details?.state === 'confirmed') {
+        let canClearPending = true
+        if (createsHtlc) {
+          try {
+            await remoteSigner.activateRemoteSignerFromTransaction(details, sendContext)
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          }
+          catch (error) {
+            canClearPending = false
+            logger.error('Failed to activate included HTLC signer', error)
+          }
+        }
+        if (canClearPending) {
+          try {
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await updateTransactionStatus({
+              hash: staged.tx.hash,
+              status: details.state,
+              timestamp: details.timestamp,
+              executionResult: details.executionResult,
+            })
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          }
+          catch (error) {
+            canClearPending = false
+            logger.error('Failed to persist accepted transaction status', error)
+          }
+        }
+        if (!remoteSigner.isWalletContextCurrent(sendContext))
+          return staleContextResult(i18n.t('Wallet or network changed before sending'))
+
+        if (canClearPending) {
+          removePendingHash(staged.tx.hash, sendContext)
+          if (createsHtlc && details.state === 'included')
+            upsertPlainPendingByHash(syncState.pendingHtlcCreationTransactions, details)
+        }
+      }
+
+      logger.log('✈️ Sent transaction', staged.plain, { state: details?.state ?? null, executionResult: details?.executionResult ?? null })
+      logger.log('✈️ Sent transaction', staged.tx)
+
+      try {
+        if (isRemoteDrainTransfer(staged.tx.transfer)) {
+          const senderAddress = Nimiq.Address.fromUserFriendlyAddress(staged.tx.sender)
+          const deactivated = await remoteSigner.deactivateRemoteSigner(senderAddress, sendContext)
+          if (!deactivated) {
+            logger.warn('Skipped stale remote signer deactivation after accepted drain', {
+              address: staged.tx.sender,
+            })
+          }
+        }
+        else if (
+          remoteSigner.isWalletContextCurrent(sendContext)
+          && staged.tx.transfer !== Transfer.LocalToRemote
+          && staged.tx.transfer !== Transfer.ExtendRemote
+        ) {
+          await updateActiveRemoteBalance(remoteBalance.value - staged.tx.amount)
+        }
+      }
+      catch (error) {
+        logger.error('Failed to update balances after accepted transaction', error)
+      }
+      if (!remoteSigner.isWalletContextCurrent(sendContext))
+        return staleContextResult(i18n.t('Wallet or network changed before sending'))
+
+      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        try {
+          const patchedSwapResult = await patchedSwap.catch(() => undefined)
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
+            let timeoutId: number
+            async function checkSecret() {
+              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                reject(new Error(i18n.t('Wallet or network changed before sending')))
+                return
+              }
+              const { getSwap } = await useFastspotApiV2()
+              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                reject(new Error(i18n.t('Wallet or network changed before sending')))
+                return
+              }
+              const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
+              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                reject(new Error(i18n.t('Wallet or network changed before sending')))
+                return
+              }
+              if ('preimage' in currentSwap && currentSwap.preimage) {
+                window.clearTimeout(timeoutId)
+                resolve(currentSwap.preimage)
+              }
+              else {
+                timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
+              }
+            }
+            void checkSecret().catch(reject)
+          })
+
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          staged.tx.meta = { secret }
+          staged.tx.status = 'confirmed'
+          await upsertTx(staged.tx)
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
+          if (index >= 0)
+            transactions.value[index].meta = { secret }
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          trackSwapCompleted({
+            swap_duration_ms: Date.now() - swapStartedAt,
+            asset: Asset.NIM,
+          })
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
+          if (!remoteSigner.isWalletContextCurrent(sendContext))
+            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+        }
+        catch (error) {
+          logger.error('Failed to finish accepted swap bookkeeping', error)
+        }
+      }
+
+      return {
+        outcome: 'submitted',
+        tx: staged.tx,
+        serialized: staged.serialized!,
+      }
+    }
+    catch (error) {
+      if (broadcastPhase === 'accepted' && stagedSend) {
+        logger.error('Accepted transaction bookkeeping failed', error)
+        return { outcome: 'submitted', tx: stagedSend.tx, serialized: stagedSend.serialized! }
+      }
+      if (broadcastPhase === 'possible' && stagedSend)
+        return unknownResult(stagedSend, error)
+      return cleanupRejectedStaged(error instanceof Error ? error.message : String(error))
+    }
   }
 
   const activeAssetTransactions = computed(() => transactions.value.filter(tx => (tx.asset || Asset.NIM) === activeAsset.value))
@@ -380,6 +837,7 @@ export const useTransactions = defineStore('transactions', () => {
     dbTxs.forEach((tx) => {
       tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
+      tx.executionResult = transactions.value.find(existing => existing.hash === tx.hash && existing.status === tx.status)?.executionResult
     })
     const knownHashes = new Set(dbTxs.map(tx => tx.hash))
     // Keep any in-memory transactions not yet in DB (e.g. just-added pending txs)
@@ -393,13 +851,21 @@ export const useTransactions = defineStore('transactions', () => {
     await refreshFromDb()
   }, { immediate: true })
 
-  async function addReceiptTransaction(tx: UserReceiptTransaction) {
+  async function addReceiptTransaction(tx: UserReceiptTransaction, expectedContext?: WalletContext) {
+    const context = expectedContext ?? remoteSigner.getWalletContext()
+    // Polygon receipts can arrive before a Nimiq client exists.
+    if (context && !remoteSigner.isWalletContextCurrent(context))
+      return
     // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
-    if (tx.senderType === Nimiq.AccountType.HTLC && await useRemoteSigner().isOurRemoteSigner(tx.sender)) {
+    if (tx.senderType === Nimiq.AccountType.HTLC && await remoteSigner.isOurRemoteSigner(tx.sender)) {
       logger.log(`🚫 addReceiptTransaction skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
       return
     }
+    if (context && !remoteSigner.isWalletContextCurrent(context))
+      return
     await upsertTx(tx)
+    if (context && !remoteSigner.isWalletContextCurrent(context))
+      return
     addTransaction(tx)
   }
 
@@ -419,7 +885,7 @@ export const useTransactions = defineStore('transactions', () => {
     },
     meta?: Record<string, any>,
   ) {
-    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer })
+    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
     const newTx = {
       transfer,
       amount: tx.value,
@@ -429,12 +895,14 @@ export const useTransactions = defineStore('transactions', () => {
       recipientType: toAccountType(tx.recipientType),
       hash: tx.transactionHash,
       status: tx.state,
+      executionResult: tx.executionResult,
       timestamp: tx.timestamp,
+      validityStartHeight: tx.validityStartHeight,
       title: 'Payment', // translated at display time
       fee: tx.fee,
       // proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
       // TODO: This is a temporary fix, proof size should always be the same but better to get it from the tx instead of hardcoding it
-      proofSize: useRemoteSigner().remoteProofSize,
+      proofSize: remoteSigner.remoteProofSize,
       isCashbackClaimed: true,
       merchantName: '',
       paymentMethod: PaymentMethod.NIM,
@@ -501,15 +969,16 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: AppTransactionState, timestamp: number | undefined }) {
-    await run(SQLQuery.UpdateTxStatus, [status, timestamp, hash])
+  async function updateTransactionStatus({ hash, status, timestamp, executionResult }: { hash: string, status: AppTransactionState, timestamp: number | undefined, executionResult?: boolean }) {
+    await run(SQLQuery.UpdateTxStatus, [status, timestamp ?? null, hash])
     const index = transactions.value.findIndex(tx => tx.hash === hash)
     if (index >= 0) {
       const nextTransactions = [...transactions.value]
       nextTransactions[index] = {
         ...nextTransactions[index],
         status,
-        timestamp,
+        executionResult: executionResult ?? nextTransactions[index].executionResult,
+        timestamp: timestamp ?? nextTransactions[index].timestamp,
       }
       transactions.value = nextTransactions.sort(
         (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
@@ -597,6 +1066,7 @@ export const useTransactions = defineStore('transactions', () => {
   return {
     transactions: readonly(transactions),
     sendTx,
+    restorePendingOutgoingTransactions,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
     addUnknownPaymentToMerchantTransaction,

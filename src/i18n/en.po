@@ -27,15 +27,19 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:154
+#: src/stores/transactions.ts:286
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/modals/MenuModal.vue:83
+#: src/stores/transactions.ts:296
+msgid "A transaction is still pending. Wait for it to resolve before sending another."
+msgstr ""
+
+#: src/modals/MenuModal.vue:81
 msgid "About"
 msgstr ""
 
-#: src/modals/MenuModal.vue:40
+#: src/modals/MenuModal.vue:38
 #: src/views/HomeView.vue:190
 msgid "Activate Cashback & Rewards"
 msgstr ""
@@ -61,7 +65,7 @@ msgid "Add new card"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:86
-#: src/types/transactions.ts:145
+#: src/types/transactions.ts:147
 msgid "Add Stake"
 msgstr ""
 
@@ -74,17 +78,17 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:168
-#: src/stores/nimiq-network.ts:190
-#: src/stores/nimiq-network.ts:220
+#: src/stores/nimiq-network.ts:214
+#: src/stores/nimiq-network.ts:236
+#: src/stores/nimiq-network.ts:266
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:558
+#: src/lib/flows/index.ts:567
 msgid "Address saved"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:205
+#: src/stores/nimiq-network.ts:251
 msgid "Addresses missing"
 msgstr ""
 
@@ -150,7 +154,7 @@ msgstr ""
 msgid "App screenshots"
 msgstr ""
 
-#: src/modals/MenuModal.vue:59
+#: src/modals/MenuModal.vue:57
 msgid "App Settings"
 msgstr ""
 
@@ -168,11 +172,11 @@ msgid "Auto-deposit threshold"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:71
+#: src/modals/MenuModal.vue:69
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:611
+#: src/lib/flows/index.ts:620
 msgid "Backup successful"
 msgstr ""
 
@@ -297,11 +301,11 @@ msgid "Cashlink claimed successfully"
 msgstr ""
 
 #: src/composables/useNotifications.ts:356
-#: src/types/transactions.ts:140
+#: src/types/transactions.ts:142
 msgid "Cashlink Claiming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:170
+#: src/stores/nimiq-network.ts:216
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -371,13 +375,13 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:168
+#: src/types/transactions.ts:170
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:163
-#: src/types/transactions.ts:164
+#: src/types/transactions.ts:165
+#: src/types/transactions.ts:166
 msgid "Confirming"
 msgstr ""
 
@@ -385,7 +389,7 @@ msgstr ""
 msgid "Connecting to network."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:176
+#: src/components/NimWithdraw.vue:174
 #: src/components/PaymentAmountInput.vue:161
 #: src/views/MainView.vue:92
 msgid "Connecting to Polygon"
@@ -424,12 +428,20 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
+#: src/stores/transactions.ts:456
+msgid "Cosigner returned a different transaction"
+msgstr ""
+
 #: src/stores/polygon-usdt.ts:887
 msgid "Could not determine Polygon transaction hash"
 msgstr ""
 
 #: src/composables/useStringParser.ts:281
 msgid "Could not fetch amount for Bitcoin Lightning swap."
+msgstr ""
+
+#: src/stores/transactions.ts:292
+msgid "Could not verify pending transactions"
 msgstr ""
 
 #: src/lib/flows/steps.ts:724
@@ -441,7 +453,7 @@ msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:81
-#: src/types/transactions.ts:144
+#: src/types/transactions.ts:146
 msgid "Create Staker"
 msgstr ""
 
@@ -491,7 +503,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/types/transactions.ts:150
+#: src/types/transactions.ts:152
 msgid "Delete Validator"
 msgstr ""
 
@@ -577,15 +589,15 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:199
+#: src/stores/nimiq-network.ts:245
 msgid "Error getting account"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:229
+#: src/stores/nimiq-network.ts:275
 msgid "Error getting account transactions"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:214
+#: src/stores/nimiq-network.ts:260
 msgid "Error getting accounts"
 msgstr ""
 
@@ -598,19 +610,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:73
+#: src/stores/sync/htlc.ts:87
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:132
+#: src/stores/sync/htlc.ts:139
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:157
+#: src/stores/sync/htlc.ts:164
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:103
+#: src/stores/sync/htlc.ts:117
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -624,7 +636,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:167
+#: src/types/transactions.ts:169
 msgid "Expired"
 msgstr ""
 
@@ -669,7 +681,7 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: src/modals/MenuModal.vue:48
+#: src/modals/MenuModal.vue:46
 msgid "Features"
 msgstr ""
 
@@ -809,7 +821,7 @@ msgstr ""
 msgid "Insufficient balance for this payment"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:190
+#: src/components/NimWithdraw.vue:188
 #: src/components/PaymentAmountInput.vue:168
 msgid "Insufficient funds"
 msgstr ""
@@ -819,8 +831,8 @@ msgid "Internationalized domain (punycode). Verify it matches the real site."
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:165
-#: src/types/transactions.ts:166
+#: src/types/transactions.ts:167
+#: src/types/transactions.ts:168
 msgid "Invalid"
 msgstr ""
 
@@ -888,7 +900,7 @@ msgstr ""
 msgid "Invalid LNURL"
 msgstr ""
 
-#: src/lib/tx.ts:115
+#: src/lib/tx.ts:123
 msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
@@ -942,12 +954,12 @@ msgstr ""
 msgid "Invalid signature. Please try again"
 msgstr ""
 
-#: src/lib/tx.ts:86
+#: src/lib/tx.ts:94
 #: src/stores/polygon-usdt.ts:1787
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:354
+#: src/lib/tx.ts:348
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -1048,7 +1060,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:90
+#: src/modals/MenuModal.vue:88
 msgid "Log Out"
 msgstr ""
 
@@ -1073,7 +1085,7 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: src/modals/MenuModal.vue:54
+#: src/modals/MenuModal.vue:52
 msgid "Mini Apps"
 msgstr ""
 
@@ -1094,10 +1106,6 @@ msgstr ""
 msgid "NAKA Card"
 msgstr ""
 
-#: src/modals/MenuModal.vue:33
-msgid "NAKA Support"
-msgstr ""
-
 #: src/lib/flows/steps.ts:751
 msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
 msgstr ""
@@ -1107,7 +1115,7 @@ msgstr ""
 msgid "Network"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:115
+#: src/stores/nimiq-network.ts:119
 msgid "Network consensus lost."
 msgstr ""
 
@@ -1115,16 +1123,21 @@ msgstr ""
 msgid "Network fees"
 msgstr ""
 
-#: src/lib/tx.ts:374
+#: src/lib/tx.ts:372
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:161
+#: src/types/transactions.ts:163
 msgid "New"
 msgstr ""
 
 #: src/components/naka/HoldNakaCardToReader.vue:65
 msgid "NFC is not supported on this device"
+msgstr ""
+
+#: src/stores/sync/remote-signers.ts:41
+#: src/stores/transactions.ts:302
+msgid "Nimiq network unavailable"
 msgstr ""
 
 #: src/components/BricksInput.vue:10
@@ -1139,11 +1152,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:194
-msgid "No account found"
-msgstr ""
-
-#: src/lib/tx.ts:258
+#: src/lib/tx.ts:261
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1155,7 +1164,7 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:209
+#: src/stores/nimiq-network.ts:255
 msgid "No accounts found"
 msgstr ""
 
@@ -1163,7 +1172,7 @@ msgstr ""
 msgid "No active card"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:160
+#: src/stores/nimiq-network.ts:206
 msgid "No Cashlink found"
 msgstr ""
 
@@ -1183,7 +1192,7 @@ msgstr ""
 msgid "No NAKA Card found"
 msgstr ""
 
-#: src/lib/tx.ts:91
+#: src/lib/tx.ts:99
 msgid "No NIM HTLC found in swap"
 msgstr ""
 
@@ -1191,7 +1200,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:412
+#: src/composables/useApi.ts:413
 msgid "No payment details found"
 msgstr ""
 
@@ -1217,7 +1226,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:224
+#: src/stores/nimiq-network.ts:270
 msgid "No transactions found"
 msgstr ""
 
@@ -1294,7 +1303,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:142
+#: src/types/transactions.ts:144
 msgid "Payment"
 msgstr ""
 
@@ -1373,7 +1382,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:30
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:162
+#: src/types/transactions.ts:164
 msgid "Pending"
 msgstr ""
 
@@ -1394,7 +1403,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:640
+#: src/lib/flows/index.ts:649
 msgid "PIN change successful"
 msgstr ""
 
@@ -1451,7 +1460,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:143
+#: src/types/transactions.ts:145
 msgid "Points Payment"
 msgstr ""
 
@@ -1550,7 +1559,7 @@ msgid "Refunded"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:108
-#: src/types/transactions.ts:149
+#: src/types/transactions.ts:151
 msgid "Remove Stake"
 msgstr ""
 
@@ -1576,7 +1585,7 @@ msgid "Resend"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:103
-#: src/types/transactions.ts:148
+#: src/types/transactions.ts:150
 msgid "Retire Stake"
 msgstr ""
 
@@ -1646,7 +1655,7 @@ msgstr ""
 msgid "See words"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:160
+#: src/components/NimWithdraw.vue:158
 msgid "Select an address to calculate Polygon fee."
 msgstr ""
 
@@ -1678,13 +1687,13 @@ msgstr ""
 msgid "Sender"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:185
+#: src/components/NimWithdraw.vue:183
 #: src/views/MainView.vue:109
 msgid "Server not available"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:90
-#: src/types/transactions.ts:146
+#: src/types/transactions.ts:148
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1692,7 +1701,7 @@ msgstr ""
 msgid "Set an amount"
 msgstr ""
 
-#: src/modals/MenuModal.vue:65
+#: src/modals/MenuModal.vue:63
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1704,7 +1713,8 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/composables/useApi.ts:62
-#: src/lib/flows/index.ts:514
+#: src/lib/flows/index.ts:513
+#: src/lib/flows/index.ts:522
 msgid "Something went wrong"
 msgstr ""
 
@@ -1749,16 +1759,16 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:396
+#: src/lib/tx.ts:408
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:310
-#: src/composables/useApi.ts:317
-#: src/lib/tx.ts:261
-#: src/lib/tx.ts:370
-#: src/lib/tx.ts:39
-#: src/lib/tx.ts:61
+#: src/composables/useApi.ts:311
+#: src/composables/useApi.ts:318
+#: src/lib/tx.ts:264
+#: src/lib/tx.ts:368
+#: src/lib/tx.ts:50
+#: src/lib/tx.ts:69
 msgid "Something went wrong syncing your account"
 msgstr ""
 
@@ -1788,7 +1798,7 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
-#: src/types/transactions.ts:151
+#: src/types/transactions.ts:153
 msgid "Staking Contract"
 msgstr ""
 
@@ -1813,6 +1823,7 @@ msgid "Submitted {date}"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:82
+#: src/modals/MenuModal.vue:31
 msgid "Support"
 msgstr ""
 
@@ -1824,7 +1835,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:387
+#: src/composables/useMiniAppHost.ts:389
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1879,13 +1890,18 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:627
+#: src/lib/flows/index.ts:636
 msgid "The PINs do not match"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:242
 #: src/composables/useQRScanner.ts:302
 msgid "The QR scanner is not ready yet. Please wait."
+msgstr ""
+
+#: src/lib/flows/index.ts:357
+#: src/lib/flows/index.ts:515
+msgid "The transaction may have been sent and is still pending. Do not retry."
 msgstr ""
 
 #: src/components/NimAddressInput.vue:47
@@ -1936,7 +1952,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:351
+#: src/composables/useMiniAppHost.ts:353
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -1980,7 +1996,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:139
+#: src/types/transactions.ts:141
 msgid "Top-Up"
 msgstr ""
 
@@ -1996,20 +2012,20 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:226
-msgid "Transaction already sent"
+#: src/stores/transactions.ts:462
+msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/lib/flows/index.ts:355
-msgid "Transaction failed: {error}"
-msgstr ""
-
-#: src/stores/transactions.ts:249
+#: src/stores/transactions.ts:522
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:284
+#: src/stores/transactions.ts:466
 msgid "Transaction invalid for PoS network"
+msgstr ""
+
+#: src/stores/transactions.ts:530
+msgid "Transaction submission could not be confirmed"
 msgstr ""
 
 #: src/stores/polygon-usdt.ts:900
@@ -2049,12 +2065,8 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
-#: src/types/transactions.ts:172
+#: src/types/transactions.ts:174
 msgid "Unknown"
-msgstr ""
-
-#: src/lib/flows/index.ts:357
-msgid "Unknown error"
 msgstr ""
 
 #: src/components/naka/NakaCardManagement.vue:103
@@ -2074,7 +2086,7 @@ msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:95
-#: src/types/transactions.ts:147
+#: src/types/transactions.ts:149
 msgid "Update Staker"
 msgstr ""
 
@@ -2123,8 +2135,21 @@ msgstr ""
 msgid "View on X"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:183
+#: src/components/NimWithdraw.vue:181
 msgid "Wait for consensus before withdrawing"
+msgstr ""
+
+#: src/stores/sync/remote-signers.ts:47
+#: src/stores/sync/remote-signers.ts:60
+#: src/stores/transactions.ts:311
+#: src/stores/transactions.ts:379
+#: src/stores/transactions.ts:400
+#: src/stores/transactions.ts:432
+#: src/stores/transactions.ts:438
+#: src/stores/transactions.ts:452
+#: src/stores/transactions.ts:496
+#: src/stores/transactions.ts:497
+msgid "Wallet or network changed before sending"
 msgstr ""
 
 #: src/components/competition/CompetitionAppDetail.vue:113
@@ -2153,7 +2178,7 @@ msgstr ""
 
 #: src/composables/useNotifications.ts:276
 #: src/modals/ChangelogModal.vue:17
-#: src/modals/MenuModal.vue:77
+#: src/modals/MenuModal.vue:75
 msgid "What's New"
 msgstr ""
 
@@ -2231,11 +2256,11 @@ msgstr ""
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
-#: src/types/transactions.ts:141
+#: src/types/transactions.ts:143
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:516
+#: src/lib/flows/index.ts:525
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -2295,7 +2320,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
 msgstr ""
 
-#: src/components/NimWithdraw.vue:191
+#: src/components/NimWithdraw.vue:189
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 

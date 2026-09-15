@@ -1,4 +1,5 @@
 import type * as Nimiq from '@nimiq/core'
+import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Asset, Chain } from '@/lib/assets'
 import { i18n } from '@/i18n/i18n-setup'
 
@@ -96,11 +97,14 @@ export interface BaseTransaction {
   recipient: string
   recipientType?: Nimiq.AccountType
   status: AppTransactionState
+  // Transient execution evidence for the unfinalized payment indicator.
+  executionResult?: boolean
   timestamp: number | undefined
   amount: number
   fee: number
   hash: string
   proofSize: number
+  validityStartHeight?: number | null
   asset?: Asset
   chain?: Chain
   message?: string
@@ -324,6 +328,30 @@ export type ExternalTransactionSentByUser = UserTransaction | MerchantTransactio
  */
 export type TransactionSentByUser = ExternalTransactionSentByUser | SyncTransaction
 
+export type RecoverablePlainTransactionDetails
+  = Omit<PlainTransactionDetails, 'validityStartHeight'> & {
+    validityStartHeight?: number | null
+  }
+
+export type TransactionSendResult
+  = | {
+    outcome: 'submitted'
+    tx: TransactionSentByUser
+    serialized: string
+  }
+  | {
+    outcome: 'rejected'
+    reason?: 'busy'
+    error: string
+  }
+  | {
+    outcome: 'unknown'
+    stagedTx: TransactionSentByUser
+    stagedHash: string
+    error: string
+    serialized?: string
+  }
+
 /**
  * Transactions that are received by the user and the sender is another user. Just a normal payment or transfer.
  */
@@ -363,7 +391,10 @@ export type PartialSendTxArgs
     | Pick<ExtendRemoteTx, 'transfer'>
     | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
     | Pick<RemoteToLocalTx, 'transfer'>
-    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & {
+      sender: Nimiq.Address
+      proofSize: number
+    }
     | PartialStakingTxArgs
 
 export enum PaymentMethod {

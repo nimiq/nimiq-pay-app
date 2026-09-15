@@ -1,6 +1,7 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
+import type { WalletContext } from '@/stores/remote-signer'
 import type { UserReceiptTransaction } from '@/types/transactions'
-import { until, useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
+import { useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
@@ -16,7 +17,7 @@ import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { useRemoteSigner } from '@/stores/remote-signer'
+import { sameWalletContext, useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncBalances } from '@/stores/sync/balances'
 import { useSyncHtlc } from '@/stores/sync/htlc'
 import { useSyncRemoteSigners } from '@/stores/sync/remote-signers'
@@ -27,15 +28,17 @@ import { useTransactions } from '@/stores/transactions'
 const logger = useLogger('useSync')
 
 export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
-  const { client, height: localHeight, consensus } = storeToRefs(useNimiqNetwork())
+  const { client, height: localHeight, consensus, networkName } = storeToRefs(useNimiqNetwork())
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, isHtlcActive, homeBalanceState } = storeToRefs(useRemoteSigner())
+  const { getWalletContext, isWalletContextCurrent } = useRemoteSigner()
   const { isProcessingRemote, isSyncingWallets, headChangePendingDrainLock, headChangeUpdatesLock } = storeToRefs(useLocks())
   const { updateBalances } = useSyncBalances()
   const { handleFunds, checkRemoteValidity, extendValidity, checkHtlcState, checkExpiredSwapHtlcs, maybeCheckHtlcState } = useSyncHtlc()
   const { verifyRemoteSignersDb } = useSyncRemoteSigners()
   const { updateSingleTransaction, updateTransactionHistory, updateTransactionsInDb } = useSyncTransactions()
-  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, nodesAreSynced } = storeToRefs(useSyncState())
+  const syncState = useSyncState()
+  const { pendingTransactions, pendingPaymentTransactions, pendingRemoteDrainTxs, isTransactionPending, nodesAreSynced, walletContextGeneration } = storeToRefs(syncState)
 
   const { resume: startPeriodicTransactionRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
@@ -49,16 +52,81 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { resume: startPeriodicDbRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
       return
-    await Promise.all([
-      useTransactions().refreshFromDb(),
-      updateBalances(),
-    ])
+    await useTransactions().refreshFromDb()
+    if (client.value && consensus.value === 'established')
+      await updateBalances()
   }, 30_000, { immediate: false })
 
-  let pendingDrainHeadListener: number | undefined
-  let updatesHeadListener: number | undefined
-  let localTransactionListener: number | undefined
-  let remoteAddressListener: number | undefined
+  interface ListenerHandle {
+    client: NonNullable<typeof client.value>
+    id: number
+  }
+
+  type OnlineSyncContext = WalletContext
+
+  let pendingDrainHeadListener: ListenerHandle | undefined
+  let updatesHeadListener: ListenerHandle | undefined
+  let localTransactionListener: ListenerHandle | undefined
+  let remoteAddressListener: ListenerHandle | undefined
+  let remoteAddressListenerGeneration = 0
+  let completedOnlineSyncContext: OnlineSyncContext | undefined
+
+  function getOnlineSyncContext(): OnlineSyncContext | undefined {
+    return consensus.value === 'established' ? getListenerContext() : undefined
+  }
+
+  function getListenerContext(): OnlineSyncContext | undefined {
+    if (!hasLocalWallet.value || !client.value)
+      return undefined
+    return getWalletContext()
+  }
+
+  function isListenerContextCurrent(context: OnlineSyncContext) {
+    return hasLocalWallet.value && isWalletContextCurrent(context)
+  }
+
+  function isOnlineSyncContextCurrent(context: OnlineSyncContext) {
+    return consensus.value === 'established' && isListenerContextCurrent(context)
+  }
+
+  async function runOnlineSync(
+    context: OnlineSyncContext,
+    isCurrent: () => boolean = () => isOnlineSyncContextCurrent(context),
+  ) {
+    if (!isCurrent())
+      return false
+    if (!await registerWalletListeners(context, isCurrent))
+      return false
+    logger.log('Updating balances')
+    await updateBalances()
+    if (!isCurrent())
+      return false
+    // Surface cached/history txs ASAP — don't block first paint on remote-signer verification (APP-159)
+    void updateTransactionHistory()
+    await useRemoteSigner().resolveHomeBalanceState()
+    if (!isCurrent())
+      return false
+
+    // Initial reconciliation can finish before signer hydration. Unblock deposits before history verification.
+    await checkHtlcState()
+    if (!isCurrent())
+      return false
+
+    logger.log('Verifying remote signers in DB')
+    await verifyRemoteSignersDb()
+    if (!isCurrent())
+      return false
+
+    logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
+    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
+    if (!isCurrent())
+      return false
+    startPeriodicTransactionRefresh()
+    return isCurrent()
+  }
+
+  let readinessSyncPromise: Promise<void> | undefined
+  let readinessSyncQueued = false
 
   /**
    * Syncs the local and the remote wallet immediately and then every time a new block is minted.
@@ -68,6 +136,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (!hasLocalWallet.value)
       return
 
+    // Pinia survives an in-app logout/login, but pending work belongs to one wallet only.
+    syncState.setWalletContext(localAddress.value.toUserFriendlyAddress(), networkName.value)
+
     if (isMockEnabled) {
       logger.log('🎭 Mock mode: skipping wallet sync, loading mock data')
       const { loadMockData } = await import('@/lib/mock-data')
@@ -76,45 +147,44 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     }
 
     isSyncingWallets.value = true
-    logger.log('🔄 Remote Signer initialization')
-    await useRemoteSigner().init()
-    usePolygonSync().init().catch(error => logger.error('Failed to initialize Polygon sync', error))
-    logger.log('Updating balances')
-    await updateBalances()
-    logger.log('Checking HTLC state and updating transactions in DB')
-    await Promise.all([checkHtlcState(), updateTransactionsInDb()])
-
-    startPeriodicDbRefresh()
-
-    logger.log('Waiting for client to be ready')
-    await until(client).toBeTruthy()
-    logger.log('Waiting for consensus to be established')
-    await client.value!.waitForConsensusEstablished()
-    // Surface cached/history txs ASAP — don't block first paint on remote-signer verification (APP-159)
-    void updateTransactionHistory()
-    await useRemoteSigner().resolveHomeBalanceState()
-
-    logger.log('Verifying remote signers in DB')
-    await verifyRemoteSignersDb()
-
-    logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
-    await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
-    startPeriodicTransactionRefresh()
-    await registerWalletListeners()
-
-    isSyncingWallets.value = false
+    try {
+      // Polygon startup must not wait for Nimiq readiness or recovery.
+      usePolygonSync().init().catch(error => logger.error('Failed to initialize Polygon sync', error))
+      await readinessSyncPromise
+      logger.log('Hydrating wallet state from DB')
+      const restored = await useTransactions().restorePendingOutgoingTransactions()
+      startPeriodicDbRefresh()
+      if (!restored)
+        return
+      await Promise.all([
+        checkHtlcState(),
+        useRemoteSigner().init(),
+      ])
+      const context = getOnlineSyncContext()
+      if (context && await runOnlineSync(context))
+        completedOnlineSyncContext = context
+    }
+    finally {
+      isSyncingWallets.value = false
+    }
   }
 
-  async function registerWalletListeners() {
+  async function registerWalletListeners(
+    context: OnlineSyncContext,
+    isCurrent: () => boolean = () => isOnlineSyncContextCurrent(context),
+  ) {
     await removeListener(pendingDrainHeadListener)
     await removeListener(updatesHeadListener)
     await removeListener(localTransactionListener)
     pendingDrainHeadListener = undefined
     updatesHeadListener = undefined
     localTransactionListener = undefined
+    if (!isCurrent())
+      return false
 
-    pendingDrainHeadListener = await client.value?.addHeadChangedListener(async () => {
-      if (headChangePendingDrainLock.value)
+    const registeringClient = context.client
+    const pendingDrainId = await registeringClient.addHeadChangedListener(async () => {
+      if (!isListenerContextCurrent(context) || headChangePendingDrainLock.value)
         return
       headChangePendingDrainLock.value = true
 
@@ -129,28 +199,44 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       }
       headChangePendingDrainLock.value = false
     })
+    if (!isCurrent()) {
+      await registeringClient.removeListener(pendingDrainId)
+      return false
+    }
+    pendingDrainHeadListener = { client: registeringClient, id: pendingDrainId }
 
-    updatesHeadListener = await client.value?.addHeadChangedListener(async () => {
-      if (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
-        await verifyRemoteSignersDb()
-      else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
-        await verifyRemoteSignersDb()
+    const updatesId = await registeringClient.addHeadChangedListener(async () => {
+      if (!isListenerContextCurrent(context))
+        return
 
       if (headChangeUpdatesLock.value)
         return
       headChangeUpdatesLock.value = true
 
-      if (pendingTransactions.value.length > 0) {
-        try {
-          for (const tx of pendingTransactions.value)
-            await updateSingleTransaction(tx.transactionHash)
+      try {
+        // Included payments release the send lock, but still need finality/rejection updates.
+        const unconfirmed = await useConn().query<{ hash: string }[]>(SQLQuery.SelectUnconfirmedNimPayments)
+        if (!isListenerContextCurrent(context)) {
+          headChangeUpdatesLock.value = false
+          return
         }
-        catch (error) {
-          logger.error('Error checking pending transactions', error)
-        }
+        const hashes = new Set([
+          ...pendingTransactions.value.map(tx => tx.transactionHash),
+          ...unconfirmed.map(tx => tx.hash),
+        ])
+        for (const hash of hashes)
+          await updateSingleTransaction(hash)
+      }
+      catch (error) {
+        logger.error('Error checking pending transactions', error)
       }
 
       try {
+        if (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
+          await verifyRemoteSignersDb()
+        else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
+          await verifyRemoteSignersDb()
+
         await updateBalances()
         await handleFunds()
 
@@ -165,20 +251,48 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       }
       headChangeUpdatesLock.value = false
     })
+    if (!isCurrent()) {
+      await registeringClient.removeListener(updatesId)
+      await removeListener(pendingDrainHeadListener)
+      pendingDrainHeadListener = undefined
+      return false
+    }
+    updatesHeadListener = { client: registeringClient, id: updatesId }
 
-    localTransactionListener = await client.value?.addTransactionListener(handleIncomingTransaction, [localAddress.value])
+    const localTransactionId = await registeringClient.addTransactionListener(
+      (tx: PlainTransactionDetails) => {
+        if (!isListenerContextCurrent(context))
+          return
+        return handleIncomingTransaction(tx, context)
+      },
+      [localAddress.value],
+    )
+    if (!isCurrent()) {
+      await registeringClient.removeListener(localTransactionId)
+      await removeListener(pendingDrainHeadListener)
+      await removeListener(updatesHeadListener)
+      pendingDrainHeadListener = undefined
+      updatesHeadListener = undefined
+      return false
+    }
+    localTransactionListener = { client: registeringClient, id: localTransactionId }
+    return true
   }
 
-  async function handleIncomingTransaction(tx: PlainTransactionDetails) {
+  async function handleIncomingTransaction(tx: PlainTransactionDetails, context: OnlineSyncContext) {
+    if (!isListenerContextCurrent(context))
+      return
     logger.log(`📬 New ${tx.state} transaction received`, tx)
 
-    if (tx.sender === localAddress.value.toUserFriendlyAddress() || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
+    if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
       return
 
     if (tx.recipientType === 'staking' && tx.data.type === 'add-stake' && (!remoteAddress.value || tx.sender !== remoteAddress.value.toUserFriendlyAddress()))
       return
 
     const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+    if (!isListenerContextCurrent(context))
+      return
     const hash = tx.transactionHash
     if (dbTxs.some(dbTx => dbTx.hash === hash))
       return
@@ -186,9 +300,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     // Drop drains from our own HTLCs — they'd be mis-recorded as fresh Top-Ups with the drain
     // block's recent timestamp. The proof carries the HTLC creator address; for our chain
     // (including extensions) this is always the local wallet. Foreign HTLC senders stay.
-    if (isOwnHtlcDrain(tx, localAddress.value.toUserFriendlyAddress())) {
+    if (isOwnHtlcDrain(tx, context.owner)) {
       logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
-      await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender)
+      await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender, context)
       return
     }
 
@@ -196,21 +310,86 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
 
     if (nakaBufferAddresses.includes(tx.sender)) {
       logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-      return useTransactions().setNakaTxRefunded(tx.value)
+      if (isListenerContextCurrent(context))
+        await useTransactions().setNakaTxRefunded(tx.value)
+      return
     }
 
     const receipt = await buildTopUpReceipt(tx)
-    useTransactions().addReceiptTransaction(receipt)
+    if (!isListenerContextCurrent(context))
+      return
+    await useTransactions().addReceiptTransaction(receipt, context)
+    if (!isListenerContextCurrent(context))
+      return
     trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)
     // Real-time only: refresh / history paths must NOT fire the notifier.
     void useNotifications().scheduleIncomingPaymentNotification(receipt)
   }
 
-  async function removeListener(listener: number | undefined) {
-    if (listener === undefined)
+  async function removeListener(listener: ListenerHandle | undefined) {
+    if (!listener)
       return
-    await client.value?.removeListener(listener)
+    await listener.client.removeListener(listener.id)
   }
+
+  async function syncAfterReadiness() {
+    if (readinessSyncPromise) {
+      readinessSyncQueued = true
+      return readinessSyncPromise
+    }
+
+    readinessSyncPromise = (async () => {
+      do {
+        readinessSyncQueued = false
+        const context = getOnlineSyncContext()
+        if (!context || (completedOnlineSyncContext && sameWalletContext(context, completedOnlineSyncContext)))
+          continue
+        const isCurrentReadiness = () => !isSyncingWallets.value && isOnlineSyncContextCurrent(context)
+        try {
+          await useRemoteSigner().init()
+          if (!isCurrentReadiness())
+            continue
+          if (!await useTransactions().restorePendingOutgoingTransactions())
+            continue
+          if (!isCurrentReadiness())
+            continue
+
+          const pendingHashes = [
+            ...pendingTransactions.value.map(tx => tx.transactionHash),
+            ...pendingRemoteDrainTxs.value.map(tx => tx.hash),
+          ]
+          await Promise.all([
+            checkHtlcState(),
+            ...pendingHashes.map(hash => updateSingleTransaction(hash)),
+          ])
+          if (await runOnlineSync(context, isCurrentReadiness))
+            completedOnlineSyncContext = context
+        }
+        catch (error) {
+          logger.error('Error completing wallet sync after readiness', error)
+        }
+      } while (readinessSyncQueued)
+    })().finally(() => {
+      readinessSyncPromise = undefined
+    })
+    return readinessSyncPromise
+  }
+
+  watch(
+    [client, consensus, isSyncingWallets],
+    async ([currentClient, currentConsensus, syncing]) => {
+      if (
+        syncing
+        || !hasLocalWallet.value
+        || !currentClient
+        || currentConsensus !== 'established'
+      ) {
+        return
+      }
+      await syncAfterReadiness()
+    },
+    { immediate: true },
+  )
 
   watch(consensus, (newConsensus, oldConsensus) => {
     if (newConsensus === 'established' && (!oldConsensus || oldConsensus === 'syncing'))
@@ -251,18 +430,44 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     }
   }, { immediate: true })
 
-  watch(localHeight, maybeCheckHtlcState)
-
-  watch(remoteAddress, async () => {
-    await removeListener(remoteAddressListener)
-    remoteAddressListener = undefined
-    if (!remoteAddress.value)
+  watch(localHeight, async () => {
+    if (isSyncingWallets.value)
       return
+    await readinessSyncPromise
+    if (isSyncingWallets.value)
+      return
+    await maybeCheckHtlcState()
+  })
 
-    remoteAddressListener = await client.value?.addTransactionListener((tx: PlainTransactionDetails) => {
+  watch([remoteAddress, client, localAddress, networkName, walletContextGeneration], async () => {
+    const registrationGeneration = ++remoteAddressListenerGeneration
+    const previousListener = remoteAddressListener
+    remoteAddressListener = undefined
+    await removeListener(previousListener)
+    const context = getListenerContext()
+    const registeredRemoteAddress = remoteAddress.value
+    if (!registeredRemoteAddress || !context)
+      return
+    const registeredRemoteAddressString = registeredRemoteAddress.toUserFriendlyAddress()
+    const isRegisteredRemoteAddressCurrent = () => remoteAddress.value?.toUserFriendlyAddress() === registeredRemoteAddressString
+
+    const listenerId = await context.client.addTransactionListener(async (tx: PlainTransactionDetails) => {
+      if (!isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent())
+        return
       logger.log(`📬 New transaction from remote received`, tx)
       pendingPaymentTransactions.value.push(tx)
-    }, [remoteAddress.value])
+      try {
+        await updateSingleTransaction(tx.transactionHash, tx)
+      }
+      catch (error) {
+        logger.error('Failed to reconcile remote transaction', { hash: tx.transactionHash, executionResult: tx.executionResult ?? null }, error)
+      }
+    }, [registeredRemoteAddress])
+    if (registrationGeneration !== remoteAddressListenerGeneration || !isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent()) {
+      await context.client.removeListener(listenerId)
+      return
+    }
+    remoteAddressListener = { client: context.client, id: listenerId }
   }, { immediate: true })
 
   return {
