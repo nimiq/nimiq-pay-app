@@ -46,5 +46,33 @@ jobs:
           --device "Samsung Galaxy Tab S9-13.0"
           --flow flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml
           --format HTML-DETAILED
-          --output nimiq-pay-tests/tests_output/maestro_report.html
+          --output ./maestro-reports
+
+      - name: "Publish test results on Maestro Results Repo"
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
+          external_repository: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
+          publish_dir: './maestro-reports'
+          keep_files: true
+
+  slackNotification:
+    if: always()
+    needs: run_browserstack_maestro
+    name: Automation Tests Status
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_ICON: https://github.com/rtCamp.png?size=48
+        SLACK_MESSAGE: "Maestro Test Suite results: ${{ job.status }} URL: https://maestrowalletresults.netlify.app/"
+        SLACK_TITLE: Automation Tests Status
+        SLACK_USERNAME: Francisco_Diaz
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
 

@@ -14,3 +14,38 @@ output.onboarding = {
 output.home = {
     payTitle: "Pay"
 };
+
+output.navigation = {
+    openMenuBtn: "Open menu",
+    settingsBtn: "Settings",
+    topUpBtn: "Top Up",
+    withdrawBtn: "Withdraw",
+    closeFlowModalBtn: "close flow modal"
+};
+
+output.settings = {
+    title: "Settings",
+    language: "Language",
+    currency: "Currency",
+    minimumNimDecimals: "Minimum NIM Decimals",
+    autoDepositThreshold: "Auto-deposit threshold.*",
+    pushNotifications: "Receive Push Notifications",
+    reduceAnimations: "Reduce Animations",
+    changePin: "Change PIN"
+};
+
+output.topUp = {
+    title: "Top up address",
+    addressPrefix: "NQ.*",
+    copyAddress: "Copy address"
+};
+
+output.withdraw = {
+    title: "Withdraw",
+    usd: "USD",
+    nim: ".*NIM",
+    selectAddress: "Select an address.*",
+    amount25: "$25",
+    amount50: "$50",
+    amount100: "$100"
+};

@@ -4,24 +4,26 @@ tags:
   - franciscoTest
 
 ---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
 - runFlow: ../../subflows/create_account.yaml
 
-- tapOn: Open menu
+- tapOn: ${output.navigation.openMenuBtn}
 - extendedWaitUntil:
-    visible: Settings
+    visible: ${output.settings.title}
     timeout: 5000
-- tapOn: Settings
+- tapOn: ${output.navigation.settingsBtn}
 - extendedWaitUntil:
-    visible: Settings
+    visible: ${output.settings.title}
     timeout: 5000
 
-- assertVisible: Language
-- assertVisible: Currency
-- assertVisible: Minimum NIM Decimals
+- assertVisible: ${output.settings.language}
+- assertVisible: ${output.settings.currency}
+- assertVisible: ${output.settings.minimumNimDecimals}
 - assertVisible:
-    text: 'Auto-deposit threshold.*'
-- assertVisible: Receive Push Notifications
-- assertVisible: Reduce Animations
-- assertVisible: Change PIN
+    text: ${output.settings.autoDepositThreshold}
+- assertVisible: ${output.settings.pushNotifications}
+- assertVisible: ${output.settings.reduceAnimations}
+- assertVisible: ${output.settings.changePin}
 
 - stopApp

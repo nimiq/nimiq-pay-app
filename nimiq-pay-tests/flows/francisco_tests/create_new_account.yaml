@@ -4,36 +4,38 @@ tags:
   - franciscoTest
 
 ---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
 - launchApp:
     clearState: true
 
-- tapOn: "Get Started"
+- tapOn: ${output.launchScreen.getStartedBtn}
 - extendedWaitUntil:
-    visible: Choose a PIN
+    visible: ${output.onboarding.choosePinTitle}
     timeout: 10000
 - inputText: '1111'
 - extendedWaitUntil:
-    visible: Confirm your PIN
+    visible: ${output.onboarding.confirmPinTitle}
     timeout: 10000
 - inputText: '1111'
 - waitForAnimationToEnd
 
 - runFlow:
     when:
-      visible: Biometric Authentication
+      visible: ${output.onboarding.biometricTitle}
     commands:
-      - tapOn: "Skip for now"
+      - tapOn: ${output.onboarding.skipForNowBtn}
       - waitForAnimationToEnd
 
 - runFlow:
     when:
-      visible: Enable notifications
+      visible: ${output.onboarding.enableNotificationsTitle}
     commands:
-      - tapOn: "Skip for now"
+      - tapOn: ${output.onboarding.skipForNowBtn}
       - waitForAnimationToEnd
 
 - extendedWaitUntil:
-    visible: Pay
+    visible: ${output.home.payTitle}
     timeout: 10000
 
 - stopApp
