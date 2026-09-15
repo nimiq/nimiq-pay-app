@@ -2,6 +2,7 @@
 import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
 import { App } from '@capacitor/app'
 import { Device } from '@capacitor/device'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonNote, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { computedAsync, onLongPress, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -44,12 +45,21 @@ const { unregisterNotifications, registerNotifications, requestLocalNotification
 const htmlRefHook = ref<HTMLElement | null>(null)
 const nimDecimalsOptions = [0, 2, DECIMALS.NIM]
 
-const appVersion = computedAsync(async () => {
+const bundleVersion = computedAsync(async () => {
+  try {
+    const version = (await CapacitorUpdater.current()).bundle.version
+    if (version)
+      return version
+  }
+  catch (e) {
+    logger.error('Error getting bundle version:', e)
+  }
+
   try {
     return (await App.getInfo()).version
   }
   catch (e) {
-    logger.error('Error getting app version:', e)
+    logger.error('Error getting native version:', e)
     return '0.0.0'
   }
 })
@@ -67,7 +77,7 @@ async function onLongPressCallback() {
 
   logger.log('Remote signers:', await getAllRemoteSigners())
   logger.log('Device Info:', await Device.getInfo())
-  logger.log(`Nimiq Pay v${appVersion.value}`)
+  logger.log(`Nimiq Pay bundle v${bundleVersion.value}`)
   logger.sendReport()
 }
 
@@ -200,7 +210,7 @@ onBeforeMount(updateBiometryInfo)
           <IonLabel>{{ $t('Delete Cryptocity Points account') }}</IonLabel>
         </IonItem>
       </IonList>
-      <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60" @click="handleVersionClick">v{{ appVersion }}</code>
+      <code ref="htmlRefHook" class="mt-auto p-4 pb-0 text-sm opacity-60" @click="handleVersionClick">v{{ bundleVersion }}</code>
     </div>
   </ModalTemplate>
 </template>
