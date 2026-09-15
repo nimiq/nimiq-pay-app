@@ -17,17 +17,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
-    name: Publish production OTA
+  build:
+    name: Build and verify OTA
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     environment:
-      name: production
-
+      name: ota-build
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
     env:
       APP_ID: ${{ vars.APP_ID }}
-      UPDATE_CDN: ${{ vars.UPDATE_CDN }}
 
       VITE_ENABLE_NAKA: ${{ vars.VITE_ENABLE_NAKA }}
       VITE_ENABLE_BLUECODE: ${{ vars.VITE_ENABLE_BLUECODE }}
@@ -42,21 +41,14 @@ jobs:
       VITE_BNB_RPC_URL: ${{ vars.VITE_BNB_RPC_URL }}
       VITE_SEPOLIA_RPC_URL: ${{ vars.VITE_SEPOLIA_RPC_URL }}
 
-      R2_BUCKET: ${{ vars.R2_BUCKET }}
-      R2_ENDPOINT: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_REGION: auto
-      AWS_DEFAULT_REGION: auto
-
     steps:
-
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           path: nimiq-pay-app
+          persist-credentials: false
 
       - name: Validate OTA tag
         id: version
@@ -83,9 +75,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin main --no-tags
-
-          TAG_COMMIT="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+          TAG_COMMIT="$(git rev-parse HEAD)"
 
           if ! git merge-base --is-ancestor \
             "$TAG_COMMIT" \
@@ -134,29 +124,16 @@ jobs:
           echo "Compatible native versions:"
           echo "$NATIVE_VERSIONS"
 
-      - name: Validate production settings
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Validate build settings
         run: |
           set -euo pipefail
-
-          for NAME in APP_ID UPDATE_CDN R2_BUCKET CLOUDFLARE_ACCOUNT_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
-            if [ -z "${!NAME}" ]; then
-              echo "ERROR: Missing production setting: $NAME"
-              exit 1
-            fi
-          done
-
-          if [[ "$UPDATE_CDN" != https://* ]]; then
-            echo "ERROR: UPDATE_CDN must use HTTPS."
-            exit 1
-          fi
+          : "${APP_ID:?Missing ota-build APP_ID}"
 
           # The infrastructure test targets only the synthetic native version 0.0.0.
           if ! jq -e '.compatibleNativeVersions == ["0.0.0"]' ota.json > /dev/null; then
             for NAME in VITE_WALKIE_TALKIE_URL VITE_WALKIE_TALKIE_API_KEY; do
               if [ -z "${!NAME}" ]; then
-                echo "ERROR: Missing production setting: $NAME"
+                echo "ERROR: Missing ota-build setting: $NAME"
                 exit 1
               fi
             done
@@ -170,12 +147,12 @@ jobs:
           fi
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
         with:
           package_json_file: nimiq-pay-app/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: pnpm
@@ -211,104 +188,175 @@ jobs:
       - name: Build application
         run: pnpm build:web
 
-      - name: Create and encrypt OTA bundle
-        id: bundle
+      - name: Create unsigned OTA bundle
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          CAPGO_PRIVATE_KEY: ${{ secrets.CAPGO_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/capgo bundle zip \
+            "$APP_ID" --bundle "$VERSION" --name bundle.zip --key-v2 --json > bundle.json
+          RAW_CHECKSUM="$(jq -er '.checksum | select(test("^[0-9a-f]{64}$"))' bundle.json)"
+          printf '%s  %s\n' "$RAW_CHECKSUM" bundle.zip | sha256sum --check
+
+      - name: Name build artifact
+        id: artifact
+        run: echo "name=ota-unsigned-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload unsigned bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: nimiq-pay-app/bundle.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  publish:
+    name: Sign and publish production OTA
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+    env:
+      UPDATE_CDN: ${{ vars.UPDATE_CDN }}
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+      R2_ENDPOINT: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      AWS_REGION: auto
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          path: nimiq-pay-app
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /.capgo_key_v2.pub
+            /ota.json
+            /scripts/encrypt-ota.mjs
+
+      - name: Validate OTA tag
+        id: version
         run: |
           set -euo pipefail
 
-          : "${CAPGO_PRIVATE_KEY:?CAPGO_PRIVATE_KEY is missing}"
+          TAG="$GITHUB_REF_NAME"
 
-          # Keep the private key outside the repository and build output.
-          umask 077
-          OTA_KEY_FILE="$(mktemp "$RUNNER_TEMP/capgo-private-key.XXXXXX")"
-          trap 'rm -f "$OTA_KEY_FILE"' EXIT
-
-          printf '%s\n' "$CAPGO_PRIVATE_KEY" > "$OTA_KEY_FILE"
-          unset CAPGO_PRIVATE_KEY
-
-          RAW_ZIP="bundle-${VERSION}.zip"
-
-          BUNDLE_JSON="$(
-            ./node_modules/.bin/capgo bundle zip \
-              "$APP_ID" \
-              --bundle "$VERSION" \
-              --name "$RAW_ZIP" \
-              --key-v2 \
-              --json
-          )"
-
-          RAW_CHECKSUM="$(
-            printf '%s' "$BUNDLE_JSON" |
-              jq -er '.checksum | select(type == "string" and length > 0)'
-          )"
-
-          if [ ! -s "$RAW_ZIP" ]; then
-            echo "ERROR: Expected ZIP does not exist or is empty: $RAW_ZIP"
+          if [[ ! "$TAG" =~ ^ota-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid OTA tag: $TAG"
+            echo "Expected format: ota-v2.10.3"
             exit 1
           fi
 
-          # Verify the original ZIP before encrypting it.
-          if [[ ! "$RAW_CHECKSUM" =~ ^[0-9a-f]{64}$ ]]; then
-            echo "ERROR: Capgo did not return a SHA-256 checksum."
+          VERSION="${TAG#ota-v}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          echo "OTA tag:     $TAG"
+          echo "OTA version: $VERSION"
+
+      - name: Verify tag belongs to main
+        id: git
+        run: |
+          set -euo pipefail
+
+          TAG_COMMIT="$(git rev-parse HEAD)"
+
+          if ! git merge-base --is-ancestor \
+            "$TAG_COMMIT" \
+            "origin/main"
+          then
+            echo "ERROR: $GITHUB_REF_NAME is not based on main."
+            echo "Tagged commit: $TAG_COMMIT"
             exit 1
           fi
 
-          printf '%s  %s\n' "$RAW_CHECKSUM" "$RAW_ZIP" |
-            sha256sum --check
+          echo "commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
 
-          ENCRYPTED_JSON="$(
-            ./node_modules/.bin/capgo bundle encrypt \
-              "$RAW_ZIP" \
-              "$RAW_CHECKSUM" \
-              --key "$OTA_KEY_FILE" \
-              --json
-          )"
+          echo "Tagged commit is contained in main:"
+          echo "$TAG_COMMIT"
 
-          ENCRYPTED_ZIP="$(
-            printf '%s' "$ENCRYPTED_JSON" |
-              jq -er '.filename | select(type == "string" and length > 0)'
-          )"
+      - name: Validate OTA configuration
+        id: ota
+        run: |
+          set -euo pipefail
 
-          CAPGO_CHECKSUM="$(
-            printf '%s' "$ENCRYPTED_JSON" |
-              jq -er '.checksum | select(type == "string" and length > 0)'
-          )"
-
-          SESSION_KEY="$(
-            printf '%s' "$ENCRYPTED_JSON" |
-              jq -er '.ivSessionKey | select(type == "string" and length > 0)'
-          )"
-
-          if [ ! -s "$ENCRYPTED_ZIP" ]; then
-            echo "ERROR: Encrypted bundle is missing or empty."
+          if [ ! -f ota.json ]; then
+            echo "ERROR: ota.json does not exist."
             exit 1
           fi
 
-          # CI verifies the encrypted bytes served by R2 and the Worker.
-          # Capgo receives its encoded checksum separately in the manifest.
-          UPLOAD_SHA256="$(
-            sha256sum "$ENCRYPTED_ZIP" |
-              awk '{print $1}'
+          if ! jq -e '
+            .compatibleNativeVersions |
+            type == "array" and
+            length > 0 and
+            all(.[];
+              type == "string" and
+              test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")
+            )
+          ' ota.json > /dev/null; then
+            echo "ERROR: ota.json must list compatible native versions in X.Y.Z format."
+            exit 1
+          fi
+
+          NATIVE_VERSIONS="$(
+            jq -c '.compatibleNativeVersions' ota.json
           )"
 
+          echo "native_versions=$NATIVE_VERSIONS" \
+            >> "$GITHUB_OUTPUT"
+
+          echo "Compatible native versions:"
+          echo "$NATIVE_VERSIONS"
+
+      - name: Validate publishing settings
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          : "${R2_BUCKET:?Missing production R2_BUCKET}"
+          : "${CLOUDFLARE_ACCOUNT_ID:?Missing production CLOUDFLARE_ACCOUNT_ID}"
+          if [[ "$UPDATE_CDN" != https://* ]]; then
+            echo "ERROR: UPDATE_CDN must use HTTPS."
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      # Download only data into a separate directory; never execute files from the build runner.
+      - name: Download unsigned bundle
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+          path: ${{ runner.temp }}/ota-input
+
+      - name: Encrypt and sign OTA bundle
+        id: bundle
+        env:
+          CAPGO_PRIVATE_KEY: ${{ secrets.CAPGO_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          node scripts/encrypt-ota.mjs "$RUNNER_TEMP/ota-input/bundle.zip" bundle-encrypted.zip > encrypted.json
           {
-            echo "zip=$ENCRYPTED_ZIP"
-            echo "checksum=$CAPGO_CHECKSUM"
-            echo "session_key=$SESSION_KEY"
-            echo "upload_sha256=$UPLOAD_SHA256"
+            echo "zip=bundle-encrypted.zip"
+            jq -er '"checksum=" + .checksum, "session_key=" + .session_key, "upload_sha256=" + .upload_sha256' encrypted.json
           } >> "$GITHUB_OUTPUT"
-
-          echo "Encrypted bundle: $ENCRYPTED_ZIP"
-          echo "Upload SHA-256: $UPLOAD_SHA256"
 
       - name: Verify R2 client
         run: aws --version
 
       - name: Upload immutable bundle to R2
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           VERSION: ${{ steps.version.outputs.version }}
           ZIP_NAME: ${{ steps.bundle.outputs.zip }}
           UPLOAD_SHA256: ${{ steps.bundle.outputs.upload_sha256 }}
@@ -443,6 +491,9 @@ jobs:
           cat production.json
 
       - name: Publish production manifest
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           set -euo pipefail
 
