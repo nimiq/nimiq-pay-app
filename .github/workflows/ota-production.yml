@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    working-directory: nimiq-pay-app
+
 concurrency:
   group: nimiq-pay-ota-production
   cancel-in-progress: false
@@ -52,6 +56,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          path: nimiq-pay-app
 
       - name: Validate OTA tag
         id: version
@@ -166,12 +171,18 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
+        with:
+          package_json_file: nimiq-pay-app/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
+          cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
+
+      - name: Setup provider packages
+        uses: ./nimiq-pay-app/.github/actions/setup-provider
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

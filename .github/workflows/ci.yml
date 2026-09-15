@@ -5,16 +5,26 @@ on:
     branches: [main]
   pull_request:
 
+defaults:
+  run:
+    working-directory: nimiq-pay-app
+
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          path: nimiq-pay-app
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: nimiq-pay-app/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: pnpm
+          cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
+      - uses: ./nimiq-pay-app/.github/actions/setup-provider
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
 
@@ -22,11 +32,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          path: nimiq-pay-app
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: nimiq-pay-app/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: pnpm
+          cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
+      - uses: ./nimiq-pay-app/.github/actions/setup-provider
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run
 
@@ -35,10 +51,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          path: nimiq-pay-app
       - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: nimiq-pay-app/package.json
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*
           cache: pnpm
+          cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
+      - uses: ./nimiq-pay-app/.github/actions/setup-provider
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:web

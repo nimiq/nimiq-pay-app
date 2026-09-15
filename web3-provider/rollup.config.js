@@ -5,6 +5,13 @@ import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 export default {
   input: 'src/provider.ts',
+  onwarn(warning, warn) {
+    // The injected bundle must contain its dependencies, with no runtime globals.
+    if (warning.code === 'UNRESOLVED_IMPORT') {
+      throw new Error(warning.message);
+    }
+    warn(warning);
+  },
   output: {
     file: 'dist/provider.js',
     format: 'iife',
