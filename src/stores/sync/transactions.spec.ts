@@ -25,6 +25,28 @@ describe('useSyncTransactions', () => {
   })
 
   describe('updateSingleTransaction', () => {
+    it.each([false, true])('applies listener executionResult=%s over an earlier result', async (executionResult) => {
+      const { useTransactions } = await import('@/stores/transactions')
+      ;(useTransactions().transactions as any[]).push({
+        hash: 'h1',
+        status: executionResult ? 'failed' : 'included',
+        executionResult: !executionResult,
+      })
+      const { useSyncTransactions } = await import('./transactions')
+      const tx = { transactionHash: 'h1', state: 'included', executionResult, timestamp: 12 }
+
+      await useSyncTransactions().updateSingleTransaction('h1', tx as any)
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({
+        hash: 'h1',
+        status: executionResult ? 'included' : 'failed',
+        timestamp: 12,
+        executionResult,
+      })
+      expect(state.client.getTransaction).not.toHaveBeenCalled()
+      expect(state.getTransactionState).not.toHaveBeenCalled()
+    })
+
     it('skips when !hasLocalWallet', async () => {
       state.hasLocalWallet = false
       const { useSyncTransactions } = await import('./transactions')
@@ -93,7 +115,7 @@ describe('useSyncTransactions', () => {
 
       await useSyncTransactions().updateSingleTransaction('h1')
 
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 12 })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 12, executionResult: false })
     })
 
     it.each(['failed', 'invalidated'] as const)('does not fetch a transaction already marked %s', async (status) => {
@@ -151,7 +173,7 @@ describe('useSyncTransactions', () => {
 
       await useSyncTransactions().updateSingleTransaction('h1')
 
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: executionResult ? 'included' : 'failed', timestamp: 12 })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: executionResult ? 'included' : 'failed', timestamp: 12, executionResult })
     })
 
     it('falls back to remote-signer API when client.getTransaction throws', async () => {
@@ -258,7 +280,7 @@ describe('useSyncTransactions', () => {
       statusWrite.resolve()
       await update
 
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: expectedState, timestamp: 12 })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: expectedState, timestamp: 12, executionResult: transaction.executionResult })
       expect(state.updateTransactionStatus).toHaveBeenCalledBefore(removePendingSpy)
       expect(syncState.pendingTransactions).toHaveLength(0)
     })
@@ -1243,6 +1265,19 @@ describe('useSyncTransactions', () => {
   })
 
   describe('updateTransactionsInDb', () => {
+    it.each(['client', 'cosigner'])('records successful execution from %s even when inclusion and timestamp are unchanged', async (source) => {
+      state.consensus = source === 'client' ? 'established' : 'syncing'
+      state.query.mockResolvedValue([{ hash: 'h1', status: 'included', timestamp: 5 }])
+      const tx = { state: 'included', timestamp: 5, value: 1, executionResult: true }
+      state.client.getTransaction.mockResolvedValue(tx)
+      state.getTransactionState.mockResolvedValue({ data: tx, error: undefined })
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionsInDb()
+
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'included', timestamp: 5, executionResult: true })
+    })
+
     it.each(['client', 'cosigner'])('preserves failures recorded during a %s batch lookup unless execution succeeds', async (source) => {
       for (const status of ['failed', 'invalidated']) {
         for (const executionResult of [undefined, false, true]) {
@@ -1269,7 +1304,7 @@ describe('useSyncTransactions', () => {
           if (executionResult === undefined)
             expect(state.updateTransactionStatus).not.toHaveBeenCalled()
           else
-            expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'race', status: executionResult ? 'included' : 'failed', timestamp: 5 })
+            expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'race', status: executionResult ? 'included' : 'failed', timestamp: 5, executionResult })
         }
       }
     })
@@ -1298,7 +1333,7 @@ describe('useSyncTransactions', () => {
 
       await useSyncTransactions().updateTransactionsInDb()
 
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5 })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5, executionResult: false })
     })
 
     it('ignores USDT rows', async () => {
@@ -1403,7 +1438,7 @@ describe('useSyncTransactions', () => {
 
       await useSyncTransactions().updateTransactionsInDb()
 
-      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5 })
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({ hash: 'h1', status: 'failed', timestamp: 5, executionResult: false })
     })
 
     it('skips updateTransactionStatus when state and timestamp are unchanged', async () => {

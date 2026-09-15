@@ -451,11 +451,17 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     const registeredRemoteAddressString = registeredRemoteAddress.toUserFriendlyAddress()
     const isRegisteredRemoteAddressCurrent = () => remoteAddress.value?.toUserFriendlyAddress() === registeredRemoteAddressString
 
-    const listenerId = await context.client.addTransactionListener((tx: PlainTransactionDetails) => {
+    const listenerId = await context.client.addTransactionListener(async (tx: PlainTransactionDetails) => {
       if (!isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent())
         return
       logger.log(`📬 New transaction from remote received`, tx)
       pendingPaymentTransactions.value.push(tx)
+      try {
+        await updateSingleTransaction(tx.transactionHash, tx)
+      }
+      catch (error) {
+        logger.error('Failed to reconcile remote transaction', { hash: tx.transactionHash, executionResult: tx.executionResult ?? null }, error)
+      }
     }, [registeredRemoteAddress])
     if (registrationGeneration !== remoteAddressListenerGeneration || !isListenerContextCurrent(context) || !isRegisteredRemoteAddressCurrent()) {
       await context.client.removeListener(listenerId)

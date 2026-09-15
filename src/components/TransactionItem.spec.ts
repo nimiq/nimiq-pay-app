@@ -1,3 +1,4 @@
+import type { ExternalTransaction } from '@/types/transactions'
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
@@ -114,7 +115,7 @@ describe('transactionItem', () => {
     expect(wrapper.get('[data-testid="crypto-amount"]').text()).toBe('USDT')
   })
 
-  it.each(['included', 'mined'] as const)('shows %s transactions as confirming until final', async (status) => {
+  it.each(['included', 'mined'] as const)('shows %s payments without execution evidence as confirming', async (status) => {
     const { default: TransactionItem } = await import('./TransactionItem.vue')
     const wrapper = mount(TransactionItem, {
       props: {
@@ -143,6 +144,55 @@ describe('transactionItem', () => {
 
     expect(wrapper.classes()).toContain('opacity-60')
     expect(wrapper.text()).toContain('Confirming')
+  })
+
+  it.each([
+    { transfer: Transfer.UserPayment },
+    {
+      transfer: Transfer.UserPaymentToMerchant,
+      merchantName: 'Merchant',
+      merchantCategory: MerchantCategory.Shop,
+      paymentMethod: PaymentMethod.NIM,
+      paymentRef: 'ref',
+      rail: Rail.Unknown,
+      fiatAmount: 25,
+      fiatFeeAmount: 0,
+      fiatCurrency: 'USD',
+      isCashbackClaimed: true,
+    },
+  ] as const)('settles $transfer once execution succeeds before finality', async (payment) => {
+    const { default: TransactionItem } = await import('./TransactionItem.vue')
+    const tx: ExternalTransaction = {
+      ...payment,
+      title: 'Payment',
+      timestamp: 123,
+      amount: 2500000,
+      fee: 0,
+      hash: 'payment',
+      sender: 'sender',
+      recipient: 'recipient',
+      status: 'included',
+      proofSize: 0,
+      message: '',
+      asset: Asset.NIM,
+      chain: Chain.Nimiq,
+    }
+    const wrapper = mount(TransactionItem, { props: { tx }, global: { stubs: { IonRippleEffect: true } } })
+
+    expect(wrapper.classes()).toContain('opacity-60')
+    expect(wrapper.text()).toContain('Confirming')
+
+    await wrapper.setProps({ tx: { ...tx, executionResult: true } })
+    expect(wrapper.classes()).not.toContain('opacity-60')
+    expect(wrapper.text()).not.toContain('Confirming')
+
+    await wrapper.setProps({ tx: { ...tx, status: 'pending', executionResult: undefined } })
+    expect(wrapper.classes()).toContain('opacity-60')
+    expect(wrapper.text()).toContain('Pending')
+
+    await wrapper.setProps({ tx: { ...tx, status: 'failed', executionResult: false } })
+    expect(wrapper.classes()).toContain('line-through')
+    expect(wrapper.text()).toContain('Invalid')
   })
 
   it.each(['included', 'mined', 'confirmed'] as const)('keeps incoming %s receipts settled in the list', async (status) => {

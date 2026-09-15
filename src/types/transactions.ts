@@ -97,6 +97,8 @@ export interface BaseTransaction {
   recipient: string
   recipientType?: Nimiq.AccountType
   status: AppTransactionState
+  // Transient execution evidence for the unfinalized payment indicator.
+  executionResult?: boolean
   timestamp: number | undefined
   amount: number
   fee: number

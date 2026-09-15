@@ -686,8 +686,8 @@ describe('useSyncLifecycle', () => {
       expect(state.client.addTransactionListener).not.toHaveBeenCalled()
     })
 
-    it('pushes incoming remote transactions onto pendingPaymentTransactions', async () => {
-      let remoteListener: ((tx: any) => void) | undefined
+    it.each([false, true, undefined])('reconciles listener executionResult=%s without another lookup', async (executionResult) => {
+      let remoteListener: ((tx: any) => Promise<void>) | undefined
       state.client.addTransactionListener.mockImplementation(async (fn: any, addresses?: any[]) => {
         if (addresses?.[0]?.toUserFriendlyAddress?.() === 'NQ11 TEST REMOTE ADDRESS')
           remoteListener = fn
@@ -698,10 +698,22 @@ describe('useSyncLifecycle', () => {
       await Promise.resolve()
       await Promise.resolve()
       expect(remoteListener).toBeDefined()
-      const tx = { transactionHash: 'remote-tx' }
-      remoteListener!(tx)
       const { useSyncState } = await import('./state')
-      expect(useSyncState().pendingPaymentTransactions).toContainEqual(tx)
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'remote-tx' } as any)
+      const tx = { transactionHash: 'remote-tx', state: 'included', timestamp: 123, executionResult }
+      await remoteListener!(tx)
+
+      expect(syncState.pendingPaymentTransactions).toContainEqual(tx)
+      expect(state.updateTransactionStatus).toHaveBeenCalledWith({
+        hash: 'remote-tx',
+        status: executionResult === false ? 'failed' : 'included',
+        timestamp: 123,
+        executionResult,
+      })
+      expect(syncState.pendingTransactions).toEqual([])
+      expect(state.client.getTransaction).not.toHaveBeenCalled()
+      expect(state.getTransactionState).not.toHaveBeenCalled()
     })
 
     it('ignores local and remote callbacks after wallet context becomes stale', async () => {

@@ -395,6 +395,30 @@ describe('useTransactions', () => {
     expect(seenStatuses).toEqual(['confirmed'])
   })
 
+  it.each([true, false, undefined])('preserves executionResult=%s unless an update provides a result', async (executionResult) => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    await store.addWithdrawalTransaction({ hash: 'execution', status: 'pending', timestamp: 123, asset: Asset.NIM } as any)
+    await store.updateTransactionStatus({ hash: 'execution', status: 'included', timestamp: 123, executionResult })
+
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.UpdateTxStatus, ['included', 123, 'execution'])
+    expect(store.transactions.find(tx => tx.hash === 'execution')).toMatchObject({ status: 'included', executionResult })
+
+    state.query.mockResolvedValue([{ hash: 'execution', status: 'included', timestamp: 123, asset: Asset.NIM }])
+    await store.refreshFromDb()
+    expect(store.transactions.find(tx => tx.hash === 'execution')?.executionResult).toBe(executionResult)
+
+    await store.updateTransactionStatus({ hash: 'execution', status: 'included', timestamp: 123 })
+    expect(store.transactions.find(tx => tx.hash === 'execution')?.executionResult).toBe(executionResult)
+
+    await store.updateTransactionStatus({ hash: 'execution', status: 'included', timestamp: 123, executionResult: !executionResult })
+    expect(store.transactions.find(tx => tx.hash === 'execution')?.executionResult).toBe(!executionResult)
+
+    await store.updateTransactionStatus({ hash: 'execution', status: 'confirmed', timestamp: 123, executionResult: true })
+    expect(store.transactions.find(tx => tx.hash === 'execution')).toMatchObject({ status: 'confirmed', executionResult: true })
+  })
+
   it('persists validity evidence when importing a payment from history', async () => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()

@@ -621,6 +621,7 @@ export const useTransactions = defineStore('transactions', () => {
         || details?.state === 'invalidated'
         || details?.state === 'expired'
       ) {
+        logger.warn('Transaction rejected', { hash: staged.tx.hash, state: details.state, executionResult: details.executionResult ?? null })
         const errorMessage = i18n.t('Transaction invalid')
         if (!remoteSigner.isWalletContextCurrent(sendContext))
           return { outcome: 'rejected', error: errorMessage }
@@ -687,6 +688,7 @@ export const useTransactions = defineStore('transactions', () => {
               hash: staged.tx.hash,
               status: details.state,
               timestamp: details.timestamp,
+              executionResult: details.executionResult,
             })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
@@ -706,7 +708,7 @@ export const useTransactions = defineStore('transactions', () => {
         }
       }
 
-      logger.log('✈️ Sent transaction', staged.plain)
+      logger.log('✈️ Sent transaction', staged.plain, { state: details?.state ?? null, executionResult: details?.executionResult ?? null })
       logger.log('✈️ Sent transaction', staged.tx)
 
       try {
@@ -835,6 +837,7 @@ export const useTransactions = defineStore('transactions', () => {
     dbTxs.forEach((tx) => {
       tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
       tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
+      tx.executionResult = transactions.value.find(existing => existing.hash === tx.hash && existing.status === tx.status)?.executionResult
     })
     const knownHashes = new Set(dbTxs.map(tx => tx.hash))
     // Keep any in-memory transactions not yet in DB (e.g. just-added pending txs)
@@ -882,7 +885,7 @@ export const useTransactions = defineStore('transactions', () => {
     },
     meta?: Record<string, any>,
   ) {
-    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer })
+    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
     const newTx = {
       transfer,
       amount: tx.value,
@@ -892,6 +895,7 @@ export const useTransactions = defineStore('transactions', () => {
       recipientType: toAccountType(tx.recipientType),
       hash: tx.transactionHash,
       status: tx.state,
+      executionResult: tx.executionResult,
       timestamp: tx.timestamp,
       validityStartHeight: tx.validityStartHeight,
       title: 'Payment', // translated at display time
@@ -965,7 +969,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp }: { hash: string, status: AppTransactionState, timestamp: number | undefined }) {
+  async function updateTransactionStatus({ hash, status, timestamp, executionResult }: { hash: string, status: AppTransactionState, timestamp: number | undefined, executionResult?: boolean }) {
     await run(SQLQuery.UpdateTxStatus, [status, timestamp ?? null, hash])
     const index = transactions.value.findIndex(tx => tx.hash === hash)
     if (index >= 0) {
@@ -973,6 +977,7 @@ export const useTransactions = defineStore('transactions', () => {
       nextTransactions[index] = {
         ...nextTransactions[index],
         status,
+        executionResult: executionResult ?? nextTransactions[index].executionResult,
         timestamp: timestamp ?? nextTransactions[index].timestamp,
       }
       transactions.value = nextTransactions.sort(

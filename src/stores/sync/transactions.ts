@@ -104,7 +104,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     return true
   }
 
-  async function updateSingleTransaction(hash: string) {
+  async function updateSingleTransaction(hash: string, observedTransaction?: PlainTransactionDetails) {
     if (!hasLocalWallet.value)
       return
 
@@ -112,17 +112,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     if (!pendingContext)
       return
     const context: PendingTransactionContext = pendingContext
-
-    const current = useTransactions().transactions.find(transaction => transaction.hash === hash)
-    if (current && ['failed', 'invalidated'].includes(current.status)) {
-      // Batch refresh can persist failure before the pending-send entry is reconciled.
-      removeCurrentPendingHash(hash, context)
-      return
-    }
-
-    const currentPending = pendingTransactions.value.find(transaction => transaction.transactionHash === hash)
-      ?? pendingRemoteDrainTxs.value.find(transaction => transaction.hash === hash)
-    const pending = currentPending ? { ...currentPending } : undefined
 
     async function reconcile(transaction: { state: AppTransactionState | 'unknown', timestamp?: number, executionResult?: boolean, validityStartHeight?: number }) {
       if (transaction.state === 'unknown')
@@ -150,15 +139,30 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           currentPending.validityStartHeight = transaction.validityStartHeight
       }
 
-      await updateTransactionStatus({ hash, status: state, timestamp: transaction.timestamp })
+      await updateTransactionStatus({ hash, status: state, timestamp: transaction.timestamp, executionResult: transaction.executionResult })
       if (!isPendingTransactionContextCurrent(context))
         return
 
       if (RESOLVED_TRANSACTION_STATES.has(state)) {
-        logger.log(`Removing transaction ${hash} from pending transactions`)
+        logger.log(`Removing transaction ${hash} from pending transactions`, { state, executionResult: transaction.executionResult ?? null })
         removeCurrentPendingHash(hash, context)
       }
     }
+
+    // Listener events already contain execution evidence; a fresh lookup can miss it before finality.
+    if (observedTransaction)
+      return reconcile(observedTransaction)
+
+    const current = useTransactions().transactions.find(transaction => transaction.hash === hash)
+    if (current && ['failed', 'invalidated'].includes(current.status)) {
+      // Batch refresh can persist failure before the pending-send entry is reconciled.
+      removeCurrentPendingHash(hash, context)
+      return
+    }
+
+    const currentPending = pendingTransactions.value.find(transaction => transaction.transactionHash === hash)
+      ?? pendingRemoteDrainTxs.value.find(transaction => transaction.hash === hash)
+    const pending = currentPending ? { ...currentPending } : undefined
 
     if (context.client && consensus.value === 'established') {
       try {
@@ -286,7 +290,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
               return
             }
 
-            logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`)
+            logger.log(`📬 New ${tx.state} transaction received with ${usePrice(tx.value).crypto.formatted}`, { hash: tx.transactionHash, executionResult: tx.executionResult ?? null })
             if (tx.senderType === 'staking') {
               if (isLocalCurrent())
                 handleStakingTxs(tx)
@@ -529,9 +533,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             && !['failed', 'invalidated'].includes(state) && executionResult !== true) {
             return
           }
-          if ((dbTx.status !== state) || (dbTx.timestamp !== timestamp)) {
-            logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${usePrice(amount).crypto.formatted}`)
-            updateTransactionStatus({ hash: dbTx.hash, status: state, timestamp })
+          if (dbTx.status !== state || dbTx.timestamp !== timestamp || (executionResult !== undefined && current?.executionResult !== executionResult)) {
+            logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${usePrice(amount).crypto.formatted}`, { executionResult: executionResult ?? null })
+            updateTransactionStatus({ hash: dbTx.hash, status: state, timestamp, executionResult })
           }
         }
         catch (error) {
