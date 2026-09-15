@@ -1,0 +1,393 @@
+name: Publish OTA update
+
+on:
+  push:
+    tags:
+      - 'ota-v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nimiq-pay-ota-production
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish production OTA
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    environment:
+      name: production
+
+    env:
+      APP_ID: ${{ vars.APP_ID }}
+      UPDATE_CDN: ${{ vars.UPDATE_CDN }}
+
+      VITE_ENABLE_NAKA: ${{ vars.VITE_ENABLE_NAKA }}
+      VITE_ENABLE_BLUECODE: ${{ vars.VITE_ENABLE_BLUECODE }}
+      VITE_ENABLE_MINI_APPS: ${{ vars.VITE_ENABLE_MINI_APPS }}
+      VITE_WALKIE_TALKIE_URL: ${{ vars.VITE_WALKIE_TALKIE_URL }}
+      VITE_WALKIE_TALKIE_API_KEY: ${{ secrets.VITE_WALKIE_TALKIE_API_KEY }}
+      VITE_ETHEREUM_RPC_URL: ${{ vars.VITE_ETHEREUM_RPC_URL }}
+      VITE_POLYGON_RPC_URL: ${{ vars.VITE_POLYGON_RPC_URL }}
+      VITE_ARBITRUM_RPC_URL: ${{ vars.VITE_ARBITRUM_RPC_URL }}
+      VITE_OPTIMISM_RPC_URL: ${{ vars.VITE_OPTIMISM_RPC_URL }}
+      VITE_BASE_RPC_URL: ${{ vars.VITE_BASE_RPC_URL }}
+      VITE_BNB_RPC_URL: ${{ vars.VITE_BNB_RPC_URL }}
+      VITE_SEPOLIA_RPC_URL: ${{ vars.VITE_SEPOLIA_RPC_URL }}
+
+      R2_BUCKET: ${{ vars.R2_BUCKET }}
+      R2_ENDPOINT: https://${{ vars.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_REGION: auto
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Validate OTA tag
+        id: version
+        run: |
+          set -euo pipefail
+
+          TAG="$GITHUB_REF_NAME"
+
+          if [[ ! "$TAG" =~ ^ota-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid OTA tag: $TAG"
+            echo "Expected format: ota-v2.10.3"
+            exit 1
+          fi
+
+          VERSION="${TAG#ota-v}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          echo "OTA tag:     $TAG"
+          echo "OTA version: $VERSION"
+
+      - name: Verify tag belongs to main
+        id: git
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --no-tags
+
+          TAG_COMMIT="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+
+          if ! git merge-base --is-ancestor \
+            "$TAG_COMMIT" \
+            "origin/main"
+          then
+            echo "ERROR: $GITHUB_REF_NAME is not based on main."
+            echo "Tagged commit: $TAG_COMMIT"
+            exit 1
+          fi
+
+          echo "commit=$TAG_COMMIT" >> "$GITHUB_OUTPUT"
+
+          echo "Tagged commit is contained in main:"
+          echo "$TAG_COMMIT"
+
+      - name: Validate OTA configuration
+        id: ota
+        run: |
+          set -euo pipefail
+
+          if [ ! -f ota.json ]; then
+            echo "ERROR: ota.json does not exist."
+            exit 1
+          fi
+
+          if ! jq -e '
+            .compatibleNativeVersions |
+            type == "array" and
+            length > 0 and
+            all(.[];
+              type == "string" and
+              test("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$")
+            )
+          ' ota.json > /dev/null; then
+            echo "ERROR: ota.json must list compatible native versions in X.Y.Z format."
+            exit 1
+          fi
+
+          NATIVE_VERSIONS="$(
+            jq -c '.compatibleNativeVersions' ota.json
+          )"
+
+          echo "native_versions=$NATIVE_VERSIONS" \
+            >> "$GITHUB_OUTPUT"
+
+          echo "Compatible native versions:"
+          echo "$NATIVE_VERSIONS"
+
+      - name: Validate production settings
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          for NAME in APP_ID UPDATE_CDN R2_BUCKET CLOUDFLARE_ACCOUNT_ID AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!NAME}" ]; then
+              echo "ERROR: Missing production setting: $NAME"
+              exit 1
+            fi
+          done
+
+          if [[ "$UPDATE_CDN" != https://* ]]; then
+            echo "ERROR: UPDATE_CDN must use HTTPS."
+            exit 1
+          fi
+
+          # The infrastructure test targets only the synthetic native version 0.0.0.
+          if ! jq -e '.compatibleNativeVersions == ["0.0.0"]' ota.json > /dev/null; then
+            for NAME in VITE_WALKIE_TALKIE_URL VITE_WALKIE_TALKIE_API_KEY; do
+              if [ -z "${!NAME}" ]; then
+                echo "ERROR: Missing production setting: $NAME"
+                exit 1
+              fi
+            done
+
+            for NAME in VITE_ENABLE_NAKA VITE_ENABLE_BLUECODE VITE_ENABLE_MINI_APPS; do
+              if [[ "${!NAME}" != true && "${!NAME}" != false ]]; then
+                echo "ERROR: $NAME must explicitly be true or false."
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify Capgo CLI
+        run: |
+          set -euo pipefail
+
+          if [ ! -x ./node_modules/.bin/capgo ]; then
+            echo "ERROR: @capgo/cli is not installed locally."
+            echo "Run: pnpm add --save-dev @capgo/cli"
+            exit 1
+          fi
+
+          ./node_modules/.bin/capgo --version
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm exec vitest run
+
+      - name: Build application
+        run: pnpm build:web
+
+      - name: Create OTA bundle
+        id: bundle
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          ZIP_NAME="bundle-${VERSION}.zip"
+
+          BUNDLE_JSON="$(
+            ./node_modules/.bin/capgo bundle zip \
+              "$APP_ID" \
+              --bundle "$VERSION" \
+              --name "$ZIP_NAME" \
+              --json
+          )"
+
+          echo "$BUNDLE_JSON"
+
+          CHECKSUM="$(
+            printf '%s' "$BUNDLE_JSON" |
+              jq -r '.checksum'
+          )"
+
+          if [ -z "$CHECKSUM" ] || [ "$CHECKSUM" = "null" ]; then
+            echo "ERROR: Capgo did not return a checksum."
+            exit 1
+          fi
+
+          if [ ! -f "$ZIP_NAME" ]; then
+            echo "ERROR: Expected ZIP does not exist:"
+            echo "$ZIP_NAME"
+            exit 1
+          fi
+
+          # The public download and native updater must use the same SHA-256.
+          if [[ ! "$CHECKSUM" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "ERROR: Capgo did not return a SHA-256 checksum."
+            exit 1
+          fi
+          printf '%s  %s\n' "$CHECKSUM" "$ZIP_NAME" | sha256sum --check
+
+          echo "zip=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+
+          echo "Bundle:   $ZIP_NAME"
+          echo "Checksum: $CHECKSUM"
+
+      - name: Verify R2 client
+        run: aws --version
+
+      - name: Upload immutable bundle to R2
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP_NAME: ${{ steps.bundle.outputs.zip }}
+          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+        run: |
+          set -euo pipefail
+
+          KEY="bundles/${VERSION}.zip"
+
+          if aws s3api head-object \
+            --bucket "$R2_BUCKET" \
+            --key "$KEY" \
+            --endpoint-url "$R2_ENDPOINT" \
+            > /dev/null 2> "$RUNNER_TEMP/ota-head-error"
+          then
+            echo "Bundle already exists in R2."
+            echo "Verifying that it is identical..."
+
+            aws s3 cp \
+              "s3://${R2_BUCKET}/${KEY}" \
+              "${RUNNER_TEMP}/existing-bundle.zip" \
+              --endpoint-url "$R2_ENDPOINT"
+
+            EXISTING_CHECKSUM="$(
+              sha256sum "${RUNNER_TEMP}/existing-bundle.zip" |
+                awk '{print $1}'
+            )"
+
+            if [ "$EXISTING_CHECKSUM" != "$CHECKSUM" ]; then
+              echo "ERROR: Bundle version already exists with different content."
+              echo "Version:  $VERSION"
+              echo "Expected: $CHECKSUM"
+              echo "Existing: $EXISTING_CHECKSUM"
+              exit 1
+            fi
+
+            echo "Existing R2 bundle is identical."
+
+          else
+            # A denied or failed lookup does not mean the object is absent.
+            if ! grep -q 'An error occurred (404) when calling the HeadObject operation' "$RUNNER_TEMP/ota-head-error"; then
+              cat "$RUNNER_TEMP/ota-head-error" >&2
+              exit 1
+            fi
+
+            # The condition also prevents an overwrite if another writer wins the race.
+            aws s3api put-object \
+              --bucket "$R2_BUCKET" \
+              --key "$KEY" \
+              --body "$ZIP_NAME" \
+              --if-none-match '*' \
+              --endpoint-url "$R2_ENDPOINT" \
+              --content-type "application/zip" \
+              --cache-control "public,max-age=31536000,immutable"
+          fi
+
+      - name: Verify public bundle
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+        run: |
+          set -euo pipefail
+
+          URL="${UPDATE_CDN%/}/bundles/${VERSION}.zip"
+
+          echo "Downloading:"
+          echo "$URL"
+
+          curl \
+            --fail \
+            --proto =https \
+            --proto-redir =https \
+            --connect-timeout 15 \
+            --max-time 180 \
+            --location \
+            --retry 5 \
+            --retry-delay 2 \
+            "$URL" \
+            --output "${RUNNER_TEMP}/public-bundle.zip"
+
+          PUBLIC_CHECKSUM="$(
+            sha256sum "${RUNNER_TEMP}/public-bundle.zip" |
+              awk '{print $1}'
+          )"
+
+          if [ "$PUBLIC_CHECKSUM" != "$CHECKSUM" ]; then
+            echo "ERROR: Public bundle checksum mismatch."
+            echo "Expected: $CHECKSUM"
+            echo "Received: $PUBLIC_CHECKSUM"
+            exit 1
+          fi
+
+          echo "Public bundle verified successfully."
+
+      - name: Create production manifest
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+          COMMIT: ${{ steps.git.outputs.commit }}
+          NATIVE_VERSIONS: ${{ steps.ota.outputs.native_versions }}
+        run: |
+          set -euo pipefail
+
+          PUBLISHED_AT="$(
+            date -u +'%Y-%m-%dT%H:%M:%SZ'
+          )"
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg checksum "$CHECKSUM" \
+            --arg commit "$COMMIT" \
+            --arg publishedAt "$PUBLISHED_AT" \
+            --argjson compatibleNativeVersions "$NATIVE_VERSIONS" \
+            '{
+              enabled: true,
+              version: $version,
+              checksum: $checksum,
+              compatibleNativeVersions: $compatibleNativeVersions,
+              commit: $commit,
+              publishedAt: $publishedAt
+            }' \
+            > production.json
+
+          echo "Production manifest:"
+          cat production.json
+
+      - name: Publish production manifest
+        run: |
+          set -euo pipefail
+
+          aws s3 cp \
+            production.json \
+            "s3://${R2_BUCKET}/channels/production.json" \
+            --endpoint-url "$R2_ENDPOINT" \
+            --content-type "application/json" \
+            --cache-control "no-store"
+
+          echo
+          echo "OTA published successfully."

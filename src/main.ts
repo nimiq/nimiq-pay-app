@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { IonicVue } from '@ionic/vue'
 import { devtools } from '@vue/devtools'
 import { LockdownMode } from 'capacitor-lockdown-mode'
@@ -84,6 +86,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const { language } = storeToRefs(useApp())
     await setLanguage(language.value)
     lockdownApp.mount('#app')
+    // Lockdown Mode is an intentional screen, not a failed OTA startup.
+    if (Capacitor.isNativePlatform()) {
+      await CapacitorUpdater.notifyAppReady()
+        .catch(e => useLogger('CapacitorUpdater').error('Failed to confirm OTA startup', e))
+    }
     // Classify the cause (true Lockdown Mode vs other WASM failure) for diagnostics only.
     LockdownMode.isLockdownModeEnabled()
       .then(result => useLogger('LockdownMode').log('WebAssembly unavailable on iOS', result))
@@ -176,4 +183,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await router.isReady()
 
   app.mount('#app')
+
+  // Confirm only after local initialization and the initial route have succeeded.
+  if (Capacitor.isNativePlatform()) {
+    await CapacitorUpdater.notifyAppReady()
+      .catch(e => useLogger('CapacitorUpdater').error('Failed to confirm OTA startup', e))
+  }
 })

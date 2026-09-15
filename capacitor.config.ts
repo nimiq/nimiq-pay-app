@@ -1,4 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli'
+import type {} from '@capgo/capacitor-updater'
+
+const updateCdn = process.env.UPDATE_CDN?.replace(/\/+$/, '')
 
 const config: CapacitorConfig = {
   appId: 'com.nimiq.pay',
@@ -10,6 +13,15 @@ const config: CapacitorConfig = {
   loggingBehavior: 'debug',
   appendUserAgent: 'Nimiq Pay',
   plugins: {
+    CapacitorUpdater: {
+      // Native builds opt in only when the self-hosted endpoint is configured.
+      autoUpdate: updateCdn ? 'atBackground' : 'off',
+      updateUrl: updateCdn ? `${updateCdn}/api/updates` : '',
+      statsUrl: '',
+      channelUrl: '',
+      defaultChannel: 'production',
+      appReadyTimeout: 30000,
+    },
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       iosIsEncryption: true,
