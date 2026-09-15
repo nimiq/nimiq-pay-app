@@ -332,6 +332,78 @@ describe('useSyncTransactions', () => {
       expect(syncState.pendingTransactions).toHaveLength(0)
     })
 
+    it.each(['client', 'history', 'batch'])('retains %s validity evidence through a reorg and expires an absent imported payment', async (source) => {
+      const { useSyncTransactions } = await import('./transactions')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      const store = useSyncTransactions()
+      const row = {
+        hash: 'imported',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ22 RECIPIENT',
+        status: 'included',
+        timestamp: 42,
+        raw: undefined,
+        validityStartHeight: null as number | null,
+      }
+      state.query.mockImplementation(async sql => sql === SQLQuery.GetTransactionByHash ? row as any : [row])
+      state.run.mockImplementation(async (sql, values) => {
+        if (sql === SQLQuery.BackfillTxValidityStartHeight && row.validityStartHeight === null)
+          row.validityStartHeight = values![0] as number
+      })
+      const included = { transactionHash: row.hash, state: 'included', validityStartHeight: 100, timestamp: 42, value: 1 }
+      state.client.getTransaction.mockResolvedValue(included)
+      if (source === 'history') {
+        syncState.pendingTransactions.push({ transactionHash: row.hash, sender: row.sender } as any)
+        state.client.getTransaction.mockRejectedValue(new Error('not found'))
+        state.getTransactionState.mockResolvedValue({ data: { state: 'unknown' }, error: undefined })
+        state.getAllTransactionsForAddress.mockResolvedValue({ transactions: [included], complete: true })
+      }
+      if (source === 'batch')
+        await store.updateTransactionsInDb()
+      else
+        await store.updateSingleTransaction(row.hash)
+      expect(row.validityStartHeight).toBe(100)
+
+      // A reorg returns the imported transaction to pending before it disappears.
+      state.client.getTransaction.mockResolvedValue({ ...included, state: 'pending' })
+      await store.updateSingleTransaction(row.hash)
+      expect(state.updateTransactionStatus).toHaveBeenLastCalledWith({ hash: row.hash, status: 'pending', timestamp: 42 })
+
+      // Model pending-state restoration without serialized content after a restart.
+      syncState.pendingTransactions.splice(0, syncState.pendingTransactions.length, {
+        transactionHash: row.hash,
+        sender: row.sender,
+        state: 'pending',
+        timestamp: 42,
+      } as any)
+      state.client.getTransaction.mockRejectedValue(new Error('not found'))
+      state.getTransactionState.mockResolvedValue({ data: { state: 'unknown' }, error: undefined })
+      state.getAllTransactionsForAddress.mockResolvedValue({ transactions: [], complete: true })
+      state.height = 1000
+      expect(syncState.isTransactionPending).toBe(true)
+
+      await store.updateSingleTransaction(row.hash)
+
+      expect(state.updateTransactionStatus).toHaveBeenLastCalledWith({ hash: row.hash, status: 'expired', timestamp: 42 })
+      expect(syncState.isTransactionPending).toBe(false)
+    })
+
+    it('retains pending recovery state if persisting observed validity fails', async () => {
+      const { useSyncTransactions } = await import('./transactions')
+      const { useSyncState } = await import('./state')
+      const syncState = useSyncState()
+      syncState.pendingTransactions.push({ transactionHash: 'h1', sender: 'NQ00 TEST LOCAL ADDRESS' } as any)
+      state.client.getTransaction.mockResolvedValue({ state: 'included', validityStartHeight: 100 })
+      state.run.mockRejectedValue(new Error('disk full'))
+
+      await expect(useSyncTransactions().updateSingleTransaction('h1')).rejects.toThrow('disk full')
+
+      expect(state.updateTransactionStatus).not.toHaveBeenCalled()
+      expect(syncState.pendingTransactions[0].validityStartHeight).toBeUndefined()
+      expect(syncState.isTransactionPending).toBe(true)
+    })
+
     it('recovers and persists a legacy outgoing height before expiring an absent transaction', async () => {
       const { getLegacyTransactionValidityStartHeight } = await import('@/lib/utils')
       vi.mocked(getLegacyTransactionValidityStartHeight).mockReturnValueOnce(100)
@@ -1014,6 +1086,7 @@ describe('useSyncTransactions', () => {
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
       const withdrawalTx = {
         transactionHash: 'withdrawal-hash',
+        validityStartHeight: 100,
         sender: signer.address,
         senderType: 'basic',
         recipient: 'NQ77 KNOWN TOP UP',
@@ -1039,6 +1112,7 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateTransactionHistory()
       expect(state.addWithdrawalTransaction).toHaveBeenCalledWith(expect.objectContaining({
         hash: 'withdrawal-hash',
+        validityStartHeight: 100,
         transfer: Transfer.UserPayment,
       }))
     })

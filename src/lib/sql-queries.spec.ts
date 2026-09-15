@@ -22,7 +22,7 @@ describe('transaction recovery queries', () => {
     expect(db.prepare('SELECT timestamp FROM transactions').get()).toEqual({ timestamp: 0 })
     db.prepare(SQLQuery.BackfillTxValidityStartHeight).run(100, 'legacy')
     db.prepare(SQLQuery.BackfillTxValidityStartHeight).run(200, 'legacy')
-    expect(db.prepare('SELECT validityStartHeight FROM transactions').get()).toEqual({ validityStartHeight: 100 })
+    expect(db.prepare(SQLQuery.GetTransactionByHash).get('legacy')).toMatchObject({ validityStartHeight: 100 })
   })
 
   it('tracks unconfirmed NIM payments through reinclusion and stops at final states', () => {

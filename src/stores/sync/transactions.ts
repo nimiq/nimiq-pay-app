@@ -124,7 +124,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       ?? pendingRemoteDrainTxs.value.find(transaction => transaction.hash === hash)
     const pending = currentPending ? { ...currentPending } : undefined
 
-    async function reconcile(transaction: { state: AppTransactionState | 'unknown', timestamp?: number, executionResult?: boolean }) {
+    async function reconcile(transaction: { state: AppTransactionState | 'unknown', timestamp?: number, executionResult?: boolean, validityStartHeight?: number }) {
       if (transaction.state === 'unknown')
         return
       const state = transaction.executionResult === false ? 'failed' : transaction.state
@@ -136,6 +136,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       if (current && ['failed', 'invalidated'].includes(current.status)
         && !['failed', 'invalidated'].includes(state) && transaction.executionResult !== true) {
         return
+      }
+
+      if (typeof transaction.validityStartHeight === 'number'
+        && Number.isSafeInteger(transaction.validityStartHeight) && transaction.validityStartHeight >= 0) {
+        // Save chain evidence before a reorg can make the transaction unavailable.
+        await run(SQLQuery.BackfillTxValidityStartHeight, [transaction.validityStartHeight, hash])
+        if (!isPendingTransactionContextCurrent(context))
+          return
+        const currentPending = pendingTransactions.value.find(transaction => transaction.transactionHash === hash)
+          ?? pendingRemoteDrainTxs.value.find(transaction => transaction.hash === hash)
+        if (currentPending && typeof currentPending.validityStartHeight !== 'number')
+          currentPending.validityStartHeight = transaction.validityStartHeight
       }
 
       await updateTransactionStatus({ hash, status: state, timestamp: transaction.timestamp })
@@ -189,10 +201,10 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     if (!history.complete)
       return
     if (typeof pending.validityStartHeight !== 'number') {
-      const row = await query<{ hash: string, sender: string, recipient: string, raw?: string }>(SQLQuery.GetTransactionByHash, [hash], { single: true })
+      const row = await query<{ hash: string, sender: string, recipient: string, raw?: string, validityStartHeight?: number | null }>(SQLQuery.GetTransactionByHash, [hash], { single: true })
       if (!isPendingTransactionContextCurrent(context))
         return
-      const recoveredHeight = row && getLegacyTransactionValidityStartHeight(row, networkId.value)
+      const recoveredHeight = row && (row.validityStartHeight ?? getLegacyTransactionValidityStartHeight(row, networkId.value))
       if (typeof recoveredHeight === 'number') {
         await run(SQLQuery.BackfillTxValidityStartHeight, [recoveredHeight, hash])
         if (!isPendingTransactionContextCurrent(context))
@@ -432,6 +444,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
    * Updates the transactions in the db if they have a different status or timestamp.
    */
   async function updateTransactionsInDb() {
+    const context = getPendingTransactionContext()
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
 
     await Promise.all(dbTxs.map(async (dbTx) => {
@@ -483,6 +496,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         try {
           let state: AppTransactionState, timestamp: number, amount: number
           let executionResult: boolean | undefined
+          let validityStartHeight: number | undefined
           if (!client.value || consensus.value !== 'established') {
             const { data: tx, error } = await useRemoteSignerApi().getTransactionState({ hash: dbTx.hash })
             if (error || !tx || tx.state === 'unknown') {
@@ -496,10 +510,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           }
           else {
             const tx = await client.value!.getTransaction(dbTx.hash)
+            validityStartHeight = tx.validityStartHeight
             executionResult = tx.executionResult
             state = executionResult === false ? 'failed' : tx.state
             timestamp = tx.timestamp || 0
             amount = tx.value
+          }
+          if (!context || !isPendingTransactionContextCurrent(context))
+            return
+          if (typeof validityStartHeight === 'number' && Number.isSafeInteger(validityStartHeight) && validityStartHeight >= 0) {
+            await run(SQLQuery.BackfillTxValidityStartHeight, [validityStartHeight, dbTx.hash])
+            if (!isPendingTransactionContextCurrent(context))
+              return
           }
           const current = useTransactions().transactions.find(transaction => transaction.hash === dbTx.hash)
           // Another refresh may record failure while this lookup is pending.
@@ -575,6 +597,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       hash: tx.transactionHash,
       status: tx.state,
       timestamp: tx.timestamp,
+      validityStartHeight: tx.validityStartHeight,
       title: 'Withdrawal',
       fee: tx.fee,
       // TODO: Proof size should be read from tx proof once all Nimiq client variants expose it consistently.
@@ -638,6 +661,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
       status: tx.state,
       timestamp: tx.timestamp,
+      validityStartHeight: tx.validityStartHeight,
       title,
       proofSize: tx.proof.raw.length / 2,
     })

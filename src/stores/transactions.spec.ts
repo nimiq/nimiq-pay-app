@@ -395,6 +395,19 @@ describe('useTransactions', () => {
     expect(seenStatuses).toEqual(['confirmed'])
   })
 
+  it('persists validity evidence when importing a payment from history', async () => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    const { plain } = createSignedTransaction('imported-payment', { state: 'included', validityStartHeight: 100 })
+
+    await store.addUnknownPaymentToMerchantTransaction(plain as any)
+
+    const write = state.run.mock.calls.find(([sql]) => sql === SQLQuery.UpsertTx)
+    expect((write?.[1] as unknown[])?.at(-1)).toBe(100)
+    expect(store.transactions.find(tx => tx.hash === 'imported-payment')?.validityStartHeight).toBe(100)
+  })
+
   it.each([undefined, 0, 999])('preserves or replaces transaction timestamp with %s', async (timestamp) => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()

@@ -893,6 +893,7 @@ export const useTransactions = defineStore('transactions', () => {
       hash: tx.transactionHash,
       status: tx.state,
       timestamp: tx.timestamp,
+      validityStartHeight: tx.validityStartHeight,
       title: 'Payment', // translated at display time
       fee: tx.fee,
       // proofSize: 'raw' in tx.proof ? tx.proof.raw.length / 2 : 0,
