@@ -211,53 +211,98 @@ jobs:
       - name: Build application
         run: pnpm build:web
 
-      - name: Create OTA bundle
+      - name: Create and encrypt OTA bundle
         id: bundle
         env:
           VERSION: ${{ steps.version.outputs.version }}
+          CAPGO_PRIVATE_KEY: ${{ secrets.CAPGO_PRIVATE_KEY }}
         run: |
           set -euo pipefail
 
-          ZIP_NAME="bundle-${VERSION}.zip"
+          : "${CAPGO_PRIVATE_KEY:?CAPGO_PRIVATE_KEY is missing}"
+
+          # Keep the private key outside the repository and build output.
+          umask 077
+          OTA_KEY_FILE="$(mktemp "$RUNNER_TEMP/capgo-private-key.XXXXXX")"
+          trap 'rm -f "$OTA_KEY_FILE"' EXIT
+
+          printf '%s\n' "$CAPGO_PRIVATE_KEY" > "$OTA_KEY_FILE"
+          unset CAPGO_PRIVATE_KEY
+
+          RAW_ZIP="bundle-${VERSION}.zip"
 
           BUNDLE_JSON="$(
             ./node_modules/.bin/capgo bundle zip \
               "$APP_ID" \
               --bundle "$VERSION" \
-              --name "$ZIP_NAME" \
+              --name "$RAW_ZIP" \
+              --key-v2 \
               --json
           )"
 
-          echo "$BUNDLE_JSON"
-
-          CHECKSUM="$(
+          RAW_CHECKSUM="$(
             printf '%s' "$BUNDLE_JSON" |
-              jq -r '.checksum'
+              jq -er '.checksum | select(type == "string" and length > 0)'
           )"
 
-          if [ -z "$CHECKSUM" ] || [ "$CHECKSUM" = "null" ]; then
-            echo "ERROR: Capgo did not return a checksum."
+          if [ ! -s "$RAW_ZIP" ]; then
+            echo "ERROR: Expected ZIP does not exist or is empty: $RAW_ZIP"
             exit 1
           fi
 
-          if [ ! -f "$ZIP_NAME" ]; then
-            echo "ERROR: Expected ZIP does not exist:"
-            echo "$ZIP_NAME"
-            exit 1
-          fi
-
-          # The public download and native updater must use the same SHA-256.
-          if [[ ! "$CHECKSUM" =~ ^[0-9a-f]{64}$ ]]; then
+          # Verify the original ZIP before encrypting it.
+          if [[ ! "$RAW_CHECKSUM" =~ ^[0-9a-f]{64}$ ]]; then
             echo "ERROR: Capgo did not return a SHA-256 checksum."
             exit 1
           fi
-          printf '%s  %s\n' "$CHECKSUM" "$ZIP_NAME" | sha256sum --check
 
-          echo "zip=$ZIP_NAME" >> "$GITHUB_OUTPUT"
-          echo "checksum=$CHECKSUM" >> "$GITHUB_OUTPUT"
+          printf '%s  %s\n' "$RAW_CHECKSUM" "$RAW_ZIP" |
+            sha256sum --check
 
-          echo "Bundle:   $ZIP_NAME"
-          echo "Checksum: $CHECKSUM"
+          ENCRYPTED_JSON="$(
+            ./node_modules/.bin/capgo bundle encrypt \
+              "$RAW_ZIP" \
+              "$RAW_CHECKSUM" \
+              --key "$OTA_KEY_FILE" \
+              --json
+          )"
+
+          ENCRYPTED_ZIP="$(
+            printf '%s' "$ENCRYPTED_JSON" |
+              jq -er '.filename | select(type == "string" and length > 0)'
+          )"
+
+          CAPGO_CHECKSUM="$(
+            printf '%s' "$ENCRYPTED_JSON" |
+              jq -er '.checksum | select(type == "string" and length > 0)'
+          )"
+
+          SESSION_KEY="$(
+            printf '%s' "$ENCRYPTED_JSON" |
+              jq -er '.ivSessionKey | select(type == "string" and length > 0)'
+          )"
+
+          if [ ! -s "$ENCRYPTED_ZIP" ]; then
+            echo "ERROR: Encrypted bundle is missing or empty."
+            exit 1
+          fi
+
+          # CI verifies the encrypted bytes served by R2 and the Worker.
+          # Capgo receives its encoded checksum separately in the manifest.
+          UPLOAD_SHA256="$(
+            sha256sum "$ENCRYPTED_ZIP" |
+              awk '{print $1}'
+          )"
+
+          {
+            echo "zip=$ENCRYPTED_ZIP"
+            echo "checksum=$CAPGO_CHECKSUM"
+            echo "session_key=$SESSION_KEY"
+            echo "upload_sha256=$UPLOAD_SHA256"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Encrypted bundle: $ENCRYPTED_ZIP"
+          echo "Upload SHA-256: $UPLOAD_SHA256"
 
       - name: Verify R2 client
         run: aws --version
@@ -266,7 +311,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           ZIP_NAME: ${{ steps.bundle.outputs.zip }}
-          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+          UPLOAD_SHA256: ${{ steps.bundle.outputs.upload_sha256 }}
         run: |
           set -euo pipefail
 
@@ -286,16 +331,18 @@ jobs:
               "${RUNNER_TEMP}/existing-bundle.zip" \
               --endpoint-url "$R2_ENDPOINT"
 
-            EXISTING_CHECKSUM="$(
+            EXISTING_SHA256="$(
               sha256sum "${RUNNER_TEMP}/existing-bundle.zip" |
                 awk '{print $1}'
             )"
 
-            if [ "$EXISTING_CHECKSUM" != "$CHECKSUM" ]; then
+            if [ "$EXISTING_SHA256" != "$UPLOAD_SHA256" ]; then
               echo "ERROR: Bundle version already exists with different content."
+              echo "Encryption uses fresh randomness on every run."
+              echo "If an earlier run uploaded this version, publish a new OTA tag."
               echo "Version:  $VERSION"
-              echo "Expected: $CHECKSUM"
-              echo "Existing: $EXISTING_CHECKSUM"
+              echo "Expected: $UPLOAD_SHA256"
+              echo "Existing: $EXISTING_SHA256"
               exit 1
             fi
 
@@ -315,14 +362,14 @@ jobs:
               --body "$ZIP_NAME" \
               --if-none-match '*' \
               --endpoint-url "$R2_ENDPOINT" \
-              --content-type "application/zip" \
+              --content-type "application/octet-stream" \
               --cache-control "public,max-age=31536000,immutable"
           fi
 
       - name: Verify public bundle
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+          UPLOAD_SHA256: ${{ steps.bundle.outputs.upload_sha256 }}
         run: |
           set -euo pipefail
 
@@ -343,15 +390,15 @@ jobs:
             "$URL" \
             --output "${RUNNER_TEMP}/public-bundle.zip"
 
-          PUBLIC_CHECKSUM="$(
+          PUBLIC_SHA256="$(
             sha256sum "${RUNNER_TEMP}/public-bundle.zip" |
               awk '{print $1}'
           )"
 
-          if [ "$PUBLIC_CHECKSUM" != "$CHECKSUM" ]; then
+          if [ "$PUBLIC_SHA256" != "$UPLOAD_SHA256" ]; then
             echo "ERROR: Public bundle checksum mismatch."
-            echo "Expected: $CHECKSUM"
-            echo "Received: $PUBLIC_CHECKSUM"
+            echo "Expected: $UPLOAD_SHA256"
+            echo "Received: $PUBLIC_SHA256"
             exit 1
           fi
 
@@ -361,10 +408,14 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
           CHECKSUM: ${{ steps.bundle.outputs.checksum }}
+          SESSION_KEY: ${{ steps.bundle.outputs.session_key }}
           COMMIT: ${{ steps.git.outputs.commit }}
           NATIVE_VERSIONS: ${{ steps.ota.outputs.native_versions }}
         run: |
           set -euo pipefail
+
+          : "${CHECKSUM:?Missing Capgo checksum}"
+          : "${SESSION_KEY:?Missing encrypted session key}"
 
           PUBLISHED_AT="$(
             date -u +'%Y-%m-%dT%H:%M:%SZ'
@@ -373,6 +424,7 @@ jobs:
           jq -n \
             --arg version "$VERSION" \
             --arg checksum "$CHECKSUM" \
+            --arg session_key "$SESSION_KEY" \
             --arg commit "$COMMIT" \
             --arg publishedAt "$PUBLISHED_AT" \
             --argjson compatibleNativeVersions "$NATIVE_VERSIONS" \
@@ -380,6 +432,7 @@ jobs:
               enabled: true,
               version: $version,
               checksum: $checksum,
+              session_key: $session_key,
               compatibleNativeVersions: $compatibleNativeVersions,
               commit: $commit,
               publishedAt: $publishedAt
