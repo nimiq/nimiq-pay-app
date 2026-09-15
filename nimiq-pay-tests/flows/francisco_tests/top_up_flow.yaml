@@ -1,14 +1,16 @@
 appId: ${APP_ID}
 ---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
 - runFlow: ../../subflows/create_account.yaml
 
-- tapOn: Top Up
+- tapOn: ${output.navigation.topUpBtn}
 - waitForAnimationToEnd
 
-- assertVisible: Top up address
+- assertVisible: ${output.topUp.title}
 - assertVisible:
-    text: 'NQ.*'
-- assertVisible: Copy address
+    text: ${output.topUp.addressPrefix}
+- assertVisible: ${output.topUp.copyAddress}
 
 - back
 - waitForAnimationToEnd
