@@ -2,6 +2,27 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.20.0 — 2026-09-16
+
+### Withdraw your way
+Nimiq Pay now remembers whether you enter withdrawal amounts in crypto or your local currency.
+
+_How to use:_ When withdrawing, choose crypto or your local currency for the amount. Your choice is saved for next time.
+
+### More reliable payments
+Payment results appear sooner, and pending transactions recover more reliably after restarting or reconnecting. Fixes also help prevent stuck payments and missing transaction history.
+
+### Smoother Mini Apps
+Mini Apps now support downloads. Navigation fixes keep controls accessible and prevent the back action from unexpectedly closing Mini Apps.
+
+### Find competition entries faster
+Search and filters make it easier to browse Mini Apps competition entries.
+
+_How to use:_ Open the Mini Apps competition and use search or filters to narrow down the entries.
+
+### Live chat for everyone
+Live support chat is now available to all users, making it easier to get help when you need it.
+
 ## 2.19.1 — 2026-08-12
 
 ### Cashlinks you can just scan

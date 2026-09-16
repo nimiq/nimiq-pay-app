@@ -1,5 +1,33 @@
 [
   {
+    "version": "2.20.0",
+    "date": "2026-09-16",
+    "highlights": [
+      {
+        "title": "Withdraw your way",
+        "description": "Nimiq Pay now remembers whether you enter withdrawal amounts in crypto or your local currency.",
+        "howTo": "When withdrawing, choose crypto or your local currency for the amount. Your choice is saved for next time."
+      },
+      {
+        "title": "More reliable payments",
+        "description": "Payment results appear sooner, and pending transactions recover more reliably after restarting or reconnecting. Fixes also help prevent stuck payments and missing transaction history."
+      },
+      {
+        "title": "Smoother Mini Apps",
+        "description": "Mini Apps now support downloads. Navigation fixes keep controls accessible and prevent the back action from unexpectedly closing Mini Apps."
+      },
+      {
+        "title": "Find competition entries faster",
+        "description": "Search and filters make it easier to browse Mini Apps competition entries.",
+        "howTo": "Open the Mini Apps competition and use search or filters to narrow down the entries."
+      },
+      {
+        "title": "Live chat for everyone",
+        "description": "Live support chat is now available to all users, making it easier to get help when you need it."
+      }
+    ]
+  },
+  {
     "version": "2.19.1",
     "date": "2026-08-12",
     "highlights": [
