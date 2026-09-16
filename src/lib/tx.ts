@@ -195,6 +195,10 @@ export async function getSignedTx(partialArgs: PartialSendTxArgs, options: GetSi
       return { outcome: 'rejected', error: e instanceof Error ? e.message : String(e) }
     }
 
+    // wasm-bindgen throws an opaque "expected instance of Address" for an undefined sender
+    if (!useRemoteSigner().remoteAddress)
+      return { outcome: 'rejected', error: i18n.t('Something went wrong syncing your account') }
+
     const tx = new Nimiq.Transaction(
       /* sender */ useRemoteSigner().remoteAddress!,
       /* senderType */ Nimiq.AccountType.HTLC,
