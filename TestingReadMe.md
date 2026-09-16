@@ -40,7 +40,7 @@ Open the app
 adb shell am start -n com.nimiq.pay.debug/com.nimiq.pay.MainActivity
 
 Close the app
-adb shell am force-stop com.nimiq.pay.debug
+adb shell am force-stop com.nimiq.pay.debug 
 
 Uninstall the app
 adb uninstall com.nimiq.pay.debug

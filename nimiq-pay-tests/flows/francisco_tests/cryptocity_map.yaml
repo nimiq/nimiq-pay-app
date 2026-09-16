@@ -1,0 +1,28 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- runFlow:
+    when:
+      visible: ${output.navigation.closeNotificationCardBtn}
+    commands:
+      - tapOn: ${output.navigation.closeNotificationCardBtn}
+      - waitForAnimationToEnd
+
+- assertVisible: ${output.navigation.cryptoMapBtn}
+- tapOn: ${output.navigation.cryptoMapBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.cryptocityMap.closeBtn}
+
+- tapOn: ${output.cryptocityMap.closeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- stopApp

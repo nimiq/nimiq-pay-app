@@ -21,6 +21,11 @@ output.home = {
 
 output.navigation = {
     openMenuBtn: "Open menu",
+    earnPointsBtn: "Earn Points",
+    cryptoMapBtn: "Crypto Map",
+    miniAppsBtn: "Mini Apps",
+    recoveryWordsBtn: "Recovery Words",
+    closeNotificationCardBtn: "close notification card",
     settingsBtn: "Settings",
     backupAccountBtn: "Backup Account",
     whatsNewBtn: "What's New",
@@ -85,4 +90,18 @@ output.logout = {
     title: "Are you sure you want to log out?",
     instructions: "Log in again with your recovery words.*",
     confirmBtn: "Confirm"
+};
+
+output.cryptocityPoints = {
+    comingSoonMessage: "Cryptocity Points are coming soon. Stay tuned."
+};
+
+output.cryptocityMap = {
+    closeBtn: "Close map"
+};
+
+output.miniApps = {
+    discoverTitle: "Discover",
+    searchInput: "Search or enter App URL",
+    closeBtn: "close modal"
 };
