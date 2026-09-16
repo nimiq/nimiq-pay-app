@@ -1,5 +1,24 @@
 # Nimiq Pay
 
+## Native releases
+
+Run `pnpm release:beta` from a clean checkout on a Mac with the existing iOS and
+Android build tools and signing credentials configured. The command syncs
+translations, asks which AI CLI to use for the changelog, then starts release-it.
+
+Set `GITHUB_TOKEN` in your local `.env` or shell environment. Use a personal access
+token with access to `nimiq/nimiq-pay-app` and **Contents: read and write** permission
+([GitHub release permissions](https://docs.github.com/en/rest/releases/releases#create-a-release)).
+The token replaces `GITLAB_TOKEN`; no GitLab package registry token is needed for
+release assets. Git must also be authenticated for pushing commits and tags to
+`origin`, which should point to `https://github.com/nimiq/nimiq-pay-app.git`.
+
+Release-it generates the changelog for review, builds iOS and Android, then commits
+and tags the version and pushes it. It publishes the release notes and `.ipa`,
+`.app.tgz`, `.aab`, and `.apk` files as GitHub release assets. After publishing, it
+uploads the `.ipa` and `.aab` to BrowserStack using `BROWSERSTACK_USERNAME` and
+`BROWSERSTACK_ACCESS_KEY`, then removes the local release build files.
+
 ## Nimiq Pay Flows
 
 A flow is a sequence of steps that the user needs to follow to complete a user

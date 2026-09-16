@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Generates the in-app changelog (src/data/changelog.json), a repo CHANGELOG.md,
-// and — with --print-latest — the GitLab release notes markdown (stdout).
+// and — with --print-latest — the GitHub release notes markdown (stdout).
 //
 // Usage:
 //   node scripts/generate-changelog.mjs [version] [--print-latest] [--force]
@@ -9,7 +9,7 @@
 //            release-it passes ${version} (the next version) via .release-it.json.
 // - --print-latest: print the release-notes markdown for `version` to STDOUT and
 //                   nothing else (all logs go to stderr). Used as release-it's
-//                   `gitlab.releaseNotes` command so the notes land in the GitLab release.
+//                   `github.releaseNotes` command so the notes land in the GitHub release.
 // - --force: regenerate even if an entry for `version` already exists.
 //
 // Idempotent: if src/data/changelog.json already has an entry for `version`, the AI

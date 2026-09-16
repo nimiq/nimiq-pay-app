@@ -1,12 +1,13 @@
 {
   "verbose": 2,
   "hooks": {
+    "before:init": "node -e \"if (!process.env.GITHUB_TOKEN?.trim()) { console.error('GITHUB_TOKEN is required to publish the release and upload assets. Set it in .env or the environment.'); process.exit(1); }\"",
     "after:bump": [
       "node scripts/generate-changelog.mjs ${version}",
       "pnpm build:ios",
       "pnpm build:android"
     ],
-    "after:gitlab:release": [
+    "after:github:release": [
       "node scripts/browserstack-upload.js"
     ],
     "after:release": [
@@ -20,11 +21,9 @@
   "git": {
     "commitMessage": "🚀 Release v${version}"
   },
-  "gitlab": {
+  "github": {
     "release": true,
     "releaseNotes": "node scripts/generate-changelog.mjs ${version} --print-latest",
-    "genericPackageRepositoryName": "nimiq-pay",
-    "useGenericPackageRepositoryForAssets": true,
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",
       "builds/ios/NimiqPay-${version}.app.tgz",
