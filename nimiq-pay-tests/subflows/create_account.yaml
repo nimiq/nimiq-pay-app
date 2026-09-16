@@ -1,13 +1,13 @@
 appId: ${APP_ID}
 ---
-- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
 - launchApp:
     clearState: true
 
 - extendedWaitUntil:
     visible: ${output.launchScreen.getStartedBtn}
-    timeout: 10000
+    timeout: 45000
 - tapOn: ${output.launchScreen.getStartedBtn}
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}

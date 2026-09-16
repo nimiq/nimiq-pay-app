@@ -12,12 +12,20 @@ output.onboarding = {
 };
 
 output.home = {
-    payTitle: "Pay"
+    payTitle: "Pay",
+    switchAssetBtn: "Switch asset",
+    usdtBtn: "USDT",
+    fiatAmount: "\\$",
+    usdtAmount: "USDT"
 };
 
 output.navigation = {
     openMenuBtn: "Open menu",
     settingsBtn: "Settings",
+    backupAccountBtn: "Backup Account",
+    whatsNewBtn: "What's New",
+    aboutBtn: "About",
+    logoutBtn: "Log Out",
     topUpBtn: "Top Up",
     withdrawBtn: "Withdraw",
     closeFlowModalBtn: "close flow modal"
@@ -48,4 +56,33 @@ output.withdraw = {
     amount25: "$25",
     amount50: "$50",
     amount100: "$100"
+};
+
+output.backup = {
+    introTitle: 'There is no "Forgot password"',
+    introDescription: "Create a backup. It's the only way to recover your account.",
+    noOneCanSeeBtn: "No one can see me",
+    showWordsTitle: "Write down these words",
+    continueBtn: "Continue",
+    validateTitle: "Test your backup",
+    question: "What's the .* word\\?"
+};
+
+output.whatsNew = {
+    title: "What's New",
+    version: "Version.*",
+    previousVersions: "Previous versions",
+    previousVersionHighlight: "Mini Apps competition showcase"
+};
+
+output.about = {
+    pageTitle: "Nimiq",
+    staySignedOutBtn: "Stay signed out",
+    pageUrl: "nimiq.com"
+};
+
+output.logout = {
+    title: "Are you sure you want to log out?",
+    instructions: "Log in again with your recovery words.*",
+    confirmBtn: "Confirm"
 };
