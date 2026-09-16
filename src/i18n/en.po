@@ -27,11 +27,11 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:286
+#: src/stores/transactions.ts:330
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:296
+#: src/stores/transactions.ts:347
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
@@ -65,7 +65,7 @@ msgid "Add new card"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:86
-#: src/types/transactions.ts:147
+#: src/types/transactions.ts:149
 msgid "Add Stake"
 msgstr ""
 
@@ -78,9 +78,9 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:214
-#: src/stores/nimiq-network.ts:236
-#: src/stores/nimiq-network.ts:266
+#: src/stores/nimiq-network.ts:215
+#: src/stores/nimiq-network.ts:237
+#: src/stores/nimiq-network.ts:269
 msgid "Address missing"
 msgstr ""
 
@@ -88,7 +88,7 @@ msgstr ""
 msgid "Address saved"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:251
+#: src/stores/nimiq-network.ts:254
 msgid "Addresses missing"
 msgstr ""
 
@@ -301,11 +301,11 @@ msgid "Cashlink claimed successfully"
 msgstr ""
 
 #: src/composables/useNotifications.ts:356
-#: src/types/transactions.ts:142
+#: src/types/transactions.ts:144
 msgid "Cashlink Claiming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:216
+#: src/stores/nimiq-network.ts:217
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -375,17 +375,17 @@ msgstr ""
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:170
+#: src/types/transactions.ts:172
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
-#: src/types/transactions.ts:165
-#: src/types/transactions.ts:166
+#: src/types/transactions.ts:167
+#: src/types/transactions.ts:168
 msgid "Confirming"
 msgstr ""
 
-#: src/lib/utils.ts:65
+#: src/lib/utils.ts:128
 msgid "Connecting to network."
 msgstr ""
 
@@ -395,7 +395,7 @@ msgstr ""
 msgid "Connecting to Polygon"
 msgstr ""
 
-#: src/lib/utils.ts:63
+#: src/lib/utils.ts:126
 msgid "Consensus established."
 msgstr ""
 
@@ -428,7 +428,8 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:456
+#: src/stores/transactions.ts:545
+#: src/stores/transactions.ts:559
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
@@ -440,7 +441,7 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/transactions.ts:292
+#: src/stores/transactions.ts:342
 msgid "Could not verify pending transactions"
 msgstr ""
 
@@ -453,7 +454,7 @@ msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:81
-#: src/types/transactions.ts:146
+#: src/types/transactions.ts:148
 msgid "Create Staker"
 msgstr ""
 
@@ -503,7 +504,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/types/transactions.ts:152
+#: src/types/transactions.ts:154
 msgid "Delete Validator"
 msgstr ""
 
@@ -589,15 +590,15 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:245
+#: src/stores/nimiq-network.ts:248
 msgid "Error getting account"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:275
+#: src/stores/nimiq-network.ts:278
 msgid "Error getting account transactions"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:260
+#: src/stores/nimiq-network.ts:263
 msgid "Error getting accounts"
 msgstr ""
 
@@ -610,19 +611,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:87
+#: src/stores/sync/htlc.ts:102
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:139
+#: src/stores/sync/htlc.ts:158
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:164
+#: src/stores/sync/htlc.ts:183
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:117
+#: src/stores/sync/htlc.ts:136
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -636,7 +637,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:169
+#: src/types/transactions.ts:171
 msgid "Expired"
 msgstr ""
 
@@ -831,8 +832,8 @@ msgid "Internationalized domain (punycode). Verify it matches the real site."
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
-#: src/types/transactions.ts:167
-#: src/types/transactions.ts:168
+#: src/types/transactions.ts:169
+#: src/types/transactions.ts:170
 msgid "Invalid"
 msgstr ""
 
@@ -959,7 +960,7 @@ msgstr ""
 msgid "Invalid swap hash"
 msgstr ""
 
-#: src/lib/tx.ts:348
+#: src/lib/tx.ts:351
 msgid "Invalid transfer type"
 msgstr ""
 
@@ -1115,7 +1116,7 @@ msgstr ""
 msgid "Network"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:119
+#: src/stores/nimiq-network.ts:120
 msgid "Network consensus lost."
 msgstr ""
 
@@ -1123,11 +1124,11 @@ msgstr ""
 msgid "Network fees"
 msgstr ""
 
-#: src/lib/tx.ts:372
+#: src/lib/tx.ts:375
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:163
+#: src/types/transactions.ts:165
 msgid "New"
 msgstr ""
 
@@ -1135,8 +1136,8 @@ msgstr ""
 msgid "NFC is not supported on this device"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:41
-#: src/stores/transactions.ts:302
+#: src/stores/sync/remote-signers.ts:66
+#: src/stores/transactions.ts:353
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1152,7 +1153,7 @@ msgstr ""
 msgid "No"
 msgstr ""
 
-#: src/lib/tx.ts:261
+#: src/lib/tx.ts:264
 msgid "No account has been created yet, or it is currently processing funds"
 msgstr ""
 
@@ -1164,7 +1165,7 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:255
+#: src/stores/nimiq-network.ts:258
 msgid "No accounts found"
 msgstr ""
 
@@ -1172,7 +1173,7 @@ msgstr ""
 msgid "No active card"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:206
+#: src/stores/nimiq-network.ts:207
 msgid "No Cashlink found"
 msgstr ""
 
@@ -1200,7 +1201,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:413
+#: src/composables/useApi.ts:427
 msgid "No payment details found"
 msgstr ""
 
@@ -1226,7 +1227,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:270
+#: src/stores/nimiq-network.ts:273
 msgid "No transactions found"
 msgstr ""
 
@@ -1303,7 +1304,7 @@ msgstr ""
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:144
+#: src/types/transactions.ts:146
 msgid "Payment"
 msgstr ""
 
@@ -1324,7 +1325,7 @@ msgstr ""
 msgid "Payment expiring soon"
 msgstr ""
 
-#: src/composables/useApi.ts:118
+#: src/composables/useApi.ts:119
 #: src/composables/useGoCryptoMonitoring.ts:111
 msgid "Payment invalid"
 msgstr ""
@@ -1382,7 +1383,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:30
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:164
+#: src/types/transactions.ts:166
 msgid "Pending"
 msgstr ""
 
@@ -1460,7 +1461,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:145
+#: src/types/transactions.ts:147
 msgid "Points Payment"
 msgstr ""
 
@@ -1559,7 +1560,7 @@ msgid "Refunded"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:108
-#: src/types/transactions.ts:151
+#: src/types/transactions.ts:153
 msgid "Remove Stake"
 msgstr ""
 
@@ -1585,7 +1586,7 @@ msgid "Resend"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:103
-#: src/types/transactions.ts:150
+#: src/types/transactions.ts:152
 msgid "Retire Stake"
 msgstr ""
 
@@ -1693,7 +1694,7 @@ msgid "Server not available"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:90
-#: src/types/transactions.ts:148
+#: src/types/transactions.ts:150
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1712,7 +1713,8 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/composables/useApi.ts:62
+#: src/composables/useApi.ts:220
+#: src/composables/useApi.ts:63
 #: src/lib/flows/index.ts:513
 #: src/lib/flows/index.ts:522
 msgid "Something went wrong"
@@ -1759,14 +1761,16 @@ msgstr ""
 msgid "Something went wrong paying with Points"
 msgstr ""
 
-#: src/lib/tx.ts:408
+#: src/lib/tx.ts:412
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:311
-#: src/composables/useApi.ts:318
-#: src/lib/tx.ts:264
-#: src/lib/tx.ts:368
+#: src/composables/useApi.ts:325
+#: src/composables/useApi.ts:332
+#: src/composables/useMiniAppHost.ts:1674
+#: src/lib/tx.ts:200
+#: src/lib/tx.ts:267
+#: src/lib/tx.ts:371
 #: src/lib/tx.ts:50
 #: src/lib/tx.ts:69
 msgid "Something went wrong syncing your account"
@@ -1798,7 +1802,7 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
-#: src/types/transactions.ts:153
+#: src/types/transactions.ts:155
 msgid "Staking Contract"
 msgstr ""
 
@@ -1835,11 +1839,11 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:389
+#: src/composables/useMiniAppHost.ts:390
 msgid "Switched to {chain}"
 msgstr ""
 
-#: src/lib/utils.ts:64
+#: src/lib/utils.ts:127
 msgid "Syncing with network."
 msgstr ""
 
@@ -1952,7 +1956,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:353
+#: src/composables/useMiniAppHost.ts:354
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -1996,7 +2000,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:141
+#: src/types/transactions.ts:143
 msgid "Top-Up"
 msgstr ""
 
@@ -2012,19 +2016,20 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:462
+#: src/stores/transactions.ts:565
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:522
+#: src/stores/transactions.ts:606
+#: src/stores/transactions.ts:625
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:466
+#: src/stores/transactions.ts:568
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:530
+#: src/stores/transactions.ts:665
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
@@ -2065,7 +2070,7 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
-#: src/types/transactions.ts:174
+#: src/types/transactions.ts:176
 msgid "Unknown"
 msgstr ""
 
@@ -2086,7 +2091,7 @@ msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:95
-#: src/types/transactions.ts:149
+#: src/types/transactions.ts:151
 msgid "Update Staker"
 msgstr ""
 
@@ -2139,16 +2144,37 @@ msgstr ""
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:47
-#: src/stores/sync/remote-signers.ts:60
-#: src/stores/transactions.ts:311
-#: src/stores/transactions.ts:379
-#: src/stores/transactions.ts:400
-#: src/stores/transactions.ts:432
-#: src/stores/transactions.ts:438
-#: src/stores/transactions.ts:452
-#: src/stores/transactions.ts:496
-#: src/stores/transactions.ts:497
+#: src/stores/sync/remote-signers.ts:72
+#: src/stores/sync/remote-signers.ts:85
+#: src/stores/transactions.ts:338
+#: src/stores/transactions.ts:357
+#: src/stores/transactions.ts:368
+#: src/stores/transactions.ts:436
+#: src/stores/transactions.ts:445
+#: src/stores/transactions.ts:455
+#: src/stores/transactions.ts:510
+#: src/stores/transactions.ts:527
+#: src/stores/transactions.ts:553
+#: src/stores/transactions.ts:577
+#: src/stores/transactions.ts:592
+#: src/stores/transactions.ts:593
+#: src/stores/transactions.ts:615
+#: src/stores/transactions.ts:668
+#: src/stores/transactions.ts:676
+#: src/stores/transactions.ts:686
+#: src/stores/transactions.ts:694
+#: src/stores/transactions.ts:702
+#: src/stores/transactions.ts:736
+#: src/stores/transactions.ts:742
+#: src/stores/transactions.ts:747
+#: src/stores/transactions.ts:752
+#: src/stores/transactions.ts:757
+#: src/stores/transactions.ts:772
+#: src/stores/transactions.ts:777
+#: src/stores/transactions.ts:782
+#: src/stores/transactions.ts:788
+#: src/stores/transactions.ts:791
+#: src/stores/transactions.ts:794
 msgid "Wallet or network changed before sending"
 msgstr ""
 
@@ -2256,7 +2282,7 @@ msgstr ""
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
-#: src/types/transactions.ts:143
+#: src/types/transactions.ts:145
 msgid "Withdrawal"
 msgstr ""
 
