@@ -1,0 +1,36 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.whatsNewBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.whatsNewBtn}
+- waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.whatsNew.title}
+    timeout: 5000
+- assertVisible: ${output.whatsNew.version}
+- assertVisible: ${output.whatsNew.previousVersions}
+
+- tapOn: ${output.whatsNew.previousVersions}
+- waitForAnimationToEnd
+- assertVisible: ${output.whatsNew.previousVersionHighlight}
+
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.navigation.whatsNewBtn}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- stopApp
