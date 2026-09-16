@@ -252,7 +252,6 @@ describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test
         code: -32001,
         type: 'TRANSACTION_OUTCOME_UNKNOWN',
         message: 'The transaction outcome is unknown. It may have been submitted; do not retry.',
-        type: 'TRANSACTION_OUTCOME_UNKNOWN',
       },
     })
     expect(trackWeb3Request).toHaveBeenCalledWith(expect.objectContaining({
