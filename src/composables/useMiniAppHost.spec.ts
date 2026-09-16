@@ -1,7 +1,9 @@
 import { Buffer } from 'node:buffer'
+import * as NimiqCore from '@nimiq/core'
 import { Interface, parseUnits } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { ZERO_HASH_ROOT } from '@/types/transactions'
 import { MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
@@ -639,5 +641,340 @@ describe('miniAppHost', () => {
         decodedAssetTransfer: expect.anything(),
       }),
     }))
+  })
+})
+
+describe('miniAppHost HTLC guards', () => {
+  const localKeyPair = NimiqCore.KeyPair.generate()
+  const cosignerKeyPair = NimiqCore.KeyPair.generate()
+  const ownContract = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const foreignContract = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const recipient = NimiqCore.KeyPair.generate().toAddress().toUserFriendlyAddress()
+  const signatureProofHex = NimiqCore.BufferUtils.toHex(NimiqCore.SignatureProof.singleSig(
+    localKeyPair.publicKey,
+    NimiqCore.Signature.create(localKeyPair.privateKey, localKeyPair.publicKey, new Uint8Array([1])),
+  ).serialize())
+
+  /** The contract shape `createDepositData` produces for our own custody HTLCs. */
+  const ownHtlcAccount = {
+    type: 'htlc',
+    balance: 1000,
+    sender: localKeyPair.toAddress().toUserFriendlyAddress(),
+    recipient: cosignerKeyPair.toAddress().toUserFriendlyAddress(),
+    hashRoot: ZERO_HASH_ROOT,
+    hashCount: 1,
+    timeout: 0,
+  }
+  const foreignHtlcAccount = { ...ownHtlcAccount, recipient, hashRoot: 'aa'.repeat(32) }
+
+  let isOurRemoteSigner: ReturnType<typeof vi.fn>
+  let getAccount: ReturnType<typeof vi.fn>
+  let getHtlcCreationData: ReturnType<typeof vi.fn>
+  let sendTx: ReturnType<typeof vi.fn>
+
+  /** Params for each redeem method; all of them take the contract address first. */
+  const redeemCalls = [
+    ['sendRedeemRegularHtlcTransaction', (contract: string) => [contract, recipient, 'ab'.repeat(32), 'cd'.repeat(32), 1, 'blake2b', 100]],
+    ['sendRedeemTimeoutHtlcTransaction', (contract: string) => [contract, recipient, 100]],
+    ['sendRedeemEarlyHtlcTransaction', (contract: string) => [contract, recipient, signatureProofHex, signatureProofHex, 100, 0, 42]],
+    ['signRedeemEarlyHtlcTransaction', (contract: string) => [contract, recipient, 100, 0, 42]],
+  ] as const
+
+  beforeEach(() => {
+    vi.stubGlobal('Nimiq', NimiqCore)
+    isOurRemoteSigner = vi.fn(async () => false)
+    getAccount = vi.fn(async () => ({ data: foreignHtlcAccount, error: undefined }))
+    getHtlcCreationData = vi.fn(async () => undefined)
+    sendTx = vi.fn(async () => ({ outcome: 'submitted', tx: { hash: 'tx-hash' }, serialized: 'serialized-tx' }))
+
+    useLocalWallet.mockReturnValue({
+      localAddress: localKeyPair.toAddress(),
+      localWallet: localKeyPair,
+    })
+    useNimiqNetwork.mockReturnValue({
+      consensus: 'established',
+      height: 0,
+      networkId: 5,
+      getAccount,
+      getHtlcCreationData,
+    })
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey: NimiqCore.BufferUtils.toHex(cosignerKeyPair.publicKey.serialize()),
+      isOurRemoteSigner,
+    })
+    useTransactions.mockReturnValue({ sendTx })
+  })
+
+  it.each(redeemCalls)('refuses %s against a contract listed as our own remote signer', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+    isOurRemoteSigner.mockImplementation(async (address: string) => address === ownContract)
+
+    await expect(handleRequest({ network: 'nimiq', name, params: params(ownContract) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: 4001,
+      // Text unique to the ownership refusal — the unverifiable path must not satisfy this.
+      message: expect.stringContaining('Refusing to spend'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each(redeemCalls)('refuses %s against a contract whose on-chain shape is ours but which the table has not learnt yet', async (name, params) => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: ownHtlcAccount, error: undefined })
+
+    await expect(handleRequest({ network: 'nimiq', name, params: params(ownContract) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: 4001 })
+    expect(isOurRemoteSigner).toHaveBeenCalledWith(ownContract)
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('refuses a redeem whose account lookup fails, as a network error rather than a rejection', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  // A key we cannot parse is exactly as unverifiable as a key we do not have, and must reach the
+  // Mini App as such — not as -32603, which reads like the host crashed.
+  it('refuses a redeem whose cosigner key is not valid hex, as a network error rather than a host crash', async () => {
+    const { handleRequest } = await createPermissionHost()
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey: 'zz'.repeat(32),
+      isOurRemoteSigner,
+    })
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
+    })
+    expect(getAccount).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  // A light client whose history is not ready answers with an empty result rather than throwing,
+  // so an unreadable shape must not be mistaken for a foreign one.
+  it('refuses a redeem whose contract shape resolves empty instead of treating it as foreign', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockResolvedValue(undefined)
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Cannot verify the owner'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('refuses a redeem whose creation-transaction query times out', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockRejectedValue(new Error('Operation timed out after 30000 milliseconds'))
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32000 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('reads a pruned contract from its creation transaction rather than trusting the account lookup', async () => {
+    const { handleRequest } = await createPermissionHost()
+    getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+    getHtlcCreationData.mockResolvedValue(ownHtlcAccount)
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [ownContract, recipient, 100] })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: 4001 })
+  })
+
+  it('still lets a Mini App redeem its own HTLC', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })).resolves.toBe('tx-hash')
+    expect(sendTx).toHaveBeenCalledWith(expect.objectContaining({ sender: foreignContract, recipient }))
+  })
+
+  it('shows the source contract on the redeem confirmation sheet', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await handleRequest({ network: 'nimiq', name: 'sendRedeemTimeoutHtlcTransaction', params: [foreignContract, recipient, 100] })
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      htlcContractAddress: foreignContract,
+      htlcData: { type: 'redeem-timeout' },
+    }))
+  })
+
+  it('shows the source contract and validity start height when only signing an early redeem', async () => {
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await handleRequest({ network: 'nimiq', name: 'signRedeemEarlyHtlcTransaction', params: [foreignContract, recipient, 100, 0, 42] })
+
+    expect(confirmationPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      htlcContractAddress: foreignContract,
+      htlcValidityStartHeight: 42,
+    }))
+  })
+
+  it.each([
+    ['a blake2b root one byte short', 'ab'.repeat(31), 'blake2b', 1],
+    ['a sha256 root one byte long', 'ab'.repeat(33), 'sha256', 1],
+    ['a 32-byte root declared as sha512', 'ab'.repeat(32), 'sha512', 1],
+    ['a hash count of 0', 'ab'.repeat(32), 'blake2b', 0],
+    ['a hash count of 256', 'ab'.repeat(32), 'blake2b', 256],
+  ])('rejects a new HTLC with %s', async (_label, hashRoot, hashAlgorithm, hashCount) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, hashRoot, hashCount, hashAlgorithm, 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  // An inherited Object member must fail as an unknown algorithm, not as a root-length problem
+  // reported against an undefined expected length.
+  it.each(['constructor', 'toString'])('rejects a new HTLC declaring %s as its hash algorithm', async (hashAlgorithm) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(32), 1, hashAlgorithm, 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32602,
+      message: 'Invalid hash algorithm',
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('rejects a regular redeem whose hash root does not match the declared algorithm', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, 'ab'.repeat(32), 'cd'.repeat(31), 1, 'blake2b', 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['a pre-image one byte short', 'ab'.repeat(31), 'cd'.repeat(32), 'blake2b'],
+    ['a pre-image between the two defined lengths', 'ab'.repeat(48), 'cd'.repeat(64), 'sha512'],
+    ['a pre-image of 256 bytes, which the length prefix cannot describe', 'ab'.repeat(256), 'cd'.repeat(32), 'blake2b'],
+  ])('rejects a regular redeem with %s', async (_label, preImage, hashRoot, hashAlgorithm) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, preImage, hashRoot, 1, hashAlgorithm, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it('rejects a regular redeem with a mismatched pre-image passed in object form', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: {
+        contractAddress: foreignContract,
+        recipient,
+        preImage: 'ab'.repeat(31),
+        hashRoot: 'cd'.repeat(32),
+        hashCount: 1,
+        hashAlgorithm: 'blake2b',
+        value: 100,
+      },
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({ code: -32602 })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  // Pre-image length is independent of the hash algorithm: the proof hashes it before comparing
+  // against the root, so both defined `PreImage` lengths are valid under a 64-byte sha512 root.
+  it.each([32, 64])('accepts a regular sha512 redeem with a %i-byte pre-image', async (preImageBytes) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendRedeemRegularHtlcTransaction',
+      params: [foreignContract, recipient, 'ab'.repeat(preImageBytes), 'cd'.repeat(64), 1, 'sha512', 100],
+    })).resolves.toBe('tx-hash')
+  })
+
+  it('accepts a 64-byte sha512 root and the maximum hash count', async () => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(64), 255, 'sha512', 1234567890, 100],
+    })).resolves.toBe('tx-hash')
+  })
+
+  const newHtlcParamStyles = [
+    ['positional', (htlcRecipient: string) => [localKeyPair.toAddress().toUserFriendlyAddress(), htlcRecipient, 'ab'.repeat(32), 1, 'blake2b', 1234567890, 100]],
+    ['named', (htlcRecipient: string) => ({ htlcSender: localKeyPair.toAddress().toUserFriendlyAddress(), htlcRecipient, hashRoot: 'ab'.repeat(32), hashCount: 1, hashAlgorithm: 'blake2b', timeout: 1234567890, value: 100 })],
+  ] as const
+
+  // The cosigner as recipient is the load-bearing part of the shape `isOwnRemoteHtlcShape` keys on,
+  // so a Mini App free to name it could mint a contract the app then adopts as custody
+  // infrastructure. `sendNewHtlcTransaction` is the only route by which a Mini App can create an
+  // HTLC, which makes the collision unconstructible once this field is refused.
+  it.each(newHtlcParamStyles)('rejects a new HTLC naming the cosigner as its recipient, in %s params', async (_style, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendNewHtlcTransaction', params: params(cosignerKeyPair.toAddress().toUserFriendlyAddress()) })
+      .catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32602,
+      message: expect.stringContaining('cosigner'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each(newHtlcParamStyles)('still accepts a new HTLC naming any other recipient, in %s params', async (_style, params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({ network: 'nimiq', name: 'sendNewHtlcTransaction', params: params(recipient) })).resolves.toBe('tx-hash')
+    expect(sendTx).toHaveBeenCalled()
+  })
+
+  // Without the cosigner address the recipient cannot be compared against it, so the request is
+  // refused as unverifiable — never waved through — and reaches the Mini App as a network error
+  // rather than -32603 or an invalid-request code.
+  it.each([
+    ['is missing', undefined],
+    ['is not valid hex', 'zz'.repeat(32)],
+  ])('refuses a new HTLC as unverifiable when the cosigner key %s', async (_label, remotePublicKey) => {
+    const { handleRequest } = await createPermissionHost()
+    useRemoteSigner.mockReturnValue({
+      remoteHeight: 0,
+      remoteAddress: cosignerKeyPair.toAddress(),
+      remotePublicKey,
+      isOurRemoteSigner,
+    })
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendNewHtlcTransaction',
+      params: [localKeyPair.toAddress().toUserFriendlyAddress(), recipient, 'ab'.repeat(32), 1, 'blake2b', 1234567890, 100],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      message: expect.stringContaining('Try again once Nimiq Pay is in sync'),
+    })
+    expect(sendTx).not.toHaveBeenCalled()
   })
 })

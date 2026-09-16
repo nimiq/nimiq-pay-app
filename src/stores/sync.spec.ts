@@ -26,6 +26,7 @@ const state = vi.hoisted(() => {
   const addReceiptTransaction = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
   const addWithdrawalTransaction = vi.fn()
+  const addHtlcTransaction = vi.fn()
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -76,6 +77,7 @@ const state = vi.hoisted(() => {
     addReceiptTransaction,
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
+    addHtlcTransaction,
     logger,
   }
 })
@@ -289,6 +291,7 @@ vi.mock('@/stores/transactions', () => {
     addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction: state.addWithdrawalTransaction,
     addStakingtransaction: vi.fn(),
+    addHtlcTransaction: state.addHtlcTransaction,
     updateTransactionCashbackClaimed: vi.fn(),
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
@@ -313,9 +316,12 @@ function remoteSigner(address: string, balance: number, active = false) {
 }
 
 describe('useSync remote signer reconciliation', () => {
+  let publicKeyFromHex: ReturnType<typeof vi.fn>
+
   beforeEach(() => {
     vi.resetModules()
     setActivePinia(createPinia())
+    publicKeyFromHex = vi.fn((_hex?: string) => ({ toAddress: () => createAddress('NQ11 COSIGNER ADDRESS') }))
     vi.stubGlobal('Nimiq', {
       Policy: {
         BLOCKS_PER_BATCH: 32,
@@ -327,6 +333,9 @@ describe('useSync remote signer reconciliation', () => {
       BufferUtils: {
         fromHex: vi.fn(() => new Uint8Array()),
         toUtf8: vi.fn(() => ''),
+      },
+      PublicKey: {
+        fromHex: publicKeyFromHex,
       },
     })
 
@@ -386,6 +395,7 @@ describe('useSync remote signer reconciliation', () => {
     state.addReceiptTransaction.mockReset()
     state.addUnknownPaymentToMerchantTransaction.mockReset()
     state.addWithdrawalTransaction.mockReset()
+    state.addHtlcTransaction.mockReset()
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -674,7 +684,7 @@ describe('useSync remote signer reconciliation', () => {
       fee: 0,
       state: 'confirmed',
       timestamp: 150_000,
-      data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+      data: { sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0'.repeat(64), hashCount: 1 },
       proof: { raw: '' },
     }
     const swapLeafTx = {
@@ -698,11 +708,12 @@ describe('useSync remote signer reconciliation', () => {
     }) as any)
     state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
 
-    // Force the swap handler down its catch path so we can observe the leaf
-    // reaching it without wiring up a Fastspot mock.
+    // Force the swap handler down its catch path so we can observe the leaf reaching it without
+    // wiring up a Fastspot mock. The wording matters: only Fastspot's `contract-not-found` detail
+    // is treated as a definite "not a swap".
     vi.doMock('@/composables/useFastspotv1', () => ({
       useFastspotApiV1: vi.fn(() => Promise.resolve({
-        getContract: vi.fn(() => Promise.reject(new Error('mocked fastspot failure'))),
+        getContract: vi.fn(() => Promise.reject(new Error('No NIM contract found under the given id NQ55 SWAP LEAF ADDRESS.'))),
       })),
     }))
 
@@ -712,9 +723,12 @@ describe('useSync remote signer reconciliation', () => {
     await store.updateTransactionHistory()
 
     expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalled()
-    expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
-      expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
+    expect(state.addHtlcTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ hash: 'swap-leaf-hash' }),
     )
+    // The cosigner address that tells our own extension chain apart from a Mini App HTLC has to be
+    // derived from the remote signer's key, not from any other key that happens to be in scope.
+    expect(publicKeyFromHex).toHaveBeenCalledWith('service-public-key')
   })
 
   it('awaits centralized signer discovery before scanning remote signer history', async () => {

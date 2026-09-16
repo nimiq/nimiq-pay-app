@@ -12,6 +12,7 @@ import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useSyncState } from '@/stores/sync/state'
+import { isOwnRemoteHtlcShape } from '@/types/transactions'
 
 const logger = useLogger('remote-signer')
 export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
@@ -1078,22 +1079,71 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
   // without re-reading the proof. Covers extension HTLCs that `discoverRemoteSignersFromBlockchain`
   // misses because it only walks first-hop HTLCs.
+  //
+  // Callers need to tell three outcomes apart, not just "registered or not": 'ours' (already known,
+  // or just registered), 'foreign' (a readable shape that is not ours — safe to treat as external),
+  // and 'unknown' (the shape could not be read this round — a timed-out creation-tx query, one
+  // that came back empty because the history index isn't ready yet, or the wallet context changed
+  // underneath us). Reporting an unreadable shape as 'foreign' would record — and on the listener
+  // path, notify on — a drain that might turn out to be ours once the query succeeds on a later
+  // refresh, and that could never be retracted.
   async function registerOwnHtlcIfMissing(
     htlcAddress: string,
     expectedContext?: WalletContext,
-  ): Promise<void> {
+  ): Promise<'ours' | 'foreign' | 'unknown'> {
     const isCurrent = () => !expectedContext || isWalletContextCurrent(expectedContext)
-    if (!isCurrent() || await isOurRemoteSigner(htlcAddress) || !isCurrent())
-      return
+    if (!isCurrent())
+      return 'unknown'
+    if (await isOurRemoteSigner(htlcAddress))
+      return 'ours'
+    if (!isCurrent())
+      return 'unknown'
     if (!remotePublicKey.value)
-      return
+      return 'unknown'
     const address = Nimiq.Address.fromUserFriendlyAddress(htlcAddress)
-    // Account may already be pruned if the HTLC has been fully drained — in that case we still
-    // register with zero balance/timeout so the cached set short-circuits future drains from
-    // this address instead of looping through getAccount on every periodic refresh.
+    let cosignerAddress: string
+    try {
+      // The key is whatever the API returned; a malformed one leaves us unable to tell our own
+      // contracts apart, which is exactly 'unknown' rather than an exception for the caller.
+      cosignerAddress = Nimiq.PublicKey.fromHex(remotePublicKey.value).toAddress().toUserFriendlyAddress()
+    }
+    catch (error) {
+      logger.error('⚠️ Cosigner public key is not valid hex — cannot classify this HTLC', { address: htlcAddress, publicKeyLength: remotePublicKey.value.length, error })
+      return 'unknown'
+    }
+    const localUserFriendly = localAddress.value!.toUserFriendlyAddress()
+
+    // The account is gone once the HTLC has been fully drained, so fall back to its creation tx.
+    let shape: Parameters<typeof isOwnRemoteHtlcShape>[0] | undefined
     const { data: account } = await useNimiqNetwork().getAccount(address)
     if (!isCurrent())
-      return
+      return 'unknown'
+    if (account?.type === 'htlc') {
+      shape = account
+    }
+    else {
+      try {
+        shape = await useNimiqNetwork().getHtlcCreationData(address)
+      }
+      catch (error) {
+        logger.error(`Could not read HTLC creation tx — deferring rather than guessing`, { address: htlcAddress, error })
+        return 'unknown'
+      }
+    }
+    if (!isCurrent())
+      return 'unknown'
+    // The caller only offers drains whose proof creator is our local address, so the contract
+    // provably has a creation tx: finding none means the history query came back incomplete
+    // (fresh light client), not that the contract is foreign.
+    if (!shape) {
+      logger.log(`⏳ No HTLC shape available yet — deferring rather than guessing`, { address: htlcAddress, accountType: account?.type ?? 'pruned' })
+      return 'unknown'
+    }
+    if (!isOwnRemoteHtlcShape(shape, { localAddress: localUserFriendly, cosignerAddress })) {
+      logger.log(`🚫 Not registering HTLC — contract shape is not ours`, { address: htlcAddress, shape })
+      return 'foreign'
+    }
+
     const balance = account?.type === 'htlc' ? account.balance : 0
     const end = account?.type === 'htlc' ? account.timeout : 0
     await insertInactiveRemoteSigner({
@@ -1106,9 +1156,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       proofSize: remoteProofSize.value,
     }, isCurrent)
     if (!isCurrent())
-      return
+      return 'unknown'
     invalidateRemoteSignerAddressCache()
     logger.log(`📝 Registered previously-unknown own HTLC`, { address: htlcAddress, end, balance, accountType: account?.type ?? 'pruned' })
+    return 'ours'
   }
 
   interface LocalHistoryRequest {

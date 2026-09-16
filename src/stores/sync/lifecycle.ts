@@ -1,6 +1,6 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { WalletContext } from '@/stores/remote-signer'
-import type { UserReceiptTransaction } from '@/types/transactions'
+import type { ExternalTransaction } from '@/types/transactions'
 import { useTimeoutFn, useTimeoutPoll } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { watch } from 'vue'
@@ -290,20 +290,30 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (tx.recipientType === 'staking' && tx.data.type === 'add-stake' && (!remoteAddress.value || tx.sender !== remoteAddress.value.toUserFriendlyAddress()))
       return
 
-    const dbTxs: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+    // Any already-recorded transfer — see the matching note in updateTransactionHistory.
+    const dbTxs: ExternalTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
     if (!isListenerContextCurrent(context))
       return
     const hash = tx.transactionHash
     if (dbTxs.some(dbTx => dbTx.hash === hash))
       return
 
-    // Drop drains from our own HTLCs — they'd be mis-recorded as fresh Top-Ups with the drain
-    // block's recent timestamp. The proof carries the HTLC creator address; for our chain
-    // (including extensions) this is always the local wallet. Foreign HTLC senders stay.
+    // Offer the HTLC for registration first — it only accepts our own contract shape. 'foreign'
+    // falls through to the receipt path below. 'unknown' means the shape couldn't be read this
+    // round (e.g. a timed-out creation-tx query): recording now could never be retracted, so wait
+    // rather than guess — the next refresh will retry.
     if (isOwnHtlcDrain(tx, context.owner)) {
-      logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
-      await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender, context)
-      return
+      const claim = await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender, context)
+      if (!isListenerContextCurrent(context))
+        return
+      if (claim === 'ours') {
+        logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
+        return
+      }
+      if (claim === 'unknown') {
+        logger.log(`⏳ handleIncomingTransaction deferred own-HTLC drain — shape unreadable this round`, { hash, sender: tx.sender, amount: tx.value })
+        return
+      }
     }
 
     logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)

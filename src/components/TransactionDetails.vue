@@ -20,11 +20,12 @@ import { FlowName } from '@/lib/flows/steps.types'
 import { SQLQuery } from '@/lib/sql-queries'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useSync } from '@/stores/sync'
 import { getSwapHtlcKey } from '@/stores/transactions'
-import { isPendingAtomicSwapTransaction, Transfer, translateTransactionState } from '@/types/transactions'
+import { isHtlcRedeemToSelf, isPendingAtomicSwapTransaction, Transfer, translateTransactionState } from '@/types/transactions'
 import { useCurrencyFormatter } from '../composables/useCurrencyFormatter'
 import TransactionAmounts from './TransactionAmounts.vue'
 
@@ -36,7 +37,8 @@ const app = useApp()
 const asset = computed(() => props.tx.asset || Asset.NIM)
 const recipientAlias = computed(() => props.tx.recipient ? app.getAlias(props.tx.recipient) : undefined)
 // Incoming payment: sender is the counterparty; recipient is the user's own address (hidden).
-const isIncoming = computed(() => props.tx.transfer === Transfer.UserReceipt)
+const isIncoming = computed(() => props.tx.transfer === Transfer.UserReceipt
+  || isHtlcRedeemToSelf(props.tx, useLocalWallet().localAddress.toUserFriendlyAddress()))
 const senderAlias = computed(() => props.tx.sender ? app.getAlias(props.tx.sender) : undefined)
 const isSenderSaved = computed(() => !!props.tx.sender && app.isSavedAddress(props.tx.sender))
 // A small hop every 3s draws the eye to the "add to address book" affordance.

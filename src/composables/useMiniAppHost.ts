@@ -1,10 +1,11 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
+import type { Address, SignatureProof } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
-import type { PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
+import type { HtlcData, PartialHtlcTxArgs, PartialSendTxArgs, PartialStakingTxArgs, PartialUserTxArgs, StakingData } from '@/types/transactions'
 import { Toast } from '@capacitor/toast'
 import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
@@ -23,7 +24,7 @@ import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-networ
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useTransactions } from '@/stores/transactions'
-import { Rail, Transfer } from '@/types/transactions'
+import { isOwnRemoteHtlcShape, Rail, Transfer } from '@/types/transactions'
 import { ALLOWED_EVM_CHAIN_IDS, EVM_CHAIN_NAMES } from '../../web3-provider/src/allowedChains'
 import {
   TRANSACTION_OUTCOME_UNKNOWN_CODE,
@@ -120,6 +121,11 @@ export type UserConfirmationRequest
       network: Network
       data: Omit<PaymentRequestData, 'transfer'>
       stakingData?: StakingData
+      htlcData?: HtlcData
+      /** Source contract of an HTLC redeem — the account the funds leave, which `data.recipient` never names. */
+      htlcContractAddress?: string
+      /** Only meaningful for `sign-early`, whose signature is bound to this exact height. */
+      htlcValidityStartHeight?: number
     })
     | (MiniAppBase & {
       type: 'eth-transaction'
@@ -156,7 +162,7 @@ export type UserConfirmationRequest
     })
     | (MiniAppBase & {
       type: 'deviceIdentifier'
-      /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
+      /** Mini App supplied human-readable explanation. Shown verbatim in the prompt. */
       reason: string
     })
 
@@ -181,9 +187,46 @@ export interface MiniAppHostConfig {
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
 }
 
+/** Wire id and hash-root length of every hash algorithm the HTLC methods accept. */
+const HTLC_HASH_ALGORITHMS: Record<string, { id: number, rootLength: number }> = {
+  blake2b: { id: 1, rootLength: 32 },
+  sha256: { id: 3, rootLength: 32 },
+  sha512: { id: 4, rootLength: 64 },
+}
+
 /**
- * MiniAppHost - SDK for the host native app that runs mini apps in InAppBrowser
- * Provides typed communication with mini apps and handles permissions, signing, transactions
+ * Resolves the hash algorithm's wire id and validates what the fixed-layout HTLC buffers in
+ * `lib/tx.ts` cannot defend themselves against. Those buffers are written field by field, so a
+ * hash root of the wrong length does not fail — it shifts `hashCount` and `timeout` and still
+ * deserialises, creating a contract whose timeout is nothing like the one the sheet showed. A
+ * `hashCount` outside 1-255 is silently truncated mod 256 by `writeUint8` for the same reason.
+ *
+ * `preImage` is only passed on a redeem, and its length is independent of the algorithm: the proof
+ * hashes it `hashCount` times before comparing against the root, so a 32-byte secret under a
+ * SHA-512 root is valid. In Nimiq's `PreImage` encoding the length byte *is* the type
+ * discriminant, and only 32 and 64 are defined; anything past 255 bytes would additionally
+ * truncate that byte and leave the proof misdescribing itself.
+ */
+function parseHtlcHashAlgorithm(algorithm: unknown, hashRoot: Uint8Array, hashCount: number, preImage?: Uint8Array): number {
+  // `hasOwn`, not a bare index: 'constructor' and 'toString' would otherwise resolve to inherited
+  // members and be reported as a root-length problem instead of an invalid algorithm.
+  const algo = typeof algorithm === 'string' && Object.hasOwn(HTLC_HASH_ALGORITHMS, algorithm)
+    ? HTLC_HASH_ALGORITHMS[algorithm]
+    : undefined
+  if (!algo)
+    throw new InvalidTransactionError('Invalid hash algorithm')
+  if (hashRoot.length !== algo.rootLength)
+    throw new InvalidTransactionError(`Invalid hash root: ${algorithm} requires a ${algo.rootLength}-byte root, got ${hashRoot.length} bytes`)
+  if (!Number.isInteger(hashCount) || hashCount < 1 || hashCount > 255)
+    throw new InvalidTransactionError(`Invalid hash count: must be an integer between 1 and 255, got ${hashCount}`)
+  if (preImage && preImage.length !== 32 && preImage.length !== 64)
+    throw new InvalidTransactionError(`Invalid pre-image: must be 32 or 64 bytes, got ${preImage.length} bytes`)
+  return algo.id
+}
+
+/**
+ * MiniAppHost - SDK for the host native app that runs Mini Apps in InAppBrowser
+ * Provides typed communication with Mini Apps and handles permissions, signing, transactions
  */
 export class MiniAppHost {
   private inAppBrowser: typeof InAppBrowser | null
@@ -1331,6 +1374,11 @@ export class MiniAppHost {
       case 'sendUpdateStakerTransaction': return this.sendUpdateStakerTransaction(message.params)
       case 'sendRetireStakeTransaction': return this.sendRetireStakeTransaction(message.params)
       case 'sendRemoveStakeTransaction': return this.sendRemoveStakeTransaction(message.params)
+      case 'sendNewHtlcTransaction': return this.sendNewHtlcTransaction(message.params)
+      case 'sendRedeemRegularHtlcTransaction': return this.sendRedeemRegularHtlcTransaction(message.params)
+      case 'sendRedeemTimeoutHtlcTransaction': return this.sendRedeemTimeoutHtlcTransaction(message.params)
+      case 'sendRedeemEarlyHtlcTransaction': return this.sendRedeemEarlyHtlcTransaction(message.params)
+      case 'signRedeemEarlyHtlcTransaction': return this.signRedeemEarlyHtlcTransaction(message.params)
       default:
         logger.log('[MiniAppHost] Unknown message name:', message.name)
         throw new UnknownRequestError(`Unknown message name: ${message.name}`)
@@ -1652,6 +1700,375 @@ export class MiniAppHost {
     })
   }
 
+  /**
+   * A Mini App must never be able to spend one of *our own* custody HTLCs. Our local wallet is
+   * their HTLC-sender, so once the 14-day timeout has passed a timeout-resolve needs nothing but
+   * our own signature — and `listAccounts` hands the contract address straight to the Mini App.
+   *
+   * Both checks are needed: the `remote_signers` table can be incomplete (that is why
+   * `registerOwnHtlcIfMissing` exists), and the on-chain shape catches contracts it has not learnt
+   * about yet. A shape we cannot read is refused as *unverifiable*, never waved through as
+   * foreign — the same distinction `registerOwnHtlcIfMissing` draws between 'unknown' and
+   * 'foreign', and for the same reason: a light client whose history is not ready yet answers a
+   * shape query with nothing at all, which would otherwise be a bypass.
+   *
+   * Only a contract established as ours is a `PermissionDeniedError`; that genuinely is a refusal
+   * and shares code 4001 with the user tapping Reject. Unverifiable is a `NetworkError`, so the
+   * Mini App cannot mistake it for a cancellation and the user gets a toast saying why.
+   */
+  private async assertNotOwnHtlc(contractAddress: Address): Promise<void> {
+    const address = contractAddress.toUserFriendlyAddress()
+    const ownContract = `Refusing to spend ${address}: it is one of your own Nimiq Pay contracts`
+    const unverifiable = `Cannot verify the owner of ${address}. Try again once Nimiq Pay is in sync.`
+
+    if (await useRemoteSigner().isOurRemoteSigner(address))
+      throw new PermissionDeniedError(ownContract)
+
+    const cosignerAddress = this.deriveCosignerAddress(unverifiable)
+
+    const { data: account } = await useNimiqNetwork().getAccount(contractAddress)
+    if (!account)
+      throw new NetworkError(unverifiable)
+
+    // A live contract is readable as an account; a fully drained one is pruned and survives only
+    // as its creation transaction.
+    let shape: Parameters<typeof isOwnRemoteHtlcShape>[0] | undefined
+    if (account.type === 'htlc') {
+      shape = account
+    }
+    else {
+      try {
+        shape = await useNimiqNetwork().getHtlcCreationData(contractAddress)
+      }
+      catch (error) {
+        logger.error('Could not read HTLC contract shape — refusing the redeem', { address, error })
+        throw new NetworkError(unverifiable)
+      }
+    }
+    if (!shape) {
+      logger.error('HTLC contract shape came back empty — refusing the redeem', { address, accountType: account.type })
+      throw new NetworkError(unverifiable)
+    }
+
+    if (isOwnRemoteHtlcShape(shape, { localAddress: useLocalWallet().localAddress.toUserFriendlyAddress(), cosignerAddress }))
+      throw new PermissionDeniedError(ownContract)
+  }
+
+  /**
+   * The cosigner address is derived from a key we may not hold yet, so every guard comparing against
+   * it has to cope with that key being missing or unparseable. Both are *unverifiable* rather than
+   * safe and take the same `NetworkError` exit with the caller's wording — letting `fromHex` throw
+   * would surface as -32603 instead, which a Mini App cannot tell apart from the host crashing.
+   */
+  private deriveCosignerAddress(unverifiable: string): string {
+    const remotePublicKey = useRemoteSigner().remotePublicKey
+    if (!remotePublicKey)
+      throw new NetworkError(unverifiable)
+    try {
+      return Nimiq.PublicKey.fromHex(remotePublicKey).toAddress().toUserFriendlyAddress()
+    }
+    catch (error) {
+      logger.error('⚠️ Cosigner public key is not valid hex — refusing as unverifiable', { reason: unverifiable, publicKeyLength: remotePublicKey.length, error })
+      throw new NetworkError(unverifiable)
+    }
+  }
+
+  /**
+   * Our own custody HTLCs are recognised by shape alone (`isOwnRemoteHtlcShape`), and the cosigner
+   * as recipient is the load-bearing part of that shape. A Mini App free to name it could mint a
+   * contract the app then adopts as custody infrastructure — registered in `remote_signers`,
+   * extended, reclaimed, hidden from history. `sendNewHtlcTransaction` is the only route by which a
+   * Mini App can create an HTLC, so refusing this one field makes the collision unconstructible.
+   *
+   * A malformed request, not a refusal, hence `InvalidTransactionError` like the other boundary
+   * validations here. Funding an HTLC spends from the remote custody contract and needs the cosigner
+   * either way, so failing closed when it cannot be derived costs nothing but a clearer message.
+   */
+  private assertHtlcRecipientIsNotCosigner(htlcRecipient: Address): void {
+    const cosignerAddress = this.deriveCosignerAddress('Cannot verify the recipient of this HTLC. Try again once Nimiq Pay is in sync.')
+    if (htlcRecipient.toUserFriendlyAddress() === cosignerAddress)
+      throw new InvalidTransactionError(`Invalid HTLC recipient: ${cosignerAddress} is the Nimiq Pay cosigner and cannot be the recipient of a Mini App HTLC`)
+  }
+
+  private async sendNewHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let htlcSender: Address
+    let htlcRecipient: Address
+    let hashRoot: Uint8Array
+    let hashCount: number
+    let hashAlgorithm: number
+    let timeout: number
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 7) {
+      htlcSender = params[0] ? Nimiq.Address.fromString(params[0]) : useLocalWallet().localAddress
+      htlcRecipient = Nimiq.Address.fromString(params[1])
+      this.assertHtlcRecipientIsNotCosigner(htlcRecipient)
+      hashRoot = Nimiq.BufferUtils.fromHex(params[2])
+      hashCount = Number(params[3])
+      hashAlgorithm = parseHtlcHashAlgorithm(params[4], hashRoot, hashCount)
+      timeout = Number(params[5])
+      value = Number(params[6])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      htlcSender = 'htlcSender' in params ? Nimiq.Address.fromString((params as any).htlcSender) : useLocalWallet().localAddress
+      htlcRecipient = Nimiq.Address.fromString((params as any).htlcRecipient)
+      this.assertHtlcRecipientIsNotCosigner(htlcRecipient)
+      hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
+      hashCount = Number((params as any).hashCount)
+      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount)
+      timeout = Number((params as any).timeout)
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendNewHtlcTransaction method')
+    }
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
+      recipient: Nimiq.Address.NULL.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'new-htlc',
+        sender: htlcSender,
+        recipient: htlcRecipient,
+        hashRoot,
+        hashCount,
+        hashAlgorithm,
+        timeout,
+      },
+      htlcTitle: 'New HTLC',
+      value,
+      analyticsRequestType: 'nimiq_htlc_new',
+    })
+  }
+
+  private async sendRedeemRegularHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let preImage: Uint8Array
+    let hashRoot: Uint8Array
+    let hashCount: number
+    let hashAlgorithm: number
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 7) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      preImage = Nimiq.BufferUtils.fromHex(params[2])
+      hashRoot = Nimiq.BufferUtils.fromHex(params[3])
+      hashCount = Number(params[4])
+      hashAlgorithm = parseHtlcHashAlgorithm(params[5], hashRoot, hashCount, preImage)
+      value = Number(params[6])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      preImage = Nimiq.BufferUtils.fromHex((params as any).preImage)
+      hashRoot = Nimiq.BufferUtils.fromHex((params as any).hashRoot)
+      hashCount = Number((params as any).hashCount)
+      hashAlgorithm = parseHtlcHashAlgorithm((params as any).hashAlgorithm, hashRoot, hashCount, preImage)
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemRegularHtlcTransaction method')
+    }
+    await this.assertNotOwnHtlc(contractAddress)
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'redeem-regular',
+        preImage,
+        hashRoot,
+        hashCount,
+        hashAlgorithm,
+      },
+      htlcTitle: 'Redeem HTLC (regular)',
+      value,
+      analyticsRequestType: 'nimiq_htlc_redeem_regular',
+    })
+  }
+
+  private async sendRedeemTimeoutHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let value: number
+
+    if (Array.isArray(params) && params.length >= 3) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      value = Number(params[2])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      value = Number((params as any).value)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemTimeoutHtlcTransaction method')
+    }
+    await this.assertNotOwnHtlc(contractAddress)
+    return this.sendPayment({
+      transfer: Transfer.HTLC,
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      htlcData: {
+        type: 'redeem-timeout',
+      },
+      htlcTitle: 'Redeem HTLC (timeout)',
+      value,
+      analyticsRequestType: 'nimiq_htlc_redeem_timeout',
+    })
+  }
+
+  private async sendRedeemEarlyHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let htlcSenderSignature: SignatureProof
+    let htlcRecipientSignature: SignatureProof
+    let value: number
+    // let fee: number | undefined
+    let validityStartHeight: number
+
+    if (Array.isArray(params) && params.length >= 7) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[2]))
+      htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex(params[3]))
+      value = Number(params[4])
+      // fee = params[5] !== undefined ? Number(params[5]) : undefined
+      validityStartHeight = Number(params[6])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      htlcSenderSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcSenderSignature))
+      htlcRecipientSignature = Nimiq.SignatureProof.deserialize(Nimiq.BufferUtils.fromHex((params as any).htlcRecipientSignature))
+      value = Number((params as any).value)
+      // fee = (params as any).fee !== undefined ? Number((params as any).fee) : undefined
+      validityStartHeight = Number((params as any).validityStartHeight)
+    }
+    else {
+      throw new InternalError('Invalid parameters for sendRedeemEarlyHtlcTransaction method')
+    }
+    await this.assertNotOwnHtlc(contractAddress)
+
+    const partialTx = {
+      sender: contractAddress.toUserFriendlyAddress(),
+      recipient: recipient.toUserFriendlyAddress(),
+      amount: value,
+      title: 'Redeem HTLC (early)',
+      transfer: Transfer.HTLC,
+      rail: Rail.MiniApp,
+      railMerchantId: this.config.url,
+      merchantName: this.config.title,
+      htlcData: {
+        type: 'redeem-early',
+        senderSignatureProof: htlcSenderSignature,
+        recipientSignatureProof: htlcRecipientSignature,
+      },
+      validityStartHeight,
+    } satisfies PartialHtlcTxArgs
+
+    // Early redeem doesn't require the user's consent, as the two required signatures are already passed in the params.
+    // So we shortcut `sendPayment` with its user confirmation and go straight to sending.
+    const analyticsRequestType = 'nimiq_htlc_redeem_early'
+    const result = await useTransactions().sendTx(partialTx)
+    trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: result.outcome === 'submitted' })
+    if (result.outcome === 'rejected')
+      throw new InternalError(`Failed to send payment transaction: ${result.error}`)
+    if (result.outcome === 'unknown') {
+      logger.log('[MiniAppHost] Transaction outcome unknown', { stagedHash: result.stagedHash })
+      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE)
+    }
+    return result.tx.hash
+  }
+
+  private async signRedeemEarlyHtlcTransaction(params: unknown): Promise<string> {
+    // Parse params
+    let contractAddress: Address
+    let recipient: Address
+    let value: number
+    // let fee: number | undefined
+    let validityStartHeight: number
+
+    if (Array.isArray(params) && params.length >= 5) {
+      contractAddress = Nimiq.Address.fromString(params[0])
+      recipient = params[1] ? Nimiq.Address.fromString(params[1]) : useLocalWallet().localAddress
+      value = Number(params[2])
+      // fee = params[3] !== undefined ? Number(params[3]) : undefined
+      validityStartHeight = Number(params[4])
+    }
+    else if (typeof params === 'object' && params !== null) {
+      contractAddress = Nimiq.Address.fromString((params as any).contractAddress)
+      recipient = 'recipient' in params ? Nimiq.Address.fromString((params as any).recipient) : useLocalWallet().localAddress
+      value = Number((params as any).value)
+      // fee = (params as any).fee !== undefined ? Number((params as any).fee) : undefined
+      validityStartHeight = Number((params as any).validityStartHeight)
+    }
+    else {
+      throw new InternalError('Invalid parameters for signRedeemEarlyHtlcTransaction method')
+    }
+    await this.assertNotOwnHtlc(contractAddress)
+
+    const analyticsRequestType = 'nimiq_htlc_sign_early'
+
+    // Because this request generates and replies with a signature, it should not go through the create/send transaction
+    // flow, as that would be semantically wrong.
+    // Thus we ask for confirmation and generate the signature directly here.
+    if (!this.config.requestUserConfirmation) {
+      throw new InternalError('Confirmation handler not provided')
+    }
+    const confirmed = await this.config.requestUserConfirmation({
+      url: this.config.url,
+      name: this.config.title,
+      type: 'transaction',
+      data: {
+        recipient: recipient.toUserFriendlyAddress(),
+        recipientType: Nimiq.AccountType.Basic,
+        amount: value,
+        fee: 0,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+      },
+      htlcData: {
+        type: 'sign-early',
+      },
+      htlcContractAddress: contractAddress.toUserFriendlyAddress(),
+      htlcValidityStartHeight: validityStartHeight,
+      network: 'nimiq',
+    })
+    if (!confirmed) {
+      trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false })
+      throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+    }
+
+    const tx = new Nimiq.Transaction(
+      /* sender */ contractAddress,
+      /* senderType */ Nimiq.AccountType.HTLC,
+      /* senderData */ new Uint8Array(0),
+      /* recipient */ recipient,
+      /* recipientType */ Nimiq.AccountType.Basic,
+      /* recipientData */ new Uint8Array(0),
+      /* value */ BigInt(value),
+      /* fee */ 0n,
+      /* flags */ 0,
+      /* validityStartHeight */ validityStartHeight,
+      /* networkId */ useNimiqNetwork().networkId,
+    )
+
+    const { privateKey, publicKey } = useLocalWallet().localWallet
+    const sig = Nimiq.Signature.create(privateKey, publicKey, tx.serializeContent())
+    const sigProof = Nimiq.SignatureProof.singleSig(publicKey, sig)
+    trackWeb3Request({ requestType: analyticsRequestType, blockchain: 'nimiq', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true })
+    return Nimiq.BufferUtils.toHex(sigProof.serialize())
+  }
+
   private async sendPayment(txData: {
     value: number
     fee?: number
@@ -1664,6 +2081,13 @@ export class MiniAppHost {
     transfer: Transfer.Staking
     stakingTitle: PartialStakingTxArgs['title']
     stakingData: StakingData
+  } | {
+    transfer: Transfer.HTLC
+    htlcTitle: PartialStakingTxArgs['title']
+    htlcData: HtlcData
+    sender: string
+    recipient: string
+    validityStartHeight?: number
   })): Promise<string> {
     if (!this.config.requestUserConfirmation) {
       throw new InternalError('Confirmation handler not provided')
@@ -1683,13 +2107,21 @@ export class MiniAppHost {
             // For remove-stake, the recipient is the user's own address
             ? useLocalWallet().localAddress.toUserFriendlyAddress()
             : STAKING_CONTRACT_ADDRESS
-          : txData.recipient,
+          : txData.transfer === Transfer.HTLC
+            ? txData.htlcData.type === 'new-htlc'
+              ? 'New contract'
+              : (txData.recipient || useLocalWallet().localAddress.toUserFriendlyAddress())
+            : txData.recipient,
         recipientType: txData.transfer === Transfer.Staking
           ? txData.stakingData.type === 'remove-stake'
             // For remove-stake transactions, the recipient is the user's local address, which is a basic account
             ? Nimiq.AccountType.Basic
             : Nimiq.AccountType.Staking
-          : Nimiq.AccountType.Basic,
+          : txData.transfer === Transfer.HTLC
+            ? txData.htlcData.type === 'new-htlc'
+              ? Nimiq.AccountType.HTLC
+              : Nimiq.AccountType.Basic
+            : Nimiq.AccountType.Basic,
         amount: txData.value,
         fee: txData.fee ?? 0,
         message: txData.message,
@@ -1698,6 +2130,10 @@ export class MiniAppHost {
         merchantName: this.config.title,
       },
       stakingData: 'stakingData' in txData ? txData.stakingData : undefined,
+      htlcData: 'htlcData' in txData ? txData.htlcData : undefined,
+      // The contract address is derived from the funding transaction, so on `new-htlc` it does not
+      // exist yet and there is nothing to show. On a redeem `txData.sender` is the contract drained.
+      htlcContractAddress: txData.transfer === Transfer.HTLC && txData.htlcData.type !== 'new-htlc' ? txData.sender : undefined,
       network: 'nimiq',
     })
     if (!confirmed) {
@@ -1730,6 +2166,20 @@ export class MiniAppHost {
         stakingData: txData.stakingData!,
       } satisfies PartialStakingTxArgs
     }
+    else if (txData.transfer === Transfer.HTLC) {
+      partialTx = {
+        sender: txData.sender,
+        recipient: txData.recipient,
+        amount: txData.value,
+        title: txData.htlcTitle,
+        transfer: txData.transfer,
+        rail: Rail.MiniApp,
+        railMerchantId: this.config.url,
+        merchantName: this.config.title,
+        htlcData: txData.htlcData!,
+        validityStartHeight: txData.validityStartHeight,
+      } satisfies PartialHtlcTxArgs
+    }
     else {
       throw new InternalError('Invalid transfer type')
     }
@@ -1744,53 +2194,6 @@ export class MiniAppHost {
     }
     return result.tx.hash
   }
-
-  // private async signTransaction(txData: RequestType['signTransaction']): Promise<ResponseType['signTransaction']> {
-  //   let tx: Transaction;
-  //   try {
-  //     tx = typeof txData === 'string' ? Nimiq.Transaction.fromAny(txData) : parseTransactionData(txData);
-  //   } catch (error) {
-  //     throw new InvalidTransactionError(`Failed to parse transaction: ${(error as Error).message}`);
-  //   }
-
-  //   if (!this.config.requestUserConfirmation) {
-  //     throw new InternalError('Confirmation handler not provided');
-  //   }
-
-  //   const confirmed = await this.config.requestUserConfirmation({
-  //     type: 'transaction',
-  //     plain: tx.toPlain(),
-  //   });
-  //   if (!confirmed) {
-  //     throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE);
-  //   }
-
-  //   // Handle claiming transactions
-  //   if (tx.recipient.equals(useLocalWallet().localAddress)) {
-  //     tx.sign(Nimiq.KeyPair.derive(useLocalWallet().localWallet.privateKey))
-  //     return {
-  //       serialized: tx.toHex(),
-  //       plain: tx.toPlain(),
-  //     };
-  //   }
-
-  //   // Handle sending transactions
-  //   const remoteAddress = useRemoteSigner().remoteAddress;
-  //   if (remoteAddress && tx.sender.equals(remoteAddress)) {
-  //     tx.proof = createResolveProof({ tx,  mode: 'early' });
-  //     const res = await getSignedTxByRemote(tx)
-  //     if (res.error) {
-  //       throw new InternalError(`Failed to sign transaction by cosigner: ${res.error}`);
-  //     }
-  //     const signedTx = res.data!.newTx;
-  //     return {
-  //       serialized: signedTx.toHex(),
-  //       plain: signedTx.toPlain(),
-  //     };
-  //   }
-
-  //   throw new PermissionDeniedError('Neither the sender nor recipient match any available account');
-  // }
 }
 
 /** Base class for MiniApp errors with typed error codes */
@@ -1821,55 +2224,3 @@ export class NetworkError extends MiniAppError {
 export class InvalidTransactionError extends MiniAppError {
   readonly type = 'INVALID_TRANSACTION'
 }
-
-// function parseTransactionData(txData: TransactionData): Transaction {
-//   const { height, networkId } = storeToRefs(useNimiqNetwork())
-
-//   if (txData.direction === 'send' && txData.recipient === useLocalWallet().localAddress.toUserFriendlyAddress()) {
-//     throw new Error('Cannot send transaction to own local address');
-//   }
-//   if (txData.direction === 'claim' && txData.sender === useRemoteSigner().remoteAddress!.toUserFriendlyAddress()) {
-//     throw new Error('Cannot claim transaction from own sender address');
-//   }
-
-//   return Nimiq.Transaction.fromPlain(txData.direction === 'send' ? {
-//     sender: useRemoteSigner().remoteAddress!.toUserFriendlyAddress(),
-//     senderType: 'htlc',
-//     recipient: txData.recipient,
-//     recipientType: txData.recipientType || 'basic',
-//     value: txData.value,
-//     fee: txData.fee || 0,
-//     validityStartHeight: height.value,
-//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-//     flags: txData.flags || 0,
-//     data: txData.data || { type: 'raw', raw: '' },
-
-//     // Required fields without effect in `fromPlain()`
-//     transactionHash: '',
-//     format: "basic",
-//     feePerByte: 0,
-//     proof: { type: 'raw', raw: '' },
-//     size: 0,
-//     valid: true,
-//   } : {
-//     sender: txData.sender,
-//     senderType: txData.senderType,
-//     recipient: useLocalWallet().localAddress.toUserFriendlyAddress(),
-//     recipientType: 'basic',
-//     value: txData.value,
-//     fee: txData.fee || 0,
-//     validityStartHeight: height.value,
-//     network: networkId.value === 24 ? 'main-albatross' : networkId.value === 5 ? 'test-albatross' : 'invalid',
-//     flags: 0,
-//     ...(txData.senderData ? { senderData: txData.senderData as PlainTransactionSenderData} : {}),
-//     data: txData.data || { type: 'raw', raw: '' },
-
-//     // Required fields without effect in `fromPlain()`
-//     transactionHash: '',
-//     format: "basic",
-//     feePerByte: 0,
-//     proof: { type: 'raw', raw: '' },
-//     size: 0,
-//     valid: true,
-//   });
-// }

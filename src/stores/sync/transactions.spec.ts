@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SQLQuery } from '@/lib/sql-queries'
 import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
-import { createAddress, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
+import { createAddress, FASTSPOT_NOT_FOUND, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -864,7 +864,7 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql === SQLQuery.GetAllUserReceipts)
+        if (sql === SQLQuery.SelectAllTransactions)
           return Promise.resolve([{ hash: 'known-hash', sender: 'NQ77 KNOWN SENDER' }])
         return Promise.resolve([])
       })
@@ -893,8 +893,8 @@ describe('useSyncTransactions', () => {
         return Promise.resolve({ data: [] })
       }) as any)
       state.query.mockImplementation((sql = '') => {
-        if (sql === SQLQuery.GetAllUserReceipts)
-          return Promise.resolve([{ hash: 'known-htlc-hash', sender: 'NQ33 NIMIQ PAY HTLC' }])
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'known-htlc-hash', transfer: Transfer.UserReceipt, sender: 'NQ33 NIMIQ PAY HTLC' }])
         return Promise.resolve([])
       })
       const { buildTopUpReceipt } = await import('@/lib/tx')
@@ -921,6 +921,38 @@ describe('useSyncTransactions', () => {
         hash: 'known-htlc-hash',
         sender: 'NQ44 HTLC OWNER',
       }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+    })
+
+    it('does not backfill an early-resolve drain stored under another transfer type', async () => {
+      const tx = {
+        transactionHash: 'known-htlc-hash',
+        sender: 'NQ55 MINI APP HTLC ADDRESS',
+        senderType: 'htlc',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { raw: '' },
+        proof: { type: 'early-resolve', raw: '' },
+      }
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS')
+          return Promise.resolve({ data: [tx] })
+        return Promise.resolve({ data: [] })
+      }) as any)
+      // Stored under a sender the backfill would "improve" — the stored transfer type is what stops it.
+      state.query.mockImplementation((sql = '') => {
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'known-htlc-hash', transfer: Transfer.HTLC, sender: 'NQ44 HTLC OWNER' }])
+        return Promise.resolve([])
+      })
+      const { useSyncTransactions } = await import('./transactions')
+
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
     describe('own-HTLC drain filtering', () => {
@@ -950,6 +982,7 @@ describe('useSyncTransactions', () => {
 
       it('drops a timeout-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -965,6 +998,7 @@ describe('useSyncTransactions', () => {
 
       it('drops an early-resolve drain whose creator is the local address', async () => {
         mockLocalAddressTxs(ownHtlcDrain('early-resolve'))
+        state.registerOwnHtlcIfMissing.mockResolvedValue('ours')
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
@@ -1023,6 +1057,27 @@ describe('useSyncTransactions', () => {
         expect(state.addReceiptTransaction).not.toHaveBeenCalled()
       })
 
+      it('keeps a Mini App HTLC drain that registration refused to claim as ours', async () => {
+        mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        // registerOwnHtlcIfMissing saw a foreign contract shape and declined to register it.
+        state.registerOwnHtlcIfMissing.mockResolvedValue('foreign')
+        const { useSyncTransactions } = await import('./transactions')
+        await useSyncTransactions().updateTransactionHistory()
+        expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+          hash: 'drain-hash',
+        }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+      })
+
+      it('defers an own-HTLC drain whose contract shape could not be read this round', async () => {
+        mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
+        // registerOwnHtlcIfMissing couldn't read the creation tx this round (e.g. a timed-out
+        // query) — the drain must be neither recorded nor claimed as ours; wait for the next refresh.
+        state.registerOwnHtlcIfMissing.mockResolvedValue('unknown')
+        const { useSyncTransactions } = await import('./transactions')
+        await useSyncTransactions().updateTransactionHistory()
+        expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      })
+
       it('keeps a foreign HTLC drain (creator != local) as a Top-Up', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve', 'NQ77 FOREIGN CREATOR'))
         const { useSyncTransactions } = await import('./transactions')
@@ -1061,6 +1116,59 @@ describe('useSyncTransactions', () => {
       expect(events).toEqual(['discover', 'getAllRemoteSigners'])
     })
 
+    it('skips the remote signer scan entirely when no cosigner key is available', async () => {
+      state.remotePublicKey = undefined
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'extension-hash',
+            sender: signer.address,
+            senderType: 'basic',
+            recipient: 'NQ44 EXTENSION HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 50_000,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 150_000,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0'.repeat(64), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
+    })
+
+    it('skips the remote signer scan when the cosigner key is not valid hex, instead of aborting the refresh', async () => {
+      // servicePublicKey comes straight from an API response, and `fromHex` throws on malformed
+      // input. The whole body of updateTransactionHistory sits under one broad catch, so an
+      // unguarded throw here silently kills every later step of the refresh.
+      ;(globalThis as any).Nimiq.PublicKey.fromHex = vi.fn(() => {
+        throw new Error('Invalid public key')
+      })
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Skipping remote signer scan'))
+      expect(state.logger.error).toHaveBeenCalledWith(
+        expect.stringContaining('public key'),
+        expect.objectContaining({ publicKeyLength: 'service-public-key'.length }),
+      )
+      expect(state.logger.error).not.toHaveBeenCalledWith('Error while updating transaction history', expect.anything())
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
+    })
+
     it('routes swap HTLCs found behind an extension chain to the swap handler', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
       state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
@@ -1074,7 +1182,7 @@ describe('useSyncTransactions', () => {
         fee: 0,
         state: 'confirmed',
         timestamp: 150_000,
-        data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+        data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 COSIGNER ADDRESS', hashRoot: '0000000000000000000000000000000000000000000000000000000000000000', hashCount: 1 },
         proof: { raw: '' },
       }
       const swapLeafTx = {
@@ -1098,9 +1206,137 @@ describe('useSyncTransactions', () => {
       state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
-        expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ hash: 'swap-leaf-hash' }),
       )
+    })
+
+    it('does not traverse a Mini App HTLC that mimics the zero hash root', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'mimic-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            // Zero hash root, but the recipient is a real counterparty rather than our cosigner.
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: '0'.repeat(64), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.getAllOutgoingTransactionsFromHtlcs).not.toHaveBeenCalled()
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(expect.objectContaining({ hash: 'mimic-hash' }))
+    })
+
+    it('records an HTLC creation as Transfer.HTLC when Fastspot does not know the contract', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockRejectedValue(new Error(FASTSPOT_NOT_FOUND))
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'mini-app-htlc-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'ab'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addHtlcTransaction).toHaveBeenCalledWith(expect.objectContaining({
+        hash: 'mini-app-htlc-hash',
+        transfer: 'htlc',
+        title: 'New HTLC',
+        amount: 500,
+      }))
+      expect(state.addUnknownPaymentToMerchantTransaction).not.toHaveBeenCalled()
+    })
+
+    it('records nothing when the Fastspot lookup fails for any reason other than an unknown contract', async () => {
+      // A 5xx, a timeout or an offline device all arrive as a bare Error, exactly like the
+      // not-found case. Writing on those would pin a real swap as a Mini App HTLC forever, since
+      // the hash is skipped by every later refresh.
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockRejectedValue(new Error('Failed to fetch'))
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'unreachable-fastspot-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ55 MINI APP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'ab'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
+      expect(state.addUnknownPaymentToMerchantTransaction).not.toHaveBeenCalled()
+    })
+
+    it('still records a Payment when Fastspot knows the contract but the pair is unsupported', async () => {
+      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS', balance: 0, active: true, publicKey: 'k', start: 100_000, end: 300_000, proofSize: 98 }
+      state.getAllRemoteSigners.mockResolvedValue([{ ...signer, address: createAddress(signer.address) }] as any)
+      state.getContract.mockResolvedValue({ from: { asset: 'BTC' }, to: { asset: 'NIM', amount: 1, fee: 0 } })
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ22 TEST FUNDED REMOTE ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'real-swap-hash',
+            sender: 'NQ22 TEST FUNDED REMOTE ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ66 SWAP HTLC ADDRESS',
+            recipientType: 'htlc',
+            value: 700,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ77 SOME COUNTERPARTY', hashRoot: 'cd'.repeat(32), hashCount: 1 },
+            proof: { raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalled()
+      expect(state.addHtlcTransaction).not.toHaveBeenCalled()
     })
 
     it('routes withdrawal txs to addWithdrawalTransaction when recipient is a known top-up sender', async () => {
@@ -1204,34 +1440,6 @@ describe('useSyncTransactions', () => {
       )
     })
 
-    it('logs swap fetch errors and falls back to addUnknownPaymentToMerchantTransaction', async () => {
-      const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
-      state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
-      const swapTx = {
-        transactionHash: 'swap-hash',
-        sender: signer.address,
-        senderType: 'basic',
-        recipient: 'NQ55 SWAP HTLC ADDRESS',
-        recipientType: 'htlc',
-        value: 50_000,
-        fee: 0,
-        state: 'confirmed',
-        timestamp: 1,
-        data: { hashRoot: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' },
-        proof: { raw: '' },
-      }
-      state.getAccountTransactions.mockImplementation(((address: any) => {
-        if (address?.toUserFriendlyAddress?.() === signer.address)
-          return Promise.resolve({ data: [swapTx] })
-        return Promise.resolve({ data: [] })
-      }) as any)
-      state.getContract.mockRejectedValue(new Error('fastspot down'))
-      const { useSyncTransactions } = await import('./transactions')
-      await useSyncTransactions().updateTransactionHistory()
-      expect(state.logger.error).toHaveBeenCalledWith('Error fetching contract info from Fastspot:', 'fastspot down')
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
-    })
-
     it('logs error when contract.from.asset is not NIM', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
@@ -1261,6 +1469,38 @@ describe('useSyncTransactions', () => {
       await useSyncTransactions().updateTransactionHistory()
       expect(state.logger.error).toHaveBeenCalledWith(expect.stringContaining('swap from another asset than NIM'))
       expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+    })
+
+    it('does not overwrite a stored Mini App HTLC redeem with a Top-Up', async () => {
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS') {
+          return Promise.resolve({ data: [{
+            transactionHash: 'redeem-hash',
+            sender: 'NQ55 MINI APP HTLC ADDRESS',
+            senderType: 'htlc',
+            recipient: 'NQ00 TEST LOCAL ADDRESS',
+            recipientType: 'basic',
+            value: 500,
+            fee: 0,
+            state: 'confirmed',
+            timestamp: 1,
+            data: { raw: '' },
+            proof: { type: 'regular-transfer', raw: '' },
+          }] })
+        }
+        return Promise.resolve({ data: [] })
+      }) as any)
+      // SelectAllTransactions (`transfer IN (...)`) already holds the redeem we sent ourselves.
+      state.query.mockImplementation((sql = '') => {
+        if (sql === SQLQuery.SelectAllTransactions)
+          return Promise.resolve([{ hash: 'redeem-hash', transfer: 'htlc', sender: 'NQ55 MINI APP HTLC ADDRESS' }])
+        return Promise.resolve([])
+      })
+
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
   })
 

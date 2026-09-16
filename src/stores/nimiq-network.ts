@@ -1,4 +1,4 @@
-import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainTransactionDetails } from '@nimiq/core'
+import type { Address, Client, ConsensusState, PlainAccount, PlainBlock, PlainHtlcData, PlainTransactionDetails } from '@nimiq/core'
 import type { AsyncResult } from '@/types'
 import { until, useTimeoutFn, useTimestamp } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
@@ -319,6 +319,28 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
+  // Mirrors DISCOVER_TIMEOUT_MS in remote-signer.ts: the identical getTransactionsByAddress call
+  // can hang on a freshly-booted light client before history is ready.
+  const HTLC_CREATION_DATA_TIMEOUT_MS = 30_000
+
+  /**
+   * Reads an HTLC's contract parameters from its creation transaction. Needed when the contract has
+   * been fully drained and pruned, so `getAccount` no longer returns it — the history index keeps
+   * the creation tx forever. `undefined` means only "the query succeeded and found no creation tx" —
+   * a failed, timed-out or client-less query throws instead. Callers that observed a drain from the
+   * contract treat both outcomes as unreadable, since such a contract provably has a creation tx.
+   */
+  async function getHtlcCreationData(htlcAddress: Address): Promise<PlainHtlcData | undefined> {
+    const plainHtlcAddress = htlcAddress.toUserFriendlyAddress()
+    // Answering "no creation tx" without a client would report a contract we simply couldn't query
+    // as one that provably isn't ours — throw so the caller defers instead.
+    if (!client.value)
+      throw new Error('Cannot read HTLC creation tx: client is not ready')
+    const txs = await promiseWithTimeout(client.value.getTransactionsByAddress(htlcAddress), HTLC_CREATION_DATA_TIMEOUT_MS)
+    const creation = txs.find(tx => tx.recipient === plainHtlcAddress && tx.recipientType === 'htlc')
+    return creation && 'hashRoot' in creation.data ? creation.data : undefined
+  }
+
   return {
     client, // make sure to await for client.value.waitForConsensusEstablished() before using it
     consensus,
@@ -333,6 +355,7 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     getAccounts,
     getAccountTransactions,
     getAllOutgoingTransactionsFromHtlcs,
+    getHtlcCreationData,
     getBalance,
     networkName,
     networkId,

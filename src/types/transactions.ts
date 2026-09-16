@@ -1,5 +1,4 @@
-import type * as Nimiq from '@nimiq/core'
-import type { PlainTransactionDetails } from '@nimiq/core'
+import type { AccountType, Address, PlainTransactionDetails, SignatureProof, TransactionState } from '@nimiq/core'
 import type { Asset, Chain } from '@/lib/assets'
 import { i18n } from '@/i18n/i18n-setup'
 
@@ -56,6 +55,11 @@ export enum Transfer {
    * Staking transactions (both to and from the staking contract, both value-transferring and signaling)
    */
   Staking = 'staking',
+
+  /**
+   * Generic HTLC transactions, not related to local/remote wallet or swaps
+   */
+  HTLC = 'htlc',
 }
 
 /**
@@ -93,9 +97,9 @@ export enum MerchantCategory {
 export interface BaseTransaction {
   raw?: string
   sender: string
-  senderType?: Nimiq.AccountType
+  senderType?: AccountType
   recipient: string
-  recipientType?: Nimiq.AccountType
+  recipientType?: AccountType
   status: AppTransactionState
   // Transient execution evidence for the unfinalized payment indicator.
   executionResult?: boolean
@@ -129,6 +133,10 @@ type KnownTransactionTitle
     | 'Remove Stake'
     | 'Delete Validator'
     | 'Staking Contract'
+    | 'New HTLC'
+    | 'Redeem HTLC (regular)'
+    | 'Redeem HTLC (timeout)'
+    | 'Redeem HTLC (early)'
 // artificial string type which is actually just a string, but that assigning a regular string to is a type error
 type UnknownTransactionTitle = string & { isUnknownTitle: true }
 export type TransactionTitle = KnownTransactionTitle | UnknownTransactionTitle
@@ -153,6 +161,10 @@ export function translateTransactionTitle(title: TransactionTitle) {
     'Remove Stake': i18n.t('Remove Stake'),
     'Delete Validator': i18n.t('Delete Validator'),
     'Staking Contract': i18n.t('Staking Contract'),
+    'New HTLC': i18n.t('New HTLC'),
+    'Redeem HTLC (regular)': i18n.t('Redeem HTLC (regular)'),
+    'Redeem HTLC (timeout)': i18n.t('Redeem HTLC (timeout)'),
+    'Redeem HTLC (early)': i18n.t('Redeem HTLC (early)'),
   }
   return Object.keys(knownTitleTranslations).includes(title)
     ? knownTitleTranslations[title as KnownTransactionTitle]
@@ -257,6 +269,50 @@ export type MerchantTransaction = BaseTransaction & {
   railMerchantId: string
 } */)
 
+export type HtlcData = {
+  type: 'new-htlc'
+  sender: Address
+  recipient: Address
+  hashRoot: Uint8Array
+  hashCount: number
+  hashAlgorithm: number
+  timeout: number
+} | {
+  type: 'redeem-regular'
+  preImage: Uint8Array
+  hashRoot: Uint8Array
+  hashCount: number
+  hashAlgorithm: number
+} | {
+  type: 'redeem-timeout'
+} | {
+  type: 'sign-early'
+} | {
+  type: 'redeem-early'
+  senderSignatureProof: SignatureProof
+  recipientSignatureProof: SignatureProof
+}
+
+export type HtlcTransaction = BaseTransaction & {
+  transfer: Transfer.HTLC
+  title: TransactionTitle
+  recipientData?: Uint8Array
+  senderData?: Uint8Array
+  rail?: Rail.MiniApp
+  railMerchantId?: string // Mini App URL
+  merchantName?: string // Mini App name
+  validityStartHeight?: number
+
+  // Unused properties for type compatibility
+  merchantCategory?: undefined
+  paymentMethod?: undefined
+  paymentRef?: undefined
+  fiatAmount?: undefined
+  fiatFeeAmount?: undefined
+  fiatCurrency?: undefined
+  isCashbackClaimed?: undefined
+}
+
 export type StakingData = {
   type: 'create-staker'
   delegation: string
@@ -282,8 +338,8 @@ export type StakingTransaction = BaseTransaction & {
   recipientData?: Uint8Array
   senderData?: Uint8Array
   rail?: Rail.MiniApp
-  railMerchantId?: string // Mini-app URL
-  merchantName?: string // Mini-app name
+  railMerchantId?: string // Mini App URL
+  merchantName?: string // Mini App name
 
   // Unused properties for type compatibility
   merchantCategory?: undefined
@@ -321,7 +377,7 @@ export type SyncTransaction = LocalToRemoteTx | RemoteToLocalTx | RemoteToLocalA
 /**
  * Transactions that are sent by the user and the recipient is another user or the staking contract
  */
-export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction | StakingTransaction
+export type ExternalTransactionSentByUser = UserTransaction | MerchantTransaction | StakingTransaction | HtlcTransaction
 
 /**
  * Transaction that the user sent to another user or internally to the HTLC contract
@@ -366,7 +422,38 @@ export type Transaction = ExternalTransaction | SyncTransaction
  * Transactions that are not internal (synchronization) transactions
  */
 export function isExternalTx(tx: Transaction): tx is ExternalTransaction {
-  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking].includes(tx.transfer)
+  return [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap, Transfer.UserReceipt, Transfer.Staking, Transfer.HTLC].includes(tx.transfer)
+}
+
+export const ZERO_HASH_ROOT = '0'.repeat(64)
+
+/**
+ * Our own remote-signer HTLCs are created by `createDepositData`, which pins every contract field.
+ * Matching the whole shape — rather than the zero hash root alone — is what keeps a Mini App HTLC
+ * from being mistaken for ours. A Mini App cannot construct the colliding shape at all, because
+ * `sendNewHtlcTransaction` refuses our cosigner as the HTLC recipient. A third party can still
+ * publish one on chain, but only our cosigner can resolve it early and only our local wallet can
+ * resolve it on timeout, so it is ours in every way that matters. `hashAlgorithm` is not matched.
+ */
+export function isOwnRemoteHtlcShape(
+  htlc: { sender: string, recipient: string, hashRoot: string, hashCount: number },
+  { localAddress, cosignerAddress }: { localAddress: string, cosignerAddress: string },
+) {
+  return htlc.sender === localAddress
+    && htlc.recipient === cosignerAddress
+    && htlc.hashRoot === ZERO_HASH_ROOT
+    && htlc.hashCount === 1
+}
+
+/**
+ * A Mini App may name any recipient on a redeem, so paying *us* is what makes it incoming.
+ * Takes the local address as a parameter to keep this module free of store imports — the same
+ * reason `isOwnHtlcDrain` in `stores/sync/transactions.ts` does.
+ */
+export function isHtlcRedeemToSelf(tx: Pick<Transaction, 'transfer' | 'senderType' | 'recipient'>, localAddress: string) {
+  return tx.transfer === Transfer.HTLC
+    && tx.senderType === Nimiq.AccountType.HTLC
+    && tx.recipient === localAddress
 }
 
 const PAYMENT_TRANSFERS = [Transfer.UserPayment, Transfer.UserPaymentToMerchant, Transfer.UserPaymentToAtomicSwap] as const
@@ -384,18 +471,20 @@ export function isPaymentTx(tx: Transaction): tx is ExternalTransactionSentByUse
 
 export type PartialUserTxArgs = Pick<UserTransaction | MerchantTransaction, 'recipient' | 'amount' | 'fee' | 'title' | 'fiatAmount' | 'fiatCurrency' | 'rail' | 'railMerchantId' | 'merchantCategory' | 'merchantName' | 'paymentRef' | 'transfer' | 'message' | 'invoiced' | 'meta'>
 export type PartialStakingTxArgs = Pick<StakingTransaction, 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer'> & { stakingData: StakingData }
+export type PartialHtlcTxArgs = Pick<HtlcTransaction, 'sender' | 'recipient' | 'amount' | 'title' | 'meta' | 'rail' | 'railMerchantId' | 'merchantName' | 'transfer' | 'validityStartHeight'> & { htlcData: HtlcData }
 
 export type PartialSendTxArgs
   = | PartialUserTxArgs
     | Pick<LocalToRemoteTx, 'transfer'>
     | Pick<ExtendRemoteTx, 'transfer'>
-    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Nimiq.Address }
+    | Pick<RemoteToLocalAfterTimeoutTx, 'transfer' | 'amount'> & { sender: Address }
     | Pick<RemoteToLocalTx, 'transfer'>
     | Pick<RemoteToLocalImmediateReclaimTx, 'transfer' | 'amount'> & {
-      sender: Nimiq.Address
+      sender: Address
       proofSize: number
     }
     | PartialStakingTxArgs
+    | PartialHtlcTxArgs
 
 export enum PaymentMethod {
   NIM = 'nim',
@@ -405,4 +494,4 @@ export enum PaymentMethod {
   Bluecode = 'bluecode',
 }
 
-export type AppTransactionState = Nimiq.TransactionState | 'mined' | 'failed'
+export type AppTransactionState = TransactionState | 'mined' | 'failed'

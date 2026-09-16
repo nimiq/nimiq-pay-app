@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { vi } from 'vitest'
 import { computed, shallowReactive } from 'vue'
 
+export const FASTSPOT_NOT_FOUND = 'No NIM contract found under the given id NQ55 MINI APP HTLC ADDRESS.'
+
 export function createAddress(value: string) {
   return {
     toUserFriendlyAddress: () => value,
@@ -35,12 +37,15 @@ function makeState() {
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
-  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<void> => Promise.resolve())
+  // 'foreign' — not 'unknown' — is the failure-visible default: in production 'unknown' means
+  // "refuse and skip", so a test that forgets to set this would silently drop everything.
+  const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<'ours' | 'foreign' | 'unknown'> => Promise.resolve('foreign'))
   const addReceiptTransaction = vi.fn()
   const scheduleIncomingPaymentNotification = vi.fn()
   const addUnknownPaymentToMerchantTransaction = vi.fn()
   const addWithdrawalTransaction = vi.fn()
   const addStakingtransaction = vi.fn()
+  const addHtlcTransaction = vi.fn()
   const updateTransactionStatus = vi.fn()
   const updateTransactionCashbackClaimed = vi.fn()
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
@@ -55,7 +60,9 @@ function makeState() {
   const reconnect = vi.fn()
   const getOrderById = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: undefined }))
   const getTransactionState = vi.fn((_args?: any): Promise<{ data: any, error: any }> => Promise.resolve({ data: undefined, error: undefined }))
-  const getContract = vi.fn((..._args: any[]): Promise<any> => Promise.reject(new Error('mocked fastspot failure')))
+  // Fastspot's real `contract-not-found` detail: the production code only records a Mini App HTLC
+  // when the rejection carries this wording, and defers on anything else.
+  const getContract = vi.fn((..._args: any[]): Promise<any> => Promise.reject(new Error(FASTSPOT_NOT_FOUND)))
   const initRemoteSigner = vi.fn((): Promise<void> => Promise.resolve())
   const initPolygon = vi.fn((): Promise<void> => Promise.resolve())
   const resolveHomeBalanceState = vi.fn((): Promise<void> => Promise.resolve())
@@ -72,7 +79,7 @@ function makeState() {
     remoteBalance: 0,
     remoteSigner: undefined as any,
     remoteHeight: 128,
-    remotePublicKey: 'service-public-key',
+    remotePublicKey: 'service-public-key' as string | undefined,
     remoteProofSize: 98,
     headTimestamp: 200_000,
     height: 128,
@@ -133,6 +140,7 @@ function makeState() {
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    addHtlcTransaction,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     refreshFromDb,
@@ -178,6 +186,7 @@ export function stubNimiqGlobal() {
       fromString: (value: string) => createAddress(value),
       fromUserFriendlyAddress: (value: string) => createAddress(value),
     },
+    PublicKey: { fromHex: () => ({ toAddress: () => ({ toUserFriendlyAddress: () => 'NQ11 COSIGNER ADDRESS' }) }) },
     BufferUtils: {
       fromHex: vi.fn(() => new Uint8Array()),
       toUtf8: vi.fn(() => ''),
@@ -268,6 +277,7 @@ export function resetSyncState() {
     state.addUnknownPaymentToMerchantTransaction,
     state.addWithdrawalTransaction,
     state.addStakingtransaction,
+    state.addHtlcTransaction,
     state.updateTransactionStatus,
     state.updateTransactionCashbackClaimed,
     state.refreshFromDb,
@@ -330,7 +340,7 @@ export function resetSyncState() {
   state.getAllRemoteSigners.mockResolvedValue([])
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
-  state.registerOwnHtlcIfMissing.mockResolvedValue(undefined)
+  state.registerOwnHtlcIfMissing.mockResolvedValue('foreign')
   state.refreshFromDb.mockResolvedValue(undefined)
   state.restorePendingOutgoingTransactions.mockResolvedValue(true)
   state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: true })
@@ -338,7 +348,7 @@ export function resetSyncState() {
   state.claimCashback.mockResolvedValue({ error: undefined, errorType: undefined })
   state.getOrderById.mockResolvedValue({ data: undefined, error: undefined })
   state.getTransactionState.mockResolvedValue({ data: undefined, error: undefined })
-  state.getContract.mockRejectedValue(new Error('mocked fastspot failure'))
+  state.getContract.mockRejectedValue(new Error(FASTSPOT_NOT_FOUND))
   state.initRemoteSigner.mockResolvedValue(undefined)
   state.initPolygon.mockResolvedValue(undefined)
   state.resolveHomeBalanceState.mockResolvedValue(undefined)
@@ -550,6 +560,7 @@ vi.mock('@/stores/transactions', () => {
     addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction: state.addWithdrawalTransaction,
     addStakingtransaction: state.addStakingtransaction,
+    addHtlcTransaction: state.addHtlcTransaction,
     updateTransactionCashbackClaimed: state.updateTransactionCashbackClaimed,
     updateTransactionStatus: state.updateTransactionStatus,
     refreshFromDb: state.refreshFromDb,

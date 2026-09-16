@@ -1,7 +1,7 @@
 import type { Client, PlainTransactionDetails, TransactionState } from '@nimiq/core'
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { RemoteSigner } from '@/lib/sql-queries'
-import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction, UserReceiptTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, StakingTransaction, Transaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { defineStore, storeToRefs } from 'pinia'
 import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
@@ -23,7 +23,7 @@ import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
-import { PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
+import { isOwnRemoteHtlcShape, PaymentMethod, PointsHashPrefix, Rail, Transfer } from '@/types/transactions'
 
 const logger = useLogger('useSync')
 const LOCAL_HISTORY_PAGE_SIZE = 100
@@ -52,6 +52,11 @@ export function isOwnHtlcDrain(tx: PlainTransactionDetails, localUserFriendly: s
     && tx.proof.creator === localUserFriendly
 }
 
+// Fastspot answers an unknown contract with `urn:x-fast:problem:contract-not-found`, whose detail
+// the API client re-throws as this message. Matching it is the only way to tell a definite "not a
+// swap" from a transport or server failure, because every non-ok response arrives as a bare Error.
+const FASTSPOT_CONTRACT_NOT_FOUND = /^No \S+ contract found under the given id\b/
+
 export const useSyncTransactions = defineStore('sync-transactions', () => {
   const { getAccountTransactions, getAllOutgoingTransactionsFromHtlcs } = useNimiqNetwork()
   const { query, run } = useConn()
@@ -66,6 +71,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     addUnknownPaymentToMerchantTransaction,
     addWithdrawalTransaction,
     addStakingtransaction,
+    addHtlcTransaction,
     updateTransactionCashbackClaimed,
     updateTransactionStatus,
   } = useTransactions()
@@ -250,7 +256,9 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
     }
     isUpdatingTransactions.value = true
     try {
-      const userReceipts: UserReceiptTransaction[] = await useConn().query(SQLQuery.GetAllUserReceipts)
+      // Any already-recorded transfer, not just receipts — otherwise a Mini App HTLC redeem we
+      // stored ourselves gets re-recorded here as a Top-Up and clobbers the original row.
+      const knownTxs: ExternalTransaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
       if (!isLocalCurrent())
         return
       try {
@@ -260,6 +268,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           const page = await getLocalTransactions({ sinceHeight: 0, ...(startAt ? { startAt } : {}), limit: LOCAL_HISTORY_PAGE_SIZE })
           if (!isLocalCurrent())
             return
+          // Offer each candidate HTLC for registration once per page — it only accepts our own
+          // contract shape. Not awaited here so plain receipts below publish without waiting; only
+          // HTLC drains await their sender's claim instead of re-deriving it.
+          const ownHtlcClaims = new Map<string, Promise<'ours' | 'foreign' | 'unknown'>>()
+          for (const tx of page) {
+            if (isOwnHtlcDrain(tx, context.owner) && !ownHtlcClaims.has(tx.sender)) {
+              ownHtlcClaims.set(tx.sender, remoteSignerStore.registerOwnHtlcIfMissing(tx.sender, context).catch((error) => {
+                logger.error('Could not classify HTLC drain — deferring to the next refresh', { address: tx.sender, error })
+                return 'unknown' as const
+              }))
+            }
+          }
           // Publish recent receipts before fetching older pages or reconciling HTLCs.
           await Promise.all(page.map(async (tx) => {
             if (!isLocalCurrent())
@@ -267,9 +287,24 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             if (tx.sender === context.owner || (remoteAddress.value && tx.sender === remoteAddress.value.toUserFriendlyAddress()))
               return
 
-            if (isOwnHtlcDrain(tx, context.owner)) {
-              logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
-              return
+            if (tx.senderType === 'htlc') {
+              const claim = await ownHtlcClaims.get(tx.sender)
+              if (!isLocalCurrent())
+                return
+              // 'unknown' means the shape couldn't be read this round (e.g. a timed-out creation-tx
+              // query) — wait for the next refresh rather than risk recording a drain that might turn
+              // out to be ours. A sender absent from this round's candidates (claim undefined, e.g. a
+              // regular, non timeout/early-resolve redeem) still falls back to remote_signers membership.
+              if (claim === 'unknown') {
+                logger.log(`⏳ updateTransactionHistory deferred own-HTLC drain — shape unreadable this round`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+                return
+              }
+              if (claim === 'ours' || (claim === undefined && await remoteSignerStore.isOurRemoteSigner(tx.sender))) {
+                logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+                return
+              }
+              if (!isLocalCurrent())
+                return
             }
 
             if (nakaBufferAddresses.includes(tx.sender)) {
@@ -280,11 +315,14 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             const hash = tx.transactionHash
-            const savedReceipt = userReceipts.find(dbTx => dbTx.hash === hash)
-            if (savedReceipt) {
-              if (tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
+            const knownTx = knownTxs.find(dbTx => dbTx.hash === hash)
+            if (knownTx) {
+              // Only rows we stored as Top-Ups get their sender backfilled with the HTLC owner: re-adding
+              // a receipt over a transfer stored under another type (e.g. a Mini App HTLC redeem) would
+              // clobber it with a Top-Up, which is exactly what the widened dedup above prevents.
+              if (knownTx.transfer === Transfer.UserReceipt && tx.senderType === 'htlc' && tx.proof.type === 'early-resolve') {
                 const receipt = await buildTopUpReceipt(tx)
-                if (isLocalCurrent() && receipt.sender !== savedReceipt.sender)
+                if (isLocalCurrent() && receipt.sender !== knownTx.sender)
                   await useTransactions().addReceiptTransaction(receipt, context)
               }
               return
@@ -301,14 +339,6 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
                 await useTransactions().addReceiptTransaction(receipt, context)
             }
           }))
-          // Register own HTLCs once per page after publishing incoming receipts.
-          const ownHtlcSenders = new Set<string>()
-          for (const tx of page) {
-            if (isOwnHtlcDrain(tx, context.owner))
-              ownHtlcSenders.add(tx.sender)
-          }
-          if (ownHtlcSenders.size > 0)
-            await Promise.all([...ownHtlcSenders].map(sender => remoteSignerStore.registerOwnHtlcIfMissing(sender, context)))
           if (!isLocalCurrent())
             return
 
@@ -336,6 +366,33 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
       if (!isCurrent())
         return
 
+      await discoverRemoteSignersFromBlockchain()
+      if (!isCurrent())
+        return
+      const remoteSigners = await getAllRemoteSigners()
+      if (!isCurrent())
+        return
+
+      // Resolved only now: discoverRemoteSignersFromBlockchain is what waits (up to 10s) for the
+      // cosigner key to arrive on a cold start, so snapshotting any earlier could read
+      // remotePublicKey before it's populated and skip the scan below for no reason.
+      // isOwnRemoteHtlcShape needs both addresses to tell our own extension chain apart from a
+      // Mini App HTLC; without a cosigner key we cannot tell them apart at all, so the scan is
+      // skipped rather than risking either error.
+      const localUserFriendlyForShape = localAddress.value.toUserFriendlyAddress()
+      const remoteCosignerKey = useRemoteSigner().remotePublicKey
+      let cosignerAddress: string | undefined
+      if (remoteCosignerKey) {
+        try {
+          cosignerAddress = Nimiq.PublicKey.fromHex(remoteCosignerKey).toAddress().toUserFriendlyAddress()
+        }
+        catch (error) {
+          // The key is whatever the API returned. Letting `fromHex` throw here would hit the broad
+          // catch below and abort the entire refresh over one unusable field.
+          logger.error('⚠️ Cosigner public key is not valid hex — skipping the remote signer scan', { publicKeyLength: remoteCosignerKey.length, error })
+        }
+      }
+
       function categorizeTransactions(txs: PlainTransactionDetails[]) {
         const htlcExtensionTxs: PlainTransactionDetails[] = []
         const htlcSwapTxs: PlainTransactionDetails[] = []
@@ -345,7 +402,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         for (const tx of txs) {
           if (tx.recipientType === 'htlc') {
             const data = tx.data
-            if ('hashRoot' in data && data.hashRoot === '0000000000000000000000000000000000000000000000000000000000000000')
+            if ('hashRoot' in data && cosignerAddress && isOwnRemoteHtlcShape(data, { localAddress: localUserFriendlyForShape, cosignerAddress }))
               htlcExtensionTxs.push(tx)
             else
               htlcSwapTxs.push(tx)
@@ -369,14 +426,11 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
 
-      await discoverRemoteSignersFromBlockchain()
-      if (!isCurrent())
-        return
-      const remoteSigners = await getAllRemoteSigners()
-      if (!isCurrent())
-        return
-
-      if (remoteSigners && remoteSigners.length) {
+      if (!cosignerAddress) {
+        // Legitimate on every refresh for a brand-new keyless wallet, not an error condition.
+        logger.warn('Skipping remote signer scan: remote public key unavailable, cannot tell our own HTLCs apart from Mini App HTLCs')
+      }
+      else if (remoteSigners && remoteSigners.length) {
         // Drain-to-local txs are user reclaims tracked by _sendTx, and DB-known hashes are already
         // categorized — both filters apply at the outer level AND to recursive traversal results
         // (which can otherwise yield the same hash twice via overlapping extension chains).
@@ -560,9 +614,33 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         return
     }
     catch (error: any) {
-      logger.error('Error fetching contract info from Fastspot:', error.message)
-      if (isCurrent())
-        await addUnknownPaymentToMerchantTransaction(tx)
+      // Recording is permanent — the hash is skipped by every later refresh — so only a contract
+      // Fastspot explicitly does not know may be written. Anything else (offline, 5xx, a gateway
+      // page that fails to parse) leaves the tx untouched for the next refresh to retry.
+      if (!FASTSPOT_CONTRACT_NOT_FOUND.test(error?.message ?? '')) {
+        logger.error(`📬 Could not ask Fastspot about this HTLC — deferring to the next refresh`, { hash: tx.transactionHash, recipient: tx.recipient, error: error?.message })
+        return
+      }
+
+      // Fastspot has never heard of this contract, so it is not a swap — it is a Mini App HTLC.
+      logger.log(`📬 HTLC unknown to Fastspot, recording as a Mini App HTLC`, { hash: tx.transactionHash, recipient: tx.recipient })
+      if (isCurrent()) {
+        await addHtlcTransaction({
+          transfer: Transfer.HTLC,
+          amount: tx.value,
+          fee: tx.fee,
+          hash: tx.transactionHash,
+          sender: tx.sender,
+          senderType: toAccountType(tx.senderType),
+          recipient: tx.recipient,
+          recipientType: toAccountType(tx.recipientType),
+          recipientData: tx.data?.raw ? Nimiq.BufferUtils.fromHex(tx.data.raw) : undefined,
+          status: tx.state,
+          timestamp: tx.timestamp,
+          title: 'New HTLC',
+          proofSize: tx.proof.raw.length / 2,
+        })
+      }
       return
     }
 
