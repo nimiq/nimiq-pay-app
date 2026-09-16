@@ -19,6 +19,49 @@ and tags the version and pushes it. It publishes the release notes and `.ipa`,
 uploads the `.ipa` and `.aab` to BrowserStack using `BROWSERSTACK_USERNAME` and
 `BROWSERSTACK_ACCESS_KEY`, then removes the local release build files.
 
+## Over-the-air updates (OTA)
+
+Nimiq Pay uses `@capgo/capacitor-updater` with Cloudflare Workers and R2 to deliver
+signed, encrypted web bundles. Native code, plugins, permissions, and
+`capacitor.config.ts` changes require a new App Store / Play Store release.
+Users must already have an OTA-enabled native release.
+
+### Publish an update
+
+1. Test the changes against every native version in
+   [`ota.json`](./ota.json), update its `compatibleNativeVersions` list as needed,
+   and merge into `main`. Native and OTA versions are independent.
+2. From a clean, up-to-date `main`, create and push an `ota-vX.Y.Z` tag. Choose an
+   unused version higher than previous production OTA releases. Never reuse or
+   move release tags.
+3. Monitor [Publish OTA update](./.github/workflows/ota-production.yml) in GitHub
+   Actions. It runs lint, typecheck, and tests, builds and signs the bundle,
+   verifies its public download, then publishes the production manifest.
+4. On a compatible device, let the update download, then background and reopen
+   the app. Verify startup and the changed behavior.
+
+The workflow uses `ota-build` for build settings and `production` for publishing.
+The `VITE_*` environment variables used to build the OTA bundle come from GitHub
+Actions variables and secrets configured for `ota-build`.
+Production needs secrets `CAPGO_PRIVATE_KEY`, `R2_ACCESS_KEY_ID`, and
+`R2_SECRET_ACCESS_KEY`, plus variables `CLOUDFLARE_ACCOUNT_ID`, `R2_BUCKET`, and
+`UPDATE_CDN`. The signing key must match the public key embedded in the native
+app. See the workflow for build settings. Restrict R2 credentials to the OTA
+bucket and `ota-v*` tag access to trusted release accounts.
+
+### Recovery
+
+The app must call `CapacitorUpdater.notifyAppReady()` after local initialization
+and rendering, without waiting for network sync or wallet unlock. Missing the
+30-second deadline triggers automatic rollback. Keep data migrations compatible
+with fallback code; rollback does not undo stored data changes.
+
+To pause new offers, set `enabled: false` in R2's `channels/production.json`.
+Coordinate with running deployments, since publishing enables offers again.
+This does not remove downloaded or installed updates. To fix a bad release,
+publish corrected code under a higher OTA version; lowering the manifest version
+does not downgrade installed updates.
+
 ## Nimiq Pay Flows
 
 A flow is a sequence of steps that the user needs to follow to complete a user
