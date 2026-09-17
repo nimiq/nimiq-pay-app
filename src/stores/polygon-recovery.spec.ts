@@ -3,7 +3,7 @@ import { Interface } from 'ethers'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Chain } from '@/lib/assets'
-import { POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
+import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { Rail, Transfer } from '@/types/transactions'
@@ -150,6 +150,7 @@ function relayReceipt(to: string = polygonUsdtConfig.htlcContract, selector = re
   ])
   return {
     hash: mocks.relayHash,
+    to: polygonUsdtConfig.openGsnRelayHubContract,
     status: 1,
     blockNumber: headBlock - 2,
     logs: [{ ...event, address: polygonUsdtConfig.openGsnRelayHubContract }],
@@ -502,7 +503,81 @@ describe('polygon payment submission through the store', () => {
   })
 })
 
-describe('polygon swap reconciliation through the store', () => {
+describe('polygon transaction reconciliation through the store', () => {
+  it('preserves confirmed status through a receipt outage and subsequent direct transfer refresh', async () => {
+    persistedPayment = { hash: mocks.relayHash, status: 'confirmed', transfer: Transfer.UserPayment, chain: Chain.Polygon }
+    mocks.transactions.updateTransactionStatus.mockImplementation(async ({ status }) => {
+      persistedPayment = { ...persistedPayment!, status }
+    })
+    mocks.provider.getTransactionReceipt.mockRejectedValueOnce(new Error('temporary RPC outage'))
+    const store = recreateStore()
+
+    await store.updateSingleTransaction(mocks.relayHash)
+
+    expect(mocks.transactions.updateTransactionStatus).not.toHaveBeenCalled()
+    expect(persistedPayment?.status).toBe('confirmed')
+
+    mocks.provider.getTransactionReceipt.mockResolvedValueOnce({
+      status: 1,
+      to: polygonUsdtConfig.tokenContract,
+      blockNumber: headBlock - 20,
+      logs: [],
+    })
+    await store.updateSingleTransaction(mocks.relayHash)
+    expect(persistedPayment?.status).toBe('confirmed')
+  })
+
+  it.each(['pending', 'mined', 'failed'])('reconciles a direct token transfer stored as %s without requiring OpenGSN', async (status) => {
+    persistedPayment = { hash: mocks.relayHash, status, transfer: Transfer.UserPayment, chain: Chain.Polygon }
+    const tokenInterface = new Interface(POLYGON_BRIDGED_TOKEN_ABI)
+    const event = tokenInterface.encodeEventLog(tokenInterface.getEvent('Transfer')!, [
+      mocks.walletAddress,
+      polygonUsdtConfig.transferContract,
+      1_000_000n,
+    ])
+    mocks.provider.getTransactionReceipt.mockResolvedValueOnce({
+      status: 1,
+      to: polygonUsdtConfig.tokenContract,
+      blockNumber: headBlock - 20,
+      logs: [{ ...event, address: polygonUsdtConfig.tokenContract }],
+    })
+
+    await recreateStore().updateSingleTransaction(mocks.relayHash)
+
+    expect(mocks.transactions.updateTransactionStatus).toHaveBeenCalledWith({
+      hash: mocks.relayHash,
+      status: 'confirmed',
+      timestamp: now / 1000,
+    })
+  })
+
+  it.each(['pending', 'confirmed'])('rejects unsuccessful OpenGSN execution even when stored as %s', async (status) => {
+    persistedPayment = { hash: mocks.relayHash, status, transfer: Transfer.UserPayment, chain: Chain.Polygon }
+    const receipt = relayReceipt()
+    const event = relayInterface.encodeEventLog(relayInterface.getEvent('TransactionRelayed')!, [
+      mocks.walletAddress,
+      mocks.walletAddress,
+      mocks.walletAddress,
+      polygonUsdtConfig.transferContract,
+      polygonUsdtConfig.transferContract,
+      new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector,
+      1,
+      1n,
+    ])
+    mocks.provider.getTransactionReceipt.mockResolvedValueOnce({
+      ...receipt,
+      logs: [{ ...event, address: polygonUsdtConfig.openGsnRelayHubContract }],
+    })
+
+    await recreateStore().updateSingleTransaction(mocks.relayHash)
+
+    expect(mocks.transactions.updateTransactionStatus).toHaveBeenCalledWith({
+      hash: mocks.relayHash,
+      status: 'failed',
+      timestamp: now / 1000,
+    })
+  })
+
   it('does not recreate a replaced hash or clear recovery when a stale preimage lookup finishes', async () => {
     const replacementHash = `0x${'ab'.repeat(32)}`
     persistedPayment = {

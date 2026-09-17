@@ -392,21 +392,16 @@ describe('polygon-usdt quote helpers', () => {
     expect(shouldRetryMissingPolygonRelay(null, 1_000)).toBe(true)
   })
 
-  it('validates OpenGSN status only for pending outgoing Polygon transactions', async () => {
+  it('identifies OpenGSN execution by the receipt destination', async () => {
     const { shouldValidateOpenGsnTransaction } = await import('./polygon-usdt')
 
     expect(shouldValidateOpenGsnTransaction({
-      status: 'pending',
-      transfer: Transfer.UserPayment,
-    } as any)).toBe(true)
+      to: polygonUsdtConfig.openGsnRelayHubContract.toLowerCase(),
+    })).toBe(true)
     expect(shouldValidateOpenGsnTransaction({
-      status: 'confirmed',
-      transfer: Transfer.UserPayment,
-    } as any)).toBe(false)
-    expect(shouldValidateOpenGsnTransaction({
-      status: 'pending',
-      transfer: Transfer.UserReceipt,
-    } as any)).toBe(false)
+      to: polygonUsdtConfig.tokenContract,
+    })).toBe(false)
+    expect(shouldValidateOpenGsnTransaction({ to: null })).toBe(false)
   })
 
   it('persists swap recovery before requesting a relay and transaction data before broadcast', async () => {

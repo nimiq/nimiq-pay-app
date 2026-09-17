@@ -157,9 +157,9 @@ export function shouldRetryMissingPolygonRelay(submittedAt: number | null | unde
 }
 
 export function shouldValidateOpenGsnTransaction(
-  tx: Pick<ExternalTransaction, 'status' | 'transfer'> | null,
+  receipt: Pick<TransactionReceipt, 'to'>,
 ) {
-  return !!tx && tx.status !== 'confirmed' && tx.transfer !== Transfer.UserReceipt
+  return !!receipt.to && addressesEqual(receipt.to, polygonUsdtConfig.openGsnRelayHubContract)
 }
 
 export function isSuccessfulOpenGsnReceipt(
@@ -1227,7 +1227,7 @@ async function getTransactionState(hash: string, validateOpenGsn = false) {
   return fetchPolygonTransactionState(
     client.provider,
     hash,
-    validateOpenGsn ? receipt => isSuccessfulOpenGsnReceipt(receipt) : undefined,
+    receipt => !(validateOpenGsn || shouldValidateOpenGsnTransaction(receipt)) || isSuccessfulOpenGsnReceipt(receipt),
   )
 }
 
@@ -1756,9 +1756,11 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       return
 
     const tx = parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
-    const { status, timestamp } = await getTransactionState(hash, shouldValidateOpenGsnTransaction(tx))
+    const { status, timestamp, lookupFailed } = await getTransactionState(hash)
     const transactionsStore = useTransactions()
-    await transactionsStore.updateTransactionStatus({ hash, status, timestamp })
+    // An RPC failure provides no chain evidence to replace the persisted status.
+    if (!lookupFailed)
+      await transactionsStore.updateTransactionStatus({ hash, status, timestamp })
 
     if (!tx || tx.transfer !== Transfer.UserPaymentToAtomicSwap || tx.chain !== Chain.Polygon || tx.meta?.secret || !tx.paymentRef)
       return
