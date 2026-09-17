@@ -27,11 +27,12 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/transactions.ts:330
+#: src/stores/polygon-usdt.ts:1977
+#: src/stores/transactions.ts:339
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:347
+#: src/stores/transactions.ts:356
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
@@ -408,7 +409,7 @@ msgstr ""
 msgid "Continue and Pay"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:84
+#: src/components/TransactionDetails.vue:86
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -428,12 +429,12 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:545
-#: src/stores/transactions.ts:559
+#: src/stores/transactions.ts:554
+#: src/stores/transactions.ts:568
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:887
+#: src/stores/polygon-usdt.ts:1032
 msgid "Could not determine Polygon transaction hash"
 msgstr ""
 
@@ -441,7 +442,15 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/transactions.ts:342
+#: src/stores/polygon-usdt.ts:2084
+msgid "Could not persist Polygon swap transaction"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:1901
+msgid "Could not persist Polygon transaction"
+msgstr ""
+
+#: src/stores/transactions.ts:351
 msgid "Could not verify pending transactions"
 msgstr ""
 
@@ -611,19 +620,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:102
+#: src/stores/sync/htlc.ts:103
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:158
+#: src/stores/sync/htlc.ts:159
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:183
+#: src/stores/sync/htlc.ts:184
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:136
+#: src/stores/sync/htlc.ts:137
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -657,7 +666,7 @@ msgstr ""
 msgid "Failed to copy address to clipboard"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:88
+#: src/components/TransactionDetails.vue:90
 #: src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr ""
@@ -838,8 +847,8 @@ msgid "Invalid"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:43
-#: src/stores/polygon-usdt.ts:236
-#: src/stores/polygon-usdt.ts:250
+#: src/stores/polygon-usdt.ts:297
+#: src/stores/polygon-usdt.ts:311
 msgid "Invalid amount"
 msgstr ""
 
@@ -956,7 +965,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:94
-#: src/stores/polygon-usdt.ts:1787
+#: src/stores/polygon-usdt.ts:2006
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -1137,7 +1146,7 @@ msgid "NFC is not supported on this device"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:66
-#: src/stores/transactions.ts:353
+#: src/stores/transactions.ts:362
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1160,8 +1169,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:30
 #: src/stores/local-wallet.ts:81
 #: src/stores/local-wallet.ts:90
-#: src/stores/polygon-usdt.ts:1673
-#: src/stores/polygon-usdt.ts:1755
+#: src/stores/polygon-usdt.ts:1859
+#: src/stores/polygon-usdt.ts:1969
 msgid "No account has been found"
 msgstr ""
 
@@ -1231,7 +1240,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1792
+#: src/stores/polygon-usdt.ts:2011
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1470,10 +1479,10 @@ msgid "Polygon fee"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:1638
-#: src/stores/polygon-usdt.ts:1677
-#: src/stores/polygon-usdt.ts:1730
-#: src/stores/polygon-usdt.ts:1759
+#: src/stores/polygon-usdt.ts:1797
+#: src/stores/polygon-usdt.ts:1863
+#: src/stores/polygon-usdt.ts:1944
+#: src/stores/polygon-usdt.ts:1973
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1481,15 +1490,29 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1719
+#: src/stores/polygon-usdt.ts:1932
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1906
+#: src/stores/polygon-usdt.ts:2182
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:896
+#: src/stores/polygon-usdt.ts:2104
+#: src/stores/polygon-usdt.ts:2119
+msgid "Polygon swap transaction failed"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:2041
+msgid "Polygon swap transaction is already pending"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:1912
+#: src/stores/polygon-usdt.ts:1917
+msgid "Polygon transaction failed"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:413
 msgid "Polygon transaction not found after relay"
 msgstr ""
 
@@ -1835,7 +1858,7 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1855
+#: src/stores/polygon-usdt.ts:2127
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
@@ -1968,11 +1991,11 @@ msgstr ""
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:67
+#: src/components/TransactionDetails.vue:69
 msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:70
+#: src/components/TransactionDetails.vue:72
 msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
 msgstr ""
 
@@ -2016,24 +2039,24 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:565
+#: src/stores/transactions.ts:574
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:606
-#: src/stores/transactions.ts:625
+#: src/stores/transactions.ts:615
+#: src/stores/transactions.ts:634
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:568
+#: src/stores/transactions.ts:577
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:665
+#: src/stores/transactions.ts:674
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:900
+#: src/stores/polygon-usdt.ts:417
 msgid "Transaction was not mined on Polygon"
 msgstr ""
 
@@ -2146,35 +2169,35 @@ msgstr ""
 
 #: src/stores/sync/remote-signers.ts:72
 #: src/stores/sync/remote-signers.ts:85
-#: src/stores/transactions.ts:338
-#: src/stores/transactions.ts:357
-#: src/stores/transactions.ts:368
-#: src/stores/transactions.ts:436
+#: src/stores/transactions.ts:347
+#: src/stores/transactions.ts:366
+#: src/stores/transactions.ts:377
 #: src/stores/transactions.ts:445
-#: src/stores/transactions.ts:455
-#: src/stores/transactions.ts:510
-#: src/stores/transactions.ts:527
-#: src/stores/transactions.ts:553
-#: src/stores/transactions.ts:577
-#: src/stores/transactions.ts:592
-#: src/stores/transactions.ts:593
-#: src/stores/transactions.ts:615
-#: src/stores/transactions.ts:668
-#: src/stores/transactions.ts:676
-#: src/stores/transactions.ts:686
-#: src/stores/transactions.ts:694
-#: src/stores/transactions.ts:702
-#: src/stores/transactions.ts:736
-#: src/stores/transactions.ts:742
-#: src/stores/transactions.ts:747
-#: src/stores/transactions.ts:752
-#: src/stores/transactions.ts:757
-#: src/stores/transactions.ts:772
-#: src/stores/transactions.ts:777
-#: src/stores/transactions.ts:782
-#: src/stores/transactions.ts:788
+#: src/stores/transactions.ts:454
+#: src/stores/transactions.ts:464
+#: src/stores/transactions.ts:519
+#: src/stores/transactions.ts:536
+#: src/stores/transactions.ts:562
+#: src/stores/transactions.ts:586
+#: src/stores/transactions.ts:601
+#: src/stores/transactions.ts:602
+#: src/stores/transactions.ts:624
+#: src/stores/transactions.ts:677
+#: src/stores/transactions.ts:685
+#: src/stores/transactions.ts:695
+#: src/stores/transactions.ts:703
+#: src/stores/transactions.ts:711
+#: src/stores/transactions.ts:745
+#: src/stores/transactions.ts:751
+#: src/stores/transactions.ts:756
+#: src/stores/transactions.ts:761
+#: src/stores/transactions.ts:766
+#: src/stores/transactions.ts:781
+#: src/stores/transactions.ts:786
 #: src/stores/transactions.ts:791
-#: src/stores/transactions.ts:794
+#: src/stores/transactions.ts:797
+#: src/stores/transactions.ts:800
+#: src/stores/transactions.ts:803
 msgid "Wallet or network changed before sending"
 msgstr ""
 
