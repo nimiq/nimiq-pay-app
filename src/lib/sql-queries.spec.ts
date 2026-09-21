@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getSwapHtlcTxHash } from '@/types/swapHtlcs'
 import { migrations, SQLQuery } from './sql-queries'
 
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
@@ -109,5 +110,76 @@ describe('transaction recovery queries', () => {
   ])('includes staking in transaction reads %#', (query, values) => {
     db.exec('INSERT INTO transactions (hash, transfer, asset, chain) VALUES (\'stake\', \'staking\', \'NIM\', \'Nimiq\')')
     expect(db.prepare(query).all(...values)).toMatchObject([{ hash: 'stake', transfer: 'staking' }])
+  })
+})
+
+describe('polygon recovery migrations', () => {
+  it('creates each recovery column once on a fresh database', () => {
+    const columns = (db.prepare('PRAGMA table_info(swap_htlcs)').all() as { name: string }[]).map(column => column.name)
+    expect(columns).toEqual([
+      'address',
+      'amount',
+      'timeout_block',
+      'swap_id',
+      'swap_status',
+      'htlc_id',
+      'tx_hash',
+      'refund_hash',
+      'refund_timestamp',
+      'refund_block',
+    ])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
+      SQLQuery.AddValidityStartHeightToTxsTable,
+    ])
+  })
+
+  it.each([8, 9])('upgrades released v%s rows without modifying NIM recovery', (version) => {
+    const legacyDb = new DatabaseSync(':memory:')
+    try {
+      for (const migration of migrations.filter(migration => migration.toVersion <= version))
+        legacyDb.exec(migration.statements.join(';'))
+      const insert = legacyDb.prepare(SQLQuery.InsertSwapHtlc)
+      insert.run('nim-address', 1, 100, 'nim-swap', 'pending', null)
+      insert.run('polygon-funding-hash', 2, 200, 'polygon-swap', 'pending', 'polygon-htlc')
+      insert.run('polygon-htlc', 3, 300, 'provisional-swap', 'pending', 'polygon-htlc')
+      if (version === 9)
+        legacyDb.exec('INSERT INTO transactions (hash, validityStartHeight) VALUES (\'nim-send\', 456)')
+
+      for (const migration of migrations.filter(migration => migration.toVersion > version))
+        legacyDb.exec(migration.statements.join(';'))
+
+      expect(legacyDb.prepare('SELECT address, tx_hash, refund_hash, refund_timestamp, refund_block FROM swap_htlcs ORDER BY address').all()).toEqual([
+        { address: 'nim-address', tx_hash: null, refund_hash: null, refund_timestamp: null, refund_block: null },
+        { address: 'polygon-funding-hash', tx_hash: 'polygon-funding-hash', refund_hash: null, refund_timestamp: null, refund_block: null },
+        { address: 'polygon-htlc', tx_hash: null, refund_hash: null, refund_timestamp: null, refund_block: null },
+      ])
+      if (version === 9)
+        expect(legacyDb.prepare('SELECT validityStartHeight FROM transactions').get()).toEqual({ validityStartHeight: 456 })
+    }
+    finally {
+      legacyDb.close()
+    }
+  })
+
+  it('retains the first refund scan block across failed and repeated attempts', () => {
+    db.prepare(SQLQuery.InsertSwapHtlcProvisional).run('htlc', 1, 100, 'swap', 'pending', 'htlc')
+    db.prepare(SQLQuery.SetSwapHtlcRefundAttempt).run(1_000, 50, 'htlc')
+    db.prepare(SQLQuery.SetSwapHtlcRefundHash).run('refund', 2_000, 60, 'htlc')
+    db.prepare(SQLQuery.ClearSwapHtlcRefundHash).run('htlc')
+    db.prepare(SQLQuery.SetSwapHtlcRefundHash).run(null, 3_000, 70, 'htlc')
+    expect(db.prepare(SQLQuery.GetSwapHtlcByAddress).get('htlc', 'htlc')).toMatchObject({
+      refund_hash: null,
+      refund_timestamp: 3_000,
+      refund_block: 50,
+    })
+  })
+
+  it('resolves explicit, legacy and provisional funding hashes', () => {
+    const row = { address: 'legacy-hash', amount: 1, timeout_block: 1, swap_id: 'swap', swap_status: 'pending', htlc_id: 'htlc' }
+    expect(getSwapHtlcTxHash(row)).toBe('legacy-hash')
+    expect(getSwapHtlcTxHash({ ...row, tx_hash: 'replacement' })).toBe('replacement')
+    expect(getSwapHtlcTxHash({ ...row, address: 'htlc' })).toBeNull()
+    expect(getSwapHtlcTxHash({ ...row, address: 'nim-address', htlc_id: null })).toBe('nim-address')
   })
 })

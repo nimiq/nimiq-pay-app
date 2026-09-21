@@ -38,6 +38,15 @@ export enum SQLQuery {
   GetUserReceiptSenders = `SELECT DISTINCT sender FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\'`, // eslint-disable-line ts/prefer-literal-enum-member
   GetTransactionByHash = 'SELECT hash, validityStartHeight, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
   UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
+  MergeReplacementTxState = `UPDATE transactions SET
+    status = COALESCE((SELECT status FROM transactions WHERE hash = ?), status),
+    timestamp = COALESCE((SELECT timestamp FROM transactions WHERE hash = ?), timestamp),
+    fee = COALESCE((SELECT fee FROM transactions WHERE hash = ?), fee),
+    raw = COALESCE((SELECT raw FROM transactions WHERE hash = ?), raw)
+    WHERE hash = ?`,
+  SetPolygonSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
+  SetPolygonTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
@@ -122,10 +131,24 @@ export enum SQLQuery {
   // Swap HTLCs
   CreateSwapHtlcTable = 'CREATE TABLE IF NOT EXISTS swap_htlcs (address TEXT PRIMARY KEY NOT NULL, amount INTEGER NOT NULL, timeout_block INTEGER NOT NULL, swap_id TEXT NOT NULL, swap_status TEXT NOT NULL)',
   AddHtlcIdColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN htlc_id TEXT',
+  AddTxHashColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN tx_hash TEXT',
+  AddRefundHashColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_hash TEXT',
+  AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
+  AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
+  BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
+  SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
+  ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
+  ClearSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = NULL WHERE address = ?',
+  SetSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
+  SetSwapHtlcRefundAttempt = 'UPDATE swap_htlcs SET refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
+  ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',
+  DeleteSwapHtlcByTxHash = 'DELETE FROM swap_htlcs WHERE address = ? OR tx_hash = ?',
+  GetSwapHtlcByAddress = 'SELECT * FROM swap_htlcs WHERE address = ? OR htlc_id = ? LIMIT 1',
   GetExpiredSwapHtlcs = 'SELECT * FROM swap_htlcs WHERE timeout_block < ?',
-  GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? LIMIT 1',
+  GetSwapTimeoutTime = 'SELECT timeout_block FROM swap_htlcs WHERE address = ? OR tx_hash = ? LIMIT 1',
   PurgeSwapHtlcs = 'DELETE FROM swap_htlcs',
 
   // Swap Quotes
@@ -146,6 +169,14 @@ export enum SQLQuery {
   DeleteNakaCard = 'DELETE FROM naka_cards WHERE sourceId = ?',
   PurgeNakaCards = 'DELETE FROM naka_cards',
 }
+
+// History refreshes chain evidence without replacing richer payment metadata.
+export const UPSERT_POLYGON_HISTORY_TX = `${SQLQuery.UpsertTx.replace('INSERT OR REPLACE', 'INSERT')}
+  ON CONFLICT(hash) DO UPDATE SET
+    status = excluded.status,
+    timestamp = COALESCE(excluded.timestamp, transactions.timestamp),
+    fee = excluded.fee,
+    raw = COALESCE(excluded.raw, transactions.raw)`
 
 export const DEFAULT_LIMIT = 30
 
@@ -220,6 +251,16 @@ export const migrations: Migration[] = [
     toVersion: 9,
     statements: [
       SQLQuery.AddValidityStartHeightToTxsTable,
+    ],
+  },
+  {
+    toVersion: 10,
+    statements: [
+      SQLQuery.AddTxHashColumnToSwapHtlcs,
+      SQLQuery.AddRefundHashColumnToSwapHtlcs,
+      SQLQuery.AddRefundTimestampColumnToSwapHtlcs,
+      SQLQuery.AddRefundBlockColumnToSwapHtlcs,
+      SQLQuery.BackfillSwapHtlcTxHash,
     ],
   },
 ]

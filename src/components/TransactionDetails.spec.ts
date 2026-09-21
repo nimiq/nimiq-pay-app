@@ -1,17 +1,18 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import { defineComponent } from 'vue'
+import { defineComponent, ref } from 'vue'
 import { Asset, Chain } from '@/lib/assets'
 import { FlowName } from '@/lib/flows/steps.types'
 import { MerchantCategory, PaymentMethod, Rail, Transfer } from '@/types/transactions'
 
 const updateNimiqTransaction = vi.fn()
 const updatePolygonTransaction = vi.fn()
+const query = vi.fn()
 
 vi.mock('@/i18n/i18n-setup', () => ({
   i18n: {
     t: (value: string) => value,
-    tc: (value: string) => value,
+    tc: (value: string, _count: number, params: Record<string, number>) => value.replace('{hours}', String(params.hours)),
   },
 }))
 
@@ -45,7 +46,7 @@ vi.mock('@/composables/useCurrencyFormatter', () => ({
 
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({
-    query: vi.fn(),
+    query,
   }),
 }))
 
@@ -69,8 +70,8 @@ vi.mock('@ionic/vue', () => ({
 
 vi.mock('@/stores/nimiq-network', () => ({
   useNimiqNetwork: () => ({
-    consensus: 'established',
-    height: 0,
+    consensus: ref('established'),
+    height: ref(1),
   }),
 }))
 
@@ -98,6 +99,48 @@ vi.mock('./TransactionAmounts.vue', () => ({
 }))
 
 describe('transactionDetails', () => {
+  it.each([
+    { asset: Asset.USDT, chain: Chain.Polygon, key: '0xpolygonhash' },
+    { asset: Asset.NIM, chain: Chain.Nimiq, key: 'NQ11 SWAP' },
+  ])('loads the swap timeout for $chain and renders its numeric value', async ({ asset, chain, key }) => {
+    query.mockResolvedValueOnce({ timeout_block: Date.now() + 3.5 * 60 * 60 * 1000 })
+    const { default: TransactionDetails } = await import('./TransactionDetails.vue')
+    const wrapper = mount(TransactionDetails, {
+      props: {
+        tx: {
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          title: 'Payment',
+          timestamp: undefined,
+          amount: 2500000,
+          fee: 0,
+          hash: '0xpolygonhash',
+          sender: 'NQ00 SENDER',
+          recipient: 'NQ11 SWAP',
+          status: 'pending',
+          proofSize: 0,
+          merchantName: 'Merchant',
+          merchantCategory: MerchantCategory.Shop,
+          paymentMethod: chain === Chain.Polygon ? PaymentMethod.USDT : PaymentMethod.NIM,
+          paymentRef: 'swap-id',
+          rail: Rail.Unknown,
+          fiatAmount: 25,
+          fiatFeeAmount: 0,
+          fiatCurrency: 'USD',
+          isCashbackClaimed: true,
+          asset,
+          chain,
+        },
+      },
+      global: { mocks: { $t: (value: string) => value } },
+    })
+    await flushPromises()
+
+    expect(query).toHaveBeenLastCalledWith(expect.any(String), [key, key], { single: true })
+    expect(wrapper.text()).toContain('next 3 hours')
+    expect(wrapper.text()).not.toContain('NaN')
+    wrapper.unmount()
+  })
+
   it('refreshes polygon transactions through the polygon store', async () => {
     updateNimiqTransaction.mockReset()
     updatePolygonTransaction.mockReset()

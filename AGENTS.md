@@ -67,6 +67,8 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 Every `executeSet` / `runSet` entry needs `values`, including `values: []` for statements without parameters. The TypeScript type allows omission, but Android throws `ExecuteSet: No value for values`.
 
+`useConn().query(..., { single: true })` returns a row object, not a scalar. Read the selected column from that row.
+
 ### Transaction messages
 
 Transaction messages are limited to 64 bytes: up to 64 ASCII characters, or fewer multibyte Unicode characters

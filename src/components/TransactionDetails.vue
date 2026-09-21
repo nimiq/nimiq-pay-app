@@ -54,9 +54,11 @@ const { updateSingleTransaction } = useSync()
 const datetime = computed(() => props.tx.timestamp ? useFormatTime(props.tx.timestamp) : '')
 const isSwapPending = computed(() => isPendingAtomicSwapTransaction(props.tx))
 const swapTimeoutTime = computedAsync(async () => {
-  if (isSwapPending.value) {
-    return await query<number>(SQLQuery.GetSwapTimeoutTime, [getSwapHtlcKey(props.tx)], { single: true })
-  }
+  if (!isSwapPending.value)
+    return
+  const swapHtlcKey = getSwapHtlcKey(props.tx)
+  const row = await query<{ timeout_block: number } | undefined>(SQLQuery.GetSwapTimeoutTime, [swapHtlcKey, swapHtlcKey], { single: true })
+  return row?.timeout_block
 })
 const timeUntilTimeout = computed(() => {
   if (swapTimeoutTime.value && consensus.value === 'established' && height.value > 0) {

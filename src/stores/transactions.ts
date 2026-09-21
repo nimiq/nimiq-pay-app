@@ -15,7 +15,7 @@ import { nakaBufferAddresses } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
-import { DEFAULT_LIMIT, SQLQuery } from '@/lib/sql-queries'
+import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
@@ -81,7 +81,7 @@ export enum TransactionListState {
 }
 
 export const useTransactions = defineStore('transactions', () => {
-  const { query, run } = useConn()
+  const { query, run, runSet } = useConn()
   const { client, networkId, networkName, height, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { activeAsset, showHiddenTransactions } = storeToRefs(useApp())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -131,51 +131,60 @@ export const useTransactions = defineStore('transactions', () => {
     return filteredTxs
   }
 
+  function getUpsertTxValues(tx: Transaction) {
+    // Store the untranslated title so it follows the user's current language at display time.
+    return [
+      tx.hash,
+      tx.timestamp,
+      tx.sender,
+      tx.senderType,
+      tx.recipient,
+      tx.recipientType,
+      tx.amount,
+      tx.fee,
+      tx.status,
+      tx.raw,
+      tx.title,
+      tx.transfer,
+      tx.message,
+      tx.rail,
+      tx.railMerchantId,
+      tx.merchantName,
+      tx.merchantCategory,
+      tx.paymentRef,
+      tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap
+        ? tx.paymentMethod
+        : null,
+      tx.fiatAmount,
+      tx.fiatFeeAmount,
+      tx.fiatCurrency,
+      tx.isCashbackClaimed,
+      tx.asset || Asset.NIM,
+      tx.chain || Chain.Nimiq,
+      tx.invoiced
+        ? JSON.stringify(tx.invoiced)
+        : null,
+      tx.meta
+        ? JSON.stringify(tx.meta)
+        : null,
+      tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.validityStartHeight ?? null,
+    ]
+  }
+
   async function upsertTx(tx: Transaction) {
     logger.log(`📚 Upsert-ing transaction`, tx)
-    await run(
-      SQLQuery.UpsertTx,
-      // Note: we're storing the original tx.title here and not the translated title. It's translated then at display
-      // time to whatever language the user has selected at that time.
-      [
-        tx.hash,
-        tx.timestamp,
-        tx.sender,
-        tx.senderType,
-        tx.recipient,
-        tx.recipientType,
-        tx.amount,
-        tx.fee,
-        tx.status,
-        tx.raw,
-        tx.title,
-        tx.transfer,
-        tx.message,
-        tx.rail,
-        tx.railMerchantId,
-        tx.merchantName,
-        tx.merchantCategory,
-        tx.paymentRef,
-        tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap
-          ? tx.paymentMethod
-          : null,
-        tx.fiatAmount,
-        tx.fiatFeeAmount,
-        tx.fiatCurrency,
-        tx.isCashbackClaimed,
-        tx.asset || Asset.NIM,
-        tx.chain || Chain.Nimiq,
-        tx.invoiced
-          ? JSON.stringify(tx.invoiced)
-          : null,
-        tx.meta
-          ? JSON.stringify(tx.meta)
-          : null,
-        tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
-        tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
-        tx.validityStartHeight ?? null,
-      ],
-    )
+    await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
+  }
+
+  async function getStoredTransaction(hash: string) {
+    const tx = await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true })
+    if (tx) {
+      tx.invoiced = typeof tx.invoiced === 'string' ? JSON.parse(tx.invoiced) : tx.invoiced
+      tx.meta = typeof tx.meta === 'string' ? JSON.parse(tx.meta) : tx.meta
+    }
+    return tx
   }
 
   async function clearTxHistory() {
@@ -874,6 +883,53 @@ export const useTransactions = defineStore('transactions', () => {
     addTransaction(tx)
   }
 
+  async function addPolygonHistoryTransaction(tx: UserTransaction) {
+    await run(UPSERT_POLYGON_HISTORY_TX, getUpsertTxValues(tx))
+    const storedTx = await getStoredTransaction(tx.hash)
+    if (!storedTx)
+      return
+
+    addTransaction(storedTx)
+  }
+
+  async function addPolygonSwapTransactionWithRecovery(tx: MerchantTransaction, recoveryAddress: string) {
+    await runSet([
+      {
+        statement: SQLQuery.SetSwapHtlcTxHash,
+        values: [tx.hash, recoveryAddress],
+      },
+      {
+        statement: SQLQuery.UpsertTx,
+        values: getUpsertTxValues(tx),
+      },
+    ])
+    addTransaction(tx)
+  }
+
+  async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
+    // Merge persisted state before the hash update removes a conflicting replacement row.
+    const statements: Parameters<typeof runSet>[0] = [
+      { statement: SQLQuery.MergeReplacementTxState, values: [newHash, newHash, newHash, newHash, oldHash] },
+      { statement: SQLQuery.UpdateTxHash, values: [newHash, oldHash] },
+    ]
+    if (recoveryAddress) {
+      statements.unshift({
+        statement: SQLQuery.ReplaceSwapHtlcTxHash,
+        values: [newHash, recoveryAddress, oldHash],
+      })
+    }
+    await runSet(statements)
+
+    const mergedTx = await getStoredTransaction(newHash)
+    if (!mergedTx)
+      return
+
+    const otherTransactions = transactions.value.filter(tx => tx.hash !== oldHash && tx.hash !== newHash)
+    transactions.value = [mergedTx, ...otherTransactions].sort(
+      (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
+    )
+  }
+
   async function addUnknownPaymentToMerchantTransaction(
     tx: PlainTransactionDetails,
     transfer = Transfer.UserPaymentToMerchant,
@@ -1017,16 +1073,29 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
-  // Polygon swap rows key by tx hash because tx.recipient is the shared HTLC contract address.
+  async function setPolygonSwapPreimage(txHash: string, secret: string) {
+    // A replacement may rename this hash while Fastspot is resolving; never recreate the old row.
+    await run(SQLQuery.SetPolygonSwapPreimage, [secret, txHash])
+    const storedTx = await getStoredTransaction(txHash)
+    if (storedTx && transactions.value.some(tx => tx.hash === txHash))
+      addTransaction(storedTx)
+    return storedTx
+  }
+
   async function setPolygonSwapHtlcRefunded(txHash: string) {
-    const tx = transactions.value.find(tx => tx.hash === txHash)
-    if (!tx)
-      return
-    tx.meta = {
-      ...tx.meta,
-      refunded: true,
+    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
+    await run(SQLQuery.SetPolygonTxRefunded, [txHash])
+    const storedTx = await getStoredTransaction(txHash)
+    if (!storedTx)
+      return false
+
+    const loadedIndex = transactions.value.findIndex(tx => tx.hash === txHash)
+    if (loadedIndex >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[loadedIndex] = storedTx
+      transactions.value = nextTransactions
     }
-    await upsertTx(tx)
+    return true
   }
 
   async function setNakaTxRefunded(amount: number) {
@@ -1069,6 +1138,9 @@ export const useTransactions = defineStore('transactions', () => {
     restorePendingOutgoingTransactions,
     addReceiptTransaction,
     addPaymentToMerchantTransaction,
+    addPolygonHistoryTransaction,
+    addPolygonSwapTransactionWithRecovery,
+    replacePolygonTransactionHash,
     addUnknownPaymentToMerchantTransaction,
     addPaymentTransaction,
     addWithdrawalTransaction,
@@ -1078,6 +1150,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
+    setPolygonSwapPreimage,
     setPolygonSwapHtlcRefunded,
     setNakaTxRefunded,
     setTxHidden,

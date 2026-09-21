@@ -1650,13 +1650,25 @@ describe('useSyncHtlc', () => {
     })
 
     it('falls back to updateSingleTransaction when Lightning preimage arrives late', async () => {
-      const polygonRow = { address: '0xrelayhash', htlc_id: '0xhtlcid', swap_id: 'swap-1' }
+      const polygonRow = { address: '0xhtlcid', htlc_id: '0xhtlcid', tx_hash: '0xrelayhash', swap_id: 'swap-1' }
       state.query.mockResolvedValue([polygonRow])
       state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: false, preimage: '0xdeadbeef' })
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.refundPolygonSwapHtlc).toHaveBeenCalledWith(polygonRow)
       expect(state.updateSinglePolygonTransaction).toHaveBeenCalledWith('0xrelayhash')
+    })
+
+    it('deletes a provisional Polygon row when Lightning preimage proves redemption', async () => {
+      const provisionalRow = { address: '0xhtlcid', htlc_id: '0xhtlcid', swap_id: 'swap-1' }
+      state.query.mockResolvedValue([provisionalRow])
+      state.refundPolygonSwapHtlc.mockResolvedValue({ refunded: false, preimage: '0xdeadbeef' })
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+
+      expect(state.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM swap_htlcs'), ['0xhtlcid'])
+      expect(state.updateSinglePolygonTransaction).not.toHaveBeenCalled()
     })
 
     it('logs and continues when refundPolygonSwapHtlc throws (row left for retry)', async () => {
