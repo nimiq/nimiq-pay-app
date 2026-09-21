@@ -6,8 +6,8 @@ import { Chain } from '@/lib/assets'
 import { POLYGON_BRIDGED_TOKEN_ABI, POLYGON_HTLC_RECIPIENT_ABI, POLYGON_RELAY_HUB_ABI, POLYGON_TRANSFER_RECIPIENT_ABI } from '@/lib/polygon/abis'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
-import { Rail, Transfer } from '@/types/transactions'
-import { usePolygonUsdt } from './polygon-usdt'
+import { markAsUnknownTransactionTitle, Rail, Transfer } from '@/types/transactions'
+import { isMatchingRelayCall, usePolygonUsdt } from './polygon-usdt'
 
 const mocks = vi.hoisted(() => ({
   provider: {
@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   run: vi.fn(),
   getSwap: vi.fn(),
   getEthAddress: vi.fn(),
+  signTypedData: vi.fn(),
   confirmSwap: vi.fn(),
   provideFundingProof: vi.fn(),
   loggerError: vi.fn(),
@@ -89,7 +90,7 @@ vi.mock('@/stores/local-wallet', () => ({
     getEthWallet: () => ({
       data: {
         address: mocks.walletAddress,
-        signTypedData: vi.fn().mockResolvedValue(`0x${'11'.repeat(64)}1b`),
+        signTypedData: mocks.signTypedData,
       },
     }),
   }),
@@ -136,6 +137,7 @@ const refundInterface = new Interface(POLYGON_HTLC_RECIPIENT_ABI)
 const relayInterface = new Interface(POLYGON_RELAY_HUB_ABI)
 let persistedHtlc: SwapHtlc | null
 let persistedPayment: Record<string, unknown> | null
+let persistedPaymentAttempt: Record<string, any> | null
 
 function relayReceipt(to: string = polygonUsdtConfig.htlcContract, selector = refundInterface.getFunction('refund')!.selector) {
   const event = relayInterface.encodeEventLog(relayInterface.getEvent('TransactionRelayed')!, [
@@ -157,6 +159,31 @@ function relayReceipt(to: string = polygonUsdtConfig.htlcContract, selector = re
   }
 }
 
+function paymentTransferLog(recipient = mocks.walletAddress, amount = 1_000_000n) {
+  const event = new Interface(POLYGON_BRIDGED_TOKEN_ABI).encodeEventLog(
+    new Interface(POLYGON_BRIDGED_TOKEN_ABI).getEvent('Transfer')!,
+    [mocks.walletAddress, recipient, amount],
+  )
+  return {
+    ...event,
+    address: polygonUsdtConfig.tokenContract,
+    transactionHash: mocks.relayHash,
+    blockNumber: headBlock + 1,
+    index: 0,
+  }
+}
+
+function persistedRelayCallData() {
+  const relayRequest = JSON.parse(persistedPaymentAttempt!.relay_request_json)
+  return relayInterface.encodeFunctionData('relayCall', [
+    1n,
+    relayRequest,
+    persistedPaymentAttempt!.signature,
+    '0x',
+    1n,
+  ])
+}
+
 function recreateStore() {
   setActivePinia(createPinia())
   return usePolygonUsdt()
@@ -165,8 +192,16 @@ function recreateStore() {
 beforeEach(() => {
   vi.clearAllMocks()
   persistedPayment = null
+  persistedPaymentAttempt = null
   mocks.getEthAddress.mockReturnValue({ data: undefined })
+  mocks.signTypedData.mockResolvedValue(`0x${'11'.repeat(64)}1b`)
   mocks.transactions.addPaymentTransaction.mockImplementation(async (tx) => {
+    persistedPayment = { ...tx }
+  })
+  mocks.transactions.addPaymentToMerchantTransaction.mockImplementation(async (tx) => {
+    persistedPayment = { ...tx }
+  })
+  mocks.transactions.addWithdrawalTransaction.mockImplementation(async (tx) => {
     persistedPayment = { ...tx }
   })
   mocks.transactions.addPolygonSwapTransactionWithRecovery.mockImplementation(async (tx) => {
@@ -230,6 +265,11 @@ beforeEach(() => {
       return persistedHtlc
     if (sql === SQLQuery.GetTransactionByHash)
       return persistedPayment?.hash === values[0] ? { ...persistedPayment } : null
+    if (sql === SQLQuery.GetPolygonPaymentAttempt) {
+      return persistedPaymentAttempt && persistedPaymentAttempt.network === values[0] && persistedPaymentAttempt.sender === values[1]
+        ? { ...persistedPaymentAttempt }
+        : null
+    }
     return null
   })
   mocks.run.mockImplementation(async (sql, values) => {
@@ -255,6 +295,27 @@ beforeEach(() => {
         htlc_id: values[5],
         tx_hash: null,
       }
+    }
+    else if (sql === SQLQuery.InsertPolygonPaymentAttempt) {
+      persistedPaymentAttempt = {
+        network: values[0],
+        sender: values[1],
+        request_json: values[2],
+        title: values[3],
+        relay_request_json: values[4],
+        relay_url: values[5],
+        signature: values[6],
+        fee: values[7],
+        start_block: values[8],
+        created_at: values[9],
+        relay_hash: values[10],
+      }
+    }
+    else if (sql === SQLQuery.SetPolygonPaymentAttemptRelayHash && persistedPaymentAttempt) {
+      persistedPaymentAttempt = { ...persistedPaymentAttempt, relay_hash: values[0] }
+    }
+    else if (sql === SQLQuery.DeletePolygonPaymentAttempt) {
+      persistedPaymentAttempt = null
     }
   })
 })
@@ -344,16 +405,239 @@ describe('polygon refund recovery through the store', () => {
 })
 
 describe('polygon payment submission through the store', () => {
-  it('keeps a submitted payment successful when post-submission receipt lookup fails', async () => {
+  it('persists intent before relay contact and blocks sequential retries after a lost response', async () => {
+    mocks.relayTransaction.mockImplementationOnce(async () => {
+      expect(persistedPaymentAttempt).toMatchObject({
+        sender: mocks.walletAddress,
+        relay_hash: null,
+        start_block: headBlock,
+      })
+      throw new Error('relay response lost')
+    })
+
+    const firstStore = recreateStore()
+    firstStore.balance = 10_000_000
+    const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+    await expect(firstStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'unknown' })
+
+    const restartedStore = recreateStore()
+    restartedStore.balance = 10_000_000
+    await expect(restartedStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'unknown' })
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(1)
+    expect(mocks.transactions.addPaymentTransaction).not.toHaveBeenCalled()
+    expect(persistedPaymentAttempt).not.toBeNull()
+  })
+
+  it('does not contact relay when durable intent persistence fails', async () => {
+    mocks.run.mockImplementationOnce(async (sql) => {
+      if (sql === SQLQuery.InsertPolygonPaymentAttempt)
+        throw new Error('database unavailable')
+    })
+    const store = recreateStore()
+    store.balance = 10_000_000
+
+    await expect(store.sendPayment(
+      { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment },
+      'Payment',
+    )).resolves.toMatchObject({ outcome: 'rejected' })
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
+    expect(mocks.provider.broadcastTransaction).not.toHaveBeenCalled()
+  })
+
+  it('keeps relay intent unknown when transaction persistence fails after relay response', async () => {
+    mocks.transactions.addPaymentTransaction.mockRejectedValueOnce(new Error('database unavailable'))
+    const store = recreateStore()
+    store.balance = 10_000_000
+
+    await expect(store.sendPayment(
+      { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment },
+      'Payment',
+    )).resolves.toMatchObject({ outcome: 'unknown' })
+    expect(persistedPaymentAttempt).toMatchObject({ relay_hash: mocks.relayHash })
+  })
+
+  it('recovers an exact relayed merchant payment after restart and preserves metadata', async () => {
+    const merchantRequest = {
+      recipient: mocks.walletAddress,
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToMerchant,
+      rail: Rail.GoCrypto,
+      railMerchantId: 'merchant-id',
+      merchantName: 'Coffee Shop',
+      paymentRef: 'payment-ref',
+      fiatAmount: 3.5,
+      fiatFeeAmount: 0.1,
+      fiatCurrency: 'EUR',
+      meta: { orderId: 'order-7' },
+    } as const
+    const merchantTitle = markAsUnknownTransactionTitle('Coffee Shop')
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('relay response lost'))
+    const firstStore = recreateStore()
+    firstStore.balance = 10_000_000
+    await expect(firstStore.sendPayment(merchantRequest, merchantTitle)).resolves.toMatchObject({ outcome: 'unknown' })
+
+    mocks.provider.getBlockNumber.mockResolvedValue(headBlock + 20)
+    mocks.provider.getLogs.mockResolvedValueOnce([paymentTransferLog()])
+    mocks.provider.getTransaction.mockResolvedValue({
+      to: polygonUsdtConfig.openGsnRelayHubContract,
+      data: persistedRelayCallData(),
+    })
+    expect(isMatchingRelayCall(
+      { to: polygonUsdtConfig.openGsnRelayHubContract, data: persistedRelayCallData() },
+      JSON.parse(persistedPaymentAttempt!.relay_request_json),
+      persistedPaymentAttempt!.signature,
+    )).toBe(true)
+    const mismatchedRequest = JSON.parse(persistedPaymentAttempt!.relay_request_json)
+    mismatchedRequest.request.nonce = String(Number(mismatchedRequest.request.nonce) + 1)
+    expect(isMatchingRelayCall(
+      { to: polygonUsdtConfig.openGsnRelayHubContract, data: persistedRelayCallData() },
+      mismatchedRequest,
+      persistedPaymentAttempt!.signature,
+    )).toBe(false)
+    mocks.provider.getTransactionReceipt.mockResolvedValue(relayReceipt(
+      polygonUsdtConfig.transferContract,
+      new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector,
+    ))
+
+    const restartedStore = recreateStore()
+    restartedStore.balance = 10_000_000
+    await expect(restartedStore.sendPayment(merchantRequest, merchantTitle)).resolves.toMatchObject({ outcome: 'previous-resolved' })
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(1)
+    expect(persistedPayment).toMatchObject({
+      hash: mocks.relayHash,
+      merchantName: 'Coffee Shop',
+      rail: Rail.GoCrypto,
+      railMerchantId: 'merchant-id',
+      paymentRef: 'payment-ref',
+      fiatAmount: 3.5,
+      fiatFeeAmount: 0.1,
+      fiatCurrency: 'EUR',
+      meta: { orderId: 'order-7' },
+    })
+    expect(persistedPaymentAttempt).toBeNull()
+  })
+
+  it('keeps an expired attempt guarded when a matching Transfer transaction cannot be loaded', async () => {
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('relay response lost'))
+    const firstStore = recreateStore()
+    firstStore.balance = 10_000_000
+    const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+    await firstStore.sendPayment(request, 'Payment')
+
+    const validUntil = Number(JSON.parse(persistedPaymentAttempt!.relay_request_json).request.validUntil)
+    mocks.provider.getBlockNumber.mockResolvedValue(validUntil + 20)
+    mocks.provider.getLogs.mockResolvedValueOnce([paymentTransferLog()])
+    mocks.provider.getTransaction.mockResolvedValueOnce(null)
+
+    const restartedStore = recreateStore()
+    restartedStore.balance = 10_000_000
+    await expect(restartedStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'unknown' })
+    expect(persistedPaymentAttempt).not.toBeNull()
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps an expired attempt guarded when the log provider has not indexed the safe head', async () => {
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('relay response lost'))
+    const firstStore = recreateStore()
+    firstStore.balance = 10_000_000
+    const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+    await firstStore.sendPayment(request, 'Payment')
+
+    const validUntil = Number(JSON.parse(persistedPaymentAttempt!.relay_request_json).request.validUntil)
+    mocks.provider.getBlockNumber.mockResolvedValue(validUntil + 20)
+    const missingHeadError = Object.assign(new Error('block not found for eth_getLogs'), {
+      error: { data: { details: { latestBlock: validUntil - 1 } } },
+    })
+    mocks.provider.getLogs.mockRejectedValueOnce(missingHeadError).mockResolvedValueOnce([])
+
+    const restartedStore = recreateStore()
+    restartedStore.balance = 10_000_000
+    await expect(restartedStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'unknown' })
+    expect(persistedPaymentAttempt).not.toBeNull()
+    expect(mocks.provider.getLogs).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears a fully scanned expired attempt before a later deliberate retry', async () => {
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('relay response lost'))
+    const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+    const firstStore = recreateStore()
+    firstStore.balance = 10_000_000
+    await firstStore.sendPayment(request, 'Payment')
+
+    const validUntil = Number(JSON.parse(persistedPaymentAttempt!.relay_request_json).request.validUntil)
+    mocks.provider.getBlockNumber.mockResolvedValue(validUntil + 20)
+    const restartedStore = recreateStore()
+    restartedStore.balance = 10_000_000
+    await expect(restartedStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'rejected' })
+    expect(persistedPaymentAttempt).toBeNull()
+
+    mocks.provider.getBlockNumber.mockResolvedValue(validUntil + 21)
+    mocks.wait.mockResolvedValueOnce(relayReceipt(
+      polygonUsdtConfig.transferContract,
+      new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector,
+    ))
+    await expect(restartedStore.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'submitted' })
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(2)
+  })
+
+  it('blocks an overlapping send before it can build a second signed request', async () => {
+    let releaseSigning!: () => void
+    const signingBlocked = new Promise<void>((resolve) => {
+      releaseSigning = resolve
+    })
+    let signingStarted!: () => void
+    const started = new Promise<void>((resolve) => {
+      signingStarted = resolve
+    })
+    mocks.signTypedData.mockImplementationOnce(async () => {
+      signingStarted()
+      await signingBlocked
+      return `0x${'11'.repeat(64)}1b`
+    })
+    mocks.wait.mockResolvedValueOnce(relayReceipt(
+      polygonUsdtConfig.transferContract,
+      new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector,
+    ))
+    const store = recreateStore()
+    store.balance = 10_000_000
+    const first = store.sendPayment({ recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment')
+    await started
+
+    const second = await store.sendPayment({ recipient: mocks.walletAddress, amount: 2_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment')
+    expect(second).toMatchObject({ outcome: 'rejected' })
+    releaseSigning()
+    await expect(first).resolves.toMatchObject({ outcome: 'submitted' })
+    expect(mocks.relayTransaction).toHaveBeenCalledOnce()
+    expect(mocks.signTypedData).toHaveBeenCalledTimes(2)
+  })
+
+  it('clears an explicit relay rejection so a deliberate retry can send', async () => {
+    mocks.relayTransaction.mockRejectedValueOnce(new Error('Got error response from relay: rejected'))
+    const store = recreateStore()
+    store.balance = 10_000_000
+    const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+
+    await expect(store.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'rejected' })
+    expect(persistedPaymentAttempt).toBeNull()
+
+    mocks.wait.mockResolvedValueOnce(relayReceipt(
+      polygonUsdtConfig.transferContract,
+      new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector,
+    ))
+    await expect(store.sendPayment(request, 'Payment')).resolves.toMatchObject({ outcome: 'submitted' })
+    expect(mocks.relayTransaction).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports unknown when post-submission confirmation lookup fails', async () => {
     const store = recreateStore()
     store.balance = 10_000_000
     mocks.wait.mockRejectedValueOnce(new Error('confirmation RPC unavailable'))
-    mocks.provider.getTransactionReceipt.mockRejectedValueOnce(new Error('receipt RPC unavailable'))
 
     const result = await store.sendPayment({ recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment')
 
-    expect(result.error).toBeUndefined()
-    expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'pending' })
+    expect(result.outcome).toBe('unknown')
+    expect(result.error).toContain('Do not retry')
     expect(mocks.transactions.addPaymentTransaction).toHaveBeenCalledOnce()
     expect(mocks.transactions.addPaymentTransaction.mock.invocationCallOrder[0]).toBeLessThan(mocks.provider.broadcastTransaction.mock.invocationCallOrder[0]!)
     expect(mocks.transactions.replaceTransaction).not.toHaveBeenCalled()

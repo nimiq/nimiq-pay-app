@@ -91,9 +91,12 @@ export async function fetchLogsWithAvailableHeadFallback(
 export async function fetchLogsWithAdaptiveRange(
   provider: GetLogsProvider,
   filter: GetLogsFilter,
+  options: { requireCompleteRange?: boolean } = {},
 ): Promise<Log[]> {
   try {
-    return await fetchLogsWithAvailableHeadFallback(provider, filter)
+    return options.requireCompleteRange
+      ? await provider.getLogs(filter)
+      : await fetchLogsWithAvailableHeadFallback(provider, filter)
   }
   catch (error) {
     const shouldSplit = isBlockRangeLimitError(error) || isTimedOutLogQueryError(error)
@@ -102,8 +105,8 @@ export async function fetchLogsWithAdaptiveRange(
 
     const midpoint = Math.floor((filter.fromBlock + filter.toBlock) / 2)
     const [left, right] = await Promise.all([
-      fetchLogsWithAdaptiveRange(provider, { ...filter, toBlock: midpoint }),
-      fetchLogsWithAdaptiveRange(provider, { ...filter, fromBlock: midpoint + 1 }),
+      fetchLogsWithAdaptiveRange(provider, { ...filter, toBlock: midpoint }, options),
+      fetchLogsWithAdaptiveRange(provider, { ...filter, fromBlock: midpoint + 1 }, options),
     ])
 
     return [...left, ...right]

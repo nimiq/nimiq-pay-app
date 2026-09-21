@@ -392,13 +392,18 @@ const paymentFlow: FlowInit = async () => {
             return failPayment(error)
         }
         else {
-          const { error } = await usePolygonUsdt().sendPayment(
+          const result = await usePolygonUsdt().sendPayment(
             polygonRequest,
             polygonTitle,
             { quote: polygonQuote },
           )
-          if (error)
-            return failPayment(error)
+          if (result.outcome === 'rejected')
+            return failPayment(result.error)
+          if (result.outcome === 'unknown' || result.outcome === 'previous-resolved') {
+            const { useToast } = await import('@/composables/useToast')
+            useToast().setToast({ message: result.error })
+            return
+          }
         }
         break
       }
@@ -517,9 +522,13 @@ selectionStep ◄────┘
       }
     }
     else {
-      const { error } = await usePolygonUsdt().sendPayment({ transfer: Transfer.UserPayment, recipient, amount, fee: 0 }, title, { quote: polygonQuote })
-      if (error)
-        return err(`${i18n.t('Something went wrong')}.\n${error}`)
+      const result = await usePolygonUsdt().sendPayment({ transfer: Transfer.UserPayment, recipient, amount, fee: 0 }, title, { quote: polygonQuote })
+      if (result.outcome === 'rejected')
+        return err(`${i18n.t('Something went wrong')}.\n${result.error}`)
+      if (result.outcome === 'unknown' || result.outcome === 'previous-resolved') {
+        setToast({ message: result.error })
+        return
+      }
     }
 
     setToast({ message: i18n.t('Withdrawal successful') })

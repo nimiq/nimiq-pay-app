@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import { Asset } from '@/lib/assets'
 import { PaymentMethod, Transfer } from '@/types/transactions'
 import { FlowName, StepName } from './steps.types'
 
@@ -12,6 +13,7 @@ const state = vi.hoisted(() => ({
   })),
   primeTransferFee: vi.fn(() => new Promise(() => {})),
   primeHtlcFee: vi.fn(() => new Promise(() => {})),
+  polygonSendPayment: vi.fn(),
   isNimiqAsset: false,
   activeAsset: 'NIM',
   trackFeatureOpened: vi.fn(),
@@ -87,6 +89,7 @@ vi.mock('@/stores/polygon-usdt', () => ({
   usePolygonUsdt: () => ({
     primeTransferFee: state.primeTransferFee,
     primeHtlcFee: state.primeHtlcFee,
+    sendPayment: state.polygonSendPayment,
   }),
 }))
 
@@ -185,6 +188,8 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.showModal.mockClear()
     state.sendTx.mockReset()
     state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
+    state.polygonSendPayment.mockReset()
+    state.polygonSendPayment.mockResolvedValue({ outcome: 'submitted', data: { tx: { hash: 'polygon-payment' }, serialized: 'polygon-payment' } })
     state.confirmNakaPayment.mockClear()
     state.setToast.mockClear()
     state.trackPaymentCompleted.mockClear()
@@ -361,6 +366,59 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(setToast).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('Do not retry'),
     }))
+    expect(setToast).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Withdrawal successful' }))
+  })
+
+  it('does not complete or fail an uncertain Polygon payment', async () => {
+    state.activeAsset = Asset.USDT
+    state.polygonSendPayment.mockResolvedValue({
+      outcome: 'unknown',
+      error: 'The transaction may have been sent and is still pending. Do not retry.',
+    })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToMerchant,
+        recipient: '0x00000000000000000000000000000000000000AA',
+        amount: 1_000_000,
+        merchantName: 'Coffee Shop',
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+      },
+    }, { err, setToast: vi.fn() })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Do not retry') }))
+    expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('does not report an uncertain Polygon withdrawal as failed or successful', async () => {
+    state.polygonSendPayment.mockResolvedValue({
+      outcome: 'unknown',
+      error: 'The transaction may have been sent and is still pending. Do not retry.',
+    })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.NimWithdraw)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+    const setToast = vi.fn()
+
+    await flow.onDone({
+      [StepName.NimWithdrawalAmountSelectionStep]: {
+        amount: 10,
+        recipient: '0x00000000000000000000000000000000000000AA',
+      },
+    }, { err, setToast })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(setToast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Do not retry') }))
     expect(setToast).not.toHaveBeenCalledWith(expect.objectContaining({ message: 'Withdrawal successful' }))
   })
 })
