@@ -38,6 +38,7 @@ export const POLYGON_RELAY_HUB_ABI = [
   'event RelayServerRegistered(address indexed relayManager, uint256 baseRelayFee, uint256 pctRelayFee, string url)',
   'event TransactionRelayed(address indexed relayManager, address indexed relayWorker, address indexed from, address to, address paymaster, bytes4 selector, uint8 status, uint256 charge)',
   'function calldataGasCost(uint256 calldataSize) view returns (uint256)',
+  'function relayCall(uint256 maxAcceptanceBudget, ((address from, address to, uint256 value, uint256 gas, uint256 nonce, bytes data, uint256 validUntil) request, (uint256 gasPrice, uint256 pctRelayFee, uint256 baseRelayFee, address relayWorker, address paymaster, address forwarder, bytes paymasterData, uint256 clientId) relayData) relayRequest, bytes signature, bytes approvalData, uint256 externalGasLimit) returns (bool paymasterAccepted, bytes returnValue)',
 ]
 
 export const POLYGON_UNISWAP_POOL_ABI = [

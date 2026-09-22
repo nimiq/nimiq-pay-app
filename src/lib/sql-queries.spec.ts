@@ -128,13 +128,30 @@ describe('polygon recovery migrations', () => {
       'refund_timestamp',
       'refund_block',
     ])
-    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    expect(migrations.map(migration => migration.toVersion)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
     expect(migrations.find(migration => migration.toVersion === 9)?.statements).toEqual([
       SQLQuery.AddValidityStartHeightToTxsTable,
     ])
   })
 
-  it.each([8, 9])('upgrades released v%s rows without modifying NIM recovery', (version) => {
+  it('stores one ordinary Polygon payment attempt per network and sender', () => {
+    const columns = (db.prepare('PRAGMA table_info(polygon_payment_attempts)').all() as { name: string }[]).map(column => column.name)
+    expect(columns).toEqual([
+      'network',
+      'sender',
+      'request_json',
+      'title',
+      'relay_request_json',
+      'relay_url',
+      'signature',
+      'fee',
+      'start_block',
+      'created_at',
+      'relay_hash',
+    ])
+  })
+
+  it.each([8, 9, 10])('upgrades released v%s rows without modifying NIM recovery', (version) => {
     const legacyDb = new DatabaseSync(':memory:')
     try {
       for (const migration of migrations.filter(migration => migration.toVersion <= version))
@@ -143,7 +160,7 @@ describe('polygon recovery migrations', () => {
       insert.run('nim-address', 1, 100, 'nim-swap', 'pending', null)
       insert.run('polygon-funding-hash', 2, 200, 'polygon-swap', 'pending', 'polygon-htlc')
       insert.run('polygon-htlc', 3, 300, 'provisional-swap', 'pending', 'polygon-htlc')
-      if (version === 9)
+      if (version >= 9)
         legacyDb.exec('INSERT INTO transactions (hash, validityStartHeight) VALUES (\'nim-send\', 456)')
 
       for (const migration of migrations.filter(migration => migration.toVersion > version))
@@ -151,10 +168,10 @@ describe('polygon recovery migrations', () => {
 
       expect(legacyDb.prepare('SELECT address, tx_hash, refund_hash, refund_timestamp, refund_block FROM swap_htlcs ORDER BY address').all()).toEqual([
         { address: 'nim-address', tx_hash: null, refund_hash: null, refund_timestamp: null, refund_block: null },
-        { address: 'polygon-funding-hash', tx_hash: 'polygon-funding-hash', refund_hash: null, refund_timestamp: null, refund_block: null },
+        { address: 'polygon-funding-hash', tx_hash: version < 10 ? 'polygon-funding-hash' : null, refund_hash: null, refund_timestamp: null, refund_block: null },
         { address: 'polygon-htlc', tx_hash: null, refund_hash: null, refund_timestamp: null, refund_block: null },
       ])
-      if (version === 9)
+      if (version >= 9)
         expect(legacyDb.prepare('SELECT validityStartHeight FROM transactions').get()).toEqual({ validityStartHeight: 456 })
     }
     finally {

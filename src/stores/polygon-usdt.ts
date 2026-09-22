@@ -112,10 +112,30 @@ interface PolygonRelayCallbacks {
   validateReceipt?: (receipt: TransactionReceipt) => boolean
 }
 
+interface PolygonPaymentAttempt {
+  network: string
+  sender: string
+  request_json: string
+  title: string
+  relay_request_json: string
+  relay_url: string
+  signature: string
+  fee: number
+  start_block: number
+  created_at: number
+  relay_hash: string | null
+}
+
 export interface PolygonRelayOutcome {
   hash: string
   status: 'mined' | 'pending' | 'rejected'
 }
+
+export type PolygonPaymentSendResult
+  = | { outcome: 'submitted', data: { tx: TransactionSentByUser, serialized: string }, error: undefined }
+    | { outcome: 'rejected', data: undefined, error: string }
+    | { outcome: 'unknown', data: undefined, error: string }
+    | { outcome: 'previous-resolved', data: undefined, error: string }
 
 export class PolygonRelayRejectedError extends Error {
   constructor(message: string, options?: ErrorOptions) {
@@ -144,6 +164,7 @@ let calldataGasCostPromise: Promise<bigint> | null = null
 let cachedRelay: CachedRelayEntry | null = null
 let requiredHtlcRelayGasPromise: Promise<bigint> | null = null
 let htlcAcceptanceBudgetPromise: Promise<bigint> | null = null
+const activePolygonPaymentSends = new Set<string>()
 
 export const POLYGON_TRANSFER_QUOTE_TTL_MS = 20_000
 const CACHED_RELAY_TTL_MS = 5 * 60_000
@@ -151,9 +172,90 @@ const INITIAL_HISTORY_SCAN_MAX_RANGES_PER_PASS = 20
 const CONCURRENT_RANGE_FETCHES = 4
 const BLOCK_TS_CACHE_MAX = 5_000
 const POLYGON_RELAY_AMBIGUITY_GRACE_MS = 5 * 60_000
+const POLYGON_PAYMENT_FINALITY_BLOCKS = 10
 
 export function shouldRetryMissingPolygonRelay(submittedAt: number | null | undefined, now = Date.now()) {
   return !submittedAt || now - submittedAt >= POLYGON_RELAY_AMBIGUITY_GRACE_MS
+}
+
+function getPolygonPaymentNetwork() {
+  return `${isTestnet ? 'testnet' : 'mainnet'}:${polygonUsdtConfig.networkId}:${polygonUsdtConfig.tokenContract.toLowerCase()}:${polygonUsdtConfig.transferContract.toLowerCase()}`
+}
+
+function normalizeRelayRequest(relayRequest: RelayRequest) {
+  return {
+    request: {
+      from: getAddress(relayRequest.request.from).toLowerCase(),
+      to: getAddress(relayRequest.request.to).toLowerCase(),
+      value: BigInt(relayRequest.request.value).toString(),
+      gas: BigInt(relayRequest.request.gas).toString(),
+      nonce: BigInt(relayRequest.request.nonce).toString(),
+      data: relayRequest.request.data.toLowerCase(),
+      validUntil: BigInt(relayRequest.request.validUntil).toString(),
+    },
+    relayData: {
+      gasPrice: BigInt(relayRequest.relayData.gasPrice).toString(),
+      pctRelayFee: BigInt(relayRequest.relayData.pctRelayFee).toString(),
+      baseRelayFee: BigInt(relayRequest.relayData.baseRelayFee).toString(),
+      relayWorker: getAddress(relayRequest.relayData.relayWorker).toLowerCase(),
+      paymaster: getAddress(relayRequest.relayData.paymaster).toLowerCase(),
+      forwarder: getAddress(relayRequest.relayData.forwarder).toLowerCase(),
+      paymasterData: relayRequest.relayData.paymasterData.toLowerCase(),
+      clientId: BigInt(relayRequest.relayData.clientId).toString(),
+    },
+  }
+}
+
+function decodeRelayCall(data: string): { relayRequest: RelayRequest, signature: string } | null {
+  try {
+    const parsed = relayHubInterface.parseTransaction({ data })
+    if (!parsed || parsed.name !== 'relayCall')
+      return null
+
+    const encodedRequest = parsed.args.relayRequest ?? parsed.args[1]
+    const request = encodedRequest.request ?? encodedRequest[0]
+    const relayData = encodedRequest.relayData ?? encodedRequest[1]
+    return {
+      relayRequest: {
+        request: {
+          from: String(request.from ?? request[0]),
+          to: String(request.to ?? request[1]),
+          value: String(request.value ?? request[2]),
+          gas: String(request.gas ?? request[3]),
+          nonce: String(request.nonce ?? request[4]),
+          data: String(request.data ?? request[5]),
+          validUntil: String(request.validUntil ?? request[6]),
+        },
+        relayData: {
+          gasPrice: String(relayData.gasPrice ?? relayData[0]),
+          pctRelayFee: String(relayData.pctRelayFee ?? relayData[1]),
+          baseRelayFee: String(relayData.baseRelayFee ?? relayData[2]),
+          relayWorker: String(relayData.relayWorker ?? relayData[3]),
+          paymaster: String(relayData.paymaster ?? relayData[4]),
+          forwarder: String(relayData.forwarder ?? relayData[5]),
+          paymasterData: String(relayData.paymasterData ?? relayData[6]),
+          clientId: String(relayData.clientId ?? relayData[7]),
+        },
+      },
+      signature: String(parsed.args.signature ?? parsed.args[2]),
+    }
+  }
+  catch {
+    return null
+  }
+}
+
+export function isMatchingRelayCall(
+  tx: { to?: string | null, data: string },
+  relayRequest: RelayRequest,
+  signature: string,
+) {
+  if (!tx.to || !addressesEqual(tx.to, polygonUsdtConfig.openGsnRelayHubContract))
+    return false
+  const decoded = decodeRelayCall(tx.data)
+  return !!decoded
+    && decoded.signature.toLowerCase() === signature.toLowerCase()
+    && JSON.stringify(normalizeRelayRequest(decoded.relayRequest)) === JSON.stringify(normalizeRelayRequest(relayRequest))
 }
 
 export function shouldValidateOpenGsnTransaction(
@@ -398,9 +500,8 @@ export async function completePolygonRelayTransaction(
   relayHash: string,
   callbacks: Omit<PolygonRelayCallbacks, 'beforeRelay'> = {},
 ): Promise<PolygonRelayOutcome> {
-  await callbacks.beforeBroadcast?.(relayHash)
-
   try {
+    await callbacks.beforeBroadcast?.(relayHash)
     let txResponse = await broadcastPolygonRelayTransaction(provider, relayTx)
     const MAX_RELAY_RETRIES = 30
     for (let attempt = 0; !txResponse && attempt < MAX_RELAY_RETRIES; attempt++) {
@@ -932,7 +1033,7 @@ async function signTokenApproval(client: PolygonUsdtClient, wallet: HDNodeWallet
   }
 }
 
-async function buildRelayExecution(wallet: HDNodeWallet, quote: PolygonTransferQuote): Promise<RelayExecutionInput & { fee: bigint }> {
+async function buildRelayExecution(wallet: HDNodeWallet, quote: PolygonTransferQuote): Promise<RelayExecutionInput & { fee: bigint, startBlock: number }> {
   const client = await getClient()
   const [tokenNonceRaw, forwarderNonceRaw, blockNumber] = await Promise.all([
     client.tokenContract.getNonce(wallet.address),
@@ -997,6 +1098,7 @@ async function buildRelayExecution(wallet: HDNodeWallet, quote: PolygonTransferQ
 
   return {
     fee,
+    startBlock: blockNumber,
     relayRequest,
     relayUrl: quote.relay.url,
     signature,
@@ -1229,6 +1331,113 @@ async function getTransactionState(hash: string, validateOpenGsn = false) {
     hash,
     receipt => !(validateOpenGsn || shouldValidateOpenGsnTransaction(receipt)) || isSuccessfulOpenGsnReceipt(receipt),
   )
+}
+
+type PolygonPaymentAttemptReconciliation
+  = | { status: 'mined', hash: string, receipt: TransactionReceipt }
+    | { status: 'rejected', hash?: string }
+    | { status: 'unknown' }
+
+function parsePaymentAttemptExecution(attempt: PolygonPaymentAttempt): RelayExecutionInput | null {
+  try {
+    const relayRequest = JSON.parse(attempt.relay_request_json) as RelayRequest
+    normalizeRelayRequest(relayRequest)
+    return {
+      relayRequest,
+      relayUrl: attempt.relay_url,
+      signature: attempt.signature,
+    }
+  }
+  catch (error) {
+    logger.error('Failed to parse persisted Polygon payment attempt', error, { sender: attempt.sender })
+    return null
+  }
+}
+
+async function reconcilePolygonPaymentAttempt(
+  client: PolygonUsdtClient,
+  attempt: PolygonPaymentAttempt,
+): Promise<PolygonPaymentAttemptReconciliation> {
+  const execution = parsePaymentAttemptExecution(attempt)
+  if (!execution)
+    return { status: 'unknown' }
+
+  const inspectHash = async (hash: string): Promise<PolygonPaymentAttemptReconciliation> => {
+    try {
+      const [tx, receipt] = await Promise.all([
+        client.provider.getTransaction(hash),
+        client.provider.getTransactionReceipt(hash),
+      ])
+      if (!receipt)
+        return { status: 'unknown' }
+      if (!tx || !isMatchingRelayCall(tx, execution.relayRequest, execution.signature))
+        return { status: 'unknown' }
+      if (receipt.status === 0 || !isSuccessfulOpenGsnReceipt(receipt, execution.relayRequest))
+        return { status: 'rejected', hash }
+      return { status: 'mined', hash, receipt }
+    }
+    catch (error) {
+      logger.error('Failed to inspect persisted Polygon payment attempt', error, { hash })
+      return { status: 'unknown' }
+    }
+  }
+
+  if (attempt.relay_hash) {
+    const result = await inspectHash(attempt.relay_hash)
+    if (result.status !== 'unknown')
+      return result
+  }
+
+  let safeHead: number
+  try {
+    safeHead = (await client.provider.getBlockNumber()) - POLYGON_PAYMENT_FINALITY_BLOCKS
+  }
+  catch (error) {
+    logger.error('Failed to get confirmed Polygon head for payment recovery', error)
+    return { status: 'unknown' }
+  }
+
+  if (safeHead < attempt.start_block)
+    return { status: 'unknown' }
+
+  let request: PolygonSendRequest
+  let logs: Log[]
+  try {
+    request = JSON.parse(attempt.request_json) as PolygonSendRequest
+    logs = await fetchLogsWithAdaptiveRange(client.provider, {
+      address: polygonUsdtConfig.tokenContract,
+      fromBlock: attempt.start_block,
+      toBlock: safeHead,
+      topics: [transferTopicHash, toAddressTopic(attempt.sender), toAddressTopic(request.recipient)],
+    }, { requireCompleteRange: true })
+  }
+  catch (error) {
+    logger.error('Failed to scan Polygon payment attempt', error, { sender: attempt.sender })
+    return { status: 'unknown' }
+  }
+
+  for (const log of logs) {
+    const transfer = parseTransferLog(log)
+    if (!transfer || transfer.value !== BigInt(request.amount))
+      continue
+    let tx
+    try {
+      tx = await client.provider.getTransaction(transfer.hash)
+    }
+    catch (error) {
+      logger.error('Failed to inspect Polygon payment recovery candidate', error, { hash: transfer.hash })
+      return { status: 'unknown' }
+    }
+    if (!tx)
+      return { status: 'unknown' }
+    if (!isMatchingRelayCall(tx, execution.relayRequest, execution.signature))
+      continue
+    return inspectHash(transfer.hash)
+  }
+
+  return safeHead > Number(execution.relayRequest.request.validUntil)
+    ? { status: 'rejected' }
+    : { status: 'unknown' }
 }
 
 export async function hasPolygonHtlcRefundEvent(
@@ -1851,20 +2060,132 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     return enrichedTx
   }
 
+  async function persistOutgoingTransaction(tx: UserTransaction | MerchantTransaction) {
+    if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
+      await useTransactions().addPaymentToMerchantTransaction(tx as MerchantTransaction)
+    else if (tx.title === 'Withdrawal')
+      await useTransactions().addWithdrawalTransaction(tx as UserTransaction)
+    else
+      await useTransactions().addPaymentTransaction(tx as UserTransaction)
+  }
+
+  async function finalizePolygonPaymentAttempt(
+    attempt: PolygonPaymentAttempt,
+    hash: string,
+    receipt: TransactionReceipt,
+  ) {
+    const request = JSON.parse(attempt.request_json) as PolygonSendRequest
+    const [block, latestBlock] = await Promise.allSettled([
+      receipt.blockNumber ? (await getClient()).provider.getBlock(receipt.blockNumber) : null,
+      (await getClient()).provider.getBlockNumber(),
+    ])
+    const timestamp = block.status === 'fulfilled' ? block.value?.timestamp : undefined
+    const status = latestBlock.status === 'fulfilled' && latestBlock.value - receipt.blockNumber >= POLYGON_PAYMENT_FINALITY_BLOCKS
+      ? 'confirmed'
+      : 'mined'
+    const tx = buildOutgoingTransaction(
+      request,
+      attempt.title as TransactionTitle,
+      attempt.sender,
+      hash,
+      timestamp === undefined ? undefined : timestamp * 1000,
+      attempt.fee,
+      status,
+    )
+    // Keep the original hash recoverable until its pending row has been merged.
+    if (attempt.relay_hash && attempt.relay_hash !== hash)
+      await useTransactions().replacePolygonTransactionHash(attempt.relay_hash, hash)
+    await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [hash, attempt.network, attempt.sender])
+    await persistOutgoingTransaction(tx)
+    await run(SQLQuery.DeletePolygonPaymentAttempt, [attempt.network, attempt.sender])
+    return tx
+  }
+
   async function sendPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
     options?: { quote?: PolygonTransferQuote },
-  ): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
+  ): Promise<PolygonPaymentSendResult> {
     const { data: wallet, error } = useLocalWallet().getEthWallet()
     if (error || !wallet)
-      return { data: undefined, error: error || i18n.t('No account has been found') }
+      return { outcome: 'rejected', data: undefined, error: error || i18n.t('No account has been found') }
 
     await init()
     if (consensus.value !== 'established')
-      return { data: undefined, error: i18n.t('Polygon is not ready yet') }
+      return { outcome: 'rejected', data: undefined, error: i18n.t('Polygon is not ready yet') }
 
+    const network = getPolygonPaymentNetwork()
+    const sender = getAddress(wallet.address)
+    const requestJson = JSON.stringify(request)
+    const activeSendKey = `${network}:${sender.toLowerCase()}`
+    if (activePolygonPaymentSends.has(activeSendKey)) {
+      return {
+        outcome: 'rejected',
+        data: undefined,
+        error: i18n.t('A transaction is already in progress'),
+      }
+    }
+    activePolygonPaymentSends.add(activeSendKey)
     try {
+      const existingAttempt = await query<PolygonPaymentAttempt | null>(
+        SQLQuery.GetPolygonPaymentAttempt,
+        [network, sender],
+        { single: true },
+      )
+      if (existingAttempt) {
+        const reconciliation = await reconcilePolygonPaymentAttempt(await getClient(), existingAttempt)
+        if (reconciliation.status === 'unknown') {
+          return {
+            outcome: 'unknown',
+            data: undefined,
+            error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+          }
+        }
+        if (reconciliation.status === 'mined') {
+          try {
+            await finalizePolygonPaymentAttempt(existingAttempt, reconciliation.hash, reconciliation.receipt)
+          }
+          catch (persistenceError) {
+            logger.error('Failed to finalize recovered Polygon payment', persistenceError, { hash: reconciliation.hash })
+            return {
+              outcome: 'unknown',
+              data: undefined,
+              error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+            }
+          }
+          await updateBalance().catch(balanceError => logger.error('Failed to refresh Polygon balance after recovery', balanceError))
+          return {
+            outcome: 'previous-resolved',
+            data: undefined,
+            error: i18n.t('A previous transaction was confirmed. No new payment was sent.'),
+          }
+        }
+
+        if (existingAttempt.relay_hash) {
+          try {
+            await useTransactions().updateTransactionStatus({
+              hash: existingAttempt.relay_hash,
+              status: 'failed',
+              timestamp: undefined,
+            })
+          }
+          catch (persistenceError) {
+            logger.error('Failed to persist rejected Polygon payment recovery', persistenceError, { hash: existingAttempt.relay_hash })
+            return {
+              outcome: 'unknown',
+              data: undefined,
+              error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+            }
+          }
+        }
+        await run(SQLQuery.DeletePolygonPaymentAttempt, [network, sender])
+        return {
+          outcome: 'rejected',
+          data: undefined,
+          error: i18n.t('Polygon transaction failed'),
+        }
+      }
+
       const quote = await resolvePolygonTransferQuote({
         request,
         balance: balance.value,
@@ -1873,56 +2194,131 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       })
       const execution = await buildRelayExecution(wallet, quote)
       let tx: UserTransaction | MerchantTransaction | undefined
-      const receipt = await relayTransaction(execution, {
-        beforeBroadcast: async (relayHash) => {
-          tx = buildOutgoingTransaction(
-            request,
-            title,
-            wallet.address,
-            relayHash,
-            Date.now(),
-            quote.fee,
-            'pending',
-          )
+      let attemptPersisted = false
+      let outcome: PolygonRelayOutcome
+      try {
+        outcome = await relayTransaction(execution, {
+          beforeRelay: async () => {
+            await run(SQLQuery.InsertPolygonPaymentAttempt, [
+              network,
+              sender,
+              requestJson,
+              title,
+              JSON.stringify(execution.relayRequest),
+              execution.relayUrl,
+              execution.signature,
+              Number(execution.fee),
+              execution.startBlock,
+              Date.now(),
+              null,
+            ])
+            attemptPersisted = true
+          },
+          beforeBroadcast: async (relayHash) => {
+            await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [relayHash, network, sender])
+            tx = buildOutgoingTransaction(
+              request,
+              title,
+              sender,
+              relayHash,
+              Date.now(),
+              quote.fee,
+              'pending',
+            )
+            await persistOutgoingTransaction(tx)
+          },
+          onReplaced: async (oldHash, newHash) => {
+            await useTransactions().replacePolygonTransactionHash(oldHash, newHash)
+            await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [newHash, network, sender])
+            if (tx?.hash === oldHash)
+              tx = { ...tx, hash: newHash }
+          },
+        })
+      }
+      catch (relayError) {
+        if (relayError instanceof PolygonRelayRejectedError) {
+          if (attemptPersisted) {
+            try {
+              await run(SQLQuery.DeletePolygonPaymentAttempt, [network, sender])
+            }
+            catch (persistenceError) {
+              logger.error('Failed to clear rejected Polygon payment attempt', persistenceError)
+              return {
+                outcome: 'unknown',
+                data: undefined,
+                error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+              }
+            }
+          }
+          return { outcome: 'rejected', data: undefined, error: relayError.message }
+        }
+        if (attemptPersisted) {
+          logger.error('Polygon relay outcome is unknown', relayError)
+          return {
+            outcome: 'unknown',
+            data: undefined,
+            error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+          }
+        }
+        throw relayError
+      }
 
-          if (tx.transfer === Transfer.UserPaymentToMerchant || tx.transfer === Transfer.UserPaymentToAtomicSwap)
-            await useTransactions().addPaymentToMerchantTransaction(tx as MerchantTransaction)
-          else if (title === 'Withdrawal')
-            await useTransactions().addWithdrawalTransaction(tx as UserTransaction)
-          else
-            await useTransactions().addPaymentTransaction(tx as UserTransaction)
-        },
-        onReplaced: async (oldHash, newHash) => {
-          await useTransactions().replacePolygonTransactionHash(oldHash, newHash)
-          if (tx?.hash === oldHash)
-            tx = { ...tx, hash: newHash }
-        },
-      })
+      if (outcome.status === 'pending' || !tx) {
+        return {
+          outcome: 'unknown',
+          data: undefined,
+          error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+        }
+      }
 
-      if (!tx)
-        throw new Error(i18n.t('Could not persist Polygon transaction'))
-
-      if (tx.hash !== receipt.hash) {
+      if (tx.hash !== outcome.hash) {
         const oldHash = tx.hash
-        await useTransactions().replacePolygonTransactionHash(oldHash, receipt.hash).catch(error => logger.error('Failed to retry Polygon replacement persistence', error, { oldHash, newHash: receipt.hash }))
+        try {
+          await useTransactions().replacePolygonTransactionHash(oldHash, outcome.hash)
+          await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [outcome.hash, network, sender])
+        }
+        catch (persistenceError) {
+          logger.error('Failed to retry Polygon replacement persistence', persistenceError, { oldHash, newHash: outcome.hash })
+          return {
+            outcome: 'unknown',
+            data: undefined,
+            error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+          }
+        }
       }
-      tx = { ...tx, hash: receipt.hash }
+      tx = { ...tx, hash: outcome.hash }
 
-      if (receipt.status === 'rejected') {
+      if (outcome.status === 'rejected') {
         tx = { ...tx, status: 'failed' }
-        await useTransactions().replaceTransaction(tx)
-        throw new Error(i18n.t('Polygon transaction failed'))
+        try {
+          await useTransactions().replaceTransaction(tx)
+          await run(SQLQuery.DeletePolygonPaymentAttempt, [network, sender])
+        }
+        catch (persistenceError) {
+          logger.error('Failed to persist rejected Polygon payment', persistenceError, { hash: outcome.hash })
+          return {
+            outcome: 'unknown',
+            data: undefined,
+            error: i18n.t('The transaction may have been sent and is still pending. Do not retry.'),
+          }
+        }
+        return { outcome: 'rejected', data: undefined, error: i18n.t('Polygon transaction failed') }
       }
 
-      tx = await enrichPersistedTransaction(tx, receipt.hash)
-      if (tx.status === 'failed')
-        throw new Error(i18n.t('Polygon transaction failed'))
+      tx = await enrichPersistedTransaction(tx, outcome.hash)
+      if (tx.status === 'failed') {
+        await run(SQLQuery.DeletePolygonPaymentAttempt, [network, sender])
+        return { outcome: 'rejected', data: undefined, error: i18n.t('Polygon transaction failed') }
+      }
+
+      await run(SQLQuery.DeletePolygonPaymentAttempt, [network, sender]).catch(deleteError => logger.error('Failed to clear completed Polygon payment attempt', deleteError, { hash: outcome.hash }))
 
       await updateBalance().catch(error => logger.error('Failed to refresh Polygon balance after payment', error))
       return {
+        outcome: 'submitted',
         data: {
           tx: tx as TransactionSentByUser,
-          serialized: receipt.hash,
+          serialized: outcome.hash,
         },
         error: undefined,
       }
@@ -1930,9 +2326,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     catch (error) {
       logger.error('Failed to send Polygon USDT transaction', error)
       return {
+        outcome: 'rejected',
         data: undefined,
         error: error instanceof Error ? error.message : i18n.t('Polygon payment failed'),
       }
+    }
+    finally {
+      activePolygonPaymentSends.delete(activeSendKey)
     }
   }
 

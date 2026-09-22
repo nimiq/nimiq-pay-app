@@ -160,6 +160,14 @@ export enum SQLQuery {
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
   PurgeSwapQuotes = 'DELETE FROM swap_quotes',
 
+  // Polygon payment attempts
+  CreatePolygonPaymentAttemptsTable = 'CREATE TABLE IF NOT EXISTS polygon_payment_attempts (network TEXT NOT NULL, sender TEXT NOT NULL, request_json TEXT NOT NULL, title TEXT NOT NULL, relay_request_json TEXT NOT NULL, relay_url TEXT NOT NULL, signature TEXT NOT NULL, fee INTEGER NOT NULL, start_block INTEGER NOT NULL, created_at INTEGER NOT NULL, relay_hash TEXT, PRIMARY KEY (network, sender))',
+  InsertPolygonPaymentAttempt = 'INSERT INTO polygon_payment_attempts (network, sender, request_json, title, relay_request_json, relay_url, signature, fee, start_block, created_at, relay_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  GetPolygonPaymentAttempt = 'SELECT * FROM polygon_payment_attempts WHERE network = ? AND sender = ? LIMIT 1',
+  SetPolygonPaymentAttemptRelayHash = 'UPDATE polygon_payment_attempts SET relay_hash = ? WHERE network = ? AND sender = ?',
+  DeletePolygonPaymentAttempt = 'DELETE FROM polygon_payment_attempts WHERE network = ? AND sender = ?',
+  PurgePolygonPaymentAttempts = 'DELETE FROM polygon_payment_attempts',
+
   // NAKA
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
   InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, JSON(?))',
@@ -261,6 +269,12 @@ export const migrations: Migration[] = [
       SQLQuery.AddRefundTimestampColumnToSwapHtlcs,
       SQLQuery.AddRefundBlockColumnToSwapHtlcs,
       SQLQuery.BackfillSwapHtlcTxHash,
+    ],
+  },
+  {
+    toVersion: 11,
+    statements: [
+      SQLQuery.CreatePolygonPaymentAttemptsTable,
     ],
   },
 ]
