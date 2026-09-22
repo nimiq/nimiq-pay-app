@@ -67,15 +67,16 @@ async function retryProviderInit() {
 
 async function login() {
     if (!provider.value) return;
-    const accounts = await provider.value.listAccounts()
-    if ('error' in accounts) {
-        console.error('Error listing accounts:', accounts.error);
-        return;
-    }
-    if (accounts.length === 2) {
-        addresses.value = accounts
-        fetchBalance();
-        fetchStaker();
+    try {
+        const accounts = await provider.value.listAccounts()
+        if (accounts.length === 2) {
+            addresses.value = accounts
+            fetchBalance();
+            fetchStaker();
+        }
+    } catch (e) {
+        alert('Error listing accounts: ' + errorMessage(e));
+        console.error('Error listing accounts:', e);
     }
 }
 
@@ -107,6 +108,10 @@ function refresh() {
 }
 
 const UNLOCKING_PERIOD = 60 * 60 * 12; // Unlocking period is one epoch (12 hours)
+function errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
 function isUnlocked(inactiveFrom: number): boolean {
     return blockNumber.value >= inactiveFrom + UNLOCKING_PERIOD;
 }
@@ -147,13 +152,10 @@ async function startStaking() {
             delegation: delegationStr,
             value, // TODO
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error starting staking: ' + result.error.message);
-        } else {
-            console.log('Staking started successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Staking started successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error starting staking: ' + errorMessage(e));
         console.error('Exception while starting staking:', e);
     }
 }
@@ -167,13 +169,10 @@ async function addStake() {
         const result = await provider.value.sendStakeTransaction({
             value,
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error adding stake: ' + result.error.message);
-        } else {
-            console.log('Stake added successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Stake added successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error adding stake: ' + errorMessage(e));
         console.error('Exception while adding stake:', e);
     }
 }
@@ -187,13 +186,10 @@ async function setActiveStake() {
         const result = await provider.value.sendSetActiveStakeTransaction({
             newActiveBalance,
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error setting active stake: ' + result.error.message);
-        } else {
-            console.log('Active stake set successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Active stake set successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error setting active stake: ' + errorMessage(e));
         console.error('Exception while setting active stake:', e);
     }
 }
@@ -207,13 +203,10 @@ async function retireStake() {
         const result = await provider.value.sendRetireStakeTransaction({
             retireStake,
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error retiring stake: ' + result.error.message);
-        } else {
-            console.log('Stake retired successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Stake retired successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error retiring stake: ' + errorMessage(e));
         console.error('Exception while retiring stake:', e);
     }
 }
@@ -227,13 +220,10 @@ async function removeStake() {
         const result = await provider.value.sendRemoveStakeTransaction({
             value: removeStake,
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error removing stake: ' + result.error.message);
-        } else {
-            console.log('Stake removed successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Stake removed successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error removing stake: ' + errorMessage(e));
         console.error('Exception while removing stake:', e);
     }
 }
@@ -247,13 +237,10 @@ async function updateStaker() {
             newDelegation: newDelegationStr,
             reactivateAllStake: true,
         });
-        if (typeof result === 'object' && 'error' in result) {
-            alert('Error updating staker: ' + result.error.message);
-        } else {
-            console.log('Staker updated successfully:', result);
-            setTimeout(refresh, 1500);
-        }
+        console.log('Staker updated successfully:', result);
+        setTimeout(refresh, 1500);
     } catch (e) {
+        alert('Error updating staker: ' + errorMessage(e));
         console.error('Exception while updating staker:', e);
     }
 }

@@ -1,5 +1,6 @@
 import type { PluginListenerHandle } from '@capacitor/core'
 import type { InAppBrowser } from '@capgo/capacitor-inappbrowser'
+import type { Address } from '@nimiq/core'
 import type { BirpcReturn } from 'birpc'
 import type { ChainApprovalRequest, NativeFunctions, RequestParams, WebviewFunctions } from '../../web3-provider/src/birpc-types'
 import type { Web3RequestType } from '@/lib/analytics'
@@ -434,6 +435,8 @@ export class MiniAppHost {
       return USER_REJECTED_REQUEST_CODE
     if (error instanceof UnknownRequestError)
       return 4200
+    if (error instanceof InvalidRequestError)
+      return -32602
     if (error instanceof InvalidTransactionError)
       return -32602
     if (error instanceof TransactionOutcomeUnknownError)
@@ -1323,6 +1326,7 @@ export class MiniAppHost {
       case 'sign': return this.sign(message.params)
       case 'isConsensusEstablished': return this.isConsensusEstablished()
       case 'getBlockNumber': return this.getBlockNumber()
+      case 'getBalance': return this.getBalance(message.params)
       case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
       case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
       case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
@@ -1343,6 +1347,29 @@ export class MiniAppHost {
 
   private getBlockNumber() {
     return Math.max(useNimiqNetwork().height, useRemoteSigner().remoteHeight)
+  }
+
+  private async getBalance(params: unknown): Promise<number> {
+    const rawAddress = (params as { address?: unknown } | null | undefined)?.address
+    if (typeof rawAddress !== 'string')
+      throw new InvalidRequestError('A valid Nimiq address is required')
+
+    let address: Address
+    try {
+      address = Nimiq.Address.fromString(rawAddress)
+    }
+    catch {
+      throw new InvalidRequestError('A valid Nimiq address is required')
+    }
+
+    const network = useNimiqNetwork()
+    if (!network.client || network.consensus !== 'established')
+      throw new NetworkError('Nimiq network is not ready')
+
+    const { data, error } = await network.getBalance(address)
+    if (error)
+      throw new NetworkError(error)
+    return data
   }
 
   private async listAccounts() {
@@ -1804,6 +1831,10 @@ class UnknownRequestError extends MiniAppError {
 
 class InternalError extends MiniAppError {
   readonly type = 'INTERNAL_ERROR'
+}
+
+class InvalidRequestError extends MiniAppError {
+  readonly type = 'INVALID_REQUEST'
 }
 
 export class PermissionDeniedError extends MiniAppError {

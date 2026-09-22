@@ -52,6 +52,21 @@ afterEach(() => {
 })
 
 describe('injected provider errors', () => {
+  it.each([
+    ['getBalance', () => window.nimiq!.getBalance('NQ11 UNRELATED')],
+    ['request(getBalance)', () => window.nimiq!.request({ method: 'getBalance', params: { address: 'NQ11 UNRELATED' } })],
+  ])('forwards %s to the native bridge', async (_name, call) => {
+    handleRequest.mockResolvedValue(12_345_678)
+
+    await expect(call()).resolves.toBe(12_345_678)
+    expect(handleRequest).toHaveBeenCalledWith({
+      network: 'nimiq',
+      name: 'getBalance',
+      params: { address: 'NQ11 UNRELATED' },
+      object: { address: 'NQ11 UNRELATED' },
+    })
+  })
+
   it('preserves type and RPC fields for concurrent Nimiq account requests', async () => {
     const error = { code: 4001, type: 'PERMISSION_DENIED', message: 'Permission denied' }
     handleRequest.mockRejectedValue(error)

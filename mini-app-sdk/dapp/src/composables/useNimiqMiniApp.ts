@@ -2,7 +2,7 @@ import type { NimiqProvider } from '@nimiq/mini-app-sdk'
 import { init } from '@nimiq/mini-app-sdk'
 import { computed, ref, shallowRef } from 'vue'
 
-const provider = shallowRef<NimiqProvider | null>(typeof window === 'undefined' ? null : (window.nimiq ?? null))
+const provider = shallowRef<NimiqProvider | null>(null)
 const isInitializing = ref(false)
 const initError = ref<string | null>(null)
 const hasProvider = computed(() => provider.value !== null)
