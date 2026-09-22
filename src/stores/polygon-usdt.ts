@@ -2092,6 +2092,9 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       attempt.fee,
       status,
     )
+    // Keep the original hash recoverable until its pending row has been merged.
+    if (attempt.relay_hash && attempt.relay_hash !== hash)
+      await useTransactions().replacePolygonTransactionHash(attempt.relay_hash, hash)
     await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [hash, attempt.network, attempt.sender])
     await persistOutgoingTransaction(tx)
     await run(SQLQuery.DeletePolygonPaymentAttempt, [attempt.network, attempt.sender])
@@ -2225,8 +2228,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
             await persistOutgoingTransaction(tx)
           },
           onReplaced: async (oldHash, newHash) => {
-            await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [newHash, network, sender])
             await useTransactions().replacePolygonTransactionHash(oldHash, newHash)
+            await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [newHash, network, sender])
             if (tx?.hash === oldHash)
               tx = { ...tx, hash: newHash }
           },
@@ -2271,8 +2274,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (tx.hash !== outcome.hash) {
         const oldHash = tx.hash
         try {
-          await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [outcome.hash, network, sender])
           await useTransactions().replacePolygonTransactionHash(oldHash, outcome.hash)
+          await run(SQLQuery.SetPolygonPaymentAttemptRelayHash, [outcome.hash, network, sender])
         }
         catch (persistenceError) {
           logger.error('Failed to retry Polygon replacement persistence', persistenceError, { oldHash, newHash: outcome.hash })

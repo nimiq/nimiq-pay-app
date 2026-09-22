@@ -644,6 +644,67 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.transactions.updateTransactionStatus).not.toHaveBeenCalled()
   })
 
+  it.each(['restart', 'recovery persistence failure', 'live replacement persistence failure'])(
+    'removes the original pending payment after %s',
+    async (scenario) => {
+      const rows = new Map<string, Record<string, unknown>>()
+      mocks.transactions.addPaymentTransaction.mockImplementation(async (tx) => {
+        rows.set(tx.hash, { ...tx })
+        persistedPayment = { ...tx }
+      })
+      mocks.transactions.replacePolygonTransactionHash.mockImplementation(async (oldHash, newHash) => {
+        const old = rows.get(oldHash)
+        rows.delete(oldHash)
+        if (old)
+          rows.set(newHash, { ...old, hash: newHash })
+      })
+      const replacementHash = `0x${'ab'.repeat(32)}`
+      const receipt = {
+        ...relayReceipt(polygonUsdtConfig.transferContract, new Interface(POLYGON_TRANSFER_RECIPIENT_ABI).getFunction('transferWithApproval')!.selector),
+        hash: replacementHash,
+      }
+      if (scenario === 'live replacement persistence failure') {
+        mocks.wait.mockRejectedValueOnce(Object.assign(new Error('transaction repriced'), {
+          code: 'TRANSACTION_REPLACED',
+          cancelled: false,
+          reason: 'repriced',
+          replacement: { hash: replacementHash },
+          receipt,
+        }))
+        mocks.transactions.replacePolygonTransactionHash
+          .mockRejectedValueOnce(new Error('database unavailable'))
+          .mockRejectedValueOnce(new Error('database unavailable'))
+      }
+      else {
+        mocks.wait.mockRejectedValueOnce(new Error('confirmation RPC unavailable'))
+      }
+      const request = { recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment } as const
+      const firstStore = recreateStore()
+      firstStore.balance = 10_000_000
+      expect((await firstStore.sendPayment(request, 'Payment')).outcome).toBe('unknown')
+      expect(rows.get(mocks.relayHash)?.status).toBe('pending')
+      expect(persistedPaymentAttempt?.relay_hash).toBe(mocks.relayHash)
+
+      const data = persistedRelayCallData()
+      mocks.provider.getBlockNumber.mockResolvedValue(headBlock + 20)
+      mocks.provider.getLogs.mockResolvedValue([{ ...paymentTransferLog(), transactionHash: replacementHash }])
+      mocks.provider.getTransaction.mockImplementation(async hash => hash === replacementHash ? { to: polygonUsdtConfig.openGsnRelayHubContract, data } : null)
+      mocks.provider.getTransactionReceipt.mockImplementation(async hash => hash === replacementHash ? receipt : null)
+      if (scenario === 'recovery persistence failure') {
+        mocks.transactions.replacePolygonTransactionHash.mockRejectedValueOnce(new Error('database unavailable'))
+        expect((await recreateStore().sendPayment(request, 'Payment')).outcome).toBe('unknown')
+        expect(persistedPaymentAttempt?.relay_hash).toBe(mocks.relayHash)
+        expect([...rows.keys()]).toEqual([mocks.relayHash])
+      }
+
+      expect((await recreateStore().sendPayment(request, 'Payment')).outcome).toBe('previous-resolved')
+      expect([...rows.keys()]).toEqual([replacementHash])
+      expect(rows.get(replacementHash)?.status).toBe('confirmed')
+      expect(persistedPaymentAttempt).toBeNull()
+      expect(mocks.relayTransaction).toHaveBeenCalledOnce()
+    },
+  )
+
   it('preserves confirmed replacement state and metadata when receipt lookup fails', async () => {
     const replacementHash = `0x${'ab'.repeat(32)}`
     const store = recreateStore()
