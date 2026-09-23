@@ -57,6 +57,25 @@ describe('useNimiqNetwork', () => {
     expect(result).toMatchObject({ error: 'Error getting balance' })
   })
 
+  it.each([12_345_678, 0])('returns the on-chain balance including %d luna', async (balance) => {
+    const address = { value: 'unrelated' }
+    const getAccount = vi.fn().mockResolvedValue({ balance })
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = { getAccount } as any
+
+    await expect(store.getBalance(address as any)).resolves.toEqual({ data: balance, error: undefined })
+    expect(getAccount).toHaveBeenCalledWith(address)
+  })
+
+  it('returns a zero fallback with an error when the account lookup fails', async () => {
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = { getAccount: vi.fn().mockRejectedValue(new Error('network failed')) } as any
+
+    await expect(store.getBalance({} as any)).resolves.toEqual({ data: 0, error: 'Error getting balance' })
+  })
+
   it('waits for an active reconnect instead of resolving early', async () => {
     let resolveDisconnect!: () => void
     const client = {

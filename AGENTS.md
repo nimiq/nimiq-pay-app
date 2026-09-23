@@ -18,6 +18,12 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Run `pnpm lint` and `pnpm typecheck` after any change.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
+### Mini Apps provider dependency in CI
+
+- `web3-provider/package.json` links to the sibling `../trust-web3-provider` checkout. CI builds the commit pinned in `.github/actions/setup-provider/action.yml`, so local tests can pass with newer provider code while CI fails.
+- When a change needs new provider code, update that CI pin in the same PR to a full commit SHA available in `nimiq/trust-web3-provider`. Publishing a new SDK version or updating the demo dependency does not update this pin.
+- Verify against that exact provider commit: build `core`, `nimiq`, then `ethereum` using the action's commands, rebuild the injected bridge, and run lint, typechecks, and the full unit suite. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+
 ## Naming & terminology
 
 - Use `isNimiqAsset` (not `isNimAsset`) to check if the active asset is NIM.

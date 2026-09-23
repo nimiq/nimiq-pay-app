@@ -11,6 +11,7 @@ const erc20Interface = new Interface([
 const {
   addressesEqual,
   createBirpc,
+  getBalance,
   hexToBytes,
   isValidEthAddress,
   loggerError,
@@ -37,6 +38,7 @@ const {
     onUnsupportedChain: { asEvent: vi.fn() },
     updateRpcUrl: vi.fn(),
   })),
+  getBalance: vi.fn(),
   hexToBytes: vi.fn(),
   isValidEthAddress: vi.fn(),
   loggerError: vi.fn(),
@@ -180,6 +182,13 @@ beforeEach(() => {
   vi.unstubAllGlobals()
   vi.stubGlobal('Nimiq', {
     AccountType: { Basic: 0, Staking: 3 },
+    Address: {
+      fromString: vi.fn((address: unknown) => {
+        if (typeof address !== 'string' || !address.startsWith('NQ'))
+          throw new Error('Invalid address')
+        return { address }
+      }),
+    },
   })
 
   addressesEqual.mockImplementation((left?: string, right?: string) =>
@@ -210,9 +219,12 @@ beforeEach(() => {
     })),
   })
   useNimiqNetwork.mockReturnValue({
+    client: {},
     consensus: 'established',
+    getBalance,
     height: 0,
   })
+  getBalance.mockResolvedValue({ data: 0, error: undefined })
   usePolygonUsdt.mockReturnValue({
     updateBalance,
     syncTransactionHistory,
@@ -223,6 +235,70 @@ beforeEach(() => {
   })
   sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
   useTransactions.mockReturnValue({ sendTx })
+})
+
+describe('MiniAppHost Nimiq balances', () => { // eslint-disable-line test/prefer-lowercase-title
+  it.each([12_345_678, 0])('returns %d luna for any valid address without requesting account access', async (balance) => {
+    const address = 'NQ11 UNRELATED'
+    getBalance.mockResolvedValue({ data: balance, error: undefined })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'getBalance',
+      params: { address },
+    })).resolves.toBe(balance)
+    expect(getBalance).toHaveBeenCalledWith({ address })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+  })
+
+  it.each([undefined, null, 1, {}, { address: null }, { address: 1 }, { address: '' }, { address: 'invalid' }])('rejects malformed balance params as INVALID_REQUEST', async (params) => {
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'getBalance',
+      params,
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: -32602,
+      message: 'A valid Nimiq address is required',
+      type: 'INVALID_REQUEST',
+    })
+    expect(getBalance).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { client: undefined, consensus: 'established' },
+    { client: {}, consensus: 'connecting' },
+  ])('rejects when Nimiq network is unavailable: %s', async (network) => {
+    useNimiqNetwork.mockReturnValue({ ...network, getBalance, height: 0 })
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'getBalance',
+      params: { address: 'NQ11 UNRELATED' },
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      type: 'NETWORK_ERROR',
+    })
+    expect(getBalance).not.toHaveBeenCalled()
+  })
+
+  it.each(['Error getting balance', 'Operation timed out'])('rejects failed balance lookup instead of returning zero: %s', async (error) => {
+    getBalance.mockResolvedValue({ data: 0, error })
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'getBalance',
+      params: { address: 'NQ11 UNRELATED' },
+    }).catch((reason: unknown) => JSON.parse(JSON.stringify(reason)))).resolves.toEqual({
+      code: -32000,
+      message: error,
+      type: 'NETWORK_ERROR',
+    })
+  })
 })
 
 describe('MiniAppHost Nimiq send certainty', () => { // eslint-disable-line test/prefer-lowercase-title

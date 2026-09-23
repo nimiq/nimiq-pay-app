@@ -12,6 +12,8 @@ const props = defineProps<{
 const hasProvider = computed(() => props.provider !== null)
 const provider = computed(() => props.provider as NimiqProvider)
 const output = ref<unknown | null>(null)
+const balanceAddress = ref('')
+const isFetchingBalance = ref(false)
 
 async function isConsensusEstablished() {
   output.value = await provider.value.isConsensusEstablished()
@@ -21,12 +23,41 @@ async function getBlockNumber() {
   output.value = await provider.value.getBlockNumber()
 }
 
+async function getBalance() {
+  const nimiq = props.provider
+  if (!nimiq || !('getBalance' in nimiq) || typeof nimiq.getBalance !== 'function') {
+    output.value = 'getBalance is unavailable. Update Nimiq Pay to use this method.'
+    return
+  }
+
+  const address = balanceAddress.value.trim()
+  if (!address || isFetchingBalance.value)
+    return
+
+  isFetchingBalance.value = true
+  output.value = 'Fetching balance...'
+  try {
+    const balance: unknown = await nimiq.getBalance(address)
+    output.value = typeof balance === 'number'
+      ? { address, balanceLuna: balance, balanceNim: balance / 1e5 }
+      : balance
+  }
+  catch (error) {
+    output.value = error && typeof error === 'object' && 'message' in error
+      ? error.message
+      : String(error)
+  }
+  finally {
+    isFetchingBalance.value = false
+  }
+}
+
 async function listAccounts() {
   output.value = await provider.value.listAccounts()
 }
 
 async function sign() {
-  output.value = await provider.value.sign("Hello Mini-App!")
+  output.value = await provider.value.sign('Hello Mini-App!')
 }
 
 async function sendBasicTransaction() {
@@ -92,6 +123,14 @@ async function retryProviderInit() {
     <strong>Test requests:</strong>
     <button type="button" @click="isConsensusEstablished" :disabled="!hasProvider">isConsensusEstablished</button>
     <button type="button" @click="getBlockNumber" :disabled="!hasProvider">getBlockNumber</button>
+    <form class="balance-query" @submit.prevent="getBalance">
+      <label for="balance-address">Nimiq address</label>
+      <input id="balance-address" v-model="balanceAddress" placeholder="NQ..." :disabled="isFetchingBalance">
+      <button type="submit" :disabled="!hasProvider || !balanceAddress.trim() || isFetchingBalance">
+        {{ isFetchingBalance ? 'Fetching balance...' : 'getBalance' }}
+      </button>
+      <small>On-chain balance on Nimiq Pay's active network. 100,000 luna = 1 NIM.</small>
+    </form>
     <button type="button" @click="listAccounts" :disabled="!hasProvider">listAccounts</button>
     <button type="button" @click="sign" :disabled="!hasProvider">sign</button>
     <button type="button" @click="sendBasicTransaction" :disabled="!hasProvider">sendBasicTransaction</button>
@@ -114,6 +153,11 @@ async function retryProviderInit() {
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+.balance-query {
+  display: grid;
+  gap: 8px;
+  width: 100%;
 }
 pre {
   margin: 0;
