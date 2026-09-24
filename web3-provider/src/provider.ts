@@ -96,6 +96,7 @@ const provider = new Web3Provider({
             code: error.code ?? -32603,
             message: error.message ?? 'Unknown error',
             ...(params.network === 'nimiq' && typeof error.type === 'string' ? { type: error.type } : {}),
+            ...(params.network === 'nimiq' && error.data !== undefined ? { data: error.data } : {}),
           })
           throw error
         })
@@ -117,6 +118,7 @@ const provider = new Web3Provider({
             code: error.code ?? -32603,
             message: error.message ?? 'Unknown error',
             ...(params.network === 'nimiq' && typeof error.type === 'string' ? { type: error.type } : {}),
+            ...(params.network === 'nimiq' && error.data !== undefined ? { data: error.data } : {}),
           }))
         return
       }

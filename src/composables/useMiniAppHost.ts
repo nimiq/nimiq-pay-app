@@ -11,13 +11,16 @@ import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
+import { isTestnet } from '@/lib'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
-import { formatUsdtAmount } from '@/lib/assets'
+import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
+import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
+import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -33,6 +36,9 @@ import {
   USER_REJECTED_REQUEST_MESSAGE,
 } from '../../web3-provider/src/provider-errors'
 import { generateUUID } from '../../web3-provider/src/utils'
+import { parseBitcoinLightningInvoice } from './useBitcoinLightning'
+import { useFastspotApiV1 } from './useFastspotv1'
+import { useFastspotApiV2 } from './useFastspotV2'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
@@ -72,6 +78,18 @@ export function getActiveMiniAppSession(): MiniAppSessionState | null {
 export interface SignatureResult {
   publicKey: string
   signature: string
+}
+
+export interface LightningPaymentResult {
+  hash: string
+  swapId: string
+}
+
+interface MiniAppLightningAttempt {
+  origin: string
+  owner: string
+  swap_id: string
+  tx_hash: string | null
 }
 
 interface DecodedAssetTransfer {
@@ -121,6 +139,23 @@ export type UserConfirmationRequest
       network: Network
       data: Omit<PaymentRequestData, 'transfer'>
       stakingData?: StakingData
+    })
+    | (MiniAppBase & {
+      type: 'lightning-access'
+      network: 'nimiq'
+      description?: string
+    })
+    | (MiniAppBase & {
+      type: 'lightning-payment'
+      network: 'nimiq'
+      data: {
+        description?: string
+        btcAmount: number
+        asset: Asset
+        amount: number
+        usdtFeeAllowance: number
+        fees: NonNullable<PaymentRequestData['swap']>['fees']
+      }
     })
     | (MiniAppBase & {
       type: 'eth-transaction'
@@ -180,6 +215,7 @@ export interface MiniAppHostConfig {
    * @returns Promise that resolves to true if user confirms, false otherwise
    */
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
+  selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
 }
 
 /**
@@ -201,6 +237,9 @@ export class MiniAppHost {
   private sessionState: MiniAppSessionState | null = null
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
+  private readonly pendingLightningInvoices = new Set<string>()
+  private lightningAccessScope: string | null = null
+  private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
 
   /** Resolve the RPC URL for the given chain (or current chain if not specified) */
   private getRpcUrlForChain(chainId?: string): string | undefined {
@@ -311,7 +350,7 @@ export class MiniAppHost {
               this.showErrorToast(error.message)
             }
             // Add the Nimiq type while preserving RPC fields used by older SDKs.
-            throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined)
+            throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined, params.network === 'nimiq' ? error.data : undefined)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
           this.showErrorToast(message)
@@ -437,7 +476,7 @@ export class MiniAppHost {
       return 4200
     if (error instanceof InvalidRequestError)
       return -32602
-    if (error instanceof InvalidTransactionError)
+    if (error instanceof InvalidTransactionError || error instanceof DuplicateLightningPaymentError)
       return -32602
     if (error instanceof TransactionOutcomeUnknownError)
       return TRANSACTION_OUTCOME_UNKNOWN_CODE
@@ -447,8 +486,8 @@ export class MiniAppHost {
   }
 
   // Plain object — Error objects don't serialize correctly over birpc
-  private createRpcError(code: number, message: string, type?: string): { code: number, message: string, type?: string } {
-    return { code, message, ...(type ? { type } : {}) }
+  private createRpcError(code: number, message: string, type?: string, data?: unknown): { code: number, message: string, type?: string, data?: unknown } {
+    return { code, message, ...(type ? { type } : {}), ...(data !== undefined ? { data } : {}) }
   }
 
   private getEthPermissions(): EthAccountsPermission[] {
@@ -1329,6 +1368,7 @@ export class MiniAppHost {
       case 'getBalance': return this.getBalance(message.params)
       case 'sendBasicTransaction': return this.sendBasicTransaction(message.params)
       case 'sendBasicTransactionWithData': return this.sendBasicTransactionWithData(message.params)
+      case 'payLightningInvoice': return this.payLightningInvoice(message.params)
       case 'sendNewStakerTransaction': return this.sendNewStakerTransaction(message.params)
       case 'sendStakeTransaction': return this.sendAddStakeTransaction(message.params)
       case 'sendSetActiveStakeTransaction': return this.sendSetActiveStakeTransaction(message.params)
@@ -1679,6 +1719,274 @@ export class MiniAppHost {
     })
   }
 
+  private async payLightningInvoice(params: unknown): Promise<LightningPaymentResult> {
+    const invoice = (params as { invoice?: unknown } | null)?.invoice
+    if (typeof invoice !== 'string' || !invoice.trim())
+      throw new InvalidRequestError('A Bitcoin Lightning invoice is required')
+    const requestConfirmation = this.config.requestUserConfirmation
+    const selectAsset = this.config.selectLightningAsset
+    if (!requestConfirmation || !selectAsset)
+      throw new InternalError('Confirmation handler not provided')
+
+    let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
+    try {
+      decoded = await parseBitcoinLightningInvoice(invoice.trim().replace(/^lightning:/i, ''))
+    }
+    catch {
+      throw new InvalidRequestError('Invalid Bitcoin Lightning invoice')
+    }
+    const paymentHash = decoded.sections.find(section => section.name === 'payment_hash')?.value
+    const timestamp = decoded.sections.find(section => section.name === 'timestamp')?.value
+    if (typeof paymentHash !== 'string' || typeof timestamp !== 'number')
+      throw new InvalidRequestError('Invalid Bitcoin Lightning invoice')
+    const invoiceExpiresAt = timestamp + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
+
+    const network = isTestnet ? 'testnet' : 'mainnet'
+    const owner = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const accessScope = `${network}:${owner}`
+    // Consent precedes the ledger lookup so invoice probes cannot reveal this wallet's payment history.
+    if (this.lightningAccessScope !== accessScope) {
+      if (this.lightningAccessRequest?.scope !== accessScope) {
+        this.lightningAccessRequest = {
+          scope: accessScope,
+          promise: requestConfirmation({
+            url: this.config.url,
+            name: this.config.title,
+            type: 'lightning-access',
+            network: 'nimiq',
+            description: decoded.description || undefined,
+          }),
+        }
+      }
+      let allowed: boolean
+      try {
+        allowed = await this.lightningAccessRequest.promise
+      }
+      finally {
+        if (this.lightningAccessRequest?.scope === accessScope)
+          this.lightningAccessRequest = null
+      }
+      if (!allowed)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      this.lightningAccessScope = accessScope
+    }
+
+    const invoiceKey = `${network}:${paymentHash}`
+    if (this.pendingLightningInvoices.has(invoiceKey))
+      throw new DuplicateLightningPaymentError('This Lightning invoice is already being paid')
+    this.pendingLightningInvoices.add(invoiceKey)
+
+    try {
+      const { query, run } = useConn()
+      const duplicatePaymentError = (attempt: MiniAppLightningAttempt) => new DuplicateLightningPaymentError(
+        'This Lightning invoice was already submitted or may still be pending',
+        attempt.origin === this.origin && attempt.owner === owner ? { hash: attempt.tx_hash || undefined, swapId: attempt.swap_id } : undefined,
+      )
+      const existing = await query<MiniAppLightningAttempt | undefined>(
+        SQLQuery.GetMiniAppLightningPayment,
+        [network, paymentHash],
+        { single: true },
+      )
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      if (existing)
+        throw duplicatePaymentError(existing)
+      if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
+        throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
+
+      const asset = await selectAsset({ url: this.config.url, name: this.config.title, description: decoded.description || undefined })
+      if (!asset)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+      if (asset !== Asset.NIM && asset !== Asset.USDT)
+        throw new InvalidRequestError('Unsupported payment asset')
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+
+      const { useStringParser } = await import('./useStringParser')
+      const { data: payment, error } = await useStringParser().getPaymentRequestData(decoded.paymentRequest, asset)
+      if (error || !payment || payment.transfer !== Transfer.UserPaymentToAtomicSwap || payment.asset !== asset || !payment.paymentRef || payment.invoiced?.currency !== 'BTC')
+        throw new InvalidTransactionError(error || `Could not prepare a ${asset} to Bitcoin Lightning swap`)
+      const description = decoded.description || payment.message
+
+      const { getSwap } = await useFastspotApiV2()
+      const quote = await getSwap(payment.paymentRef)
+      if (quote.status !== 'PENDING_CONFIRMATION' || quote.expiry <= Date.now() / 1e3 + 20 || quote.sell.amount !== payment.amount)
+        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+
+      if (useLocalWallet().localAddress.toUserFriendlyAddress() !== owner)
+        throw new NetworkError('Wallet changed before Lightning payment approval')
+      const signer = asset === Asset.NIM ? useRemoteSigner() : undefined
+      const context = signer?.getWalletContext()
+      const polygon = asset === Asset.USDT ? usePolygonUsdt() : undefined
+      const ethAddress = asset === Asset.USDT ? useLocalWallet().getEthAddress().data : undefined
+      if (polygon)
+        await polygon.updateBalance()
+      if (asset === Asset.NIM && (!context || !signer?.remoteAddress || !signer.isHtlcActive || !signer.isRemoteOk))
+        throw new NetworkError('NIM wallet is not ready')
+      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+        throw new InvalidTransactionError('Insufficient NIM balance')
+      if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
+        throw new NetworkError('USDT wallet is not ready')
+      let usdtFeeAllowance = 0
+      if (polygon) {
+        const feeSnapshot = await polygon.primeHtlcFee()
+        const quotedFee = payment.swap?.fees.filter(fee => !fee.included && fee.asset === Asset.USDT).reduce((sum, fee) => sum + fee.amount, 0) ?? 0
+        usdtFeeAllowance = Math.max(feeSnapshot.fee, quotedFee)
+        if (polygon.balance < payment.amount + usdtFeeAllowance)
+          throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+      }
+
+      const { getLimits, SwapAsset } = await useFastspotApiV1()
+      const localAddress = useLocalWallet().localAddress
+      const limits = asset === Asset.USDT
+        ? await getLimits(SwapAsset.USDT_MATIC, ethAddress!, ethAddress!)
+        : await getLimits(SwapAsset.NIM, localAddress.toUserFriendlyAddress(), localAddress.toHex())
+      if (payment.amount > Math.floor(limits.current * 0.99))
+        throw new InvalidTransactionError('Lightning swap exceeds the current limit')
+
+      const confirmed = await requestConfirmation({
+        url: this.config.url,
+        name: this.config.title,
+        type: 'lightning-payment',
+        network: 'nimiq',
+        data: {
+          description,
+          btcAmount: payment.invoiced.amount,
+          asset,
+          amount: payment.amount,
+          usdtFeeAllowance,
+          fees: payment.swap?.fees || [],
+        },
+      })
+      if (!confirmed)
+        throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+
+      if (asset === Asset.NIM && !signer!.isWalletContextCurrent(context!))
+        throw new NetworkError('Wallet or network changed before sending')
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress)
+        throw new NetworkError('Wallet changed before sending')
+      if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
+        throw new InvalidTransactionError('Bitcoin Lightning invoice expired')
+      const currentQuote = await getSwap(payment.paymentRef)
+      if (currentQuote.status !== 'PENDING_CONFIRMATION' || currentQuote.expiry <= Date.now() / 1e3 + 20 || currentQuote.sell.amount !== payment.amount)
+        throw new InvalidTransactionError('The Lightning swap quote expired; request a new invoice')
+      if (asset === Asset.NIM && signer!.remoteBalance < payment.amount)
+        throw new InvalidTransactionError('Insufficient NIM balance')
+      if (asset === Asset.USDT && polygon!.balance < payment.amount + usdtFeeAllowance)
+        throw new InvalidTransactionError('Insufficient USDT balance for payment and fee')
+      if (asset === Asset.NIM && !signer!.isWalletContextCurrent(context!))
+        throw new NetworkError('Wallet or network changed before sending')
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress)
+        throw new NetworkError('Wallet changed before sending')
+
+      try {
+        await run(SQLQuery.InsertMiniAppLightningPayment, [network, paymentHash, this.origin, owner, payment.paymentRef])
+      }
+      catch {
+        const duplicate = await query<MiniAppLightningAttempt | undefined>(
+          SQLQuery.GetMiniAppLightningPayment,
+          [network, paymentHash],
+          { single: true },
+        )
+        if (duplicate)
+          throw duplicatePaymentError(duplicate)
+        throw new InternalError('Could not save Lightning payment attempt')
+      }
+      if (asset === Asset.USDT && useLocalWallet().getEthAddress().data !== ethAddress) {
+        await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+        await run(SQLQuery.DeleteSwapQuote, [payment.paymentRef]).catch(error => logger.error('Could not clear abandoned Mini App Lightning quote', error))
+        throw new NetworkError('Wallet changed before sending')
+      }
+
+      const swapId = payment.paymentRef
+      return await new Promise<LightningPaymentResult>((resolve, reject) => {
+        let settled = false
+        const finish = (result: LightningPaymentResult | MiniAppError) => {
+          if (settled)
+            return
+          settled = true
+          if (result instanceof MiniAppError)
+            reject(result)
+          else
+            resolve(result)
+        }
+        const markSubmitted = async (hash: string) => {
+          try {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [hash, 'submitted', network, paymentHash])
+            finish({ hash, swapId })
+          }
+          catch (error) {
+            logger.error('Could not save submitted Mini App Lightning payment', error)
+            finish(new TransactionOutcomeUnknownError(`${asset} was submitted, but its payment record could not be updated. Do not retry this invoice.`, { hash, swapId }))
+          }
+        }
+        const outgoingPayment = {
+          ...payment,
+          transfer: Transfer.UserPaymentToAtomicSwap as const,
+          message: description,
+          merchantName: this.config.title,
+          railMerchantId: this.config.url,
+        }
+        if (asset === Asset.USDT) {
+          void polygon!.sendSwapPayment(outgoingPayment, 'Payment', { onSubmitted: markSubmitted, expectedSender: ethAddress, maxFee: usdtFeeAllowance }).then(async ({ data, error, rejected }) => {
+            if (settled)
+              return
+            if (error || !data) {
+              if (rejected) {
+                try {
+                  await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+                  await run(SQLQuery.DeleteSwapQuote, [swapId])
+                }
+                catch (cleanupError) {
+                  logger.error('Could not clear rejected Mini App Lightning payment', cleanupError)
+                }
+                finish(new InvalidTransactionError(error || 'Polygon Lightning payment rejected'))
+              }
+              else {
+                finish(new TransactionOutcomeUnknownError(error || 'Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+              }
+              return
+            }
+            await markSubmitted(data.tx.hash)
+          }).catch((error) => {
+            logger.error('Mini App USDT Lightning payment send failed unexpectedly', error)
+            finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+          })
+          return
+        }
+        void useTransactions().sendTx({ ...outgoingPayment, title: 'Payment' } as PartialSendTxArgs, context, markSubmitted).then(async (result) => {
+          if (settled)
+            return
+          if (result.outcome === 'rejected') {
+            try {
+              await run(SQLQuery.DeleteSwapQuote, [swapId])
+              await run(SQLQuery.DeleteMiniAppLightningPayment, [network, paymentHash])
+            }
+            catch (error) {
+              logger.error('Could not clear rejected Mini App Lightning payment', error)
+            }
+            finish(new InvalidTransactionError(result.error))
+          }
+          else if (result.outcome === 'unknown') {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [result.stagedHash, 'unknown', network, paymentHash]).catch(error => logger.error('Could not save uncertain Mini App Lightning payment', error))
+            finish(new TransactionOutcomeUnknownError(result.error, { hash: result.stagedHash, swapId }))
+          }
+          else {
+            await markSubmitted(result.tx.hash)
+          }
+        }).catch((error) => {
+          logger.error('Mini App Lightning payment send failed unexpectedly', error)
+          finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { swapId }))
+        })
+      })
+    }
+    finally {
+      this.pendingLightningInvoices.delete(invoiceKey)
+    }
+  }
+
   private async sendPayment(txData: {
     value: number
     fee?: number
@@ -1767,7 +2075,7 @@ export class MiniAppHost {
       throw new InternalError(`Failed to send payment transaction: ${result.error}`)
     if (result.outcome === 'unknown') {
       logger.log('[MiniAppHost] Transaction outcome unknown', { stagedHash: result.stagedHash })
-      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE)
+      throw new TransactionOutcomeUnknownError(TRANSACTION_OUTCOME_UNKNOWN_MESSAGE, { hash: result.stagedHash })
     }
     return result.tx.hash
   }
@@ -1823,6 +2131,7 @@ export class MiniAppHost {
 /** Base class for MiniApp errors with typed error codes */
 abstract class MiniAppError extends Error {
   abstract readonly type: string
+  readonly data?: { hash?: string, swapId?: string }
 }
 
 class UnknownRequestError extends MiniAppError {
@@ -1843,6 +2152,18 @@ export class PermissionDeniedError extends MiniAppError {
 
 class TransactionOutcomeUnknownError extends MiniAppError {
   readonly type = 'TRANSACTION_OUTCOME_UNKNOWN'
+
+  constructor(message: string, readonly data?: { hash?: string, swapId?: string }) {
+    super(message)
+  }
+}
+
+class DuplicateLightningPaymentError extends MiniAppError {
+  readonly type = 'DUPLICATE_PAYMENT'
+
+  constructor(message: string, readonly data?: { hash?: string, swapId?: string }) {
+    super(message)
+  }
 }
 
 export class NetworkError extends MiniAppError {

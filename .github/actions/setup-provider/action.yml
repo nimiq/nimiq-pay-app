@@ -8,7 +8,7 @@ runs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         repository: nimiq/trust-web3-provider
-        ref: ae6fd2628354fde269b1d405587d7177d0c3d16c
+        ref: dcebb5fd54d9e7d5f75998716e1829c94614512a
         path: trust-web3-provider
         persist-credentials: false
 

@@ -333,6 +333,7 @@ export const useTransactions = defineStore('transactions', () => {
   async function sendTx(
     partialTx: PartialSendTxArgs,
     expectedContext?: WalletContext,
+    onSubmitted?: (hash: string) => Promise<void>,
   ): Promise<TransactionSendResult> {
     if (isSendingTx.value) {
       logger.log('A transaction is already in progress')
@@ -378,7 +379,7 @@ export const useTransactions = defineStore('transactions', () => {
         }
       }
 
-      return await _sendTx(partialTx, sendContext)
+      return await _sendTx(partialTx, sendContext, onSubmitted)
     }
     catch (error) {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
@@ -388,7 +389,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext): Promise<TransactionSendResult> {
+  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext, onSubmitted?: (hash: string) => Promise<void>): Promise<TransactionSendResult> {
     const localWallet = useLocalWallet()
     const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
     let stagedSend: StagedSend | undefined
@@ -744,67 +745,79 @@ export const useTransactions = defineStore('transactions', () => {
       if (!remoteSigner.isWalletContextCurrent(sendContext))
         return staleContextResult(i18n.t('Wallet or network changed before sending'))
 
-      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
-        try {
-          const patchedSwapResult = await patchedSwap.catch(() => undefined)
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
-            let timeoutId: number
-            async function checkSecret() {
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              const { getSwap } = await useFastspotApiV2()
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
-              if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                reject(new Error(i18n.t('Wallet or network changed before sending')))
-                return
-              }
-              if ('preimage' in currentSwap && currentSwap.preimage) {
-                window.clearTimeout(timeoutId)
-                resolve(currentSwap.preimage)
-              }
-              else {
-                timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
-              }
-            }
-            void checkSecret().catch(reject)
-          })
+      // Let Mini Apps return at confirmed NIM submission while swap settlement continues below.
+      await onSubmitted?.(staged.tx.hash)
 
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          staged.tx.meta = { secret }
-          staged.tx.status = 'confirmed'
-          await upsertTx(staged.tx)
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
-          if (index >= 0)
-            transactions.value[index].meta = { secret }
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          trackSwapCompleted({
-            swap_duration_ms: Date.now() - swapStartedAt,
-            asset: Asset.NIM,
-          })
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
-          await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
-          if (!remoteSigner.isWalletContextCurrent(sendContext))
-            return staleContextResult(i18n.t('Wallet or network changed before sending'))
+      if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
+        const finishSwap = async () => {
+          try {
+            const patchedSwapResult = await patchedSwap.catch(() => undefined)
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
+              let timeoutId: number
+              async function checkSecret() {
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                const { getSwap } = await useFastspotApiV2()
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
+                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
+                  reject(new Error(i18n.t('Wallet or network changed before sending')))
+                  return
+                }
+                if ('preimage' in currentSwap && currentSwap.preimage) {
+                  window.clearTimeout(timeoutId)
+                  resolve(currentSwap.preimage)
+                }
+                else if (currentSwap.status === 'EXPIRED') {
+                  reject(new Error('Lightning swap expired before settlement'))
+                }
+                else {
+                  timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
+                }
+              }
+              void checkSecret().catch(reject)
+            })
+
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            staged.tx.meta = { secret }
+            staged.tx.status = 'confirmed'
+            await upsertTx(staged.tx)
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
+            if (index >= 0)
+              transactions.value[index].meta = { secret }
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            trackSwapCompleted({
+              swap_duration_ms: Date.now() - swapStartedAt,
+              asset: Asset.NIM,
+            })
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await run(SQLQuery.DeleteSwapHtlc, [staged.tx.recipient])
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+            await run(SQLQuery.DeleteSwapQuote, [staged.tx.paymentRef])
+            if (!remoteSigner.isWalletContextCurrent(sendContext))
+              return staleContextResult(i18n.t('Wallet or network changed before sending'))
+          }
+          catch (error) {
+            logger.error('Failed to finish accepted swap bookkeeping', error)
+          }
         }
-        catch (error) {
-          logger.error('Failed to finish accepted swap bookkeeping', error)
-        }
+        if (onSubmitted)
+          void finishSwap()
+        else
+          await finishSwap()
       }
 
       return {

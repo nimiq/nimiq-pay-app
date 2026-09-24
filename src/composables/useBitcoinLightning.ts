@@ -1,3 +1,4 @@
+import type { decode } from 'light-bolt11-decoder'
 import type { LNServicePaymentRequest, LNServiceResponse } from '@/types'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
@@ -5,6 +6,61 @@ import { i18n } from '@/i18n/i18n-setup'
 const logger = useLogger('useBitcoinLightning')
 
 const TAG_PAY_REQUEST = 'payRequest'
+const DECODE_TIMEOUT_MS = 5000
+type DecodedInvoice = ReturnType<typeof decode>
+type WorkerResponse = { id: number, ok: true, value: string | DecodedInvoice } | { id: number, ok: false, error: string }
+const pendingDecodes = new Map<number, { resolve: (value: string | DecodedInvoice) => void, reject: (error: Error) => void, timeout: ReturnType<typeof setTimeout> }>()
+let decoderWorker: Worker | undefined
+let nextDecodeId = 0
+
+function failDecoderWorker(worker: Worker, error: Error) {
+  if (decoderWorker !== worker)
+    return
+  worker.terminate()
+  decoderWorker = undefined
+  for (const pending of pendingDecodes.values()) {
+    clearTimeout(pending.timeout)
+    pending.reject(error)
+  }
+  pendingDecodes.clear()
+}
+
+// The BOLT11 decoder repeatedly slices input while parsing tags, so run it outside the UI thread.
+function decodeOffThread(type: 'invoice', value: string): Promise<DecodedInvoice>
+function decodeOffThread(type: 'lnurl', value: string): Promise<string>
+function decodeOffThread(type: 'invoice' | 'lnurl', value: string): Promise<string | DecodedInvoice> {
+  if (!decoderWorker) {
+    const worker = new Worker(new URL('./bitcoin-lightning.worker.ts', import.meta.url), { type: 'module' })
+    decoderWorker = worker
+    worker.onmessage = ({ data }: MessageEvent<WorkerResponse>) => {
+      const pending = pendingDecodes.get(data.id)
+      if (!pending)
+        return
+      pendingDecodes.delete(data.id)
+      clearTimeout(pending.timeout)
+      if (data.ok)
+        pending.resolve(data.value)
+      else
+        pending.reject(new Error(data.error))
+    }
+    worker.onerror = worker.onmessageerror = () => failDecoderWorker(worker, new Error('Lightning invoice decoder failed'))
+  }
+
+  return new Promise<string | DecodedInvoice>((resolve, reject) => {
+    const id = ++nextDecodeId
+    const worker = decoderWorker!
+    const timeout = setTimeout(() => failDecoderWorker(worker, new Error('Lightning invoice decoding timed out')), DECODE_TIMEOUT_MS)
+    pendingDecodes.set(id, { resolve, reject, timeout })
+    try {
+      worker.postMessage({ id, type, value })
+    }
+    catch (error) {
+      pendingDecodes.delete(id)
+      clearTimeout(timeout)
+      reject(error)
+    }
+  })
+}
 // https://github.com/dolcalmi/lnurl-pay/blob/c780358f4bd51bd69690bed135c3b78653fbd109/src/utils.ts#L11C1-L12C75
 const LNURL_REGEX
   = /^(?:http.*[&?]lightning=|lightning:)?(lnurl\d+[02-9ac-hj-np-z]+)/
@@ -35,11 +91,7 @@ async function decodeCallbackUrl(url: string) {
   if (!parsedUrl)
     throw new Error('Invalid LNURL')
 
-  const { bech32 } = await import('bech32')
-  // https://github.com/nbd-wtf/light-bolt11-decoder/blob/a9a0a8e2607ee2f96278c56ba16477859423ae9e/bolt11.js#L224
-  const decoded = bech32.decode(parsedUrl, Number.MAX_SAFE_INTEGER)
-  const array = bech32.fromWords(decoded.words)
-  const callbackUrl = new TextDecoder().decode(new Uint8Array(array))
+  const callbackUrl = await decodeOffThread('lnurl', parsedUrl)
   if (!URL.canParse(callbackUrl))
     throw new Error(i18n.t('Invalid callback URL'))
   return callbackUrl
@@ -133,10 +185,9 @@ async function parseLnurlPayRequest(url: string) {
 }
 
 export async function parseBitcoinLightningInvoice(url: string) {
-  const { decode } = await import('light-bolt11-decoder')
   // BOLT11 payment requests don't require any further processing
   if (!isLnurl(url))
-    return decode(url)
+    return await decodeOffThread('invoice', url)
 
   // But LNURL need to be decoded first, get the payment requests from the service and then decode the lightning invoice
   const invoice = await parseLnurlPayRequest(url)
@@ -144,7 +195,7 @@ export async function parseBitcoinLightningInvoice(url: string) {
     throw new Error(i18n.t('Invalid LNURL'))
 
   return {
-    ...decode(invoice.pr),
+    ...await decodeOffThread('invoice', invoice.pr),
     // A description is not included in the payment request, so we use the one from the LNURL service
     description: invoice.description,
   }

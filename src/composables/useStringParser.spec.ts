@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Asset } from '@/lib/assets'
 
 const state = vi.hoisted(() => ({
   query: vi.fn(),
@@ -184,6 +185,40 @@ describe('useStringParser', () => {
     ])
   })
 
+  it('rejects an expired Lightning invoice before requesting a quote', async () => {
+    state.parseBitcoinLightningInvoice.mockResolvedValue({
+      paymentRequest: 'lnbc1expired',
+      expiry: Math.floor(Date.now() / 1e3) - 700,
+      sections: [
+        { name: 'timestamp', value: Math.floor(Date.now() / 1e3) - 1000 },
+        { name: 'expiry', value: 300 },
+        { name: 'coin_network', letters: 'tb' },
+        { name: 'amount', value: '1000' },
+      ],
+    })
+
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('lightning:lnbc1expired')
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Bitcoin Lightning invoice expired.')
+    expect(state.createSwap).not.toHaveBeenCalled()
+  })
+
+  it('uses the BOLT11 default expiry when no expiry tag exists', async () => {
+    state.parseBitcoinLightningInvoice.mockResolvedValue({
+      paymentRequest: 'lnbc1defaultexpiry',
+      sections: [{ name: 'timestamp', value: Math.floor(Date.now() / 1e3) - 3700 }],
+    })
+
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('lightning:lnbc1defaultexpiry')
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Bitcoin Lightning invoice expired.')
+    expect(state.createSwap).not.toHaveBeenCalled()
+  })
+
   it('creates USDT_MATIC swap when active asset is USDT', async () => {
     state.activeAsset = 'USDT'
     state.parseBitcoinLightningInvoice.mockResolvedValue({
@@ -238,7 +273,37 @@ describe('useStringParser', () => {
     ])
   })
 
+  it('quotes NIM for a Mini App even when the active asset is USDT', async () => {
+    state.activeAsset = 'USDT'
+    state.parseBitcoinLightningInvoice.mockResolvedValue({
+      paymentRequest: 'lnbc1nimfromminiapp',
+      expiry: 600,
+      sections: [
+        { name: 'timestamp', value: Math.floor(Date.now() / 1e3) },
+        { name: 'coin_network', letters: 'tb' },
+        { name: 'amount', value: '1000' },
+      ],
+    })
+    state.createSwap.mockResolvedValue({
+      id: 'swap-mini-app',
+      status: 'PENDING_CONFIRMATION',
+      sell: { asset: 'NIM', amount: 125000 },
+      buy: { asset: 'BTC_LN', amount: 1000 },
+      fees: [],
+      expiry: Math.floor(Date.now() / 1e3) + 600,
+    })
+
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('lightning:lnbc1nimfromminiapp', Asset.NIM)
+
+    expect(error).toBeUndefined()
+    expect(data).toMatchObject({ asset: 'NIM', chain: 'Nimiq', paymentRef: 'swap-mini-app' })
+    expect(state.createSwap).toHaveBeenCalledWith({ asset: 'NIM' }, expect.objectContaining({ asset: 'BTC_LN' }))
+    expect(state.activeAsset).toBe('USDT')
+  })
+
   it('namespaces Lightning swap quote cache entries by sell asset', async () => {
+    const quoteExpiry = Math.floor(Date.now() / 1e3) + 600
     state.parseBitcoinLightningInvoice.mockResolvedValue({
       paymentRequest: 'lnbc1sharedinvoice',
       description: 'Shared invoice',
@@ -256,7 +321,7 @@ describe('useStringParser', () => {
       sell: { asset: 'NIM', amount: 125000 },
       buy: { asset: 'BTC_LN', amount: 1000 },
       fees: [],
-      expiry: Math.floor(Date.now() / 1e3) + 600,
+      expiry: quoteExpiry,
     })
 
     const { useStringParser } = await import('./useStringParser')
@@ -266,7 +331,7 @@ describe('useStringParser', () => {
     expect(state.run).toHaveBeenLastCalledWith(expect.stringContaining('INSERT OR REPLACE INTO swap_quotes'), [
       'NIM:lnbc1sharedinvoice',
       'swap-nim-1',
-      expect.any(Number),
+      quoteExpiry * 1e3,
     ])
 
     state.query.mockClear()

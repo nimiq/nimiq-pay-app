@@ -160,6 +160,13 @@ export enum SQLQuery {
   GetAllSwapQuotes = 'SELECT * FROM swap_quotes',
   PurgeSwapQuotes = 'DELETE FROM swap_quotes',
 
+  // Mini App Lightning attempts are kept after swap quote cleanup to prevent duplicate invoice payments.
+  CreateMiniAppLightningPaymentsTable = 'CREATE TABLE IF NOT EXISTS mini_app_lightning_payments (network TEXT NOT NULL, invoice_hash TEXT NOT NULL, origin TEXT NOT NULL, owner TEXT NOT NULL, swap_id TEXT NOT NULL, tx_hash TEXT, status TEXT NOT NULL, PRIMARY KEY (network, invoice_hash))',
+  GetMiniAppLightningPayment = 'SELECT origin, owner, swap_id, tx_hash, status FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ? LIMIT 1',
+  InsertMiniAppLightningPayment = 'INSERT INTO mini_app_lightning_payments (network, invoice_hash, origin, owner, swap_id, status) VALUES (?, ?, ?, ?, ?, \'pending\')',
+  SetMiniAppLightningPaymentStatus = 'UPDATE mini_app_lightning_payments SET tx_hash = COALESCE(tx_hash, ?), status = ? WHERE network = ? AND invoice_hash = ?',
+  DeleteMiniAppLightningPayment = 'DELETE FROM mini_app_lightning_payments WHERE network = ? AND invoice_hash = ?',
+
   // Polygon payment attempts
   CreatePolygonPaymentAttemptsTable = 'CREATE TABLE IF NOT EXISTS polygon_payment_attempts (network TEXT NOT NULL, sender TEXT NOT NULL, request_json TEXT NOT NULL, title TEXT NOT NULL, relay_request_json TEXT NOT NULL, relay_url TEXT NOT NULL, signature TEXT NOT NULL, fee INTEGER NOT NULL, start_block INTEGER NOT NULL, created_at INTEGER NOT NULL, relay_hash TEXT, PRIMARY KEY (network, sender))',
   InsertPolygonPaymentAttempt = 'INSERT INTO polygon_payment_attempts (network, sender, request_json, title, relay_request_json, relay_url, signature, fee, start_block, created_at, relay_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -275,6 +282,12 @@ export const migrations: Migration[] = [
     toVersion: 11,
     statements: [
       SQLQuery.CreatePolygonPaymentAttemptsTable,
+    ],
+  },
+  {
+    toVersion: 12,
+    statements: [
+      SQLQuery.CreateMiniAppLightningPaymentsTable,
     ],
   },
 ]
