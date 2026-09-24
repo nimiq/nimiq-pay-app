@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { renderReport, summarizeResults } from './browserstack-maestro-run.js'
+import { parseEnvVariables, renderReport, summarizeResults } from './browserstack-maestro-run.js'
 
 // Mirrors the shape documented for GET /app-automate/maestro/v2/builds/{build_id}.
 function buildFixture(overrides = {}) {
@@ -32,6 +32,29 @@ function sessionFixture(testcases, overrides = {}) {
 function testcase(name, status, extra = {}) {
   return { name, status, duration: 12.5, ...extra }
 }
+
+describe('parseEnvVariables', () => {
+  it('collects repeated --env flags', () => {
+    const variables = parseEnvVariables(['--app', 'X', '--env', 'APP_ID=com.nimiq.pay.debug', '--env', 'PIN=1111'])
+
+    expect(variables).toEqual({ APP_ID: 'com.nimiq.pay.debug', PIN: '1111' })
+  })
+
+  it('returns nothing when --env is absent', () => {
+    expect(parseEnvVariables(['--app', 'X'])).toEqual({})
+  })
+
+  it('keeps values containing "=" intact', () => {
+    const variables = parseEnvVariables(['--env', 'TOKEN=a=b'])
+
+    expect(variables).toEqual({ TOKEN: 'a=b' })
+  })
+
+  it('rejects entries without a key', () => {
+    expect(() => parseEnvVariables(['--env', 'PIN'])).toThrow(/Expected KEY=VALUE/)
+    expect(() => parseEnvVariables(['--env', '=1111'])).toThrow(/Expected KEY=VALUE/)
+  })
+})
 
 describe('summarizeResults', () => {
   it('counts test cases by status and reports success', () => {

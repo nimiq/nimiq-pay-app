@@ -74,6 +74,35 @@ function getArgValue(args, flag, fallback = undefined) {
   return next
 }
 
+function getArgValues(args, flag) {
+  const values = []
+
+  for (let index = 0; index < args.length; index += 1) {
+    const next = args[index + 1]
+    if (args[index] === flag && next && !next.startsWith('-')) {
+      values.push(next)
+    }
+  }
+
+  return values
+}
+
+/** Turn repeated `--env KEY=VALUE` flags into BrowserStack's `setEnvVariables` payload. */
+export function parseEnvVariables(args) {
+  const variables = {}
+
+  for (const entry of getArgValues(args, '--env')) {
+    const separator = entry.indexOf('=')
+    if (separator <= 0) {
+      throw new Error(`Invalid --env value "${entry}". Expected KEY=VALUE.`)
+    }
+
+    variables[entry.slice(0, separator)] = entry.slice(separator + 1)
+  }
+
+  return variables
+}
+
 function printHelp() {
   console.log(`Usage: node scripts/browserstack-maestro-run.js [options]
 
@@ -81,7 +110,9 @@ Options:
   --app <value>            BrowserStack app identifier or custom_id (required)
   --suite <value>          BrowserStack test suite identifier or custom_id (required)
   --device <value>         BrowserStack device string, required, e.g. "Google Pixel 7 Pro-13.0"
-  --flow <value>           Flow path inside the uploaded suite to execute (default: flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml)
+  --flow <value>           Flow file or folder inside the uploaded suite to execute (default: flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml)
+  --env <KEY=VALUE>        Environment variable exposed to the flows via BrowserStack's
+                           setEnvVariables; repeat for several (e.g. APP_ID, PIN)
   --project <value>        BrowserStack project name (default: Maestro Nimiq Pay)
   --output <value>         Report directory, or an .html file path (default: nimiq-pay-tests/tests_output/maestro_report.html)
   --timeout <seconds>      How long to wait for the build to finish (default: 1500)
@@ -329,6 +360,7 @@ async function main() {
   }
 
   const request = createApiClient(username, accessKey)
+  const envVariables = parseEnvVariables(args)
   const payload = {
     app,
     testSuite: suite,
@@ -337,9 +369,19 @@ async function main() {
     execute: [flow],
   }
 
+  if (Object.keys(envVariables).length > 0) {
+    payload.setEnvVariables = envVariables
+  }
+
   console.log('🚀 Starting BrowserStack Maestro build...')
   console.log(`📄 Maestro report output: ${output}`)
-  console.log(JSON.stringify(payload, null, 2))
+  // Env values are for credentials as often as not, so only the keys are echoed.
+  console.log(JSON.stringify({
+    ...payload,
+    ...(payload.setEnvVariables
+      ? { setEnvVariables: Object.fromEntries(Object.keys(envVariables).map(key => [key, '***'])) }
+      : {}),
+  }, null, 2))
 
   const started = await request('/android/build', {
     method: 'POST',
@@ -355,8 +397,26 @@ async function main() {
   console.log(`✅ Build started: ${buildId}`)
   console.log(`⏳ Waiting for the build to finish (timeout ${timeoutSeconds}s)...`)
 
-  const build = await waitForBuild(request, buildId, timeoutSeconds)
-  const sessions = await collectSessions(request, buildId, build)
+  let build
+  let waitError
+  try {
+    build = await waitForBuild(request, buildId, timeoutSeconds)
+  }
+  catch (error) {
+    waitError = error
+    // Report what BrowserStack has so far: a stalled build must not leave the report missing,
+    // which is what used to fail the publish step.
+    build = await request(`/builds/${buildId}`).catch(() => null)
+  }
+
+  if (!build) {
+    throw waitError
+  }
+
+  const sessions = await collectSessions(request, buildId, build).catch((error) => {
+    console.error(`⚠️ Could not read every session: ${error.message}`)
+    return []
+  })
   const { rows, counts, buildStatus, ok } = summarizeResults(build, sessions)
 
   const { htmlPath, jsonPath } = resolveReportPaths(output)
@@ -372,6 +432,10 @@ async function main() {
   console.log(`   skipped:  ${counts.skipped}`)
   console.log(`📝 Report written to ${htmlPath}`)
   console.log(`📝 Raw build data written to ${jsonPath}`)
+
+  if (waitError) {
+    console.error(`❌ ${waitError.message}`)
+  }
 
   if (rows.length === 0) {
     console.error(`❌ No test cases were reported. Check that "${flow}" exists inside the uploaded suite (paths are relative to the suite's root folder).`)

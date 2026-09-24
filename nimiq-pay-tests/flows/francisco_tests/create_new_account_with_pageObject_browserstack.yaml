@@ -1,4 +1,4 @@
-appId: com.nimiq.pay
+appId: com.nimiq.pay.debug
 
 tags:
   - franciscoTest
