@@ -28,7 +28,7 @@ jobs:
   run_browserstack_maestro:
     needs: upload_maestro_suite
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
@@ -39,14 +39,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Maestro suite on BrowserStack
+        # The folder's flows target com.nimiq.pay.debug and need the Mini Apps build, so this
+        # relies on the debug APK uploaded as NimiqPayAndroidApkDebug, not the release one.
         run: >
           node scripts/browserstack-maestro-run.js
-          --app NimiqPayAndroidApk
+          --app NimiqPayAndroidApkDebug
           --suite francisco_tests
           --device "Samsung Galaxy Tab S9-13.0"
-          --flow flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml
-          --format HTML-DETAILED
+          --flow flows/francisco_tests
+          --env APP_ID=com.nimiq.pay.debug
+          --env PIN=1111
           --output ./maestro-reports
+          --timeout 3000
 
       - name: "Publish test results on Maestro Results Repo"
         # The run step exits non-zero when tests fail, so publish the report regardless.
