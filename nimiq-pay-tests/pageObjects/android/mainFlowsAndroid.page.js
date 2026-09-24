@@ -102,6 +102,26 @@ output.cryptocityMap = {
 
 output.miniApps = {
     discoverTitle: "Discover",
-    searchInput: "Search or enter App URL",
-    closeBtn: "close modal"
+    // The searchbar exposes neither text nor an accessible label to Maestro (the real
+    // <input> sits in Ionic's shadow DOM), so it is targeted by the id on its host
+    // element, which Android WebView maps to a resource-id.
+    searchInputId: "mini-apps-search",
+    closeBtn: "close modal",
+    matchingAppsTitle: "Matching Apps",
+    noResultsMessage: "No apps found.",
+    // Type filter renders role="radio" buttons whose label is uppercased by CSS, so anchor
+    // the patterns to avoid also matching app rows ("Runs on EVM") or names ("EVM Mini Wallet").
+    filterAllBtn: "^ALL$",
+    filterNimiqBtn: "^NIMIQ$",
+    filterEvmBtn: "^EVM$",
+    // Row renders name + description, so the entry must be matched by prefix.
+    nimtrisEntry: "Nimtris.*",
+    evmMiniWalletEntry: "EVM Mini Wallet.*",
+    // Anchored past the app name on purpose: the soft keyboard's suggestion strip also
+    // exposes a clickable "Cinima" chip, so a looser pattern taps the suggestion instead
+    // of the row and the Mini App never opens.
+    cinimaEntry: "^Cinima Runs on Nimiq.*",
+    // Anchored so it matches only the native Mini App toolbar title, not the list row
+    // (which reads "Cinima Runs on Nimiq Cinima ...").
+    cinimaAppTitle: "^Cinima$"
 };

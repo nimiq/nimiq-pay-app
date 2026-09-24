@@ -1,0 +1,44 @@
+appId: ${APP_ID}
+
+name: Mini Apps Filter
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Mini Apps button lives in the Home footer, bottom right.
+- assertVisible: ${output.navigation.miniAppsBtn}
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.miniApps.discoverTitle}
+
+# All: apps of both types are listed.
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+
+# Nimiq: the EVM app drops out of the list.
+- tapOn: ${output.miniApps.filterNimiqBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertNotVisible: ${output.miniApps.evmMiniWalletEntry}
+
+# EVM: the Nimiq app drops out instead.
+- tapOn: ${output.miniApps.filterEvmBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- assertNotVisible: ${output.miniApps.nimtrisEntry}
+
+# Back to All: both are listed again.
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+
+- stopApp
