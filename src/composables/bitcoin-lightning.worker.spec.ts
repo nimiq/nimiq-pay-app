@@ -18,10 +18,12 @@ afterAll(() => vi.unstubAllGlobals())
 
 describe('bitcoin Lightning decoder worker', () => {
   it('transfers non-enumerable invoice fields to the caller', () => {
-    const invoice = { sections: [{ name: 'payment_hash', value: 'hash' }], paymentRequest: 'lnbc1test', expiry: 3600 }
+    const invoice = { sections: [{ name: 'payment_hash', value: 'hash' }], paymentRequest: 'lnbc1test' }
     Object.defineProperties(invoice, {
       description: { get: () => 'Coffee' },
+      expiry: { get: () => 3600 },
       payment_hash: { get: () => 'hash' },
+      route_hints: { get: () => [[{ fee_base_msat: 1000 }]] },
     })
     vi.mocked(decode).mockReturnValue(invoice as ReturnType<typeof decode>)
 
@@ -30,7 +32,7 @@ describe('bitcoin Lightning decoder worker', () => {
     expect(postMessage).toHaveBeenCalledWith({
       id: 1,
       ok: true,
-      value: expect.objectContaining({ description: 'Coffee', payment_hash: 'hash', sections: invoice.sections }),
+      value: expect.objectContaining({ description: 'Coffee', expiry: 3600, payment_hash: 'hash', route_hints: [[{ fee_base_msat: 1000 }]], sections: invoice.sections }),
     })
   })
 

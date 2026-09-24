@@ -165,14 +165,14 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       if (asset === Asset.USDT)
         rows.push({ title: 'USDT fee allowance', value: `${formatAmount(usdtFeeAllowance / 10 ** DECIMALS[Crypto.USDT], DECIMALS[Crypto.USDT])} USDT` })
       for (const fee of fees) {
-        if (fee.asset !== Crypto.NIM && fee.asset !== Crypto.BTC && fee.asset !== Crypto.USDT)
+        if (fee.asset !== Crypto.NIM && fee.asset !== Crypto.BTC && fee.asset !== Crypto.USDT && fee.asset !== 'USD')
           continue
         if (asset === Asset.USDT && fee.asset === Crypto.USDT && !fee.included)
           continue
-        const amount = fee.amount / 10 ** DECIMALS[fee.asset]
+        const amount = fee.asset === 'USD' ? fee.amount.toFixed(2) : (fee.amount / 10 ** DECIMALS[fee.asset]).toFixed(DECIMALS[fee.asset])
         rows.push({
           title: `${fee.source === 'SERVICE' ? 'Service' : 'Network'} fee${fee.included ? ' (included)' : ''}`,
-          value: `${amount.toFixed(DECIMALS[fee.asset])} ${fee.asset}`,
+          value: `${amount} ${fee.asset}`,
         })
       }
       const result = await ExtendedDialog.sheet({

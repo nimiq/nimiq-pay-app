@@ -205,6 +205,25 @@ describe('useStringParser', () => {
     expect(state.createSwap).not.toHaveBeenCalled()
   })
 
+  it('rejects a Lightning invoice with less than 20 seconds remaining before requesting a quote', async () => {
+    state.parseBitcoinLightningInvoice.mockResolvedValue({
+      paymentRequest: 'lnbc1nearexpiry',
+      sections: [
+        { name: 'timestamp', value: Math.floor(Date.now() / 1e3) - 50 },
+        { name: 'expiry', value: 60 },
+        { name: 'coin_network', letters: 'tb' },
+        { name: 'amount', value: '1000' },
+      ],
+    })
+
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData('lightning:lnbc1nearexpiry')
+
+    expect(data).toBeUndefined()
+    expect(error).toBe('Bitcoin Lightning invoice expired.')
+    expect(state.createSwap).not.toHaveBeenCalled()
+  })
+
   it('uses the BOLT11 default expiry when no expiry tag exists', async () => {
     state.parseBitcoinLightningInvoice.mockResolvedValue({
       paymentRequest: 'lnbc1defaultexpiry',

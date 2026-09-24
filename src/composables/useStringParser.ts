@@ -227,7 +227,7 @@ export function useStringParser() {
     const invoiceExpiresAt = timestampSection.value + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
 
     // Show expiry error 20s before actual expiry
-    if (invoiceExpiresAt < Date.now() / 1e3 - 20)
+    if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
     const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection | undefined

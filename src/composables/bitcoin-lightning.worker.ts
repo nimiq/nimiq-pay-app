@@ -26,6 +26,7 @@ workerScope.onmessage = ({ data }: MessageEvent<Request>) => {
         ...decoded,
         description: decoded.description,
         description_hash: decoded.description_hash,
+        expiry: decoded.expiry,
         fallback_address: decoded.fallback_address,
         feature_bits: decoded.feature_bits,
         metadata: decoded.metadata,
@@ -33,6 +34,7 @@ workerScope.onmessage = ({ data }: MessageEvent<Request>) => {
         payee: decoded.payee,
         payment_hash: decoded.payment_hash,
         payment_secret: decoded.payment_secret,
+        route_hints: decoded.route_hints,
       },
     })
   }
