@@ -13,7 +13,8 @@ tags:
 - waitForAnimationToEnd
 
 - assertVisible: ${output.miniApps.discoverTitle}
-- assertVisible: ${output.miniApps.searchInput}
+- assertVisible:
+    id: ${output.miniApps.searchInputId}
 - assertVisible: ${output.miniApps.closeBtn}
 
 - tapOn: ${output.miniApps.closeBtn}
