@@ -49,6 +49,8 @@ jobs:
           --output ./maestro-reports
 
       - name: "Publish test results on Maestro Results Repo"
+        # The run step exits non-zero when tests fail, so publish the report regardless.
+        if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
