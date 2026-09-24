@@ -73,7 +73,7 @@ jobs:
       env:
         SLACK_COLOR: ${{ job.status }}
         SLACK_ICON: https://github.com/rtCamp.png?size=48
-        SLACK_MESSAGE: "Maestro Test Suite results: ${{ job.status }} URL: https://maestrowalletresults.netlify.app/"
+        SLACK_MESSAGE: "Maestro Test Suite results: ${{ job.status }} URL: https://maestro-nimiq-pay-android-results.netlify.app/"
         SLACK_TITLE: Automation Tests Status
         SLACK_USERNAME: Francisco_Diaz
         SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
