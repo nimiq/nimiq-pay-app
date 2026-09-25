@@ -1922,6 +1922,15 @@ export class MiniAppHost {
             finish(new TransactionOutcomeUnknownError(`${asset} was submitted, but its payment record could not be updated. Do not retry this invoice.`, { hash, swapId }))
           }
         }
+        const markFundingUncertain = async (hash: string) => {
+          try {
+            await run(SQLQuery.SetMiniAppLightningPaymentStatus, [hash, 'unknown', network, paymentHash])
+          }
+          catch (error) {
+            logger.error('Could not save uncertain Mini App Lightning payment', error)
+          }
+          finish(new TransactionOutcomeUnknownError('Lightning payment outcome is unknown. Do not retry this invoice.', { hash, swapId }))
+        }
         const outgoingPayment = {
           ...payment,
           transfer: Transfer.UserPaymentToAtomicSwap as const,
@@ -1930,7 +1939,7 @@ export class MiniAppHost {
           railMerchantId: this.config.url,
         }
         if (asset === Asset.USDT) {
-          void polygon!.sendSwapPayment(outgoingPayment, 'Payment', { onSubmitted: markSubmitted, expectedSender: ethAddress, maxFee: usdtFeeAllowance }).then(async ({ data, error, rejected }) => {
+          void polygon!.sendSwapPayment(outgoingPayment, 'Payment', { onSubmitted: markSubmitted, onFundingUncertain: markFundingUncertain, expectedSender: ethAddress, maxFee: usdtFeeAllowance }).then(async ({ data, error, rejected }) => {
             if (settled)
               return
             if (error || !data) {

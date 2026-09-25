@@ -846,6 +846,35 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.provideFundingProof).toHaveBeenCalledWith('swap-id', 'contract-id', mocks.relayHash)
     expect(persistedHtlc).toBeNull()
   })
+
+  it('reports uncertain swap funding before waiting for Lightning settlement', async () => {
+    persistedHtlc = null
+    const store = recreateStore()
+    mocks.wait.mockRejectedValueOnce(new Error('confirmation RPC unavailable'))
+    let releaseNotification!: () => void
+    const onFundingUncertain = vi.fn(() => new Promise<void>((resolve) => {
+      releaseNotification = resolve
+    }))
+
+    const payment = store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment', { onFundingUncertain })
+
+    await vi.waitFor(() => expect(onFundingUncertain).toHaveBeenCalledWith(mocks.relayHash))
+    expect(persistedPayment).toMatchObject({ hash: mocks.relayHash, status: 'pending' })
+    expect(persistedHtlc).toMatchObject({ address: mocks.htlcId, tx_hash: mocks.relayHash })
+    expect(mocks.provideFundingProof).not.toHaveBeenCalled()
+
+    releaseNotification()
+    const result = await payment
+    expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed', meta: { secret: 'secret' } })
+    expect(mocks.provideFundingProof).toHaveBeenCalledWith('swap-id', 'contract-id', mocks.relayHash)
+  })
 })
 
 describe('polygon transaction reconciliation through the store', () => {

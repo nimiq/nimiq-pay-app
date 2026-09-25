@@ -2365,7 +2365,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   async function sendSwapPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
-    options: { onSubmitted?: (hash: string) => Promise<void>, expectedSender?: string, maxFee?: number } = {},
+    options: { onSubmitted?: (hash: string) => Promise<void>, onFundingUncertain?: (hash: string) => Promise<void>, expectedSender?: string, maxFee?: number } = {},
   ): Promise<Result<{ tx: TransactionSentByUser, serialized: string }, string> & { rejected?: boolean }> {
     const swapKey = request.paymentRef!
     if (activeSwapPayments.has(swapKey))
@@ -2535,6 +2535,15 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         else
           await run(SQLQuery.ClearSwapHtlcTxHash, [provisionalSwapHtlcKey])
         throw new Error(i18n.t('Polygon swap transaction failed'))
+      }
+
+      if (receipt.status === 'pending') {
+        try {
+          await options.onFundingUncertain?.(receipt.hash)
+        }
+        catch (error) {
+          logger.error('Failed to report uncertain Polygon swap funding', error, { hash: receipt.hash })
+        }
       }
 
       // Signal funding to Fastspot

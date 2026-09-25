@@ -478,6 +478,22 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
     expect(run).not.toHaveBeenCalledWith(expect.stringContaining('DELETE FROM mini_app_lightning_payments'), expect.anything())
   })
 
+  it('returns an unknown outcome with the Polygon hash before Lightning settlement', async () => {
+    selectUsdt()
+    sendSwapPayment.mockImplementation(async (_payment, _title, options) => {
+      await options.onFundingUncertain('pending-usdt-hash')
+      return new Promise(() => {})
+    })
+    const { handleRequest } = await createPermissionHost()
+
+    await expect(handleRequest(request)).rejects.toMatchObject({
+      type: 'TRANSACTION_OUTCOME_UNKNOWN',
+      data: { hash: 'pending-usdt-hash', swapId: 'swap-id' },
+    })
+    expect(run).toHaveBeenCalledWith(expect.stringContaining('UPDATE mini_app_lightning_payments'), ['pending-usdt-hash', 'unknown', expect.any(String), 'invoice-hash'])
+    expect(run).not.toHaveBeenCalledWith(expect.stringContaining('DELETE FROM mini_app_lightning_payments'), expect.anything())
+  })
+
   it('clears a definitely rejected Polygon attempt', async () => {
     selectUsdt()
     sendSwapPayment.mockResolvedValue({ data: undefined, error: 'Relay rejected', rejected: true })
