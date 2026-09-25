@@ -42,6 +42,11 @@ export declare global {
       readonly language?: string
       /** Fiat currency selected by the user in Nimiq Pay. */
       readonly userFiat?: NimiqPayFiat
+      /** Enter native fullscreen after the Mini App has asked the user. */
+      requestFullscreen: () => Promise<void>
+      exitFullscreen: () => Promise<void>
+      getFullscreen: () => Promise<boolean>
+      onFullscreenChange: (listener: (enabled: boolean) => void) => () => void
       /**
        * Request a pseudonymous, per-origin device identifier (64-char hex SHA-256).
        * Prompts the user on first call per origin; subsequent calls auto-resolve.
@@ -55,5 +60,6 @@ export declare global {
   interface WindowEventMap {
     'eip6963:announceProvider': EIP6963AnnounceProviderEvent
     'eip6963:requestProvider': Event
+    'nimiqPay:fullscreenChange': CustomEvent<{ enabled: boolean }>
   }
 }

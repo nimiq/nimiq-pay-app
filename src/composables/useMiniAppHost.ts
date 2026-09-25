@@ -228,6 +228,7 @@ export class MiniAppHost {
   private destroyed = false
   private birpc: BirpcReturn<WebviewFunctions, NativeFunctions> | null = null
   private messageFromWebviewListener: PluginListenerHandle | null = null
+  private fullscreenChangeListener: PluginListenerHandle | null = null
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
@@ -298,6 +299,7 @@ export class MiniAppHost {
     if (this.destroyed) {
       return
     }
+    this.destroyed = true
     this.stopRemoteAddressWatcher?.()
     this.stopRemoteAddressWatcher = null
     // A late destroy of an old host must not clobber the session a newer host
@@ -308,13 +310,20 @@ export class MiniAppHost {
       _activeMiniAppSession = null
       isMiniAppActive.value = false
     }
-    await this.inAppBrowser?.clearAllCookies()
-    await this.messageFromWebviewListener?.remove()
+    const cleanupResults = await Promise.allSettled([
+      this.inAppBrowser?.clearAllCookies(),
+      this.messageFromWebviewListener?.remove(),
+      this.fullscreenChangeListener?.remove(),
+    ])
+    for (const result of cleanupResults) {
+      if (result.status === 'rejected')
+        logger.error('Could not clean up Mini App host', result.reason)
+    }
     this.messageFromWebviewListener = null
+    this.fullscreenChangeListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
-    this.destroyed = true
   }
 
   private setupBirpc(): void {
@@ -344,16 +353,18 @@ export class MiniAppHost {
           }
         }
         catch (error) {
+          const isFullscreenRequest = params.network === 'host' && (params.name === 'setFullscreen' || params.name === 'getFullscreen')
           if (error instanceof MiniAppError) {
             // Show toast for user-actionable errors (skip permission denied - user already knows)
-            if (!(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
+            if (!isFullscreenRequest && !(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
               this.showErrorToast(error.message)
             }
             // Add the Nimiq type while preserving RPC fields used by older SDKs.
             throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined, params.network === 'nimiq' ? error.data : undefined)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
-          this.showErrorToast(message)
+          if (!isFullscreenRequest)
+            this.showErrorToast(message)
           throw this.createRpcError(-32603, message, params.network === 'nimiq' ? 'INTERNAL_ERROR' : undefined)
         }
       },
@@ -445,15 +456,28 @@ export class MiniAppHost {
           if (event.detail)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
-          this.messageFromWebviewListener = handle
+          if (this.destroyed)
+            void handle.remove()
+          else
+            this.messageFromWebviewListener = handle
         })
       },
       // Fire-and-forget host→webview methods. Without this birpc treats them as
       // request/response and the discarded promises would reject with a 120s
       // timeout if the webview disappears mid-flight (unhandledrejection).
-      eventNames: ['updateRpcUrl', 'clearAccountCache'],
+      eventNames: ['updateRpcUrl', 'clearAccountCache', 'fullscreenChanged'],
       timeout: 120_000,
     })
+
+    void browser.addListener('fullscreenChange', ({ enabled }) => {
+      if (!this.destroyed && _activeMiniAppSession === this.sessionState)
+        this.birpc?.fullscreenChanged.asEvent(enabled)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.fullscreenChangeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
   }
 
   private showErrorToast(message: string): void {
@@ -1312,6 +1336,15 @@ export class MiniAppHost {
   private async _handleHostMessage(message: RequestParams) {
     logger.log('[MiniAppHost] Handling host message:', message)
     switch (message.name) {
+      case 'setFullscreen': {
+        const enabled = (message.params as { enabled?: unknown } | null | undefined)?.enabled
+        if (typeof enabled !== 'boolean')
+          throw new InvalidRequestError('enabled must be a boolean')
+        await this.inAppBrowser!.setFullscreen({ enabled })
+        return
+      }
+      case 'getFullscreen':
+        return (await this.inAppBrowser!.getFullscreen()).enabled
       case 'requestDeviceIdentifier':
         return this.requestDeviceIdentifier(message.params)
       default:
