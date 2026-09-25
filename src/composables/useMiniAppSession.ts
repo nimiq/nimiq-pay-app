@@ -82,13 +82,14 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
 
   try {
     const { MiniAppHost } = await import('@/composables/useMiniAppHost')
-    const { requestUserConfirmation } = await import('@/lib/mini-app-confirmation')
+    const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
 
     const host = MiniAppHost.reconnect(InAppBrowser, {
       url: session.url,
       title: session.title,
       evmRpcUrls: session.evmRpcUrls,
       requestUserConfirmation,
+      selectLightningAsset,
     }, session.chainId)
 
     // Re-register close listener so the host is destroyed when user closes the webview

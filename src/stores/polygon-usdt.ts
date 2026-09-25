@@ -3,7 +3,7 @@ import type { Log, TransactionReceipt } from 'ethers'
 import type { HDNodeWallet } from 'ethers/wallet'
 import type { PolygonTransferFeeSnapshot, PolygonTransferQuote, RelayServerInfo } from '@/lib/polygon/types'
 import type { SavedAddress } from '@/stores/app'
-import type { AsyncResult } from '@/types'
+import type { Result } from '@/types'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { ExternalTransaction, MerchantTransaction, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { Contract, getAddress, Interface, isError, JsonRpcProvider, Signature, Transaction } from 'ethers'
@@ -2365,21 +2365,33 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   async function sendSwapPayment(
     request: PolygonSendRequest,
     title: TransactionTitle,
-  ): AsyncResult<{ tx: TransactionSentByUser, serialized: string }, string> {
+    options: { onSubmitted?: (hash: string) => Promise<void>, onFundingUncertain?: (hash: string) => Promise<void>, expectedSender?: string, maxFee?: number } = {},
+  ): Promise<Result<{ tx: TransactionSentByUser, serialized: string }, string> & { rejected?: boolean }> {
+    const swapKey = request.paymentRef!
+    if (activeSwapPayments.has(swapKey))
+      return { data: undefined, error: i18n.t('A transaction is already in progress') }
+
     const { data: wallet, error } = useLocalWallet().getEthWallet()
     if (error || !wallet)
-      return { data: undefined, error: error || i18n.t('No account has been found') }
+      return { data: undefined, error: error || i18n.t('No account has been found'), rejected: true }
+    if (options.expectedSender && getAddress(wallet.address) !== getAddress(options.expectedSender))
+      return { data: undefined, error: i18n.t('Wallet changed before sending'), rejected: true }
 
     await init()
     if (consensus.value !== 'established')
-      return { data: undefined, error: i18n.t('Polygon is not ready yet') }
+      return { data: undefined, error: i18n.t('Polygon is not ready yet'), rejected: !activeSwapPayments.has(swapKey) }
 
-    const swapKey = request.paymentRef!
     if (activeSwapPayments.has(swapKey))
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
     activeSwapPayments.add(swapKey)
 
     const swapStartedAt = Date.now()
+    let fundingPossible = false
+    let fundingRejected = false
+    const ensureApprovedSender = () => {
+      if (options.expectedSender && useLocalWallet().getEthAddress().data !== options.expectedSender)
+        throw new Error(i18n.t('Wallet changed before sending'))
+    }
 
     try {
       // Confirm swap with Fastspot
@@ -2405,16 +2417,19 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       const { parseBitcoinLightningInvoice } = await import('@/composables/useBitcoinLightning')
       const decoded = await parseBitcoinLightningInvoice(request.recipient)
       if (swap.hash !== decoded.payment_hash)
-        return { data: undefined, error: i18n.t('Invalid swap hash') }
+        return { data: undefined, error: i18n.t('Invalid swap hash'), rejected: true }
 
       // Get USDT_MATIC contract from swap
       const usdtContract = swap.contracts[fastspotV1.SwapAsset.USDT_MATIC]
       if (!usdtContract)
-        return { data: undefined, error: i18n.t('No USDT HTLC found in swap') }
+        return { data: undefined, error: i18n.t('No USDT HTLC found in swap'), rejected: true }
 
       const htlcDetails = usdtContract.htlc as import('@nimiq/fastspot-api-v1').Erc20HtlcDetails
 
       const feeSnapshot = await primeHtlcFee()
+      if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
+        throw new Error(i18n.t('Polygon fee changed; review the payment again'))
+      ensureApprovedSender()
 
       // Build and execute HTLC relay transaction
       const execution = await buildHtlcRelayExecution(
@@ -2426,6 +2441,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         usdtContract.timeout,
         feeSnapshot,
       )
+      ensureApprovedSender()
 
       const provisionalSwapHtlcKey = htlcDetails.address
       let createdProvisionalRow = false
@@ -2439,10 +2455,15 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
               [provisionalSwapHtlcKey, provisionalSwapHtlcKey],
               { single: true },
             )
-            if (existingRow?.tx_hash)
+            if (existingRow?.tx_hash) {
+              fundingPossible = true
               throw new Error(i18n.t('Polygon swap transaction is already pending'))
-            if (existingRow)
+            }
+            if (existingRow) {
+              fundingPossible = true
+              ensureApprovedSender()
               return
+            }
 
             await run(
               SQLQuery.InsertSwapHtlcProvisional,
@@ -2456,6 +2477,15 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
               ],
             )
             createdProvisionalRow = true
+            try {
+              ensureApprovedSender()
+            }
+            catch (error) {
+              await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
+              createdProvisionalRow = false
+              throw error
+            }
+            fundingPossible = true
           },
           beforeBroadcast: async (relayHash) => {
             tx = buildOutgoingTransaction(
@@ -2498,12 +2528,22 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       tx = { ...tx, hash: receipt.hash }
 
       if (receipt.status === 'rejected') {
+        fundingRejected = true
         await useTransactions().replaceTransaction({ ...tx, status: 'failed' })
         if (createdProvisionalRow)
           await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
         else
           await run(SQLQuery.ClearSwapHtlcTxHash, [provisionalSwapHtlcKey])
         throw new Error(i18n.t('Polygon swap transaction failed'))
+      }
+
+      if (receipt.status === 'pending') {
+        try {
+          await options.onFundingUncertain?.(receipt.hash)
+        }
+        catch (error) {
+          logger.error('Failed to report uncertain Polygon swap funding', error, { hash: receipt.hash })
+        }
       }
 
       // Signal funding to Fastspot
@@ -2517,8 +2557,13 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       // State enrichment is best-effort after the relay hash and recovery data exist.
       tx = await enrichPersistedTransaction(tx, receipt.hash, 'swap transaction')
-      if (tx.status === 'failed')
+      if (tx.status === 'failed') {
+        fundingRejected = true
         throw new Error(i18n.t('Polygon swap transaction failed'))
+      }
+
+      if (receipt.status === 'mined')
+        await options.onSubmitted?.(receipt.hash)
 
       // Poll for preimage until the HTLC expires
       const maxPollMs = Math.max((usdtContract.timeout * 1000) - Date.now(), 60_000)
@@ -2582,6 +2627,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       return {
         data: undefined,
         error: error instanceof Error ? error.message : i18n.t('Polygon swap payment failed'),
+        rejected: !fundingPossible || fundingRejected || error instanceof PolygonRelayRejectedError,
       }
     }
     finally {

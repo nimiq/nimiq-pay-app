@@ -91,6 +91,21 @@ describe('injected provider errors', () => {
     await expect(window.nimiq!.sign('hello')).rejects.toEqual(error)
   })
 
+  it('preserves the reconciliation hash without resolving an uncertain Nimiq payment', async () => {
+    const error = {
+      code: -32001,
+      type: 'TRANSACTION_OUTCOME_UNKNOWN',
+      message: 'The transaction outcome is unknown. It may have been submitted; do not retry.',
+      data: { hash: 'staged-hash' },
+    }
+    handleRequest.mockRejectedValue(error)
+
+    await expect(window.nimiq!.request({
+      method: 'sendBasicTransactionWithData',
+      params: { recipient: 'NQ22 RECIPIENT', value: 100000, fee: 0, data: 'Payment reference' },
+    })).rejects.toEqual(error)
+  })
+
   it('keeps the Ethereum rejection payload unchanged', async () => {
     handleRequest.mockRejectedValue({ code: 4001, type: 'PERMISSION_DENIED', message: 'Permission denied' })
 

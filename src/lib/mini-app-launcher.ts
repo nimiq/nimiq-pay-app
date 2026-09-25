@@ -11,7 +11,7 @@ import { clearSession, hasPendingSession } from '@/composables/useMiniAppSession
 import { useToast } from '@/composables/useToast'
 import { isTestnet } from '@/lib'
 import { trackDAppClosed, trackDAppOpened } from '@/lib/analytics'
-import { requestUserConfirmation } from '@/lib/mini-app-confirmation'
+import { requestUserConfirmation, selectLightningAsset } from '@/lib/mini-app-confirmation'
 import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
 import { normalizeMiniAppUrl } from '@/modals/mini-app-search'
@@ -189,6 +189,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       url: targetUrl,
       title: appTitle,
       requestUserConfirmation,
+      selectLightningAsset,
       evmRpcUrls,
     })
 

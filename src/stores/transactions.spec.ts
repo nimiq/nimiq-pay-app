@@ -2052,6 +2052,36 @@ describe('useTransactions', () => {
       expect(state.client.sendTransaction).not.toHaveBeenCalled()
     })
 
+    it('signals NIM submission before waiting for Lightning settlement', async () => {
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('submitted-before-lightning')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+      const onSubmitted = vi.fn(async () => {})
+
+      const send = useTransactions().sendTx({
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        paymentRef: 'swap-id',
+      } as any, undefined, onSubmitted)
+      await expect(send).resolves.toMatchObject({ outcome: 'submitted' })
+      expect(onSubmitted).toHaveBeenCalledWith('submitted-before-lightning')
+      expect(state.isSendingTx).toBe(false)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+
+      settleSwap({ preimage: 'secret' })
+      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+    })
+
     it('returns rejected for a second concurrent send and only broadcasts once', async () => {
       const { useTransactions } = await import('./transactions')
       const { signedTx } = createSignedTransaction('locked-send')

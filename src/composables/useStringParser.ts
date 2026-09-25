@@ -87,7 +87,7 @@ export function useStringParser() {
 
   // Parses different URL formats and returns a PaymentRequestData object
   // TODO Bluecode
-  async function getPaymentRequestData(content: string): Promise<Result<PaymentRequestData, string>> {
+  async function getPaymentRequestData(content: string, lightningSellAsset?: Asset): Promise<Result<PaymentRequestData, string>> {
     if (isValidEthAddress(content))
       return parsePolygonAddress(content)
 
@@ -121,7 +121,7 @@ export function useStringParser() {
       result = await parseGoCryptoUrl(url)
     }
     else if (rail === Rail.BitcoinLightning) {
-      result = await parseBitcoinLightningUrl(url)
+      result = await parseBitcoinLightningUrl(url, lightningSellAsset)
     }
     // If it is a payment request from the Nimiq Wallet, redirect to the withdrawal flow
     else if (rail === Rail.NimiqWallet) {
@@ -210,7 +210,7 @@ export function useStringParser() {
     return fetchGoCryptoPaymentRequestData(goCryptoRequestIdentifier)
   }
 
-  async function parseBitcoinLightningUrl(url: URL): Promise<Result<PaymentRequestData, string>> {
+  async function parseBitcoinLightningUrl(url: URL, sellAsset?: Asset): Promise<Result<PaymentRequestData, string>> {
     let decoded: Awaited<ReturnType<typeof parseBitcoinLightningInvoice>>
     try {
       decoded = await parseBitcoinLightningInvoice(url.searchParams.get('lightning') || url.pathname)
@@ -224,9 +224,10 @@ export function useStringParser() {
     const timestampSection = decoded.sections.find(section => section.name === 'timestamp') as TimestampSection
     if (!timestampSection || !timestampSection.value)
       return { error: i18n.t('Invalid Bitcoin Lightning invoice: missing timestamp.'), data: undefined }
+    const invoiceExpiresAt = timestampSection.value + (decoded.sections.find(section => section.name === 'expiry')?.value ?? 3600)
 
     // Show expiry error 20s before actual expiry
-    if (timestampSection.value + decoded.expiry < Date.now() / 1e3 - 20)
+    if (invoiceExpiresAt <= Date.now() / 1e3 + 20)
       return { error: i18n.t('Bitcoin Lightning invoice expired.'), data: undefined }
 
     const coinNetworkSection = decoded.sections.find(section => section.name === 'coin_network') as CoinNetworkSection | undefined
@@ -241,7 +242,7 @@ export function useStringParser() {
     // BTC LN amounts are in millisatoshis, 3 decimals more than BTC's 8.
     const amountBtc = Number.parseInt(amountSection.value) / 1e11
 
-    const isUsdt = useApp().activeAsset === Asset.USDT
+    const isUsdt = (sellAsset ?? useApp().activeAsset) === Asset.USDT
     const sellAssetId = isUsdt ? AssetId.USDT_MATIC : AssetId.NIM
     const swapQuoteCacheKey = `${sellAssetId}:${decoded.paymentRequest}`
 
@@ -269,7 +270,7 @@ export function useStringParser() {
           { asset: sellAssetId },
           { asset: AssetId.BTC_LN, amount: amountBtc, peer: decoded.paymentRequest },
         ))
-        await run(SQLQuery.InsertSwapQuote, [swapQuoteCacheKey, quote.id, Date.now() + decoded.expiry * 1e3])
+        await run(SQLQuery.InsertSwapQuote, [swapQuoteCacheKey, quote.id, Math.min(invoiceExpiresAt, quote.expiry) * 1e3])
       }
       catch (e) {
         logger.error('Error creating swap:', { error: e, amountBtc, decoded, sellAssetId })

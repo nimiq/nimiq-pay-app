@@ -14,6 +14,8 @@ const provider = computed(() => props.provider as NimiqProvider)
 const output = ref<unknown | null>(null)
 const balanceAddress = ref('')
 const isFetchingBalance = ref(false)
+const lightningInvoice = ref('')
+const isPayingLightning = ref(false)
 
 async function isConsensusEstablished() {
   output.value = await provider.value.isConsensusEstablished()
@@ -81,6 +83,35 @@ async function sendBasicTransactionWithData() {
   })
 }
 
+async function payLightningInvoice() {
+  const nimiq = props.provider
+  if (!nimiq || !('payLightningInvoice' in nimiq) || typeof nimiq.payLightningInvoice !== 'function') {
+    output.value = 'payLightningInvoice is unavailable. Update Nimiq Pay to test this flow.'
+    return
+  }
+  const invoice = lightningInvoice.value.trim()
+  if (!invoice || isPayingLightning.value)
+    return
+
+  isPayingLightning.value = true
+  output.value = 'Choose NIM or USDT in Nimiq Pay...'
+  try {
+    output.value = await nimiq.payLightningInvoice({ invoice })
+  }
+  catch (error) {
+    output.value = error && typeof error === 'object'
+      ? {
+          type: 'type' in error ? error.type : 'UNKNOWN_ERROR',
+          message: 'message' in error ? error.message : String(error),
+          data: 'data' in error ? error.data : undefined,
+        }
+      : String(error)
+  }
+  finally {
+    isPayingLightning.value = false
+  }
+}
+
 async function requestDeviceIdentifier() {
   if (!window.nimiqPay?.requestDeviceIdentifier) {
     output.value = 'nimiqPay.requestDeviceIdentifier is unavailable in this context'
@@ -135,6 +166,14 @@ async function retryProviderInit() {
     <button type="button" @click="sign" :disabled="!hasProvider">sign</button>
     <button type="button" @click="sendBasicTransaction" :disabled="!hasProvider">sendBasicTransaction</button>
     <button type="button" @click="sendBasicTransactionWithData" :disabled="!hasProvider">sendBasicTransactionWithData</button>
+    <form class="balance-query" @submit.prevent="payLightningInvoice">
+      <label for="lightning-invoice">BTC Lightning invoice or fixed LNURL</label>
+      <textarea id="lightning-invoice" v-model="lightningInvoice" rows="3" placeholder="lnbc... or lnurl..." :disabled="isPayingLightning" />
+      <button type="submit" :disabled="!hasProvider || !lightningInvoice.trim() || isPayingLightning">
+        {{ isPayingLightning ? 'Paying...' : 'payLightningInvoice' }}
+      </button>
+      <small>Choose NIM or USDT in Nimiq Pay. A returned hash means the payment was submitted; Lightning settlement continues in Nimiq Pay.</small>
+    </form>
     <button type="button" @click="requestDeviceIdentifier">Request Device Identifier</button>
     <br/>
     <strong>Response:</strong>
