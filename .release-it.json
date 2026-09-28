@@ -11,6 +11,7 @@
       "node scripts/browserstack-upload.js"
     ],
     "after:release": [
+      "gh release edit ${version} --draft=false",
       "rm builds/android/NimiqPay-*.aab",
       "rm builds/android/NimiqPay-*.apk",
       "rm builds/ios/NimiqPay-*.ipa",
@@ -23,6 +24,7 @@
   },
   "github": {
     "release": true,
+    "draft": true,
     "releaseNotes": "node scripts/generate-changelog.mjs ${version} --print-latest",
     "assets": [
       "builds/ios/NimiqPay-${version}.ipa",

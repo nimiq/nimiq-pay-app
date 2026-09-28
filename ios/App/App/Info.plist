@@ -17,7 +17,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.20.0</string>
+	<string>2.21.1</string>
 	<key>CFBundleURLName</key>
 	<string>com.nimiq.pay</string>
 	<key>CFBundleURLSchemes</key>
@@ -49,7 +49,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>116</string>
+	<string>117</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
