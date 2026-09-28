@@ -193,6 +193,17 @@ export function useLogger(name: string = '') {
     return saveLogsToFile()
   }
 
+  /** Current log file as base64, keeping only the newest `maxBytes` */
+  async function readLogsBase64(maxBytes: number) {
+    await saveLogsToFile()
+    await writingLock
+    // Without `encoding`, native returns base64 encoded natively (no multi-MB transcoding in JS)
+    const { data } = await Filesystem.readFile({ path: logFileName, directory })
+    // Base64 is whole 4-char groups from the start, so a tail of whole groups is still valid
+    const maxChars = Math.floor(maxBytes / 3) * 4
+    return (data as string).slice(-maxChars)
+  }
+
   return {
     init,
     log,
@@ -200,5 +211,6 @@ export function useLogger(name: string = '') {
     error,
     sendReport,
     forceSaveToFile,
+    readLogsBase64,
   }
 }

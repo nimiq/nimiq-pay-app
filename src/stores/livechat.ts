@@ -4,8 +4,10 @@ import { Device } from '@capacitor/device'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { useLogger } from '@/composables/useLogger'
 import { isTestnet } from '@/lib'
-import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, getStatus } from '@/lib/walkie-talkie'
+import { logDiagnostics } from '@/lib/diagnostics'
+import { closeSession as apiCloseSession, sendMessage as apiSendMessage, startSession as apiStartSession, uploadAttachment as apiUploadAttachment, getStatus, MAX_ATTACHMENT_SIZE } from '@/lib/walkie-talkie'
 import { kvPreferences, useApp } from './app'
 import { useLocalWallet } from './local-wallet'
 
@@ -113,22 +115,35 @@ export const useLiveChat = defineStore('livechat', () => {
     const findPending = () => messages.value.find(m => !m.id && !m.failed && m.timestamp === message.timestamp)!
 
     try {
-      if (!sessionId.value) {
-        const preamble = await buildSupportPreamble(walletAddress)
-        const result = await apiStartSession(userId, preamble)
-        sessionId.value = result.session_id
-        const { message_id } = await apiSendMessage(userId, result.session_id, trimmed)
-        findPending().id = message_id
-      }
-      else {
-        const { message_id } = await apiSendMessage(userId, sessionId.value, trimmed)
-        findPending().id = message_id
-      }
+      const { message_id } = await apiSendMessage(userId, await ensureSession(walletAddress, userId), trimmed)
+      findPending().id = message_id
     }
     catch (e) {
       console.error('Failed to send live chat message', e)
       findPending().failed = true
     }
+  }
+
+  async function ensureSession(walletAddress: string, userId: string) {
+    if (!sessionId.value) {
+      const preamble = await buildSupportPreamble(walletAddress)
+      const result = await apiStartSession(userId, preamble)
+      sessionId.value = result.session_id
+    }
+    return sessionId.value
+  }
+
+  /** Uploads the app logs to the support thread. The backend adds a 📎 message to history, picked up by polling. */
+  async function sendLogs() {
+    const walletAddress = useLocalWallet().localAddress.toUserFriendlyAddress()
+    const userId = walletAddress.replaceAll(' ', '')
+    const [session, content] = await Promise.all([
+      ensureSession(walletAddress, userId),
+      logDiagnostics().then(() => useLogger().readLogsBase64(MAX_ATTACHMENT_SIZE)),
+    ])
+    const date = new Date().toISOString().substring(0, 19).replaceAll(':', '-')
+    await apiUploadAttachment(userId, session, `nimiq-pay-logs-${date}.txt`, content)
+    conversationEnded.value = false
   }
 
   async function closeSession() {
@@ -154,6 +169,7 @@ export const useLiveChat = defineStore('livechat', () => {
     conversationEnded,
     reset,
     sendMessage,
+    sendLogs,
     closeSession,
     initFromBackground,
   }
