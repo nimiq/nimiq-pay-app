@@ -66,6 +66,9 @@ const birpc = createBirpc<NativeFunctions, WebviewFunctions>({
     clearCachedAccounts(network)
     log(`Cleared account cache for ${network}`)
   },
+  fullscreenChanged: (enabled: boolean) => {
+    window.dispatchEvent(new CustomEvent('nimiqPay:fullscreenChange', { detail: { enabled } }))
+  },
 }, {
   post: data => window.mobileApp?.postMessage({ detail: data }),
   on: (fn) => {
@@ -254,6 +257,14 @@ window.ethereum = Ethereum
 window.nimiqPay = Object.freeze({
   language: window.__NIMIQ_PAY__?.lang,
   userFiat: window.__NIMIQ_PAY__?.userFiat,
+  requestFullscreen: (): Promise<void> => birpc.handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: true } }) as Promise<void>,
+  exitFullscreen: (): Promise<void> => birpc.handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: false } }) as Promise<void>,
+  getFullscreen: (): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'getFullscreen' }) as Promise<boolean>,
+  onFullscreenChange: (listener: (enabled: boolean) => void): (() => void) => {
+    const handler = (event: CustomEvent<{ enabled: boolean }>) => listener(event.detail.enabled)
+    window.addEventListener('nimiqPay:fullscreenChange', handler)
+    return () => window.removeEventListener('nimiqPay:fullscreenChange', handler)
+  },
   requestDeviceIdentifier: async (options: { reason: string }): Promise<string> => {
     const reason = options?.reason
     if (typeof reason !== 'string' || reason.trim().length === 0) {

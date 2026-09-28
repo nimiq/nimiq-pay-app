@@ -59,8 +59,8 @@ importers:
         specifier: ^8.3.8
         version: 8.3.8(@capacitor/core@8.3.4)
       '@capgo/capacitor-inappbrowser':
-        specifier: ^8.16.6
-        version: 8.16.6(@capacitor/core@8.3.4)
+        specifier: ^8.20.0
+        version: 8.20.0(@capacitor/core@8.3.4)
       '@capgo/capacitor-updater':
         specifier: ^8.51.16
         version: 8.51.16(@capacitor/core@8.3.4)
@@ -557,8 +557,8 @@ packages:
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
-  '@capgo/capacitor-inappbrowser@8.16.6':
-    resolution: {integrity: sha512-M/GUTwIyvavo0vp5J07+qVd2hUkiwEXl/2V60zuEPcb74Gplwvz4RFcxd2fCS4Af6lmo0bTVHBNgjQ/pL+rlFg==}
+  '@capgo/capacitor-inappbrowser@8.20.0':
+    resolution: {integrity: sha512-DK9JcHqgpSTAf7JP9FcM916KocXlnquAWB7yNdveZno0a+4COKDw/mpTe3ZBAu+PEP4ymK1PrgdMneWeZUBrdA==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -8268,7 +8268,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.3.4
 
-  '@capgo/capacitor-inappbrowser@8.16.6(@capacitor/core@8.3.4)':
+  '@capgo/capacitor-inappbrowser@8.20.0(@capacitor/core@8.3.4)':
     dependencies:
       '@capacitor/core': 8.3.4
 

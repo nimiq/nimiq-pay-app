@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer'
+import { Toast } from '@capacitor/toast'
 import { Interface, parseUnits } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Asset } from '@/lib/assets'
@@ -43,6 +44,7 @@ const {
   addressesEqual: vi.fn(),
   createBirpc: vi.fn(() => ({
     $close: vi.fn(),
+    fullscreenChanged: { asEvent: vi.fn() },
     onChainAdded: { asEvent: vi.fn() },
     onChainChanged: { asEvent: vi.fn() },
     onUnsupportedChain: { asEvent: vi.fn() },
@@ -153,11 +155,15 @@ vi.mock('./useLogger', () => ({
 }))
 
 function createBrowser() {
+  const removeListener = vi.fn()
   return {
-    addListener: vi.fn(() => Promise.resolve({ remove: vi.fn() })),
+    addListener: vi.fn((_event: string, _handler: (event: { enabled: boolean }) => void) => Promise.resolve({ remove: removeListener })),
     clearAllCookies: vi.fn(() => Promise.resolve()),
+    getFullscreen: vi.fn(() => Promise.resolve({ enabled: false })),
     postMessage: vi.fn(),
     removeAllListeners: vi.fn(() => Promise.resolve()),
+    removeListener,
+    setFullscreen: vi.fn(() => Promise.resolve()),
   }
 }
 
@@ -176,6 +182,7 @@ async function createPermissionHost(options: { confirmed?: boolean } = {}) {
 
   return {
     browser,
+    host: _host,
     handleRequest: handlers.handleRequest as (params: {
       network: string
       name: string
@@ -185,6 +192,58 @@ async function createPermissionHost(options: { confirmed?: boolean } = {}) {
     requestUserConfirmation: confirmationPrompt,
   }
 }
+
+describe('fullscreen host API', () => {
+  it('changes and reads native fullscreen without a host confirmation', async () => {
+    const { browser, handleRequest, requestUserConfirmation } = await createPermissionHost()
+    browser.getFullscreen.mockResolvedValue({ enabled: true })
+
+    await handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: true } })
+    expect(browser.setFullscreen).toHaveBeenCalledWith({ enabled: true })
+    expect(await handleRequest({ network: 'host', name: 'getFullscreen' })).toBe(true)
+    await handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: false } })
+    expect(browser.setFullscreen).toHaveBeenLastCalledWith({ enabled: false })
+    expect(requestUserConfirmation).not.toHaveBeenCalled()
+  })
+
+  it('returns fullscreen failures without showing host toasts', async () => {
+    const { browser, handleRequest } = await createPermissionHost()
+    await expect(handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: 'true' } })).rejects.toThrow()
+    expect(browser.setFullscreen).not.toHaveBeenCalled()
+
+    browser.setFullscreen.mockRejectedValueOnce(new Error('WebView is hidden'))
+    await expect(handleRequest({ network: 'host', name: 'setFullscreen', params: { enabled: true } })).rejects.toThrow('WebView is hidden')
+    browser.getFullscreen.mockRejectedValueOnce(new Error('WebView is hidden'))
+    await expect(handleRequest({ network: 'host', name: 'getFullscreen' })).rejects.toThrow('WebView is hidden')
+    expect(Toast.show).not.toHaveBeenCalled()
+  })
+
+  it('forwards native exit and removes its listener on teardown', async () => {
+    const { browser, host } = await createPermissionHost()
+    await Promise.resolve()
+    const listener = browser.addListener.mock.calls.find(([event]) => event === 'fullscreenChange')?.[1]
+    expect(listener).toBeDefined()
+    listener!({ enabled: false })
+    const bridge = createBirpc.mock.results.at(-1)!.value
+    expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
+
+    await host.destroy()
+    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
+    const { browser, host } = await createPermissionHost()
+    await Promise.resolve()
+    browser.clearAllCookies.mockRejectedValueOnce(new Error('Cookie cleanup failed'))
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    await host.destroy()
+
+    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    expect(bridge.$close).toHaveBeenCalledOnce()
+    expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
+  })
+})
 
 function jsonRpcResponse(body: unknown) {
   return {
