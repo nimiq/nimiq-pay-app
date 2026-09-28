@@ -3,30 +3,28 @@
 # Alberto Monterroso 2024, 2026.
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2026-06-17 10:27+0000\n"
+"PO-Revision-Date: 2026-09-28 12:42+0000\n"
 "Last-Translator: Alberto Monterroso\n"
 "Language: es\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.13.3\n"
+"X-Generator: Weblate 2026.10.dev0\n"
 
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" es una palabra de recuperación inválida"
 
 msgid "{count} entries"
-msgstr ""
+msgstr "{count} participaciones"
 
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} restantes."
 
-#, fuzzy
-#| msgid "Payment preview"
 msgid "{name} preview"
-msgstr "Prevista del pago"
+msgstr "Vista previa de {name}"
 
 msgid "{name} screenshot {number}"
-msgstr ""
+msgstr "Captura {number} de {name}"
 
 msgid "0x..."
 msgstr "0x..."
@@ -58,10 +56,8 @@ msgstr "Añadir tarjeta nueva"
 msgid "Add Stake"
 msgstr "Añadir al staking"
 
-#, fuzzy
-#| msgid "Add another address"
 msgid "Add to address book"
-msgstr "Añadir otra dirección"
+msgstr "Añadir a la libreta de direcciones"
 
 msgid "Address copied to clipboard"
 msgstr "La dirección se ha copiado al portapapeles"
@@ -69,10 +65,8 @@ msgstr "La dirección se ha copiado al portapapeles"
 msgid "Address missing"
 msgstr "Dirección no encontrada"
 
-#, fuzzy
-#| msgid "Address missing"
 msgid "Address saved"
-msgstr "Dirección no encontrada"
+msgstr "Dirección guardada"
 
 msgid "Addresses missing"
 msgstr "Direcciones no encontradas"
@@ -117,12 +111,10 @@ msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Se ha producido un error desconocido, introduce tu PIN manualmente"
 
 msgid "App previews"
-msgstr ""
+msgstr "Vistas previas de la app"
 
-#, fuzzy
-#| msgid "Store screenshot safely"
 msgid "App screenshots"
-msgstr "Guarda la captura de pantalla en un lugar seguro"
+msgstr "Capturas de pantalla de la app"
 
 msgid "App Settings"
 msgstr "Ajustes de la app"
@@ -176,7 +168,7 @@ msgid "Both expected and the given PIN are empty"
 msgstr "El PIN esperado y el proporcionado están vacíos"
 
 msgid "Builder"
-msgstr ""
+msgstr "Creador"
 
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "Al tocar 'pagar', aceptas los {terms} de gestión de datos de Fastspot"
@@ -236,10 +228,10 @@ msgid "Check"
 msgstr "Comprobar"
 
 msgid "Check back when the next entries arrive."
-msgstr ""
+msgstr "Vuelve cuando lleguen nuevas participaciones."
 
 msgid "Check your connection and try again."
-msgstr ""
+msgstr "Comprueba tu conexión e inténtalo de nuevo."
 
 msgid "Choose a PIN"
 msgstr "Elije un PIN"
@@ -254,12 +246,10 @@ msgid "Close"
 msgstr "Cerrar"
 
 msgid "Competition cycles"
-msgstr ""
+msgstr "Rondas del concurso"
 
-#, fuzzy
-#| msgid "This address could not be parsed."
 msgid "Competition entries could not be loaded"
-msgstr "No se ha podido interpretar esta dirección."
+msgstr "No se han podido cargar las participaciones del concurso"
 
 msgid "Complete"
 msgstr "Completar"
@@ -344,7 +334,7 @@ msgid "Currency"
 msgstr "Moneda"
 
 msgid "Cycle {number}"
-msgstr ""
+msgstr "Ronda {number}"
 
 msgid "Daily limit"
 msgstr "Límite diario"
@@ -398,7 +388,7 @@ msgid "Enter Address"
 msgstr "Ingresar dirección"
 
 msgid "Enter amount in {currency}"
-msgstr ""
+msgstr "Introduce el importe en {currency}"
 
 msgid "Enter feature password"
 msgstr "Introduce la contraseña de la función"
@@ -467,7 +457,7 @@ msgid "Expiring Points"
 msgstr "Puntos por vencer"
 
 msgid "Explore entries"
-msgstr ""
+msgstr "Ver participaciones"
 
 msgid "Failed to activate NAKA Card on device: {error}"
 msgstr "No se ha podido activar la tarjeta NAKA en el dispositivo: {error}"
@@ -521,7 +511,7 @@ msgid "Get Started"
 msgstr "Comenzar"
 
 msgid "Give it a name so you recognise it later"
-msgstr ""
+msgstr "Ponle un nombre para reconocerla después"
 
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr "Ve a Ajustes → Privacidad y seguridad → Modo de aislamiento"
@@ -551,7 +541,7 @@ msgid "Hold your phone near the terminal"
 msgstr "Acerca tu teléfono al terminal"
 
 msgid "How to use:"
-msgstr ""
+msgstr "Cómo usarlo:"
 
 msgid "I agree to NAKA Card's {terms}"
 msgstr "Acepto los {terms} de la tarjeta NAKA"
@@ -726,7 +716,7 @@ msgid "Learn more"
 msgstr "Saber más"
 
 msgid "Learn what is new in this update"
-msgstr ""
+msgstr "Descubre las novedades de esta actualización"
 
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr "La solicitud de Lightning es por un importe de pago variable, pero los importes variables no son compatibles"
@@ -764,18 +754,16 @@ msgid "Make sure you are sending from a Polygon address, or your funds might be 
 msgstr "¡Asegúrate de enviar desde una dirección de Polygon o podrías perder tus fondos de forma permanente!"
 
 msgid "Meet the builders creating new experiences for Nimiq Pay."
-msgstr ""
+msgstr "Conoce a los creadores que dan vida a nuevas experiencias en Nimiq Pay."
 
 msgid "Message"
-msgstr ""
+msgstr "Mensaje"
 
 msgid "Mini Apps"
 msgstr "Mini Apps"
 
-#, fuzzy
-#| msgid "Mini Apps"
 msgid "Mini Apps Competition"
-msgstr "Mini Apps"
+msgstr "Concurso de Mini Apps"
 
 msgid "Minimum NIM Decimals"
 msgstr "Decimales mínimos de NIM"
@@ -838,10 +826,10 @@ msgid "No Cashlink found"
 msgstr "No se encontró ningún Cashlink"
 
 msgid "No changelog yet. Check back after the next update."
-msgstr ""
+msgstr "Aún no hay novedades. Vuelve después de la próxima actualización."
 
 msgid "No entries in this cycle yet"
-msgstr ""
+msgstr "Aún no hay participaciones en esta ronda"
 
 msgid "No NAKA Card found"
 msgstr "No se ha encontrado ninguna tarjeta NAKA"
@@ -898,24 +886,20 @@ msgstr "No se pueden habilitar las notificaciones, se omitirá este paso."
 msgid "Only {count} out of {total} remaining."
 msgstr "Solo {count} de {total} restantes."
 
-#, fuzzy
-#| msgid "Open anyway"
 msgid "Open {name}"
-msgstr "Abrir de todos modos"
+msgstr "Abrir {name}"
 
 msgid "Open anyway"
 msgstr "Abrir de todos modos"
 
 msgid "Open Mini Apps Competition"
-msgstr ""
+msgstr "Abrir el concurso de Mini Apps"
 
 msgid "Open this mini app?"
 msgstr "¿Abrir esta Mini App?"
 
-#, fuzzy
-#| msgid "Keep pressing…"
 msgid "Opening…"
-msgstr "Sigue pulsando…"
+msgstr "Abriendo…"
 
 msgid "Pay"
 msgstr "Pagar"
@@ -1065,7 +1049,7 @@ msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr "Posición {position}: {glyph} ({code}). {reason}."
 
 msgid "Previous versions"
-msgstr ""
+msgstr "Versiones anteriores"
 
 msgid "Privacy Policy"
 msgstr "Política de privacidad"
@@ -1193,10 +1177,8 @@ msgstr "Envía USDT en Polygon a la siguiente dirección."
 msgid "Send USDT to this address"
 msgstr "Envía USDT a esta dirección"
 
-#, fuzzy
-#| msgid "Send"
 msgid "Sender"
-msgstr "Enviar"
+msgstr "Remitente"
 
 msgid "Server not available"
 msgstr "Servidor no disponible"
@@ -1261,15 +1243,11 @@ msgstr "Algo salió mal verificando el número de teléfono"
 msgid "Something went wrong while starting the camera"
 msgstr "Algo ha ido mal al iniciar la cámara"
 
-#, fuzzy
-#| msgid "Something went wrong paying with Points"
 msgid "Something went wrong, please re-enable biometric login"
-msgstr "Algo salió mal al pagar con Puntos"
+msgstr "Algo ha ido mal. Vuelve a activar el inicio de sesión biométrico"
 
-#, fuzzy
-#| msgid "Pay with Bluecode"
 msgid "Source code"
-msgstr "Pagar con Bluecode"
+msgstr "Código fuente"
 
 msgid "Staking Contract"
 msgstr "Contrato de staking"
@@ -1284,10 +1262,10 @@ msgid "Store screenshot safely"
 msgstr "Guarda la captura de pantalla en un lugar seguro"
 
 msgid "Submissions"
-msgstr ""
+msgstr "Participaciones"
 
 msgid "Submitted {date}"
-msgstr ""
+msgstr "Enviada el {date}"
 
 msgid "Support"
 msgstr "Soporte"
@@ -1308,7 +1286,7 @@ msgid "Tap to pay with NAKA!"
 msgstr "¡Toca para pagar con NAKA!"
 
 msgid "Tap your pending NIM to add it to your available balance."
-msgstr ""
+msgstr "Toca tus NIM pendientes para añadirlos a tu saldo disponible."
 
 msgid "Terms & Conditions"
 msgstr "Términos y condiciones"
@@ -1506,19 +1484,19 @@ msgid "Verify your phone number"
 msgstr "Verifica tu número de teléfono"
 
 msgid "Version"
-msgstr ""
+msgstr "Versión"
 
 msgid "View {name}"
-msgstr ""
+msgstr "Ver {name}"
 
 msgid "View on X"
-msgstr ""
+msgstr "Ver en X"
 
 msgid "Wait for consensus before withdrawing"
 msgstr "Espera al consenso antes de retirar"
 
 msgid "Watch demo"
-msgstr ""
+msgstr "Ver demo"
 
 msgid "We're working on something special"
 msgstr "Estamos preparando algo especial"
@@ -1535,10 +1513,8 @@ msgstr "¿Qué deseas hacer?"
 msgid "What is Bluecode?"
 msgstr "¿Qué es Bluecode?"
 
-#, fuzzy
-#| msgid "What's the 1st word?"
 msgid "What's New"
-msgstr "¿Cuál es la palabra número 1?"
+msgstr "Novedades"
 
 msgid "What's the 10th word?"
 msgstr "¿Cuál es la palabra número 10?"
