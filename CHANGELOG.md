@@ -2,6 +2,25 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.21.0 — 2026-09-28
+
+### Share app logs with support
+Support can now help you faster. You can send your app logs directly in the support chat, so the team can see what went wrong.
+
+_How to use:_ Open the support chat, tap the attach button next to the message field, and confirm to send your logs. If a support agent asks for your logs, the chat will show a notice to remind you.
+
+### Lightning payments in Mini Apps
+Mini Apps can now request Bitcoin Lightning payments. The app also saves each payment attempt, so you are not charged twice.
+
+### Better Mini Apps experience
+Mini Apps can now use fullscreen for a more immersive view. With your permission, they can also see your NIM balance, so they can show you relevant options.
+
+### Safer USDT payments
+USDT payments and swaps now recover more reliably if something goes wrong along the way. The app will not retry a payment until it confirms the first one did not go through, so you are never charged twice.
+
+### Chat button fixes
+The support chat button and notification badge now stay in the right spot, even when a backup reminder is on screen.
+
 ## 2.20.0 — 2026-09-16
 
 ### Withdraw your way
