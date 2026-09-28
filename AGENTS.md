@@ -1,11 +1,10 @@
 # CLAUDE.md
 
-Common mistakes, gotchas, and confusion points in this project. If something surprises you, alert the developer and add it here. If unsure, ask — don't assume.
+Common mistakes, gotchas, and confusion points in this project. If something surprises you, alert the developer and add it here.
 
 ## Collaboration
 
-- Unsure about anything? Ask the developer.
-- Stuck? Ask the developer to guide you.
+- Keep going when no input is needed. Stop and ask only when blocked, when requirements are ambiguous, or before destructive actions.
 
 ## Simplicity
 
@@ -15,7 +14,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Tooling & commands
 
 - Use `pnpm` for dependencies and scripts.
-- Run `pnpm lint` and `pnpm typecheck` after any change.
+- Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
 ### Mini Apps provider dependency in CI
@@ -31,7 +30,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 ## Comments
 
-- Comment only complex/non-obvious code. Concise, explain *why* not *what*.
+- Comment complex/non-obvious code. Concise, explain *why* not *what*.
 
 ## Vue & components
 
@@ -40,16 +39,10 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - `Flow.vue` keeps visited steps mounted in `historyStack`. When wiring step handlers (`done`, `select`, `skip`, `back`, `navigateTo`), always validate the emitting step is still the active step before changing flow state.
 - Animations: prefer `motion-v` (use the `motion` skill).
 
-## JavaScript & TypeScript pitfalls
-
-- Never `arr.forEach(async ...)`: the callback is fire-and-forget, so inner awaits aren't awaited by the loop. Use `for (const x of arr)` (sequential) or `await Promise.all(arr.map(async ...))` (parallel).
-- `Array.prototype.concat` returns a new array, doesn't mutate. To grow an existing local array, use `arr.push(...other)` — `arr.concat(other)` silently discards the result.
-- Don't add a base interface + `extends` wrapper just to add one field to most variants of a union (e.g. `ChainScoped extends MiniAppBase { network }`). If only a minority opt out, keep the base minimal and inline the field per variant via intersection. Extension only pays off when reused in more than one place or carrying multiple shared fields.
-
 ## Testing
 
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
-- Don't run test all the time. Run tests only when you are about to commit or when you are debugging a test failure. Don't run tests after every change, it slows down development and is unnecessary.
+- Run tests only before committing or when debugging a test failure.
 
 ## Nimiq client & sync
 
@@ -64,7 +57,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Cosigner `validityStart` is the height at which spending is allowed (includes confirmation delay). It is not the creating transaction's `validityStartHeight`; never compare them for equality.
 - Cosigner `txSent: false` includes broadcast RPC timeouts. Keep the staged transaction unresolved; false does not prove it was never broadcast.
 
-- Client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. logout → login) must capture the ID and remove the previous one first; see the `watch(remoteAddress, ...)` block in `src/stores/sync.ts` for the canonical pattern.
+- Client listeners (`client.addTransactionListener`, `client.addHeadChangedListener`) return a numeric ID and must be cleaned up via `client.removeListener` before re-registering. Anything registered inside a store action that can run more than once (e.g. logout → login) must capture the ID and remove the previous one first; see `registerWalletListeners` in `src/stores/sync/lifecycle.ts` and `init` in `src/stores/remote-signer.ts` for the canonical pattern.
 - On login/sync paths, hydrate UI state from the local DB cache (e.g. `useTransactions().refreshFromDb()`) before any network call. Never show an empty list while waiting for consensus when the data is already on disk.
 
 ## Data & schema
@@ -87,7 +80,7 @@ To evolve a table, leave its `Create*Table` query untouched and add a new `ALTER
 
 ### Fiat enum — dual update
 
-When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same value must also be added to the Mini App SDK in `mini-app-sdk/` so Mini Apps consuming the host's fiat type stay in sync. Warn the developer about this dual-update requirement whenever modifying the `Fiat` enum — do not silently update only one side.
+When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same value must also be added to the `Fiat` enum of the published `@nimiq/mini-app-sdk` package (source: `packages/mini-app-sdk/types.ts` on the `nimiq` branch of `nimiq/trust-web3-provider`) so Mini Apps consuming the host's fiat type stay in sync. Warn the developer about this dual-update requirement whenever modifying the `Fiat` enum — do not silently update only one side.
 
 ## CSS — teleported/portaled elements
 
