@@ -2,7 +2,7 @@
 
 All notable changes to Nimiq Pay.
 
-## 2.21.0 — 2026-09-28
+## 2.21.1 — 2026-09-28
 
 ### Share app logs with support
 Support can now help you faster. You can send your app logs directly in the support chat, so the team can see what went wrong.
