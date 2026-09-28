@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
-import { computedAsync, useElementVisibility, useEventListener } from '@vueuse/core'
+import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
 import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
@@ -63,6 +63,24 @@ const isRecoveryWordsShown = computed(() => !hasDoneBackup.value && !isMockEnabl
 // Ionic modals (geometric intersection, not occlusion) and the native InAppBrowser
 // webview (separate from the Vue tree).
 const homeRoot = ref<HTMLElement | null>(null)
+// The chat badge sits outside IonHeader so it can stay above the chat backdrop (Ionic header/toolbar
+// have their own stacking contexts). Align it to the main toolbar, which banners above it push down.
+// Offsets, not bounding rects: page transitions transform ion-page while mounting.
+const headerRef = ref()
+const toolbarRef = ref()
+const chatBadgeRef = ref()
+const chatBadgeTop = ref(0)
+const chatBadgeBottom = ref(0)
+useResizeObserver([headerRef, chatBadgeRef], () => {
+  const toolbar: HTMLElement | undefined = toolbarRef.value?.$el
+  const badge: HTMLElement | undefined = chatBadgeRef.value?.$el
+  if (!toolbar || !badge)
+    return
+  // iOS pads the first header toolbar with the safe area; center within the content below it
+  const paddingTop = Number.parseFloat(getComputedStyle(toolbar).paddingTop) || 0
+  chatBadgeTop.value = toolbar.offsetTop + paddingTop + (toolbar.offsetHeight - paddingTop - badge.offsetHeight) / 2
+  chatBadgeBottom.value = chatBadgeTop.value + badge.offsetHeight
+})
 const homeElementVisible = useElementVisibility(homeRoot)
 const openModalCount = ref(0)
 useEventListener(document, 'ionModalDidPresent', () => {
@@ -245,9 +263,9 @@ onMounted(() => {
 
 <template>
   <IonPage ref="homeRoot" class="bg-[var(--colors-gray)]">
-    <IonHeader class="ion-no-border">
+    <IonHeader ref="headerRef" class="ion-no-border">
       <BackupNotification v-if="isRecoveryWordsShown" />
-      <IonToolbar class="px-2">
+      <IonToolbar ref="toolbarRef" class="px-2">
         <IonButtons slot="start">
           <IonButton aria-label="Open menu" @click="showModal(Modal.Menu, { isSmall: true })">
             <MenuIcon class="h-5 w-7 opacity-30" />
@@ -352,8 +370,8 @@ onMounted(() => {
 
     <!-- Live Chat -->
     <IonBackdrop v-if="liveChatEnabled && liveChatShown" class="bg-black opacity-[0.32] z-20" @ion-backdrop-tap="liveChatShown = false" />
-    <LiveChatBadge v-if="liveChatEnabled" class="absolute top-[10px] left-[72px] z-20" />
-    <LiveChat />
+    <LiveChatBadge v-if="liveChatEnabled" ref="chatBadgeRef" class="absolute left-[72px] z-20" :style="{ top: `${chatBadgeTop}px` }" />
+    <LiveChat :style="{ '--top-margin': `${chatBadgeBottom}px` }" />
   </IonPage>
 </template>
 

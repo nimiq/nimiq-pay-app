@@ -27,12 +27,18 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1977
-#: src/stores/transactions.ts:339
+#: src/stores/polygon-usdt.ts:2160
+msgid "A previous transaction was confirmed. No new payment was sent."
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:2125
+#: src/stores/polygon-usdt.ts:2372
+#: src/stores/polygon-usdt.ts:2385
+#: src/stores/transactions.ts:340
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:356
+#: src/stores/transactions.ts:357
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
@@ -41,7 +47,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:38
-#: src/views/HomeView.vue:190
+#: src/views/HomeView.vue:208
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -49,7 +55,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:183
+#: src/views/HomeView.vue:201
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -65,7 +71,7 @@ msgstr ""
 msgid "Add new card"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:86
+#: src/lib/mini-app-confirmation.ts:101
 #: src/types/transactions.ts:149
 msgid "Add Stake"
 msgstr ""
@@ -85,7 +91,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:567
+#: src/lib/flows/index.ts:576
 msgid "Address saved"
 msgstr ""
 
@@ -127,7 +133,7 @@ msgstr ""
 msgid "Amount exceeds payment limit of {fiatAmount}"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:62
+#: src/composables/useBitcoinLightning.ts:114
 msgid "Amount too small"
 msgstr ""
 
@@ -177,7 +183,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:620
+#: src/lib/flows/index.ts:629
 msgid "Backup successful"
 msgstr ""
 
@@ -201,7 +207,7 @@ msgstr ""
 msgid "Biometric is not supported on this device"
 msgstr ""
 
-#: src/composables/useStringParser.ts:230
+#: src/composables/useStringParser.ts:231
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
@@ -250,6 +256,7 @@ msgstr ""
 msgid "Calculating Polygon fee..."
 msgstr ""
 
+#: src/components/ChatConfirmDialog.vue:13
 #: src/components/PhoneInput.vue:66
 #: src/components/TheHomeTransactions.vue:67
 #: src/components/WithdrawalAddressList.vue:21
@@ -257,7 +264,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useStringParser.ts:276
+#: src/composables/useStringParser.ts:277
 msgid "Cannot create swap"
 msgstr ""
 
@@ -265,7 +272,7 @@ msgstr ""
 msgid "Cannot enable biometric"
 msgstr ""
 
-#: src/composables/useStringParser.ts:263
+#: src/composables/useStringParser.ts:264
 msgid "Cannot fetch existing swap"
 msgstr ""
 
@@ -429,28 +436,24 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:554
-#: src/stores/transactions.ts:568
+#: src/stores/transactions.ts:555
+#: src/stores/transactions.ts:569
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1032
+#: src/stores/polygon-usdt.ts:1134
 msgid "Could not determine Polygon transaction hash"
 msgstr ""
 
-#: src/composables/useStringParser.ts:281
+#: src/composables/useStringParser.ts:282
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2084
+#: src/stores/polygon-usdt.ts:2516
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1901
-msgid "Could not persist Polygon transaction"
-msgstr ""
-
-#: src/stores/transactions.ts:351
+#: src/stores/transactions.ts:352
 msgid "Could not verify pending transactions"
 msgstr ""
 
@@ -462,7 +465,7 @@ msgstr ""
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:81
+#: src/lib/mini-app-confirmation.ts:96
 #: src/types/transactions.ts:148
 msgid "Create Staker"
 msgstr ""
@@ -471,7 +474,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:112
+#: src/views/HomeView.vue:130
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -675,11 +678,11 @@ msgstr ""
 msgid "Failed to delete Points account"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:129
+#: src/composables/useBitcoinLightning.ts:181
 msgid "Failed to fetch LNURL service"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:110
+#: src/composables/useBitcoinLightning.ts:162
 msgid "Failed to fetch payment request"
 msgstr ""
 
@@ -847,12 +850,12 @@ msgid "Invalid"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:43
-#: src/stores/polygon-usdt.ts:297
-#: src/stores/polygon-usdt.ts:311
+#: src/stores/polygon-usdt.ts:399
+#: src/stores/polygon-usdt.ts:413
 msgid "Invalid amount"
 msgstr ""
 
-#: src/composables/useStringParser.ts:239
+#: src/composables/useStringParser.ts:240
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr ""
 
@@ -864,7 +867,7 @@ msgstr ""
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:44
+#: src/composables/useBitcoinLightning.ts:96
 msgid "Invalid callback URL"
 msgstr ""
 
@@ -906,7 +909,7 @@ msgstr ""
 msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:144
+#: src/composables/useBitcoinLightning.ts:195
 msgid "Invalid LNURL"
 msgstr ""
 
@@ -923,11 +926,11 @@ msgstr ""
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/composables/useStringParser.ts:341
+#: src/composables/useStringParser.ts:342
 msgid "Invalid Nimiq Wallet request. Missing recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:335
+#: src/composables/useStringParser.ts:336
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
 msgstr ""
 
@@ -965,7 +968,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:94
-#: src/stores/polygon-usdt.ts:2006
+#: src/stores/polygon-usdt.ts:2420
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -983,17 +986,17 @@ msgstr ""
 msgid "Invalid USDT address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:420
+#: src/composables/useStringParser.ts:421
 msgid "Invalid USDT Wallet request. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:400
+#: src/composables/useStringParser.ts:401
 msgid "Invalid USDT Wallet request. Only Polygon network requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:397
-#: src/composables/useStringParser.ts:408
-#: src/composables/useStringParser.ts:412
+#: src/composables/useStringParser.ts:398
+#: src/composables/useStringParser.ts:409
+#: src/composables/useStringParser.ts:413
 msgid "Invalid USDT Wallet request. Only USDT Wallet requests are supported."
 msgstr ""
 
@@ -1035,7 +1038,7 @@ msgstr ""
 msgid "Learn what is new in this update"
 msgstr ""
 
-#: src/composables/useBitcoinLightning.ts:71
+#: src/composables/useBitcoinLightning.ts:123
 msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
 msgstr ""
 
@@ -1146,7 +1149,7 @@ msgid "NFC is not supported on this device"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:66
-#: src/stores/transactions.ts:362
+#: src/stores/transactions.ts:363
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1158,7 +1161,7 @@ msgstr ""
 msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:98
+#: src/lib/mini-app-confirmation.ts:113
 msgid "No"
 msgstr ""
 
@@ -1169,8 +1172,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:30
 #: src/stores/local-wallet.ts:81
 #: src/stores/local-wallet.ts:90
-#: src/stores/polygon-usdt.ts:1859
-#: src/stores/polygon-usdt.ts:1969
+#: src/stores/polygon-usdt.ts:2111
+#: src/stores/polygon-usdt.ts:2376
 msgid "No account has been found"
 msgstr ""
 
@@ -1240,7 +1243,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2011
+#: src/stores/polygon-usdt.ts:2425
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1370,7 +1373,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:434
+#: src/lib/flows/index.ts:439
 msgid "Payment successful"
 msgstr ""
 
@@ -1413,7 +1416,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:649
+#: src/lib/flows/index.ts:658
 msgid "PIN change successful"
 msgstr ""
 
@@ -1478,11 +1481,15 @@ msgstr ""
 msgid "Polygon fee"
 msgstr ""
 
+#: src/stores/polygon-usdt.ts:2431
+msgid "Polygon fee changed; review the payment again"
+msgstr ""
+
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:1797
-#: src/stores/polygon-usdt.ts:1863
-#: src/stores/polygon-usdt.ts:1944
-#: src/stores/polygon-usdt.ts:1973
+#: src/stores/polygon-usdt.ts:2008
+#: src/stores/polygon-usdt.ts:2115
+#: src/stores/polygon-usdt.ts:2346
+#: src/stores/polygon-usdt.ts:2382
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1490,29 +1497,30 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1932
+#: src/stores/polygon-usdt.ts:2331
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2182
+#: src/stores/polygon-usdt.ts:2629
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2104
-#: src/stores/polygon-usdt.ts:2119
+#: src/stores/polygon-usdt.ts:2537
+#: src/stores/polygon-usdt.ts:2562
 msgid "Polygon swap transaction failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2041
+#: src/stores/polygon-usdt.ts:2460
 msgid "Polygon swap transaction is already pending"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:1912
-#: src/stores/polygon-usdt.ts:1917
+#: src/stores/polygon-usdt.ts:2185
+#: src/stores/polygon-usdt.ts:2305
+#: src/stores/polygon-usdt.ts:2311
 msgid "Polygon transaction failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:413
+#: src/stores/polygon-usdt.ts:514
 msgid "Polygon transaction not found after relay"
 msgstr ""
 
@@ -1582,7 +1590,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:108
+#: src/lib/mini-app-confirmation.ts:123
 #: src/types/transactions.ts:153
 msgid "Remove Stake"
 msgstr ""
@@ -1600,7 +1608,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:191
+#: src/views/HomeView.vue:209
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1608,7 +1616,7 @@ msgstr ""
 msgid "Resend"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:103
+#: src/lib/mini-app-confirmation.ts:118
 #: src/types/transactions.ts:152
 msgid "Retire Stake"
 msgstr ""
@@ -1716,7 +1724,7 @@ msgstr ""
 msgid "Server not available"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:90
+#: src/lib/mini-app-confirmation.ts:105
 #: src/types/transactions.ts:150
 msgid "Set Active Stake"
 msgstr ""
@@ -1738,8 +1746,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:513
-#: src/lib/flows/index.ts:522
+#: src/lib/flows/index.ts:518
+#: src/lib/flows/index.ts:527
 msgid "Something went wrong"
 msgstr ""
 
@@ -1790,7 +1798,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:325
 #: src/composables/useApi.ts:332
-#: src/composables/useMiniAppHost.ts:1674
+#: src/composables/useMiniAppHost.ts:2051
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1858,11 +1866,11 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2127
+#: src/stores/polygon-usdt.ts:2574
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:390
+#: src/composables/useMiniAppHost.ts:441
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1870,7 +1878,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:182
+#: src/views/HomeView.vue:200
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1917,7 +1925,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:636
+#: src/lib/flows/index.ts:645
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1927,7 +1935,15 @@ msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
 #: src/lib/flows/index.ts:357
-#: src/lib/flows/index.ts:515
+#: src/lib/flows/index.ts:520
+#: src/stores/polygon-usdt.ts:2141
+#: src/stores/polygon-usdt.ts:2153
+#: src/stores/polygon-usdt.ts:2177
+#: src/stores/polygon-usdt.ts:2249
+#: src/stores/polygon-usdt.ts:2260
+#: src/stores/polygon-usdt.ts:2270
+#: src/stores/polygon-usdt.ts:2285
+#: src/stores/polygon-usdt.ts:2302
 msgid "The transaction may have been sent and is still pending. Do not retry."
 msgstr ""
 
@@ -1979,7 +1995,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:354
+#: src/composables/useMiniAppHost.ts:405
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2039,24 +2055,24 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:574
+#: src/stores/transactions.ts:575
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:615
-#: src/stores/transactions.ts:634
+#: src/stores/transactions.ts:616
+#: src/stores/transactions.ts:635
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:577
+#: src/stores/transactions.ts:578
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:674
+#: src/stores/transactions.ts:675
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:417
+#: src/stores/polygon-usdt.ts:518
 msgid "Transaction was not mined on Polygon"
 msgstr ""
 
@@ -2113,7 +2129,7 @@ msgstr ""
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:95
+#: src/lib/mini-app-confirmation.ts:110
 #: src/types/transactions.ts:151
 msgid "Update Staker"
 msgstr ""
@@ -2167,37 +2183,42 @@ msgstr ""
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
+#: src/stores/polygon-usdt.ts:2378
+#: src/stores/polygon-usdt.ts:2393
+msgid "Wallet changed before sending"
+msgstr ""
+
 #: src/stores/sync/remote-signers.ts:72
 #: src/stores/sync/remote-signers.ts:85
-#: src/stores/transactions.ts:347
-#: src/stores/transactions.ts:366
-#: src/stores/transactions.ts:377
-#: src/stores/transactions.ts:445
-#: src/stores/transactions.ts:454
-#: src/stores/transactions.ts:464
-#: src/stores/transactions.ts:519
-#: src/stores/transactions.ts:536
-#: src/stores/transactions.ts:562
-#: src/stores/transactions.ts:586
-#: src/stores/transactions.ts:601
+#: src/stores/transactions.ts:348
+#: src/stores/transactions.ts:367
+#: src/stores/transactions.ts:378
+#: src/stores/transactions.ts:446
+#: src/stores/transactions.ts:455
+#: src/stores/transactions.ts:465
+#: src/stores/transactions.ts:520
+#: src/stores/transactions.ts:537
+#: src/stores/transactions.ts:563
+#: src/stores/transactions.ts:587
 #: src/stores/transactions.ts:602
-#: src/stores/transactions.ts:624
-#: src/stores/transactions.ts:677
-#: src/stores/transactions.ts:685
-#: src/stores/transactions.ts:695
-#: src/stores/transactions.ts:703
-#: src/stores/transactions.ts:711
-#: src/stores/transactions.ts:745
-#: src/stores/transactions.ts:751
+#: src/stores/transactions.ts:603
+#: src/stores/transactions.ts:625
+#: src/stores/transactions.ts:678
+#: src/stores/transactions.ts:686
+#: src/stores/transactions.ts:696
+#: src/stores/transactions.ts:704
+#: src/stores/transactions.ts:712
+#: src/stores/transactions.ts:746
 #: src/stores/transactions.ts:756
 #: src/stores/transactions.ts:761
 #: src/stores/transactions.ts:766
-#: src/stores/transactions.ts:781
-#: src/stores/transactions.ts:786
-#: src/stores/transactions.ts:791
-#: src/stores/transactions.ts:797
-#: src/stores/transactions.ts:800
-#: src/stores/transactions.ts:803
+#: src/stores/transactions.ts:771
+#: src/stores/transactions.ts:789
+#: src/stores/transactions.ts:794
+#: src/stores/transactions.ts:799
+#: src/stores/transactions.ts:805
+#: src/stores/transactions.ts:808
+#: src/stores/transactions.ts:811
 msgid "Wallet or network changed before sending"
 msgstr ""
 
@@ -2309,7 +2330,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:525
+#: src/lib/flows/index.ts:534
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -2327,7 +2348,7 @@ msgstr ""
 msgid "Wrong answer"
 msgstr ""
 
-#: src/composables/useStringParser.ts:235
+#: src/composables/useStringParser.ts:236
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
@@ -2335,7 +2356,7 @@ msgstr ""
 msgid "Wrong number of recovery words"
 msgstr ""
 
-#: src/lib/mini-app-confirmation.ts:98
+#: src/lib/mini-app-confirmation.ts:113
 msgid "Yes"
 msgstr ""
 
@@ -2373,7 +2394,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:196
+#: src/views/HomeView.vue:214
 msgid "You have a reward to claim!"
 msgstr ""
 

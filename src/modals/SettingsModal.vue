@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import type { IonToggleCustomEvent, ToggleChangeEventDetail } from '@ionic/core'
-import { App } from '@capacitor/app'
-import { Device } from '@capacitor/device'
-import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { IonBackButton, IonButtons, IonItem, IonLabel, IonList, IonNote, IonSelect, IonSelectOption, IonToggle } from '@ionic/vue'
 import { computedAsync, onLongPress, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -15,17 +12,15 @@ import { useNotifications } from '@/composables/useNotifications'
 import { toCoins } from '@/composables/usePrice'
 import { LANGUAGE_LABELS, setLanguage, SUPPORTED_LANGUAGES } from '@/i18n/i18n-setup'
 import { isMiniAppsEnabled } from '@/lib'
+import { getBundleVersion, logDiagnostics } from '@/lib/diagnostics'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { Crypto, DECIMALS, Fiat, PushNotificationsStatus, useApp } from '@/stores/app'
-import { useLocks } from '@/stores/locks'
-import { useRemoteSigner } from '@/stores/remote-signer'
 
 const logger = useLogger('SettingsModal')
 
 const { showModal, closeModal } = useModal()
 const { isBiometricSupported, isBiometricEnabled, updateBiometryInfo } = useBiometric()
-const { getAllRemoteSigners } = useRemoteSigner()
 const {
   language,
   selectedFiat,
@@ -39,45 +34,15 @@ const {
 
 // Threshold is stored in luna; show it in NIM. Edited via the AutoDepositThreshold modal.
 const htlcThresholdNim = computed(() => toCoins(htlcThreshold.value, Crypto.NIM))
-const { headChangePendingDrainLock, htlcCheckLock, headChangeUpdatesLock, isNetworkReconnecting, isProcessingRemote, isSendingTx, isSyncingWallets, isUpdatingTransactions } = storeToRefs(useLocks())
 
 const { unregisterNotifications, registerNotifications, requestLocalNotificationsPermission } = useNotifications()
 const htmlRefHook = ref<HTMLElement | null>(null)
 const nimDecimalsOptions = [0, 2, DECIMALS.NIM]
 
-const bundleVersion = computedAsync(async () => {
-  try {
-    const version = (await CapacitorUpdater.current()).bundle.version
-    if (version)
-      return version
-  }
-  catch (e) {
-    logger.error('Error getting bundle version:', e)
-  }
+const bundleVersion = computedAsync(getBundleVersion)
 
-  try {
-    return (await App.getInfo()).version
-  }
-  catch (e) {
-    logger.error('Error getting native version:', e)
-    return '0.0.0'
-  }
-})
 async function onLongPressCallback() {
-  logger.log({
-    headChangePendingDrainLock: headChangePendingDrainLock.value,
-    htlcCheckLock: htlcCheckLock.value,
-    headChangeUpdatesLock: headChangeUpdatesLock.value,
-    isNetworkReconnecting: isNetworkReconnecting.value,
-    isProcessingRemote: isProcessingRemote.value,
-    isSendingTx: isSendingTx.value,
-    isSyncingWallets: isSyncingWallets.value,
-    isUpdatingTransactions: isUpdatingTransactions.value,
-  })
-
-  logger.log('Remote signers:', await getAllRemoteSigners())
-  logger.log('Device Info:', await Device.getInfo())
-  logger.log(`Nimiq Pay bundle v${bundleVersion.value}`)
+  await logDiagnostics()
   logger.sendReport()
 }
 

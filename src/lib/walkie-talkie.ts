@@ -43,6 +43,16 @@ export async function sendMessage(userId: string, sessionId: string, message: st
   })
 }
 
+// Backend rejects decoded files over 10 MiB
+export const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024
+
+export async function uploadAttachment(userId: string, sessionId: string, filename: string, contentBase64: string): Promise<{ file_id: string }> {
+  return request<{ file_id: string }>(`${BASE_URL}/user/${encodeURIComponent(userId)}/session/${encodeURIComponent(sessionId)}/attachment`, {
+    method: 'POST',
+    body: JSON.stringify({ filename, content_base64: contentBase64 }),
+  })
+}
+
 export async function getHistory(userId: string, sessionId: string, fromId: string): Promise<WtMessage[]> {
   return request<WtMessage[]>(`${BASE_URL}/user/${encodeURIComponent(userId)}/session/${encodeURIComponent(sessionId)}/history/${encodeURIComponent(fromId)}`)
 }
