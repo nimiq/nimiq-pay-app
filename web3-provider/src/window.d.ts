@@ -21,6 +21,9 @@ interface EIP6963AnnounceProviderEvent extends CustomEvent {
 /** Mirrors `Fiat` from `@nimiq/mini-app-sdk` — keep values in sync. */
 type NimiqPayFiat = 'USD' | 'EUR' | 'CRC' | 'GMD'
 
+/** Mirrors `Network` from `@nimiq/mini-app-sdk` — keep values in sync. */
+type NimiqPayNetwork = 'mainnet' | 'testnet'
+
 /**
  * Window interface extension for `mobileApp` injected by InAppBrowser plugin
  */
@@ -36,12 +39,14 @@ export declare global {
     /** Ethereum RPC URL injected by the host before this script runs. */
     __ETH_RPC_URL__?: string
     /** Host context seeded by Nimiq Pay before the provider script runs. */
-    __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat }
+    __NIMIQ_PAY__?: { lang?: string, userFiat?: NimiqPayFiat, network?: NimiqPayNetwork }
     /** Public host APIs exposed to mini apps. */
     nimiqPay?: {
       readonly language?: string
       /** Fiat currency selected by the user in Nimiq Pay. */
       readonly userFiat?: NimiqPayFiat
+      /** Nimiq network Nimiq Pay is connected to. */
+      readonly network?: NimiqPayNetwork
       /** Enter native fullscreen after the Mini App has asked the user. */
       requestFullscreen: () => Promise<void>
       exitFullscreen: () => Promise<void>

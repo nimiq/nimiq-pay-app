@@ -23,6 +23,9 @@ const hostLanguage = computed((): string => {
 // Host-selected fiat currency (Nimiq Pay). Falls back to USD outside of Nimiq Pay.
 const hostFiat = computed((): string => window.nimiqPay?.userFiat ?? 'USD')
 
+// Nimiq network Nimiq Pay runs on. Falls back to mainnet outside of Nimiq Pay.
+const hostNetwork = computed((): string => window.nimiqPay?.network ?? 'mainnet')
+
 interface I18nEntry { greeting: string, tagline: string }
 const DEFAULT_I18N: I18nEntry = { greeting: 'Hello', tagline: 'Nimiq Pay mini-app starter' }
 const I18N: Record<string, I18nEntry> = {
@@ -115,6 +118,9 @@ onBeforeUnmount(() => stopFullscreenChanges?.())
   </p>
   <p data-testid="host-fiat" style="opacity: 0.7; margin: 0 0 8px;">
     Fiat: {{ hostFiat }}
+  </p>
+  <p data-testid="host-network" style="opacity: 0.7; margin: 0 0 8px;">
+    Network: {{ hostNetwork }}
   </p>
   <p data-testid="device-identifier" style="opacity: 0.7; margin: 0 0 8px;">
     Device Identifier: {{ deviceIdentifier ?? 'not requested' }}
