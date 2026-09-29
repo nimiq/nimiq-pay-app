@@ -200,6 +200,7 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
     const hostContext = JSON.stringify({
       lang: options.language ?? 'en',
       userFiat: options.userFiat ?? Fiat.USD,
+      network: isTestnet ? 'testnet' : 'mainnet',
     })
     const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
 
