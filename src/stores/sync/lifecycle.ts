@@ -44,17 +44,24 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (!hasLocalWallet.value)
       return
 
-    await updateTransactionHistory()
-    await updateTransactionsInDb()
+    // useTimeoutPoll only reschedules after the callback resolves, so one throw would end the poll for the session.
+    try {
+      await updateTransactionHistory()
+      await updateTransactionsInDb()
+    }
+    catch (error) {
+      logger.error('Periodic transaction refresh failed', error)
+    }
   }, 30_000, { immediate: false })
 
   // Reloading from DB catches transactions saved outside the in-memory list.
   const { resume: startPeriodicDbRefresh } = useTimeoutPoll(async () => {
     if (!hasLocalWallet.value)
       return
-    await useTransactions().refreshFromDb()
+    // Catch each call on its own: a throw would end the poll, and a failing DB read must not skip balance updates.
+    await useTransactions().refreshFromDb().catch(error => logger.error('Periodic DB refresh failed', error))
     if (client.value && consensus.value === 'established')
-      await updateBalances()
+      await updateBalances().catch(error => logger.error('Periodic balance refresh failed', error))
   }, 30_000, { immediate: false })
 
   interface ListenerHandle {
@@ -95,6 +102,8 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   ) {
     if (!isCurrent())
       return false
+    // Both callers restore pending sends first. Start before any step that can fail, so a failure can't leave it off.
+    startPeriodicTransactionRefresh()
     if (!await registerWalletListeners(context, isCurrent))
       return false
     logger.log('Updating balances')
@@ -119,9 +128,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
 
     logger.log(`🧬 Starting to sync wallets. Local height: ${localHeight.value}. Remote height: ${remoteHeight.value}`)
     await Promise.all([handleFunds(), checkRemoteValidity(), extendValidity()])
-    if (!isCurrent())
-      return false
-    startPeriodicTransactionRefresh()
     return isCurrent()
   }
 
