@@ -197,6 +197,99 @@ describe('useSyncLifecycle', () => {
       expect(state.isSyncingWallets).toBe(false)
     })
 
+    describe('periodic refresh', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      })
+
+      it('does not start the periodic transaction refresh while pending sends are not restored', async () => {
+        state.restorePendingOutgoingTransactions.mockResolvedValue(false)
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).not.toHaveBeenCalled()
+      })
+
+      it('starts the periodic transaction refresh even when an online sync step fails', async () => {
+        const { useSyncBalances } = await import('./balances')
+        const { useSyncTransactions } = await import('./transactions')
+        const error = new Error('balances failed')
+        vi.spyOn(useSyncBalances(), 'updateBalances').mockRejectedValue(error)
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+
+        await expect(useSyncLifecycle().syncWallets()).rejects.toThrow(error)
+        await flushPromises()
+        expect(updateTransactionsInDb).not.toHaveBeenCalled()
+
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledOnce()
+      })
+
+      it('starts the periodic transaction refresh when an offline startup becomes ready', async () => {
+        const onlineClient = state.client
+        state.client = undefined
+        state.consensus = 'connecting'
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+
+        state.client = onlineClient
+        state.consensus = 'established'
+        await vi.waitFor(() => expect(onlineClient.addHeadChangedListener).toHaveBeenCalledTimes(2))
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledOnce()
+      })
+
+      it('keeps the periodic transaction refresh running after a failed run', async () => {
+        const { useSyncTransactions } = await import('./transactions')
+        vi.spyOn(useSyncTransactions(), 'updateTransactionHistory').mockResolvedValue()
+        const updateTransactionsInDb = vi.spyOn(useSyncTransactions(), 'updateTransactionsInDb').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+        const callsAfterSync = updateTransactionsInDb.mock.calls.length
+        const error = new Error('db query failed')
+        updateTransactionsInDb.mockRejectedValueOnce(error)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(updateTransactionsInDb).toHaveBeenCalledTimes(callsAfterSync + 2)
+        expect(state.logger.error).toHaveBeenCalledWith('Periodic transaction refresh failed', error)
+      })
+
+      it('keeps the periodic DB refresh and balance updates running after a failed DB read', async () => {
+        const { useSyncBalances } = await import('./balances')
+        const updateBalances = vi.spyOn(useSyncBalances(), 'updateBalances').mockResolvedValue()
+        const { useSyncLifecycle } = await import('./lifecycle')
+        await useSyncLifecycle().syncWallets()
+        await flushPromises()
+        const dbCallsAfterSync = state.refreshFromDb.mock.calls.length
+        const balanceCallsAfterSync = updateBalances.mock.calls.length
+        const error = new Error('db refresh failed')
+        state.refreshFromDb.mockRejectedValueOnce(error)
+
+        await vi.advanceTimersByTimeAsync(30_000)
+        await vi.advanceTimersByTimeAsync(30_000)
+
+        expect(state.refreshFromDb).toHaveBeenCalledTimes(dbCallsAfterSync + 2)
+        expect(updateBalances).toHaveBeenCalledTimes(balanceCallsAfterSync + 2)
+        expect(state.logger.error).toHaveBeenCalledWith('Periodic DB refresh failed', error)
+      })
+    })
+
     it('registers two head listeners and one local transaction listener', async () => {
       const { useSyncLifecycle } = await import('./lifecycle')
       await useSyncLifecycle().syncWallets()

@@ -295,7 +295,7 @@ onMounted(async () => {
   }
 
   logger.log('Initial checks done, starting sync process')
-  useSync().syncWallets()
+  useSync().syncWallets().catch(error => logger.error('Wallet sync failed', error))
   detectPaymentRequest()
 
   if (kycSdkStatus.value === SumsubSdkStatus.PENDING)

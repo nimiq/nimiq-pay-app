@@ -40,6 +40,7 @@ const updatePointsStatus = vi.fn()
 const updateNakaUser = vi.fn()
 const initNotifications = vi.fn()
 const syncWallets = vi.fn()
+const loggerError = vi.fn()
 const checkKycInBackground = vi.fn()
 const routerReplace = vi.fn()
 const libState = vi.hoisted(() => ({
@@ -161,7 +162,7 @@ vi.mock('@/components/TheHomeFooter.vue', () => ({
 
 vi.mock('@/composables/useLogger', () => ({
   useLogger: () => ({
-    error: vi.fn(),
+    error: loggerError,
     log: vi.fn(),
   }),
 }))
@@ -330,6 +331,8 @@ describe('mainView', () => {
     updateNakaUser.mockReset()
     initNotifications.mockReset()
     syncWallets.mockReset()
+    syncWallets.mockResolvedValue(undefined)
+    loggerError.mockReset()
     checkKycInBackground.mockReset()
     routerReplace.mockReset()
     libState.isTestnet = false
@@ -340,6 +343,16 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(updateNakaUser).not.toHaveBeenCalled()
+  })
+
+  it('logs a rejected wallet sync instead of leaving it unhandled', async () => {
+    const error = new Error('sync failed')
+    syncWallets.mockRejectedValue(error)
+
+    await mountComponent()
+    await flushPromises()
+
+    expect(loggerError).toHaveBeenCalledWith('Wallet sync failed', error)
   })
 
   it('does not show the NIM consensus banner when USDT is the active asset', async () => {
