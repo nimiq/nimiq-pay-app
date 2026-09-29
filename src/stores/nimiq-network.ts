@@ -94,8 +94,11 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     head.value = await client.value.getHeadBlock()
     networkId.value = await useNimiqNetwork().client!.getNetworkId()
 
-    const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(() => {
-      useNimiqNetwork().reconnect()
+    const { isPending: isPendingReconnectNetwork, start: startReconnectNetwork, stop: stopReconnectNetwork } = useTimeoutFn(async () => {
+      await useNimiqNetwork().reconnect()
+      // Consensus listener only arms the watchdog on an established -> lost transition, so re-arm it here
+      if (consensus.value !== 'established')
+        startReconnectNetwork()
     }, 2 * 60 * 1e3, { immediate: false }) // 2 minutes
 
     client.value.addConsensusChangedListener(async (newConsensus) => {
@@ -159,8 +162,15 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
         logger.log('Disconnected from network, connecting again...')
         await client.value?.connectNetwork()
 
-        await until(consensus).toBe('established')
-        logger.log('Connected to network')
+        // Bounded so a client that never regains consensus releases the lock and can be reconnected again
+        await until(consensus).toBe('established', { timeout: 2 * 60 * 1e3 })
+        if (consensus.value === 'established')
+          logger.log('Connected to network')
+        else
+          logger.warn('Reconnect timed out waiting for consensus', { consensus: consensus.value, peerCount: peerCount.value })
+      }
+      catch (error) {
+        logger.error('Reconnect failed', error)
       }
       finally {
         isNetworkReconnecting.value = false

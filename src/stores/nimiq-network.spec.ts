@@ -4,7 +4,7 @@ import { computed } from 'vue'
 
 const state = vi.hoisted(() => ({
   isNetworkReconnecting: false,
-  logger: { log: vi.fn(), error: vi.fn() },
+  logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
 vi.mock('@/composables/useLogger', () => ({ useLogger: () => state.logger }))
@@ -28,6 +28,7 @@ describe('useNimiqNetwork', () => {
     setActivePinia(createPinia())
     state.isNetworkReconnecting = false
     state.logger.log.mockReset()
+    state.logger.warn.mockReset()
     state.logger.error.mockReset()
     vi.stubGlobal('Nimiq', {
       Client: { create: vi.fn() },
@@ -102,6 +103,46 @@ describe('useNimiqNetwork', () => {
     store.consensus = 'established'
     await Promise.all([first, second])
     expect(client.connectNetwork).toHaveBeenCalledOnce()
+  })
+
+  it('releases the reconnect lock when consensus never returns', async () => {
+    vi.useFakeTimers()
+    const client = {
+      disconnectNetwork: vi.fn(() => Promise.resolve()),
+      connectNetwork: vi.fn(() => Promise.resolve()),
+    }
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = client as any
+    store.peerCount = 0
+    store.consensus = 'connecting'
+
+    const first = store.reconnect()
+    await vi.advanceTimersByTimeAsync(2 * 60 * 1e3)
+    await first
+
+    expect(state.isNetworkReconnecting).toBe(false)
+    expect(state.logger.warn).toHaveBeenCalledWith('Reconnect timed out waiting for consensus', expect.anything())
+
+    const second = store.reconnect()
+    expect(second).not.toBe(first)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(client.disconnectNetwork).toHaveBeenCalledTimes(2)
+  })
+
+  it('logs a failed reconnect and releases the lock', async () => {
+    const error = new Error('connect failed')
+    const { useNimiqNetwork } = await import('./nimiq-network')
+    const store = useNimiqNetwork()
+    store.client = {
+      disconnectNetwork: vi.fn(() => Promise.resolve()),
+      connectNetwork: vi.fn(() => Promise.reject(error)),
+    } as any
+    store.peerCount = 0
+
+    await expect(store.reconnect()).resolves.toBeUndefined()
+    expect(state.isNetworkReconnecting).toBe(false)
+    expect(state.logger.error).toHaveBeenCalledWith('Reconnect failed', error)
   })
 
   it('disconnects a history client when its consensus wait times out', async () => {
