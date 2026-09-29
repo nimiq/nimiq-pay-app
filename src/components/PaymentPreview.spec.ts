@@ -10,6 +10,8 @@ const polygonConsensus = ref<'established' | 'connecting'>('established')
 const isHtlcActive = ref(true)
 const isRemoteOk = ref(true)
 const selectedFiat = ref('EUR')
+const isUsdtMaintenanceActive = ref(false)
+const usdtMaintenanceNotice = ref('USDT maintenance notice')
 const checkPointsPaymentValidity = vi.fn()
 const setToast = vi.fn()
 const usePrice = vi.fn()
@@ -51,6 +53,10 @@ vi.mock('@/stores/app', () => ({
   useApp: () => ({
     selectedFiat,
   }),
+}))
+
+vi.mock('@/stores/feature-flags', () => ({
+  useFeatureFlags: () => ({ isUsdtMaintenanceActive, usdtMaintenanceNotice }),
 }))
 
 vi.mock('@capacitor/browser', () => ({
@@ -266,6 +272,7 @@ async function mountComponentWithoutPrefilledFiat() {
 
 describe('paymentPreview', () => {
   beforeEach(() => {
+    isUsdtMaintenanceActive.value = false
     usdtBalance.value = 500_000_000
     polygonConsensus.value = 'established'
     isHtlcActive.value = true
@@ -349,6 +356,16 @@ describe('paymentPreview', () => {
     expect(wrapper.find('[data-testid="polygon-warning"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Pay')
     expect(wrapper.find('[data-testid="points-toggle"]').exists()).toBe(false)
+  })
+
+  it('shows maintenance notice and blocks a USDT payment already in progress', async () => {
+    const wrapper = await mountComponent()
+    await flushPromises()
+    isUsdtMaintenanceActive.value = true
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain(usdtMaintenanceNotice.value)
+    expect(wrapper.get('[data-testid="payment-preview-pay"]').attributes('disabled')).toBeDefined()
   })
 
   it('disables the USDT pay action when the quoted fee pushes total debit above balance', async () => {

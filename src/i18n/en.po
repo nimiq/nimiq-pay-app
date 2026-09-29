@@ -32,8 +32,8 @@ msgid "A previous transaction was confirmed. No new payment was sent."
 msgstr ""
 
 #: src/stores/polygon-usdt.ts:2125
-#: src/stores/polygon-usdt.ts:2372
-#: src/stores/polygon-usdt.ts:2385
+#: src/stores/polygon-usdt.ts:2380
+#: src/stores/polygon-usdt.ts:2393
 #: src/stores/transactions.ts:340
 msgid "A transaction is already in progress"
 msgstr ""
@@ -91,7 +91,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:576
+#: src/lib/flows/index.ts:582
 msgid "Address saved"
 msgstr ""
 
@@ -117,7 +117,7 @@ msgstr ""
 msgid "Already paid"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:217
+#: src/components/PaymentPreview.vue:220
 msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
 msgstr ""
 
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:629
+#: src/lib/flows/index.ts:635
 msgid "Backup successful"
 msgstr ""
 
@@ -240,7 +240,7 @@ msgstr ""
 msgid "Builder"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:223
+#: src/components/PaymentPreview.vue:226
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr ""
 
@@ -399,7 +399,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:174
 #: src/components/PaymentAmountInput.vue:161
-#: src/views/MainView.vue:92
+#: src/views/MainView.vue:102
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -449,7 +449,7 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2516
+#: src/stores/polygon-usdt.ts:2528
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
@@ -645,7 +645,7 @@ msgid "Establishing consensus"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:172
-#: src/components/PaymentPreview.vue:199
+#: src/components/PaymentPreview.vue:202
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
@@ -968,7 +968,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:94
-#: src/stores/polygon-usdt.ts:2420
+#: src/stores/polygon-usdt.ts:2430
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -1047,7 +1047,7 @@ msgid "Loading"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:169
-#: src/components/PaymentPreview.vue:196
+#: src/components/PaymentPreview.vue:199
 msgid "Loading swap limits..."
 msgstr ""
 
@@ -1173,7 +1173,7 @@ msgstr ""
 #: src/stores/local-wallet.ts:81
 #: src/stores/local-wallet.ts:90
 #: src/stores/polygon-usdt.ts:2111
-#: src/stores/polygon-usdt.ts:2376
+#: src/stores/polygon-usdt.ts:2384
 msgid "No account has been found"
 msgstr ""
 
@@ -1243,7 +1243,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2425
+#: src/stores/polygon-usdt.ts:2435
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1291,7 +1291,7 @@ msgstr ""
 msgid "Opening…"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:245
+#: src/components/PaymentPreview.vue:248
 #: src/components/TheHomeFooter.vue:19
 msgid "Pay"
 msgstr ""
@@ -1373,7 +1373,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:439
+#: src/lib/flows/index.ts:445
 msgid "Payment successful"
 msgstr ""
 
@@ -1416,7 +1416,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:658
+#: src/lib/flows/index.ts:664
 msgid "PIN change successful"
 msgstr ""
 
@@ -1481,42 +1481,42 @@ msgstr ""
 msgid "Polygon fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2431
+#: src/stores/polygon-usdt.ts:2441
 msgid "Polygon fee changed; review the payment again"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
 #: src/stores/polygon-usdt.ts:2008
 #: src/stores/polygon-usdt.ts:2115
-#: src/stores/polygon-usdt.ts:2346
-#: src/stores/polygon-usdt.ts:2382
+#: src/stores/polygon-usdt.ts:2351
+#: src/stores/polygon-usdt.ts:2390
 msgid "Polygon is not ready yet"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:192
+#: src/components/PaymentPreview.vue:195
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2331
+#: src/stores/polygon-usdt.ts:2336
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2629
+#: src/stores/polygon-usdt.ts:2641
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2537
-#: src/stores/polygon-usdt.ts:2562
+#: src/stores/polygon-usdt.ts:2549
+#: src/stores/polygon-usdt.ts:2574
 msgid "Polygon swap transaction failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2460
+#: src/stores/polygon-usdt.ts:2472
 msgid "Polygon swap transaction is already pending"
 msgstr ""
 
 #: src/stores/polygon-usdt.ts:2185
-#: src/stores/polygon-usdt.ts:2305
-#: src/stores/polygon-usdt.ts:2311
+#: src/stores/polygon-usdt.ts:2310
+#: src/stores/polygon-usdt.ts:2316
 msgid "Polygon transaction failed"
 msgstr ""
 
@@ -1536,7 +1536,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:121
+#: src/views/MainView.vue:131
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1720,7 +1720,7 @@ msgid "Sender"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:183
-#: src/views/MainView.vue:109
+#: src/views/MainView.vue:119
 msgid "Server not available"
 msgstr ""
 
@@ -1746,8 +1746,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:518
-#: src/lib/flows/index.ts:527
+#: src/lib/flows/index.ts:524
+#: src/lib/flows/index.ts:533
 msgid "Something went wrong"
 msgstr ""
 
@@ -1866,7 +1866,7 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2574
+#: src/stores/polygon-usdt.ts:2586
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
@@ -1891,7 +1891,7 @@ msgstr ""
 msgid "Terms & Conditions"
 msgstr ""
 
-#: src/components/PaymentPreview.vue:228
+#: src/components/PaymentPreview.vue:231
 msgid "Terms of service"
 msgstr ""
 
@@ -1917,7 +1917,7 @@ msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Po
 msgstr ""
 
 #: src/components/PaymentAmountInput.vue:53
-#: src/components/PaymentPreview.vue:218
+#: src/components/PaymentPreview.vue:221
 msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
 msgstr ""
 
@@ -1925,7 +1925,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:645
+#: src/lib/flows/index.ts:651
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1935,15 +1935,15 @@ msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
 #: src/lib/flows/index.ts:357
-#: src/lib/flows/index.ts:520
+#: src/lib/flows/index.ts:526
 #: src/stores/polygon-usdt.ts:2141
 #: src/stores/polygon-usdt.ts:2153
 #: src/stores/polygon-usdt.ts:2177
-#: src/stores/polygon-usdt.ts:2249
-#: src/stores/polygon-usdt.ts:2260
-#: src/stores/polygon-usdt.ts:2270
-#: src/stores/polygon-usdt.ts:2285
-#: src/stores/polygon-usdt.ts:2302
+#: src/stores/polygon-usdt.ts:2254
+#: src/stores/polygon-usdt.ts:2265
+#: src/stores/polygon-usdt.ts:2275
+#: src/stores/polygon-usdt.ts:2290
+#: src/stores/polygon-usdt.ts:2307
 msgid "The transaction may have been sent and is still pending. Do not retry."
 msgstr ""
 
@@ -2138,11 +2138,15 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/views/MainView.vue:84
+#: src/views/MainView.vue:94
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
-#: src/lib/flows/index.ts:372
+#: src/stores/feature-flags.ts:16
+msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
+msgstr ""
+
+#: src/lib/flows/index.ts:377
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -2183,8 +2187,8 @@ msgstr ""
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2378
-#: src/stores/polygon-usdt.ts:2393
+#: src/stores/polygon-usdt.ts:2386
+#: src/stores/polygon-usdt.ts:2401
 msgid "Wallet changed before sending"
 msgstr ""
 
@@ -2330,7 +2334,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:534
+#: src/lib/flows/index.ts:540
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -2385,7 +2389,7 @@ msgid "You don't have enough Points for this purchase."
 msgstr ""
 
 #: src/components/PaymentAmountInput.vue:169
-#: src/components/PaymentPreview.vue:205
+#: src/components/PaymentPreview.vue:208
 #: src/composables/useUsdtQuoteRefresh.ts:45
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
 msgstr ""

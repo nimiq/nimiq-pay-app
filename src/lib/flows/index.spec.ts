@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   primeTransferFee: vi.fn(() => new Promise(() => {})),
   primeHtlcFee: vi.fn(() => new Promise(() => {})),
   polygonSendPayment: vi.fn(),
+  isUsdtMaintenanceActive: false,
   isNimiqAsset: false,
   activeAsset: 'NIM',
   trackFeatureOpened: vi.fn(),
@@ -90,6 +91,13 @@ vi.mock('@/stores/polygon-usdt', () => ({
     primeTransferFee: state.primeTransferFee,
     primeHtlcFee: state.primeHtlcFee,
     sendPayment: state.polygonSendPayment,
+  }),
+}))
+
+vi.mock('@/stores/feature-flags', () => ({
+  useFeatureFlags: () => ({
+    isUsdtMaintenanceActive: state.isUsdtMaintenanceActive,
+    usdtMaintenanceNotice: 'USDT maintenance notice',
   }),
 }))
 
@@ -178,6 +186,7 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.primeTransferFee.mockClear()
     state.primeHtlcFee.mockClear()
     state.isNimiqAsset = false
+    state.isUsdtMaintenanceActive = false
     state.activeAsset = 'NIM'
     state.trackFeatureOpened.mockClear()
     state.trackWalletCreated.mockClear()
@@ -397,6 +406,29 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(err).not.toHaveBeenCalled()
     expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Do not retry') }))
     expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('blocks a USDT payment when maintenance begins during the flow', async () => {
+    state.activeAsset = Asset.USDT
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    state.isUsdtMaintenanceActive = true
+    const err = vi.fn()
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToMerchant,
+        recipient: '0x00000000000000000000000000000000000000AA',
+        amount: 1_000_000,
+        merchantName: 'Coffee Shop',
+      },
+      [StepName.PaymentPreview]: { payWithPuntos: false },
+    }, { err, setToast: vi.fn() })
+
+    expect(err).toHaveBeenCalledWith('USDT maintenance notice')
+    expect(state.polygonSendPayment).not.toHaveBeenCalled()
   })
 
   it('does not report an uncertain Polygon withdrawal as failed or successful', async () => {

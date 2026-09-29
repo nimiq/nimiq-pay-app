@@ -22,6 +22,7 @@ import { shouldPreserveMiniAppSession, shouldReloadAppAfterBackground } from '@/
 import { isDev } from '@/lib/index'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocks } from '@/stores/locks'
 
 const logger = useLogger('App.vue')
@@ -151,6 +152,11 @@ App.addListener('resume', async () => {
   await useTransactions().refreshFromDb()
   void useSync().updateTransactionHistory()
 
+  // Flags may change while backgrounded; refresh without delaying the reconnect check below
+  void Posthog.reloadFeatureFlags()
+    .then(() => useFeatureFlags().refreshUsdtMaintenance())
+    .catch(error => logger.error('Failed to reload feature flags', error))
+
   const { getStatus } = useRemoteSignerApi()
   const { data, hasError } = await getStatus()
   if (hasError)
@@ -162,12 +168,6 @@ App.addListener('resume', async () => {
     logger.log('Local height is behind remote height, reconnecting...')
     useNimiqNetwork().reconnect()
   }
-
-  try {
-  // Reload feature flags, it may have changed but not updated until app is closed and reopened
-    await Posthog.reloadFeatureFlags()
-  }
-  catch {}
 })
 </script>
 

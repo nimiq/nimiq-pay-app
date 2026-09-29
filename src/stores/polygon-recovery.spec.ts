@@ -30,6 +30,7 @@ const mocks = vi.hoisted(() => ({
   confirmSwap: vi.fn(),
   provideFundingProof: vi.fn(),
   loggerError: vi.fn(),
+  isUsdtMaintenanceActive: false,
   transactions: {
     setPolygonSwapHtlcRefunded: vi.fn(),
     setPolygonSwapPreimage: vi.fn(),
@@ -80,7 +81,7 @@ vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
 vi.mock('@/lib/analytics', () => ({ trackSwapCompleted: vi.fn(), trackSwapFailed: vi.fn(), trackTopUpReceived: vi.fn() }))
 vi.mock('@/stores/feature-flags', async () => {
   const { ref } = await import('vue')
-  return { useFeatureFlags: () => ({ polygonRpcUrl: ref('https://polygon.example') }) }
+  return { useFeatureFlags: () => ({ polygonRpcUrl: ref('https://polygon.example'), isUsdtMaintenanceActive: ref(mocks.isUsdtMaintenanceActive), usdtMaintenanceNotice: ref('USDT maintenance notice') }) }
 })
 vi.mock('@/stores/conn', () => ({ useConn: () => ({ query: mocks.query, run: mocks.run }) }))
 vi.mock('@/stores/app', () => ({ useApp: () => ({ withdrawalAddressesHistory: [] }) }))
@@ -191,6 +192,7 @@ function recreateStore() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.isUsdtMaintenanceActive = false
   persistedPayment = null
   persistedPaymentAttempt = null
   mocks.getEthAddress.mockReturnValue({ data: undefined })
@@ -405,6 +407,17 @@ describe('polygon refund recovery through the store', () => {
 })
 
 describe('polygon payment submission through the store', () => {
+  it('rejects a new payment during maintenance without contacting the relay', async () => {
+    mocks.isUsdtMaintenanceActive = true
+    const store = recreateStore()
+    store.balance = 10_000_000
+
+    await expect(store.sendPayment({ recipient: mocks.walletAddress, amount: 1_000_000, fee: 1000, transfer: Transfer.UserPayment }, 'Payment'))
+      .resolves
+      .toMatchObject({ outcome: 'rejected', error: 'USDT maintenance notice' })
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
+  })
+
   it('persists intent before relay contact and blocks sequential retries after a lost response', async () => {
     mocks.relayTransaction.mockImplementationOnce(async () => {
       expect(persistedPaymentAttempt).toMatchObject({
@@ -779,6 +792,24 @@ describe('polygon payment submission through the store', () => {
     expect(result.error).toBeUndefined()
     expect(result.data?.tx).toMatchObject({ hash: mocks.relayHash, status: 'confirmed' })
     expect(mocks.transactions.updateTransactionStatus).toHaveBeenCalledWith({ hash: mocks.relayHash, status: 'confirmed', timestamp: now / 1000 })
+  })
+
+  it('blocks swap funding during maintenance', async () => {
+    mocks.isUsdtMaintenanceActive = true
+    const store = recreateStore()
+
+    const result = await store.sendSwapPayment({
+      recipient: 'lnbc-invoice',
+      amount: 1_000_000,
+      fee: 1000,
+      transfer: Transfer.UserPaymentToAtomicSwap,
+      paymentRef: 'swap-id',
+      rail: Rail.BitcoinLightning,
+    }, 'Payment')
+
+    expect(result).toMatchObject({ rejected: true, error: 'USDT maintenance notice' })
+    expect(mocks.confirmSwap).not.toHaveBeenCalled()
+    expect(mocks.relayTransaction).not.toHaveBeenCalled()
   })
 
   it('retains swap recovery when both replacement persistence attempts fail', async () => {

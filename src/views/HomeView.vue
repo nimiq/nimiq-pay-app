@@ -50,7 +50,7 @@ const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, g
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
 const { hasCard: hasNakaCard } = storeToRefs(useNaka())
-const { isNakaAvailable } = storeToRefs(useFeatureFlags())
+const { isNakaAvailable, isUsdtMaintenanceActive } = storeToRefs(useFeatureFlags())
 const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
@@ -303,7 +303,7 @@ onMounted(() => {
           <button aria-label="Top Up" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openTopUp">
             {{ $t('Top Up') }}
           </button>
-          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space" @click="openWithdraw">
+          <button aria-label="Withdraw" class="px-6 py-2 text-base font-bold rounded-full bg-space/[0.06] text-space disabled:opacity-50" :disabled="!isNimiqAsset && isUsdtMaintenanceActive" @click="openWithdraw">
             {{ $t('Withdraw') }}
           </button>
         </div>

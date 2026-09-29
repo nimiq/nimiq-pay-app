@@ -26,6 +26,7 @@ import { isMockEnabled } from '@/lib/mock-mode'
 import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useKyc } from '@/stores/kyc'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
@@ -43,6 +44,7 @@ const router = useRouter()
 
 const { isRemoteOk, isHtlcActive, remoteBalance, hasHtlcExpired } = storeToRefs(useRemoteSigner())
 const { phoneNumberVerified, displayedPaymentRequests, isNimiqAsset, htlcThreshold } = storeToRefs(useApp())
+const { isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
 const { locked, dbExists } = storeToRefs(useConn())
 const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
@@ -60,7 +62,7 @@ const isFirstRender = ref(true)
 const isPaymentDisabled = computed(() =>
   isNimiqAsset.value
     ? (pointsBalance.value === 0 && (!(isRemoteOk.value && isHtlcActive.value) || remoteBalance.value === 0)) || isProcessingRemote.value || isTransactionPending.value || hasHtlcExpired.value || htlcCanBeExtended.value
-    : polygonBalance.value === 0 || isProcessingRemote.value || isTransactionPending.value,
+    : isUsdtMaintenanceActive.value || polygonBalance.value === 0 || isProcessingRemote.value || isTransactionPending.value,
 )
 
 const isConsensusMessageShown = computed(() =>
@@ -79,8 +81,16 @@ watchEffect(async () => {
     return
 
   if (!isNimiqAsset.value) {
+    if (isUsdtMaintenanceActive.value) {
+      statusMessageText.value = usdtMaintenanceNotice.value
+      statusMessageBgColor.value = 'bg-[#F9EDE1]'
+      statusMessageTextColor.value = 'text-pumpkin'
+      statusMessageIconColor.value = 'text-pumpkin/60'
+      statusMessageIcon.value = markRaw(InfoIcon)
+      isStatusMessageShown.value = true
+    }
     // Mock mode fakes a working USDT setup even on testnet dev builds
-    if (isTestnet && !isMockEnabled) {
+    else if (isTestnet && !isMockEnabled) {
       statusMessageText.value = i18n.t('USDT is only available on mainnet. Switch to mainnet to use USDT.')
       statusMessageBgColor.value = 'bg-[#F9EDE1]'
       statusMessageTextColor.value = 'text-pumpkin'
