@@ -23,6 +23,7 @@ import { Asset, assetToCrypto, fastspotFeeTickerToCrypto, formatUsdtAmount } fro
 import { stepEmits, StepName } from '@/lib/flows/steps.types'
 import { roundUpToTwoDecimals } from '@/lib/utils'
 import { Fiat, useApp } from '@/stores/app'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -53,6 +54,7 @@ const { balance: usdtBalance, consensus: polygonConsensus } = storeToRefs(polygo
 const { formatFiat, formatCrypto } = useCurrencyFormatter()
 const { localAddress } = storeToRefs(useLocalWallet())
 const { selectedFiat } = storeToRefs(useApp())
+const { isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
 
 const payment = computed<PaymentRequestData>(() =>
   typeof props.state[StepName.QRCodeScanner] === 'object'
@@ -374,8 +376,11 @@ const remainingFiatLimits = computedAsync(async () => {
   return fiatAmount.fiat.formatted
 })
 
+const isUsdtMaintenanceBlocked = computed(() => asset.value === Asset.USDT && isUsdtMaintenanceActive.value)
+
 const disabled = computed(() =>
-  (isAtomicSwap.value && (loadingSwapLimits.value || loadingHtlcFee.value)) /* Not loaded yet */
+  isUsdtMaintenanceBlocked.value
+  || (isAtomicSwap.value && (loadingSwapLimits.value || loadingHtlcFee.value)) /* Not loaded yet */
   // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
   || (isAtomicSwap.value && !!swapAddressLimits.value && payment.value.amount > swapLimit.value) /* Over swap limit */
   || !(
@@ -406,7 +411,7 @@ watch(() => goCryptoError.value || flowErrorMessage.value, (message) => {
 }, { immediate: true })
 
 function handlePay() {
-  if (loading.value)
+  if (loading.value || isUsdtMaintenanceBlocked.value)
     return
 
   const paymentAnalytics = startPaymentAnalytics()
@@ -696,7 +701,10 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
             </p>
           </template>
           <template v-else-if="asset === Asset.USDT">
-            <p v-if="polygonConsensus !== 'established'" class="text-pumpkin">
+            <p v-if="isUsdtMaintenanceActive" class="text-pumpkin">
+              {{ usdtMaintenanceNotice }}
+            </p>
+            <p v-else-if="polygonConsensus !== 'established'" class="text-pumpkin">
               {{ $t('Polygon is still connecting. Please wait a moment.') }}
             </p>
             <p v-else-if="isAtomicSwap && (loadingSwapLimits || loadingHtlcFee)" class="flex items-center justify-center opacity-60 gap-x-2">
@@ -742,7 +750,7 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
         aria-label="Pay"
         expand="block"
         class="w-full text-base font-bold [&_ion-spinner]:h-4"
-        :disabled="!isConfirmationAlert && disabled"
+        :disabled="isUsdtMaintenanceBlocked || (!isConfirmationAlert && disabled)"
         @click="handlePay"
       >
         <Transition

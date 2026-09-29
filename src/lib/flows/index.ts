@@ -366,6 +366,11 @@ const paymentFlow: FlowInit = async () => {
         break
       }
       case PaymentMethod.USDT: {
+        const { useFeatureFlags } = await import('@/stores/feature-flags')
+        const featureFlags = useFeatureFlags()
+        if (featureFlags.isUsdtMaintenanceActive)
+          return failPayment(featureFlags.usdtMaintenanceNotice)
+
         const request = payment.request
         const polygonQuote = state[StepName.PaymentPreview]?.polygonQuote
         if (!isPaymentTransferType(request.transfer)) {

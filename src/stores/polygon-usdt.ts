@@ -1651,7 +1651,7 @@ async function fetchRangesParallel(
 }
 
 export const usePolygonUsdt = defineStore('polygon-usdt', () => {
-  const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
+  const { polygonRpcUrl, isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
   // Invalidate the cached client when the RPC URL changes from PostHog
   watch(polygonRpcUrl, (newUrl) => {
     if (newUrl !== resolvedRpcUrl) {
@@ -2186,6 +2186,9 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
         }
       }
 
+      if (isUsdtMaintenanceActive.value)
+        return { outcome: 'rejected', data: undefined, error: usdtMaintenanceNotice.value }
+
       const quote = await resolvePolygonTransferQuote({
         request,
         balance: balance.value,
@@ -2199,6 +2202,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       try {
         outcome = await relayTransaction(execution, {
           beforeRelay: async () => {
+            if (isUsdtMaintenanceActive.value)
+              throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
             await run(SQLQuery.InsertPolygonPaymentAttempt, [
               network,
               sender,
@@ -2367,6 +2372,9 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
     title: TransactionTitle,
     options: { onSubmitted?: (hash: string) => Promise<void>, onFundingUncertain?: (hash: string) => Promise<void>, expectedSender?: string, maxFee?: number } = {},
   ): Promise<Result<{ tx: TransactionSentByUser, serialized: string }, string> & { rejected?: boolean }> {
+    if (isUsdtMaintenanceActive.value)
+      return { data: undefined, error: usdtMaintenanceNotice.value, rejected: true }
+
     const swapKey = request.paymentRef!
     if (activeSwapPayments.has(swapKey))
       return { data: undefined, error: i18n.t('A transaction is already in progress') }
@@ -2400,6 +2408,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       let swap: import('@nimiq/fastspot-api-v1').Swap
       try {
+        if (isUsdtMaintenanceActive.value)
+          throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
         swap = await fastspotV1.confirmSwap(
           { id: request.paymentRef! } as import('@nimiq/fastspot-api-v1').PreSwap,
           { asset: fastspotV1.SwapAsset.BTC_LN },
@@ -2450,6 +2460,8 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       try {
         receipt = await relayTransaction(execution, {
           beforeRelay: async () => {
+            if (isUsdtMaintenanceActive.value)
+              throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
             const existingRow = await query<SwapHtlc | null>(
               SQLQuery.GetSwapHtlcByAddress,
               [provisionalSwapHtlcKey, provisionalSwapHtlcKey],

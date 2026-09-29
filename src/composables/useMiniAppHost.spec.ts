@@ -116,6 +116,9 @@ vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet,
 }))
 
+const featureFlags = vi.hoisted(() => ({ isUsdtMaintenanceActive: false, usdtMaintenanceNotice: 'USDT maintenance notice' }))
+vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => featureFlags }))
+
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({ query, run }),
 }))
@@ -267,6 +270,7 @@ function createReconnectHost(chainId = '0x89') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  featureFlags.isUsdtMaintenanceActive = false
   vi.unstubAllGlobals()
   vi.stubGlobal('Nimiq', {
     AccountType: { Basic: 0, Staking: 3 },
@@ -560,6 +564,16 @@ describe('MiniAppHost Lightning payments', () => { // eslint-disable-line test/p
 
     await expect(handleRequest(request)).rejects.toMatchObject({ type: 'INVALID_TRANSACTION', message: 'Relay rejected' })
     expect(run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM mini_app_lightning_payments'), [expect.any(String), 'invoice-hash'])
+  })
+
+  it('rejects USDT before confirmation during maintenance', async () => {
+    selectUsdt()
+    featureFlags.isUsdtMaintenanceActive = true
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest(request)).rejects.toMatchObject({ type: 'NETWORK_ERROR', message: 'USDT maintenance notice' })
+    expect(confirmationPrompt).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'lightning-payment' }))
+    expect(sendSwapPayment).not.toHaveBeenCalled()
   })
 
   it('rejects USDT when the balance cannot cover the relay fee', async () => {

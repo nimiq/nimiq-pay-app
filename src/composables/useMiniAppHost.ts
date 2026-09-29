@@ -21,6 +21,7 @@ import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
+import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
@@ -1862,6 +1863,8 @@ export class MiniAppHost {
         throw new InvalidTransactionError('Insufficient NIM balance')
       if (asset === Asset.USDT && (!ethAddress || polygon?.consensus !== 'established'))
         throw new NetworkError('USDT wallet is not ready')
+      if (asset === Asset.USDT && useFeatureFlags().isUsdtMaintenanceActive)
+        throw new NetworkError(useFeatureFlags().usdtMaintenanceNotice)
       let usdtFeeAllowance = 0
       if (polygon) {
         const feeSnapshot = await polygon.primeHtlcFee()

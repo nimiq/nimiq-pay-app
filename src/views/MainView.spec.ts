@@ -30,6 +30,8 @@ const isConsensusNeeded = ref(false)
 const isScannerActive = ref(false)
 const localBalance = ref(0)
 const htlcThreshold = ref(0)
+const isUsdtMaintenanceActive = ref(false)
+const usdtMaintenanceNotice = ref('USDT maintenance notice')
 const kycSdkStatus = ref('idle')
 
 const updatePointsBalance = vi.fn()
@@ -199,6 +201,10 @@ vi.mock('@/stores/app', () => ({
   }),
 }))
 
+vi.mock('@/stores/feature-flags', () => ({
+  useFeatureFlags: () => ({ isUsdtMaintenanceActive, usdtMaintenanceNotice }),
+}))
+
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({
     locked,
@@ -316,6 +322,7 @@ describe('mainView', () => {
     localBalance.value = 0
     htlcThreshold.value = 0
     kycSdkStatus.value = 'idle'
+    isUsdtMaintenanceActive.value = false
     updatePointsBalance.mockReset()
     updateTasks.mockReset()
     updatePointsStatus.mockReset()
@@ -358,6 +365,18 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('false')
+  })
+
+  it('shows maintenance notice and disables USDT Pay', async () => {
+    activeAsset.value = Asset.USDT
+    usdtBalance.value = 1_000_000
+    isUsdtMaintenanceActive.value = true
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('USDT maintenance notice')
+    expect(wrapper.get('[data-testid="home-footer"]').attributes('data-disabled')).toBe('true')
   })
 
   it('shows the USDT testnet warning instead of the Polygon connecting banner', async () => {
