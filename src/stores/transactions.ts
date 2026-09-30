@@ -168,8 +168,11 @@ export const useTransactions = defineStore('transactions', () => {
         ? JSON.stringify(tx.meta)
         : null,
       tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.hash,
       tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.hash,
       tx.validityStartHeight ?? null,
+      tx.hash,
     ]
   }
 
@@ -787,14 +790,8 @@ export const useTransactions = defineStore('transactions', () => {
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            staged.tx.meta = { secret }
-            staged.tx.status = 'confirmed'
-            await upsertTx(staged.tx)
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
-            if (index >= 0)
-              transactions.value[index].meta = { secret }
+            // Update only the swap result; other writers may have changed the row while settlement was pending.
+            await setSwapPreimage(staged.tx.hash, secret)
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
             trackSwapCompleted({
@@ -1076,19 +1073,22 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function setSwapHtlcRefunded(htlcAddress: string) {
-    const tx = transactions.value.find(tx => tx.recipient === htlcAddress)
-    if (tx) {
-      tx.meta = {
-        ...tx.meta,
-        refunded: true,
+    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
+    await run(SQLQuery.SetSwapTxRefundedByHtlc, [htlcAddress])
+    const index = transactions.value.findIndex(tx => tx.recipient === htlcAddress)
+    if (index >= 0) {
+      const nextTransactions = [...transactions.value]
+      nextTransactions[index] = {
+        ...nextTransactions[index],
+        meta: { ...nextTransactions[index].meta, refunded: true },
       }
-      await upsertTx(tx)
+      transactions.value = nextTransactions
     }
   }
 
-  async function setPolygonSwapPreimage(txHash: string, secret: string) {
+  async function setSwapPreimage(txHash: string, secret: string) {
     // A replacement may rename this hash while Fastspot is resolving; never recreate the old row.
-    await run(SQLQuery.SetPolygonSwapPreimage, [secret, txHash])
+    await run(SQLQuery.SetSwapPreimage, [secret, txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (storedTx && transactions.value.some(tx => tx.hash === txHash))
       addTransaction(storedTx)
@@ -1163,7 +1163,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
-    setPolygonSwapPreimage,
+    setSwapPreimage,
     setPolygonSwapHtlcRefunded,
     setNakaTxRefunded,
     setTxHidden,

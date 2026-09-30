@@ -33,7 +33,7 @@ const mocks = vi.hoisted(() => ({
   isUsdtMaintenanceActive: false,
   transactions: {
     setPolygonSwapHtlcRefunded: vi.fn(),
-    setPolygonSwapPreimage: vi.fn(),
+    setSwapPreimage: vi.fn(),
     addPaymentTransaction: vi.fn(),
     addPaymentToMerchantTransaction: vi.fn(),
     addWithdrawalTransaction: vi.fn(),
@@ -210,7 +210,7 @@ beforeEach(() => {
     persistedPayment = { ...tx }
     persistedHtlc = { ...persistedHtlc!, tx_hash: tx.hash }
   })
-  mocks.transactions.setPolygonSwapPreimage.mockImplementation(async (hash, secret) => {
+  mocks.transactions.setSwapPreimage.mockImplementation(async (hash, secret) => {
     if (!persistedPayment || persistedPayment.hash !== hash)
       return null
     const meta = typeof persistedPayment.meta === 'string' ? JSON.parse(persistedPayment.meta) : persistedPayment.meta
@@ -842,7 +842,7 @@ describe('polygon payment submission through the store', () => {
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenCalledTimes(2)
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenNthCalledWith(1, mocks.relayHash, replacementHash, mocks.htlcId)
     expect(mocks.transactions.replacePolygonTransactionHash).toHaveBeenNthCalledWith(2, mocks.relayHash, replacementHash, mocks.htlcId)
-    expect(mocks.transactions.setPolygonSwapPreimage).toHaveBeenCalledWith(replacementHash, 'secret')
+    expect(mocks.transactions.setSwapPreimage).toHaveBeenCalledWith(replacementHash, 'secret')
     expect(persistedPayment).toMatchObject({ hash: mocks.relayHash, status: 'pending' })
     expect(persistedHtlc).toMatchObject({ address: mocks.htlcId, tx_hash: mocks.relayHash })
     expect(mocks.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
@@ -1015,8 +1015,8 @@ describe('polygon transaction reconciliation through the store', () => {
     resolvePreimage({ preimage: 'late-secret' })
     await reconcile
 
-    expect(mocks.transactions.setPolygonSwapPreimage).toHaveBeenCalledWith(mocks.relayHash, 'late-secret')
-    await expect(mocks.transactions.setPolygonSwapPreimage.mock.results[0]!.value).resolves.toBeNull()
+    expect(mocks.transactions.setSwapPreimage).toHaveBeenCalledWith(mocks.relayHash, 'late-secret')
+    await expect(mocks.transactions.setSwapPreimage.mock.results[0]!.value).resolves.toBeNull()
     expect(mocks.transactions.replaceTransaction).not.toHaveBeenCalled()
     expect(persistedPayment).toMatchObject({ hash: replacementHash })
     expect(persistedHtlc).toMatchObject({ tx_hash: replacementHash })

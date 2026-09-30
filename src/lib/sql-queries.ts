@@ -37,7 +37,8 @@ export enum SQLQuery {
   GetAllUserReceipts = `SELECT hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\' ORDER BY timestamp DESC NULLS FIRST`, // eslint-disable-line ts/prefer-literal-enum-member
   GetUserReceiptSenders = `SELECT DISTINCT sender FROM transactions WHERE transfer = \'${Transfer.UserReceipt}\'`, // eslint-disable-line ts/prefer-literal-enum-member
   GetTransactionByHash = 'SELECT hash, validityStartHeight, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json as invoiced, meta_json as meta FROM transactions WHERE hash = ? LIMIT 1',
-  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  // List queries don't select senderData, recipientData or validityStartHeight; re-saving such a row keeps the stored values.
+  UpsertTx = 'INSERT OR REPLACE INTO transactions (hash, timestamp, sender, senderType, recipient, recipientType, amount, fee, status, raw, title, transfer, message, rail, railMerchantId, merchantName, merchantCategory, paymentRef, paymentMethod, fiatAmount, fiatFeeAmount, fiatCurrency, isCashbackClaimed, asset, chain, invoiced_json, meta_json, senderData, recipientData, validityStartHeight) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, (SELECT senderData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT recipientData FROM transactions WHERE hash = ?)), COALESCE(?, (SELECT validityStartHeight FROM transactions WHERE hash = ?)))',
   UpdateTxHash = 'UPDATE OR REPLACE transactions SET hash = ? WHERE hash = ?',
   MergeReplacementTxState = `UPDATE transactions SET
     status = COALESCE((SELECT status FROM transactions WHERE hash = ?), status),
@@ -45,8 +46,9 @@ export enum SQLQuery {
     fee = COALESCE((SELECT fee FROM transactions WHERE hash = ?), fee),
     raw = COALESCE((SELECT raw FROM transactions WHERE hash = ?), raw)
     WHERE hash = ?`,
-  SetPolygonSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
+  SetSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
   SetPolygonTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
+  SetSwapTxRefundedByHtlc = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE recipient = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',
   UpdateTxTitle = 'UPDATE transactions SET title = ? WHERE hash = ?',
