@@ -627,9 +627,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             await useTransactions().setSwapHtlcRefunded(htlc.address)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
           }
-          else if (txDetails.executionResult === false || txDetails.state === 'invalidated' || txDetails.state === 'expired') {
+          else if (txDetails.executionResult === false) {
             logger.error('Error while sending refund swap HTLC tx', txDetails)
             await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+          }
+          else if (txDetails.state === 'invalidated' || txDetails.state === 'expired') {
+            // A rebuilt copy is rejected once the original lands; keep the hash so its lookup decides.
+            logger.error('Error while sending refund swap HTLC tx', txDetails)
           }
           else {
             logger.warn('Swap HTLC refund has no execution result yet; next sweep checks its hash', txDetails)

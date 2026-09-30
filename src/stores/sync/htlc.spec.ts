@@ -1762,10 +1762,8 @@ describe('useSyncHtlc', () => {
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
     })
 
-    it.each([
-      { result: { state: 'included', executionResult: false } },
-      { result: { state: 'expired' } },
-    ])('clears the refund hash when the refund fails ($result.state)', async ({ result }) => {
+    it('clears the refund hash when the refund execution fails', async () => {
+      const result = { state: 'included', executionResult: false }
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
       state.client.sendTransaction = vi.fn(() => Promise.resolve(result)) as any
@@ -1774,6 +1772,19 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
       expect(state.run).toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, ['NQ55 SWAP HTLC ADDRESS'])
+      expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+    })
+
+    it.each(['invalidated', 'expired'])('keeps the refund hash when the node rejects the send (%s)', async (sendState) => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      state.client.sendTransaction = vi.fn(() => Promise.resolve({ state: sendState })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      // A rebroadcast copy is rejected once the original lands, so its lookup decides next sweep.
+      expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
       expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
     })
 
