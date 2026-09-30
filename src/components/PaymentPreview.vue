@@ -124,6 +124,8 @@ const htlcFeeSnapshot = computedAsync(async (): Promise<Awaited<ReturnType<typeo
     return htlcFeeSnapshot.value && { ...htlcFeeSnapshot.value }
   }
 }, null, loadingHtlcFee)
+// Only the first fetch blocks paying; a background refresh keeps the fee already shown.
+const awaitingHtlcFee = computed(() => loadingHtlcFee.value && !htlcFeeSnapshot.value)
 
 // The store's HTLC fee expires; re-prime it so the fee shown and approved stays current.
 const HTLC_FEE_RETRY_MS = 5_000
@@ -167,7 +169,7 @@ const hasEnoughBalance = computed(() => {
     return true
   if (asset.value === Asset.USDT) {
     if (isAtomicSwap.value)
-      return !loadingHtlcFee.value && usdtBalance.value >= usdtTotalDebit.value
+      return !awaitingHtlcFee.value && usdtBalance.value >= usdtTotalDebit.value
     return !!usdtQuote.value && usdtBalance.value >= usdtQuote.value.totalDebit
   }
   return useRemoteSigner().remoteBalance >= payment.value.amount
@@ -396,7 +398,7 @@ const isUsdtMaintenanceBlocked = computed(() => asset.value === Asset.USDT && is
 
 const disabled = computed(() =>
   isUsdtMaintenanceBlocked.value
-  || (isAtomicSwap.value && (loadingSwapLimits.value || loadingHtlcFee.value)) /* Not loaded yet */
+  || (isAtomicSwap.value && (loadingSwapLimits.value || awaitingHtlcFee.value)) /* Not loaded yet */
   // If failed to get limits, allow payment cause in case of being over the limit, it will fail when confirming swap
   || (isAtomicSwap.value && !!swapAddressLimits.value && payment.value.amount > swapLimit.value) /* Over swap limit */
   || !(
@@ -727,7 +729,7 @@ const footerMessageClass = computed(() => canPayWithPuntos.value ? 'min-h-[4rem]
             <p v-else-if="polygonConsensus !== 'established'" class="text-pumpkin">
               {{ $t('Polygon is still connecting. Please wait a moment.') }}
             </p>
-            <p v-else-if="isAtomicSwap && (loadingSwapLimits || loadingHtlcFee)" class="flex items-center justify-center opacity-60 gap-x-2">
+            <p v-else-if="isAtomicSwap && (loadingSwapLimits || awaitingHtlcFee)" class="flex items-center justify-center opacity-60 gap-x-2">
               <LoadingSpinner class="w-4 h-4 shrink-0" />
               {{ $t('Loading swap limits...') }}
             </p>

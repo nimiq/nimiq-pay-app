@@ -637,6 +637,26 @@ describe('paymentPreview', () => {
     }
   })
 
+  it('keeps Pay enabled while an HTLC fee refresh runs', async () => {
+    vi.useFakeTimers()
+    try {
+      primeHtlcFee
+        .mockResolvedValueOnce({ fee: 4_000_000, expiresAt: Date.now() + 20_000 })
+        .mockReturnValue(new Promise(() => {}))
+      const wrapper = await mountComponent({ state: lightningSwapState() })
+      await flushPromises()
+
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+
+      expect(primeHtlcFee).toHaveBeenCalledTimes(2)
+      expect(wrapper.get('[data-testid="payment-preview-pay"]').attributes('disabled')).toBeUndefined()
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('retries a failed HTLC fee refresh', async () => {
     vi.useFakeTimers()
     try {
