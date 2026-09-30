@@ -1824,6 +1824,19 @@ describe('useSyncHtlc', () => {
       expect(state.client.sendTransaction).toHaveBeenCalledTimes(retries ? 1 : 0)
     })
 
+    it('keeps an empty HTLC with an unproven stored refund after its validity window', async () => {
+      state.height = 128
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', refund_hash: 'stored-refund', refund_block: 1 }])
+      state.client.getTransaction = vi.fn(() => Promise.reject(new Error('Operation timed out'))) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
     it('does not scan HTLC history for an empty HTLC', async () => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any

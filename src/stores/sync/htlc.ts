@@ -561,6 +561,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
         try {
           // The stored refund decides the outcome; an empty HTLC alone can't tell a refund from a redeem.
+          let refundFailed = false
           if (htlc.refund_hash) {
             const refund = await promiseWithTimeout(client.value!.getTransaction(htlc.refund_hash), HTLC_CALL_TIMEOUT_MS)
               .catch((error) => {
@@ -577,15 +578,23 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             }
             if (refund && refund.executionResult !== false)
               continue
-            await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+            refundFailed = refund?.executionResult === false
           }
 
           const account = await promiseWithTimeout(client.value!.getAccount(htlc.address), HTLC_CALL_TIMEOUT_MS) as PlainAccount
           if (!account.balance) {
+            // A failed lookup can't rule out that the stored refund drained the HTLC; keep its proof and retry.
+            if (htlc.refund_hash && !refundFailed) {
+              logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
+              continue
+            }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
             continue
           }
+          // Funds still in the HTLC prove a stored refund never landed.
+          if (htlc.refund_hash)
+            await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
 
           logger.log('Refunding swap HTLC', htlc, account)
           const refundTx = new Nimiq.Transaction(
