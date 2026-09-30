@@ -1070,9 +1070,8 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function updateTransactionCashbackClaimed({ hash }: { hash: string }) {
     await run(SQLQuery.UpdateCashbackStatus, [true, hash])
-    const tx = transactions.value.find(tx => tx.hash === hash)
-    if (tx)
-      tx.isCashbackClaimed = true
+    if (transactions.value.some(tx => tx.hash === hash))
+      transactions.value = transactions.value.map(tx => tx.hash === hash ? { ...tx, isCashbackClaimed: true } as ExternalTransaction : tx)
   }
 
   async function setSwapHtlcRefunded(htlcAddress: string) {
