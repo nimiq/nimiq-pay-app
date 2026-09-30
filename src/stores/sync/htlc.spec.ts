@@ -1743,27 +1743,93 @@ describe('useSyncHtlc', () => {
       expect(state.htlcCheckLock).toBe(false)
     })
 
-    it('marks an empty native HTLC refunded when its history shows our refund landed', async () => {
+    it('stores the refund hash before broadcasting', async () => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
-      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
-      state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([
-        { sender: 'NQ66 FUNDER', recipient: 'NQ55 SWAP HTLC ADDRESS', executionResult: true },
-        { sender: 'NQ55 SWAP HTLC ADDRESS', recipient: state.localAddress.toUserFriendlyAddress(), executionResult: true },
-      ])) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      let hashStoredBeforeBroadcast = false
+      state.client.sendTransaction = vi.fn(async () => {
+        hashStoredBeforeBroadcast = state.run.mock.calls.some(([sql, values]) => sql === SQLQuery.SetNativeSwapHtlcRefundHash
+          && JSON.stringify(values?.slice(2)) === JSON.stringify([128, 'NQ55 SWAP HTLC ADDRESS'])
+          && values?.[0] === 'refund-hash')
+        return { state: 'new' }
+      }) as any
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      expect(state.setSwapHtlcRefunded).toHaveBeenCalledWith('NQ55 SWAP HTLC ADDRESS')
-      expect(state.run).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM swap_htlcs'), ['NQ55 SWAP HTLC ADDRESS'])
+      expect(hashStoredBeforeBroadcast).toBe(true)
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
     })
 
-    it('keeps an empty native HTLC row when its history lookup fails', async () => {
+    it.each([
+      { result: { state: 'included', executionResult: false } },
+      { result: { state: 'expired' } },
+    ])('clears the refund hash when the refund fails ($result.state)', async ({ result }) => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
-      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
-      state.client.getTransactionsByAddress = vi.fn(() => Promise.reject(new Error('history unavailable'))) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      state.client.sendTransaction = vi.fn(() => Promise.resolve(result)) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
-      expect(state.logger.error).toHaveBeenCalledWith('Error while refunding swap HTLC', expect.any(Error))
-      expect(state.run).not.toHaveBeenCalledWith(expect.stringContaining('DELETE FROM swap_htlcs'), ['NQ55 SWAP HTLC ADDRESS'])
+      expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, ['NQ55 SWAP HTLC ADDRESS'])
+      expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+    })
+
+    it('marks refunded and deletes the row when a stored refund succeeded', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', refund_hash: 'stored-refund', refund_block: 100 }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'confirmed', executionResult: true })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.client.getTransaction).toHaveBeenCalledWith('stored-refund')
+      expect(state.setSwapHtlcRefunded).toHaveBeenCalledWith('NQ55 SWAP HTLC ADDRESS')
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('waits while a stored refund has no execution result', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', refund_hash: 'stored-refund', refund_block: 100 }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'pending' })) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+      expect(state.run).not.toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.anything())
+      expect(state.client.sendTransaction).not.toHaveBeenCalled()
+    })
+
+    it('replaces a stored refund whose execution failed', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', refund_hash: 'stored-refund', refund_block: 100 }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'included', executionResult: false })) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, ['NQ55 SWAP HTLC ADDRESS'])
+      expect(state.client.sendTransaction).toHaveBeenCalledOnce()
+    })
+
+    it.each([
+      { refundBlock: 100, lookup: 'rejects', retries: false },
+      { refundBlock: 100, lookup: 'resolves empty', retries: false },
+      { refundBlock: 1, lookup: 'rejects', retries: true },
+    ])('retries a stored refund it cannot find only after its validity window (block $refundBlock, $lookup)', async ({ refundBlock, lookup, retries }) => {
+      state.height = 128
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', refund_hash: 'stored-refund', refund_block: refundBlock }])
+      state.client.getTransaction = vi.fn(() => lookup === 'rejects' ? Promise.reject(new Error('Transaction not found')) : Promise.resolve(undefined)) as any
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.client.sendTransaction).toHaveBeenCalledTimes(retries ? 1 : 0)
+    })
+
+    it('does not scan HTLC history for an empty HTLC', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 0 })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      await useSyncHtlc().checkExpiredSwapHtlcs()
+      expect(state.client.getTransactionsByAddress).not.toHaveBeenCalled()
     })
 
     it('releases the swap lock when an HTLC balance lookup hangs', async () => {

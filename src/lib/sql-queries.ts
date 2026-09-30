@@ -47,7 +47,8 @@ export enum SQLQuery {
     raw = COALESCE((SELECT raw FROM transactions WHERE hash = ?), raw)
     WHERE hash = ?`,
   SetSwapPreimage = `UPDATE transactions SET status = 'confirmed', meta_json = json_set(COALESCE(meta_json, '{}'), '$.secret', ?) WHERE hash = ?`,
-  SetPolygonTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
+  SetTxRefunded = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE hash = ?`,
+  SetTxHidden = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.hidden', json(?)) WHERE hash = ?`,
   SetSwapTxRefundedByHtlc = `UPDATE transactions SET meta_json = json_set(COALESCE(meta_json, '{}'), '$.refunded', json('true')) WHERE recipient = ?`,
   UpdateTxStatus = 'UPDATE transactions SET status = ?, timestamp = COALESCE(?, timestamp) WHERE hash = ?',
   BackfillTxValidityStartHeight = 'UPDATE transactions SET validityStartHeight = ? WHERE hash = ? AND validityStartHeight IS NULL',
@@ -144,6 +145,8 @@ export enum SQLQuery {
   ReplaceSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = ? WHERE address = ? AND tx_hash = ?',
   ClearSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = NULL WHERE address = ?',
   SetSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
+  // A native refund's validity window starts at its own block, so every attempt replaces it.
+  SetNativeSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = ?, refund_timestamp = ?, refund_block = ? WHERE address = ?',
   SetSwapHtlcRefundAttempt = 'UPDATE swap_htlcs SET refund_timestamp = ?, refund_block = COALESCE(refund_block, ?) WHERE address = ?',
   ClearSwapHtlcRefundHash = 'UPDATE swap_htlcs SET refund_hash = NULL, refund_timestamp = NULL WHERE address = ?',
   DeleteSwapHtlc = 'DELETE FROM swap_htlcs WHERE address = ?',

@@ -187,6 +187,7 @@ export function stubNimiqGlobal() {
     Transaction: vi.fn().mockImplementation(() => ({
       proof: undefined as Uint8Array | undefined,
       serializeContent: () => new Uint8Array(),
+      hash: () => 'refund-hash',
     })),
     Signature: { create: vi.fn(() => new Uint8Array()) },
     SignatureProof: { singleSig: vi.fn(() => ({ serialize: () => new Uint8Array(1) })) },

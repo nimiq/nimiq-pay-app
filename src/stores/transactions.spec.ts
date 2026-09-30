@@ -620,14 +620,7 @@ describe('useTransactions', () => {
     expect(store.transactionsToShow).toHaveLength(0)
     expect(store.transactions).toHaveLength(1)
 
-    const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-      ([query]) => query === SQLQuery.UpsertTx,
-    )
-    expect(upsertCall).toBeDefined()
-    const metaJson = upsertCall![1].find(
-      (arg): arg is string => typeof arg === 'string' && arg.includes('"hidden"'),
-    )
-    expect(metaJson).toContain('"hidden":true')
+    expect(state.run).toHaveBeenCalledWith(SQLQuery.SetTxHidden, ['true', '0xhide'])
   })
 
   it('reveals hidden txs when showHiddenTransactions is enabled (APP-132)', async () => {
@@ -2082,6 +2075,53 @@ describe('useTransactions', () => {
       await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
     })
 
+    it('saves the Lightning secret even when the swap row is gone', async () => {
+      const db = new DatabaseSync(':memory:')
+      for (const migration of migrations)
+        db.exec(migration.statements.join(';'))
+      state.run.mockImplementation(async (statement, values = []) => {
+        db.prepare(statement as string).run(...(values as unknown[]).map(value => value ?? null) as Array<string | number | null>)
+      })
+      state.query.mockImplementation(async (statement, values = [], options): Promise<any> => {
+        const query = db.prepare(statement)
+        const params = (values as unknown[]).map(value => value ?? null) as Array<string | number | null>
+        return options?.single ? query.get(...params) : query.all(...params)
+      })
+      const { useTransactions } = await import('./transactions')
+      const { signedTx } = createSignedTransaction('swap-row-removed')
+      let settleSwap!: (value: { preimage: string }) => void
+      state.provideFundingProof.mockReturnValue(new Promise(resolve => settleSwap = resolve))
+      mockRemoteSigning(signedTx, {
+        outcome: 'signed',
+        signedTx,
+        txSent: true,
+        swap: {
+          id: 'swap-id',
+          status: 'pending',
+          contracts: { NIM: { id: 'nim-contract', htlc: { timeoutTime: 123 } } },
+        },
+      } as any)
+
+      try {
+        await expect(useTransactions().sendTx({
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          paymentRef: 'swap-id',
+        } as any, undefined, async () => {})).resolves.toMatchObject({ outcome: 'submitted' })
+        db.prepare('DELETE FROM transactions WHERE hash = ?').run('swap-row-removed')
+
+        settleSwap({ preimage: 'secret' })
+        await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, expect.any(Array)))
+
+        expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('swap-row-removed')).toEqual({
+          status: 'confirmed',
+          meta_json: '{"secret":"secret"}',
+        })
+      }
+      finally {
+        db.close()
+      }
+    })
+
     it('keeps row updates made while waiting for Lightning settlement', async () => {
       const db = new DatabaseSync(':memory:')
       for (const migration of migrations)
@@ -2229,6 +2269,59 @@ describe('useTransactions', () => {
       expect(db.prepare('SELECT meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
         meta_json: '{"secret":"preimage","refunded":true}',
       })
+    })
+
+    it('keeps newer row state when hiding a loaded tx', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      db.exec(`UPDATE transactions SET status = 'failed', meta_json = '{"secret":"preimage","refunded":true}' WHERE hash = 'nim-swap'`)
+
+      await store.setTxHidden('nim-swap', true)
+
+      expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
+        status: 'failed',
+        meta_json: '{"secret":"preimage","refunded":true,"hidden":true}',
+      })
+      expect(store.transactions[0].meta).toEqual({ secret: 'preimage', hidden: true })
+    })
+
+    it('keeps newer row state when marking a loaded NAKA tx refunded', async () => {
+      const { nakaBufferAddresses } = await import('@/lib')
+      nakaBufferAddresses.push('NQ55 SWAP HTLC ADDRESS')
+      try {
+        const { useTransactions } = await import('./transactions')
+        const store = useTransactions()
+        await store.refreshFromDb()
+        db.exec(`UPDATE transactions SET status = 'failed', meta_json = '{"secret":"preimage","hidden":true}' WHERE hash = 'nim-swap'`)
+
+        await store.setNakaTxRefunded(10)
+
+        expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
+          status: 'failed',
+          meta_json: '{"secret":"preimage","hidden":true,"refunded":true}',
+        })
+        expect(store.transactions[0].meta).toEqual({ secret: 'preimage', refunded: true })
+      }
+      finally {
+        nakaBufferAddresses.splice(0)
+      }
+    })
+
+    it('marks every loaded tx sent to a refunded swap HTLC', async () => {
+      db.prepare(`INSERT INTO transactions (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain)
+        VALUES ('nim-swap-retry', 'failed', 2, 'NQ00 TEST LOCAL ADDRESS', 'NQ55 SWAP HTLC ADDRESS', 10, 0, ?, ?, ?)`).run(
+        Transfer.UserPaymentToAtomicSwap,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+
+      await store.setSwapHtlcRefunded('NQ55 SWAP HTLC ADDRESS')
+
+      expect(store.transactions.map(tx => tx.meta?.refunded)).toEqual([true, true])
     })
 
     it('replaces the loaded native swap tx after marking it refunded', async () => {
