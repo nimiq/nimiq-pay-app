@@ -1702,9 +1702,11 @@ describe('useSyncHtlc', () => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
       state.client.sendTransaction = vi.fn(() => Promise.resolve({ state: 'included', executionResult: true })) as any
+      const { SQLQuery } = await import('@/lib/sql-queries')
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.setSwapHtlcRefunded).toHaveBeenCalledWith('NQ55 SWAP HTLC ADDRESS')
+      expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
     })
 
     it('does not mark a native refund done before its execution is known', async () => {

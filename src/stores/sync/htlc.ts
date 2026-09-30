@@ -621,6 +621,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
           if (txDetails.executionResult === true) {
             await useTransactions().setSwapHtlcRefunded(htlc.address)
+            await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
           }
           else if (txDetails.executionResult === false || txDetails.state === 'invalidated' || txDetails.state === 'expired') {
             logger.error('Error while sending refund swap HTLC tx', txDetails)
