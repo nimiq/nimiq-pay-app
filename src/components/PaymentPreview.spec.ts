@@ -615,6 +615,51 @@ describe('paymentPreview', () => {
     }
   })
 
+  it('keeps the shown HTLC fee and cap when a refresh fails', async () => {
+    vi.useFakeTimers()
+    try {
+      primeHtlcFee
+        .mockResolvedValueOnce({ fee: 4_000_000, expiresAt: Date.now() + 20_000 })
+        .mockRejectedValue(new Error('relay down'))
+      const wrapper = await mountComponent({ state: lightningSwapState() })
+      await flushPromises()
+
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+
+      expect(primeHtlcFee).toHaveBeenCalledTimes(2)
+      expect(wrapper.vm.usdtFee).toBe(4_000_000)
+      expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: 4_000_000 })
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('retries a failed HTLC fee refresh', async () => {
+    vi.useFakeTimers()
+    try {
+      primeHtlcFee
+        .mockResolvedValueOnce({ fee: 4_000_000, expiresAt: Date.now() + 20_000 })
+        .mockRejectedValueOnce(new Error('relay down'))
+        .mockResolvedValue({ fee: 5_000_000, expiresAt: Date.now() + 60_000 })
+      const wrapper = await mountComponent({ state: lightningSwapState() })
+      await flushPromises()
+
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(5_000)
+      await flushPromises()
+
+      expect(primeHtlcFee).toHaveBeenCalledTimes(3)
+      expect(wrapper.vm.usdtFee).toBe(5_000_000)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('shows the same fee a USDT Lightning swap is capped at', async () => {
     const wrapper = await mountComponent({ state: lightningSwapState(1_000_000) })
     await flushPromises()

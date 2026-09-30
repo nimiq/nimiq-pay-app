@@ -109,7 +109,7 @@ const {
 // can prevent the async chain from settling in Vue's scheduler.
 const loadingHtlcFee = ref(false)
 const htlcFeeRefresh = ref(0)
-const htlcFeeSnapshot = computedAsync(async () => {
+const htlcFeeSnapshot = computedAsync(async (): Promise<Awaited<ReturnType<typeof polygonUsdt.primeHtlcFee>> | null> => {
   void htlcFeeRefresh.value
   if (asset.value !== Asset.USDT || !isAtomicSwap.value || polygonConsensus.value !== 'established')
     return null
@@ -119,18 +119,21 @@ const htlcFeeSnapshot = computedAsync(async () => {
   }
   catch (error) {
     logger.error('Failed to get Polygon HTLC fee', error)
-    return null
+    // Keep the fee already shown so a failed refresh neither lowers it nor drops the cap.
+    // A new object re-triggers the refresh watcher, which retries after HTLC_FEE_RETRY_MS.
+    return htlcFeeSnapshot.value && { ...htlcFeeSnapshot.value }
   }
 }, null, loadingHtlcFee)
 
 // The store's HTLC fee expires; re-prime it so the fee shown and approved stays current.
+const HTLC_FEE_RETRY_MS = 5_000
 const htlcFeeRefreshDelay = ref(0)
 const { start: scheduleHtlcFeeRefresh, stop: stopHtlcFeeRefresh } = useTimeoutFn(() => htlcFeeRefresh.value++, htlcFeeRefreshDelay, { immediate: false })
 watch([htlcFeeSnapshot, loading], ([snapshot, isPaying]) => {
   stopHtlcFeeRefresh()
   if (!snapshot || isPaying)
     return
-  htlcFeeRefreshDelay.value = Math.max(0, snapshot.expiresAt - Date.now())
+  htlcFeeRefreshDelay.value = Math.max(HTLC_FEE_RETRY_MS, snapshot.expiresAt - Date.now())
   scheduleHtlcFeeRefresh()
 })
 
