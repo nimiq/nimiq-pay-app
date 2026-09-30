@@ -561,6 +561,70 @@ describe('paymentPreview', () => {
     expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: expectedAllowance })
   })
 
+  function lightningSwapState(quotedFee = 1_000_000) {
+    return {
+      [StepName.QRCodeScanner]: {
+        amount: 116_440_000,
+        asset: Asset.USDT,
+        chain: Chain.Polygon,
+        fee: 0,
+        feeIncludedInAmount: true,
+        merchantCategory: MerchantCategory.Shop,
+        merchantName: 'The Barn',
+        paymentRef: 'swap-ref',
+        rail: Rail.BitcoinLightning,
+        recipient: 'lnbc1atomicswapinvoice',
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        swap: {
+          fees: [
+            { asset: Asset.USDT, amount: quotedFee, included: false, source: 'NETWORK' as const },
+          ],
+        },
+      },
+    }
+  }
+
+  it('sends no fee cap for a USDT Lightning swap without an HTLC fee estimate', async () => {
+    primeHtlcFee.mockRejectedValue(new Error('relay down'))
+    const wrapper = await mountComponent({ state: lightningSwapState(0) })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+
+    expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: undefined })
+  })
+
+  it('refreshes an expired HTLC fee estimate before a USDT Lightning swap is paid', async () => {
+    vi.useFakeTimers()
+    try {
+      primeHtlcFee
+        .mockResolvedValueOnce({ fee: 4_000_000, expiresAt: Date.now() + 20_000 })
+        .mockResolvedValue({ fee: 6_000_000, expiresAt: Date.now() + 40_000 })
+      const wrapper = await mountComponent({ state: lightningSwapState() })
+      await flushPromises()
+
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+
+      expect(primeHtlcFee).toHaveBeenCalledTimes(2)
+      expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: 6_000_000 })
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('shows the same fee a USDT Lightning swap is capped at', async () => {
+    const wrapper = await mountComponent({ state: lightningSwapState(1_000_000) })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+
+    expect(wrapper.vm.usdtFee).toBe(4_000_000)
+    expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: 4_000_000 })
+  })
+
   it('shows HTLC fee in inline text for USDT Lightning swaps (swap fee added when resolved)', async () => {
     const wrapper = await mountComponent({
       state: {

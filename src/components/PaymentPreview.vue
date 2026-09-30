@@ -4,7 +4,7 @@ import type { PaymentRequestData, State } from '@/lib/flows/steps.types'
 import { Browser } from '@capacitor/browser'
 import { IonButton, IonToggle } from '@ionic/vue'
 import { FiatAmount } from '@nimiq/vue3-components'
-import { computedAsync } from '@vueuse/core'
+import { computedAsync, useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { PopoverArrow, PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'radix-vue'
 import { computed, effectScope, onUnmounted, ref, toValue, watch, watchEffect } from 'vue'
@@ -108,7 +108,9 @@ const {
 // reactive ref synchronously before the first `await` inside computedAsync
 // can prevent the async chain from settling in Vue's scheduler.
 const loadingHtlcFee = ref(false)
+const htlcFeeRefresh = ref(0)
 const htlcFeeSnapshot = computedAsync(async () => {
+  void htlcFeeRefresh.value
   if (asset.value !== Asset.USDT || !isAtomicSwap.value || polygonConsensus.value !== 'established')
     return null
 
@@ -121,6 +123,17 @@ const htlcFeeSnapshot = computedAsync(async () => {
   }
 }, null, loadingHtlcFee)
 
+// The store's HTLC fee expires; re-prime it so the fee shown and approved stays current.
+const htlcFeeRefreshDelay = ref(0)
+const { start: scheduleHtlcFeeRefresh, stop: stopHtlcFeeRefresh } = useTimeoutFn(() => htlcFeeRefresh.value++, htlcFeeRefreshDelay, { immediate: false })
+watch([htlcFeeSnapshot, loading], ([snapshot, isPaying]) => {
+  stopHtlcFeeRefresh()
+  if (!snapshot || isPaying)
+    return
+  htlcFeeRefreshDelay.value = Math.max(0, snapshot.expiresAt - Date.now())
+  scheduleHtlcFeeRefresh()
+})
+
 const flowErrorMessage = computed(() => {
   if (usdtQuoteError.value && isGenericPolygonQuoteErrorMessage(props.errorMsg))
     return usdtQuoteError.value
@@ -132,10 +145,10 @@ const usdtFee = computed(() => {
   if (asset.value !== Asset.USDT)
     return payment.value.fee
 
-  // For atomic swaps, use non-included fees from Fastspot quote (Polygon HTLC gas),
-  // falling back to our local estimate
+  // For atomic swaps, show the higher of Fastspot's non-included USDT fee and our HTLC relay estimate:
+  // it is also the most the swap may sign.
   return isAtomicSwap.value
-    ? (nonIncludedUsdtFee.value || htlcFeeSnapshot.value?.fee || 0)
+    ? Math.max(nonIncludedUsdtFee.value, htlcFeeSnapshot.value?.fee ?? 0)
     : (usdtQuote.value?.fee ?? payment.value.fee)
 })
 
@@ -430,9 +443,9 @@ function handlePay() {
     payWithPuntos: payWithPuntos.value,
     paymentAnalytics,
     polygonQuote: usdtQuote.value || undefined,
-    // Same allowance as Mini App swaps: sending fails if the Polygon fee rises above this preview's fees.
-    usdtFeeAllowance: asset.value === Asset.USDT && isAtomicSwap.value
-      ? Math.max(htlcFeeSnapshot.value?.fee ?? 0, nonIncludedUsdtFee.value)
+    // A swap may not sign more than the fee shown; without an HTLC estimate there is nothing to cap against.
+    usdtFeeAllowance: asset.value === Asset.USDT && isAtomicSwap.value && htlcFeeSnapshot.value
+      ? usdtFee.value
       : undefined,
   })
 }
