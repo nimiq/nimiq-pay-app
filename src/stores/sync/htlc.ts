@@ -22,6 +22,7 @@ import { Transfer } from '@/types/transactions'
 const logger = useLogger('useSync')
 const { setToast } = useToast()
 const HTLC_LOOKUP_TIMEOUT_MS = 30_000
+const REFUND_BROADCAST_TIMEOUT_MS = 30_000
 
 interface PendingHtlcCreationRow {
   hash: string
@@ -560,8 +561,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         }
 
         try {
-          const account = await client.value!.getAccount(htlc.address) as PlainAccount
+          const account = await promiseWithTimeout(client.value!.getAccount(htlc.address), HTLC_LOOKUP_TIMEOUT_MS) as PlainAccount
           if (!account.balance) {
+            // A refund can land after its broadcast result was lost; its history tells a refund from a redeem.
+            const htlcTransactions = await promiseWithTimeout(client.value!.getTransactionsByAddress(htlc.address), HTLC_LOOKUP_TIMEOUT_MS)
+            const localAddressString = localAddress.value.toUserFriendlyAddress()
+            if (htlcTransactions.some(tx => tx.recipient === localAddressString && tx.executionResult === true))
+              await useTransactions().setSwapHtlcRefunded(htlc.address)
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
             continue
@@ -588,11 +594,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
           proof.write(sigProof)
           refundTx.proof = proof
-          const txDetails = await client.value!.sendTransaction(refundTx)
-          if (txDetails.state !== 'invalidated')
-            useTransactions().setSwapHtlcRefunded(htlc.address)
-          else
+          const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), REFUND_BROADCAST_TIMEOUT_MS)
+          if (txDetails.executionResult === true)
+            await useTransactions().setSwapHtlcRefunded(htlc.address)
+          else if (txDetails.executionResult === false || txDetails.state === 'invalidated')
             logger.error('Error while sending refund swap HTLC tx', txDetails)
+          else
+            logger.warn('Swap HTLC refund has no execution result yet; next sweep checks the HTLC history', txDetails)
         }
         catch (error) {
           logger.error('Error while refunding swap HTLC', error)
