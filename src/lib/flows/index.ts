@@ -392,6 +392,7 @@ const paymentFlow: FlowInit = async () => {
           const { error } = await usePolygonUsdt().sendSwapPayment(
             polygonRequest,
             polygonTitle,
+            { maxFee: state[StepName.PaymentPreview]?.usdtFeeAllowance },
           )
           if (error)
             return failPayment(error)

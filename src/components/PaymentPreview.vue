@@ -430,6 +430,10 @@ function handlePay() {
     payWithPuntos: payWithPuntos.value,
     paymentAnalytics,
     polygonQuote: usdtQuote.value || undefined,
+    // Same allowance as Mini App swaps: sending fails if the Polygon fee rises above this preview's fees.
+    usdtFeeAllowance: asset.value === Asset.USDT && isAtomicSwap.value
+      ? Math.max(htlcFeeSnapshot.value?.fee ?? 0, nonIncludedUsdtFee.value)
+      : undefined,
   })
 }
 

@@ -145,6 +145,7 @@ export interface State {
   [StepName.PaymentPreview]: {
     payWithPuntos: boolean
     polygonQuote?: PolygonTransferQuote
+    usdtFeeAllowance?: number
     paymentAnalytics: PaymentAnalyticsState
   }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
@@ -311,7 +312,7 @@ export type StepInitOptions<Props = undefined> = {
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }
 
-export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction | NimWithdrawalSelection | { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote }
+export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction | NimWithdrawalSelection | { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote, usdtFeeAllowance?: number }
 
 export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => true,

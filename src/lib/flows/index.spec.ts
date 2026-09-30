@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   primeTransferFee: vi.fn(() => new Promise(() => {})),
   primeHtlcFee: vi.fn(() => new Promise(() => {})),
   polygonSendPayment: vi.fn(),
+  polygonSendSwapPayment: vi.fn(),
   isUsdtMaintenanceActive: false,
   isNimiqAsset: false,
   activeAsset: 'NIM',
@@ -91,6 +92,7 @@ vi.mock('@/stores/polygon-usdt', () => ({
     primeTransferFee: state.primeTransferFee,
     primeHtlcFee: state.primeHtlcFee,
     sendPayment: state.polygonSendPayment,
+    sendSwapPayment: state.polygonSendSwapPayment,
   }),
 }))
 
@@ -406,6 +408,38 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(err).not.toHaveBeenCalled()
     expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ message: expect.stringContaining('Do not retry') }))
     expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
+  })
+
+  it('limits the signed Polygon fee of a USDT Lightning swap to the approved allowance', async () => {
+    state.activeAsset = Asset.USDT
+    state.polygonSendSwapPayment.mockResolvedValue({ data: {}, error: undefined })
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: {
+        asset: Asset.USDT,
+        transfer: Transfer.UserPaymentToAtomicSwap,
+        recipient: 'lnbc1atomicswapinvoice',
+        amount: 1_000_000,
+        paymentRef: 'swap-ref',
+        merchantName: 'Coffee Shop',
+      },
+      [StepName.PaymentPreview]: {
+        payWithPuntos: false,
+        paymentAnalytics: { startedAt: 1, status: 'started' },
+        usdtFeeAllowance: 4_000_000,
+      },
+    }, { err, setToast: vi.fn() })
+
+    expect(err).not.toHaveBeenCalled()
+    expect(state.polygonSendSwapPayment).toHaveBeenCalledWith(
+      expect.objectContaining({ paymentRef: 'swap-ref' }),
+      expect.anything(),
+      { maxFee: 4_000_000 },
+    )
   })
 
   it('blocks a USDT payment when maintenance begins during the flow', async () => {

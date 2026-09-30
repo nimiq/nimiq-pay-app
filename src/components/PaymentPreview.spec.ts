@@ -528,6 +528,39 @@ describe('paymentPreview', () => {
     expect(wrapper.find('[data-testid="polygon-warning"]').exists()).toBe(false)
   })
 
+  it.each([
+    { quotedFee: 1_000_000, expectedAllowance: 4_000_000 },
+    { quotedFee: 5_000_000, expectedAllowance: 5_000_000 },
+  ])('approves the higher of the HTLC and quoted fee ($quotedFee) for USDT Lightning swaps', async ({ quotedFee, expectedAllowance }) => {
+    const wrapper = await mountComponent({
+      state: {
+        [StepName.QRCodeScanner]: {
+          amount: 116_440_000,
+          asset: Asset.USDT,
+          chain: Chain.Polygon,
+          fee: 0,
+          feeIncludedInAmount: true,
+          merchantCategory: MerchantCategory.Shop,
+          merchantName: 'The Barn',
+          paymentRef: 'swap-ref',
+          rail: Rail.BitcoinLightning,
+          recipient: 'lnbc1atomicswapinvoice',
+          transfer: Transfer.UserPaymentToAtomicSwap,
+          swap: {
+            fees: [
+              { asset: Asset.USDT, amount: quotedFee, included: false, source: 'NETWORK' as const },
+            ],
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+
+    expect(wrapper.emitted('done')?.[0]?.[0]).toMatchObject({ usdtFeeAllowance: expectedAllowance })
+  })
+
   it('shows HTLC fee in inline text for USDT Lightning swaps (swap fee added when resolved)', async () => {
     const wrapper = await mountComponent({
       state: {
