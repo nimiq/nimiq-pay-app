@@ -34,11 +34,11 @@ msgstr ""
 #: src/stores/polygon-usdt.ts:2125
 #: src/stores/polygon-usdt.ts:2380
 #: src/stores/polygon-usdt.ts:2393
-#: src/stores/transactions.ts:340
+#: src/stores/transactions.ts:343
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:357
+#: src/stores/transactions.ts:360
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
@@ -47,7 +47,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:38
-#: src/views/HomeView.vue:208
+#: src/views/HomeView.vue:207
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -55,7 +55,7 @@ msgstr ""
 msgid "Activate NAKA Card"
 msgstr ""
 
-#: src/views/HomeView.vue:201
+#: src/views/HomeView.vue:200
 msgid "Activate NAKA for contactless payments"
 msgstr ""
 
@@ -85,9 +85,9 @@ msgstr ""
 msgid "Address copied to clipboard"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:215
-#: src/stores/nimiq-network.ts:237
-#: src/stores/nimiq-network.ts:269
+#: src/stores/nimiq-network.ts:225
+#: src/stores/nimiq-network.ts:247
+#: src/stores/nimiq-network.ts:279
 msgid "Address missing"
 msgstr ""
 
@@ -95,7 +95,7 @@ msgstr ""
 msgid "Address saved"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:254
+#: src/stores/nimiq-network.ts:264
 msgid "Addresses missing"
 msgstr ""
 
@@ -169,7 +169,7 @@ msgstr ""
 msgid "Are you sure you want to log out?"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:48
+#: src/components/TransactionDetails.vue:41
 msgid "Asset"
 msgstr ""
 
@@ -313,7 +313,7 @@ msgstr ""
 msgid "Cashlink Claiming"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:217
+#: src/stores/nimiq-network.ts:227
 msgid "Cashlink has no balance"
 msgstr ""
 
@@ -416,7 +416,7 @@ msgstr ""
 msgid "Continue and Pay"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:86
+#: src/components/TransactionDetails.vue:82
 msgid "Copied to clipboard"
 msgstr ""
 
@@ -436,8 +436,8 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:555
-#: src/stores/transactions.ts:569
+#: src/stores/transactions.ts:558
+#: src/stores/transactions.ts:572
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
@@ -453,7 +453,7 @@ msgstr ""
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:352
+#: src/stores/transactions.ts:355
 msgid "Could not verify pending transactions"
 msgstr ""
 
@@ -474,7 +474,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:130
+#: src/views/HomeView.vue:129
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -496,7 +496,7 @@ msgstr ""
 msgid "Daily limit"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:41
+#: src/components/TransactionDetails.vue:34
 msgid "Date"
 msgstr ""
 
@@ -602,15 +602,15 @@ msgstr ""
 msgid "Enter your referral promo code."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:248
+#: src/stores/nimiq-network.ts:258
 msgid "Error getting account"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:278
+#: src/stores/nimiq-network.ts:288
 msgid "Error getting account transactions"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:263
+#: src/stores/nimiq-network.ts:273
 msgid "Error getting accounts"
 msgstr ""
 
@@ -669,7 +669,7 @@ msgstr ""
 msgid "Failed to copy address to clipboard"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:90
+#: src/components/TransactionDetails.vue:86
 #: src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr ""
@@ -1006,7 +1006,7 @@ msgstr ""
 
 #: src/modals/PointsModal.vue:57
 #: src/modals/ReferralModal.vue:4
-#: src/views/HomeView.vue:98
+#: src/views/HomeView.vue:94
 msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
 msgstr ""
 
@@ -1094,7 +1094,7 @@ msgstr ""
 msgid "Meet the builders creating new experiences for Nimiq Pay."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:87
+#: src/components/TransactionDetails.vue:80
 msgid "Message"
 msgstr ""
 
@@ -1124,11 +1124,11 @@ msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your p
 msgstr ""
 
 #: src/components/PaymentPreview.vue:89
-#: src/components/TransactionDetails.vue:53
+#: src/components/TransactionDetails.vue:46
 msgid "Network"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:120
+#: src/stores/nimiq-network.ts:123
 msgid "Network consensus lost."
 msgstr ""
 
@@ -1149,7 +1149,7 @@ msgid "NFC is not supported on this device"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:66
-#: src/stores/transactions.ts:363
+#: src/stores/transactions.ts:366
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1177,7 +1177,7 @@ msgstr ""
 msgid "No account has been found"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:258
+#: src/stores/nimiq-network.ts:268
 msgid "No accounts found"
 msgstr ""
 
@@ -1185,7 +1185,7 @@ msgstr ""
 msgid "No active card"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:207
+#: src/stores/nimiq-network.ts:217
 msgid "No Cashlink found"
 msgstr ""
 
@@ -1239,7 +1239,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:273
+#: src/stores/nimiq-network.ts:283
 msgid "No transactions found"
 msgstr ""
 
@@ -1369,7 +1369,7 @@ msgstr ""
 msgid "Payment Request"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:94
+#: src/components/TransactionDetails.vue:87
 msgid "Payment Secret"
 msgstr ""
 
@@ -1393,7 +1393,7 @@ msgstr ""
 msgid "pending"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:30
+#: src/components/TransactionDetails.vue:23
 #: src/components/TransactionItem.vue:11
 #: src/types/transactions.ts:166
 msgid "Pending"
@@ -1570,7 +1570,7 @@ msgid "Receive USDT on Polygon"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:93
-#: src/components/TransactionDetails.vue:79
+#: src/components/TransactionDetails.vue:72
 msgid "Recipient"
 msgstr ""
 
@@ -1586,7 +1586,7 @@ msgstr ""
 msgid "Refreshing connection"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:33
+#: src/components/TransactionDetails.vue:26
 msgid "Refunded"
 msgstr ""
 
@@ -1608,7 +1608,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:209
+#: src/views/HomeView.vue:208
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1715,7 +1715,7 @@ msgstr ""
 msgid "Send USDT to this address"
 msgstr ""
 
-#: src/components/TransactionDetails.vue:60
+#: src/components/TransactionDetails.vue:53
 msgid "Sender"
 msgstr ""
 
@@ -1798,7 +1798,7 @@ msgstr ""
 
 #: src/composables/useApi.ts:325
 #: src/composables/useApi.ts:332
-#: src/composables/useMiniAppHost.ts:2051
+#: src/composables/useMiniAppHost.ts:2054
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
 #: src/lib/tx.ts:371
@@ -1841,7 +1841,7 @@ msgstr ""
 msgid "Standard rates may apply."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:27
+#: src/components/TransactionDetails.vue:20
 msgid "Status"
 msgstr ""
 
@@ -1870,7 +1870,7 @@ msgstr ""
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:441
+#: src/composables/useMiniAppHost.ts:442
 msgid "Switched to {chain}"
 msgstr ""
 
@@ -1878,7 +1878,7 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:200
+#: src/views/HomeView.vue:199
 msgid "Tap to pay with NAKA!"
 msgstr ""
 
@@ -1995,7 +1995,7 @@ msgstr ""
 msgid "This merchant is not registered to receive Points payments."
 msgstr ""
 
-#: src/composables/useMiniAppHost.ts:405
+#: src/composables/useMiniAppHost.ts:406
 msgid "This network is not supported by Nimiq Pay"
 msgstr ""
 
@@ -2003,7 +2003,7 @@ msgstr ""
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr ""
 
-#: src/components/TransactionDetails.vue:105
+#: src/components/TransactionDetails.vue:98
 msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
 msgstr ""
 
@@ -2035,7 +2035,7 @@ msgstr ""
 msgid "This transaction will reappear in your history."
 msgstr ""
 
-#: src/views/HomeView.vue:41
+#: src/views/HomeView.vue:37
 msgid "Top Up"
 msgstr ""
 
@@ -2055,20 +2055,20 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:575
+#: src/stores/transactions.ts:578
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:616
-#: src/stores/transactions.ts:635
+#: src/stores/transactions.ts:619
+#: src/stores/transactions.ts:638
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:578
+#: src/stores/transactions.ts:581
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:675
+#: src/stores/transactions.ts:678
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
@@ -2194,31 +2194,30 @@ msgstr ""
 
 #: src/stores/sync/remote-signers.ts:72
 #: src/stores/sync/remote-signers.ts:85
-#: src/stores/transactions.ts:348
-#: src/stores/transactions.ts:367
-#: src/stores/transactions.ts:378
-#: src/stores/transactions.ts:446
-#: src/stores/transactions.ts:455
-#: src/stores/transactions.ts:465
-#: src/stores/transactions.ts:520
-#: src/stores/transactions.ts:537
-#: src/stores/transactions.ts:563
-#: src/stores/transactions.ts:587
-#: src/stores/transactions.ts:602
-#: src/stores/transactions.ts:603
-#: src/stores/transactions.ts:625
-#: src/stores/transactions.ts:678
-#: src/stores/transactions.ts:686
-#: src/stores/transactions.ts:696
-#: src/stores/transactions.ts:704
-#: src/stores/transactions.ts:712
-#: src/stores/transactions.ts:746
-#: src/stores/transactions.ts:756
-#: src/stores/transactions.ts:761
-#: src/stores/transactions.ts:766
-#: src/stores/transactions.ts:771
-#: src/stores/transactions.ts:789
-#: src/stores/transactions.ts:794
+#: src/stores/transactions.ts:351
+#: src/stores/transactions.ts:370
+#: src/stores/transactions.ts:381
+#: src/stores/transactions.ts:449
+#: src/stores/transactions.ts:458
+#: src/stores/transactions.ts:468
+#: src/stores/transactions.ts:523
+#: src/stores/transactions.ts:540
+#: src/stores/transactions.ts:566
+#: src/stores/transactions.ts:590
+#: src/stores/transactions.ts:605
+#: src/stores/transactions.ts:606
+#: src/stores/transactions.ts:628
+#: src/stores/transactions.ts:681
+#: src/stores/transactions.ts:689
+#: src/stores/transactions.ts:699
+#: src/stores/transactions.ts:707
+#: src/stores/transactions.ts:715
+#: src/stores/transactions.ts:749
+#: src/stores/transactions.ts:759
+#: src/stores/transactions.ts:764
+#: src/stores/transactions.ts:769
+#: src/stores/transactions.ts:774
+#: src/stores/transactions.ts:792
 #: src/stores/transactions.ts:799
 #: src/stores/transactions.ts:805
 #: src/stores/transactions.ts:808
@@ -2322,7 +2321,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:74
 #: src/lib/flows/steps.ts:546
-#: src/views/HomeView.vue:44
+#: src/views/HomeView.vue:40
 msgid "Withdraw"
 msgstr ""
 
@@ -2398,7 +2397,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:214
+#: src/views/HomeView.vue:213
 msgid "You have a reward to claim!"
 msgstr ""
 

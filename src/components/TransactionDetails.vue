@@ -6,7 +6,7 @@ import { Identicon } from '@nimiq/vue3-components'
 import { computedAsync } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
-import { computed, onBeforeMount, ref } from 'vue'
+import { computed, onBeforeMount } from 'vue'
 import AddressBookIcon from '@/components/icons/address-book.vue'
 import UsdtLogo from '@/components/icons/usdt-logo.vue'
 import { useLogger } from '@/composables/useLogger'
@@ -74,10 +74,6 @@ const timeUntilTimeout = computed(() => {
   }
   return null
 })
-// TODO: Get the map info from crypto map API
-// const showMap = computed(() => props.tx.transfer === Transfer.UserPaymentToMerchant)
-const showMap = ref(false)
-
 async function handleCopy(string: string) {
   try {
     await Clipboard.write({
@@ -133,13 +129,6 @@ onBeforeMount(() => {
         {{ formatInvoiced(tx.invoiced) }}
       </template>
     </TransactionAmounts>
-
-    <div v-if="showMap" class="grid w-[calc(100vw-18px)] border rounded-md border-space/10">
-      <!-- TODO Replace the box below this with the map -->
-      <div class="bg-space/[0.06] grid place-content-center text-space font-bold font-mono h-60">
-        🚧 Map Preview 🚧
-      </div>
-    </div>
 
     <div
       v-if="tx"
