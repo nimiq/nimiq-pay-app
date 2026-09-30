@@ -142,7 +142,7 @@ function goCryptoPaymentDetailsToPaymentRequestData<IM extends boolean>(
     fee: 0,
     feeIncludedInAmount: false, // there doesn't seem to be any fee applied by GoCrypto
     merchantName: paymentDetails.storeName,
-    merchantCategory: MerchantCategory.Shop, // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
+    merchantCategory: MerchantCategory.Shop,
     rail: Rail.GoCrypto,
     paymentRef: paymentDetails.id,
     transfer: Transfer.UserPaymentToMerchant,

@@ -183,7 +183,7 @@ export function useStringParser() {
     const transfer = Transfer.UserPaymentToMerchant
     const rail = Rail.CryptoPaymentLink
     const paymentRef = searchParams.get(CPL_URL_ID_PARAM)
-    const merchantCategory = MerchantCategory.Shop // TODO: At the moment, we don't have a way of fetching the shop category from the Crypto Map
+    const merchantCategory = MerchantCategory.Shop
 
     if (!paymentRef)
       return { error: i18n.t('Invalid CPLink. Missing id.'), data: undefined }

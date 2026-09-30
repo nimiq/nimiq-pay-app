@@ -7,7 +7,6 @@ import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import BackupNotification from '@/components/BackupNotification.vue'
-import MapIcon from '@/components/icons/crypto-map.vue'
 import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import LiveChat from '@/components/LiveChat.vue'
@@ -283,10 +282,6 @@ onMounted(() => {
             <span v-if="phoneNumberVerified" class="ml-2">
               {{ (pointsBalance / 1e5).toLocaleString() }}
             </span>
-          </IonButton>
-
-          <IonButton aria-label="Crypto Map" fill="clear" @click="showModal(Modal.Map, { showHandle: true })">
-            <MapIcon class="h-6 opacity-40" />
           </IonButton>
         </IonButtons>
       </IonToolbar>

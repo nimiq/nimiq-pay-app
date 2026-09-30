@@ -149,14 +149,6 @@ final class AppUITests: XCTestCase {
     // Wait until the tx history is loaded
     sleep(60)
     snapshot("3HomeScreen")
-
-    while !webViewsQuery.buttons["Go to Crypto Map"].isHittable {
-      app.swipeUp()
-    }
-
-    // Give time for the map to load
-    sleep(10)
-    snapshot("4HomeScreenWithMap")
   }
 
   func tapInputField(_ element: XCUIElement, shouldBeFocused: Bool = false) {

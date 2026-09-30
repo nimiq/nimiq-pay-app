@@ -59,7 +59,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Nimiq Pay authentication with TouchID or FaceID</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>To be able to access location services while using the app. Used for KYC and Crypto Map location</string>
+	<string>To be able to access location services while using the app. Used for KYC</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>To be able to conduct KYC</string>
 	<key>NSPhotoLibraryUsageDescription</key>

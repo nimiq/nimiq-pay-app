@@ -28,7 +28,6 @@ export enum Modal {
   Task = '@/modals/TaskModal.vue',
   Referral = '@/modals/ReferralModal.vue',
   SecretFeatures = '@/modals/SecretFeaturesModal.vue',
-  Map = '@/modals/MapModal.vue',
   Changelog = '@/modals/ChangelogModal.vue',
 }
 
@@ -101,9 +100,6 @@ function _useModal() {
         break
       case Modal.SecretFeatures:
         component = defineAsyncComponent(() => import(Modal.SecretFeatures))
-        break
-      case Modal.Map:
-        component = defineAsyncComponent(() => import(Modal.Map))
         break
       case Modal.Changelog:
         component = defineAsyncComponent(() => import(Modal.Changelog))
