@@ -2308,6 +2308,18 @@ describe('useTransactions', () => {
       }
     })
 
+    it('replaces the loaded tx when its cashback is claimed', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const loadedTx = store.transactions[0]
+
+      await store.updateTransactionCashbackClaimed({ hash: 'nim-swap' })
+
+      expect(store.transactions[0]).not.toBe(loadedTx)
+      expect(store.transactions[0].isCashbackClaimed).toBe(true)
+    })
+
     it('marks every loaded tx sent to a refunded swap HTLC', async () => {
       db.prepare(`INSERT INTO transactions (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain)
         VALUES ('nim-swap-retry', 'failed', 2, 'NQ00 TEST LOCAL ADDRESS', 'NQ55 SWAP HTLC ADDRESS', 10, 0, ?, ?, ?)`).run(
