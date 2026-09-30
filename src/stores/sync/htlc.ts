@@ -561,16 +561,14 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
 
         try {
           // The stored refund decides the outcome; an empty HTLC alone can't tell a refund from a redeem.
-          let refundFailed = false
+          let refundUnproven = false
+          let refundWindowOpen = false
           if (htlc.refund_hash) {
             const refund = await promiseWithTimeout(client.value!.getTransaction(htlc.refund_hash), HTLC_CALL_TIMEOUT_MS)
               .catch((error) => {
                 logger.warn('Stored swap HTLC refund lookup failed', htlc.refund_hash, error)
                 return undefined
               })
-            // Until its validity window ends, a refund that can't be found may still be included.
-            if (!refund && localHeight.value <= (htlc.refund_block ?? 0) + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS)
-              continue
             if (refund?.executionResult === true) {
               await useTransactions().setSwapHtlcRefunded(htlc.address)
               await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
@@ -578,23 +576,29 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             }
             if (refund && refund.executionResult !== false)
               continue
-            refundFailed = refund?.executionResult === false
+            refundUnproven = !refund
+            // Until its validity window ends, a refund that can't be found may still be included.
+            refundWindowOpen = refundUnproven && localHeight.value <= (htlc.refund_block ?? 0) + Nimiq.Policy.TRANSACTION_VALIDITY_WINDOW_BLOCKS
           }
 
           const account = await promiseWithTimeout(client.value!.getAccount(htlc.address), HTLC_CALL_TIMEOUT_MS) as PlainAccount
           if (!account.balance) {
-            // A failed lookup can't rule out that the stored refund drained the HTLC; keep its proof and retry.
-            if (htlc.refund_hash && !refundFailed) {
-              logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
-              continue
+            if (refundUnproven) {
+              if (refundWindowOpen) {
+                logger.warn('Swap HTLC is empty but its stored refund is unconfirmed', htlc)
+                continue
+              }
+              // Past its window, only a complete history scan tells whether the refund drained the HTLC.
+              const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
+              if (landedRefund?.executionResult === true)
+                await useTransactions().setSwapHtlcRefunded(htlc.address)
             }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
             continue
           }
-          // Funds still in the HTLC prove a stored refund never landed.
-          if (htlc.refund_hash)
-            await conn.run(SQLQuery.ClearSwapHtlcRefundHash, [htlc.address])
+          // Inside its window an unfound refund is rebuilt unchanged, so a rebroadcast keeps its hash.
+          const validityStartHeight = refundWindowOpen ? htlc.refund_block! : localHeight.value
 
           logger.log('Refunding swap HTLC', htlc, account)
           const refundTx = new Nimiq.Transaction(
@@ -607,7 +611,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             BigInt(account.balance),
             0n,
             0,
-            localHeight.value,
+            validityStartHeight,
             networkId.value,
           )
           const { privateKey, publicKey } = localWallet.value
@@ -617,7 +621,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           proof.writeUint8(/* TIMEOUT_RESOLVE */ 2)
           proof.write(sigProof)
           refundTx.proof = proof
-          await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), localHeight.value, htlc.address])
+          await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), validityStartHeight, htlc.address])
           const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
           if (txDetails.executionResult === true) {
             await useTransactions().setSwapHtlcRefunded(htlc.address)
