@@ -168,8 +168,11 @@ export const useTransactions = defineStore('transactions', () => {
         ? JSON.stringify(tx.meta)
         : null,
       tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.hash,
       tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.hash,
       tx.validityStartHeight ?? null,
+      tx.hash,
     ]
   }
 
@@ -787,14 +790,11 @@ export const useTransactions = defineStore('transactions', () => {
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            staged.tx.meta = { secret }
-            staged.tx.status = 'confirmed'
-            await upsertTx(staged.tx)
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            const index = transactions.value.findIndex(tx => tx.hash === staged.tx.hash)
-            if (index >= 0)
-              transactions.value[index].meta = { secret }
+            // Update only the swap result; other writers may have changed the row while settlement was pending.
+            const storedTx = await setSwapPreimage(staged.tx.hash, secret)
+            // A removed row is recreated, or the secret would be lost once the swap bookkeeping is deleted below.
+            if (!storedTx)
+              await upsertTx({ ...staged.tx, meta: { ...staged.tx.meta, secret }, status: 'confirmed' })
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
             trackSwapCompleted({
@@ -1076,19 +1076,20 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function setSwapHtlcRefunded(htlcAddress: string) {
-    const tx = transactions.value.find(tx => tx.recipient === htlcAddress)
-    if (tx) {
-      tx.meta = {
-        ...tx.meta,
-        refunded: true,
-      }
-      await upsertTx(tx)
-    }
+    // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
+    await run(SQLQuery.SetSwapTxRefundedByHtlc, [htlcAddress])
+    mergeLoadedTxMeta(tx => tx.recipient === htlcAddress, { refunded: true })
   }
 
-  async function setPolygonSwapPreimage(txHash: string, secret: string) {
+  // Loaded rows are plain objects in a shallowRef, so replace them to re-run the list computeds.
+  function mergeLoadedTxMeta(matches: (tx: ExternalTransaction) => boolean, meta: Record<string, unknown>) {
+    if (transactions.value.some(matches))
+      transactions.value = transactions.value.map(tx => matches(tx) ? { ...tx, meta: { ...tx.meta, ...meta } } : tx)
+  }
+
+  async function setSwapPreimage(txHash: string, secret: string) {
     // A replacement may rename this hash while Fastspot is resolving; never recreate the old row.
-    await run(SQLQuery.SetPolygonSwapPreimage, [secret, txHash])
+    await run(SQLQuery.SetSwapPreimage, [secret, txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (storedTx && transactions.value.some(tx => tx.hash === txHash))
       addTransaction(storedTx)
@@ -1097,7 +1098,7 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function setPolygonSwapHtlcRefunded(txHash: string) {
     // Update only refund metadata so unloaded or stale cache entries cannot overwrite persisted state.
-    await run(SQLQuery.SetPolygonTxRefunded, [txHash])
+    await run(SQLQuery.SetTxRefunded, [txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (!storedTx)
       return false
@@ -1113,25 +1114,19 @@ export const useTransactions = defineStore('transactions', () => {
 
   async function setNakaTxRefunded(amount: number) {
     const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
-    if (tx) {
-      tx.meta = {
-        ...tx.meta,
-        refunded: true,
-      }
-      await upsertTx(tx)
-    }
-  }
-
-  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). Mirrors setSwapHtlcRefunded —
-  // flag lives in tx.meta, persisted via upsertTx; transactionsToShow filters it out unless the dev-menu
-  // reveal toggle is on. The shallowRef reassignment is required to re-trigger the filter computed.
-  async function setTxHidden(hash: string, hidden: boolean) {
-    const tx = transactions.value.find(tx => tx.hash === hash)
     if (!tx)
       return
-    tx.meta = { ...tx.meta, hidden }
-    await upsertTx(tx)
-    transactions.value = [...transactions.value]
+    await run(SQLQuery.SetTxRefunded, [tx.hash])
+    mergeLoadedTxMeta(loadedTx => loadedTx.hash === tx.hash, { refunded: true })
+  }
+
+  // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). The flag lives in tx.meta;
+  // transactionsToShow filters it out unless the dev-menu reveal toggle is on.
+  async function setTxHidden(hash: string, hidden: boolean) {
+    if (!transactions.value.some(tx => tx.hash === hash))
+      return
+    await run(SQLQuery.SetTxHidden, [String(hidden), hash])
+    mergeLoadedTxMeta(tx => tx.hash === hash, { hidden })
   }
 
   const status = computed(() => {
@@ -1163,7 +1158,7 @@ export const useTransactions = defineStore('transactions', () => {
     updateTransactionTitle,
     updateTransactionCashbackClaimed,
     setSwapHtlcRefunded,
-    setPolygonSwapPreimage,
+    setSwapPreimage,
     setPolygonSwapHtlcRefunded,
     setNakaTxRefunded,
     setTxHidden,

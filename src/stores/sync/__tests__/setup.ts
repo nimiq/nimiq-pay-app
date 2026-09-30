@@ -105,6 +105,7 @@ function makeState() {
       getAccount: vi.fn((_addr?: string): Promise<any> => Promise.resolve({ type: 'basic', balance: 0 })),
       getTransaction: vi.fn((_hash?: string): Promise<any> => Promise.resolve(undefined)),
       sendTransaction: vi.fn((_tx?: any): Promise<any> => Promise.resolve({ state: 'pending' })),
+      getTransactionsByAddress: vi.fn((_addr?: string): Promise<any[]> => Promise.resolve([])),
     } as any,
     getBalance,
     getAccountTransactions,
@@ -186,6 +187,7 @@ export function stubNimiqGlobal() {
     Transaction: vi.fn().mockImplementation(() => ({
       proof: undefined as Uint8Array | undefined,
       serializeContent: () => new Uint8Array(),
+      hash: () => 'refund-hash',
     })),
     Signature: { create: vi.fn(() => new Uint8Array()) },
     SignatureProof: { singleSig: vi.fn(() => ({ serialize: () => new Uint8Array(1) })) },
@@ -238,6 +240,7 @@ export function resetSyncState() {
     getAccount: vi.fn(() => Promise.resolve({ type: 'basic', balance: 0 })),
     getTransaction: vi.fn(() => Promise.resolve(undefined)),
     sendTransaction: vi.fn(() => Promise.resolve({ state: 'pending' })),
+    getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
   } as any
 
   for (const fn of [

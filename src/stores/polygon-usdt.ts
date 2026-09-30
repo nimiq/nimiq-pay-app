@@ -1980,7 +1980,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       if (!('preimage' in swapResult) || !swapResult.preimage)
         return
 
-      const updatedTx = await transactionsStore.setPolygonSwapPreimage(hash, swapResult.preimage)
+      const updatedTx = await transactionsStore.setSwapPreimage(hash, swapResult.preimage)
       // A relay replacement may have renamed this hash while Fastspot was answering.
       if (!updatedTx)
         return
@@ -2605,7 +2605,7 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       })
 
       // Update transaction with secret
-      const persistedTx = await useTransactions().setPolygonSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
+      const persistedTx = await useTransactions().setSwapPreimage(tx.hash, secret).catch(error => logger.error('Failed to persist completed Polygon swap', error, { hash: receipt.hash }))
       const confirmedTx = persistedTx ?? { ...tx, meta: { ...tx.meta, secret }, status: 'confirmed' as const }
 
       trackSwapCompleted({
