@@ -82,6 +82,10 @@ To evolve a table, leave its `Create*Table` query untouched and add a new `ALTER
 
 When adding a new currency to the `Fiat` enum in `src/stores/app.ts`, the same value must also be added to the `Fiat` enum of the published `@nimiq/mini-app-sdk` package (source: `packages/mini-app-sdk/types.ts` on the `nimiq` branch of `nimiq/trust-web3-provider`) so Mini Apps consuming the host's fiat type stay in sync. Warn the developer about this dual-update requirement whenever modifying the `Fiat` enum — do not silently update only one side.
 
+## Android release R8
+
+Release uses `proguard-android-optimize.txt`. With optimization on, R8 folds reads of annotation types that no rule keeps to `null`. Capacitor's `PluginHandle.getPluginAnnotation()` then returns null and `checkPermissions` crashes with an NPE. `android/app/proguard-rules.pro` keeps the Capacitor annotation interfaces; don't remove them. After R8 rule or plugin changes, install a release build and exercise permission flows (push toggle, biometrics, camera). Debug builds are not minified and won't show this.
+
 ## CSS — teleported/portaled elements
 
 Anything teleported/portaled to `document.body` (Vue `<Teleport>`, Reka UI `DialogPortal`, etc.) renders invisible by default: `src/theme/variables.css` has `body>div:not(#app) { z-index: -100 }` (keeps the camera-preview web video behind the app), and the `:not(#app)` gives it id-level specificity that beats any utility class like `z-[99999]`. Set the z-index via inline `style` on the portaled element instead (inline wins; the rule has no `!important`) — see `MiniAppActionsSheet.vue`. Don't widen or delete the camera rule.
