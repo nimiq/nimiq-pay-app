@@ -817,9 +817,7 @@ describe('useSyncTransactions', () => {
       expect(state.getLocalTransactions).toHaveBeenNthCalledWith(2, { sinceHeight: 0, startAt: 'local-99', limit: 100 })
     })
 
-    it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {
-      vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
-      vi.resetModules()
+    it('skips legacy NAKA refunds from buffer addresses', async () => {
       const nakaTx = {
         transactionHash: 'naka-tx',
         sender: 'NQ99 NAKA',
@@ -840,8 +838,7 @@ describe('useSyncTransactions', () => {
       }) as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.setNakaTxRefunded).toHaveBeenCalledWith(100)
-      vi.doUnmock('@/lib')
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
     it('skips already-saved hashes', async () => {

@@ -273,9 +273,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
             }
 
             if (nakaBufferAddresses.includes(tx.sender)) {
-              logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-              if (isLocalCurrent())
-                await useTransactions().setNakaTxRefunded(tx.value)
+              logger.log(`🚫 updateTransactionHistory skipped legacy NAKA refund`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
               return
             }
 

@@ -2,7 +2,6 @@
 import type { Ref } from 'vue'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
 import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
@@ -22,17 +21,14 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
-import { isNakaEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { promiseWithTimeout, sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
-import { useKyc } from '@/stores/kyc'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
-import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
@@ -48,9 +44,7 @@ const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
-const { hasCard: hasNakaCard } = storeToRefs(useNaka())
-const { isNakaAvailable, isUsdtMaintenanceActive } = storeToRefs(useFeatureFlags())
-const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
+const { isUsdtMaintenanceActive } = storeToRefs(useFeatureFlags())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
@@ -193,14 +187,7 @@ async function handleRefresh(event: CustomEvent) {
   event.detail.complete()
 }
 
-watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkStatus, isNakaAvailable, isNimiqAsset], () => {
-  const nakaCardActivationNotification = {
-    id: 'activate-naka-card',
-    get title() { return i18n.t('Tap to pay with NAKA!') },
-    get subtitle() { return i18n.t('Activate NAKA for contactless payments') },
-    action: () => initializeFlow(FlowName.NakaOnboarding, { analyticsSource: 'home_notification' }),
-  }
-
+watch([referralCode, phoneNumberVerified, isCampaignActive], () => {
   // Remove number verification and reward notifications and re-add them later if necessary
   const verifyNumberNotification = {
     id: 'verify-phone-number',
@@ -220,19 +207,12 @@ watch([referralCode, phoneNumberVerified, isCampaignActive, hasNakaCard, kycSdkS
     removeLocalNotification(claimRewardsNotification.id, false)
   }
 
-  // Remove notification if user already has a Naka card
-  if (hasNakaCard.value || !isNimiqAsset.value) {
-    removeLocalNotification(nakaCardActivationNotification.id, false)
-  }
-
   if (referralCode.value && phoneNumberVerified.value)
     redeemReferral()
   else if (!referralCode.value && !phoneNumberVerified.value && isCampaignActive.value)
     addLocalNotification(verifyNumberNotification, true)
   else if (referralCode.value && !phoneNumberVerified.value)
     addLocalNotification(claimRewardsNotification, true)
-  if (!hasNakaCard.value && isNimiqAsset.value && kycSdkStatus.value !== SumsubSdkStatus.APPROVED && isNakaEnabled && isNakaAvailable.value)
-    addLocalNotification(nakaCardActivationNotification, true)
 }, { immediate: true })
 
 watch(() => localNotifications.value.length, (newValue, oldValue) => {

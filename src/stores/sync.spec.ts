@@ -293,7 +293,6 @@ vi.mock('@/stores/transactions', () => {
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
     restorePendingOutgoingTransactions: vi.fn(() => Promise.resolve(true)),
-    setNakaTxRefunded: vi.fn(),
     setSwapHtlcRefunded: vi.fn(),
   }))
 

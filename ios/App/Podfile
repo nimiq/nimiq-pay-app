@@ -1,5 +1,3 @@
-# Used in KYC process for NAKA
-source 'https://github.com/SumSubstance/Specs.git'
 source 'https://cdn.cocoapods.org/'
 
 require_relative '../../node_modules/.pnpm/@capacitor+ios@8.3.4_@capacitor+core@8.3.4/node_modules/@capacitor/ios/scripts/pods_helpers'
@@ -33,7 +31,6 @@ def capacitor_pods
   pod 'RdlaboCapacitorScreenshotEvent', :path => '../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event'
   pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.15_@capacitor+core@8.3.4/node_modules/capacitor-extended-dialog'
   pod 'CapacitorLockdownMode', :path => '../../node_modules/.pnpm/capacitor-lockdown-mode@0.0.1_@capacitor+core@8.3.4/node_modules/capacitor-lockdown-mode'
-  pod 'CapacitorSumsubMobileSdk', :path => '../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.7_@capacitor+core@8.3.4/node_modules/capacitor-sumsub-mobile-sdk'
   pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@8.1.0_@capacitor+core@8.3.4/node_modules/@capacitor-community/sqlite'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.4/node_modules/@capacitor/app'
   pod 'CapacitorClipboard', :path => '../../node_modules/.pnpm/@capacitor+clipboard@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/clipboard'

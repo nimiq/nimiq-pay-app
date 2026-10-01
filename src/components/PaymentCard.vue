@@ -2,19 +2,11 @@
 import { IonIcon } from '@ionic/vue'
 import { lockClosed } from 'ionicons/icons'
 import { motion } from 'motion-v'
-import { storeToRefs } from 'pinia'
-import { onMounted } from 'vue'
 import EyeCrossedIcon from '@/components/icons/eye-crossed.vue'
 import EyeIcon from '@/components/icons/eye.vue'
 import LoadingSpinner from '@/components/icons/loading-spinner.vue'
-import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
-import { useToast } from '@/composables/useToast'
-import { i18n } from '@/i18n/i18n-setup'
-import { useLocks } from '@/stores/locks'
-import { useNaka } from '@/stores/naka'
 
-type NakaCardColor = 'blue' | 'gold' | 'green' // | 'purple'
+type CardColor = 'blue' | 'gold' | 'green' // | 'purple'
 
 const {
   color = 'blue',
@@ -24,7 +16,7 @@ const {
   locked,
   blocked,
 } = defineProps<{
-  color?: NakaCardColor
+  color?: CardColor
   cardData?: {
     maskedPan: string
     expiry: string
@@ -41,34 +33,12 @@ const {
 
 const emit = defineEmits(['showSecretDataChange'])
 
-const colors: Record<NakaCardColor, string[]> = {
+const colors: Record<CardColor, string[]> = {
   blue: ['#1473AA', '#265DD7', '#0582CA'],
   gold: ['', '#EC991C', '#E9B213'],
   green: ['#F8F8F8', '#41A38E', '#21BCA5'],
   // purple: TODO - The SVG is not the same :/
 }
-
-const logger = useLogger('NakaCard.vue')
-const { isNakaCardActivating } = storeToRefs(useLocks())
-const { activateCardOnDevice } = useNaka()
-
-onMounted(async () => {
-  if (useDevice().isWeb || blocked)
-    return
-
-  isNakaCardActivating.value = true
-  try {
-    await activateCardOnDevice()
-  }
-  catch (e) {
-    logger.error('Error activating NAKA Card on device:', e)
-    useToast().setToast({
-      message: i18n.t('Failed to activate NAKA Card on device: {error}', { error: (e as Error).message }),
-      type: 'error',
-    })
-  }
-  isNakaCardActivating.value = false
-})
 
 function formatPan(pan: string) {
   if (pan.includes('*')) {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { Asset } from '@/lib/assets'
-import { PaymentMethod, Transfer } from '@/types/transactions'
+import { Transfer } from '@/types/transactions'
 import { FlowName, StepName } from './steps.types'
 
 const state = vi.hoisted(() => ({
@@ -29,7 +29,6 @@ const state = vi.hoisted(() => ({
   updatePinInputTs: vi.fn(),
   setEntropy: vi.fn(async () => {}),
   sendTx: vi.fn(),
-  confirmNakaPayment: vi.fn(async () => ({})),
   setToast: vi.fn(),
   trackPaymentCompleted: vi.fn(),
 }))
@@ -38,7 +37,6 @@ vi.mock('@ionic/vue', () => ({
   modalController: {
     create: state.create,
   },
-  SumsubSdkStatus: {},
 }))
 
 vi.mock('@/components/Flow.vue', () => ({
@@ -103,14 +101,6 @@ vi.mock('@/stores/feature-flags', () => ({
   }),
 }))
 
-vi.mock('@/lib', () => ({
-  isNakaEnabled: true,
-}))
-
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({ isCardActive: true, isCardLocked: false }),
-}))
-
 vi.mock('@/stores/transactions', () => ({
   useTransactions: () => ({ sendTx: state.sendTx }),
 }))
@@ -156,7 +146,6 @@ vi.mock('./steps', () => {
     promoCodeStep: vi.fn(async () => step),
     phoneNumberStep: vi.fn(async () => step),
     phoneNumberConfirmStep: vi.fn(async () => step),
-    holdNakaCardToReaderStep: vi.fn(async () => step),
     bluecodeNotAvailableStep: vi.fn(async () => step),
     paymentAmountInputStep: vi.fn(async () => step),
     nimWithdrawalAmountSelectionStep: vi.fn(async () => step),
@@ -201,7 +190,6 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'payment-hash' }, serialized: 'serialized-payment' })
     state.polygonSendPayment.mockReset()
     state.polygonSendPayment.mockResolvedValue({ outcome: 'submitted', data: { tx: { hash: 'polygon-payment' }, serialized: 'polygon-payment' } })
-    state.confirmNakaPayment.mockClear()
     state.setToast.mockClear()
     state.trackPaymentCompleted.mockClear()
   })
@@ -280,43 +268,7 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
   })
 
-  it('does not confirm an uncertain Naka payment when final serialization is available', async () => {
-    state.isNimiqAsset = true
-    state.sendTx.mockResolvedValue({
-      outcome: 'unknown',
-      stagedTx: { hash: 'staged-payment' },
-      stagedHash: 'staged-payment',
-      serialized: 'serialized-uncertain-payment',
-      error: 'response lost',
-    })
-    const { initializeFlow } = await import('./index')
-    await initializeFlow(FlowName.Payment)
-    const flow = getLastCreatedFlow()
-
-    await flow.onDone({
-      [StepName.HoldNakaCardToReader]: {
-        request: {
-          transfer: Transfer.UserPaymentToMerchant,
-          recipient: 'NQ22 MERCHANT',
-          amount: 10,
-          paymentMethod: PaymentMethod.NakaCard,
-        },
-        confirmPayment: state.confirmNakaPayment,
-      },
-      [StepName.PaymentPreview]: {
-        payWithPuntos: false,
-        paymentAnalytics: { startedAt: 1, status: 'started' },
-      },
-    }, { err: vi.fn(), setToast: vi.fn() })
-
-    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
-    expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
-    expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
-      message: expect.stringContaining('Do not retry'),
-    }))
-  })
-
-  it('does not confirm or complete an uncertain Naka payment without final serialization', async () => {
+  it('does not complete or fail an uncertain NIM payment', async () => {
     state.isNimiqAsset = true
     state.sendTx.mockResolvedValue({
       outcome: 'unknown',
@@ -329,14 +281,10 @@ describe('initializeFlow analytics and setup hooks', () => {
     const flow = getLastCreatedFlow()
 
     await flow.onDone({
-      [StepName.HoldNakaCardToReader]: {
-        request: {
-          transfer: Transfer.UserPaymentToMerchant,
-          recipient: 'NQ22 MERCHANT',
-          amount: 10,
-          paymentMethod: PaymentMethod.NakaCard,
-        },
-        confirmPayment: state.confirmNakaPayment,
+      [StepName.QRCodeScanner]: {
+        transfer: Transfer.UserPaymentToMerchant,
+        recipient: 'NQ22 MERCHANT',
+        amount: 10,
       },
       [StepName.PaymentPreview]: {
         payWithPuntos: false,
@@ -344,7 +292,6 @@ describe('initializeFlow analytics and setup hooks', () => {
       },
     }, { err: vi.fn(), setToast: vi.fn() })
 
-    expect(state.confirmNakaPayment).not.toHaveBeenCalled()
     expect(state.trackPaymentCompleted).not.toHaveBeenCalled()
     expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({
       message: expect.stringContaining('Do not retry'),

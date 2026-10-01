@@ -4,5 +4,4 @@
     <string name="title_activity_main">Nimiq Pay</string>
     <string name="package_name">com.nimiq.pay</string>
     <string name="custom_url_scheme">com.nimiq.pay</string>
-    <string name="description_aid">Nimiq Pay NFC Payment Service</string>
 </resources>

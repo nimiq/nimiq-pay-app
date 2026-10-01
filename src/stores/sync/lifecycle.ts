@@ -312,14 +312,12 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     }
 
-    logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
-
     if (nakaBufferAddresses.includes(tx.sender)) {
-      logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-      if (isListenerContextCurrent(context))
-        await useTransactions().setNakaTxRefunded(tx.value)
+      logger.log(`🚫 handleIncomingTransaction skipped legacy NAKA refund`, { hash, sender: tx.sender, amount: tx.value })
       return
     }
+
+    logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
 
     const receipt = await buildTopUpReceipt(tx)
     if (!isListenerContextCurrent(context))

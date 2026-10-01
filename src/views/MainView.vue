@@ -5,7 +5,6 @@ import { Clipboard } from '@capacitor/clipboard'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { IonPage, IonRouterOutlet, IonTabs } from '@ionic/vue'
 import { refDebounced, refThrottled, until, useSwipe } from '@vueuse/core'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
 import { storeToRefs } from 'pinia'
 import { computed, markRaw, onMounted, ref, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -27,11 +26,8 @@ import { sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
-import { useKyc } from '@/stores/kyc'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
-// NAKA disabled: issuer server retired. Uncomment with the refresh block below to restore.
-// import { useNaka } from '@/stores/naka'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePoints } from '@/stores/points'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
@@ -53,9 +49,6 @@ const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(use
 const { isTransactionPending, hasPendingHtlcCreation, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
-// const { updateUser: updateNakaUser } = useNaka()
-const { sdkStatus: kycSdkStatus } = storeToRefs(useKyc())
-const { checkKycInBackground } = useKyc()
 
 const isFirstRender = ref(true)
 
@@ -259,15 +252,6 @@ onMounted(async () => {
     return
   }
 
-  /* NAKA disabled: issuer server retired. Keep refresh code for restoration.
-  try {
-    updateNakaUser() // Fire and forget
-  }
-  catch (error) {
-    logger.error('Error updating NAKA user:', error)
-  }
-  */
-
   try {
     await updatePointsStatus()
   }
@@ -297,9 +281,6 @@ onMounted(async () => {
   logger.log('Initial checks done, starting sync process')
   useSync().syncWallets().catch(error => logger.error('Wallet sync failed', error))
   detectPaymentRequest()
-
-  if (kycSdkStatus.value === SumsubSdkStatus.PENDING)
-    checkKycInBackground()
 
   isFirstRender.value = false
 })

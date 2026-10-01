@@ -28,7 +28,6 @@ jobs:
     env:
       APP_ID: ${{ vars.APP_ID }}
 
-      VITE_ENABLE_NAKA: ${{ vars.VITE_ENABLE_NAKA }}
       VITE_ENABLE_BLUECODE: ${{ vars.VITE_ENABLE_BLUECODE }}
       VITE_ENABLE_MINI_APPS: ${{ vars.VITE_ENABLE_MINI_APPS }}
       VITE_WALKIE_TALKIE_URL: ${{ vars.VITE_WALKIE_TALKIE_URL }}
@@ -138,7 +137,7 @@ jobs:
               fi
             done
 
-            for NAME in VITE_ENABLE_NAKA VITE_ENABLE_BLUECODE VITE_ENABLE_MINI_APPS; do
+            for NAME in VITE_ENABLE_BLUECODE VITE_ENABLE_MINI_APPS; do
               if [[ "${!NAME}" != true && "${!NAME}" != false ]]; then
                 echo "ERROR: $NAME must explicitly be true or false."
                 exit 1

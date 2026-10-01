@@ -207,7 +207,7 @@ Each of `space` / `sky` / `keppel` / `algae` / `mint` / `gold` / `pumpkin` / `ch
 - **Headline** (Mulish 600, `2.25rem` / 36px, line-height 1.125): Top-of-flow titles ("Send NIM", "Back up your wallet", "Set up Nimiq Pay"). One per screen. `text-4xl font-semibold` in `@layer base h1`.
 - **Title** (Mulish 600, `1.125rem` / 18px, line-height 1.5): Menu items, list-row leads, modal section heads. The "this is what you tap" weight. `text-lg font-semibold`.
 - **Body** (Mulish 400, `1rem` / 16px, line-height 1.5): Paragraphs, descriptions, helper text. Cap measure at 65 to 75 characters; on a 390px iPhone width that's roughly the natural line-length, so most screens read correctly without manual `max-width`.
-- **Label** (Mulish 700, `0.875rem` / 14px, letter-spacing 0.025em, often UPPERCASE on toggle pills like `PaymentSelector`): Pill-toggle labels, pre-action affordances ("SCAN QR", "NAKA"), category tags. Bold and tight, never longer than two words.
+- **Label** (Mulish 700, `0.875rem` / 14px, letter-spacing 0.025em, often UPPERCASE on toggle pills like `PaymentSelector`): Pill-toggle labels, pre-action affordances ("SCAN QR"), category tags. Bold and tight, never longer than two words.
 - **Caption** (Mulish 400, `0.75rem` / 12px, line-height 1.333): Microcopy under inputs, fee disclosure, "approx." annotations next to fiat conversions.
 - **Numeric** (Fira Mono 500, weight ranges from 400 for body addresses to 700 for "this is the amount" emphasis): Every number representing value. Addresses: monospace, ellipsised in the middle (`MiddleEllipsis.vue`). Balances: monospace, large. Hashes: monospace, small.
 
@@ -250,7 +250,7 @@ Two button shapes coexist deliberately. Pill (`rounded-full`) buttons are for *n
 - **Primary, destructive.** Same shape as gradient primary, surface is `--radial-gradient-red`. Used only for *Delete Address*, *Log Out*, *Confirm sign-out*. The label is a verb, never just "Confirm."
 - **Secondary, pill ghost.** `Plaza Night / 6%` background, `Plaza Night` text, label typography, `rounded-full`, `0.5rem 1.5rem` padding. The home screen Top Up / Withdraw pair. Reads as "available, not pushing."
 - **Tertiary, link.** `QuickButton.vue`. Text-only with optional chevron. `Signal Blue` text, font-weight 700, body typography. Inline within content; never used as a screen-bottom commit.
-- **Long-press button.** `LongPressButton.vue`. Used on Naka card-tap moments where accidental confirmation is risky. Visualises progress with a circular fill in `Signal Blue`, completes only at full-fill. The hold is the safety.
+- **Long-press button.** `LongPressButton.vue`. Used where accidental confirmation is risky, such as card-tap moments. Visualises progress with a circular fill in `Signal Blue`, completes only at full-fill. The hold is the safety.
 
 ### Pill Toggle (Signature Component)
 

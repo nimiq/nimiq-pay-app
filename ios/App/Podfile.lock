@@ -49,9 +49,6 @@ PODS:
     - Capacitor
   - CapacitorStatusBar (8.0.2):
     - Capacitor
-  - CapacitorSumsubMobileSdk (0.0.7):
-    - Capacitor
-    - IdensicMobileSDK
   - CapacitorToast (8.0.1):
     - Capacitor
   - CapawesomeCapacitorPosthog (8.5.0):
@@ -115,11 +112,6 @@ PODS:
     - GoogleUtilities/Logger
   - GoogleUtilities/UserDefaults (7.12.0):
     - GoogleUtilities/Logger
-  - IdensicMobileSDK (1.41.1):
-    - IdensicMobileSDK/Default (= 1.41.1)
-  - IdensicMobileSDK/Core (1.41.1)
-  - IdensicMobileSDK/Default (1.41.1):
-    - IdensicMobileSDK/Core
   - IONCameraLib (1.0.4)
   - IONFilesystemLib (1.1.1)
   - KeychainSwift (21.0.0)
@@ -165,7 +157,6 @@ DEPENDENCIES:
   - "CapacitorScreenOrientation (from `../../node_modules/.pnpm/@capacitor+screen-orientation@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/screen-orientation`)"
   - "CapacitorShare (from `../../node_modules/.pnpm/@capacitor+share@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/share`)"
   - "CapacitorStatusBar (from `../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.4/node_modules/@capacitor/status-bar`)"
-  - "CapacitorSumsubMobileSdk (from `../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.7_@capacitor+core@8.3.4/node_modules/capacitor-sumsub-mobile-sdk`)"
   - "CapacitorToast (from `../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast`)"
   - "CapawesomeCapacitorPosthog (from `../../node_modules/.pnpm/@capawesome+capacitor-posthog@8.5.0_@capacitor+core@8.3.4_posthog-js@1.372.9/node_modules/@capawesome/capacitor-posthog`)"
   - "CapgoCameraPreview (from `../../node_modules/.pnpm/@capgo+camera-preview@8.3.8_@capacitor+core@8.3.4/node_modules/@capgo/camera-preview`)"
@@ -175,8 +166,6 @@ DEPENDENCIES:
   - "RdlaboCapacitorScreenshotEvent (from `../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.3.4/node_modules/@rdlabo/capacitor-screenshot-event`)"
 
 SPEC REPOS:
-  https://github.com/SumSubstance/Specs.git:
-    - IdensicMobileSDK
   trunk:
     - Alamofire
     - CocoaLumberjack
@@ -243,8 +232,6 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/.pnpm/@capacitor+share@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/share"
   CapacitorStatusBar:
     :path: "../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.4/node_modules/@capacitor/status-bar"
-  CapacitorSumsubMobileSdk:
-    :path: "../../node_modules/.pnpm/capacitor-sumsub-mobile-sdk@0.0.7_@capacitor+core@8.3.4/node_modules/capacitor-sumsub-mobile-sdk"
   CapacitorToast:
     :path: "../../node_modules/.pnpm/@capacitor+toast@8.0.1_@capacitor+core@8.3.4/node_modules/@capacitor/toast"
   CapawesomeCapacitorPosthog:
@@ -282,7 +269,6 @@ SPEC CHECKSUMS:
   CapacitorScreenOrientation: 6c3c84223ea1dd44aaa7184e2b416dd1192270d0
   CapacitorShare: 0c58305114538568059bfc07111f22dcb9cb2a82
   CapacitorStatusBar: 01d5763b4ed720de5ce2edbc938de6a98f4c8f32
-  CapacitorSumsubMobileSdk: 0923814fbe75504bab8abd647ecb029d49b437a7
   CapacitorToast: 408036fbd702120d3adde3980b740f3c0fb60c9e
   CapawesomeCapacitorPosthog: 96feaf395849fc3e9b186b8d2d4fbf79bdd8a6b9
   CapgoCameraPreview: bdbc20c3ed01ffdf37151164c6c8355b1c0c544e
@@ -296,7 +282,6 @@ SPEC CHECKSUMS:
   FirebaseMessaging: b285329399cc6edd73b5b32864c68454177bcf3f
   GoogleDataTransport: 57c22343ab29bc686febbf7cbb13bad167c2d8fe
   GoogleUtilities: 0759d1a57ebb953965c2dfe0ba4c82e95ccc2e34
-  IdensicMobileSDK: dffe78563f393fc6535fa1f85d6a4f7fe640855a
   IONCameraLib: f2349804460bd9e3f892e42109b8d996ab3fa19d
   IONFilesystemLib: dfa8706539ac9ab77ccfd6e5b3830ce9b5e57f6c
   KeychainSwift: 4a71a45c802fd9e73906457c2dcbdbdc06c9419d
@@ -309,6 +294,6 @@ SPEC CHECKSUMS:
   Version: de5907f2c5d0f3cf21708db7801d1d5401139486
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: c13774a5cd0194b4e85a9343c97f4dee1097539b
+PODFILE CHECKSUM: 612e8ad9b05f489da0dbe7aee435e2ed74fd0e8f
 
 COCOAPODS: 1.15.2

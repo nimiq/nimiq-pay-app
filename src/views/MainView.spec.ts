@@ -32,16 +32,13 @@ const localBalance = ref(0)
 const htlcThreshold = ref(0)
 const isUsdtMaintenanceActive = ref(false)
 const usdtMaintenanceNotice = ref('USDT maintenance notice')
-const kycSdkStatus = ref('idle')
 
 const updatePointsBalance = vi.fn()
 const updateTasks = vi.fn()
 const updatePointsStatus = vi.fn()
-const updateNakaUser = vi.fn()
 const initNotifications = vi.fn()
 const syncWallets = vi.fn()
 const loggerError = vi.fn()
-const checkKycInBackground = vi.fn()
 const routerReplace = vi.fn()
 const libState = vi.hoisted(() => ({
   isTestnet: false,
@@ -95,12 +92,6 @@ vi.mock('@vueuse/core', async () => {
     }),
   }
 })
-
-vi.mock('capacitor-sumsub-mobile-sdk', () => ({
-  SumsubSdkStatus: {
-    PENDING: 'pending',
-  },
-}))
 
 vi.mock('pinia', () => ({
   storeToRefs: <T>(store: T) => store,
@@ -213,13 +204,6 @@ vi.mock('@/stores/conn', () => ({
   }),
 }))
 
-vi.mock('@/stores/kyc', () => ({
-  useKyc: () => ({
-    sdkStatus: kycSdkStatus,
-    checkKycInBackground,
-  }),
-}))
-
 vi.mock('@/stores/local-wallet', () => ({
   useLocalWallet: () => ({
     localBalance,
@@ -232,12 +216,6 @@ vi.mock('@/stores/locks', () => ({
     isSyncingWallets,
     isConsensusNeeded,
     isScannerActive,
-  }),
-}))
-
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({
-    updateUser: updateNakaUser,
   }),
 }))
 
@@ -322,27 +300,17 @@ describe('mainView', () => {
     isScannerActive.value = false
     localBalance.value = 0
     htlcThreshold.value = 0
-    kycSdkStatus.value = 'idle'
     isUsdtMaintenanceActive.value = false
     updatePointsBalance.mockReset()
     updateTasks.mockReset()
     updatePointsStatus.mockReset()
     updatePointsStatus.mockResolvedValue(undefined)
-    updateNakaUser.mockReset()
     initNotifications.mockReset()
     syncWallets.mockReset()
     syncWallets.mockResolvedValue(undefined)
     loggerError.mockReset()
-    checkKycInBackground.mockReset()
     routerReplace.mockReset()
     libState.isTestnet = false
-  })
-
-  it('does not update the NAKA user from the retired issuer API on mount', async () => {
-    await mountComponent()
-    await flushPromises()
-
-    expect(updateNakaUser).not.toHaveBeenCalled()
   })
 
   it('logs a rejected wallet sync instead of leaving it unhandled', async () => {

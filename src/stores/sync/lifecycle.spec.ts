@@ -508,9 +508,7 @@ describe('useSyncLifecycle', () => {
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
-    it('marks NAKA reversal when sender is in nakaBufferAddresses', async () => {
-      vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
-      vi.resetModules()
+    it('skips legacy NAKA refunds from buffer addresses', async () => {
       const listener = await captureLocalTxListener()
       await listener({
         transactionHash: 'h1',
@@ -523,9 +521,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.setNakaTxRefunded).toHaveBeenCalledWith(250)
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
-      vi.doUnmock('@/lib')
     })
 
     it('drops own-HTLC drains identified by proof.creator and registers them', async () => {
@@ -710,9 +706,7 @@ describe('useSyncLifecycle', () => {
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
       })
 
-      it('does NOT fire on NAKA reversal', async () => {
-        vi.doMock('@/lib', () => ({ isDev: false, nakaBufferAddresses: ['NQ99 NAKA'] }))
-        vi.resetModules()
+      it('does NOT fire on legacy NAKA refund', async () => {
         const listener = await captureLocalTxListener()
         await listener({
           transactionHash: 'naka-h',
@@ -726,7 +720,6 @@ describe('useSyncLifecycle', () => {
           data: { raw: '' },
         })
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
-        vi.doUnmock('@/lib')
       })
 
       it('does NOT fire on add-stake from non-remote sender', async () => {

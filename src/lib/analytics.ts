@@ -52,8 +52,6 @@ export type FeatureName
     | 'referral'
     | 'mini_apps'
     | 'verify_phone'
-    | 'naka_onboarding'
-    | 'naka_management'
 
 export interface FeatureOpenedProperties {
   featureName: FeatureName
