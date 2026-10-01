@@ -378,6 +378,10 @@ vi.mock('@/lib', () => ({
   isDev: false,
 }))
 
+vi.mock('@/lib/analytics', () => ({
+  trackTopUpReceived: vi.fn(),
+}))
+
 vi.mock('@/lib/utils', async importOriginal => ({
   ...await importOriginal<typeof import('@/lib/utils')>(),
   getLegacyTransactionValidityStartHeight: vi.fn(() => undefined),
