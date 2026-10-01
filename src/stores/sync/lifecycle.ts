@@ -8,6 +8,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
+import { nakaBufferAddresses } from '@/lib'
 import { trackTopUpReceived } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -308,6 +309,11 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     if (isOwnHtlcDrain(tx, context.owner)) {
       logger.log(`🚫 handleIncomingTransaction skipped own-HTLC drain`, { hash, sender: tx.sender, amount: tx.value })
       await useRemoteSigner().registerOwnHtlcIfMissing(tx.sender, context)
+      return
+    }
+
+    if (nakaBufferAddresses.includes(tx.sender)) {
+      logger.log(`🚫 handleIncomingTransaction skipped legacy NAKA refund`, { hash, sender: tx.sender, amount: tx.value })
       return
     }
 

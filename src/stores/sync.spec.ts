@@ -129,6 +129,7 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib', () => ({
   isDev: false,
+  nakaBufferAddresses: [],
 }))
 
 vi.mock('@/lib/tx', () => ({

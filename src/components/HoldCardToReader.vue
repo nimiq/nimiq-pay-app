@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { IonButton } from '@ionic/vue'
 import { motion } from 'motion-v'
 import Check from '@/components/icons/check.vue'
 import NfcCrossed from '@/components/icons/nfc-crossed.vue'

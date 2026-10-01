@@ -8,6 +8,12 @@ export const nimiqDomainUrl = isTestnet ? 'nimiq-testnet.com' : 'nimiq.com'
 
 export const walletUrl = new URL(`https://wallet.${nimiqDomainUrl}`)
 
+// Retired NAKA card refund senders. Sync skips them so past refunds are not re-imported as Top-Ups.
+export const nakaBufferAddresses = [
+  'NQ72 F16T 8H2C KVLQ 7QAJ DXA6 85BC E4QU FT7G', // Testnet
+  'NQ60 G92X YHN0 0369 U0L0 N9GU FA2Q GBKY UVHA', // Mainnet
+]
+
 export const nimiqPayCosignerPublicKeys = isTestnet
   ? [
       'c1534c708122968212c6709526801d18218ce9303590f2bca473213d99b24aaf',

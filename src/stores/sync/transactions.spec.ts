@@ -817,6 +817,30 @@ describe('useSyncTransactions', () => {
       expect(state.getLocalTransactions).toHaveBeenNthCalledWith(2, { sinceHeight: 0, startAt: 'local-99', limit: 100 })
     })
 
+    it('skips legacy NAKA refunds from buffer addresses', async () => {
+      const nakaTx = {
+        transactionHash: 'naka-tx',
+        sender: 'NQ99 NAKA',
+        senderType: 'basic',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { raw: '' },
+        proof: { raw: '' },
+      }
+      state.getAccountTransactions.mockImplementation(((address: any) => {
+        if (address?.toUserFriendlyAddress?.() === 'NQ00 TEST LOCAL ADDRESS')
+          return Promise.resolve({ data: [nakaTx] })
+        return Promise.resolve({ data: [] })
+      }) as any)
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+    })
+
     it('skips already-saved hashes', async () => {
       const tx = {
         transactionHash: 'known-hash',

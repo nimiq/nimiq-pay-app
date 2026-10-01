@@ -508,6 +508,22 @@ describe('useSyncLifecycle', () => {
       expect(state.addReceiptTransaction).not.toHaveBeenCalled()
     })
 
+    it('skips legacy NAKA refunds from buffer addresses', async () => {
+      const listener = await captureLocalTxListener()
+      await listener({
+        transactionHash: 'h1',
+        sender: 'NQ99 NAKA',
+        senderType: 'basic',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        recipientType: 'basic',
+        value: 250,
+        fee: 0,
+        state: 'confirmed',
+        data: { raw: '' },
+      })
+      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+    })
+
     it('drops own-HTLC drains identified by proof.creator and registers them', async () => {
       const listener = await captureLocalTxListener()
       await listener({
@@ -686,6 +702,22 @@ describe('useSyncLifecycle', () => {
           timestamp: 9,
           data: { raw: '' },
           proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
+        })
+        expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
+      })
+
+      it('does NOT fire on legacy NAKA refund', async () => {
+        const listener = await captureLocalTxListener()
+        await listener({
+          transactionHash: 'naka-h',
+          sender: 'NQ99 NAKA',
+          senderType: 'basic',
+          recipient: 'NQ00 TEST LOCAL ADDRESS',
+          recipientType: 'basic',
+          value: 250,
+          fee: 0,
+          state: 'confirmed',
+          data: { raw: '' },
         })
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
       })

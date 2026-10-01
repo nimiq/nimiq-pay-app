@@ -8,6 +8,7 @@ import { useCplApi, useRemoteSignerApi } from '@/composables/useApi'
 import { useFastspotApiV1 } from '@/composables/useFastspotv1'
 import { useLogger } from '@/composables/useLogger'
 import { usePrice } from '@/composables/usePrice'
+import { nakaBufferAddresses } from '@/lib'
 import { Asset } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -268,6 +269,11 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
 
             if (isOwnHtlcDrain(tx, context.owner)) {
               logger.log(`🚫 updateTransactionHistory skipped own-HTLC drain`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
+              return
+            }
+
+            if (nakaBufferAddresses.includes(tx.sender)) {
+              logger.log(`🚫 updateTransactionHistory skipped legacy NAKA refund`, { hash: tx.transactionHash, sender: tx.sender, amount: tx.value })
               return
             }
 
