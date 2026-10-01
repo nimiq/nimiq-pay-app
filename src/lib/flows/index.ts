@@ -256,7 +256,6 @@ const paymentFlow: FlowInit = async () => {
 
     const nimPaymentRequest = state[StepName.QRCodeScanner]
     const payWithPuntos = state[StepName.PaymentPreview]?.payWithPuntos
-    const bluecodePaymentRequest = {} // state[StepName.BluecodePayment]
 
     // 1. Check wether the user has done the flow as expected and we don't have a surprise in the params
 
@@ -266,7 +265,6 @@ const paymentFlow: FlowInit = async () => {
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
-    const isBluecodePaymentRequest = objectHasData(bluecodePaymentRequest)
 
     // No translation as not user-facing. Dev error which should not occur in production.
     if (payWithPuntos && isNimPaymentRequest) {
@@ -274,24 +272,13 @@ const paymentFlow: FlowInit = async () => {
       reportCriticalError(new Error(msg), { flow: flowName })
       throw new Error(msg)
     }
-    if (isBluecodePaymentRequest)
-      throw new Error('Bluecode payments are not supported yet')
-
-    // Only one of the state can be true, otherwise the flow is not as expected
-    if ([isNimPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
-      throw new Error(`Multiple payment methods are active at the same time. Expected just one of ${{ payWithPuntos, bluecodePaymentRequest }}`)
-
     // 2. Parse the payments parameters
 
-    let payment:
-      | { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
-      | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
+    let payment: { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
     if (isNimPaymentRequest)
       payment = { method: (payWithPuntos ? PaymentMethod.Points : assetToPaymentMethod(nimPaymentRequest.asset || Asset.NIM)) as PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: nimPaymentRequest }
-    else if (isBluecodePaymentRequest)
-      payment = { method: PaymentMethod.Bluecode, request: bluecodePaymentRequest }
     else
-      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos, bluecodePaymentRequest }}`)
+      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos }}`)
 
     // 3. Do the payment
 
@@ -402,12 +389,8 @@ const paymentFlow: FlowInit = async () => {
           return failPayment(error)
         break
       }
-      case PaymentMethod.Bluecode: {
-        throw new Error('Bluecode payments are not supported yet')
-        // break
-      }
       default: {
-        throw new Error(`Unknown payment method`, payment)
+        throw new Error(`Unknown payment method: ${payment.method}`)
       }
     }
 

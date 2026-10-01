@@ -11,6 +11,8 @@ defineProps<{
   card?: { maskedPan: string, expiry: string }
   isReady: boolean
   isCardActive: boolean
+  // `null` means not checked yet. The template treats it like `false`, so keep `isReady` false until both
+  // are known, otherwise "NFC is not supported" / "Enable NFC" flashes before the first NFC check returns.
   isNfcSupported: boolean | null
   isNfcEnabled: boolean | null
   paymentSuccessful?: boolean

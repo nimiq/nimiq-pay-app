@@ -350,8 +350,6 @@ const paymentMethod = computed(() => {
     return PaymentMethod.USDT
   else if (props.state[StepName.QRCodeScanner])
     return PaymentMethod.NIM
-  // else if (props.state[StepName.BluecodePayment])
-  //   return PaymentMethod.Bluecode
   throw new Error('Unexpected payment method')
 })
 

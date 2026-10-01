@@ -397,7 +397,6 @@ export enum PaymentMethod {
   NIM = 'nim',
   USDT = 'usdt',
   Points = 'points',
-  Bluecode = 'bluecode',
 }
 
 export type AppTransactionState = Nimiq.TransactionState | 'mined' | 'failed'

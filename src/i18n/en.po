@@ -79,7 +79,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:556
+#: src/lib/flows/index.ts:539
 msgid "Address saved"
 msgstr ""
 
@@ -163,7 +163,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:609
+#: src/lib/flows/index.ts:592
 msgid "Backup successful"
 msgstr ""
 
@@ -1255,7 +1255,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:420
+#: src/lib/flows/index.ts:403
 msgid "Payment successful"
 msgstr ""
 
@@ -1298,7 +1298,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:638
+#: src/lib/flows/index.ts:621
 msgid "PIN change successful"
 msgstr ""
 
@@ -1615,8 +1615,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:498
-#: src/lib/flows/index.ts:507
+#: src/lib/flows/index.ts:481
+#: src/lib/flows/index.ts:490
 msgid "Something went wrong"
 msgstr ""
 
@@ -1784,7 +1784,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:625
+#: src/lib/flows/index.ts:608
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1793,8 +1793,8 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/index.ts:334
-#: src/lib/flows/index.ts:500
+#: src/lib/flows/index.ts:321
+#: src/lib/flows/index.ts:483
 #: src/stores/polygon-usdt.ts:2135
 #: src/stores/polygon-usdt.ts:2147
 #: src/stores/polygon-usdt.ts:2171
@@ -1989,7 +1989,7 @@ msgstr ""
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 
-#: src/lib/flows/index.ts:352
+#: src/lib/flows/index.ts:339
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -2171,7 +2171,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:514
+#: src/lib/flows/index.ts:497
 msgid "Withdrawal successful"
 msgstr ""
 
