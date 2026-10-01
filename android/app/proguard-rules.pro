@@ -25,3 +25,10 @@
 -keepclassmembers class net.sqlcipher.** { *; }
 
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# Capacitor reads @CapacitorPlugin/@Permission at runtime. Without a keep on the
+# annotation types, R8 optimization treats them as never instantiated and folds
+# PluginHandle.getPluginAnnotation() to null (NPE in checkPermissions).
+-keep @interface com.getcapacitor.annotation.*
+-keep @interface com.getcapacitor.NativePlugin
+-keep @interface com.getcapacitor.PluginMethod
