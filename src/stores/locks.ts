@@ -15,7 +15,6 @@ export const useLocks = defineStore('locks', () => {
   const isConsensusNeeded = ref(false)
   const isAppInBackground = ref(false)
   const isScannerActive = ref(false)
-  const isNakaCardActivating = ref(false)
   const isHomeVisible = ref(false)
 
   useMutationObserver(document.body, (mutations) => {
@@ -36,7 +35,6 @@ export const useLocks = defineStore('locks', () => {
     isConsensusNeeded,
     isAppInBackground,
     isScannerActive,
-    isNakaCardActivating,
     isHomeVisible,
   }
 })

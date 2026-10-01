@@ -8,7 +8,6 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { usePrice } from '@/composables/usePrice'
-import { nakaBufferAddresses } from '@/lib'
 import { trackTopUpReceived } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { SQLQuery } from '@/lib/sql-queries'
@@ -313,13 +312,6 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
     }
 
     logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
-
-    if (nakaBufferAddresses.includes(tx.sender)) {
-      logger.log('NAKA reversal detected, marking matching tx as reversed', { tx })
-      if (isListenerContextCurrent(context))
-        await useTransactions().setNakaTxRefunded(tx.value)
-      return
-    }
 
     const receipt = await buildTopUpReceipt(tx)
     if (!isListenerContextCurrent(context))

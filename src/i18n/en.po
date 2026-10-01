@@ -27,36 +27,28 @@ msgstr ""
 msgid "0x..."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2160
+#: src/stores/polygon-usdt.ts:2154
 msgid "A previous transaction was confirmed. No new payment was sent."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2125
-#: src/stores/polygon-usdt.ts:2380
-#: src/stores/polygon-usdt.ts:2393
-#: src/stores/transactions.ts:343
+#: src/stores/polygon-usdt.ts:2119
+#: src/stores/polygon-usdt.ts:2374
+#: src/stores/polygon-usdt.ts:2387
+#: src/stores/transactions.ts:342
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:360
+#: src/stores/transactions.ts:359
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
-#: src/modals/MenuModal.vue:81
+#: src/modals/MenuModal.vue:69
 msgid "About"
 msgstr ""
 
-#: src/modals/MenuModal.vue:38
-#: src/views/HomeView.vue:207
-msgid "Activate Cashback & Rewards"
-msgstr ""
-
 #: src/modals/MenuModal.vue:26
-msgid "Activate NAKA Card"
-msgstr ""
-
-#: src/views/HomeView.vue:200
-msgid "Activate NAKA for contactless payments"
+#: src/views/HomeView.vue:194
+msgid "Activate Cashback & Rewards"
 msgstr ""
 
 #: src/components/QRScanner.vue:57
@@ -67,16 +59,12 @@ msgstr ""
 msgid "Add another address"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:17
-msgid "Add new card"
-msgstr ""
-
 #: src/lib/mini-app-confirmation.ts:101
-#: src/types/transactions.ts:149
+#: src/types/transactions.ts:148
 msgid "Add Stake"
 msgstr ""
 
-#: src/lib/flows/steps.ts:610
+#: src/lib/flows/steps.ts:589
 msgid "Add to address book"
 msgstr ""
 
@@ -91,7 +79,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:582
+#: src/lib/flows/index.ts:556
 msgid "Address saved"
 msgstr ""
 
@@ -125,14 +113,6 @@ msgstr ""
 msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:139
-msgid "Amount exceeds daily limit of {fiatAmount}"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:89
-msgid "Amount exceeds payment limit of {fiatAmount}"
-msgstr ""
-
 #: src/composables/useBitcoinLightning.ts:114
 msgid "Amount too small"
 msgstr ""
@@ -161,7 +141,7 @@ msgstr ""
 msgid "App screenshots"
 msgstr ""
 
-#: src/modals/MenuModal.vue:57
+#: src/modals/MenuModal.vue:45
 msgid "App Settings"
 msgstr ""
 
@@ -179,11 +159,11 @@ msgid "Auto-deposit threshold"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:21
-#: src/modals/MenuModal.vue:69
+#: src/modals/MenuModal.vue:57
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:635
+#: src/lib/flows/index.ts:609
 msgid "Backup successful"
 msgstr ""
 
@@ -192,7 +172,7 @@ msgid "Backup your account before logging out"
 msgstr ""
 
 #: src/composables/useBiometric.ts:41
-#: src/lib/flows/steps.ts:227
+#: src/lib/flows/steps.ts:220
 #: src/modals/EnableBiometricModal.vue:4
 #: src/modals/SettingsModal.vue:61
 msgid "Biometric Authentication"
@@ -211,24 +191,11 @@ msgstr ""
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
-#: src/components/naka/NakaCardDelete.vue:10
-msgid "Block"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:107
-#: src/lib/flows/steps.ts:775
-msgid "Block card"
-msgstr ""
-
-#: src/components/naka/NakaCard.vue:49
+#: src/components/PaymentCard.vue:49
 msgid "Blocked"
 msgstr ""
 
-#: src/lib/flows/steps.ts:776
-msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
-msgstr ""
-
-#: src/lib/flows/steps.ts:356
+#: src/lib/flows/steps.ts:349
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr ""
 
@@ -268,7 +235,7 @@ msgstr ""
 msgid "Cannot create swap"
 msgstr ""
 
-#: src/lib/flows/steps.ts:238
+#: src/lib/flows/steps.ts:231
 msgid "Cannot enable biometric"
 msgstr ""
 
@@ -276,40 +243,12 @@ msgstr ""
 msgid "Cannot fetch existing swap"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:164
-msgid "Cannot verify daily limits: {error}"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:151
-msgid "Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:114
-msgid "Cannot verify payment limits: {error}"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:101
-msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr ""
-
-#: src/components/naka/NakaCardDelete.vue:32
-msgid "Card blocked"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:86
-msgid "Card locked"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:99
-msgid "Card unlocked"
-msgstr ""
-
 #: src/composables/useQRScanner.ts:129
 msgid "Cashlink claimed successfully"
 msgstr ""
 
 #: src/composables/useNotifications.ts:356
-#: src/types/transactions.ts:144
+#: src/types/transactions.ts:143
 msgid "Cashlink Claiming"
 msgstr ""
 
@@ -333,11 +272,11 @@ msgstr ""
 msgid "Check your connection and try again."
 msgstr ""
 
-#: src/lib/flows/steps.ts:96
+#: src/lib/flows/steps.ts:89
 msgid "Choose a PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:582
+#: src/lib/flows/steps.ts:561
 msgid "Choose an address"
 msgstr ""
 
@@ -371,25 +310,25 @@ msgstr ""
 msgid "Confirm and send"
 msgstr ""
 
-#: src/lib/flows/steps.ts:571
+#: src/lib/flows/steps.ts:550
 msgid "Confirm Withdrawal"
 msgstr ""
 
-#: src/lib/flows/steps.ts:282
+#: src/lib/flows/steps.ts:275
 msgid "Confirm your phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:145
+#: src/lib/flows/steps.ts:138
 msgid "Confirm your PIN"
 msgstr ""
 
-#: src/types/transactions.ts:172
+#: src/types/transactions.ts:171
 msgid "Confirmed"
 msgstr ""
 
 #. We display just included, but not yet confirmed transactions as confirming.
+#: src/types/transactions.ts:166
 #: src/types/transactions.ts:167
-#: src/types/transactions.ts:168
 msgid "Confirming"
 msgstr ""
 
@@ -399,7 +338,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:174
 #: src/components/PaymentAmountInput.vue:161
-#: src/views/MainView.vue:102
+#: src/views/MainView.vue:95
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -432,12 +371,12 @@ msgstr ""
 msgid "Copy code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:614
+#: src/lib/flows/steps.ts:593
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:558
-#: src/stores/transactions.ts:572
+#: src/stores/transactions.ts:557
+#: src/stores/transactions.ts:571
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
@@ -449,24 +388,24 @@ msgstr ""
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2528
+#: src/stores/polygon-usdt.ts:2522
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:355
+#: src/stores/transactions.ts:354
 msgid "Could not verify pending transactions"
 msgstr ""
 
-#: src/lib/flows/steps.ts:724
+#: src/lib/flows/steps.ts:703
 msgid "Create a backup. It's the only way to recover your account."
 msgstr ""
 
-#: src/lib/flows/steps.ts:363
+#: src/lib/flows/steps.ts:356
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:96
-#: src/types/transactions.ts:148
+#: src/types/transactions.ts:147
 msgid "Create Staker"
 msgstr ""
 
@@ -474,7 +413,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:129
+#: src/views/HomeView.vue:123
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -490,10 +429,6 @@ msgstr ""
 #: src/components/competition/CompetitionSpotlight.vue:26
 #: src/components/competition/MiniAppsCompetitionView.vue:57
 msgid "Cycle {number}"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:28
-msgid "Daily limit"
 msgstr ""
 
 #: src/components/TransactionDetails.vue:34
@@ -516,7 +451,7 @@ msgstr ""
 msgid "Delete Points Account"
 msgstr ""
 
-#: src/types/transactions.ts:154
+#: src/types/transactions.ts:153
 msgid "Delete Validator"
 msgstr ""
 
@@ -544,12 +479,12 @@ msgstr ""
 msgid "Enable Fingerprint"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:73
+#: src/components/HoldCardToReader.vue:69
 msgid "Enable NFC to pay"
 msgstr ""
 
 #: src/components/EnableNotifications.vue:6
-#: src/lib/flows/steps.ts:305
+#: src/lib/flows/steps.ts:298
 msgid "Enable notifications"
 msgstr ""
 
@@ -574,7 +509,7 @@ msgstr ""
 msgid "Enter manually"
 msgstr ""
 
-#: src/lib/flows/steps.ts:459
+#: src/lib/flows/steps.ts:438
 msgid "Enter payment request"
 msgstr ""
 
@@ -582,11 +517,11 @@ msgstr ""
 msgid "Enter PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:74
+#: src/lib/flows/steps.ts:67
 msgid "Enter recovery words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:283
+#: src/lib/flows/steps.ts:276
 msgid "Enter the code from the SMS sent to you."
 msgstr ""
 
@@ -594,11 +529,11 @@ msgstr ""
 msgid "Enter your PIN to enable biometric authentication"
 msgstr ""
 
-#: src/lib/flows/steps.ts:57
+#: src/lib/flows/steps.ts:50
 msgid "Enter your promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:58
+#: src/lib/flows/steps.ts:51
 msgid "Enter your referral promo code."
 msgstr ""
 
@@ -649,7 +584,7 @@ msgstr ""
 msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
 msgstr ""
 
-#: src/types/transactions.ts:171
+#: src/types/transactions.ts:170
 msgid "Expired"
 msgstr ""
 
@@ -659,10 +594,6 @@ msgstr ""
 
 #: src/components/competition/CompetitionSpotlight.vue:35
 msgid "Explore entries"
-msgstr ""
-
-#: src/components/naka/NakaCard.vue:66
-msgid "Failed to activate NAKA Card on device: {error}"
 msgstr ""
 
 #: src/components/AddressDisplay.vue:54
@@ -694,7 +625,7 @@ msgstr ""
 msgid "Featured"
 msgstr ""
 
-#: src/modals/MenuModal.vue:46
+#: src/modals/MenuModal.vue:34
 msgid "Features"
 msgstr ""
 
@@ -716,7 +647,7 @@ msgid "Full link:"
 msgstr ""
 
 #: src/components/OnBoardingScreen.vue:34
-#: src/lib/flows/steps.ts:370
+#: src/lib/flows/steps.ts:363
 msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
 msgstr ""
 
@@ -724,7 +655,7 @@ msgstr ""
 msgid "Get free NIM"
 msgstr ""
 
-#: src/lib/flows/steps.ts:306
+#: src/lib/flows/steps.ts:299
 msgid "Get important info on transactions, top-ups, security and more."
 msgstr ""
 
@@ -736,7 +667,7 @@ msgstr ""
 msgid "Get Started"
 msgstr ""
 
-#: src/lib/flows/steps.ts:614
+#: src/lib/flows/steps.ts:593
 msgid "Give it a name so you recognise it later"
 msgstr ""
 
@@ -748,7 +679,6 @@ msgstr ""
 msgid "GoCrypto refused connecting"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingWhatIsNaka.vue:7
 #: src/components/OnBoardingScreen.vue:23
 #: src/components/TheHomeAmounts.vue:64
 msgid "Got it"
@@ -770,20 +700,12 @@ msgstr ""
 msgid "Hide transaction?"
 msgstr ""
 
-#: src/components/naka/NakaCardDelete.vue:4
-msgid "Hold the button to confirm."
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:62
+#: src/components/HoldCardToReader.vue:58
 msgid "Hold your phone near the terminal"
 msgstr ""
 
 #: src/components/ChangelogEntry.vue:20
 msgid "How to use:"
-msgstr ""
-
-#: src/components/naka/NakaOnboardingVerifyId.vue:7
-msgid "I agree to NAKA Card's {terms}"
 msgstr ""
 
 #: src/views/SetupView.vue:17
@@ -792,10 +714,6 @@ msgstr ""
 
 #: src/views/LockdownScreen.vue:28
 msgid "I have turned it off"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:128
-msgid "Identification is not verified. Please contact support."
 msgstr ""
 
 #: src/components/NimWithdrawConfirm.vue:11
@@ -821,13 +739,9 @@ msgstr ""
 msgid "Incoming Payments"
 msgstr ""
 
-#: src/lib/flows/steps.ts:204
-#: src/lib/flows/steps.ts:96
+#: src/lib/flows/steps.ts:197
+#: src/lib/flows/steps.ts:89
 msgid "Insert PIN to confirm"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:177
-msgid "Insufficient balance"
 msgstr ""
 
 #: src/lib/issuer-websocket.ts:69
@@ -844,8 +758,8 @@ msgid "Internationalized domain (punycode). Verify it matches the real site."
 msgstr ""
 
 #. For transactions that got rejected by the mempool.
+#: src/types/transactions.ts:168
 #: src/types/transactions.ts:169
-#: src/types/transactions.ts:170
 msgid "Invalid"
 msgstr ""
 
@@ -902,11 +816,11 @@ msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
 #: src/composables/useStringParser.ts:133
-msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
+msgid "Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are supported."
 msgstr ""
 
 #: src/composables/useStringParser.ts:134
-msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks for NIM are supported."
 msgstr ""
 
 #: src/composables/useBitcoinLightning.ts:195
@@ -918,7 +832,7 @@ msgid "Invalid NIM HTLC data in swap"
 msgstr ""
 
 #: src/composables/useStringParser.ts:46
-#: src/lib/flows/steps.ts:641
+#: src/lib/flows/steps.ts:620
 msgid "Invalid Nimiq address"
 msgstr ""
 
@@ -934,7 +848,7 @@ msgstr ""
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
 msgstr ""
 
-#: src/lib/flows/steps.ts:265
+#: src/lib/flows/steps.ts:258
 msgid "Invalid phone number"
 msgstr ""
 
@@ -944,10 +858,10 @@ msgstr ""
 msgid "Invalid PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:125
-#: src/lib/flows/steps.ts:129
-#: src/lib/flows/steps.ts:217
-#: src/lib/flows/steps.ts:219
+#: src/lib/flows/steps.ts:118
+#: src/lib/flows/steps.ts:122
+#: src/lib/flows/steps.ts:210
+#: src/lib/flows/steps.ts:212
 msgid "Invalid PIN code"
 msgstr ""
 
@@ -968,7 +882,7 @@ msgid "Invalid signature. Please try again"
 msgstr ""
 
 #: src/lib/tx.ts:94
-#: src/stores/polygon-usdt.ts:2430
+#: src/stores/polygon-usdt.ts:2424
 msgid "Invalid swap hash"
 msgstr ""
 
@@ -982,7 +896,7 @@ msgstr ""
 
 #: src/composables/useQRScanner.ts:89
 #: src/composables/useStringParser.ts:39
-#: src/lib/flows/steps.ts:634
+#: src/lib/flows/steps.ts:613
 msgid "Invalid USDT address"
 msgstr ""
 
@@ -1016,10 +930,6 @@ msgstr ""
 
 #: src/components/LongPressButton.vue:27
 msgid "Keep pressing…"
-msgstr ""
-
-#: src/components/naka/NakaOnboardingVerifyId.vue:72
-msgid "KYC verification in progress, we will notify you once it is completed."
 msgstr ""
 
 #: src/lib/issuer-websocket.ts:73
@@ -1059,10 +969,6 @@ msgstr ""
 msgid "Loading…"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:100
-msgid "Lock card"
-msgstr ""
-
 #: src/views/LockdownScreen.vue:14
 msgid "Lockdown Mode is on"
 msgstr ""
@@ -1073,7 +979,7 @@ msgid ""
 "Please ensure that you have them available before logging out."
 msgstr ""
 
-#: src/modals/MenuModal.vue:88
+#: src/modals/MenuModal.vue:76
 msgid "Log Out"
 msgstr ""
 
@@ -1098,7 +1004,7 @@ msgstr ""
 msgid "Message"
 msgstr ""
 
-#: src/modals/MenuModal.vue:52
+#: src/modals/MenuModal.vue:40
 msgid "Mini Apps"
 msgstr ""
 
@@ -1109,18 +1015,6 @@ msgstr ""
 
 #: src/modals/SettingsModal.vue:37
 msgid "Minimum NIM Decimals"
-msgstr ""
-
-#: src/components/PaymentSelector.vue:20
-msgid "Naka"
-msgstr ""
-
-#: src/modals/MenuModal.vue:20
-msgid "NAKA Card"
-msgstr ""
-
-#: src/lib/flows/steps.ts:751
-msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
 msgstr ""
 
 #: src/components/PaymentPreview.vue:89
@@ -1140,16 +1034,16 @@ msgstr ""
 msgid "Network ID mismatch"
 msgstr ""
 
-#: src/types/transactions.ts:165
+#: src/types/transactions.ts:164
 msgid "New"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:65
+#: src/components/HoldCardToReader.vue:61
 msgid "NFC is not supported on this device"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:66
-#: src/stores/transactions.ts:366
+#: src/stores/transactions.ts:365
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1172,8 +1066,8 @@ msgstr ""
 #: src/stores/local-wallet.ts:30
 #: src/stores/local-wallet.ts:81
 #: src/stores/local-wallet.ts:90
-#: src/stores/polygon-usdt.ts:2111
-#: src/stores/polygon-usdt.ts:2384
+#: src/stores/polygon-usdt.ts:2105
+#: src/stores/polygon-usdt.ts:2378
 msgid "No account has been found"
 msgstr ""
 
@@ -1181,8 +1075,12 @@ msgstr ""
 msgid "No accounts found"
 msgstr ""
 
-#: src/components/naka/HoldNakaCardToReader.vue:76
+#: src/components/HoldCardToReader.vue:72
 msgid "No active card"
+msgstr ""
+
+#: src/components/HoldCardToReader.vue:78
+msgid "No card found"
 msgstr ""
 
 #: src/stores/nimiq-network.ts:217
@@ -1199,10 +1097,6 @@ msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:125
 msgid "No matching submissions"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:82
-msgid "No NAKA Card found"
 msgstr ""
 
 #: src/lib/tx.ts:99
@@ -1243,7 +1137,7 @@ msgstr ""
 msgid "No transactions found"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2435
+#: src/stores/polygon-usdt.ts:2429
 msgid "No USDT HTLC found in swap"
 msgstr ""
 
@@ -1263,7 +1157,7 @@ msgstr ""
 msgid "Notifications about new campaigns and other important events"
 msgstr ""
 
-#: src/lib/flows/steps.ts:314
+#: src/lib/flows/steps.ts:307
 msgid "Notifications cannot be enabled, skipping this step."
 msgstr ""
 
@@ -1300,7 +1194,7 @@ msgstr ""
 msgid "PAY"
 msgstr ""
 
-#: src/lib/flows/steps.ts:362
+#: src/lib/flows/steps.ts:355
 msgid "Pay with Bluecode"
 msgstr ""
 
@@ -1308,15 +1202,11 @@ msgstr ""
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr ""
 
-#: src/lib/flows/steps.ts:750
-msgid "Pay with NAKA Card"
-msgstr ""
-
 #: src/components/OnBoardingScreen.vue:27
 msgid "Pay with Points"
 msgstr ""
 
-#: src/types/transactions.ts:146
+#: src/types/transactions.ts:145
 msgid "Payment"
 msgstr ""
 
@@ -1346,16 +1236,8 @@ msgstr ""
 msgid "Payment is being processed"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:53
-msgid "Payment limit"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:24
-msgid "Payment limits"
-msgstr ""
-
-#: src/lib/flows/steps.ts:510
-#: src/lib/flows/steps.ts:523
+#: src/lib/flows/steps.ts:489
+#: src/lib/flows/steps.ts:502
 msgid "Payment preview"
 msgstr ""
 
@@ -1364,8 +1246,8 @@ msgid "Payment rejected due to unknown reason"
 msgstr ""
 
 #: src/components/PaymentRequestDetectedNotification.vue:12
-#: src/lib/flows/steps.ts:478
-#: src/lib/flows/steps.ts:489
+#: src/lib/flows/steps.ts:457
+#: src/lib/flows/steps.ts:468
 msgid "Payment Request"
 msgstr ""
 
@@ -1373,7 +1255,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:445
+#: src/lib/flows/index.ts:420
 msgid "Payment successful"
 msgstr ""
 
@@ -1395,7 +1277,7 @@ msgstr ""
 
 #: src/components/TransactionDetails.vue:23
 #: src/components/TransactionItem.vue:11
-#: src/types/transactions.ts:166
+#: src/types/transactions.ts:165
 msgid "Pending"
 msgstr ""
 
@@ -1416,11 +1298,11 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:664
+#: src/lib/flows/index.ts:638
 msgid "PIN change successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:155
+#: src/lib/flows/steps.ts:148
 msgid "PIN did not match"
 msgstr ""
 
@@ -1428,24 +1310,24 @@ msgstr ""
 msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
 msgstr ""
 
-#: src/lib/flows/steps.ts:151
+#: src/lib/flows/steps.ts:144
 msgid "Please confirm your PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:262
+#: src/lib/flows/steps.ts:255
 msgid "Please enter a phone number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:120
-#: src/lib/flows/steps.ts:215
+#: src/lib/flows/steps.ts:113
+#: src/lib/flows/steps.ts:208
 msgid "Please enter a PIN code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:62
+#: src/lib/flows/steps.ts:55
 msgid "Please enter a promo code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:287
+#: src/lib/flows/steps.ts:280
 msgid "Please enter a verification code"
 msgstr ""
 
@@ -1453,11 +1335,7 @@ msgstr ""
 msgid "Please enter at least ten characters"
 msgstr ""
 
-#: src/lib/flows/steps.ts:758
-msgid "Please verify yourself with SumSub to activate your NAKA Card."
-msgstr ""
-
-#: src/lib/flows/steps.ts:269
+#: src/lib/flows/steps.ts:262
 msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
 msgstr ""
 
@@ -1473,7 +1351,7 @@ msgstr ""
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr ""
 
-#: src/types/transactions.ts:147
+#: src/types/transactions.ts:146
 msgid "Points Payment"
 msgstr ""
 
@@ -1481,15 +1359,15 @@ msgstr ""
 msgid "Polygon fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2441
+#: src/stores/polygon-usdt.ts:2435
 msgid "Polygon fee changed; review the payment again"
 msgstr ""
 
 #: src/composables/useUsdtQuoteRefresh.ts:44
-#: src/stores/polygon-usdt.ts:2008
-#: src/stores/polygon-usdt.ts:2115
-#: src/stores/polygon-usdt.ts:2351
-#: src/stores/polygon-usdt.ts:2390
+#: src/stores/polygon-usdt.ts:2002
+#: src/stores/polygon-usdt.ts:2109
+#: src/stores/polygon-usdt.ts:2345
+#: src/stores/polygon-usdt.ts:2384
 msgid "Polygon is not ready yet"
 msgstr ""
 
@@ -1497,26 +1375,26 @@ msgstr ""
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2336
+#: src/stores/polygon-usdt.ts:2330
 msgid "Polygon payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2641
+#: src/stores/polygon-usdt.ts:2635
 msgid "Polygon swap payment failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2549
-#: src/stores/polygon-usdt.ts:2574
+#: src/stores/polygon-usdt.ts:2543
+#: src/stores/polygon-usdt.ts:2568
 msgid "Polygon swap transaction failed"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2472
+#: src/stores/polygon-usdt.ts:2466
 msgid "Polygon swap transaction is already pending"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2185
+#: src/stores/polygon-usdt.ts:2179
+#: src/stores/polygon-usdt.ts:2304
 #: src/stores/polygon-usdt.ts:2310
-#: src/stores/polygon-usdt.ts:2316
 msgid "Polygon transaction failed"
 msgstr ""
 
@@ -1536,7 +1414,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:131
+#: src/views/MainView.vue:124
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1548,8 +1426,8 @@ msgstr ""
 msgid "Promo code not found"
 msgstr ""
 
-#: src/lib/flows/steps.ts:146
-#: src/lib/flows/steps.ts:97
+#: src/lib/flows/steps.ts:139
+#: src/lib/flows/steps.ts:90
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr ""
 
@@ -1565,7 +1443,7 @@ msgstr ""
 msgid "Receive Push Notifications"
 msgstr ""
 
-#: src/lib/flows/steps.ts:652
+#: src/lib/flows/steps.ts:631
 msgid "Receive USDT on Polygon"
 msgstr ""
 
@@ -1591,7 +1469,7 @@ msgid "Refunded"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:123
-#: src/types/transactions.ts:153
+#: src/types/transactions.ts:152
 msgid "Remove Stake"
 msgstr ""
 
@@ -1608,26 +1486,21 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:208
+#: src/views/HomeView.vue:195
 msgid "Requires Phone Number"
 msgstr ""
 
-#: src/lib/flows/steps.ts:284
+#: src/lib/flows/steps.ts:277
 msgid "Resend"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:118
-#: src/types/transactions.ts:152
+#: src/types/transactions.ts:151
 msgid "Retire Stake"
 msgstr ""
 
 #: src/composables/useNotifications.ts:149
 msgid "Rewards Notifications"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:48
-#: src/components/naka/NakaCardManagement.vue:73
-msgid "save"
 msgstr ""
 
 #: src/components/NimAddressInput.vue:61
@@ -1642,35 +1515,31 @@ msgid "Scan an address QR code."
 msgstr ""
 
 #: src/components/QRScanner.vue:28
-msgid "Scan any Nimiq, USDT or NAKA QR code to pay."
+msgid "Scan any Nimiq or USDT QR code to pay."
 msgstr ""
 
 #: src/components/QRScanner.vue:25
-msgid "Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
+msgid "Scan any Nimiq, USDT or Bitcoin Lightning QR code to pay."
 msgstr ""
 
 #: src/components/QRScanner.vue:56
-msgid "Scan any supported Nimiq, USDT or NAKA QR code to pay."
+msgid "Scan any supported Nimiq or USDT QR code to pay."
 msgstr ""
 
 #: src/components/QRScanner.vue:53
-msgid "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
+msgid "Scan any supported Nimiq, USDT or Bitcoin Lightning QR code to pay."
 msgstr ""
 
 #: src/components/NimAddressDisplay.vue:32
 msgid "Scan Cashlink"
 msgstr ""
 
-#: src/components/PaymentSelector.vue:21
-msgid "Scan QR"
-msgstr ""
-
-#: src/lib/flows/steps.ts:377
-#: src/lib/flows/steps.ts:681
+#: src/lib/flows/steps.ts:370
+#: src/lib/flows/steps.ts:660
 msgid "Scan QR code"
 msgstr ""
 
-#: src/lib/flows/steps.ts:682
+#: src/lib/flows/steps.ts:661
 msgid "Scan the QR code to send NIM to this address"
 msgstr ""
 
@@ -1695,23 +1564,23 @@ msgstr ""
 msgid "Select an address…"
 msgstr ""
 
-#: src/lib/flows/steps.ts:654
+#: src/lib/flows/steps.ts:633
 msgid "Send a transaction to the address below. Top up as much as you like."
 msgstr ""
 
-#: src/lib/flows/steps.ts:611
+#: src/lib/flows/steps.ts:590
 msgid "Send NIM to this address"
 msgstr ""
 
-#: src/lib/flows/steps.ts:652
+#: src/lib/flows/steps.ts:631
 msgid "Send NIM to top up"
 msgstr ""
 
-#: src/lib/flows/steps.ts:654
+#: src/lib/flows/steps.ts:633
 msgid "Send USDT on Polygon to the address below."
 msgstr ""
 
-#: src/lib/flows/steps.ts:611
+#: src/lib/flows/steps.ts:590
 msgid "Send USDT to this address"
 msgstr ""
 
@@ -1720,12 +1589,12 @@ msgid "Sender"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:183
-#: src/views/MainView.vue:119
+#: src/views/MainView.vue:112
 msgid "Server not available"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:105
-#: src/types/transactions.ts:150
+#: src/types/transactions.ts:149
 msgid "Set Active Stake"
 msgstr ""
 
@@ -1733,7 +1602,7 @@ msgstr ""
 msgid "Set an amount"
 msgstr ""
 
-#: src/modals/MenuModal.vue:63
+#: src/modals/MenuModal.vue:51
 #: src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr ""
@@ -1746,8 +1615,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:524
-#: src/lib/flows/index.ts:533
+#: src/lib/flows/index.ts:498
+#: src/lib/flows/index.ts:507
 msgid "Something went wrong"
 msgstr ""
 
@@ -1769,7 +1638,7 @@ msgstr ""
 msgid "Something went wrong claiming the cashback"
 msgstr ""
 
-#: src/lib/flows/steps.ts:180
+#: src/lib/flows/steps.ts:173
 msgid "Something went wrong decrypting the database"
 msgstr ""
 
@@ -1833,7 +1702,7 @@ msgstr ""
 msgid "Source code"
 msgstr ""
 
-#: src/types/transactions.ts:155
+#: src/types/transactions.ts:154
 msgid "Staking Contract"
 msgstr ""
 
@@ -1857,8 +1726,7 @@ msgstr ""
 msgid "Submitted {date}"
 msgstr ""
 
-#: src/components/naka/NakaCardManagement.vue:82
-#: src/modals/MenuModal.vue:31
+#: src/modals/MenuModal.vue:19
 msgid "Support"
 msgstr ""
 
@@ -1866,7 +1734,7 @@ msgstr ""
 msgid "Swap fee"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2586
+#: src/stores/polygon-usdt.ts:2580
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr ""
 
@@ -1878,24 +1746,15 @@ msgstr ""
 msgid "Syncing with network."
 msgstr ""
 
-#: src/views/HomeView.vue:199
-msgid "Tap to pay with NAKA!"
-msgstr ""
-
 #: src/components/TheHomeAmounts.vue:55
 msgid "Tap your pending NIM to add it to your available balance."
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:89
-#: src/components/naka/NakaOnboardingVerifyId.vue:10
-msgid "Terms & Conditions"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:231
 msgid "Terms of service"
 msgstr ""
 
-#: src/lib/flows/steps.ts:737
+#: src/lib/flows/steps.ts:716
 msgid "Test your backup"
 msgstr ""
 
@@ -1925,7 +1784,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:651
+#: src/lib/flows/index.ts:625
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1934,16 +1793,16 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/index.ts:357
-#: src/lib/flows/index.ts:526
-#: src/stores/polygon-usdt.ts:2141
-#: src/stores/polygon-usdt.ts:2153
-#: src/stores/polygon-usdt.ts:2177
-#: src/stores/polygon-usdt.ts:2254
-#: src/stores/polygon-usdt.ts:2265
-#: src/stores/polygon-usdt.ts:2275
-#: src/stores/polygon-usdt.ts:2290
-#: src/stores/polygon-usdt.ts:2307
+#: src/lib/flows/index.ts:334
+#: src/lib/flows/index.ts:500
+#: src/stores/polygon-usdt.ts:2135
+#: src/stores/polygon-usdt.ts:2147
+#: src/stores/polygon-usdt.ts:2171
+#: src/stores/polygon-usdt.ts:2248
+#: src/stores/polygon-usdt.ts:2259
+#: src/stores/polygon-usdt.ts:2269
+#: src/stores/polygon-usdt.ts:2284
+#: src/stores/polygon-usdt.ts:2301
 msgid "The transaction may have been sent and is still pending. Do not retry."
 msgstr ""
 
@@ -1955,7 +1814,7 @@ msgstr ""
 msgid "There are currently no free NIM available."
 msgstr ""
 
-#: src/lib/flows/steps.ts:723
+#: src/lib/flows/steps.ts:702
 msgid "There is no \"Forgot password\""
 msgstr ""
 
@@ -1965,10 +1824,6 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:181
 msgid "There is no cashback reward when paying with Points."
-msgstr ""
-
-#: src/components/naka/NakaOnboardingVerifyId.vue:89
-msgid "There was an error setting up your NAKA Card. Please try again later."
 msgstr ""
 
 #: src/modals/ExpiringPointsModal.vue:7
@@ -1985,10 +1840,6 @@ msgstr ""
 
 #: src/components/PaymentPreview.vue:63
 msgid "This conversion and the operation of a BTC Lightning channel require fees."
-msgstr ""
-
-#: src/components/naka/NakaCardDelete.vue:7
-msgid "This is your last card. If you block it, you will need to contact support for a replacement."
 msgstr ""
 
 #: src/composables/usePointsPayment.ts:69
@@ -2039,7 +1890,7 @@ msgstr ""
 msgid "Top Up"
 msgstr ""
 
-#: src/types/transactions.ts:143
+#: src/types/transactions.ts:142
 msgid "Top-Up"
 msgstr ""
 
@@ -2051,33 +1902,29 @@ msgstr ""
 msgid "Total fees"
 msgstr ""
 
-#: src/lib/flows/steps.ts:698
+#: src/lib/flows/steps.ts:677
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:578
+#: src/stores/transactions.ts:577
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:619
-#: src/stores/transactions.ts:638
+#: src/stores/transactions.ts:618
+#: src/stores/transactions.ts:637
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:581
+#: src/stores/transactions.ts:580
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:678
+#: src/stores/transactions.ts:677
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
 #: src/stores/polygon-usdt.ts:518
 msgid "Transaction was not mined on Polygon"
-msgstr ""
-
-#: src/components/naka/HoldNakaCardToReader.vue:58
-msgid "Trigger a payment on the issuer"
 msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:19
@@ -2109,28 +1956,24 @@ msgstr ""
 msgid "Unhide transaction?"
 msgstr ""
 
-#: src/types/transactions.ts:176
+#: src/types/transactions.ts:175
 msgid "Unknown"
-msgstr ""
-
-#: src/components/naka/NakaCardManagement.vue:103
-msgid "Unlock card"
 msgstr ""
 
 #: src/composables/useBiometric.ts:39
 msgid "Unlock Nimiq Pay with your biometric data"
 msgstr ""
 
-#: src/lib/flows/steps.ts:228
+#: src/lib/flows/steps.ts:221
 msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr ""
 
-#: src/lib/flows/steps.ts:228
+#: src/lib/flows/steps.ts:221
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr ""
 
 #: src/lib/mini-app-confirmation.ts:110
-#: src/types/transactions.ts:151
+#: src/types/transactions.ts:150
 msgid "Update Staker"
 msgstr ""
 
@@ -2138,7 +1981,7 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/views/MainView.vue:94
+#: src/views/MainView.vue:87
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
@@ -2146,7 +1989,7 @@ msgstr ""
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 
-#: src/lib/flows/index.ts:377
+#: src/lib/flows/index.ts:352
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -2158,16 +2001,11 @@ msgstr ""
 msgid "Verify"
 msgstr ""
 
-#: src/components/naka/NakaOnboardingVerifyId.vue:22
-msgid "Verify ID"
-msgstr ""
-
-#: src/lib/flows/steps.ts:369
-#: src/lib/flows/steps.ts:757
+#: src/lib/flows/steps.ts:362
 msgid "Verify your ID"
 msgstr ""
 
-#: src/lib/flows/steps.ts:254
+#: src/lib/flows/steps.ts:247
 msgid "Verify your phone number"
 msgstr ""
 
@@ -2187,41 +2025,41 @@ msgstr ""
 msgid "Wait for consensus before withdrawing"
 msgstr ""
 
-#: src/stores/polygon-usdt.ts:2386
-#: src/stores/polygon-usdt.ts:2401
+#: src/stores/polygon-usdt.ts:2380
+#: src/stores/polygon-usdt.ts:2395
 msgid "Wallet changed before sending"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:72
 #: src/stores/sync/remote-signers.ts:85
-#: src/stores/transactions.ts:351
-#: src/stores/transactions.ts:370
-#: src/stores/transactions.ts:381
-#: src/stores/transactions.ts:449
-#: src/stores/transactions.ts:458
-#: src/stores/transactions.ts:468
-#: src/stores/transactions.ts:523
-#: src/stores/transactions.ts:540
-#: src/stores/transactions.ts:566
-#: src/stores/transactions.ts:590
+#: src/stores/transactions.ts:350
+#: src/stores/transactions.ts:369
+#: src/stores/transactions.ts:380
+#: src/stores/transactions.ts:448
+#: src/stores/transactions.ts:457
+#: src/stores/transactions.ts:467
+#: src/stores/transactions.ts:522
+#: src/stores/transactions.ts:539
+#: src/stores/transactions.ts:565
+#: src/stores/transactions.ts:589
+#: src/stores/transactions.ts:604
 #: src/stores/transactions.ts:605
-#: src/stores/transactions.ts:606
-#: src/stores/transactions.ts:628
-#: src/stores/transactions.ts:681
-#: src/stores/transactions.ts:689
-#: src/stores/transactions.ts:699
-#: src/stores/transactions.ts:707
-#: src/stores/transactions.ts:715
-#: src/stores/transactions.ts:749
-#: src/stores/transactions.ts:759
-#: src/stores/transactions.ts:764
-#: src/stores/transactions.ts:769
-#: src/stores/transactions.ts:774
-#: src/stores/transactions.ts:792
-#: src/stores/transactions.ts:799
-#: src/stores/transactions.ts:805
-#: src/stores/transactions.ts:808
-#: src/stores/transactions.ts:811
+#: src/stores/transactions.ts:627
+#: src/stores/transactions.ts:680
+#: src/stores/transactions.ts:688
+#: src/stores/transactions.ts:698
+#: src/stores/transactions.ts:706
+#: src/stores/transactions.ts:714
+#: src/stores/transactions.ts:748
+#: src/stores/transactions.ts:758
+#: src/stores/transactions.ts:763
+#: src/stores/transactions.ts:768
+#: src/stores/transactions.ts:773
+#: src/stores/transactions.ts:791
+#: src/stores/transactions.ts:798
+#: src/stores/transactions.ts:804
+#: src/stores/transactions.ts:807
+#: src/stores/transactions.ts:810
 msgid "Wallet or network changed before sending"
 msgstr ""
 
@@ -2229,7 +2067,7 @@ msgstr ""
 msgid "Watch demo"
 msgstr ""
 
-#: src/lib/flows/steps.ts:744
+#: src/lib/flows/steps.ts:723
 msgid "We're working on something special"
 msgstr ""
 
@@ -2245,13 +2083,13 @@ msgstr ""
 msgid "What do you want to do?"
 msgstr ""
 
-#: src/lib/flows/steps.ts:355
+#: src/lib/flows/steps.ts:348
 msgid "What is Bluecode?"
 msgstr ""
 
 #: src/composables/useNotifications.ts:276
 #: src/modals/ChangelogModal.vue:17
-#: src/modals/MenuModal.vue:75
+#: src/modals/MenuModal.vue:63
 msgid "What's New"
 msgstr ""
 
@@ -2320,7 +2158,7 @@ msgid "Why this address is flagged"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:74
-#: src/lib/flows/steps.ts:546
+#: src/lib/flows/steps.ts:525
 #: src/views/HomeView.vue:40
 msgid "Withdraw"
 msgstr ""
@@ -2329,19 +2167,19 @@ msgstr ""
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr ""
 
-#: src/types/transactions.ts:145
+#: src/types/transactions.ts:144
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:540
+#: src/lib/flows/index.ts:514
 msgid "Withdrawal successful"
 msgstr ""
 
-#: src/lib/flows/steps.ts:730
+#: src/lib/flows/steps.ts:709
 msgid "Write down these words"
 msgstr ""
 
-#: src/lib/flows/steps.ts:731
+#: src/lib/flows/steps.ts:710
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -2397,7 +2235,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:213
+#: src/views/HomeView.vue:200
 msgid "You have a reward to claim!"
 msgstr ""
 
@@ -2425,20 +2263,12 @@ msgstr ""
 msgid "You will receive {amount} Point | You will receive {amount} Points"
 msgstr ""
 
-#: src/lib/flows/steps.ts:255
+#: src/lib/flows/steps.ts:248
 msgid "You will receive an SMS with a verification code"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:17
 msgid "Your account, funds and data will be lost if you log out without a backup."
-msgstr ""
-
-#: src/components/naka/NakaCardIsReady.vue:8
-msgid "Your ID has been successfully verified. Tap ‘Pay’ on the start screen and chose NAKA to pay."
-msgstr ""
-
-#: src/components/naka/NakaCardIsReady.vue:5
-msgid "Your NAKA Card is ready!"
 msgstr ""
 
 #: src/components/PaymentPreview.vue:159

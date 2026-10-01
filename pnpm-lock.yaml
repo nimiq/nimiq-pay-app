@@ -109,9 +109,6 @@ importers:
       capacitor-lockdown-mode:
         specifier: 0.0.1
         version: 0.0.1(@capacitor/core@8.3.4)
-      capacitor-sumsub-mobile-sdk:
-        specifier: ^0.0.7
-        version: 0.0.7(@capacitor/core@8.3.4)
       ethers:
         specifier: ^6.16.0
         version: 6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -3021,11 +3018,6 @@ packages:
 
   capacitor-lockdown-mode@0.0.1:
     resolution: {integrity: sha512-6avv03s+BgAaTifTSBWFrA7ykamw8+1djMMhYAiw/g7gs8OSjylP+uwdPtDAChb6/xisuZeiNmCqaPka0z0E1Q==}
-    peerDependencies:
-      '@capacitor/core': '>=8.0.0'
-
-  capacitor-sumsub-mobile-sdk@0.0.7:
-    resolution: {integrity: sha512-aZoadVeqpLu81tLCxr1F1YqDM4/kCh5C+EOKM+UE2i+XQaRhQXWd7KxZIliNQDqmc/8MJBE868M79ufmgJmzsw==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
 
@@ -10857,10 +10849,6 @@ snapshots:
       '@capacitor/core': 8.3.4
 
   capacitor-lockdown-mode@0.0.1(@capacitor/core@8.3.4):
-    dependencies:
-      '@capacitor/core': 8.3.4
-
-  capacitor-sumsub-mobile-sdk@0.0.7(@capacitor/core@8.3.4):
     dependencies:
       '@capacitor/core': 8.3.4
 

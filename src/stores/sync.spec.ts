@@ -129,7 +129,6 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib', () => ({
   isDev: false,
-  nakaBufferAddresses: [],
 }))
 
 vi.mock('@/lib/tx', () => ({
@@ -293,7 +292,6 @@ vi.mock('@/stores/transactions', () => {
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
     restorePendingOutgoingTransactions: vi.fn(() => Promise.resolve(true)),
-    setNakaTxRefunded: vi.fn(),
     setSwapHtlcRefunded: vi.fn(),
   }))
 

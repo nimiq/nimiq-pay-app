@@ -188,10 +188,6 @@ vi.mock('@/stores/conn', () => ({
 vi.mock('@/stores/feature-flags', () => ({ useFeatureFlags: () => stores.featureFlags }))
 vi.mock('@/stores/local-wallet', () => ({ useLocalWallet: () => stores.localWallet }))
 vi.mock('@/stores/locks', () => ({ useLocks: () => stores.locks }))
-vi.mock('@/stores/naka', () => ({
-  useNaka: () => ({ deactivateCardOnDevice: vi.fn(), card: undefined }),
-  useNakaDb: () => ({ purgeNakaCards: vi.fn() }),
-}))
 vi.mock('@/stores/nimiq-network', () => ({
   useNimiqNetwork: () => ({ ...stores.network, reconnect: vi.fn() }),
 }))

@@ -1,18 +1,15 @@
 import type { Slots } from 'vue'
-import type { PaymentSuccessMessage } from '../issuer-schemas/ws.schema'
 import type { FeatureName } from '@/lib/analytics'
 import type { Flow, FlowHookCb, FlowInit, PaymentRequestData, State, StepInitOptions } from '@/lib/flows/steps.types'
 import type { PartialSendTxArgs } from '@/types/transactions'
 import { modalController } from '@ionic/vue'
-import { SumsubSdkStatus } from 'capacitor-sumsub-mobile-sdk'
-import { defineAsyncComponent, h, ref } from 'vue'
+import { h, ref } from 'vue'
 
 import FlowCmp from '@/components/Flow.vue'
 
 import { useLogger } from '@/composables/useLogger'
 import { Modal, useModal } from '@/composables/useModal'
 import { i18n } from '@/i18n/i18n-setup'
-import { isNakaEnabled } from '@/lib'
 import {
   buildPaymentAnalyticsProps,
   finishPaymentAnalytics,
@@ -36,8 +33,6 @@ const FEATURE_FLOW_MAP: Partial<Record<FlowName, FeatureName>> = {
   [FlowName.NimWithdraw]: 'withdraw',
   [FlowName.Backup]: 'backup',
   [FlowName.VerifyPhone]: 'verify_phone',
-  [FlowName.NakaOnboarding]: 'naka_onboarding',
-  [FlowName.NakaCardManagement]: 'naka_management',
 }
 
 async function completeWalletSetup(
@@ -216,31 +211,22 @@ const onBoardingBluecodeFlow: FlowInit = async () => {
 
 /**
  *
-        ┌───Can go to───────┬───or go to───┐
-        │                   │              ▼
-┌────┐ ┌──┐ ┌────────┐ ┌────┴──────┐ ┌──────────────┐
-│Naka│ │QR│ │Bluecode│ │ManualInput│ │PaymentPreview┼──►beforeNext() -> PayLogic
-└─┬──┘ └──┘ └────┬───┘ └───────────┘ └──────────────┘
-  │              │                         ▲
-  └──────────────┴──────skips─to───────────┘
- * We have in the state 4 input steps used in the beforeNext to make the payment
+   ┌───Can go to───────┬───or go to───┐
+   │                   │              ▼
+┌──┐ ┌────────┐ ┌──────┴────┐ ┌──────────────┐
+│QR│ │Bluecode│ │ManualInput│ │PaymentPreview┼──►beforeNext() -> PayLogic
+└──┘ └────┬───┘ └───────────┘ └──────────────┘
+          │                         ▲
+          └─────────skips─to────────┘
+ * We have in the state 3 input steps used in the beforeNext to make the payment
  */
 const paymentFlow: FlowInit = async () => {
   const [
-    { holdNakaCardToReaderStep, qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentAmountInputStep, paymentPreviewStep, pinCodeStep },
+    { qrCodeScannerStep, bluecodeNotAvailableStep, paymentRequestManualInputStep, paymentAmountInputStep, paymentPreviewStep, pinCodeStep },
     { QRDataFormat },
     { useApp },
   ] = await Promise.all([import('./steps'), import('@/composables/useStringParser'), import('@/stores/app')])
-  const isNakaAvailableForActiveAsset = isNakaEnabled && useApp().isNimiqAsset
 
-  const { useNaka } = isNakaEnabled
-    ? await import('@/stores/naka')
-    : { useNaka: () => ({ isCardActive: false, isCardLocked: false }) }
-
-  const hasActiveNakaCard = isNakaAvailableForActiveAsset && useNaka().isCardActive && !useNaka().isCardLocked
-  const initialStep = hasActiveNakaCard ? StepName.HoldNakaCardToReader : StepName.QRCodeScanner
-
-  const slotComponent = hasActiveNakaCard ? defineAsyncComponent(() => import('@/components/PaymentSelector.vue')) : undefined
   if (!useApp().isNimiqAsset) {
     const { usePolygonUsdt } = await import('@/stores/polygon-usdt')
     const polygonUsdt = usePolygonUsdt()
@@ -257,7 +243,6 @@ const paymentFlow: FlowInit = async () => {
 
   const flowName = FlowName.Payment
   const steps = (await Promise.all([
-    hasActiveNakaCard ? (options: StepInitOptions) => holdNakaCardToReaderStep({ ...options, allowGoBack: false }) : undefined,
     (options: StepInitOptions) => qrCodeScannerStep({ ...options, allowGoBack: false, props: { expect: QRDataFormat.PaymentRequest } }),
     __ENABLE_BLUECODE__ ? (options: StepInitOptions) => bluecodeNotAvailableStep({ ...options, allowGoBack: false }) : undefined,
     paymentRequestManualInputStep,
@@ -271,18 +256,16 @@ const paymentFlow: FlowInit = async () => {
 
     const nimPaymentRequest = state[StepName.QRCodeScanner]
     const payWithPuntos = state[StepName.PaymentPreview]?.payWithPuntos
-    const nakaPaymentRequest = state[StepName.HoldNakaCardToReader]
     const bluecodePaymentRequest = {} // state[StepName.BluecodePayment]
 
     // 1. Check wether the user has done the flow as expected and we don't have a surprise in the params
 
     const objectHasData = (obj: Record<string, unknown>) => typeof obj === 'object' && Object.keys(obj).length > 0
 
-    if (typeof nimPaymentRequest === 'string' || (!nimPaymentRequest && !nakaPaymentRequest))
+    if (typeof nimPaymentRequest === 'string' || !nimPaymentRequest)
       throw new Error(`${flowName} flow expected a parsed payment request`)
 
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
-    const isNakaPaymentRequest = objectHasData(nakaPaymentRequest)
     const isBluecodePaymentRequest = objectHasData(bluecodePaymentRequest)
 
     // No translation as not user-facing. Dev error which should not occur in production.
@@ -293,27 +276,22 @@ const paymentFlow: FlowInit = async () => {
     }
     if (isBluecodePaymentRequest)
       throw new Error('Bluecode payments are not supported yet')
-    if (isNakaPaymentRequest && !isNakaAvailableForActiveAsset)
-      throw new Error('Naka payments are not supported yet')
 
     // Only one of the state can be true, otherwise the flow is not as expected
-    if ([isNimPaymentRequest, isNakaPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
-      throw new Error(`Multiple payment methods are active at the same time. Expected just one of ${{ payWithPuntos, nakaPaymentRequest, bluecodePaymentRequest }}`)
+    if ([isNimPaymentRequest, isBluecodePaymentRequest].filter(Boolean).length > 1)
+      throw new Error(`Multiple payment methods are active at the same time. Expected just one of ${{ payWithPuntos, bluecodePaymentRequest }}`)
 
     // 2. Parse the payments parameters
 
     let payment:
       | { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
-      | { method: PaymentMethod.NakaCard, request: PaymentRequestData, confirmPayment: (serializedTx: string) => Promise<PaymentSuccessMessage> }
       | { method: PaymentMethod.Bluecode, request: Record<string, any> } // TODO Modify request to the needs
     if (isNimPaymentRequest)
       payment = { method: (payWithPuntos ? PaymentMethod.Points : assetToPaymentMethod(nimPaymentRequest.asset || Asset.NIM)) as PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: nimPaymentRequest }
-    else if (isNakaPaymentRequest)
-      payment = { method: PaymentMethod.NakaCard, ...nakaPaymentRequest }
     else if (isBluecodePaymentRequest)
       payment = { method: PaymentMethod.Bluecode, request: bluecodePaymentRequest }
     else
-      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos, nakaPaymentRequest, bluecodePaymentRequest }}`)
+      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos, bluecodePaymentRequest }}`)
 
     // 3. Do the payment
 
@@ -339,8 +317,7 @@ const paymentFlow: FlowInit = async () => {
 
     logger.log(`🤑  Initializing payment process with ${payment.method}`, payment)
     switch (payment.method) {
-      case PaymentMethod.NIM:
-      case PaymentMethod.NakaCard: {
+      case PaymentMethod.NIM: {
         const { useTransactions } = await import('@/stores/transactions')
         const result = await useTransactions().sendTx({
           ...payment.request,
@@ -359,8 +336,6 @@ const paymentFlow: FlowInit = async () => {
             return
           }
           case 'submitted':
-            if (payment.method === PaymentMethod.NakaCard)
-              await payment.confirmPayment(result.serialized)
             break
         }
         break
@@ -453,13 +428,12 @@ const paymentFlow: FlowInit = async () => {
     const previewState = state[StepName.PaymentPreview]
     if (previewState?.paymentAnalytics.status === 'started') {
       const qrData = state[StepName.QRCodeScanner]
-      const nakaData = state[StepName.HoldNakaCardToReader]
-      const request = (typeof qrData === 'object' && qrData) || (typeof nakaData === 'object' && nakaData?.request)
+      const request = typeof qrData === 'object' && qrData
       if (request) {
         const payWithPuntos = !!previewState.payWithPuntos
         const method = payWithPuntos
           ? PaymentMethod.Points
-          : nakaData ? PaymentMethod.NakaCard : assetToPaymentMethod(request.asset || Asset.NIM)
+          : assetToPaymentMethod(request.asset || Asset.NIM)
         trackPaymentCancelled({
           ...buildPaymentAnalyticsProps({
             asset: request.asset || Asset.NIM,
@@ -476,7 +450,7 @@ const paymentFlow: FlowInit = async () => {
     }
   }
 
-  return { flowName, steps, onDone, onCancel, initialStep, slotComponent } satisfies Flow
+  return { flowName, steps, onDone, onCancel } satisfies Flow
 }
 
 const nimWithdrawFlow: FlowInit = async () => {
@@ -673,56 +647,6 @@ const comingSoonFlow: FlowInit = async () => {
   return { flowName, steps }
 }
 
-const nakaOnboardFlow: FlowInit = async () => {
-  const [
-    { FlowName: Flow },
-    { whatIsNakaStep, verifyYourIdNakaStep },
-  ] = await Promise.all([
-    import('@/lib/flows/steps.types'),
-    import('./steps'),
-  ])
-
-  const flowName = Flow.NakaOnboarding
-  const steps = await Promise.all([
-    whatIsNakaStep({ flowName }),
-    verifyYourIdNakaStep({ flowName }),
-  ])
-
-  const onCancel: Flow['onCancel'] = async () => {
-    const { useKyc } = await import('@/stores/kyc')
-    if (useKyc().sdkStatus === SumsubSdkStatus.PENDING)
-      useKyc().checkKycInBackground()
-  }
-
-  return { flowName, steps, onCancel }
-}
-
-const nakaCardIsReadyFlow: FlowInit = async () => {
-  const { nakaCardIsReadyStep } = await import('./steps')
-  const flowName = FlowName.NakaCardIsReady
-  const steps = await Promise.all([nakaCardIsReadyStep].map(s => s({ flowName })))
-  return { flowName, steps }
-}
-
-const nakaCardManagementFlow: FlowInit = async () => {
-  const [
-    { nakaCardManagementStep, nakaCardDeleteStep },
-    // { useNaka },
-  ] = await Promise.all([
-    import('./steps'),
-    // import('@/stores/naka'),
-  ] as const)
-  // if (!useNaka().isCardActive)
-  //   throw new Error('Naka card is not activated')
-
-  const flowName = FlowName.NakaCardManagement
-  const steps = await Promise.all([
-    nakaCardManagementStep,
-    nakaCardDeleteStep,
-  ].map(s => s({ flowName })))
-  return { flowName, steps }
-}
-
 const askForPinFlow: FlowInit = async () => {
   const [
     { pinCodeStep },
@@ -748,9 +672,6 @@ const flows = {
   [FlowName.Backup]: backupFlow,
   [FlowName.ChangePin]: changePinFlow,
   [FlowName.ComingSoon]: comingSoonFlow,
-  [FlowName.NakaOnboarding]: nakaOnboardFlow,
-  [FlowName.NakaCardIsReady]: nakaCardIsReadyFlow,
-  [FlowName.NakaCardManagement]: nakaCardManagementFlow,
   [FlowName.AddressSelection]: addressSelectionFlow,
   [FlowName.AddressDeletion]: addressDeletionFlow,
   [FlowName.SaveAddress]: saveAddressFlow,

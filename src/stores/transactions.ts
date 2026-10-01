@@ -11,7 +11,6 @@ import { useLogger } from '@/composables/useLogger'
 
 import { useTransactionSearch } from '@/composables/useTransactionSearch'
 import { i18n } from '@/i18n/i18n-setup'
-import { nakaBufferAddresses } from '@/lib'
 import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -1111,14 +1110,6 @@ export const useTransactions = defineStore('transactions', () => {
     return true
   }
 
-  async function setNakaTxRefunded(amount: number) {
-    const tx = transactions.value.find(tx => tx.amount === amount && nakaBufferAddresses.includes(tx.recipient))
-    if (!tx)
-      return
-    await run(SQLQuery.SetTxRefunded, [tx.hash])
-    mergeLoadedTxMeta(loadedTx => loadedTx.hash === tx.hash, { refunded: true })
-  }
-
   // APP-132: Soft-hide a tx (cosmetic, e.g. before recording the screen). The flag lives in tx.meta;
   // transactionsToShow filters it out unless the dev-menu reveal toggle is on.
   async function setTxHidden(hash: string, hidden: boolean) {
@@ -1159,7 +1150,6 @@ export const useTransactions = defineStore('transactions', () => {
     setSwapHtlcRefunded,
     setSwapPreimage,
     setPolygonSwapHtlcRefunded,
-    setNakaTxRefunded,
     setTxHidden,
     clearTxHistory,
     refreshFromDb,

@@ -57,7 +57,6 @@ export enum SQLQuery {
   ClearTxHistory = 'DELETE FROM transactions',
   AddInvoicedColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN invoiced_json TEXT',
   AddMetaColumnToTxsTable = 'ALTER TABLE transactions ADD COLUMN meta_json TEXT',
-  GetIncludedTransactionsByRailAfter = `SELECT hash, timestamp, amount, status FROM transactions WHERE status IN ('included', 'confirmed') AND rail = ? AND timestamp >= ? ORDER BY timestamp`,
   AddSenderDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN senderData TEXT',
   AddRecipientDataToTxsTable = 'ALTER TABLE transactions ADD COLUMN recipientData TEXT',
   AddAssetToTxsTable = 'ALTER TABLE transactions ADD COLUMN asset TEXT',
@@ -180,14 +179,8 @@ export enum SQLQuery {
   DeletePolygonPaymentAttempt = 'DELETE FROM polygon_payment_attempts WHERE network = ? AND sender = ?',
   PurgePolygonPaymentAttempts = 'DELETE FROM polygon_payment_attempts',
 
-  // NAKA
+  // Legacy: NAKA was removed, but migrations are additive-only, so the table stays.
   CreateNakaCardsTable = 'CREATE TABLE IF NOT EXISTS naka_cards (sourceId TEXT PRIMARY KEY NOT NULL, statusId TEXT NOT NULL, expiryDate TEXT NOT NULL, meta TEXT NOT NULL)',
-  InsertNakaCard = 'INSERT OR REPLACE INTO naka_cards (sourceId, statusId, expiryDate, meta) VALUES (?, ?, ?, JSON(?))',
-  // GetNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE sourceId = ? LIMIT 1',
-  // GetActiveNakaCard = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards WHERE statusId = "Active" LIMIT 1',
-  GetAllNakaCards = 'SELECT sourceId, statusId, expiryDate, meta FROM naka_cards',
-  DeleteNakaCard = 'DELETE FROM naka_cards WHERE sourceId = ?',
-  PurgeNakaCards = 'DELETE FROM naka_cards',
 }
 
 // History refreshes chain evidence without replacing richer payment metadata.

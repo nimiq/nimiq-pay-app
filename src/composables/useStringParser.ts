@@ -130,8 +130,8 @@ export function useStringParser() {
     else {
       result = {
         error: __ENABLE_BTC_LN__
-          ? i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported.')
-          : i18n.t('Invalid link format. Only CPLinks and NAKA requests for NIM are supported.'),
+          ? i18n.t('Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are supported.')
+          : i18n.t('Invalid link format. Only CPLinks for NIM are supported.'),
         data: undefined,
       }
     }

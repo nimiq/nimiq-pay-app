@@ -59,9 +59,7 @@ const { isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatur
 const payment = computed<PaymentRequestData>(() =>
   typeof props.state[StepName.QRCodeScanner] === 'object'
     ? props.state[StepName.QRCodeScanner]
-    : typeof props.state[StepName.HoldNakaCardToReader] === 'object'
-      ? props.state[StepName.HoldNakaCardToReader].request
-      : { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment },
+    : { amount: 0, fee: 0, recipient: '', transfer: Transfer.UserPayment },
 )
 const asset = computed(() => payment.value.asset || Asset.NIM)
 const isAtomicSwap = computed(() => !!payment.value.swap)
@@ -341,7 +339,7 @@ const canPayWithPuntos = computed(() => asset.value === Asset.NIM && objectHasDa
  * Only allow paying with Points if:
  *   - The user has enough NIM balance
  *   - The user is eligible for Points
- *   - The user has scanned something with the QR code scanner in previous steps (no Naka, no bluecode...)
+ *   - The user has scanned something with the QR code scanner in previous steps (no bluecode...)
  */
 const payWithPuntos = ref((asset.value === Asset.NIM) && (!hasEnoughBalance.value && isEligible.value && canPayWithPuntos.value))
 
@@ -350,8 +348,6 @@ const paymentMethod = computed(() => {
     return PaymentMethod.Points
   else if (asset.value === Asset.USDT)
     return PaymentMethod.USDT
-  else if (props.state[StepName.HoldNakaCardToReader])
-    return PaymentMethod.NakaCard
   else if (props.state[StepName.QRCodeScanner])
     return PaymentMethod.NIM
   // else if (props.state[StepName.BluecodePayment])

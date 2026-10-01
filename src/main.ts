@@ -27,7 +27,6 @@ import { useNimiqNetwork } from '@/stores/nimiq-network'
 import App from './App.vue'
 import router from './router'
 import { useMiniApps } from './stores/mini-apps'
-import { useNaka } from './stores/naka'
 import LockdownScreen from './views/LockdownScreen.vue'
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css'
@@ -126,7 +125,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (!isAlertRoute)
     trackCurrentAppOpen('cold_start')
   if (!isAlertRoute) {
-    useNaka().init()
     useMiniApps() // computedAsync triggers description fetching on store creation
   }
 

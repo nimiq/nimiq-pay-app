@@ -7,7 +7,6 @@ import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import AppsIcon from '@/components/icons/apps.vue'
 import BackupIcon from '@/components/icons/backup.vue'
-import CreditCardIcon from '@/components/icons/credit-card.vue'
 import GiftIcon from '@/components/icons/gift.vue'
 import LiveChatIcon from '@/components/icons/live-chat.vue'
 import LogoutIcon from '@/components/icons/log-out.vue'
@@ -16,13 +15,11 @@ import SettingsIcon from '@/components/icons/settings.vue'
 import SparklesIcon from '@/components/icons/sparkles.vue'
 import MenuItem from '@/components/MenuItem.vue'
 import { Modal, useModal } from '@/composables/useModal'
-import { isMiniAppsEnabled, isNakaEnabled } from '@/lib'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { useApp } from '@/stores/app'
-import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLiveChat } from '@/stores/livechat'
-import { useNaka } from '@/stores/naka'
 import { usePoints } from '@/stores/points'
 
 const htmlRefHook = ref<HTMLElement | null>(null)
@@ -35,11 +32,7 @@ function onLongPressCallback() {
   useModal().showModal(Modal.Dev, { isOnTop: true })
 }
 
-const { hasCard } = storeToRefs(useNaka())
-const { isNakaAvailable } = storeToRefs(useFeatureFlags())
-const showNakaMenuItem = computed(() => isNakaEnabled && hasCard.value)
-const showActivateNakaMenuItem = computed(() => isNakaEnabled && !hasCard.value && isNakaAvailable.value)
-const showPaymentsSection = computed(() => showNakaMenuItem.value || showActivateNakaMenuItem.value || (!phoneNumberVerified.value && isCampaignActive.value))
+const showPaymentsSection = computed(() => !phoneNumberVerified.value && isCampaignActive.value)
 
 function openLiveChat() {
   liveChatEnabled.value = true
@@ -70,18 +63,6 @@ onLongPress(
       {{ $t('Payments') }}
     </span>
 
-    <MenuItem
-      v-if="showNakaMenuItem"
-      :icon="CreditCardIcon"
-      :title="$t('NAKA Card')"
-      @click="initializeFlow(FlowName.NakaCardManagement, { analyticsSource: 'menu' })"
-    />
-    <MenuItem
-      v-else-if="showActivateNakaMenuItem"
-      :icon="CreditCardIcon"
-      :title="$t('Activate NAKA Card')"
-      @click="initializeFlow(FlowName.NakaOnboarding, { analyticsSource: 'menu' })"
-    />
     <MenuItem
       :icon="LiveChatIcon"
       :title="$t('Support')"

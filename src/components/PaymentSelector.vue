@@ -1,32 +1,23 @@
 <script setup lang="ts">
-import type { Step } from '@/lib/flows/steps.types'
-import { storeToRefs } from 'pinia'
+import type { Step, StepName } from '@/lib/flows/steps.types'
 import { computed, useTemplateRef } from 'vue'
-import { i18n } from '@/i18n/i18n-setup'
-import { isNakaEnabled } from '@/lib'
-import { stepEmits, StepName } from '@/lib/flows/steps.types'
-import { useApp } from '@/stores/app'
-import { useNaka } from '@/stores/naka'
+import { stepEmits } from '@/lib/flows/steps.types'
 
-const { activeStep } = defineProps<{ activeStep?: Step }>()
+// Pill toggle that switches between alternative input steps of a flow (e.g. scan QR vs. tap card).
+const { activeStep, options } = defineProps<{
+  activeStep?: Step
+  options: { label: string, value: StepName }[]
+}>()
 
 const emit = defineEmits(stepEmits)
 
-const { isNimiqAsset } = storeToRefs(useApp())
-const { isCardActive, isCardLocked } = storeToRefs(useNaka())
+const stepNames = computed(() => options.map(option => option.value))
 
-const showNakaOption = computed(() => isNakaEnabled && isNimiqAsset.value && isCardActive.value && !isCardLocked.value)
-const options = computed(() => [
-  ...(showNakaOption.value ? [{ label: i18n.t('Naka'), value: StepName.HoldNakaCardToReader }] : []),
-  { label: i18n.t('Scan QR'), value: StepName.QRCodeScanner },
-])
-const stepNames = computed(() => options.value.map(option => option.value))
-
-const shouldBeDisplayed = computed(() => options.value.length > 1 && activeStep && stepNames.value.includes(activeStep.step))
+const shouldBeDisplayed = computed(() => options.length > 1 && activeStep && stepNames.value.includes(activeStep.step))
 
 const pillSlider = useTemplateRef<HTMLSpanElement>('pillSlider')
 const activeOptionIndex = computed(() => {
-  const index = options.value.findIndex(option => option.value === activeStep?.step)
+  const index = options.findIndex(option => option.value === activeStep?.step)
   return index >= 0 ? index : 0
 })
 

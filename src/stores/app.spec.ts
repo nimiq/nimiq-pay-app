@@ -26,10 +26,6 @@ vi.mock('@/i18n/i18n-setup', () => ({
   guessUserLanguage: () => 'en',
 }))
 
-vi.mock('@/lib', () => ({
-  nakaBufferAddresses: [],
-}))
-
 const { queryMock, runMock } = vi.hoisted(() => ({ queryMock: vi.fn(), runMock: vi.fn() }))
 
 vi.mock('./conn', () => ({

@@ -1484,7 +1484,6 @@ export function buildOutgoingTransaction(
       || request.rail === Rail.GoCrypto
       || request.rail === Rail.BitcoinLightning
       || request.rail === Rail.NimiqWallet
-      || request.rail === Rail.NakaCard
       || request.rail === Rail.Unknown
       ? request.rail
       : Rail.Unknown
@@ -1527,11 +1526,6 @@ export function buildOutgoingTransaction(
         return {
           ...merchantBase,
           rail: Rail.NimiqWallet,
-        }
-      case Rail.NakaCard:
-        return {
-          ...merchantBase,
-          rail: Rail.NakaCard,
         }
       case Rail.Unknown:
       default:

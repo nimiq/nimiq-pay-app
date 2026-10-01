@@ -44,18 +44,6 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   // Cold start read; App.vue refreshes again on resume
   void refreshUsdtMaintenance()
 
-  const isNakaAvailable = computedAsync(async () => {
-    try {
-      const { enabled } = await Posthog.isFeatureEnabled({ key: 'naka-card' })
-      logger.log(`NAKA feature flag is ${enabled ? 'enabled' : 'disabled'}`)
-      return enabled
-    }
-    catch (error) {
-      logger.error('Error checking NAKA feature flag:', error)
-      return false
-    }
-  }, false)
-
   const polygonRpcUrl = computedAsync(async () => {
     // Dev override (set via DevModal) wins over everything else.
     if (polygonRpcOverride) {
@@ -87,7 +75,6 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
     isUsdtMaintenanceActive,
     usdtMaintenanceNotice,
     refreshUsdtMaintenance,
-    isNakaAvailable,
     polygonRpcUrl,
   }
 })

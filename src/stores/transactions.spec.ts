@@ -144,7 +144,6 @@ vi.mock('@/composables/useTransactionSearch', () => ({
 
 vi.mock('@/lib', () => ({
   isDev: false,
-  nakaBufferAddresses: [],
 }))
 
 vi.mock('@/lib/analytics', () => ({
@@ -2284,28 +2283,6 @@ describe('useTransactions', () => {
         meta_json: '{"secret":"preimage","refunded":true,"hidden":true}',
       })
       expect(store.transactions[0].meta).toEqual({ secret: 'preimage', hidden: true })
-    })
-
-    it('keeps newer row state when marking a loaded NAKA tx refunded', async () => {
-      const { nakaBufferAddresses } = await import('@/lib')
-      nakaBufferAddresses.push('NQ55 SWAP HTLC ADDRESS')
-      try {
-        const { useTransactions } = await import('./transactions')
-        const store = useTransactions()
-        await store.refreshFromDb()
-        db.exec(`UPDATE transactions SET status = 'failed', meta_json = '{"secret":"preimage","hidden":true}' WHERE hash = 'nim-swap'`)
-
-        await store.setNakaTxRefunded(10)
-
-        expect(db.prepare('SELECT status, meta_json FROM transactions WHERE hash = ?').get('nim-swap')).toEqual({
-          status: 'failed',
-          meta_json: '{"secret":"preimage","hidden":true,"refunded":true}',
-        })
-        expect(store.transactions[0].meta).toEqual({ secret: 'preimage', refunded: true })
-      }
-      finally {
-        nakaBufferAddresses.splice(0)
-      }
     })
 
     it('replaces the loaded tx when its cashback is claimed', async () => {

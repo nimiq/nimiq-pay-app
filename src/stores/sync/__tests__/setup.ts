@@ -45,7 +45,6 @@ function makeState() {
   const updateTransactionCashbackClaimed = vi.fn()
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
   const restorePendingOutgoingTransactions = vi.fn((): Promise<boolean> => Promise.resolve(true))
-  const setNakaTxRefunded = vi.fn()
   const setSwapHtlcRefunded = vi.fn()
   const setPolygonSwapHtlcRefunded = vi.fn()
   const refundPolygonSwapHtlc = vi.fn((_htlc?: any): Promise<{ refunded: boolean, preimage?: string, hash?: string }> => Promise.resolve({ refunded: true }))
@@ -138,7 +137,6 @@ function makeState() {
     updateTransactionCashbackClaimed,
     refreshFromDb,
     restorePendingOutgoingTransactions,
-    setNakaTxRefunded,
     setSwapHtlcRefunded,
     setPolygonSwapHtlcRefunded,
     refundPolygonSwapHtlc,
@@ -275,7 +273,6 @@ export function resetSyncState() {
     state.updateTransactionCashbackClaimed,
     state.refreshFromDb,
     state.restorePendingOutgoingTransactions,
-    state.setNakaTxRefunded,
     state.setSwapHtlcRefunded,
     state.setPolygonSwapHtlcRefunded,
     state.refundPolygonSwapHtlc,
@@ -379,7 +376,6 @@ vi.mock('@/i18n/i18n-setup', () => ({
 
 vi.mock('@/lib', () => ({
   isDev: false,
-  nakaBufferAddresses: [] as string[],
 }))
 
 vi.mock('@/lib/utils', async importOriginal => ({
@@ -557,7 +553,6 @@ vi.mock('@/stores/transactions', () => {
     updateTransactionStatus: state.updateTransactionStatus,
     refreshFromDb: state.refreshFromDb,
     restorePendingOutgoingTransactions: state.restorePendingOutgoingTransactions,
-    setNakaTxRefunded: state.setNakaTxRefunded,
     setSwapHtlcRefunded: state.setSwapHtlcRefunded,
     setPolygonSwapHtlcRefunded: state.setPolygonSwapHtlcRefunded,
   }))
