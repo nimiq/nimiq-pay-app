@@ -59,3 +59,6 @@ public/web3-provider.js
 nimiq-pay-tests/.maestro/screenshots
 
 /.capgo_key_v2
+
+# Netlify CLI local state
+.netlify/

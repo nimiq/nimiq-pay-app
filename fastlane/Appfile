@@ -1,5 +1,4 @@
 app_identifier("com.nimiq.pay") # The bundle identifier of your app
-apple_id("alberto.monterroso@hotmail.com") # Your Apple Developer Portal username
 
 itc_team_id("126720357") # App Store Connect Team ID
 team_id("ZK66THWMSR") # Developer Portal Team ID
