@@ -268,6 +268,17 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.routerReplace.mock.invocationCallOrder[0]).toBeLessThan(state.trackWalletImported.mock.invocationCallOrder[0])
   })
 
+  it('reports the payment state readably when the scanned request has no data', async () => {
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+
+    await expect(flow.onDone({
+      [StepName.QRCodeScanner]: {},
+      [StepName.PaymentPreview]: { payWithPuntos: false },
+    }, { err: vi.fn(), setToast: vi.fn() })).rejects.toThrow('Unexpected payment method. Expected one of {"payWithPuntos":false}')
+  })
+
   it('does not complete or fail an uncertain NIM payment', async () => {
     state.isNimiqAsset = true
     state.sendTx.mockResolvedValue({
