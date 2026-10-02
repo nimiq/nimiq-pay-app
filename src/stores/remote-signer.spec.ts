@@ -229,6 +229,12 @@ vi.mock('@/stores/local-wallet', () => {
   return { useLocalWallet }
 })
 
+const defaultCosignerPublicKeys = ['service-public-key', 'service-public-key-a', 'service-public-key-b']
+const cosignerPublicKeys = vi.hoisted(() => [] as string[])
+vi.mock('@/lib', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib')>(),
+  nimiqPayCosignerPublicKeys: cosignerPublicKeys,
+}))
 vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast: vi.fn() }) }))
 vi.mock('@/stores/app', () => ({
   useApp: defineStore('app', () => ({ htlcThreshold: ref(0) })),
@@ -284,6 +290,7 @@ vi.mock('@/composables/useApi', () => ({
 describe('useRemoteSigner', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    cosignerPublicKeys.splice(0, cosignerPublicKeys.length, ...defaultCosignerPublicKeys)
 
     vi.stubGlobal('Nimiq', {
       Address: {
@@ -2006,6 +2013,43 @@ describe('useRemoteSigner', () => {
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [extension.recipient, 500, 98, 'service-public-key', 124_100, 1_000_500, false])
   })
 
+  it('ignores a redeemed swap HTLC to Fastspot created from a signer HTLC', async () => {
+    const root = createHtlcCreation()
+    const swap = createHtlcCreation({
+      transactionHash: 'swap-hash',
+      sender: root.recipient,
+      senderType: 'htlc',
+      recipient: 'NQ15 E4X4 13N5 UMLJ 4H6V 5F3B 8FQ3 0617 TKUA',
+      data: {
+        type: 'htlc',
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        recipient: 'NQ56 VE9K PV0Y TK4T QBMY 8E9G B85J QR6M MSHL',
+        timeout: 1_000_500,
+      },
+    })
+    mockAddressSpecificSignerMetadata(root, swap)
+    state.client.getTransactionsByAddress = vi.fn((address: ReturnType<typeof createAddress>) => {
+      const value = address.toUserFriendlyAddress()
+      if (value === state.localAddress.toUserFriendlyAddress())
+        return Promise.resolve([root])
+      if (value === root.recipient)
+        return Promise.resolve([swap])
+      return Promise.resolve([])
+    })
+    state.getAccount.mockImplementation(async (address) => {
+      if (address?.toUserFriendlyAddress() === swap.recipient)
+        return { data: { type: 'basic', balance: 0 }, error: undefined }
+      return { data: createLiveHtlcAccount(), error: undefined }
+    })
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(state.getRemoteSigner.mock.calls.map(call => (call as any[])[0].address.toUserFriendlyAddress())).not.toContain(swap.recipient)
+    expect(state.run).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([swap.recipient]))
+  })
+
   it('imports a funded parent restored by a reorg after extension history was read', async () => {
     const root = createHtlcCreation()
     const extension = createHtlcCreation({
@@ -3102,7 +3146,7 @@ describe('useRemoteSigner', () => {
         status: 200,
       })
       state.getAccount.mockResolvedValue({
-        data: { type: 'htlc', balance: 521, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ_R', timeout: 555_000, hashRoot: '0', hashAlgorithm: 'sha256', hashCount: 1, totalAmount: 521 },
+        data: { type: 'htlc', balance: 521, sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 COSIGNER ADDRESS', timeout: 555_000, hashRoot: '0', hashAlgorithm: 'sha256', hashCount: 1, totalAmount: 521 },
         error: undefined,
       })
 
@@ -3176,6 +3220,67 @@ describe('useRemoteSigner', () => {
       expect(state.run).not.toHaveBeenCalledWith(
         expect.any(String),
         expect.arrayContaining(['NQ44 EXTENSION HTLC ADDRESS']),
+      )
+    })
+
+    it('skips a refunded swap HTLC whose creation redeems to a non-cosigner address', async () => {
+      const swapHtlc = 'NQ15 E4X4 13N5 UMLJ 4H6V 5F3B 8FQ3 0617 TKUA'
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+      state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([
+        createHtlcCreation({
+          transactionHash: 'swap-hash',
+          sender: 'NQ22 TEST OLD HTLC ADDRESS',
+          senderType: 'htlc',
+          recipient: swapHtlc,
+          data: { type: 'htlc', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ11 UNLISTED FASTSPOT ADDRESS', timeout: 1_000_500 },
+        }),
+      ]))
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing(swapHtlc)
+      await store.registerOwnHtlcIfMissing(swapHtlc)
+
+      expect(state.client.getTransactionsByAddress).toHaveBeenCalledOnce()
+      expect(state.run).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([swapHtlc]))
+    })
+
+    it('registers an HTLC to the live cosigner key when the config list does not have it yet', async () => {
+      cosignerPublicKeys.splice(0, cosignerPublicKeys.length, 'service-public-key-a')
+      state.getAccount.mockResolvedValue({
+        data: createLiveHtlcAccount({ balance: 521, recipient: 'NQ99 COSIGNER ADDRESS', timeout: 555_000 }),
+        error: undefined,
+      })
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await vi.waitFor(() => expect(store.remotePublicKey).toBe('service-public-key'))
+
+      await store.registerOwnHtlcIfMissing('NQ44 ROTATED KEY HTLC')
+
+      expect(state.run).toHaveBeenCalledWith(
+        expect.any(String),
+        ['NQ44 ROTATED KEY HTLC', 521, 98, 'service-public-key', 0, 555_000, false],
+      )
+    })
+
+    it('still registers a pruned HTLC when its history is incomplete', async () => {
+      state.getAccount.mockResolvedValue({ data: { type: 'basic', balance: 0 }, error: undefined })
+      state.client.getTransactionsByAddress = vi.fn(() => Promise.reject(new Error('history unavailable')))
+
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      await store.registerOwnHtlcIfMissing('NQ44 PRUNED HTLC')
+
+      expect(state.run).toHaveBeenCalledWith(
+        expect.any(String),
+        ['NQ44 PRUNED HTLC', 0, 98, 'service-public-key', 0, 0, false],
       )
     })
 
