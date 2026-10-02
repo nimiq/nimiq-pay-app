@@ -5,6 +5,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, ref, watch } from 'vue'
 import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
+import { nimiqPayCosignerPublicKeys } from '@/lib'
 import { SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
@@ -352,6 +353,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   const status = ref<RemoteStatus>(RemoteStatus.Unknown)
   const remoteHeight = ref(-1)
   const remotePublicKey = ref<string | undefined>()
+
   const remoteAddress = computed(() => remoteSigner.value?.address)
   const start = computed(() => remoteSigner.value?.start || 0)
   const end = computed(() => remoteSigner.value?.end || 0)
@@ -1074,6 +1076,23 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return current
   }
 
+  // Remote wallets are HTLCs redeemable by a Nimiq Pay cosigner. Swap HTLCs (e.g. to Fastspot) share their shape but not this recipient.
+  // The live cosigner key covers a rotation not yet shipped in the config list.
+  function isCosignerAddress(address: string) {
+    const keys = remotePublicKey.value ? [...nimiqPayCosignerPublicKeys, remotePublicKey.value] : nimiqPayCosignerPublicKeys
+    return keys.some((key) => {
+      try {
+        return Nimiq.PublicKey.fromHex(key).toAddress().toUserFriendlyAddress() === address
+      }
+      catch {
+        return false
+      }
+    })
+  }
+
+  // Refunded non-cosigner HTLCs found by `registerOwnHtlcIfMissing`; avoids a history lookup on every refresh.
+  const foreignHtlcAddresses = new Set<string>()
+
   // Self-healing: when we observe a drain whose proof.creator is our local address (verified upstream),
   // register the HTLC as an inactive signer so future runs catch it via `isOurRemoteSigner` even
   // without re-reading the proof. Covers extension HTLCs that `discoverRemoteSignersFromBlockchain`
@@ -1083,7 +1102,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     expectedContext?: WalletContext,
   ): Promise<void> {
     const isCurrent = () => !expectedContext || isWalletContextCurrent(expectedContext)
-    if (!isCurrent() || await isOurRemoteSigner(htlcAddress) || !isCurrent())
+    if (!isCurrent() || foreignHtlcAddresses.has(htlcAddress) || await isOurRemoteSigner(htlcAddress) || !isCurrent())
       return
     if (!remotePublicKey.value)
       return
@@ -1094,6 +1113,22 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     const { data: account } = await useNimiqNetwork().getAccount(address)
     if (!isCurrent())
       return
+
+    // A refunded swap HTLC also drains to us with our address as creator, but its redeem address
+    // is not a cosigner. Pruned accounts need the creation tx for that; without it, register anyway.
+    let htlcRecipient = account?.type === 'htlc' ? account.recipient : undefined
+    if (!htlcRecipient) {
+      const history = await getAllTransactionsForAddress(address)
+      if (!isCurrent())
+        return
+      const creationData = history.transactions.find(tx => tx.recipient === htlcAddress)?.data
+      htlcRecipient = creationData?.type === 'htlc' ? creationData.recipient : undefined
+    }
+    if (htlcRecipient && !isCosignerAddress(htlcRecipient)) {
+      foreignHtlcAddresses.add(htlcAddress)
+      logger.log(`🚫 Skipped registering non-cosigner HTLC`, { address: htlcAddress, recipient: htlcRecipient })
+      return
+    }
     const balance = account?.type === 'htlc' ? account.balance : 0
     const end = account?.type === 'htlc' ? account.timeout : 0
     await insertInactiveRemoteSigner({
@@ -1354,6 +1389,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && (transaction.flags & 0b1) === 0b1
           && data.type === 'htlc'
           && data.sender === owner
+          && isCosignerAddress(data.recipient)
       })
 
       for (const transaction of candidates) {
@@ -1433,7 +1469,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
               || extension.recipientType !== 'htlc'
               || (extension.flags & 0b1) !== 0b1
               || extensionData.type !== 'htlc'
-              || extensionData.sender !== owner) {
+              || extensionData.sender !== owner
+              || !isCosignerAddress(extensionData.recipient)) {
               continue
             }
 
