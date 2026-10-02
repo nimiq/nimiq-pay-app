@@ -32,6 +32,11 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - Comment complex/non-obvious code. Concise, explain *why* not *what*.
 
+## Error messages
+
+- Never interpolate an object into a template string: `` `Expected ${{ a, b }}` `` renders `[object Object]`. Use `JSON.stringify({ a, b })` or name the fields.
+- The second argument of `new Error()` is `ErrorOptions` (`{ cause }`), not extra data. `new Error('msg', payload)` silently drops `payload`; put the data in the message or use `{ cause }`.
+
 ## Vue & components
 
 - Sibling blocks of the same currency: wrap in one `<template v-if="asset === Asset.USDT">` / `<template v-if="asset === Asset.NIM">` instead of repeating the condition per block.

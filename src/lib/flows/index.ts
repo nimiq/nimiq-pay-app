@@ -272,13 +272,14 @@ const paymentFlow: FlowInit = async () => {
       reportCriticalError(new Error(msg), { flow: flowName })
       throw new Error(msg)
     }
+
     // 2. Parse the payments parameters
 
     let payment: { method: PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: PaymentRequestData }
     if (isNimPaymentRequest)
       payment = { method: (payWithPuntos ? PaymentMethod.Points : assetToPaymentMethod(nimPaymentRequest.asset || Asset.NIM)) as PaymentMethod.NIM | PaymentMethod.USDT | PaymentMethod.Points, request: nimPaymentRequest }
     else
-      throw new Error(`Unexpected payment method. Expected one of ${{ payWithPuntos }}`)
+      throw new Error(`Unexpected payment method. Expected one of ${JSON.stringify({ payWithPuntos })}`)
 
     // 3. Do the payment
 
