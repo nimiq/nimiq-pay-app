@@ -533,6 +533,41 @@ describe('useRemoteSigner', () => {
     expect(store.remoteBalance).toBe(25)
   })
 
+  it('hydrates isHtlcActive from the stored validity window before consensus', async () => {
+    state.consensus = 'connecting'
+    mockActiveSignerQuery()
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+
+    expect(store.isHtlcActive).toBe(true)
+  })
+
+  it('does not hydrate isHtlcActive for an expired stored signer', async () => {
+    state.consensus = 'connecting'
+    mockExpiredSignerQuery(25)
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+
+    expect(store.isHtlcActive).toBe(false)
+  })
+
+  it('leaves isHtlcActive to reconciliation once consensus is established', async () => {
+    mockActiveSignerQuery()
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    await store.init()
+
+    expect(store.isHtlcActive).toBe(false)
+  })
+
   it('retains the last known balance after the active signer is cleared for a drain', async () => {
     mockActiveSignerQuery()
 

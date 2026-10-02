@@ -1567,6 +1567,14 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         remoteSigner.value = activeRemoteSigner
         remoteBalance.value = activeRemoteSigner?.balance ?? 0
         homeBalanceState.value = activeRemoteSigner ? 'resolved-remote' : 'loading'
+        // Reconciliation needs consensus. Until then, trust the stored validity window so a
+        // cold start doesn't report a funded, valid HTLC as "Processing funds".
+        if (consensus.value !== 'established') {
+          isHtlcActive.value = !!activeRemoteSigner
+            && remoteBalance.value > 0
+            && activeRemoteSigner.start <= headTimestamp.value
+            && activeRemoteSigner.end > headTimestamp.value
+        }
       }
       logger.log('📡 Remote Signer from DB', remoteSigner.value ? { ...remoteSigner.value, address: remoteSigner.value.address.toUserFriendlyAddress() } : null)
       const context = getWalletContext()
