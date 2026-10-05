@@ -1,0 +1,87 @@
+appId: ${APP_ID}
+name: Returning to app mini apps
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/returning_to_dashboard.yaml
+
+# Mini Apps screen
+- assertVisible: ${output.navigation.miniAppsBtn}
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- assertVisible:
+    id: ${output.miniApps.searchInputId}
+- assertVisible: ${output.miniApps.closeBtn}
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+# Mini Apps filters
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- extendedWaitUntil:
+    visible: ${output.miniApps.nimtrisEntry}
+    timeout: 20000
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- tapOn: ${output.miniApps.filterNimiqBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertNotVisible: ${output.miniApps.evmMiniWalletEntry}
+- tapOn: ${output.miniApps.filterEvmBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- assertNotVisible: ${output.miniApps.nimtrisEntry}
+- tapOn: ${output.miniApps.filterAllBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- assertVisible: ${output.miniApps.evmMiniWalletEntry}
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+# Mini Apps search
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- tapOn:
+    id: ${output.miniApps.searchInputId}
+- inputText: Nimtris
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
+- assertVisible: ${output.miniApps.nimtrisEntry}
+- tapOn: ${output.miniApps.closeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+# Cinima Mini App
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.discoverTitle}
+- tapOn:
+    id: ${output.miniApps.searchInputId}
+- inputText: Cinima
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
+- assertVisible: ${output.miniApps.cinimaEntry}
+- tapOn: ${output.miniApps.cinimaEntry}
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.discoverTitle}
+    timeout: 60000
+- extendedWaitUntil:
+    visible: ${output.miniApps.cinimaAppTitle}
+    timeout: 60000
+
+- stopApp
