@@ -1,0 +1,56 @@
+appId: ${APP_ID}
+name: Returning to dashboard
+---
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- launchApp:
+    clearState: true
+
+- tapOn: ${output.launchScreen.getStartedBtn}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- inputText: '1111'
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: '1111'
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.biometricTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.enableNotificationsTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+- stopApp
+- launchApp:
+    clearState: false
+
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 10000
+- assertNotVisible: ${output.home.payTitle}
+- inputText: '1111'
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.home.switchAssetBtn}
+- assertVisible: ${output.navigation.openMenuBtn}
+- assertVisible: ${output.navigation.earnPointsBtn}

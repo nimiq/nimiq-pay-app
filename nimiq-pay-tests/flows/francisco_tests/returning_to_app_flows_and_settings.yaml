@@ -1,0 +1,163 @@
+appId: ${APP_ID}
+name: Returning to app Flows and settings
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/returning_to_dashboard.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.title}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.title}
+    timeout: 5000
+
+- assertVisible: ${output.settings.language}
+- assertVisible: ${output.settings.currency}
+- assertVisible: ${output.settings.minimumNimDecimals}
+- assertVisible:
+    text: ${output.settings.autoDepositThreshold}
+- assertVisible: ${output.settings.pushNotifications}
+- assertVisible: ${output.settings.reduceAnimations}
+- assertVisible: ${output.settings.changePin}
+
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.navigation.backupAccountBtn}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.backupAccountBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.backupAccountBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.backup.introTitle}
+- assertVisible: ${output.backup.introDescription}
+- assertVisible: ${output.backup.noOneCanSeeBtn}
+- tapOn: ${output.backup.noOneCanSeeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.backup.showWordsTitle}
+- assertVisible: ${output.backup.continueBtn}
+- tapOn: ${output.backup.continueBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.backup.validateTitle}
+- assertVisible: ${output.backup.question}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.whatsNewBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.whatsNewBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.whatsNew.title}
+    timeout: 5000
+- assertVisible: ${output.whatsNew.version}
+- assertVisible: ${output.whatsNew.previousVersions}
+- tapOn: ${output.whatsNew.previousVersions}
+- waitForAnimationToEnd
+- assertVisible: ${output.whatsNew.previousVersionHighlight}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.navigation.whatsNewBtn}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.aboutBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.aboutBtn}
+- runFlow:
+    when:
+      visible: ${output.about.staySignedOutBtn}
+    commands:
+      - tapOn: ${output.about.staySignedOutBtn}
+      - waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.about.pageUrl}
+    timeout: 10000
+- assertVisible: ${output.about.pageUrl}
+
+- stopApp
+- launchApp:
+    clearState: false
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 10000
+- assertNotVisible: ${output.home.payTitle}
+- inputText: '1111'
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+- assertVisible: ${output.navigation.topUpBtn}
+- assertVisible: ${output.navigation.withdrawBtn}
+- assertVisible: ${output.home.payTitle}
+- assertVisible: ${output.navigation.openMenuBtn}
+- assertVisible: ${output.navigation.earnPointsBtn}
+
+- tapOn: ${output.navigation.topUpBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.topUp.title}
+- assertVisible:
+    text: ${output.topUp.addressPrefix}
+- assertVisible: ${output.topUp.copyAddress}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- tapOn: ${output.navigation.withdrawBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.withdraw.title}
+- assertVisible: ${output.withdraw.usd}
+- assertVisible:
+    text: ${output.withdraw.nim}
+- assertVisible:
+    text: ${output.withdraw.selectAddress}
+- assertVisible: ${output.withdraw.amount25}
+- assertVisible: ${output.withdraw.amount50}
+- assertVisible: ${output.withdraw.amount100}
+- tapOn: ${output.navigation.closeFlowModalBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- runFlow:
+    when:
+      visible: ${output.navigation.closeNotificationCardBtn}
+    commands:
+      - tapOn: ${output.navigation.closeNotificationCardBtn}
+      - waitForAnimationToEnd
+- assertVisible: ${output.navigation.cryptoMapBtn}
+- tapOn: ${output.navigation.cryptoMapBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.cryptocityMap.closeBtn}
+- tapOn: ${output.cryptocityMap.closeBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- assertVisible: ${output.navigation.earnPointsBtn}
+- tapOn: ${output.navigation.earnPointsBtn}
+- waitForAnimationToEnd
+- assertVisible: ${output.cryptocityPoints.comingSoonMessage}
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- stopApp

@@ -6,6 +6,7 @@ output.launchScreen = {
 output.onboarding = {
     choosePinTitle: "Choose a PIN",
     confirmPinTitle: "Confirm your PIN",
+    enterPinTitle: "Enter PIN",
     biometricTitle: "Biometric Authentication",
     enableNotificationsTitle: "Enable notifications",
     skipForNowBtn: "Skip for now"
