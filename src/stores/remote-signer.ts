@@ -6,7 +6,7 @@ import { computed, readonly, ref, watch } from 'vue'
 import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { nimiqPayCosignerPublicKeys } from '@/lib'
-import { SQLQuery } from '@/lib/sql-queries'
+import { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -43,6 +43,19 @@ export interface RemoteSignerDiscoveryResult {
   added: number
   alreadyKnown: number
   localComplete: boolean
+  errors: string[]
+  // Funding HTLCs seen in local history, even those whose cosigner metadata could not be resolved.
+  createdHtlcs: string[]
+  // Every local history page was read, so createdHtlcs lists all funding HTLCs.
+  historyComplete: boolean
+}
+
+export interface LocalHtlcHistoryScan {
+  context: WalletContext
+  // Funding HTLC creations from local history, newest first.
+  creations: PlainTransactionDetails[]
+  historyComplete: boolean
+  sawHtlcTransaction: boolean
   errors: string[]
 }
 
@@ -237,8 +250,18 @@ function useRemoteSignerDb() {
 
     async purgeRemoteSigners() {
       signerWriteRevision += 1
-      const write = enqueueSignerWrite(() => run(SQLQuery.PurgeRemoteSigners))
+      // The check vouched for the purged signer set; the next one must be checked again.
+      const write = enqueueSignerWrite(() => runSet([
+        { statement: SQLQuery.PurgeRemoteSigners, values: [] },
+        { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
+        { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
+        { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
+      ]))
       await write
+      const syncState = useSyncState()
+      syncState.htlcHistoryChecked = false
+      syncState.htlcExtensionsWalked = false
+      syncState.htlcCheckHoldStartedAt = undefined
     },
 
     async deactivateRemoteSignerInDb(
@@ -992,6 +1015,16 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     if (!context)
       return invalid('Local wallet unavailable')
 
+    // Without consensus the account lookup fails and a funded HTLC reads as inactive.
+    try {
+      await promiseWithTimeout(context.client.waitForConsensusEstablished(), DISCOVER_TIMEOUT_MS)
+    }
+    catch {
+      return invalid('Nimiq consensus unavailable')
+    }
+    if (!isWalletContextCurrent(context))
+      return invalid('Wallet or network changed during validation')
+
     const { data: remoteStatus, error: statusError } = await getStatus()
     if (!isWalletContextCurrent(context))
       return invalid('Wallet or network changed during validation')
@@ -1052,7 +1085,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function registerValidatedRemoteSigner(
-    candidate: ValidatedRemoteSigner,
+    candidate: Pick<ValidatedRemoteSigner, 'address'>,
   ): Promise<RemoteSignerValidationDetails> {
     const context = getWalletContext()
     if (!context)
@@ -1162,6 +1195,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   let inFlightLocalHistory: LocalHistoryRequest | undefined
   let replacementHistoryClient: { baseClient: Client, client: Client, network: string } | undefined
   let discoverRequest: DiscoveryRequest | undefined
+  let scanRequest: { context: WalletContext, promise: Promise<LocalHtlcHistoryScan> } | undefined
 
   async function resetLocalHistoryRequest(request: LocalHistoryRequest) {
     if (!request.resetPromise) {
@@ -1320,12 +1354,9 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   }
 
   async function discoverRemoteSignersFromBlockchain(): Promise<RemoteSignerDiscoveryResult> {
-    if (!localAddress.value || !client.value)
-      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] }
-
-    const context = getWalletContext()
+    const context = localAddress.value && client.value ? getWalletContext() : undefined
     if (!context)
-      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] }
+      return { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'], createdHtlcs: [], historyComplete: false }
     if (discoverRequest && sameWalletContext(discoverRequest.context, context))
       return discoverRequest.promise
 
@@ -1337,26 +1368,41 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return promise
   }
 
-  async function runDiscoverRemoteSignersFromBlockchain(context: WalletContext): Promise<RemoteSignerDiscoveryResult> {
-    const result: RemoteSignerDiscoveryResult = { added: 0, alreadyKnown: 0, localComplete: false, errors: [] }
+  /**
+   * Pages through all local history for HTLC creations without asking the cosigner, so callers can
+   * act on funded HTLCs in seconds while the slow per-HTLC metadata validation runs afterwards.
+   */
+  async function scanLocalHtlcCreations(): Promise<LocalHtlcHistoryScan | undefined> {
+    const context = getWalletContext()
+    if (!context)
+      return undefined
+    // Startup discovery and DB verification both scan; share one pass over the whole history.
+    if (scanRequest && sameWalletContext(scanRequest.context, context))
+      return scanRequest.promise
+    const promise = runScanLocalHtlcCreations(context).finally(() => {
+      if (scanRequest?.promise === promise)
+        scanRequest = undefined
+    })
+    scanRequest = { context, promise }
+    return promise
+  }
+
+  async function runScanLocalHtlcCreations(context: WalletContext): Promise<LocalHtlcHistoryScan> {
+    const scan: LocalHtlcHistoryScan = { context, creations: [], historyComplete: false, sawHtlcTransaction: false, errors: [] }
     try {
       await promiseWithTimeout(context.client.waitForConsensusEstablished(), DISCOVER_TIMEOUT_MS)
     }
     catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       logger.error('discoverRemoteSignersFromBlockchain: consensus unavailable', message)
-      result.errors.push(message)
-      return result
+      return { ...scan, errors: [message] }
     }
     if (!isWalletContextCurrent(context))
-      return { ...result, errors: ['Wallet changed during discovery'] }
+      return { ...scan, errors: ['Wallet changed during discovery'] }
 
     const { owner } = context
     const seenTransactions = new Set<string>()
-    const seenSignerAddresses = new Set<string>()
     const seenCursors = new Set<string>()
-    let sawHtlcTransaction = false
-    let evidenceIncomplete = false
     let startAt: string | undefined
 
     // Old funding HTLCs may be beyond the first page, so scan until history is exhausted.
@@ -1369,15 +1415,15 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         const errorName = error instanceof Error ? error.name : typeof error
         const errorMessage = error instanceof Error ? error.message : String(error)
         logger.error('discoverRemoteSignersFromBlockchain: getTransactionsByAddress failed', errorName, errorMessage)
-        result.errors.push(`${errorName}: ${errorMessage}`)
+        scan.errors.push(`${errorName}: ${errorMessage}`)
         break
       }
       if (!isWalletContextCurrent(context))
-        return { ...result, errors: ['Wallet changed during discovery'] }
+        return { ...scan, errors: ['Wallet changed during discovery'] }
 
       logger.log('All Transactions from Blockchain', transactions)
-      sawHtlcTransaction ||= transactions.some(transaction => transaction.recipientType === 'htlc')
-      const candidates = transactions.filter((transaction) => {
+      scan.sawHtlcTransaction ||= transactions.some(transaction => transaction.recipientType === 'htlc')
+      scan.creations.push(...transactions.filter((transaction) => {
         if (seenTransactions.has(transaction.transactionHash))
           return false
         seenTransactions.add(transaction.transactionHash)
@@ -1390,133 +1436,153 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
           && data.type === 'htlc'
           && data.sender === owner
           && isCosignerAddress(data.recipient)
-      })
-
-      for (const transaction of candidates) {
-        let address: Address
-        try {
-          address = Nimiq.Address.fromString(transaction.recipient)
-        }
-        catch {
-          logger.warn('Ignoring HTLC creation with invalid recipient address', transaction.transactionHash)
-          continue
-        }
-        const rootResult = await resolveAddressSpecificSignerMetadata(address, context)
-        if (!isWalletContextCurrent(context))
-          return { ...result, errors: ['Wallet changed during discovery'] }
-        if (rootResult.status === 'unavailable') {
-          evidenceIncomplete = true
-          result.errors.push(`HTLC metadata unavailable: ${transaction.recipient}`)
-          continue
-        }
-        if (rootResult.status === 'rejected'
-          || rootResult.metadata.creationTransactionHash !== transaction.transactionHash) {
-          logger.warn('Ignoring HTLC creation with mismatched signer metadata', transaction.transactionHash)
-          continue
-        }
-
-        const signersToScan = [rootResult.metadata]
-        while (signersToScan.length > 0) {
-          const metadata = signersToScan.shift()!
-          if (seenSignerAddresses.has(metadata.addressString))
-            continue
-          seenSignerAddresses.add(metadata.addressString)
-
-          const { data: account, error } = await getAccount(metadata.address)
-          if (!isWalletContextCurrent(context))
-            return { ...result, errors: ['Wallet changed during discovery'] }
-          if (error && error !== NO_ACCOUNT_ERROR) {
-            evidenceIncomplete = true
-            result.errors.push(`HTLC account lookup failed: ${metadata.addressString}`)
-          }
-          else if (error === NO_ACCOUNT_ERROR
-            || account?.type === 'basic'
-            || (account?.type === 'htlc'
-              && account.sender === owner
-              && account.recipient === metadata.cosignerRecipient
-              && account.timeout === metadata.end)) {
-            // Keep validated, drained HTLCs so wallet restores can import their outgoing history.
-            const insertResult = await upsertInactiveRemoteSigner({
-              active: false,
-              balance: account?.type === 'htlc' ? account.balance : 0,
-              address: metadata.address,
-              publicKey: metadata.publicKey,
-              start: metadata.start,
-              end: metadata.end,
-              proofSize: metadata.proofSize,
-            }, context)
-            if (!isWalletContextCurrent(context))
-              return { ...result, errors: ['Wallet changed during discovery'] }
-            if (insertResult === 'added')
-              result.added += 1
-            else
-              result.alreadyKnown += 1
-          }
-
-          const history = await getAllTransactionsForAddress(metadata.address)
-          if (!isWalletContextCurrent(context))
-            return { ...result, errors: ['Wallet changed during discovery'] }
-          if (!history.complete) {
-            evidenceIncomplete = true
-            result.errors.push(`HTLC history lookup incomplete: ${metadata.addressString}`)
-          }
-
-          for (const extension of history.transactions) {
-            const extensionData = extension.data
-            if (!isSuccessfulHistoricalHtlcTransaction(extension)
-              || extension.sender !== metadata.addressString
-              || extension.senderType !== 'htlc'
-              || extension.recipientType !== 'htlc'
-              || (extension.flags & 0b1) !== 0b1
-              || extensionData.type !== 'htlc'
-              || extensionData.sender !== owner
-              || !isCosignerAddress(extensionData.recipient)) {
-              continue
-            }
-
-            let childAddress: Address
-            try {
-              childAddress = Nimiq.Address.fromString(extension.recipient)
-            }
-            catch {
-              logger.warn('Ignoring HTLC extension with invalid recipient address', extension.transactionHash)
-              continue
-            }
-            const childResult = await resolveAddressSpecificSignerMetadata(childAddress, context)
-            if (!isWalletContextCurrent(context))
-              return { ...result, errors: ['Wallet changed during discovery'] }
-            if (childResult.status === 'unavailable') {
-              evidenceIncomplete = true
-              result.errors.push(`HTLC metadata unavailable: ${extension.recipient}`)
-              continue
-            }
-            if (childResult.status === 'rejected'
-              || childResult.metadata.creationTransactionHash !== extension.transactionHash) {
-              logger.warn('Ignoring HTLC extension with mismatched signer metadata', extension.transactionHash)
-              continue
-            }
-            signersToScan.push(childResult.metadata)
-          }
-        }
-      }
+      }))
 
       if (transactions.length < HISTORY_PAGE_SIZE) {
-        result.localComplete = !evidenceIncomplete
+        scan.historyComplete = true
         break
       }
 
       const nextCursor = transactions.at(-1)?.transactionHash
       if (!nextCursor || seenCursors.has(nextCursor)) {
-        result.errors.push('Local history pagination made no progress')
+        scan.errors.push('Local history pagination made no progress')
         break
       }
       seenCursors.add(nextCursor)
       startAt = nextCursor
     }
+    return scan
+  }
 
+  async function runDiscoverRemoteSignersFromBlockchain(context: WalletContext): Promise<RemoteSignerDiscoveryResult> {
+    const localScan = await scanLocalHtlcCreations()
+    const result: RemoteSignerDiscoveryResult = {
+      added: 0,
+      alreadyKnown: 0,
+      localComplete: false,
+      errors: [...localScan?.errors ?? ['Local wallet or client unavailable']],
+      createdHtlcs: localScan?.creations.map(transaction => transaction.recipient) ?? [],
+      historyComplete: localScan?.historyComplete ?? false,
+    }
+    if (!localScan || !isWalletContextCurrent(context))
+      return result
+
+    const { owner } = context
+    const seenSignerAddresses = new Set<string>()
+    let evidenceIncomplete = false
+
+    for (const transaction of localScan.creations) {
+      let address: Address
+      try {
+        address = Nimiq.Address.fromString(transaction.recipient)
+      }
+      catch {
+        logger.warn('Ignoring HTLC creation with invalid recipient address', transaction.transactionHash)
+        continue
+      }
+      const rootResult = await resolveAddressSpecificSignerMetadata(address, context)
+      if (!isWalletContextCurrent(context))
+        return { ...result, errors: ['Wallet changed during discovery'] }
+      if (rootResult.status === 'unavailable') {
+        evidenceIncomplete = true
+        result.errors.push(`HTLC metadata unavailable: ${transaction.recipient} (${rootResult.reason})`)
+        continue
+      }
+      if (rootResult.status === 'rejected'
+        || rootResult.metadata.creationTransactionHash !== transaction.transactionHash) {
+        logger.warn('Ignoring HTLC creation with mismatched signer metadata', transaction.transactionHash)
+        continue
+      }
+
+      const signersToScan = [rootResult.metadata]
+      while (signersToScan.length > 0) {
+        const metadata = signersToScan.shift()!
+        if (seenSignerAddresses.has(metadata.addressString))
+          continue
+        seenSignerAddresses.add(metadata.addressString)
+
+        const { data: account, error } = await getAccount(metadata.address)
+        if (!isWalletContextCurrent(context))
+          return { ...result, errors: ['Wallet changed during discovery'] }
+        if (error && error !== NO_ACCOUNT_ERROR) {
+          evidenceIncomplete = true
+          result.errors.push(`HTLC account lookup failed: ${metadata.addressString}`)
+        }
+        else if (error === NO_ACCOUNT_ERROR
+          || account?.type === 'basic'
+          || (account?.type === 'htlc'
+            && account.sender === owner
+            && account.recipient === metadata.cosignerRecipient
+            && account.timeout === metadata.end)) {
+          // Keep validated, drained HTLCs so wallet restores can import their outgoing history.
+          const insertResult = await upsertInactiveRemoteSigner({
+            active: false,
+            balance: account?.type === 'htlc' ? account.balance : 0,
+            address: metadata.address,
+            publicKey: metadata.publicKey,
+            start: metadata.start,
+            end: metadata.end,
+            proofSize: metadata.proofSize,
+          }, context)
+          if (!isWalletContextCurrent(context))
+            return { ...result, errors: ['Wallet changed during discovery'] }
+          if (insertResult === 'added')
+            result.added += 1
+          else
+            result.alreadyKnown += 1
+        }
+
+        const history = await getAllTransactionsForAddress(metadata.address)
+        if (!isWalletContextCurrent(context))
+          return { ...result, errors: ['Wallet changed during discovery'] }
+        if (!history.complete) {
+          evidenceIncomplete = true
+          result.errors.push(`HTLC history lookup incomplete: ${metadata.addressString}`)
+        }
+
+        for (const extension of history.transactions) {
+          const extensionData = extension.data
+          if (!isSuccessfulHistoricalHtlcTransaction(extension)
+            || extension.sender !== metadata.addressString
+            || extension.senderType !== 'htlc'
+            || extension.recipientType !== 'htlc'
+            || (extension.flags & 0b1) !== 0b1
+            || extensionData.type !== 'htlc'
+            || extensionData.sender !== owner
+            || !isCosignerAddress(extensionData.recipient)) {
+            continue
+          }
+
+          let childAddress: Address
+          try {
+            childAddress = Nimiq.Address.fromString(extension.recipient)
+          }
+          catch {
+            logger.warn('Ignoring HTLC extension with invalid recipient address', extension.transactionHash)
+            continue
+          }
+          const childResult = await resolveAddressSpecificSignerMetadata(childAddress, context)
+          if (!isWalletContextCurrent(context))
+            return { ...result, errors: ['Wallet changed during discovery'] }
+          if (childResult.status === 'unavailable') {
+            evidenceIncomplete = true
+            result.errors.push(`HTLC metadata unavailable: ${extension.recipient} (${childResult.reason})`)
+            continue
+          }
+          if (childResult.status === 'rejected'
+            || childResult.metadata.creationTransactionHash !== extension.transactionHash) {
+            logger.warn('Ignoring HTLC extension with mismatched signer metadata', extension.transactionHash)
+            continue
+          }
+          signersToScan.push(childResult.metadata)
+        }
+      }
+    }
+
+    result.localComplete = localScan.historyComplete && !evidenceIncomplete
     // Partial history must not decide which recovered signer becomes active.
     if (result.localComplete && isWalletContextCurrent(context))
-      await updateRemoteFromApi(!sawHtlcTransaction, context)
+      await updateRemoteFromApi(!localScan.sawHtlcTransaction, context)
     return result
   }
 
@@ -1706,8 +1772,10 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     resolveAddressSpecificSignerMetadata,
     updateSignersTableBalance,
     discoverRemoteSignersFromBlockchain,
+    scanLocalHtlcCreations,
     validateRemoteSignerAddress,
     registerValidatedRemoteSigner,
+    isCosignerAddress,
     upsertInactiveRemoteSigner,
     purgeRemoteSigners,
 

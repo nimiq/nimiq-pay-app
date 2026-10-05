@@ -3,7 +3,10 @@ import type { Ref } from 'vue'
 import type { RecoverablePlainTransactionDetails, TransactionSentByUser } from '@/types/transactions'
 import { computedAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import { useLogger } from '@/composables/useLogger'
+import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
+import { kv } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
@@ -11,6 +14,8 @@ import { useRemoteSigner } from '@/stores/remote-signer'
 const MAX_BLOCK_HEIGHT_MISMATCH = Nimiq.Policy.BLOCKS_PER_BATCH
 export const HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS = 120 * Nimiq.Policy.BLOCKS_PER_BATCH
 export const MAX_BLOCKS_HALF_BEFORE_AUTO_EXTEND_PLEASE_DO_IT_WHENEVER_YOU_FEEL_LIKE_NO_STRESS_PURA_VIDA = HTLC_AUTO_EXTEND_LOOKAHEAD_BLOCKS
+// Payments need an HTLC, so a fresh database never holds local funds longer than this.
+export const HTLC_HISTORY_CHECK_HOLD_MS = 10 * 60 * 1000
 
 export function upsertPlainPendingByHash(collection: RecoverablePlainTransactionDetails[], transaction: RecoverablePlainTransactionDetails) {
   const index = collection.findIndex(tx => tx.transactionHash === transaction.transactionHash)
@@ -56,6 +61,11 @@ export const useSyncState = defineStore('sync-state', () => {
   const isUpdatingBalancesNow = ref(false)
   const shouldUpdateBalancesAgain = ref(false)
   const walletContextGeneration = ref(0)
+  const logger = useLogger('sync-state')
+  // Undefined until read from this wallet's DB; sync can start before syncWallets loads it.
+  const htlcHistoryChecked = shallowRef<boolean>()
+  const htlcExtensionsWalked = shallowRef<boolean>()
+  const htlcCheckHoldStartedAt = shallowRef<number>()
   let walletContext: { address: string, network: string } | undefined
 
   function setWalletContext(address: string, network: string) {
@@ -74,6 +84,22 @@ export const useSyncState = defineStore('sync-state', () => {
     return walletContextGeneration.value
   }
 
+  // Logout and restore reload the page and purgeRemoteSigners resets these, so a cached value is never stale.
+  async function loadHtlcHistoryFlags() {
+    if (htlcHistoryChecked.value === undefined || htlcExtensionsWalked.value === undefined) {
+      try {
+        const [checked, walked] = await Promise.all([kv().getItem(HTLC_HISTORY_CHECKED_KV_KEY), kv().getItem(HTLC_EXTENSIONS_WALKED_KV_KEY)])
+        htlcHistoryChecked.value ??= checked === '1'
+        htlcExtensionsWalked.value ??= walked === '1'
+      }
+      catch (error) {
+        // Unloaded reads as unchecked, which keeps the hold: the safe side.
+        logger.error('Failed to load the HTLC history check state', error)
+      }
+    }
+    return { checked: htlcHistoryChecked.value, walked: htlcExtensionsWalked.value }
+  }
+
   // Touch the local-wallet store here so sync-state stays tied to wallet lifetime in Pinia devtools.
   useLocalWallet()
 
@@ -88,7 +114,11 @@ export const useSyncState = defineStore('sync-state', () => {
     isUpdatingBalancesNow,
     shouldUpdateBalancesAgain,
     walletContextGeneration,
+    htlcHistoryChecked,
+    htlcExtensionsWalked,
+    htlcCheckHoldStartedAt,
     setWalletContext,
+    loadHtlcHistoryFlags,
     nodesAreSynced,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,

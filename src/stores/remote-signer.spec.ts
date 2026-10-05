@@ -1377,7 +1377,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       added: 2,
       alreadyKnown: 0,
       localComplete: false,
@@ -1623,7 +1623,7 @@ describe('useRemoteSigner', () => {
     useSyncState().walletContextGeneration += 1
     resolveInsert({ changes: { changes: 1 } })
 
-    await expect(discovery).resolves.toEqual({
+    await expect(discovery).resolves.toMatchObject({
       added: 0,
       alreadyKnown: 0,
       localComplete: false,
@@ -1649,7 +1649,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).toHaveBeenCalledWith(
       expect.any(String),
       [creation.recipient, 696_900_000, 98, 'service-public-key', 123_100, 999_500, false],
@@ -1669,7 +1669,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).not.toHaveBeenCalled()
   })
 
@@ -1743,7 +1743,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).toHaveBeenCalledWith(
       expect.any(String),
       [root.recipient, 0, 96, 'service-public-key-a', 123_100, 999_500, false],
@@ -1922,6 +1922,108 @@ describe('useRemoteSigner', () => {
     expect(state.run).not.toHaveBeenCalled()
   })
 
+  it('reports why address-specific metadata is unavailable', async () => {
+    const creation = createHtlcCreation()
+    state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
+    state.getRemoteSigner.mockRejectedValue(new Error('transport unavailable'))
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(result.errors).toEqual([`HTLC metadata unavailable: ${creation.recipient} (transport unavailable)`])
+  })
+
+  it('drops the HTLC history check together with the purged signers', async () => {
+    const { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } = await import('@/lib/sql-queries')
+    const { useSyncState } = await import('@/stores/sync/state')
+    const { useRemoteSigner } = await import('./remote-signer')
+    useSyncState().htlcHistoryChecked = true
+    useSyncState().htlcCheckHoldStartedAt = 1
+
+    await useRemoteSigner().purgeRemoteSigners()
+
+    expect(state.runSet).toHaveBeenCalledExactlyOnceWith([
+      { statement: SQLQuery.PurgeRemoteSigners, values: [] },
+      { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
+      { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
+      { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
+    ])
+    // handleFunds trusts the cached flag, so a stale `true` would skip the hold for the new signer set.
+    expect(useSyncState().htlcHistoryChecked).toBe(false)
+    expect(useSyncState().htlcExtensionsWalked).toBe(false)
+    expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+  })
+
+  it('lists HTLC creations from local history even when their metadata is unavailable', async () => {
+    const creation = createHtlcCreation()
+    state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
+    state.getRemoteSigner.mockRejectedValue(new Error('transport unavailable'))
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(result.localComplete).toBe(false)
+    expect(result.createdHtlcs).toEqual([creation.recipient])
+    expect(result.historyComplete).toBe(true)
+  })
+
+  function twoHistoryPages() {
+    const newer = createHtlcCreation({ transactionHash: 'newer-creation', recipient: 'NQ33 TEST NEWER HTLC ADDRESS' })
+    const older = createHtlcCreation()
+    const filler = Array.from({ length: 99 }, (_, index) => ({
+      transactionHash: `filler-${index}`,
+      executionResult: true,
+      sender: 'NQ00 TEST LOCAL ADDRESS',
+      senderType: 'basic',
+      recipient: `NQ${index} BASIC ADDRESS`,
+      recipientType: 'basic',
+      flags: 0,
+      data: {},
+    }))
+    return { newer, older, firstPage: [newer, ...filler], secondPage: [older] }
+  }
+
+  it('reads every local history page before resolving cosigner metadata', async () => {
+    const { newer, older, firstPage, secondPage } = twoHistoryPages()
+    const calls: string[] = []
+    state.client.getTransactionsByAddress = vi.fn((_address: unknown, _sinceHeight: unknown, _known: unknown, startAt: string | undefined) => {
+      calls.push('history')
+      return Promise.resolve(startAt ? secondPage : firstPage)
+    })
+    state.getRemoteSigner.mockImplementation(() => {
+      calls.push('metadata')
+      return Promise.reject(new Error('transport unavailable'))
+    })
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(calls.lastIndexOf('history')).toBeLessThan(calls.indexOf('metadata'))
+    expect(result).toMatchObject({ historyComplete: true, localComplete: false, createdHtlcs: [newer.recipient, older.recipient] })
+  })
+
+  it('shares one history scan between concurrent callers', async () => {
+    const { firstPage, secondPage } = twoHistoryPages()
+    state.client.getTransactionsByAddress = vi.fn((_address: unknown, _sinceHeight: unknown, _known: unknown, startAt: string | undefined) =>
+      Promise.resolve(startAt ? secondPage : firstPage))
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    const [first, second] = await Promise.all([store.scanLocalHtlcCreations(), store.scanLocalHtlcCreations()])
+
+    expect(second).toBe(first)
+    expect(state.client.getTransactionsByAddress).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports local history as incomplete when a history page fails', async () => {
+    state.client.getTransactionsByAddress = vi.fn(() => Promise.reject(new Error('history unavailable')))
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(result.historyComplete).toBe(false)
+  })
+
   it('bounds historical discovery consensus waiting', async () => {
     vi.useFakeTimers()
     state.client.waitForConsensusEstablished = vi.fn(() => new Promise(() => {}))
@@ -1941,7 +2043,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] })
+    expect(result).toMatchObject({ added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local wallet or client unavailable'] })
   })
 
   it('discovers a historical HTLC through bounded pages without replacing the active signer', async () => {
@@ -1999,7 +2101,7 @@ describe('useRemoteSigner', () => {
 
     expect(store.remoteAddress?.toUserFriendlyAddress()).toBe(activeAddress)
     expect(store.remoteBalance).toBe(25)
-    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.client.getTransactionsByAddress).toHaveBeenNthCalledWith(1, state.localAddress, undefined, undefined, undefined, 100)
     expect(state.client.getTransactionsByAddress).toHaveBeenNthCalledWith(2, state.localAddress, undefined, undefined, 'hash-99', 100)
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [oldAddress, 696_900_000, 98, 'service-public-key', 123_100, 999_500, false])
@@ -2043,7 +2145,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 2, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [root.recipient, 0, 98, 'service-public-key', 123_100, 999_500, false])
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [extension.recipient, 500, 98, 'service-public-key', 124_100, 1_000_500, false])
   })
@@ -2080,7 +2182,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 1, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.getRemoteSigner.mock.calls.map(call => (call as any[])[0].address.toUserFriendlyAddress())).not.toContain(swap.recipient)
     expect(state.run).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining([swap.recipient]))
   })
@@ -2129,7 +2231,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).not.toHaveBeenCalled()
   })
 
@@ -2576,7 +2678,7 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result).toEqual({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+    expect(result).toMatchObject({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
     expect(state.run).not.toHaveBeenCalled()
   })
 
@@ -2693,6 +2795,45 @@ describe('useRemoteSigner', () => {
     })
     expect(state.client.getTransaction).toHaveBeenCalledExactlyOnceWith('creation-hash')
     expect(state.run).not.toHaveBeenCalled()
+  })
+
+  it('waits for consensus before looking up the HTLC account', async () => {
+    const oldAddress = 'NQ22 TEST OLD HTLC ADDRESS'
+    let establishConsensus!: () => void
+    const consensus = new Promise<void>((resolve) => {
+      establishConsensus = resolve
+    })
+    state.client.waitForConsensusEstablished = vi.fn(() => consensus)
+    state.getAccount.mockResolvedValue({ data: createLiveHtlcAccount(), error: undefined })
+    state.getRemoteSigner.mockResolvedValue({
+      data: createRemoteSignerApiData(oldAddress),
+      error: undefined,
+      hasError: false,
+      status: 200,
+    })
+    state.client.getTransaction.mockResolvedValue(createHtlcCreation())
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const validation = useRemoteSigner().validateRemoteSignerAddress(oldAddress)
+    for (let i = 0; i < 10; i++)
+      await Promise.resolve()
+    expect(state.getAccount).not.toHaveBeenCalled()
+
+    establishConsensus()
+    await expect(validation).resolves.toMatchObject({ status: 'importable' })
+  })
+
+  it('reports missing consensus instead of an inactive HTLC', async () => {
+    vi.useFakeTimers()
+    state.client.waitForConsensusEstablished = vi.fn(() => new Promise(() => {}))
+
+    const { useRemoteSigner } = await import('./remote-signer')
+    const validation = useRemoteSigner().validateRemoteSignerAddress('NQ22 TEST OLD HTLC ADDRESS')
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    await expect(validation).resolves.toMatchObject({ status: 'invalid', reason: 'Nimiq consensus unavailable' })
+    expect(state.getAccount).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('registers only the validated target without changing the active signer', async () => {

@@ -14,6 +14,10 @@ msgstr ""
 msgid "{count} of {total} remaining."
 msgstr ""
 
+#: src/modals/HtlcHistoryCheckModal.vue:21
+msgid "{minutes} min left at most"
+msgstr ""
+
 #: src/components/competition/CompetitionAppDetail.vue:12
 #: src/components/competition/CompetitionAppPoster.vue:15
 msgid "{name} preview"
@@ -47,7 +51,7 @@ msgid "About"
 msgstr ""
 
 #: src/modals/MenuModal.vue:26
-#: src/views/HomeView.vue:194
+#: src/views/HomeView.vue:195
 msgid "Activate Cashback & Rewards"
 msgstr ""
 
@@ -79,7 +83,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:539
+#: src/lib/flows/index.ts:540
 msgid "Address saved"
 msgstr ""
 
@@ -163,12 +167,16 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:592
+#: src/lib/flows/index.ts:593
 msgid "Backup successful"
 msgstr ""
 
 #: src/modals/LogOutModal/Warning.vue:13
 msgid "Backup your account before logging out"
+msgstr ""
+
+#: src/modals/HtlcHistoryCheckModal.vue:16
+msgid "Before securing new funds, Nimiq Pay checks your account history so no earlier deposit is left behind. Your funds stay safe in your wallet meanwhile. This can take up to {minutes} minutes."
 msgstr ""
 
 #: src/composables/useBiometric.ts:41
@@ -270,6 +278,11 @@ msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:16
 msgid "Check your connection and try again."
+msgstr ""
+
+#: src/modals/HtlcHistoryCheckModal.vue:13
+#: src/views/MainView.vue:122
+msgid "Checking your account"
 msgstr ""
 
 #: src/lib/flows/steps.ts:89
@@ -413,7 +426,7 @@ msgstr ""
 msgid "Cryptocity Points"
 msgstr ""
 
-#: src/views/HomeView.vue:123
+#: src/views/HomeView.vue:124
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr ""
 
@@ -558,22 +571,23 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:103
+#: src/stores/sync/htlc.ts:149
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:159
+#: src/stores/sync/htlc.ts:210
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:184
+#: src/stores/sync/htlc.ts:235
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:137
+#: src/stores/sync/htlc.ts:188
 msgid "Error while topping up deposit"
 msgstr ""
 
+#: src/modals/HtlcHistoryCheckModal.vue:21
 #: src/modals/LongTimeNoSeeModal.vue:21
 #: src/views/MainView.vue:41
 msgid "Establishing consensus"
@@ -1042,7 +1056,7 @@ msgstr ""
 msgid "NFC is not supported on this device"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:66
+#: src/stores/sync/remote-signers.ts:75
 #: src/stores/transactions.ts:365
 msgid "Nimiq network unavailable"
 msgstr ""
@@ -1255,7 +1269,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:403
+#: src/lib/flows/index.ts:404
 msgid "Payment successful"
 msgstr ""
 
@@ -1298,7 +1312,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:621
+#: src/lib/flows/index.ts:622
 msgid "PIN change successful"
 msgstr ""
 
@@ -1414,7 +1428,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:124
+#: src/views/MainView.vue:133
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1486,7 +1500,7 @@ msgstr ""
 msgid "Requesting…"
 msgstr ""
 
-#: src/views/HomeView.vue:195
+#: src/views/HomeView.vue:196
 msgid "Requires Phone Number"
 msgstr ""
 
@@ -1615,8 +1629,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:481
-#: src/lib/flows/index.ts:490
+#: src/lib/flows/index.ts:482
+#: src/lib/flows/index.ts:491
 msgid "Something went wrong"
 msgstr ""
 
@@ -1784,7 +1798,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:608
+#: src/lib/flows/index.ts:609
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1793,8 +1807,8 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/index.ts:321
-#: src/lib/flows/index.ts:483
+#: src/lib/flows/index.ts:322
+#: src/lib/flows/index.ts:484
 #: src/stores/polygon-usdt.ts:2135
 #: src/stores/polygon-usdt.ts:2147
 #: src/stores/polygon-usdt.ts:2171
@@ -1989,7 +2003,7 @@ msgstr ""
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 
-#: src/lib/flows/index.ts:339
+#: src/lib/flows/index.ts:340
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -2030,8 +2044,8 @@ msgstr ""
 msgid "Wallet changed before sending"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:72
-#: src/stores/sync/remote-signers.ts:85
+#: src/stores/sync/remote-signers.ts:81
+#: src/stores/sync/remote-signers.ts:94
 #: src/stores/transactions.ts:350
 #: src/stores/transactions.ts:369
 #: src/stores/transactions.ts:380
@@ -2171,7 +2185,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:497
+#: src/lib/flows/index.ts:498
 msgid "Withdrawal successful"
 msgstr ""
 
@@ -2235,7 +2249,7 @@ msgstr ""
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
 msgstr ""
 
-#: src/views/HomeView.vue:200
+#: src/views/HomeView.vue:201
 msgid "You have a reward to claim!"
 msgstr ""
 

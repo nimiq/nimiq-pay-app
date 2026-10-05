@@ -22,6 +22,15 @@ export interface RemoteSigner {
   end: number
 }
 
+// Set once this database's signers were checked against history for funded HTLCs, or the hold gave up.
+// Logout and restore delete the database, so a restored wallet must check again.
+export const HTLC_HISTORY_CHECKED_KV_KEY = 'htlcHistoryChecked'
+// Set once a clean sweep followed every HTLC's extensions. Separate from the check because upgraded installs
+// are backfilled as checked (no hold) but may still miss a funded extension an older version never stored.
+export const HTLC_EXTENSIONS_WALKED_KV_KEY = 'htlcExtensionsWalked'
+// Persisted so restarts don't restart the hold and block HTLC creation forever.
+export const HTLC_CHECK_HOLD_STARTED_KV_KEY = 'htlcCheckHoldStartedAt'
+
 export enum SQLQuery {
   // Key-Value Store
   CreateKvTable = 'CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL)',
@@ -138,6 +147,8 @@ export enum SQLQuery {
   AddRefundTimestampColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_timestamp INTEGER',
   AddRefundBlockColumnToSwapHtlcs = 'ALTER TABLE swap_htlcs ADD COLUMN refund_block INTEGER',
   BackfillSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = address WHERE htlc_id IS NOT NULL AND tx_hash IS NULL AND address != htlc_id',
+  // Key must match HTLC_HISTORY_CHECKED_KV_KEY. Upgraded installs with signers already track their HTLCs.
+  BackfillHtlcHistoryChecked = 'INSERT OR IGNORE INTO kv (key, value) SELECT \'htlcHistoryChecked\', \'1\' WHERE EXISTS (SELECT 1 FROM remote_signers)',
   InsertSwapHtlc = 'INSERT OR REPLACE INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   InsertSwapHtlcProvisional = 'INSERT INTO swap_htlcs (address, amount, timeout_block, swap_id, swap_status, htlc_id) VALUES (?, ?, ?, ?, ?, ?)',
   SetSwapHtlcTxHash = 'UPDATE swap_htlcs SET tx_hash = COALESCE(tx_hash, ?) WHERE address = ?',
@@ -286,6 +297,12 @@ export const migrations: Migration[] = [
     toVersion: 12,
     statements: [
       SQLQuery.CreateMiniAppLightningPaymentsTable,
+    ],
+  },
+  {
+    toVersion: 13,
+    statements: [
+      SQLQuery.BackfillHtlcHistoryChecked,
     ],
   },
 ]

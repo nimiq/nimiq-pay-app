@@ -72,9 +72,12 @@ export class LabEngine {
         return
       }
       await this.refresh()
+      // Restore keeps the same amount again in the wallet, so the app has local funds to secure.
       const needed = config.scenario === 'two' || config.scenario === 'bomb'
         ? 2 * (config.amount + config.fee)
-        : config.scenario === 'drained' ? config.amount + 3 * config.fee : config.amount + config.fee
+        : config.scenario === 'drained'
+          ? config.amount + 3 * config.fee
+          : config.scenario === 'restore' ? 2 * config.amount + config.fee : config.amount + config.fee
       if (!Number.isSafeInteger(needed) || this.state.ownerBalance < needed)
         throw new Error(`Insufficient owner funds. Reserve at least ${formatNim(needed)} NIM for this scenario.`)
       if (config.amount <= config.fee)
@@ -262,8 +265,12 @@ export class LabEngine {
       if (this.state.stage === 'funding-a' && this.state.transactions.find(tx => tx.kind === 'a')?.state === 'confirmed') {
         if (this.state.contracts[0].balance !== config.amount)
           throw new Error('A’s live balance differs from setup. Keep the app closed and inspect external transactions.')
-        this.state.stage = config.scenario === 'two' ? 'ready-new' : config.scenario === 'drained' ? 'ready-drain' : 'waiting-expiry'
-        this.note(this.state.stage === 'waiting-expiry' ? 'A is confirmed. Waiting for chain time to pass expiry; do not open the app.' : 'A is confirmed and funded. Review and continue to the next transaction.')
+        this.state.stage = config.scenario === 'two' ? 'ready-new' : config.scenario === 'drained' ? 'ready-drain' : config.scenario === 'restore' ? 'checking' : 'waiting-expiry'
+        this.note(this.state.stage === 'waiting-expiry'
+          ? 'A is confirmed. Waiting for chain time to pass expiry; do not open the app.'
+          : this.state.stage === 'checking'
+            ? 'A is confirmed and funded. Waiting for the cosigner to recognize A; keep the app closed.'
+            : 'A is confirmed and funded. Review and continue to the next transaction.')
       }
       if (this.state.stage === 'draining-a' && this.state.transactions.find(tx => tx.kind === 'drain')?.state === 'confirmed') {
         if (this.state.contracts[0].balance !== 0)
@@ -298,7 +305,9 @@ export class LabEngine {
         await this.verifySetup()
         this.state.stage = 'observe'
         this.state.observing = true
-        this.note('Chain setup verified. Open the app now. Record app results separately; cleanup is locked during observation.')
+        this.note(config.scenario === 'restore'
+          ? 'Chain setup verified. Log out of Nimiq Pay, import the app wallet\'s recovery words, and watch the first deposit. Record app results separately; cleanup is locked during observation.'
+          : 'Chain setup verified. Open the app now. Record app results separately; cleanup is locked during observation.')
       }
       this.state.error = ''
     }
@@ -319,8 +328,10 @@ export class LabEngine {
     const b = this.state.contracts[1]
     if (a.balance !== (scenario === 'drained' ? 0 : amount) || (b && b.balance !== amount))
       throw new Error('Live HTLC balances no longer match the scenario. Inspect external app activity before continuing.')
-    if ((scenario === 'two' && !a.registered) || (b && !b.registered))
+    if (((scenario === 'two' || scenario === 'restore') && !a.registered) || (b && !b.registered))
       throw new Error('Waiting for the cosigner to recognize each funded, unexpired contract.')
+    if (scenario === 'restore' && this.state.ownerBalance < amount)
+      throw new Error(`The app wallet needs at least ${formatNim(amount)} NIM of local funds besides A. Fund it and keep the app closed.`)
     if (scenario === 'bomb') {
       if (this.state.head.timestamp <= a.expiry)
         throw new Error('A is not expired according to chain time.')

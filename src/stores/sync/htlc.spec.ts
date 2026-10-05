@@ -2,6 +2,8 @@
 import './__tests__/setup'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
+import { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
 import { Transfer } from '@/types/transactions'
 import { createAddress, remoteSignerFixture, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
@@ -34,7 +36,143 @@ describe('useSyncHtlc', () => {
     await Promise.resolve()
   }
 
+  async function markHtlcHistoryChecked() {
+    const { useSyncState } = await import('./state')
+    useSyncState().htlcHistoryChecked = true
+  }
+
   describe('handleFunds', () => {
+    it('holds local funds on a database that has not checked HTLC history yet', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { useSyncState: freshState } = await import('./state')
+      freshState().htlcHistoryChecked = false
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(useSyncState().htlcHistoryChecked).toBe(false)
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeTypeOf('number')
+      expect(state.kvSetItem).toHaveBeenCalledWith(HTLC_CHECK_HOLD_STARTED_KV_KEY, String(useSyncState().htlcCheckHoldStartedAt))
+    })
+
+    it('reads a recorded history check before syncWallets loads it', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      state.kvGetItem.mockImplementation(async key => key === HTLC_HISTORY_CHECKED_KV_KEY ? '1' : undefined)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = undefined
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_CHECK_HOLD_STARTED_KV_KEY, expect.anything())
+    })
+
+    it('releases the explanation at the hold limit even if handleFunds does not run again', async () => {
+      vi.useFakeTimers()
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { HTLC_HISTORY_CHECK_HOLD_MS, useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = false
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().handleFunds()
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeTypeOf('number')
+      vi.advanceTimersByTime(HTLC_HISTORY_CHECK_HOLD_MS)
+
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+    })
+
+    it('releases the hold once an existing HTLC is activated with funds', async () => {
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncHtlc()
+      useSyncState().htlcCheckHoldStartedAt = Date.now()
+
+      state.remoteBalance = 860_000
+      await nextTick()
+
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+    })
+
+    it('keeps holding without throwing when the hold state cannot be read', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      state.kvGetItem.mockRejectedValue(new Error('database closed'))
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = undefined
+
+      await expect(useSyncHtlc().handleFunds()).resolves.toBeUndefined()
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+    })
+
+    it('resumes the hold from its persisted start after a restart', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const startedAt = Date.now() - 60_000
+      state.kvGetItem.mockImplementation(async key => key === HTLC_CHECK_HOLD_STARTED_KV_KEY ? String(startedAt) : undefined)
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(useSyncState().htlcCheckHoldStartedAt).toBe(startedAt)
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_CHECK_HOLD_STARTED_KV_KEY, expect.anything())
+    })
+
+    it('stops holding after a restart once the persisted hold has expired', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { HTLC_HISTORY_CHECK_HOLD_MS, useSyncState } = await import('./state')
+      const startedAt = Date.now() - HTLC_HISTORY_CHECK_HOLD_MS
+      state.kvGetItem.mockImplementation(async key => key === HTLC_CHECK_HOLD_STARTED_KV_KEY ? String(startedAt) : undefined)
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+      // The sweep must keep following HTLC extensions, so the timeout is not a passed check.
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_HISTORY_CHECKED_KV_KEY, '1')
+      // Not assigned, so HomeView doesn't flash the hold modal.
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+    })
+
+    it('creates an HTLC right away when the database already checked HTLC history', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      await markHtlcHistoryChecked()
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+    })
+
+    it('stops holding without recording the check once the hold limit passes', async () => {
+      state.localBalance = 100_000
+      state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+      const { HTLC_HISTORY_CHECK_HOLD_MS, useSyncState } = await import('./state')
+      useSyncState().htlcCheckHoldStartedAt = Date.now() - HTLC_HISTORY_CHECK_HOLD_MS
+      const { useSyncState: freshState } = await import('./state')
+      freshState().htlcHistoryChecked = false
+      const { useSyncHtlc } = await import('./htlc')
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(HTLC_HISTORY_CHECKED_KV_KEY, '1')
+      expect(useSyncState().htlcHistoryChecked).toBe(false)
+      // Clearing the start releases the explanation modal.
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+    })
+
     it('returns immediately when localBalance is 0', async () => {
       state.localBalance = 0
       const { useSyncHtlc } = await import('./htlc')
@@ -65,6 +203,7 @@ describe('useSyncHtlc', () => {
       state.isHtlcPending = false
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
@@ -88,6 +227,7 @@ describe('useSyncHtlc', () => {
       state.getBalance.mockResolvedValue({ data: balance, error: undefined })
       state.sendTx.mockResolvedValueOnce({ outcome: 'rejected', reason: 'busy', error: 'pending' })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await primeNodesAreSynced()
       const store = useSyncHtlc()
 
@@ -106,12 +246,14 @@ describe('useSyncHtlc', () => {
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       state.sendTx.mockResolvedValue({ outcome: 'rejected', error: 'boom' })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.setToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
       expect(state.isProcessingRemote).toBe(false)
     })
 
     it('liquidates active HTLC when nodes are synced and remote ok', async () => {
+      await markHtlcHistoryChecked()
       state.localBalance = 100_000
       state.height = 1000
       state.remoteHeight = 1000
@@ -124,7 +266,46 @@ describe('useSyncHtlc', () => {
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.RemoteToLocal })
     })
 
+    it('leaves an expired active HTLC to the timeout reclaim instead of asking the cosigner', async () => {
+      // The cosigner refuses past validity end (409 "Wallet validity end reached").
+      state.localBalance = 100_000
+      state.height = 1000
+      state.remoteHeight = 1000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      state.hasHtlcExpired = true
+      state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      await primeNodesAreSynced()
+
+      await useSyncHtlc().handleFunds()
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+      expect(state.setToast).not.toHaveBeenCalled()
+    })
+
+    it('holds a top-up instead of liquidating the active HTLC before the history check', async () => {
+      state.localBalance = 100_000
+      state.height = 1000
+      state.remoteHeight = 1000
+      state.remoteBalance = 50_000
+      state.isHtlcActive = true
+      state.isRemoteOk = true
+      state.getBalance.mockResolvedValue({ data: 50_000, error: undefined })
+      const { useSyncHtlc } = await import('./htlc')
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = false
+
+      await primeNodesAreSynced()
+      await useSyncHtlc().handleFunds(true)
+
+      expect(state.sendTx).not.toHaveBeenCalled()
+      // Secured funds stay secured; only the new deposit waits, so no explanation modal.
+      expect(useSyncState().htlcCheckHoldStartedAt).toBeUndefined()
+    })
+
     it('logs liquidation context when topping up an active HTLC fails', async () => {
+      await markHtlcHistoryChecked()
       state.localBalance = 100_000
       state.height = 1000
       state.remoteHeight = 1000
@@ -185,6 +366,7 @@ describe('useSyncHtlc', () => {
       state.isHtlcPending = false
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
@@ -198,6 +380,7 @@ describe('useSyncHtlc', () => {
       state.isHtlcPending = false
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.getBalance).toHaveBeenCalledWith(state.remoteAddress)
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
@@ -208,6 +391,7 @@ describe('useSyncHtlc', () => {
       state.htlcThreshold = 100_000
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })
@@ -224,6 +408,7 @@ describe('useSyncHtlc', () => {
     })
 
     it('liquidates an active HTLC once localBalance reaches htlcThreshold', async () => {
+      await markHtlcHistoryChecked()
       state.localBalance = 100_000
       state.htlcThreshold = 100_000
       state.height = 1000
@@ -242,6 +427,7 @@ describe('useSyncHtlc', () => {
       state.htlcThreshold = 0
       state.getBalance.mockResolvedValue({ data: 0, error: undefined })
       const { useSyncHtlc } = await import('./htlc')
+      await markHtlcHistoryChecked()
       await useSyncHtlc().handleFunds()
       expect(state.sendTx).toHaveBeenCalledWith({ transfer: Transfer.LocalToRemote })
     })

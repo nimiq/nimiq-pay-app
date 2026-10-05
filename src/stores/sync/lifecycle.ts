@@ -29,7 +29,7 @@ const logger = useLogger('useSync')
 
 export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
   const { client, height: localHeight, consensus, networkName } = storeToRefs(useNimiqNetwork())
-  const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
+  const { localAddress, localBalance, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { remoteHeight, remoteBalance, remoteAddress, isHtlcActive, homeBalanceState } = storeToRefs(useRemoteSigner())
   const { getWalletContext, isWalletContextCurrent } = useRemoteSigner()
   const { isProcessingRemote, isSyncingWallets, headChangePendingDrainLock, headChangeUpdatesLock } = storeToRefs(useLocks())
@@ -152,6 +152,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     }
 
+    // The flags live in this wallet's DB (wiped on logout); load them before the sweep or a deposit reads them.
+    await syncState.loadHtlcHistoryFlags()
+
     isSyncingWallets.value = true
     try {
       // Polygon startup must not wait for Nimiq readiness or recovery.
@@ -238,10 +241,18 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       }
 
       try {
-        if (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
-          await verifyRemoteSignersDb()
-        else if (remoteBalance.value === 0 && localHeight.value % 10 === 0)
-          await verifyRemoteSignersDb()
+        // An unchecked database holds waiting local funds until a sweep comes back clean, so retry as often as when empty.
+        const shouldVerify = (!isTransactionPending.value && localHeight.value % (5 * Nimiq.Policy.BLOCKS_PER_BATCH) === 0)
+          || ((remoteBalance.value === 0 || (!syncState.htlcHistoryChecked && localBalance.value > 0)) && localHeight.value % 10 === 0)
+        if (shouldVerify) {
+          const verifying = verifyRemoteSignersDb()
+          // Until extensions are walked its sweep can outlast the hold, so don't hold this listener: handleFunds
+          // must run to end the hold, and payment status updates must not wait either.
+          if (syncState.htlcExtensionsWalked)
+            await verifying
+          else
+            verifying.catch(error => logger.error('Error in background remote signer verification', error))
+        }
 
         await updateBalances()
         await handleFunds()
