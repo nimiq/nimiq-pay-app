@@ -55,7 +55,7 @@ const config: CapacitorConfig = {
       autoCaptureExceptions: true
     },
     SystemBars: {
-      insetsHandling: 'disable'
+      insetsHandling: 'native'
     }
   }
 };

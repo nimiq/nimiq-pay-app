@@ -73,6 +73,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
     
     func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
-      return UIInterfaceOrientationMask(rawValue: (self.window!.rootViewController as! CAPBridgeViewController).supportedInterfaceOrientations.rawValue)
+      // Under UIScene the window is owned by SceneDelegate; self.window is always nil
+      guard let bridgeViewController = window?.rootViewController as? CAPBridgeViewController else {
+        return .all
+      }
+      return bridgeViewController.supportedInterfaceOrientations
+    }
+
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = SceneDelegate.self
+        return config
     }
 }
