@@ -2,6 +2,23 @@
 
 All notable changes to Nimiq Pay.
 
+## 2.22.0 — 2026-10-06
+
+### Safer swap fees and refunds
+The fee you see before a swap is now the most you'll pay, even if network fees go up while you confirm. Refunds from failed swaps are also tracked more reliably, so your funds come back and show up correctly.
+
+### More reliable syncing
+The app recovers better when the network connection drops or a sync step fails, so your balance and transactions stay up to date during longer sessions.
+
+### Clearer wallet status on startup
+Your funded wallet no longer shows "Processing funds" for a while after you open the app. Claimed cashback now also updates in your transaction list right away.
+
+### Smoother screens and Mini Apps
+When the keyboard is open, the Withdraw button stays in view and the screen moves up properly, for example when you enter your PIN. Mini App logos now show in full in their dialogs. USDT payments now show a clear notice during scheduled maintenance.
+
+### Crypto Map removed
+The Crypto Map service has been shut down, so its button and map views are no longer in the app.
+
 ## 2.21.1 — 2026-09-28
 
 ### Share app logs with support
