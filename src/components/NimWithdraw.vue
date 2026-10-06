@@ -330,9 +330,10 @@ watch(() => props.isVisible, (visible) => {
       <TriangleIcon class="h-[10px] ml-4 text-space/30 justify-self-end" />
     </div>
 
-    <span class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
+    <!-- Only render when set: its empty margin pushed the submit button under the keyboard -->
+    <span v-if="errorMessage" class="my-8 text-center text-pumpkin">{{ errorMessage }}</span>
 
-    <div class="flex w-full mt-auto mb-4 justify-evenly">
+    <div class="flex w-full mt-auto pt-4 mb-4 justify-evenly">
       <button class="px-4 py-2 text-base font-bold rounded-full bg-space-space-100 text-space/60" @click="applyFiatPreset(25)">
         <FiatAmount :amount="25" :currency="selectedFiat" hide-decimals />
       </button>
