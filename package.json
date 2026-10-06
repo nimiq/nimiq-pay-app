@@ -70,7 +70,7 @@
     "bech32": "^2.0.0",
     "birpc": "^4.2.0",
     "buffer": "5.7.1",
-    "capacitor-extended-dialog": "^0.0.15",
+    "capacitor-extended-dialog": "^0.0.16",
     "capacitor-lockdown-mode": "0.0.1",
     "ethers": "^6.17.0",
     "fuse.js": "^7.5.0",
