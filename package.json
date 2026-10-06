@@ -142,7 +142,9 @@
   "packageManager": "pnpm@10.28.0",
   "pnpm": {
     "overrides": {
-      "jeep-sqlite": "2.5.6"
+      "jeep-sqlite": "2.5.6",
+      "@swc/core": "1.15.33",
+      "@swc/wasm": "1.15.33"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
