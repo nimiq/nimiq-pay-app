@@ -58,6 +58,10 @@
     <string>The camera is required to scan QR codes that contain addresses and payment requests</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Nimiq Pay authentication with TouchID or FaceID</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Nimiq Pay uses your location for features like finding nearby places to pay</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Nimiq Pay uses the microphone for features that record audio, like voice messages</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Required to scan QR codes that contain addresses and payment requests</string>
     <key>UILaunchStoryboardName</key>
