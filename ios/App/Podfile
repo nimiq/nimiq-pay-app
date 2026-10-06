@@ -29,7 +29,7 @@ def capacitor_pods
   pod 'CapgoCapacitorInappbrowser', :path => '../../node_modules/.pnpm/@capgo+capacitor-inappbrowser@8.21.1_@capacitor+core@8.5.2/node_modules/@capgo/capacitor-inappbrowser'
   pod 'CapgoCapacitorUpdater', :path => '../../node_modules/.pnpm/@capgo+capacitor-updater@8.52.1_@capacitor+core@8.5.2/node_modules/@capgo/capacitor-updater'
   pod 'RdlaboCapacitorScreenshotEvent', :path => '../../node_modules/.pnpm/@rdlabo+capacitor-screenshot-event@8.0.0_@capacitor+core@8.5.2/node_modules/@rdlabo/capacitor-screenshot-event'
-  pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.15_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog'
+  pod 'CapacitorExtendedDialog', :path => '../../node_modules/.pnpm/capacitor-extended-dialog@0.0.16_@capacitor+core@8.5.2/node_modules/capacitor-extended-dialog'
   pod 'CapacitorLockdownMode', :path => '../../node_modules/.pnpm/capacitor-lockdown-mode@0.0.1_@capacitor+core@8.5.2/node_modules/capacitor-lockdown-mode'
   pod 'CapacitorCommunitySqlite', :path => '../../node_modules/.pnpm/@capacitor-community+sqlite@8.1.1_@capacitor+core@8.5.2/node_modules/@capacitor-community/sqlite'
   pod 'CapacitorApp', :path => '../../node_modules/.pnpm/@capacitor+app@8.1.2_@capacitor+core@8.5.2/node_modules/@capacitor/app'
