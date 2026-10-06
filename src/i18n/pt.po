@@ -11,862 +11,1194 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
 "X-Generator: Weblate 5.13.3\n"
 
+#: src/stores/local-wallet.ts:50
 msgid "\"{word}\" is an invalid recovery word"
 msgstr "\"{word}\" é uma palavra de recuperação inválida"
 
+#: src/components/competition/CompetitionSpotlight.vue:32
 msgid "{count} entries"
 msgstr ""
 
+#: src/modals/ReferralModal.vue:22
 msgid "{count} of {total} remaining."
 msgstr "{count} de {total} em falta."
 
+#: src/components/competition/CompetitionAppDetail.vue:12
+#: src/components/competition/CompetitionAppPoster.vue:15
 #, fuzzy
 #| msgid "Payment preview"
 msgid "{name} preview"
 msgstr "Pré-visualização do pagamento"
 
+#: src/components/competition/CompetitionAppDetail.vue:71
 msgid "{name} screenshot {number}"
 msgstr ""
 
+#: src/components/NimAddressInput.vue:25
 msgid "0x..."
 msgstr "0x..."
 
+#: src/stores/polygon-usdt.ts:2154
+msgid "A previous transaction was confirmed. No new payment was sent."
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:2119 src/stores/polygon-usdt.ts:2374
+#: src/stores/polygon-usdt.ts:2387 src/stores/transactions.ts:342
 msgid "A transaction is already in progress"
 msgstr "Uma transação já está em curso"
 
+#: src/stores/transactions.ts:359
+msgid ""
+"A transaction is still pending. Wait for it to resolve before sending "
+"another."
+msgstr ""
+
+#: src/modals/MenuModal.vue:69
 msgid "About"
 msgstr "Sobre"
 
+#: src/modals/MenuModal.vue:26 src/views/HomeView.vue:194
 msgid "Activate Cashback & Rewards"
 msgstr "Ativar Cashback e Recompensas"
 
-msgid "Activate NAKA Card"
-msgstr "Ativar cartão NAKA"
-
-msgid "Activate NAKA for contactless payments"
-msgstr "Ativar o NAKA para pagamentos sem contacto"
-
+#: src/components/QRScanner.vue:57
 msgid "Activating scanner"
 msgstr "A activar o scanner"
 
+#: src/components/WithdrawalAddressList.vue:44
 msgid "Add another address"
 msgstr "Adicionar outro endereço"
 
-msgid "Add new card"
-msgstr "Adicionar novo cartão"
-
+#: src/lib/mini-app-confirmation.ts:101 src/types/transactions.ts:148
 msgid "Add Stake"
 msgstr "Adicionar stake"
 
+#: src/lib/flows/steps.ts:589
 #, fuzzy
 #| msgid "Add another address"
 msgid "Add to address book"
 msgstr "Adicionar outro endereço"
 
+#: src/components/AddressDisplay.vue:50 src/components/NimAddressDisplay.vue:39
 msgid "Address copied to clipboard"
 msgstr "Endereço copiado para a área de transferência"
 
+#: src/stores/nimiq-network.ts:225 src/stores/nimiq-network.ts:247
+#: src/stores/nimiq-network.ts:279
 msgid "Address missing"
 msgstr "Endereço em falta"
 
+#: src/lib/flows/index.ts:540
 #, fuzzy
 #| msgid "Address missing"
 msgid "Address saved"
 msgstr "Endereço em falta"
 
+#: src/stores/nimiq-network.ts:264
 msgid "Addresses missing"
 msgstr "Endereços em falta"
 
-msgid "After being disconnected for a while, the network connection needs to refresh. This can take up to 60 sec."
-msgstr "Após um período de desconexão, a ligação de rede precisa de ser reativada. Isto pode demorar até 60 segundos."
+#: src/modals/LongTimeNoSeeModal.vue:16
+msgid ""
+"After being disconnected for a while, the network connection needs to "
+"refresh. This can take up to 60 sec."
+msgstr ""
+"Após um período de desconexão, a ligação de rede precisa de ser reativada. "
+"Isto pode demorar até 60 segundos."
 
+#: src/components/NimAddressInput.vue:38
+#: src/components/WithdrawalAddressList.vue:11
 msgid "Alias (optional)"
 msgstr "Nome (opcional)"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:89
+#: src/components/NimWithdraw.vue:64
 msgid "All"
 msgstr "Tudo"
 
+#: src/composables/useGoCryptoMonitoring.ts:108
 msgid "Already paid"
 msgstr "Já está pago"
 
-msgid "Always check if you are paying to a Polygon address, or your funds might be permanently lost!"
-msgstr "Verifica sempre se estás a pagar para um endereço Polygon, ou podes perder os teus fundos para sempre!"
+#: src/components/PaymentPreview.vue:220
+msgid ""
+"Always check if you are paying to a Polygon address, or your funds might be "
+"permanently lost!"
+msgstr ""
+"Verifica sempre se estás a pagar para um endereço Polygon, ou podes perder "
+"os teus fundos para sempre!"
 
-msgid "Always check if you're paying to a polygon-address, or your funds might be permanently lost!"
-msgstr "Verifica sempre se estás a pagar para um endereço Polygon, ou podes perder os teus fundos para sempre!"
+#: src/components/PaymentAmountInput.vue:52
+msgid ""
+"Always check if you're paying to a polygon-address, or your funds might be "
+"permanently lost!"
+msgstr ""
+"Verifica sempre se estás a pagar para um endereço Polygon, ou podes perder "
+"os teus fundos para sempre!"
 
-msgid "Amount exceeds daily limit of {fiatAmount}"
-msgstr "O valor excede o limite diário de {fiatAmount}"
-
-msgid "Amount exceeds payment limit of {fiatAmount}"
-msgstr "O valor excede o limite de pagamento de {fiatAmount}"
-
+#: src/composables/useBitcoinLightning.ts:114
 msgid "Amount too small"
 msgstr "Valor demasiado pequeno"
 
+#: src/stores/local-wallet.ts:45
 msgid "An unknown error occurred while importing words"
 msgstr "Ocorreu um erro desconhecido ao importar as palavras"
 
+#: src/composables/useBiometric.ts:98
 msgid "An unknown error occurred, biometric cannot be used"
 msgstr "Ocorreu um erro desconhecido, não é possível usar a biometria"
 
+#: src/modals/EnableBiometricModal.vue:43
 msgid "An unknown error ocurred, biometric cannot be used"
 msgstr "Um erro desconhecido ocorreu, biometria não pode ser usada"
 
+#: src/composables/useBiometric.ts:131
 msgid "An unknown error ocurred, please manually input your PIN"
 msgstr "Um erro desconhecido ocorreu, por favor insere o teu PIN manualmente"
 
+#: src/components/competition/CompetitionAppDetail.vue:57
 msgid "App previews"
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:61
 #, fuzzy
 #| msgid "Store screenshot safely"
 msgid "App screenshots"
 msgstr "Armazene a captura de ecrã com segurança"
 
+#: src/modals/MenuModal.vue:45
 msgid "App Settings"
 msgstr "Definições da app"
 
+#: src/modals/LogOutModal/Confirm.vue:13
 msgid "Are you sure you want to log out?"
 msgstr "Tens a certeza que queres encerrar sessão?"
 
+#: src/components/TransactionDetails.vue:41
 msgid "Asset"
 msgstr "Ativo"
 
+#: src/modals/AutoDepositThresholdModal.vue:13 src/modals/SettingsModal.vue:47
 msgid "Auto-deposit threshold"
 msgstr "Limite para depósito automático"
 
+#: src/modals/LogOutModal/Warning.vue:21 src/modals/MenuModal.vue:57
 msgid "Backup Account"
 msgstr "Fazer cópia de segurançada conta"
 
+#: src/lib/flows/index.ts:593
 msgid "Backup successful"
 msgstr "Backup bem-sucedido"
 
+#: src/modals/LogOutModal/Warning.vue:13
 msgid "Backup your account before logging out"
 msgstr "Faz backup da tua conta antes de encerrares sessão"
 
+#: src/composables/useBiometric.ts:41 src/lib/flows/steps.ts:220
+#: src/modals/EnableBiometricModal.vue:4 src/modals/SettingsModal.vue:61
 msgid "Biometric Authentication"
 msgstr "Autenticação Biométrica"
 
+#: src/modals/EnableBiometricModal.vue:33
 msgid "Biometric authentication enabled"
 msgstr "Autenticação biométrica ativada"
 
+#: src/composables/useBiometric.ts:106 src/composables/useBiometric.ts:81
 msgid "Biometric is not supported on this device"
 msgstr "Biometria não suportada neste dispositivo"
 
+#: src/composables/useStringParser.ts:231
 msgid "Bitcoin Lightning invoice expired."
 msgstr "Fatura Bitcoin Lightning expirada."
 
-msgid "Block"
-msgstr "Bloquear"
-
-msgid "Block card"
-msgstr "Bloquear cartão"
-
+#: src/components/PaymentCard.vue:49
 msgid "Blocked"
 msgstr "Bloqueado"
 
-msgid "Blocking your card will permanently disable it. Your funds will not be affected and will remain safely in your account. You can always create a new card after you have blocked your current one."
-msgstr "Bloquear o teu cartão irá desativá-lo permanentemente. Os teus fundos não serão afetados e permanecerão seguros na tua conta. Podes sempre criar um novo cartão depois de bloqueares o atual."
-
+#: src/lib/flows/steps.ts:349
 msgid "Bluecode is a European payment service that now supports NIM."
 msgstr "Bluecode é um serviço de pagamento europeu que agora suporta NIM."
 
+#: src/composables/useDecrypt.ts:36
 msgid "Both expected and the given PIN are empty"
 msgstr "Tanto o PIN esperado quanto o fornecido estão vazios"
 
+#: src/components/competition/CompetitionAppDetail.vue:84
 msgid "Builder"
 msgstr ""
 
+#: src/components/PaymentPreview.vue:226
 msgid "By tapping “pay”, you agree to Fastspot's {terms}"
 msgstr "Ao clicares em \"pagar\", concordas com os {terms} do Fastspot."
 
+#: src/components/PhoneInput.vue:33
 msgid "By tapping “verify”, you agree to our data management practices."
-msgstr "Ao clicares em \"verificar\", concordas com as nossas práticas de gestão de dados."
+msgstr ""
+"Ao clicares em \"verificar\", concordas com as nossas práticas de gestão de "
+"dados."
 
+#: src/composables/useUsdtQuoteRefresh.ts:197
 msgid "Calculating fees..."
 msgstr "A calcular taxas..."
 
+#: src/components/PaymentPreview.vue:97
 msgid "Calculating Polygon fee..."
 msgstr "A calcular taxa da Polygon..."
 
+#: src/components/ChatConfirmDialog.vue:13 src/components/PhoneInput.vue:66
+#: src/components/TheHomeTransactions.vue:67
+#: src/components/WithdrawalAddressList.vue:21
+#: src/composables/useBiometric.ts:40
 msgid "Cancel"
 msgstr "Cancelar"
 
+#: src/composables/useStringParser.ts:277
 msgid "Cannot create swap"
 msgstr "Não é possível criar a troca"
 
+#: src/lib/flows/steps.ts:231
 msgid "Cannot enable biometric"
 msgstr "Não foi possível activar biometria"
 
+#: src/composables/useStringParser.ts:264
 msgid "Cannot fetch existing swap"
 msgstr "Não é possível obter a troca existente"
 
-msgid "Cannot verify daily limits: {error}"
-msgstr "Não é possível verificar os limites diários: {error}"
-
-msgid "Cannot verify daily limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr "Não é possível verificar os limites diários: foi pedido {expectedCurrency}, mas foi recebido {actualCurrency}"
-
-msgid "Cannot verify payment limits: {error}"
-msgstr "Não é possível verificar os limites de pagamento: {error}"
-
-msgid "Cannot verify payment limits: asked for {expectedCurrency} but got {actualCurrency}"
-msgstr "Não é possível verificar os limites de pagamento: foi pedido {expectedCurrency}, mas foi recebido {actualCurrency}"
-
-msgid "Card blocked"
-msgstr "Cartão bloqueado"
-
-msgid "Card locked"
-msgstr "Cartão temporariamente bloqueado"
-
-msgid "Card unlocked"
-msgstr "Cartão desbloqueado"
-
+#: src/composables/useQRScanner.ts:129
 msgid "Cashlink claimed successfully"
 msgstr "Cashlink reclamado com sucesso"
 
+#: src/composables/useNotifications.ts:356 src/types/transactions.ts:143
+#, fuzzy
+#| msgid "Cashlink has no balance"
+msgid "Cashlink Claiming"
+msgstr "O Cashlink não tem saldo"
+
+#: src/stores/nimiq-network.ts:227
 msgid "Cashlink has no balance"
 msgstr "O Cashlink não tem saldo"
 
+#: src/modals/SettingsModal.vue:79
 msgid "Change PIN"
 msgstr "Muda o PIN"
 
+#: src/modals/SecretFeaturesModal.vue:10
 msgid "Check"
 msgstr "Verificar"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:137
 msgid "Check back when the next entries arrive."
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:16
 msgid "Check your connection and try again."
 msgstr ""
 
+#: src/lib/flows/steps.ts:89
 msgid "Choose a PIN"
 msgstr "Escolhe um PIN"
 
+#: src/lib/flows/steps.ts:561
 msgid "Choose an address"
 msgstr "Escolhe um endereço"
 
+#: src/components/GenericInput.vue:19
 msgid "Claim Promo Code"
 msgstr "Reclamar código promocional"
 
+#: src/modals/ChangelogModal.vue:5 src/modals/MiniAppWarningModal.vue:5
 msgid "Close"
 msgstr "Fechar"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:46
 msgid "Competition cycles"
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:13
 #, fuzzy
 #| msgid "This address could not be parsed."
 msgid "Competition entries could not be loaded"
 msgstr "Não foi possível processar este endereço."
 
+#: src/components/TaskCard.vue:10
 msgid "Complete"
 msgstr "Completar"
 
+#: src/components/BricksInput.vue:18 src/modals/LogOutModal/Confirm.vue:20
 msgid "Confirm"
 msgstr "Confirmar"
 
+#: src/components/NimWithdrawConfirm.vue:36
 msgid "Confirm and send"
 msgstr "Confirmar e enviar"
 
+#: src/lib/flows/steps.ts:550
 msgid "Confirm Withdrawal"
 msgstr "Confirmar levantamento"
 
+#: src/lib/flows/steps.ts:275
 msgid "Confirm your phone number"
 msgstr "Confirma o teu número de telemóvel"
 
+#: src/lib/flows/steps.ts:138
 msgid "Confirm your PIN"
 msgstr "Confirma o teu PIN"
 
+#: src/types/transactions.ts:171
 msgid "Confirmed"
 msgstr "Confirmado"
 
 #. We display just included, but not yet confirmed transactions as confirming.
+#: src/types/transactions.ts:166 src/types/transactions.ts:167
 msgid "Confirming"
 msgstr "A confirmar"
 
+#: src/lib/utils.ts:128
 msgid "Connecting to network."
 msgstr "A conectar à rede."
 
+#: src/components/NimWithdraw.vue:174 src/components/PaymentAmountInput.vue:161
+#: src/views/MainView.vue:95
 msgid "Connecting to Polygon"
 msgstr "A ligar à Polygon"
 
+#: src/lib/utils.ts:126
 msgid "Consensus established."
 msgstr "Consenso estabelecido."
 
+#: src/components/PhoneInput.vue:67 src/components/ShowWords.vue:8
 msgid "Continue"
 msgstr "Continuar"
 
+#: src/components/PaymentAmountInput.vue:65
 msgid "Continue and Pay"
 msgstr "Continuar e pagar"
 
+#: src/components/TransactionDetails.vue:82
 msgid "Copied to clipboard"
 msgstr "Copiado para a área de transferência"
 
+#: src/modals/ReferralModal.vue:40
 msgid "Copied to the clipboard!"
 msgstr "Copiado para a área de transferência!"
 
+#: src/components/NimAddressDisplay.vue:23
 msgid "Copy address"
 msgstr "Copiar endereço"
 
+#: src/modals/ReferralModal.vue:31
 msgid "Copy code"
 msgstr "Copiar código"
 
+#: src/lib/flows/steps.ts:593
 msgid "Copy or scan the address"
 msgstr "Copiar ou digitalizar o endereço"
 
+#: src/stores/transactions.ts:557 src/stores/transactions.ts:571
+msgid "Cosigner returned a different transaction"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:1134
 msgid "Could not determine Polygon transaction hash"
 msgstr "Não foi possível determinar o hash da transação Polygon"
 
+#: src/composables/useStringParser.ts:282
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr "Não foi possível obter o valor para a troca de Bitcoin Lightning."
 
+#: src/stores/polygon-usdt.ts:2522
+#, fuzzy
+#| msgid "Could not determine Polygon transaction hash"
+msgid "Could not persist Polygon swap transaction"
+msgstr "Não foi possível determinar o hash da transação Polygon"
+
+#: src/stores/transactions.ts:354
+#, fuzzy
+#| msgid "Could not determine Polygon transaction hash"
+msgid "Could not verify pending transactions"
+msgstr "Não foi possível determinar o hash da transação Polygon"
+
+#: src/lib/flows/steps.ts:703
 msgid "Create a backup. It's the only way to recover your account."
 msgstr "Criar um backup. É a única forma de recuperar a tua conta."
 
+#: src/lib/flows/steps.ts:356
 msgid "Create a Bluecode Barcode and show it at the cashier to pay."
 msgstr "Cria um código de barras Bluecode e mostra-o no caixa para pagar."
 
+#: src/lib/mini-app-confirmation.ts:96 src/types/transactions.ts:147
 msgid "Create Staker"
 msgstr "Criar staker"
 
+#: src/modals/PointsModal.vue:18
 msgid "Cryptocity Points"
 msgstr "Pontos Cryptocity"
 
+#: src/views/HomeView.vue:123
 msgid "Cryptocity Points are coming soon. Stay tuned!"
 msgstr "Os Pontos Criptocidade estão quase a chegar. Fica atento!"
 
+#: src/stores/points.ts:213
 msgid "Cryptocity Points have been credited"
 msgstr "Pontos Cryptocity foram creditados"
 
+#: src/modals/SettingsModal.vue:26
 msgid "Currency"
 msgstr "Moeda"
 
+#: src/components/competition/CompetitionAppDetail.vue:34
+#: src/components/competition/CompetitionSpotlight.vue:26
+#: src/components/competition/MiniAppsCompetitionView.vue:57
 msgid "Cycle {number}"
 msgstr ""
 
-msgid "Daily limit"
-msgstr "Limite diário"
-
+#: src/components/TransactionDetails.vue:34
 msgid "Date"
 msgstr "Data"
 
+#: src/components/ConfirmAddressDeletion.vue:3
 msgid "Delete {address}?"
 msgstr "Eliminar {address}?"
 
+#: src/components/ConfirmAddressDeletion.vue:12
 msgid "Delete Address"
 msgstr "Eliminar endereço"
 
+#: src/modals/SettingsModal.vue:83
 msgid "Delete Cryptocity Points account"
 msgstr "Apagar conta de Pontos Cryptocity"
 
+#: src/modals/DeletePointsModal.vue:21
 msgid "Delete Points Account"
 msgstr "Apagar Pontos da Conta"
 
+#: src/types/transactions.ts:153
 msgid "Delete Validator"
 msgstr "Eliminar validador"
 
-msgid "Deleting your phone number from the Cryptocity Points system will result in the permanent loss of any Points you currently hold."
-msgstr "Apagar o teu número de telemóvel do sistema de Pontos Cryptocity resultará na perda de quaisquer Pontos que tenhas atualmente."
+#: src/modals/DeletePointsModal.vue:16
+msgid ""
+"Deleting your phone number from the Cryptocity Points system will result in "
+"the permanent loss of any Points you currently hold."
+msgstr ""
+"Apagar o teu número de telemóvel do sistema de Pontos Cryptocity resultará "
+"na perda de quaisquer Pontos que tenhas atualmente."
 
+#: src/modals/MiniAppWarningModal.vue:84
 msgid "direction-override or bidi control character"
 msgstr "carácter de controlo bidi ou de inversão de direção"
 
+#: src/modals/DisclaimerModal.vue:13
 msgid "Disclaimer"
 msgstr "Isenção de responsabilidade"
 
+#: src/modals/MiniAppWarningModal.vue:107
 msgid "Don't open"
 msgstr "Não abrir"
 
+#: src/modals/PointsModal.vue:64
 msgid "Earn Points"
 msgstr "Ganhar Pontos"
 
+#: src/components/EnableBiometric.vue:13
 msgid "Enable Fingerprint"
 msgstr "Ativar impressão digital"
 
+#: src/components/HoldCardToReader.vue:69
 msgid "Enable NFC to pay"
 msgstr "Ativa o NFC para pagar"
 
+#: src/components/EnableNotifications.vue:6 src/lib/flows/steps.ts:298
 msgid "Enable notifications"
 msgstr "Ativar notificações"
 
+#: src/components/EnableBiometric.vue:13
 msgid "Enable Touch ID/Face ID"
 msgstr "Ativar Touch ID/Face ID"
 
+#: src/components/NimAddressInput.vue:5
 msgid "Enter Address"
 msgstr "Inserir endereço"
 
+#: src/components/NimWithdraw.vue:15 src/components/PaymentAmountInput.vue:19
 msgid "Enter amount in {currency}"
 msgstr ""
 
+#: src/modals/SecretFeaturesModal.vue:4
 msgid "Enter feature password"
 msgstr "Introduz a palavra-passe da funcionalidade"
 
+#: src/components/QRScanner.vue:69
 msgid "Enter manually"
 msgstr "Insere manualmente"
 
+#: src/lib/flows/steps.ts:438
 msgid "Enter payment request"
 msgstr "Inserir pedido de pagamento"
 
+#: src/views/PinView.vue:9
 msgid "Enter PIN"
 msgstr "Inserir PIN"
 
+#: src/lib/flows/steps.ts:67
 msgid "Enter recovery words"
 msgstr "Inserir palavras de recuperação"
 
+#: src/lib/flows/steps.ts:276
 msgid "Enter the code from the SMS sent to you."
 msgstr "Introduz o código enviado por SMS."
 
+#: src/modals/EnableBiometricModal.vue:7
 msgid "Enter your PIN to enable biometric authentication"
 msgstr "Insere o teu PIN para ativar a autenticação biométrica"
 
+#: src/lib/flows/steps.ts:50
 msgid "Enter your promo code"
 msgstr "Inserir o teu código promocional"
 
+#: src/lib/flows/steps.ts:51
 msgid "Enter your referral promo code."
 msgstr "Inserir o teu código promocional de referência."
 
+#: src/stores/nimiq-network.ts:258
 msgid "Error getting account"
 msgstr "Erro ao procurar conta"
 
+#: src/stores/nimiq-network.ts:288
 msgid "Error getting account transactions"
 msgstr "Erro ao procurar transações de conta"
 
+#: src/stores/nimiq-network.ts:273
 msgid "Error getting accounts"
 msgstr "Error ao procurar contas"
 
+#: src/composables/useBiometric.ts:90
 msgid "Error using BiometricAuth"
 msgstr "Erro ao usar BiometricAuth"
 
+#: src/composables/useBiometric.ts:127 src/composables/useBiometric.ts:94
 msgid "Error using SecureStorage"
 msgstr "Erro ao usar SecureStorage"
 
+#: src/stores/sync/htlc.ts:103
 msgid "Error while creating deposit"
 msgstr "Erro ao criar depósito"
 
+#: src/stores/sync/htlc.ts:159
 msgid "Error while extending deposit"
 msgstr "Error ao extender depósito"
 
+#: src/stores/sync/htlc.ts:184
 msgid "Error while recovering deposit"
 msgstr "Erro ao recuperar depósito"
 
+#: src/stores/sync/htlc.ts:137
 msgid "Error while topping up deposit"
 msgstr "Erro ao carregar depósito"
 
+#: src/modals/LongTimeNoSeeModal.vue:21 src/views/MainView.vue:41
 msgid "Establishing consensus"
 msgstr "A estabelecer consenso"
 
-msgid "Exceeding 30-day swap limit. Your payment allowance for BTC LN is {remainingFiatLimits}"
-msgstr "Perto de exceder o limite de troca de 30 dias. O teu limite de pagamento para BTC LN é {remainingFiatLimits}"
+#: src/components/PaymentPreview.vue:172 src/components/PaymentPreview.vue:202
+msgid ""
+"Exceeding 30-day swap limit. Your payment allowance for BTC LN is "
+"{remainingFiatLimits}"
+msgstr ""
+"Perto de exceder o limite de troca de 30 dias. O teu limite de pagamento "
+"para BTC LN é {remainingFiatLimits}"
 
+#: src/types/transactions.ts:170
 msgid "Expired"
 msgstr "Expirado"
 
+#: src/modals/ExpiringPointsModal.vue:4
 msgid "Expiring Points"
 msgstr "Pontos a expirar"
 
+#: src/components/competition/CompetitionSpotlight.vue:35
 msgid "Explore entries"
 msgstr ""
 
-msgid "Failed to activate NAKA Card on device: {error}"
-msgstr "Falha ao ativar o cartão NAKA no dispositivo: {error}"
-
+#: src/components/AddressDisplay.vue:54
 msgid "Failed to copy address to clipboard"
 msgstr "Erro ao copiar endereço para a área de transferência"
 
+#: src/components/TransactionDetails.vue:86 src/modals/ReferralModal.vue:44
 msgid "Failed to copy to clipboard"
 msgstr "Falha ao copiar para a área de transferência"
 
+#: src/modals/DeletePointsModal.vue:24
 msgid "Failed to delete Points account"
 msgstr "Falha ao apagar conta de Pontos"
 
+#: src/composables/useBitcoinLightning.ts:181
 msgid "Failed to fetch LNURL service"
 msgstr "Falha ao buscar o serviço LNURL"
 
+#: src/composables/useBitcoinLightning.ts:162
 msgid "Failed to fetch payment request"
 msgstr "Falha ao buscar pedido de pagamento"
 
+#: src/lib/faucet.ts:35
 msgid "Faucet error - please try again."
 msgstr "Erro no faucet - tenta novamente."
 
+#: src/modals/PointsModal.vue:45
 msgid "Featured"
 msgstr "Destacado"
 
+#: src/modals/MenuModal.vue:34
 msgid "Features"
 msgstr "Funcionalidades"
 
+#: src/components/PaymentPreview.vue:117 src/components/PaymentPreview.vue:123
 msgid "Fees may apply {fee}"
 msgstr "Tarifas podem ser aplicadas {fee}"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:76
+msgid "Filter submissions by category"
+msgstr ""
+
+#: src/components/TestnetFaucet.vue:18
 msgid "Free NIM is on its way"
 msgstr "NIM grátis a caminho"
 
+#: src/modals/MiniAppWarningModal.vue:50
 msgid "Full link:"
 msgstr "Link completo:"
 
-msgid "Get Cryptocity Points as cashback rewards or complete challenges to earn them."
-msgstr "Receber Pontos Cryptocity como recompensas de cashback ou completa desafios para os ganhares."
+#: src/components/OnBoardingScreen.vue:34 src/lib/flows/steps.ts:363
+msgid ""
+"Get Cryptocity Points as cashback rewards or complete challenges to earn "
+"them."
+msgstr ""
+"Receber Pontos Cryptocity como recompensas de cashback ou completa desafios "
+"para os ganhares."
 
+#: src/components/TestnetFaucet.vue:9
 msgid "Get free NIM"
 msgstr "Obter NIM grátis"
 
+#: src/lib/flows/steps.ts:299
 msgid "Get important info on transactions, top-ups, security and more."
-msgstr "Receber informação importante sobre transações, recarregamentos, segurança e mais."
+msgstr ""
+"Receber informação importante sobre transações, recarregamentos, segurança e "
+"mais."
 
+#: src/components/OnBoardingScreen.vue:33
 msgid "Get Points"
 msgstr "Receber Pontos"
 
+#: src/views/SetupView.vue:13
 msgid "Get Started"
 msgstr "Começar"
 
+#: src/lib/flows/steps.ts:593
 msgid "Give it a name so you recognise it later"
 msgstr ""
 
+#: src/views/LockdownScreen.vue:20
 msgid "Go to Settings → Privacy & Security → Lockdown Mode"
 msgstr "Vai a Definições → Privacidade e segurança → Modo de Bloqueio"
 
+#: src/composables/useGoCryptoMonitoring.ts:105
 msgid "GoCrypto refused connecting"
 msgstr "O GoCrypto recusou conexão"
 
+#: src/components/OnBoardingScreen.vue:23 src/components/TheHomeAmounts.vue:64
 msgid "Got it"
 msgstr "Percebido"
 
-msgid "Help grow the crypto adoption movement. Invite a friend and you will both get {amount} Cryptocity Points."
-msgstr "Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão receber {amount} Pontos Cryptocity."
+#: src/modals/ReferralModal.vue:7
+msgid ""
+"Help grow the crypto adoption movement. Invite a friend and you will both "
+"get {amount} Cryptocity Points."
+msgstr ""
+"Ajuda a promover a adoção de cripto. Convida um amigo e ambos vão receber "
+"{amount} Pontos Cryptocity."
 
-msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
-msgstr "Olá! Junta-te a mim na aplicação Nimiq Pay e ganha Pontos Cryptocity para pagar as tuas compras com cripto. Usa o meu código {code} para receberes {amount} em Pontos Cryptocity com o teu registo."
+#: src/modals/ReferralModal.vue:53
+msgid ""
+"Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your "
+"purchases using crypto! Use my code {code} to earn {amount} in Cryptocity "
+"Points at registration."
+msgstr ""
+"Olá! Junta-te a mim na aplicação Nimiq Pay e ganha Pontos Cryptocity para "
+"pagar as tuas compras com cripto. Usa o meu código {code} para receberes "
+"{amount} em Pontos Cryptocity com o teu registo."
 
+#: src/components/TheHomeTransactions.vue:68
 msgid "Hide"
 msgstr "Ocultar"
 
+#: src/components/TheHomeTransactions.vue:62
 msgid "Hide transaction?"
 msgstr "Ocultar transação?"
 
-msgid "Hold the button to confirm."
-msgstr "Mantém o botão pressionado para confirmar."
-
+#: src/components/HoldCardToReader.vue:58
 msgid "Hold your phone near the terminal"
 msgstr "Aproxima o teu telemóvel do terminal"
 
+#: src/components/ChangelogEntry.vue:20
 msgid "How to use:"
 msgstr ""
 
-msgid "I agree to NAKA Card's {terms}"
-msgstr "Aceito os {terms} do cartão NAKA"
-
+#: src/views/SetupView.vue:17
 msgid "I have a promo code"
 msgstr "Tenho um código promocional"
 
+#: src/views/LockdownScreen.vue:28
 msgid "I have turned it off"
 msgstr "Já o desativei"
 
-msgid "Identification is not verified. Please contact support."
-msgstr "A identificação não está verificada. Contacta o suporte."
-
+#: src/components/NimWithdrawConfirm.vue:11
+#: src/components/PaymentAmountInput.vue:35
+#: src/components/PaymentPreview.vue:129
+#: src/composables/useUsdtQuoteRefresh.ts:199
 msgid "incl. {fee} fees"
 msgstr "incl. {fee} em taxas"
 
+#: src/components/PaymentPreview.vue:115
 msgid "Incl. fees"
 msgstr "Taxas incluídas"
 
+#: src/components/PaymentPreview.vue:51
 msgid "Includes {fee} in fees"
 msgstr "Incluí {fee} em taxas"
 
-msgid "Incoming funds accumulate until they reach this amount before a deposit is created. Set to 0 to deposit immediately."
-msgstr "Os fundos recebidos acumulam até atingirem este valor antes de ser criado um depósito. Define como 0 para depositar de imediato."
+#: src/modals/AutoDepositThresholdModal.vue:16
+msgid ""
+"Incoming funds accumulate until they reach this amount before a deposit is "
+"created. Set to 0 to deposit immediately."
+msgstr ""
+"Os fundos recebidos acumulam até atingirem este valor antes de ser criado um "
+"depósito. Define como 0 para depositar de imediato."
 
+#: src/composables/useNotifications.ts:302
 msgid "Incoming Payments"
 msgstr "Pagamentos recebidos"
 
+#: src/lib/flows/steps.ts:197 src/lib/flows/steps.ts:89
 msgid "Insert PIN to confirm"
 msgstr "Inserir o PIN para confirmar"
 
-msgid "Insufficient balance"
-msgstr "Saldo insuficiente"
-
+#: src/lib/issuer-websocket.ts:69
 msgid "Insufficient balance for this payment"
 msgstr "Saldo insuficiente para este pagamento"
 
+#: src/components/NimWithdraw.vue:188 src/components/PaymentAmountInput.vue:168
 msgid "Insufficient funds"
 msgstr "Fundos insuficientes"
 
+#: src/modals/MiniAppWarningModal.vue:94
 msgid "Internationalized domain (punycode). Verify it matches the real site."
-msgstr "Domínio internacionalizado (punycode). Confirma que corresponde ao site real."
+msgstr ""
+"Domínio internacionalizado (punycode). Confirma que corresponde ao site real."
 
 #. For transactions that got rejected by the mempool.
+#: src/types/transactions.ts:168 src/types/transactions.ts:169
 msgid "Invalid"
 msgstr "Inválido"
 
+#: src/composables/useUsdtQuoteRefresh.ts:43 src/stores/polygon-usdt.ts:399
+#: src/stores/polygon-usdt.ts:413
 msgid "Invalid amount"
 msgstr "Valor inválido"
 
+#: src/composables/useStringParser.ts:240
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr "Fatura Bitcoin Lightning inválida: valor em falta."
 
+#: src/composables/useStringParser.ts:226
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
 msgstr "Fatura Bitcoin Lightning inválida: carimbo de data/hora em falta."
 
+#: src/composables/useStringParser.ts:221
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr "Fatura Bitcoin Lightning inválida."
 
+#: src/composables/useBitcoinLightning.ts:96
 msgid "Invalid callback URL"
 msgstr "URL de retorno de chamada inválido"
 
+#: src/lib/issuer-websocket.ts:67
 msgid "Invalid card signature. Please try again"
 msgstr "Assinatura do cartão inválida. Tenta novamente"
 
+#: src/composables/useStringParser.ts:193
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr "CPLink inválido. Impossível obter detalhes de pagamento."
 
+#: src/composables/useStringParser.ts:178
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr "CPLink inválido. Montante ou destinatário em falta."
 
+#: src/composables/useStringParser.ts:172
+#: src/composables/useStringParser.ts:189
 msgid "Invalid CPLink. Missing id."
 msgstr "CPLink inválido. Identidade em falta."
 
+#: src/composables/useGoCryptoMonitoring.ts:134
+#: src/composables/useStringParser.ts:208
 msgid "Invalid GoCrypto link."
 msgstr "GoCrypto link inválido."
 
+#: src/composables/useGoCryptoMonitoring.ts:106
 msgid "Invalid GoCrypto response"
 msgstr "Resposta GoCrypto inválida"
 
+#: src/composables/useStringParser.ts:166
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr "Formato do link inválido. CPLinks só são suportados para NIM."
 
-msgid "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin Lightning requests are supported."
-msgstr "Formato de link inválido. Apenas são suportados CPLinks e pedidos NAKA para NIM e pedidos Bitcoin Lightning."
+#: src/composables/useStringParser.ts:133
+#, fuzzy
+#| msgid ""
+#| "Invalid link format. Only CPLinks and NAKA requests for NIM and Bitcoin "
+#| "Lightning requests are supported."
+msgid ""
+"Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are "
+"supported."
+msgstr ""
+"Formato de link inválido. Apenas são suportados CPLinks e pedidos NAKA para "
+"NIM e pedidos Bitcoin Lightning."
 
-msgid "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
-msgstr "Formato de link inválido. Apenas são suportados CPLinks e pedidos NAKA para NIM."
+#: src/composables/useStringParser.ts:134
+#, fuzzy
+#| msgid ""
+#| "Invalid link format. Only CPLinks and NAKA requests for NIM are supported."
+msgid "Invalid link format. Only CPLinks for NIM are supported."
+msgstr ""
+"Formato de link inválido. Apenas são suportados CPLinks e pedidos NAKA para "
+"NIM."
 
+#: src/composables/useBitcoinLightning.ts:195
 msgid "Invalid LNURL"
 msgstr "LNURL inválido"
 
+#: src/lib/tx.ts:123
 msgid "Invalid NIM HTLC data in swap"
 msgstr "Dados do HTLC de NIM inválidos na troca"
 
+#: src/composables/useStringParser.ts:46 src/lib/flows/steps.ts:620
 msgid "Invalid Nimiq address"
 msgstr "Endereço Nimiq inválido"
 
+#: src/composables/useStringParser.ts:58
 msgid "Invalid Nimiq Cashlink"
 msgstr "Nimiq Cashlink inválido"
 
+#: src/composables/useStringParser.ts:342
 msgid "Invalid Nimiq Wallet request. Missing recipient."
 msgstr "Pedido da Nimiq Wallet inválido. Destinatário em falta."
 
+#: src/composables/useStringParser.ts:336
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
-msgstr "Solicitação inválida da Nimiq Wallet. Só solicitações da Nimiq Wallet são suportadas."
+msgstr ""
+"Solicitação inválida da Nimiq Wallet. Só solicitações da Nimiq Wallet são "
+"suportadas."
 
+#: src/lib/flows/steps.ts:258
 msgid "Invalid phone number"
 msgstr "Número de telemóvel inválido"
 
+#: src/composables/useDecrypt.ts:42 src/composables/useDecrypt.ts:60
+#: src/modals/EnableBiometricModal.vue:23
 msgid "Invalid PIN"
 msgstr "PIN inválido"
 
+#: src/lib/flows/steps.ts:118 src/lib/flows/steps.ts:122
+#: src/lib/flows/steps.ts:210 src/lib/flows/steps.ts:212
 msgid "Invalid PIN code"
 msgstr "Código PIN inválido"
 
+#: src/composables/useDecrypt.ts:39
 msgid "Invalid PIN length {length}"
 msgstr "Comprimento de PIN inválido {length}"
 
+#: src/composables/useQRScanner.ts:138
 msgid "Invalid QR code"
 msgstr "Código QR inválido"
 
+#: src/stores/local-wallet.ts:56
 msgid "Invalid recovery words"
 msgstr "Palavras de recuperação inválidas"
 
+#: src/lib/issuer-websocket.ts:65
 msgid "Invalid signature. Please try again"
 msgstr "Assinatura inválida. Tenta novamente"
 
+#: src/lib/tx.ts:94 src/stores/polygon-usdt.ts:2424
 msgid "Invalid swap hash"
 msgstr "Hash de troca inválido"
 
+#: src/lib/tx.ts:351
 msgid "Invalid transfer type"
 msgstr "Tipo de transferência inválido"
 
+#: src/composables/useStringParser.ts:109
 msgid "Invalid URL: {url}"
 msgstr "URL inválido: {url}"
 
+#: src/composables/useQRScanner.ts:89 src/composables/useStringParser.ts:39
+#: src/lib/flows/steps.ts:613
 msgid "Invalid USDT address"
 msgstr "Endereço USDT inválido"
 
+#: src/composables/useStringParser.ts:421
 msgid "Invalid USDT Wallet request. Missing amount or recipient."
 msgstr "Pedido da USDT Wallet inválido. Valor ou destinatário em falta."
 
-msgid "Invalid USDT Wallet request. Only Polygon network requests are supported."
-msgstr "Pedido da USDT Wallet inválido. Apenas são suportados pedidos da rede Polygon."
+#: src/composables/useStringParser.ts:401
+msgid ""
+"Invalid USDT Wallet request. Only Polygon network requests are supported."
+msgstr ""
+"Pedido da USDT Wallet inválido. Apenas são suportados pedidos da rede "
+"Polygon."
 
+#: src/composables/useStringParser.ts:398
+#: src/composables/useStringParser.ts:409
+#: src/composables/useStringParser.ts:413
 msgid "Invalid USDT Wallet request. Only USDT Wallet requests are supported."
-msgstr "Pedido da USDT Wallet inválido. Apenas são suportados pedidos da USDT Wallet."
+msgstr ""
+"Pedido da USDT Wallet inválido. Apenas são suportados pedidos da USDT Wallet."
 
+#: src/modals/ReferralModal.vue:28
 msgid "Invite a Friend"
 msgstr "Convida um amigo"
 
-msgid "Invite a friend! | Invite a friend and get {amount} Point each! | Invite a friend and get {amount} Points each!"
-msgstr "Convida um amigo! | Convida um amigo e recebam {amount} ponto cada! | Convida um amigo e recebam {amount} pontos cada!"
+#: src/modals/PointsModal.vue:57 src/modals/ReferralModal.vue:4
+#: src/views/HomeView.vue:94
+msgid ""
+"Invite a friend! | Invite a friend and get {amount} Point each! | Invite a "
+"friend and get {amount} Points each!"
+msgstr ""
+"Convida um amigo! | Convida um amigo e recebam {amount} ponto cada! | "
+"Convida um amigo e recebam {amount} pontos cada!"
 
+#: src/components/PhoneInput.vue:63
 msgid "Is this your phone number?"
 msgstr "Este é o teu número de telemóvel?"
 
+#: src/components/LongPressButton.vue:27
 msgid "Keep pressing…"
 msgstr "Continua a pressionar…"
 
-msgid "KYC verification in progress, we will notify you once it is completed."
-msgstr "Verificação KYC em curso, vamos notificar-te assim que estiver concluída."
-
+#: src/lib/issuer-websocket.ts:73
 msgid "KYC verification required to complete this payment"
 msgstr "É necessária a verificação KYC para concluir este pagamento"
 
+#: src/modals/SettingsModal.vue:15
 msgid "Language"
 msgstr "Língua"
 
+#: src/components/PhoneInput.vue:39
 msgid "Learn more"
 msgstr "Sabe mais"
 
+#: src/composables/useNotifications.ts:277
 msgid "Learn what is new in this update"
 msgstr ""
 
-msgid "Lightning request is for a variable payment amount, but variable amounts are not supported"
-msgstr "O pedido Lightning é para um valor de pagamento variável, mas valores variáveis não são suportados"
+#: src/composables/useBitcoinLightning.ts:123
+msgid ""
+"Lightning request is for a variable payment amount, but variable amounts are "
+"not supported"
+msgstr ""
+"O pedido Lightning é para um valor de pagamento variável, mas valores "
+"variáveis não são suportados"
 
+#: src/components/ShowWords.vue:5
 msgid "Loading"
 msgstr "A carregar"
 
+#: src/components/PaymentPreview.vue:169 src/components/PaymentPreview.vue:199
 msgid "Loading swap limits..."
 msgstr "A carregar limites de troca..."
 
+#: src/modals/PointsModal.vue:79
 msgid "Loading tasks…"
 msgstr "A carregar tarefas…"
 
+#: src/modals/ReferralModal.vue:14
 msgid "Loading…"
 msgstr "A carregar…"
 
-msgid "Lock card"
-msgstr "Bloquear cartão temporariamente"
-
+#: src/views/LockdownScreen.vue:14
 msgid "Lockdown Mode is on"
 msgstr "O Modo de Bloqueio está ativado"
 
+#: src/modals/LogOutModal/Confirm.vue:16
 msgid ""
 "Log in again with your recovery words.\n"
 "Please ensure that you have them available before logging out."
-msgstr "Inicia a sessão novamente com as tuas palavras de recuperação. Garante que as tens disponíveis antes de encerrares sessão."
+msgstr ""
+"Inicia a sessão novamente com as tuas palavras de recuperação. Garante que "
+"as tens disponíveis antes de encerrares sessão."
 
+#: src/modals/MenuModal.vue:76
 msgid "Log Out"
 msgstr "Encerrar sessão"
 
+#: src/views/SetupView.vue:20
 msgid "Login"
 msgstr "Iniciar sessão"
 
-msgid "Make sure you are sending from a Polygon address, or your funds might be permanently lost!"
-msgstr "Certifica-te de que estás a enviar a partir de um endereço Polygon, ou podes perder os teus fundos para sempre!"
+#: src/components/NimAddressDisplay.vue:10 src/components/QRCodeDisplay.vue:7
+msgid ""
+"Make sure you are sending from a Polygon address, or your funds might be "
+"permanently lost!"
+msgstr ""
+"Certifica-te de que estás a enviar a partir de um endereço Polygon, ou podes "
+"perder os teus fundos para sempre!"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:108
+msgid "Matching submissions: {count}"
+msgstr ""
+
+#: src/components/competition/MiniAppsCompetitionView.vue:40
 msgid "Meet the builders creating new experiences for Nimiq Pay."
 msgstr ""
 
+#: src/components/TransactionDetails.vue:80
 msgid "Message"
 msgstr ""
 
+#: src/modals/MenuModal.vue:40
 msgid "Mini Apps"
 msgstr "Mini Apps"
 
+#: src/components/competition/CompetitionSpotlight.vue:29
+#: src/components/competition/MiniAppsCompetitionView.vue:37
 #, fuzzy
 #| msgid "Mini Apps"
 msgid "Mini Apps Competition"
 msgstr "Mini Apps"
 
+#: src/modals/SettingsModal.vue:37
 msgid "Minimum NIM Decimals"
 msgstr "Decimais mínimos de NIM"
 
-msgid "Naka"
-msgstr "Naka"
-
-msgid "NAKA Card"
-msgstr "Cartão NAKA"
-
-msgid "NAKA Support"
-msgstr "Suporte NAKA"
-
-msgid "NAKA works just like a credit card. Pay with NIM simply by tapping your phone wherever NAKA is accepted."
-msgstr "O NAKA funciona como um cartão de crédito. Paga com NIM aproximando simplesmente o teu telemóvel onde quer que o NAKA seja aceite."
-
+#: src/components/PaymentPreview.vue:89
+#: src/components/TransactionDetails.vue:46
 msgid "Network"
 msgstr "Rede"
 
+#: src/stores/nimiq-network.ts:123
 msgid "Network consensus lost."
 msgstr "Consenso da rede perdido."
 
+#: src/components/PaymentPreview.vue:38
 msgid "Network fees"
 msgstr "Taxas de rede"
 
+#: src/lib/tx.ts:375
 msgid "Network ID mismatch"
 msgstr "Incompatibilidade de ID da rede"
 
+#: src/types/transactions.ts:164
 msgid "New"
 msgstr "Novo"
 
+#: src/components/HoldCardToReader.vue:61
 msgid "NFC is not supported on this device"
 msgstr "O NFC não é suportado neste dispositivo"
 
+#: src/stores/sync/remote-signers.ts:66 src/stores/transactions.ts:365
+msgid "Nimiq network unavailable"
+msgstr ""
+
+#: src/components/BricksInput.vue:10
 msgid "Nimiq Pay and Nimiq Wallet use different recovery words."
 msgstr "A Nimiq Pay e a Nimiq Wallet usam palavras de recuperação diferentes."
 
-msgid "Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app cannot run until Lockdown Mode is turned off."
-msgstr "A Nimiq Pay depende de WebAssembly, que o Modo de Bloqueio do iOS bloqueia. A app não pode funcionar enquanto o Modo de Bloqueio não for desativado."
+#: src/views/LockdownScreen.vue:17
+msgid ""
+"Nimiq Pay relies on WebAssembly, which iOS Lockdown Mode blocks. The app "
+"cannot run until Lockdown Mode is turned off."
+msgstr ""
+"A Nimiq Pay depende de WebAssembly, que o Modo de Bloqueio do iOS bloqueia. "
+"A app não pode funcionar enquanto o Modo de Bloqueio não for desativado."
 
+#: src/lib/mini-app-confirmation.ts:113
 msgid "No"
 msgstr "Não"
 
-msgid "No account found"
-msgstr "Conta não encontrada"
-
+#: src/lib/tx.ts:264
 msgid "No account has been created yet, or it is currently processing funds"
-msgstr "Ainda não foi encontrada uma conta ou está atualmente a processar fundos"
+msgstr ""
+"Ainda não foi encontrada uma conta ou está atualmente a processar fundos"
 
+#: src/stores/local-wallet.ts:30 src/stores/local-wallet.ts:81
+#: src/stores/local-wallet.ts:90 src/stores/polygon-usdt.ts:2105
+#: src/stores/polygon-usdt.ts:2378
 msgid "No account has been found"
 msgstr "Nenhuma conta foi encontrada"
 
+#: src/stores/nimiq-network.ts:268
 msgid "No accounts found"
 msgstr "Nenhumas contas encontradas"
 
+#: src/components/HoldCardToReader.vue:72
 msgid "No active card"
 msgstr "Nenhum cartão ativo"
 
+#: src/components/HoldCardToReader.vue:78
+#, fuzzy
+#| msgid "No NAKA Card found"
+msgid "No card found"
+msgstr "Nenhum cartão NAKA encontrado"
+
+#: src/stores/nimiq-network.ts:217
 msgid "No Cashlink found"
 msgstr "Nenhum Cashlink encontrado"
 
+#: src/modals/ChangelogModal.vue:40
 msgid "No changelog yet. Check back after the next update."
 msgstr ""
 
+#: src/components/competition/MiniAppsCompetitionView.vue:134
 msgid "No entries in this cycle yet"
 msgstr ""
 
-msgid "No NAKA Card found"
-msgstr "Nenhum cartão NAKA encontrado"
+#: src/components/competition/MiniAppsCompetitionView.vue:125
+msgid "No matching submissions"
+msgstr ""
 
+#: src/lib/tx.ts:99
 msgid "No NIM HTLC found in swap"
 msgstr "Nenhum HTLC de NIM encontrado na troca"
 
+#: src/components/BackupIntroduction.vue:10
 msgid "No one can see me"
 msgstr "Ninguém me pode ver"
 
+#: src/composables/useApi.ts:427
 msgid "No payment details found"
 msgstr "Nenhum detalhe de pagamento encontrado"
 
+#: src/composables/useGoCryptoMonitoring.ts:104
 msgid "No payment request found"
 msgstr "Nenhum pedido de pagamento encontrado"
 
+#: src/composables/useQRScanner.ts:161
 msgid "No permission to use the camera"
 msgstr "Sem permissão para usar a camara"
 
-msgid "No Points are currently expiring | {amount} is expiring soon | {amount} are expiring soon"
-msgstr "Não há pontos a expirar | {amount} está prestes a expirar | {amount} estão prestes a expirar"
+#: src/modals/PointsModal.vue:30
+msgid ""
+"No Points are currently expiring | {amount} is expiring soon | {amount} are "
+"expiring soon"
+msgstr ""
+"Não há pontos a expirar | {amount} está prestes a expirar | {amount} estão "
+"prestes a expirar"
 
+#: src/components/WithdrawalAddressList.vue:41
 msgid "No saved addresses"
 msgstr "Sem endereços guardados"
 
+#: src/modals/PointsModal.vue:86
 msgid ""
 "No tasks available.\n"
 "Stay tuned."
@@ -874,735 +1206,1111 @@ msgstr ""
 "Sem tarefas disponíveis.\n"
 "Fica atento."
 
+#: src/stores/nimiq-network.ts:283
 msgid "No transactions found"
 msgstr "Nenhuma transação encontrada"
 
+#: src/stores/polygon-usdt.ts:2429
 msgid "No USDT HTLC found in swap"
 msgstr "Nenhum HTLC de USDT encontrado na troca"
 
+#: src/modals/MiniAppWarningModal.vue:86
 msgid "non-ASCII character (may impersonate Latin letters)"
 msgstr "carácter não-ASCII (pode imitar letras latinas)"
 
+#: src/composables/useGoCryptoMonitoring.ts:103
 msgid "Not a pending payment request"
 msgstr "Nenhum pedido de pagamento pendente"
 
+#: src/composables/useNotifications.ts:303
 msgid "Notification when a payment arrives"
 msgstr "Notificação quando chega um pagamento"
 
+#: src/composables/useNotifications.ts:150
 msgid "Notifications about new campaigns and other important events"
 msgstr "Notificações sobre novas campanhas e outros eventos importantes"
 
+#: src/lib/flows/steps.ts:307
 msgid "Notifications cannot be enabled, skipping this step."
 msgstr "As notificações não podes ser ativadas, saltando esta etapa."
 
+#: src/modals/ReferralModal.vue:21
 msgid "Only {count} out of {total} remaining."
 msgstr "Apenas {count} de {total} em falta."
 
+#: src/components/competition/CompetitionAppDetail.vue:136
 #, fuzzy
 #| msgid "Open anyway"
 msgid "Open {name}"
 msgstr "Abrir mesmo assim"
 
+#: src/modals/MiniAppWarningModal.vue:104
 msgid "Open anyway"
 msgstr "Abrir mesmo assim"
 
+#: src/components/competition/CompetitionSpotlight.vue:6
 msgid "Open Mini Apps Competition"
 msgstr ""
 
+#: src/modals/MiniAppWarningModal.vue:22
 msgid "Open this mini app?"
 msgstr "Abrir esta Mini App?"
 
+#: src/components/competition/CompetitionAppDetail.vue:136
 #, fuzzy
 #| msgid "Keep pressing…"
 msgid "Opening…"
 msgstr "Continua a pressionar…"
 
+#: src/components/PaymentPreview.vue:248 src/components/TheHomeFooter.vue:19
 msgid "Pay"
 msgstr "Pagar"
 
+#: src/components/PaymentRequestDetectedNotification.vue:21
 msgid "PAY"
 msgstr "PAGAR"
 
+#: src/lib/flows/steps.ts:355
 msgid "Pay with Bluecode"
 msgstr "Pagar com Bluecode"
 
+#: src/components/OnBoardingScreen.vue:28
 msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
 msgstr "Pagar com Pontos Cryptocity em vez de NIM sempre que for aceite."
 
-msgid "Pay with NAKA Card"
-msgstr "Pagar com o cartão NAKA"
-
+#: src/components/OnBoardingScreen.vue:27
 msgid "Pay with Points"
 msgstr "Pagar com Pontos"
 
+#: src/types/transactions.ts:145
 msgid "Payment"
 msgstr "Pagamento"
 
+#: src/composables/useGoCryptoMonitoring.ts:113
 msgid "Payment cancelled"
 msgstr "Pagamento cancelado"
 
+#: src/components/PaymentPreview.vue:23 src/components/PaymentPreview.vue:76
 msgid "Payment details"
 msgstr "Detalhes do pagamento"
 
+#: src/composables/useGoCryptoMonitoring.ts:114
 msgid "Payment expired"
 msgstr "Pagamento expirado"
 
+#: src/composables/useGoCryptoMonitoring.ts:115
 msgid "Payment expiring soon"
 msgstr "Pagamento a expirar brevemente"
 
+#: src/composables/useApi.ts:119 src/composables/useGoCryptoMonitoring.ts:111
 msgid "Payment invalid"
 msgstr "Pagamento inválido"
 
+#: src/composables/useGoCryptoMonitoring.ts:109
 msgid "Payment is being processed"
 msgstr "O pagamento está a ser processado"
 
-msgid "Payment limit"
-msgstr "Limite de pagamento"
-
-msgid "Payment limits"
-msgstr "Limites de pagamento"
-
+#: src/lib/flows/steps.ts:489 src/lib/flows/steps.ts:502
 msgid "Payment preview"
 msgstr "Pré-visualização do pagamento"
 
+#: src/lib/issuer-websocket.ts:75
 msgid "Payment rejected due to unknown reason"
 msgstr "Pagamento rejeitado por motivo desconhecido"
 
+#: src/components/PaymentRequestDetectedNotification.vue:12
+#: src/lib/flows/steps.ts:457 src/lib/flows/steps.ts:468
 msgid "Payment Request"
 msgstr "Pedido de Pagamento"
 
+#: src/components/TransactionDetails.vue:87
 msgid "Payment Secret"
 msgstr "Pagamento Secreto"
 
+#: src/lib/flows/index.ts:404
 msgid "Payment successful"
 msgstr "Pagamento bem-sucedido"
 
+#: src/composables/useGoCryptoMonitoring.ts:110
 msgid "Payment unsuccessful"
 msgstr "Pagamento não sucedido"
 
+#: src/composables/useGoCryptoMonitoring.ts:112
 msgid "Payment was refunded"
 msgstr "O pagamento foi reembolsado"
 
+#: src/modals/MenuModal.vue:14
 msgid "Payments"
 msgstr "Pagamentos"
 
+#: src/components/TheHomeAmounts.vue:40
 msgid "pending"
 msgstr "pendente"
 
+#: src/components/TransactionDetails.vue:23
+#: src/components/TransactionItem.vue:11 src/types/transactions.ts:165
 msgid "Pending"
 msgstr "Pendente"
 
+#: src/stores/points.ts:202 src/stores/points.ts:219 src/stores/points.ts:56
 msgid "Phone number missing"
 msgstr "Número de telemóvel em falta"
 
+#: src/stores/points.ts:114 src/stores/points.ts:125 src/stores/points.ts:157
+#: src/stores/points.ts:174 src/stores/points.ts:204 src/stores/points.ts:221
+#: src/stores/points.ts:232 src/stores/points.ts:93
 msgid "Phone number not verified"
 msgstr "Número de telemóvel não verificado"
 
+#: src/lib/flows/index.ts:622
 msgid "PIN change successful"
 msgstr "Mudança de PIN bem-sucedida"
 
+#: src/lib/flows/steps.ts:148
 msgid "PIN did not match"
 msgstr "O PIN não coincide"
 
-msgid "Please allow Nimiq Pay to access your camera and try again to scan QR codes."
-msgstr "Permite à Nimiq Pay aceder à tua câmara e tenta digitalizar códigos QR novamente."
+#: src/components/QRScanner.vue:80
+msgid ""
+"Please allow Nimiq Pay to access your camera and try again to scan QR codes."
+msgstr ""
+"Permite à Nimiq Pay aceder à tua câmara e tenta digitalizar códigos QR "
+"novamente."
 
+#: src/lib/flows/steps.ts:144
 msgid "Please confirm your PIN code"
 msgstr "Por favor confirma o teu código PIN"
 
+#: src/lib/flows/steps.ts:255
 msgid "Please enter a phone number"
 msgstr "Por favor insere um número de telemóvel"
 
+#: src/lib/flows/steps.ts:113 src/lib/flows/steps.ts:208
 msgid "Please enter a PIN code"
 msgstr "Por favor insere um código PIN"
 
+#: src/lib/flows/steps.ts:55
 msgid "Please enter a promo code"
 msgstr "Por favor insere um código promocional"
 
+#: src/lib/flows/steps.ts:280
 msgid "Please enter a verification code"
 msgstr "Por favor insere um código de verificação"
 
+#: src/modals/TaskModal.vue:93
 msgid "Please enter at least ten characters"
 msgstr "Por favor insere pelo menos dez caracteres"
 
-msgid "Please verify yourself with SumSub to activate your NAKA Card."
-msgstr "Verifica a tua identidade com a SumSub para ativar o teu cartão NAKA."
+#: src/lib/flows/steps.ts:262
+msgid ""
+"Please wait {time} minute before requesting a new code | Please wait {time} "
+"minutes before requesting a new code"
+msgstr ""
+"Por favor espera {time} minuto antes de pedir um novo código | Por favor "
+"espera {time} minutos antes de pedir um novo código"
 
-msgid "Please wait {time} minute before requesting a new code | Please wait {time} minutes before requesting a new code"
-msgstr "Por favor espera {time} minuto antes de pedir um novo código | Por favor espera {time} minutos antes de pedir um novo código"
-
+#: src/modals/TaskModal.vue:107
 msgid "Please watch the full video"
 msgstr "Por favor vê o vídeo todo"
 
+#: src/modals/DeletePointsModal.vue:18
 msgid "Points account deleted successfully"
 msgstr "Conta de Pontos apagada com sucesso"
 
+#: src/components/OnBoardingScreen.vue:23
 msgid "Points are loyalty rewards you can earn and pay with."
 msgstr "Pontos são recompensas de lealdade que podes ganhar e pagar com."
 
+#: src/types/transactions.ts:146
 msgid "Points Payment"
 msgstr "Pagamento com Pontos"
 
+#: src/components/PaymentPreview.vue:100
 msgid "Polygon fee"
 msgstr "Taxa da Polygon"
 
+#: src/stores/polygon-usdt.ts:2435
+msgid "Polygon fee changed; review the payment again"
+msgstr ""
+
+#: src/composables/useUsdtQuoteRefresh.ts:44 src/stores/polygon-usdt.ts:2002
+#: src/stores/polygon-usdt.ts:2109 src/stores/polygon-usdt.ts:2345
+#: src/stores/polygon-usdt.ts:2384
 msgid "Polygon is not ready yet"
 msgstr "A Polygon ainda não está pronta"
 
+#: src/components/PaymentPreview.vue:195
 msgid "Polygon is still connecting. Please wait a moment."
 msgstr "A Polygon ainda está a ligar. Aguarda um momento."
 
+#: src/stores/polygon-usdt.ts:2330
 msgid "Polygon payment failed"
 msgstr "O pagamento na Polygon falhou"
 
+#: src/stores/polygon-usdt.ts:2635
 msgid "Polygon swap payment failed"
 msgstr "O pagamento da troca na Polygon falhou"
 
+#: src/stores/polygon-usdt.ts:2543 src/stores/polygon-usdt.ts:2568
+#, fuzzy
+#| msgid "Polygon swap payment failed"
+msgid "Polygon swap transaction failed"
+msgstr "O pagamento da troca na Polygon falhou"
+
+#: src/stores/polygon-usdt.ts:2466
+#, fuzzy
+#| msgid "A transaction is already in progress"
+msgid "Polygon swap transaction is already pending"
+msgstr "Uma transação já está em curso"
+
+#: src/stores/polygon-usdt.ts:2179 src/stores/polygon-usdt.ts:2304
+#: src/stores/polygon-usdt.ts:2310
+#, fuzzy
+#| msgid "Polygon payment failed"
+msgid "Polygon transaction failed"
+msgstr "O pagamento na Polygon falhou"
+
+#: src/stores/polygon-usdt.ts:514
 msgid "Polygon transaction not found after relay"
 msgstr "Transação Polygon não encontrada após o relay"
 
+#: src/modals/MiniAppWarningModal.vue:70
 msgid "Position {position}: {glyph} ({code}). {reason}."
 msgstr "Posição {position}: {glyph} ({code}). {reason}."
 
+#: src/modals/ChangelogModal.vue:28
 msgid "Previous versions"
 msgstr ""
 
+#: src/modals/DisclaimerModal.vue:17
 msgid "Privacy Policy"
 msgstr "Política de privacidade"
 
-msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
-msgstr "A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} segundos para pagar. | A processar fundos. Aguarde cerca de ~{blocks} segundos para pagar."
+#: src/views/MainView.vue:124
+msgid ""
+"Processing funds… | Processing funds. Wait ~{blocks} second to pay. | "
+"Processing funds. Wait ~{blocks} seconds to pay."
+msgstr ""
+"A processar fundos... | A processar fundos. Aguarda cerca de ~{blocks} "
+"segundos para pagar. | A processar fundos. Aguarde cerca de ~{blocks} "
+"segundos para pagar."
 
+#: src/stores/points.ts:206
 msgid "Promo code missing"
 msgstr "Código promocional em falta"
 
+#: src/stores/points.ts:192
 msgid "Promo code not found"
 msgstr "Código promocional não encontrado"
 
+#: src/lib/flows/steps.ts:139 src/lib/flows/steps.ts:90
 msgid "Protect your Nimiq Pay app with a pin."
 msgstr "Protege a tua aplicacão Nimiq Pay com um pin."
 
+#: src/stores/points.ts:254
 msgid "Purchase"
 msgstr "Comprar"
 
+#: src/modals/DeletePointsModal.vue:13
 msgid "Really delete your Cryptocity Points account?"
 msgstr "Tens a certeza que queres apagar a tua conta de Pontos Cryptocity?"
 
+#: src/modals/SettingsModal.vue:55
 msgid "Receive Push Notifications"
 msgstr "Recebe notificações Push"
 
+#: src/lib/flows/steps.ts:631
 msgid "Receive USDT on Polygon"
 msgstr "Receber USDT na Polygon"
 
+#: src/components/PaymentPreview.vue:93
+#: src/components/TransactionDetails.vue:72
 msgid "Recipient"
 msgstr "Destinatário"
 
+#: src/components/BackupNotification.vue:16
 msgid "Recovery Words"
 msgstr "Palavras de Recuperação"
 
+#: src/modals/SettingsModal.vue:67
 msgid "Reduce Animations"
 msgstr "Reduzir animações"
 
+#: src/modals/LongTimeNoSeeModal.vue:21
 msgid "Refreshing connection"
 msgstr "A recarregar conexão"
 
+#: src/components/TransactionDetails.vue:26
 msgid "Refunded"
 msgstr "Devolvido"
 
+#: src/lib/mini-app-confirmation.ts:123 src/types/transactions.ts:152
 msgid "Remove Stake"
 msgstr "Remover stake"
 
+#: src/modals/SettingsModal.vue:73
 msgid "Reopen Mini App on unlock"
 msgstr "Reabrir Mini App ao desbloquear"
 
+#: src/lib/faucet.ts:37 src/lib/faucet.ts:42
 msgid "Request failed"
 msgstr "O pedido falhou"
 
+#: src/components/TestnetFaucet.vue:9
 msgid "Requesting…"
 msgstr "A pedir…"
 
+#: src/views/HomeView.vue:195
 msgid "Requires Phone Number"
 msgstr "Necessita número de telemóvel"
 
+#: src/lib/flows/steps.ts:277
 msgid "Resend"
 msgstr "Reenviar"
 
+#: src/lib/mini-app-confirmation.ts:118 src/types/transactions.ts:151
 msgid "Retire Stake"
 msgstr "Retirar stake"
 
+#: src/composables/useNotifications.ts:149
 msgid "Rewards Notifications"
 msgstr "Notificações de Recompensas"
 
-msgid "save"
-msgstr "guardar"
-
+#: src/components/NimAddressInput.vue:61
+#: src/components/WithdrawalAddressList.vue:18
+#: src/modals/AutoDepositThresholdModal.vue:22
 msgid "Save"
 msgstr "Guardar"
 
+#: src/components/QRScanner.vue:32 src/components/QRScanner.vue:60
 msgid "Scan an address QR code."
 msgstr "Digitaliza o código QR de um endereço."
 
-msgid "Scan any Nimiq, USDT or NAKA QR code to pay."
+#: src/components/QRScanner.vue:28
+#, fuzzy
+#| msgid "Scan any Nimiq, USDT or NAKA QR code to pay."
+msgid "Scan any Nimiq or USDT QR code to pay."
 msgstr "Digitaliza qualquer código QR Nimiq, USDT ou NAKA para pagar."
 
-msgid "Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
-msgstr "Digitaliza qualquer código QR Nimiq, USDT, Bitcoin Lightning ou NAKA para pagar."
+#: src/components/QRScanner.vue:25
+#, fuzzy
+#| msgid "Scan any Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
+msgid "Scan any Nimiq, USDT or Bitcoin Lightning QR code to pay."
+msgstr ""
+"Digitaliza qualquer código QR Nimiq, USDT, Bitcoin Lightning ou NAKA para "
+"pagar."
 
-msgid "Scan any supported Nimiq, USDT or NAKA QR code to pay."
-msgstr "Digitaliza qualquer código QR Nimiq, USDT ou NAKA suportado para pagar."
+#: src/components/QRScanner.vue:56
+#, fuzzy
+#| msgid "Scan any supported Nimiq, USDT or NAKA QR code to pay."
+msgid "Scan any supported Nimiq or USDT QR code to pay."
+msgstr ""
+"Digitaliza qualquer código QR Nimiq, USDT ou NAKA suportado para pagar."
 
-msgid "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
-msgstr "Digitaliza qualquer código QR Nimiq, USDT, Bitcoin Lightning ou NAKA suportado para pagar."
+#: src/components/QRScanner.vue:53
+#, fuzzy
+#| msgid ""
+#| "Scan any supported Nimiq, USDT, Bitcoin Lightning or NAKA QR code to pay."
+msgid "Scan any supported Nimiq, USDT or Bitcoin Lightning QR code to pay."
+msgstr ""
+"Digitaliza qualquer código QR Nimiq, USDT, Bitcoin Lightning ou NAKA "
+"suportado para pagar."
 
+#: src/components/NimAddressDisplay.vue:32
 msgid "Scan Cashlink"
 msgstr "Digitalizar Cashlink"
 
-msgid "Scan QR"
-msgstr "Digitalizar QR"
-
+#: src/lib/flows/steps.ts:370 src/lib/flows/steps.ts:660
 msgid "Scan QR code"
 msgstr "Digitalizar código QR"
 
+#: src/lib/flows/steps.ts:661
 msgid "Scan the QR code to send NIM to this address"
 msgstr "Digitalize o código QR para enviar NIM para este endereço"
 
+#: src/components/CountrySelectModal.vue:17
 msgid "Search for a country"
 msgstr "Procura um país"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:66
+#: src/components/competition/MiniAppsCompetitionView.vue:67
+msgid "Search submissions"
+msgstr ""
+
+#: src/components/ValidateWords.vue:31
 msgid "See words"
 msgstr "Ver palavras"
 
+#: src/components/NimWithdraw.vue:158
 msgid "Select an address to calculate Polygon fee."
 msgstr "Seleciona um endereço para calcular a taxa da Polygon."
 
+#: src/components/NimWithdraw.vue:44
 msgid "Select an address…"
 msgstr "Selecionar um endereço…"
 
+#: src/lib/flows/steps.ts:633
 msgid "Send a transaction to the address below. Top up as much as you like."
-msgstr "Enviar uma transação para o endereço em baixo. Recarregar saldo o quanto quiseres."
+msgstr ""
+"Enviar uma transação para o endereço em baixo. Recarregar saldo o quanto "
+"quiseres."
 
+#: src/lib/flows/steps.ts:590
 msgid "Send NIM to this address"
 msgstr "Enviar NIM para este endereço"
 
+#: src/lib/flows/steps.ts:631
 msgid "Send NIM to top up"
 msgstr "Envia NIM para recarregar"
 
+#: src/lib/flows/steps.ts:633
 msgid "Send USDT on Polygon to the address below."
 msgstr "Envia USDT na Polygon para o endereço abaixo."
 
+#: src/lib/flows/steps.ts:590
 msgid "Send USDT to this address"
 msgstr "Enviar USDT para este endereço"
 
+#: src/components/TransactionDetails.vue:53
 #, fuzzy
 #| msgid "Send"
 msgid "Sender"
 msgstr "Enviar"
 
+#: src/components/NimWithdraw.vue:183 src/views/MainView.vue:112
 msgid "Server not available"
 msgstr "Servidor não disponível"
 
+#: src/lib/mini-app-confirmation.ts:105 src/types/transactions.ts:149
 msgid "Set Active Stake"
 msgstr "Definir stake ativo"
 
+#: src/components/PaymentAmountInput.vue:4
 msgid "Set an amount"
 msgstr "Define um valor"
 
+#: src/modals/MenuModal.vue:51 src/modals/SettingsModal.vue:10
 msgid "Settings"
 msgstr "Definições"
 
+#: src/components/EnableBiometric.vue:16
+#: src/components/EnableNotifications.vue:9 src/components/PhoneInput.vue:46
 msgid "Skip for now"
 msgstr "Ignorar por agora"
 
+#: src/composables/useApi.ts:220 src/composables/useApi.ts:63
+#: src/lib/flows/index.ts:482 src/lib/flows/index.ts:491
 msgid "Something went wrong"
 msgstr "Alguma coisa deu errado"
 
+#: src/stores/points.ts:38
 msgid "Something went wrong authorizing the phone number"
 msgstr "Alguma coisa deu errado ao autorizar o número de telemóvel"
 
+#: src/composables/useDecrypt.ts:148
 msgid "Something went wrong changing the PIN"
 msgstr "Alguma coisa deu errado ao mudar o PIN"
 
+#: src/components/GenericInput.vue:29 src/stores/points.ts:178
+#: src/stores/points.ts:195
 msgid "Something went wrong checking the promo code"
 msgstr "Alguma coisa deu errado ao verificar o código promocional"
 
+#: src/stores/points.ts:225
 msgid "Something went wrong claiming the cashback"
 msgstr "Alguma coisa deu errado ao reclamar o cashback"
 
+#: src/lib/flows/steps.ts:173
 msgid "Something went wrong decrypting the database"
 msgstr "Alguma coisa deu errado ao decifrar o banco de dados"
 
+#: src/composables/useDecrypt.ts:61 src/composables/useDecrypt.ts:64
+#: src/composables/useDecrypt.ts:80 src/views/PinView.vue:77
 msgid "Something went wrong decrypting the database. Try reloading the app."
 msgstr "Algo correu mal ao decifrar a base de dados. Tenta recarregar a app."
 
+#: src/stores/points.ts:83
 msgid "Something went wrong deleting the account"
 msgstr "Alguma coisa deu errado ao apagar a conta"
 
+#: src/composables/usePointsPayment.ts:54
 msgid "Something went wrong getting the Points cashback data."
 msgstr "Alguma coisa deu errado ao reclamar os dados dos pontos de cashback."
 
+#: src/stores/points.ts:237
 msgid "Something went wrong paying with Points"
 msgstr "Alguma coisa deu errado ao pagar com pontos"
 
+#: src/lib/tx.ts:412
 msgid "Something went wrong signing the transaction"
 msgstr "Alguma coisa deu errado ao assinar a transação"
 
+#: src/composables/useApi.ts:325 src/composables/useApi.ts:332
+#: src/composables/useMiniAppHost.ts:2054 src/lib/tx.ts:200 src/lib/tx.ts:267
+#: src/lib/tx.ts:371 src/lib/tx.ts:50 src/lib/tx.ts:69
 msgid "Something went wrong syncing your account"
 msgstr "Alguma coisa deu errado ao sincronizar com a tua conta"
 
+#: src/stores/points.ts:118 src/stores/points.ts:130 src/stores/points.ts:161
 msgid "Something went wrong updating the tasks"
 msgstr "Alguma coisa deu errado ao atualizar as tarefas"
 
+#: src/stores/points.ts:97
 msgid "Something went wrong updating your Points"
 msgstr "Alguma coisa deu errado ao atualizar os teus pontos"
 
+#: src/stores/points.ts:60
 msgid "Something went wrong verifying the phone number"
 msgstr "Alguma coisa deu errado ao verificar o teu número de telemóvel"
 
+#: src/composables/useQRScanner.ts:294
 msgid "Something went wrong while starting the camera"
 msgstr "Alguma coisa deu errado ao começar a camara"
 
+#: src/composables/useBiometric.ts:115
 #, fuzzy
 #| msgid "Something went wrong paying with Points"
 msgid "Something went wrong, please re-enable biometric login"
 msgstr "Alguma coisa deu errado ao pagar com pontos"
 
+#: src/components/competition/CompetitionAppDetail.vue:104
 #, fuzzy
 #| msgid "Pay with Bluecode"
 msgid "Source code"
 msgstr "Pagar com Bluecode"
 
+#: src/types/transactions.ts:154
 msgid "Staking Contract"
 msgstr "Contrato de staking"
 
+#: src/components/PhoneInput.vue:19
 msgid "Standard rates may apply."
 msgstr "Podem ser aplicadas taxas padrão."
 
+#: src/components/TransactionDetails.vue:20
 msgid "Status"
 msgstr "Estado"
 
+#: src/components/ShowWords.vue:30
 msgid "Store screenshot safely"
 msgstr "Armazene a captura de ecrã com segurança"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:96
 msgid "Submissions"
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:93
 msgid "Submitted {date}"
 msgstr ""
 
+#: src/modals/MenuModal.vue:19
 msgid "Support"
 msgstr "Suporte"
 
+#: src/components/PaymentPreview.vue:42
 msgid "Swap fee"
 msgstr "Taxa de troca"
 
+#: src/stores/polygon-usdt.ts:2580
 msgid "Swap timed out waiting for Lightning payment confirmation"
 msgstr "A troca expirou à espera da confirmação do pagamento Lightning"
 
+#: src/composables/useMiniAppHost.ts:442
 msgid "Switched to {chain}"
 msgstr "Mudaste para {chain}"
 
+#: src/lib/utils.ts:127
 msgid "Syncing with network."
 msgstr "A sincronizar com a rede."
 
-msgid "Tap to pay with NAKA!"
-msgstr "Toca para pagar com NAKA!"
-
+#: src/components/TheHomeAmounts.vue:55
 msgid "Tap your pending NIM to add it to your available balance."
 msgstr ""
 
-msgid "Terms & Conditions"
-msgstr "Termos e condições"
-
+#: src/components/PaymentPreview.vue:231
 msgid "Terms of service"
 msgstr "Termos de serviço"
 
+#: src/lib/flows/steps.ts:716
 msgid "Test your backup"
 msgstr "Testa o teu backup"
 
-msgid "The backup is a list of 12 English words. Please make sure no one can see your screen before continuing."
-msgstr "O backup é uma lista de 12 palavras em Inglês. Por favor garante que ninguém consegue ver o teu ecrã antes de continuar."
+#: src/components/BackupIntroduction.vue:6
+msgid ""
+"The backup is a list of 12 English words. Please make sure no one can see "
+"your screen before continuing."
+msgstr ""
+"O backup é uma lista de 12 palavras em Inglês. Por favor garante que ninguém "
+"consegue ver o teu ecrã antes de continuar."
 
+#: src/components/ValidateWords.vue:20
 msgid "The correct answer is \"{correct}\"."
 msgstr "A resposta correta é \"{correct}\"."
 
+#: src/lib/issuer-websocket.ts:71
 msgid "The exchange rate is unfavorable. Please try again later"
 msgstr "A taxa de câmbio é desfavorável. Tenta novamente mais tarde"
 
-msgid "The Pay app uses USDT on the Polygon network. Sending funds from a non-Polygon address could result in permanent loss."
-msgstr "A app Pay usa USDT na rede Polygon. Enviar fundos a partir de um endereço que não seja Polygon pode resultar em perda permanente."
+#: src/components/NimAddressDisplay.vue:11 src/components/QRCodeDisplay.vue:8
+msgid ""
+"The Pay app uses USDT on the Polygon network. Sending funds from a non-"
+"Polygon address could result in permanent loss."
+msgstr ""
+"A app Pay usa USDT na rede Polygon. Enviar fundos a partir de um endereço "
+"que não seja Polygon pode resultar em perda permanente."
 
-msgid "The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon address could result in permanent loss."
-msgstr "A app Pay usa USDT na rede Polygon. Enviar fundos para um endereço que não seja Polygon pode resultar em perda permanente."
+#: src/components/PaymentAmountInput.vue:53
+#: src/components/PaymentPreview.vue:221
+msgid ""
+"The Pay app uses USDT on the Polygon network. Sending funds to a non-Polygon "
+"address could result in permanent loss."
+msgstr ""
+"A app Pay usa USDT na rede Polygon. Enviar fundos para um endereço que não "
+"seja Polygon pode resultar em perda permanente."
 
+#: src/lib/issuer-websocket.ts:61
 msgid "The payment amount exceeds the allowed limit"
 msgstr "O valor do pagamento excede o limite permitido"
 
+#: src/lib/flows/index.ts:609
 msgid "The PINs do not match"
 msgstr "Os PINs não coincidem"
 
+#: src/composables/useQRScanner.ts:242 src/composables/useQRScanner.ts:302
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr "O scanner do QR ainda não está pronto. Espera por favor."
 
-msgid "The USDT stablecoin was originally launched on Ethereum. To avoid high fees and enable fast transactions, the Pay app uses the Polygon version. Funds sent to non-Polygon USDT addresses could be permanently lost."
-msgstr "A stablecoin USDT foi originalmente lançada na Ethereum. Para evitar taxas elevadas e permitir transações rápidas, a app Pay usa a versão da Polygon. Os fundos enviados para endereços USDT que não sejam Polygon podem perder-se para sempre."
+#: src/lib/flows/index.ts:322 src/lib/flows/index.ts:484
+#: src/stores/polygon-usdt.ts:2135 src/stores/polygon-usdt.ts:2147
+#: src/stores/polygon-usdt.ts:2171 src/stores/polygon-usdt.ts:2248
+#: src/stores/polygon-usdt.ts:2259 src/stores/polygon-usdt.ts:2269
+#: src/stores/polygon-usdt.ts:2284 src/stores/polygon-usdt.ts:2301
+msgid "The transaction may have been sent and is still pending. Do not retry."
+msgstr ""
 
+#: src/components/NimAddressInput.vue:47
+msgid ""
+"The USDT stablecoin was originally launched on Ethereum. To avoid high fees "
+"and enable fast transactions, the Pay app uses the Polygon version. Funds "
+"sent to non-Polygon USDT addresses could be permanently lost."
+msgstr ""
+"A stablecoin USDT foi originalmente lançada na Ethereum. Para evitar taxas "
+"elevadas e permitir transações rápidas, a app Pay usa a versão da Polygon. "
+"Os fundos enviados para endereços USDT que não sejam Polygon podem perder-se "
+"para sempre."
+
+#: src/lib/faucet.ts:33
 msgid "There are currently no free NIM available."
 msgstr "De momento não há NIM grátis disponível."
 
+#: src/lib/flows/steps.ts:702
 msgid "There is no \"Forgot password\""
 msgstr "Não há \"Esqueci-me da palavra-passe\""
 
+#: src/components/BackupNotification.vue:7
 msgid "There is no \"Forgot Password\""
 msgstr "Não há \"Esqueci-me da Palavra-Passe\""
 
+#: src/components/PaymentPreview.vue:181
 msgid "There is no cashback reward when paying with Points."
 msgstr "Não há recompensas de cashback quando pagas com pontos."
 
-msgid "There was an error setting up your NAKA Card. Please try again later."
-msgstr "Ocorreu um erro ao configurar o teu cartão NAKA. Tenta novamente mais tarde."
+#: src/modals/ExpiringPointsModal.vue:7
+msgid ""
+"These Points are made for spending. Get out there and help drive crypto "
+"adoption."
+msgstr ""
+"Estes pontos foram feitos para ser gastos. Vai por aí e ajuda a impulsionar "
+"a adoção cripto."
 
-msgid "These Points are made for spending. Get out there and help drive crypto adoption."
-msgstr "Estes pontos foram feitos para ser gastos. Vai por aí e ajuda a impulsionar a adoção cripto."
-
+#: src/components/ConfirmAddressDeletion.vue:9
 msgid "This action cannot be undone"
 msgstr "Esta ação não pode ser desfeita"
 
+#: src/modals/MiniAppWarningModal.vue:96
 msgid "This address could not be parsed."
 msgstr "Não foi possível processar este endereço."
 
-msgid "This conversion and the operation of a BTC Lightning channel require fees."
+#: src/components/PaymentPreview.vue:63
+msgid ""
+"This conversion and the operation of a BTC Lightning channel require fees."
 msgstr "Esta conversão e a operação de um canal BTC Lightning requer uma taxa."
 
-msgid "This is your last card. If you block it, you will need to contact support for a replacement."
-msgstr "Este é o teu último cartão. Se o bloqueares, terás de contactar o suporte para obter um substituto."
-
+#: src/composables/usePointsPayment.ts:69
 msgid "This merchant is not registered to receive Points payments."
 msgstr "Este comerciante não está registado para receber pagamentos de pontos."
 
+#: src/composables/useMiniAppHost.ts:406
 msgid "This network is not supported by Nimiq Pay"
 msgstr "Esta rede não é suportada pela Nimiq Pay"
 
+#: src/composables/usePointsPayment.ts:47
 msgid "This payment is not eligible for receiving or paying with Points."
 msgstr "Este pagamento não é eligível para receber ou pagar com pontos."
 
-msgid "This pending transaction will automatically be refunded if it is not completed before the time limit"
-msgstr "Esta transação pendente vai ser devolvida automaticamente se não for completada antes do tempo limite"
+#: src/components/TransactionDetails.vue:98
+msgid ""
+"This pending transaction will automatically be refunded if it is not "
+"completed before the time limit"
+msgstr ""
+"Esta transação pendente vai ser devolvida automaticamente se não for "
+"completada antes do tempo limite"
 
-msgid "This pending transaction will be automatically refunded if it is not completed within the next day | This pending transaction will be automatically refunded if it is not completed within the next {days} days"
-msgstr "Esta transação pendente vai ser devolvida automaticamente se não for concluída até ao dia seguinte | Esta transação pendente vai ser devolvida automaticamente se não for concluída nos próximos {days}"
+#: src/components/TransactionDetails.vue:69
+msgid ""
+"This pending transaction will be automatically refunded if it is not "
+"completed within the next day | This pending transaction will be "
+"automatically refunded if it is not completed within the next {days} days"
+msgstr ""
+"Esta transação pendente vai ser devolvida automaticamente se não for "
+"concluída até ao dia seguinte | Esta transação pendente vai ser devolvida "
+"automaticamente se não for concluída nos próximos {days}"
 
-msgid "This pending transaction will be automatically refunded if it is not completed within the next hour | This pending transaction will be automatically refunded if it is not completed within the next {hours} hours"
-msgstr "Esta transação pendente vai ser devolvida automaticamente se não for concluída até à próxima hora | Esta transação pendente vai ser devolvida automaticamente se não for concluída nas próximas {hours} horas"
+#: src/components/TransactionDetails.vue:72
+msgid ""
+"This pending transaction will be automatically refunded if it is not "
+"completed within the next hour | This pending transaction will be "
+"automatically refunded if it is not completed within the next {hours} hours"
+msgstr ""
+"Esta transação pendente vai ser devolvida automaticamente se não for "
+"concluída até à próxima hora | Esta transação pendente vai ser devolvida "
+"automaticamente se não for concluída nas próximas {hours} horas"
 
+#: src/components/GenericInput.vue:34
 msgid "This promo code has been claimed too many times"
 msgstr "Este código promocional foi reclamado demasiadas vezes"
 
-msgid "This purchase gets you {amount} Point. | This purchase gets you {amount} Points."
-msgstr "Esta compra oferece-te {amount} ponto. | Esta compra oferece-te {amount} pontos."
+#: src/composables/usePointsPayment.ts:78
+msgid ""
+"This purchase gets you {amount} Point. | This purchase gets you {amount} "
+"Points."
+msgstr ""
+"Esta compra oferece-te {amount} ponto. | Esta compra oferece-te {amount} "
+"pontos."
 
+#: src/lib/faucet.ts:31
 msgid "This service is currently not available in your region."
 msgstr "Este serviço não está disponível na tua região de momento."
 
-msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
-msgstr "Esta transação ficará oculta do teu histórico. Podes voltar a mostrá-la mais tarde a partir do menu de programador."
+#: src/components/TheHomeTransactions.vue:65
+msgid ""
+"This transaction will be hidden from your history. You can reveal it later "
+"from the dev menu."
+msgstr ""
+"Esta transação ficará oculta do teu histórico. Podes voltar a mostrá-la mais "
+"tarde a partir do menu de programador."
 
+#: src/components/TheHomeTransactions.vue:64
 msgid "This transaction will reappear in your history."
 msgstr "Esta transação voltará a aparecer no teu histórico."
 
+#: src/views/HomeView.vue:37
 msgid "Top Up"
 msgstr "Recarregar"
 
+#: src/types/transactions.ts:142
 msgid "Top-Up"
 msgstr "Recarregar saldo"
 
+#: src/components/PaymentPreview.vue:104
 msgid "Total debit"
 msgstr "Débito total"
 
+#: src/components/PaymentPreview.vue:46
 msgid "Total fees"
 msgstr "Total de taxas"
 
+#: src/lib/flows/steps.ts:677
 msgid "Transaction"
 msgstr "Transação"
 
-msgid "Transaction already sent"
-msgstr "Transação já enviada"
+#: src/stores/transactions.ts:577
+#, fuzzy
+#| msgid "This address could not be parsed."
+msgid "Transaction could not be staged"
+msgstr "Não foi possível processar este endereço."
 
-msgid "Transaction failed: {error}"
-msgstr "Transação falhou: {error}"
-
+#: src/stores/transactions.ts:618 src/stores/transactions.ts:637
 msgid "Transaction invalid"
 msgstr "Transação inválida"
 
+#: src/stores/transactions.ts:580
 msgid "Transaction invalid for PoS network"
 msgstr "Transação inválida para a rede PoS"
 
+#: src/stores/transactions.ts:677
+msgid "Transaction submission could not be confirmed"
+msgstr ""
+
+#: src/stores/polygon-usdt.ts:518
 msgid "Transaction was not mined on Polygon"
 msgstr "A transação não foi minerada na Polygon"
 
-msgid "Trigger a payment on the issuer"
-msgstr "Acionar um pagamento no emissor"
-
+#: src/components/competition/MiniAppsCompetitionView.vue:19
+#: src/components/ValidateWords.vue:28
 msgid "Try again"
 msgstr "Tenta novamente"
 
+#: src/components/competition/MiniAppsCompetitionView.vue:128
+msgid "Try another search or category."
+msgstr ""
+
+#: src/views/LockdownScreen.vue:23
 msgid "Turn it off, then reopen Nimiq Pay."
 msgstr "Desativa-o e depois reabre a Nimiq Pay."
 
+#: src/stores/points.ts:106
 msgid "Unable to connect to the Points server"
 msgstr "Impossível conectar ao servidor dos Pontos"
 
+#: src/composables/useGoCryptoMonitoring.ts:107
 msgid "Unexpected GoCrypto error"
 msgstr "GoCrypto erro inesperado"
 
+#: src/components/TheHomeTransactions.vue:68
 msgid "Unhide"
 msgstr "Mostrar"
 
+#: src/components/TheHomeTransactions.vue:62
 msgid "Unhide transaction?"
 msgstr "Mostrar transação?"
 
+#: src/types/transactions.ts:175
 msgid "Unknown"
 msgstr "Desconhecido"
 
-msgid "Unknown error"
-msgstr "Erro desconhecido"
-
-msgid "Unlock card"
-msgstr "Desbloquear cartão"
-
+#: src/composables/useBiometric.ts:39
 msgid "Unlock Nimiq Pay with your biometric data"
 msgstr "Desbloqueia a Nimiq Pay com os teus dados biométricos"
 
+#: src/lib/flows/steps.ts:221
 msgid "Unlock the app using Fingerprint instead of PIN"
 msgstr "Desbloqueia a aplicação com a tua impressão digital em vez do PIN"
 
+#: src/lib/flows/steps.ts:221
 msgid "Unlock the app using Touch ID/Face ID instead of PIN"
 msgstr "Desbloqueia a aplicação ao usar o Touch ID/Face ID em vez do PIN"
 
+#: src/lib/mini-app-confirmation.ts:110 src/types/transactions.ts:150
 msgid "Update Staker"
 msgstr "Atualizar staker"
 
+#: src/modals/LongTimeNoSeeModal.vue:13
 msgid "Updating connection"
 msgstr "A atualizar conexão"
 
+#: src/views/MainView.vue:87
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
-msgstr "O USDT só está disponível na mainnet. Muda para a mainnet para usar USDT."
+msgstr ""
+"O USDT só está disponível na mainnet. Muda para a mainnet para usar USDT."
 
+#: src/stores/feature-flags.ts:16
+msgid ""
+"USDT payments are temporarily unavailable due to maintenance. Please try "
+"again later."
+msgstr ""
+
+#: src/lib/flows/index.ts:340
 msgid "USDT staking requests are not supported"
 msgstr "Os pedidos de staking em USDT não são suportados"
 
+#: src/components/PaymentPreview.vue:147
 msgid "Use {amount}"
 msgstr "Usar {amount}"
 
+#: src/components/PhoneInput.vue:43
 msgid "Verify"
 msgstr "Verificar"
 
-msgid "Verify ID"
-msgstr "Verificar identidade"
-
+#: src/lib/flows/steps.ts:362
 msgid "Verify your ID"
 msgstr "Verificar a tua identidade"
 
+#: src/lib/flows/steps.ts:247
 msgid "Verify your phone number"
 msgstr "Verificar o teu número de telemóvel"
 
+#: src/components/ChangelogEntry.vue:5
 msgid "Version"
 msgstr ""
 
+#: src/components/competition/CompetitionAppPoster.vue:6
 msgid "View {name}"
 msgstr ""
 
+#: src/components/competition/CompetitionAppDetail.vue:122
 msgid "View on X"
 msgstr ""
 
+#: src/components/NimWithdraw.vue:181
 msgid "Wait for consensus before withdrawing"
 msgstr "Esperar por consenso antes de retirar"
 
+#: src/stores/polygon-usdt.ts:2380 src/stores/polygon-usdt.ts:2395
+msgid "Wallet changed before sending"
+msgstr ""
+
+#: src/stores/sync/remote-signers.ts:72 src/stores/sync/remote-signers.ts:85
+#: src/stores/transactions.ts:350 src/stores/transactions.ts:369
+#: src/stores/transactions.ts:380 src/stores/transactions.ts:448
+#: src/stores/transactions.ts:457 src/stores/transactions.ts:467
+#: src/stores/transactions.ts:522 src/stores/transactions.ts:539
+#: src/stores/transactions.ts:565 src/stores/transactions.ts:589
+#: src/stores/transactions.ts:604 src/stores/transactions.ts:605
+#: src/stores/transactions.ts:627 src/stores/transactions.ts:680
+#: src/stores/transactions.ts:688 src/stores/transactions.ts:698
+#: src/stores/transactions.ts:706 src/stores/transactions.ts:714
+#: src/stores/transactions.ts:748 src/stores/transactions.ts:758
+#: src/stores/transactions.ts:763 src/stores/transactions.ts:768
+#: src/stores/transactions.ts:773 src/stores/transactions.ts:791
+#: src/stores/transactions.ts:798 src/stores/transactions.ts:804
+#: src/stores/transactions.ts:807 src/stores/transactions.ts:810
+msgid "Wallet or network changed before sending"
+msgstr ""
+
+#: src/components/competition/CompetitionAppDetail.vue:113
 msgid "Watch demo"
 msgstr ""
 
+#: src/lib/flows/steps.ts:723
 msgid "We're working on something special"
 msgstr "Estamos a preparar algo especial"
 
+#: src/modals/MiniAppWarningModal.vue:37
 msgid "Web address"
 msgstr "Endereço web"
 
+#: src/components/OnBoardingScreen.vue:22
 msgid "Welcome to Cryptocity Points"
 msgstr "Bem-vindo aos Pontos Cryptocity"
 
+#: src/components/ValidateWords.vue:23
 msgid "What do you want to do?"
 msgstr "O que queres fazer?"
 
+#: src/lib/flows/steps.ts:348
 msgid "What is Bluecode?"
 msgstr "O que é o Bluecode?"
 
+#: src/composables/useNotifications.ts:276 src/modals/ChangelogModal.vue:17
+#: src/modals/MenuModal.vue:63
 #, fuzzy
 #| msgid "What's the 1st word?"
 msgid "What's New"
 msgstr "Qual é a 1ª palavra?"
 
+#: src/components/ValidateWords.vue:82
 msgid "What's the 10th word?"
 msgstr "Qual é a 10ª palavra?"
 
+#: src/components/ValidateWords.vue:83
 msgid "What's the 11th word?"
 msgstr "Qual é a 11ª palavra?"
 
+#: src/components/ValidateWords.vue:84
 msgid "What's the 12th word?"
 msgstr "Qual é a 12ª palavra?"
 
+#: src/components/ValidateWords.vue:73
 msgid "What's the 1st word?"
 msgstr "Qual é a 1ª palavra?"
 
+#: src/components/ValidateWords.vue:74
 msgid "What's the 2nd word?"
 msgstr "Qual é a 2ª palavra?"
 
+#: src/components/ValidateWords.vue:75
 msgid "What's the 3rd word?"
 msgstr "Qual é a 3ª palavra?"
 
+#: src/components/ValidateWords.vue:76
 msgid "What's the 4th word?"
 msgstr "Qual é a 4ª palavra?"
 
+#: src/components/ValidateWords.vue:77
 msgid "What's the 5th word?"
 msgstr "Qual é a 5ª palavra?"
 
+#: src/components/ValidateWords.vue:78
 msgid "What's the 6th word?"
 msgstr "Qual é a 6ª palavra?"
 
+#: src/components/ValidateWords.vue:79
 msgid "What's the 7th word?"
 msgstr "Qual é a 7ª palavra?"
 
+#: src/components/ValidateWords.vue:80
 msgid "What's the 8th word?"
 msgstr "Qual é a 8ª palavra?"
 
+#: src/components/ValidateWords.vue:81
 msgid "What's the 9th word?"
 msgstr "Qual é a 9ª palavra?"
 
+#: src/components/PaymentPreview.vue:58
 msgid "When paying with BTC Lightning, NIM are swapped to BTC."
 msgstr "Ao pagar com BTC Lightning, os NIM são trocados por BTC."
 
+#: src/components/PaymentPreview.vue:59
 msgid "When paying with BTC Lightning, USDT are swapped to BTC."
 msgstr "Ao pagar com BTC Lightning, os USDT são trocados por BTC."
 
-msgid "When you register for a Cryptocity Points account in Nimiq Pay, you consent to our data management practices as detailed in our {privacyPolicy}. We prioritize your right to privacy and control over your data, thus providing an option within the app to delete your Cryptocity Points account at any time. This action will permanently remove your personal information, such as your phone number, from our records. To deter fraud, a secure log of deleted accounts will be retained for a period of 12 months. Should you decide to re-enroll, previous activities or data will not be recoverable. Our commitment to your data security includes a straightforward, in-app process for account deletion, aligning with industry best practices to ensure user autonomy and data protection. For instructions on deleting your account or for further information, please refer to the account settings within the app."
-msgstr "Ao fazer o resgisto para uma conta de Pontos Cryptocity na Nimiq Pay, concordas com nossas práticas de gestão de dados, conforme detalhado em nossa {privacyPolicy}. Prioritizamos o teu direito à privacidade e controlo sobre os teus dados, proporcionando assim uma opção dentro da aplicação para apagar a tua conta de Pontos Cryptocity a qualquer momento. Esta ação vai remover permanentemente as tuas informações pessoais, como o teu número de telemóvel, dos nossos registos. Para impedir fraudes, um registo seguro das contas apagadas vai ser mantido por um período de 12 meses. No caso de decidires inscrever-te novamente, as atividades ou dados anteriores não podem ser recuperados. O nosso compromisso com a segurança dos teus dados inclui um processo direto na aplicação para a eliminação de contas, alinhado às melhores práticas do setor para garantir a autonomia do usuário e a proteção de dados. Para obter instruções sobre como apagar a tua conta ou obter mais informações, consulta as configurações da conta na aplicação."
+#: src/modals/DisclaimerModal.vue:15
+msgid ""
+"When you register for a Cryptocity Points account in Nimiq Pay, you consent "
+"to our data management practices as detailed in our {privacyPolicy}. We "
+"prioritize your right to privacy and control over your data, thus providing "
+"an option within the app to delete your Cryptocity Points account at any "
+"time. This action will permanently remove your personal information, such as "
+"your phone number, from our records. To deter fraud, a secure log of deleted "
+"accounts will be retained for a period of 12 months. Should you decide to re-"
+"enroll, previous activities or data will not be recoverable. Our commitment "
+"to your data security includes a straightforward, in-app process for account "
+"deletion, aligning with industry best practices to ensure user autonomy and "
+"data protection. For instructions on deleting your account or for further "
+"information, please refer to the account settings within the app."
+msgstr ""
+"Ao fazer o resgisto para uma conta de Pontos Cryptocity na Nimiq Pay, "
+"concordas com nossas práticas de gestão de dados, conforme detalhado em "
+"nossa {privacyPolicy}. Prioritizamos o teu direito à privacidade e controlo "
+"sobre os teus dados, proporcionando assim uma opção dentro da aplicação para "
+"apagar a tua conta de Pontos Cryptocity a qualquer momento. Esta ação vai "
+"remover permanentemente as tuas informações pessoais, como o teu número de "
+"telemóvel, dos nossos registos. Para impedir fraudes, um registo seguro das "
+"contas apagadas vai ser mantido por um período de 12 meses. No caso de "
+"decidires inscrever-te novamente, as atividades ou dados anteriores não "
+"podem ser recuperados. O nosso compromisso com a segurança dos teus dados "
+"inclui um processo direto na aplicação para a eliminação de contas, alinhado "
+"às melhores práticas do setor para garantir a autonomia do usuário e a "
+"proteção de dados. Para obter instruções sobre como apagar a tua conta ou "
+"obter mais informações, consulta as configurações da conta na aplicação."
 
+#: src/modals/MiniAppWarningModal.vue:57
 msgid "Why this address is flagged"
 msgstr "Porque é que este endereço foi sinalizado"
 
+#: src/components/NimWithdraw.vue:75 src/lib/flows/steps.ts:525
+#: src/views/HomeView.vue:40
 msgid "Withdraw"
 msgstr "Levantar"
 
+#: src/components/NimAddressInput.vue:46
 msgid "Withdraw to Polygon USDT addresses only!"
 msgstr "Levanta apenas para endereços USDT da Polygon!"
 
+#: src/types/transactions.ts:144
 msgid "Withdrawal"
 msgstr "Levantamento"
 
+#: src/lib/flows/index.ts:498
 msgid "Withdrawal successful"
 msgstr "Levantamento bem-sucedido"
 
+#: src/lib/flows/steps.ts:709
 msgid "Write down these words"
 msgstr "Aponta estas palavras"
 
+#: src/lib/flows/steps.ts:710
 msgid ""
 "Write the words below on a piece of paper in the exact order.\n"
 "Keep your recovery words safe and never share them with anyone!"
@@ -1610,86 +2318,288 @@ msgstr ""
 "Aponta as palavras num pedaço de papel na ordem exata.\n"
 "Mantém as tuas palavra de recuperação seguras e não as partilhes com ninguém!"
 
+#: src/modals/TaskModal.vue:109
 msgid "Wrong answer"
 msgstr "Resposta errada"
 
+#: src/composables/useStringParser.ts:236
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr "Rede errada na fatura Bitcoin Lightning."
 
+#: src/stores/local-wallet.ts:53
 msgid "Wrong number of recovery words"
 msgstr "Número errado das palavras de recuperação"
 
+#: src/lib/mini-app-confirmation.ts:113
 msgid "Yes"
 msgstr "Sim"
 
+#: src/components/NimAddressInput.vue:53
 msgid "You can not use this address"
 msgstr "Não podes usar este endereço"
 
+#: src/lib/faucet.ts:29
 msgid "You can receive more free NIM in {waitTime} hours."
 msgstr "Podes receber mais NIM grátis dentro de {waitTime} horas."
 
+#: src/components/PhoneInput.vue:23
 msgid "You can try again in {remainingTime}"
 msgstr "Podes tentar novamente em {remainingTime}"
 
+#: src/components/PaymentPreview.vue:165
 msgid "You don't have enough NIM for this purchase."
 msgstr "Não tens NIM suficiente para esta compra."
 
-msgid "You don't have enough NIM for this purchase. You can only pay with Points."
+#: src/components/PaymentPreview.vue:162
+msgid ""
+"You don't have enough NIM for this purchase. You can only pay with Points."
 msgstr "Não tens NIM suficiente para esta compra. Só podes pagar com Pontos."
 
+#: src/composables/usePointsPayment.ts:60
 msgid "You don't have enough Points for this purchase."
 msgstr "Não tens pontos suficientes para esta compra."
 
+#: src/components/PaymentAmountInput.vue:169
+#: src/components/PaymentPreview.vue:208
+#: src/composables/useUsdtQuoteRefresh.ts:45
 msgid "You don't have enough USDT to cover this payment plus Polygon fees."
-msgstr "Não tens USDT suficiente para cobrir este pagamento mais as taxas da Polygon."
+msgstr ""
+"Não tens USDT suficiente para cobrir este pagamento mais as taxas da Polygon."
 
+#: src/components/NimWithdraw.vue:189
 msgid "You don't have enough USDT to cover this withdrawal plus Polygon fees."
-msgstr "Não tens USDT suficiente para cobrir este levantamento mais as taxas da Polygon."
+msgstr ""
+"Não tens USDT suficiente para cobrir este levantamento mais as taxas da "
+"Polygon."
 
+#: src/views/HomeView.vue:200
 msgid "You have a reward to claim!"
 msgstr "Tens uma recompensa para reclamar!"
 
+#: src/components/ValidateWords.vue:17
 msgid "You have chosen \"{selected}\"."
 msgstr "Escolheste \"{selected}\"."
 
-msgid "You have not opened this address before. Read it carefully. Scammers can disguise fake sites with characters that look like normal letters."
-msgstr "Nunca abriste este endereço antes. Lê-o com atenção. Os burlões conseguem disfarçar sites falsos com caracteres que parecem letras normais."
+#: src/modals/MiniAppWarningModal.vue:26
+msgid ""
+"You have not opened this address before. Read it carefully. Scammers can "
+"disguise fake sites with characters that look like normal letters."
+msgstr ""
+"Nunca abriste este endereço antes. Lê-o com atenção. Os burlões conseguem "
+"disfarçar sites falsos com caracteres que parecem letras normais."
 
+#: src/lib/issuer-websocket.ts:63
 msgid "You have reached your daily spending limit"
 msgstr "Atingiste o teu limite diário de gastos"
 
+#: src/composables/useNotifications.ts:363
 msgid "You received {amount}"
 msgstr "Recebeste {amount}"
 
+#: src/modals/TaskModal.vue:117
 msgid "You received Cryptocity Points"
 msgstr "Recebeste Pontos Cryptocity"
 
+#: src/components/GenericInput.vue:15
 msgid "You will receive {amount} Point | You will receive {amount} Points"
 msgstr "Vais receber {amount} ponto | Vais receber {amount} pontos"
 
+#: src/lib/flows/steps.ts:248
 msgid "You will receive an SMS with a verification code"
 msgstr "Vais receber uma mensagem com um código de verificação"
 
-msgid "Your account, funds and data will be lost if you log out without a backup."
-msgstr "A tua conta, fundos e dados vai ser perdida se encerrares sessão sem um backup."
+#: src/modals/LogOutModal/Warning.vue:17
+msgid ""
+"Your account, funds and data will be lost if you log out without a backup."
+msgstr ""
+"A tua conta, fundos e dados vai ser perdida se encerrares sessão sem um "
+"backup."
 
-msgid "Your ID has been successfully verified. Tap ‘Pay’ on the start screen and chose NAKA to pay."
-msgstr "A tua identidade foi verificada com sucesso. Toca em ‘Pagar’ no ecrã inicial e escolhe NAKA para pagar."
-
-msgid "Your NAKA Card is ready!"
-msgstr "O teu cartão NAKA está pronto!"
-
+#: src/components/PaymentPreview.vue:159
 msgid "Your NIM balance is not available yet. You can only pay with Points."
 msgstr "O teu saldo NIM ainda não está disponível. Só podes pagar com Pontos."
 
+#: src/components/PhoneInput.vue:9
 msgid "Your number"
 msgstr "O teu número"
 
+#: src/components/TheHomeTransactions.vue:58
 msgid "Your testnet account is empty."
 msgstr "A tua conta na testnet está vazia."
 
+#: src/modals/MiniAppWarningModal.vue:82
 msgid "zero-width character (invisible)"
 msgstr "carácter de largura zero (invisível)"
+
+#~ msgid "Activate NAKA Card"
+#~ msgstr "Ativar cartão NAKA"
+
+#~ msgid "Activate NAKA for contactless payments"
+#~ msgstr "Ativar o NAKA para pagamentos sem contacto"
+
+#~ msgid "Add new card"
+#~ msgstr "Adicionar novo cartão"
+
+#~ msgid "Amount exceeds daily limit of {fiatAmount}"
+#~ msgstr "O valor excede o limite diário de {fiatAmount}"
+
+#~ msgid "Amount exceeds payment limit of {fiatAmount}"
+#~ msgstr "O valor excede o limite de pagamento de {fiatAmount}"
+
+#~ msgid "Block"
+#~ msgstr "Bloquear"
+
+#~ msgid "Block card"
+#~ msgstr "Bloquear cartão"
+
+#~ msgid ""
+#~ "Blocking your card will permanently disable it. Your funds will not be "
+#~ "affected and will remain safely in your account. You can always create a "
+#~ "new card after you have blocked your current one."
+#~ msgstr ""
+#~ "Bloquear o teu cartão irá desativá-lo permanentemente. Os teus fundos não "
+#~ "serão afetados e permanecerão seguros na tua conta. Podes sempre criar um "
+#~ "novo cartão depois de bloqueares o atual."
+
+#~ msgid "Cannot verify daily limits: {error}"
+#~ msgstr "Não é possível verificar os limites diários: {error}"
+
+#~ msgid ""
+#~ "Cannot verify daily limits: asked for {expectedCurrency} but got "
+#~ "{actualCurrency}"
+#~ msgstr ""
+#~ "Não é possível verificar os limites diários: foi pedido "
+#~ "{expectedCurrency}, mas foi recebido {actualCurrency}"
+
+#~ msgid "Cannot verify payment limits: {error}"
+#~ msgstr "Não é possível verificar os limites de pagamento: {error}"
+
+#~ msgid ""
+#~ "Cannot verify payment limits: asked for {expectedCurrency} but got "
+#~ "{actualCurrency}"
+#~ msgstr ""
+#~ "Não é possível verificar os limites de pagamento: foi pedido "
+#~ "{expectedCurrency}, mas foi recebido {actualCurrency}"
+
+#~ msgid "Card blocked"
+#~ msgstr "Cartão bloqueado"
+
+#~ msgid "Card locked"
+#~ msgstr "Cartão temporariamente bloqueado"
+
+#~ msgid "Card unlocked"
+#~ msgstr "Cartão desbloqueado"
+
+#~ msgid "Daily limit"
+#~ msgstr "Limite diário"
+
+#~ msgid "Failed to activate NAKA Card on device: {error}"
+#~ msgstr "Falha ao ativar o cartão NAKA no dispositivo: {error}"
+
+#~ msgid "Hold the button to confirm."
+#~ msgstr "Mantém o botão pressionado para confirmar."
+
+#~ msgid "I agree to NAKA Card's {terms}"
+#~ msgstr "Aceito os {terms} do cartão NAKA"
+
+#~ msgid "Identification is not verified. Please contact support."
+#~ msgstr "A identificação não está verificada. Contacta o suporte."
+
+#~ msgid "Insufficient balance"
+#~ msgstr "Saldo insuficiente"
+
+#~ msgid ""
+#~ "KYC verification in progress, we will notify you once it is completed."
+#~ msgstr ""
+#~ "Verificação KYC em curso, vamos notificar-te assim que estiver concluída."
+
+#~ msgid "Lock card"
+#~ msgstr "Bloquear cartão temporariamente"
+
+#~ msgid "Naka"
+#~ msgstr "Naka"
+
+#~ msgid "NAKA Card"
+#~ msgstr "Cartão NAKA"
+
+#~ msgid ""
+#~ "NAKA works just like a credit card. Pay with NIM simply by tapping your "
+#~ "phone wherever NAKA is accepted."
+#~ msgstr ""
+#~ "O NAKA funciona como um cartão de crédito. Paga com NIM aproximando "
+#~ "simplesmente o teu telemóvel onde quer que o NAKA seja aceite."
+
+#~ msgid "Pay with NAKA Card"
+#~ msgstr "Pagar com o cartão NAKA"
+
+#~ msgid "Payment limit"
+#~ msgstr "Limite de pagamento"
+
+#~ msgid "Payment limits"
+#~ msgstr "Limites de pagamento"
+
+#~ msgid "Please verify yourself with SumSub to activate your NAKA Card."
+#~ msgstr ""
+#~ "Verifica a tua identidade com a SumSub para ativar o teu cartão NAKA."
+
+#~ msgid "save"
+#~ msgstr "guardar"
+
+#~ msgid "Scan QR"
+#~ msgstr "Digitalizar QR"
+
+#~ msgid "Tap to pay with NAKA!"
+#~ msgstr "Toca para pagar com NAKA!"
+
+#~ msgid "Terms & Conditions"
+#~ msgstr "Termos e condições"
+
+#~ msgid ""
+#~ "There was an error setting up your NAKA Card. Please try again later."
+#~ msgstr ""
+#~ "Ocorreu um erro ao configurar o teu cartão NAKA. Tenta novamente mais "
+#~ "tarde."
+
+#~ msgid ""
+#~ "This is your last card. If you block it, you will need to contact support "
+#~ "for a replacement."
+#~ msgstr ""
+#~ "Este é o teu último cartão. Se o bloqueares, terás de contactar o suporte "
+#~ "para obter um substituto."
+
+#~ msgid "Trigger a payment on the issuer"
+#~ msgstr "Acionar um pagamento no emissor"
+
+#~ msgid "Unlock card"
+#~ msgstr "Desbloquear cartão"
+
+#~ msgid "Verify ID"
+#~ msgstr "Verificar identidade"
+
+#~ msgid ""
+#~ "Your ID has been successfully verified. Tap ‘Pay’ on the start screen and "
+#~ "chose NAKA to pay."
+#~ msgstr ""
+#~ "A tua identidade foi verificada com sucesso. Toca em ‘Pagar’ no ecrã "
+#~ "inicial e escolhe NAKA para pagar."
+
+#~ msgid "Your NAKA Card is ready!"
+#~ msgstr "O teu cartão NAKA está pronto!"
+
+#~ msgid "NAKA Support"
+#~ msgstr "Suporte NAKA"
+
+#~ msgid "No account found"
+#~ msgstr "Conta não encontrada"
+
+#~ msgid "Transaction already sent"
+#~ msgstr "Transação já enviada"
+
+#~ msgid "Transaction failed: {error}"
+#~ msgstr "Transação falhou: {error}"
+
+#~ msgid "Unknown error"
+#~ msgstr "Erro desconhecido"
 
 #~ msgid "Payment received"
 #~ msgstr "Pagamento recebido"
@@ -1731,8 +2641,13 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgid "Your wallet is ready to use"
 #~ msgstr "A tua wallet está pronta para usar"
 
-#~ msgid "Cryptocity Points are loyalty reward points which you can earn and pay with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
-#~ msgstr "Os Pontos Cryptocity são pontos de recompensa de fidelidade que podes ganhar e usar como pagamento. Eles têm o mesmo valor que NIM (1 ponto Cryptocity: 1 NIM)."
+#~ msgid ""
+#~ "Cryptocity Points are loyalty reward points which you can earn and pay "
+#~ "with. They are worth the same as NIM (1 Cryptocity Point : 1 NIM)."
+#~ msgstr ""
+#~ "Os Pontos Cryptocity são pontos de recompensa de fidelidade que podes "
+#~ "ganhar e usar como pagamento. Eles têm o mesmo valor que NIM (1 ponto "
+#~ "Cryptocity: 1 NIM)."
 
 #~ msgid "Find places to pay with, and earn Cryptocity Points"
 #~ msgstr "Encontra lugares para pagar e ganhar Pontos Cryptocity"
@@ -1753,7 +2668,8 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgstr "Submeter"
 
 #~ msgid "We value your opinion. Please enter at least ten characters."
-#~ msgstr "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
+#~ msgstr ""
+#~ "Valorizamos a tua opinião. Por favor insere pelo menos dez caracteres."
 
 #, fuzzy
 #~| msgid "Failed to fetch payment request"
@@ -1761,8 +2677,10 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgstr "Falha ao buscar pedido de pagamento"
 
 #, fuzzy
-#~| msgid "Pay with Cryptocity Points instead of NIM wherever they're accepted."
-#~ msgid "Pay with Cryptocity Points instead of USDT wherever they're accepted."
+#~| msgid ""
+#~| "Pay with Cryptocity Points instead of NIM wherever they're accepted."
+#~ msgid ""
+#~ "Pay with Cryptocity Points instead of USDT wherever they're accepted."
 #~ msgstr "Pagar com Pontos Cryptocity em vez de NIM sempre que for aceite."
 
 #~ msgid "Open Wallet"
@@ -1804,17 +2722,29 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgid "Error during {method} request to {url}: {error}"
 #~ msgstr "Erro durante o pedido {method} para {url}: {error}"
 
-#~ msgid "Error fetching API {url}: {status} - {statusText}. Received data: {data}. Response metadata: {metadata}."
-#~ msgstr "Erro ao obter API {url}: {status} - {statusText}. Dados recebidos: {data}. Resposta metadata: {metadata}."
+#~ msgid ""
+#~ "Error fetching API {url}: {status} - {statusText}. Received data: {data}. "
+#~ "Response metadata: {metadata}."
+#~ msgstr ""
+#~ "Erro ao obter API {url}: {status} - {statusText}. Dados recebidos: "
+#~ "{data}. Resposta metadata: {metadata}."
 
-#~ msgid "If you already made a payment which was not accepted, please contact GoCrypto for a refund."
-#~ msgstr "Se já fizeste um pagamento que não foi aceite, por favor contacta GoCrypto para um reembolso."
+#~ msgid ""
+#~ "If you already made a payment which was not accepted, please contact "
+#~ "GoCrypto for a refund."
+#~ msgstr ""
+#~ "Se já fizeste um pagamento que não foi aceite, por favor contacta "
+#~ "GoCrypto para um reembolso."
 
 #~ msgid "If you already made a payment, wait for it to be confirmed instead."
 #~ msgstr "Se já fizeste um pagamento, espera então que seja confirmado."
 
-#~ msgid "If you're in the same WiFi as the merchant, try both switching to mobile data. Otherwise, try again in one hour."
-#~ msgstr "Se estás a usar o mesmo WiFi que o comerciante, tentem os dois mudar para dados móveis. Caso contrário, tenta novamente daqui a uma hora."
+#~ msgid ""
+#~ "If you're in the same WiFi as the merchant, try both switching to mobile "
+#~ "data. Otherwise, try again in one hour."
+#~ msgstr ""
+#~ "Se estás a usar o mesmo WiFi que o comerciante, tentem os dois mudar para "
+#~ "dados móveis. Caso contrário, tenta novamente daqui a uma hora."
 
 #~ msgid "Invalid API response"
 #~ msgstr "Resposta do API inválida"
@@ -1823,10 +2753,13 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgstr "Conida um amigo e ganhem até 200 pontos cada!"
 
 #~ msgid "Please ask the merchant to check the status of your payment."
-#~ msgstr "Por favor pergunta ao comerciante para verificar o estado do teu pagamento."
+#~ msgstr ""
+#~ "Por favor pergunta ao comerciante para verificar o estado do teu "
+#~ "pagamento."
 
 #~ msgid "Please ask the merchant to create a new payment request."
-#~ msgstr "Por favor pergunta ao comerciante para criar um novo pedido de pagamento."
+#~ msgstr ""
+#~ "Por favor pergunta ao comerciante para criar um novo pedido de pagamento."
 
 #~ msgid "Received an invalid response from GoCrypto: {errorMessage}"
 #~ msgstr "Recebida uma resposta inválida de GoCrypto: {errorMessage}"
@@ -1841,19 +2774,26 @@ msgstr "carácter de largura zero (invisível)"
 #~ msgstr "O pedido de pagamento está prestes a expirar"
 
 #~ msgid "The payment request might have been paid, expired, or cancelled."
-#~ msgstr "O pedido de pagamento pode já ter sido pago, expirou, ou foi cancelado."
+#~ msgstr ""
+#~ "O pedido de pagamento pode já ter sido pago, expirou, ou foi cancelado."
 
 #~ msgid "The payment request was cancelled"
 #~ msgstr "O pedido de pagamento foi cancelado"
 
-#~ msgid "This is an early beta version, please report any bugs and remember to backup your words"
-#~ msgstr "Esta é uma versão inicial beta, por favor reporta quaisquer erros e lembra-te de fazer backup às tuas palavras"
+#~ msgid ""
+#~ "This is an early beta version, please report any bugs and remember to "
+#~ "backup your words"
+#~ msgstr ""
+#~ "Esta é uma versão inicial beta, por favor reporta quaisquer erros e "
+#~ "lembra-te de fazer backup às tuas palavras"
 
 #~ msgid "To credit card / bank account"
 #~ msgstr "Para cartão de crédito/conta bancária"
 
 #~ msgid "You cannot pay with NIM yet, wait until the Top-Up is completed"
-#~ msgstr "Ainda não podes pagar com NIM, espera até o recarregamento do saldo esteja concluído"
+#~ msgstr ""
+#~ "Ainda não podes pagar com NIM, espera até o recarregamento do saldo "
+#~ "esteja concluído"
 
 #~ msgid "Your payment is invalid"
 #~ msgstr "O teu pagamento é inválido"
