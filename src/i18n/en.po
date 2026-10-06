@@ -101,7 +101,7 @@ msgid "Alias (optional)"
 msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:89
-#: src/components/NimWithdraw.vue:63
+#: src/components/NimWithdraw.vue:64
 msgid "All"
 msgstr ""
 
@@ -2171,7 +2171,7 @@ msgstr ""
 msgid "Why this address is flagged"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:74
+#: src/components/NimWithdraw.vue:75
 #: src/lib/flows/steps.ts:525
 #: src/views/HomeView.vue:40
 msgid "Withdraw"

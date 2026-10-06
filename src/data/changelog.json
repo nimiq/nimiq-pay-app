@@ -1,5 +1,31 @@
 [
   {
+    "version": "2.22.0",
+    "date": "2026-10-06",
+    "highlights": [
+      {
+        "title": "Safer swap fees and refunds",
+        "description": "The fee you see before a swap is now the most you'll pay, even if network fees go up while you confirm. Refunds from failed swaps are also tracked more reliably, so your funds come back and show up correctly."
+      },
+      {
+        "title": "More reliable syncing",
+        "description": "The app recovers better when the network connection drops or a sync step fails, so your balance and transactions stay up to date during longer sessions."
+      },
+      {
+        "title": "Clearer wallet status on startup",
+        "description": "Your funded wallet no longer shows \"Processing funds\" for a while after you open the app. Claimed cashback now also updates in your transaction list right away."
+      },
+      {
+        "title": "Smoother screens and Mini Apps",
+        "description": "When the keyboard is open, the Withdraw button stays in view and the screen moves up properly, for example when you enter your PIN. Mini App logos now show in full in their dialogs. USDT payments now show a clear notice during scheduled maintenance."
+      },
+      {
+        "title": "Crypto Map removed",
+        "description": "The Crypto Map service has been shut down, so its button and map views are no longer in the app."
+      }
+    ]
+  },
+  {
     "version": "2.21.1",
     "date": "2026-09-28",
     "highlights": [
