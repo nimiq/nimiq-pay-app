@@ -79,7 +79,7 @@ msgstr ""
 msgid "Address missing"
 msgstr ""
 
-#: src/lib/flows/index.ts:539
+#: src/lib/flows/index.ts:540
 msgid "Address saved"
 msgstr ""
 
@@ -97,7 +97,7 @@ msgid "Alias (optional)"
 msgstr ""
 
 #: src/components/competition/MiniAppsCompetitionView.vue:89
-#: src/components/NimWithdraw.vue:63
+#: src/components/NimWithdraw.vue:64
 msgid "All"
 msgstr ""
 
@@ -163,7 +163,7 @@ msgstr ""
 msgid "Backup Account"
 msgstr ""
 
-#: src/lib/flows/index.ts:592
+#: src/lib/flows/index.ts:593
 msgid "Backup successful"
 msgstr ""
 
@@ -1255,7 +1255,7 @@ msgstr ""
 msgid "Payment Secret"
 msgstr ""
 
-#: src/lib/flows/index.ts:403
+#: src/lib/flows/index.ts:404
 msgid "Payment successful"
 msgstr ""
 
@@ -1298,7 +1298,7 @@ msgstr ""
 msgid "Phone number not verified"
 msgstr ""
 
-#: src/lib/flows/index.ts:621
+#: src/lib/flows/index.ts:622
 msgid "PIN change successful"
 msgstr ""
 
@@ -1615,8 +1615,8 @@ msgstr ""
 
 #: src/composables/useApi.ts:220
 #: src/composables/useApi.ts:63
-#: src/lib/flows/index.ts:481
-#: src/lib/flows/index.ts:490
+#: src/lib/flows/index.ts:482
+#: src/lib/flows/index.ts:491
 msgid "Something went wrong"
 msgstr ""
 
@@ -1784,7 +1784,7 @@ msgstr ""
 msgid "The payment amount exceeds the allowed limit"
 msgstr ""
 
-#: src/lib/flows/index.ts:608
+#: src/lib/flows/index.ts:609
 msgid "The PINs do not match"
 msgstr ""
 
@@ -1793,8 +1793,8 @@ msgstr ""
 msgid "The QR scanner is not ready yet. Please wait."
 msgstr ""
 
-#: src/lib/flows/index.ts:321
-#: src/lib/flows/index.ts:483
+#: src/lib/flows/index.ts:322
+#: src/lib/flows/index.ts:484
 #: src/stores/polygon-usdt.ts:2135
 #: src/stores/polygon-usdt.ts:2147
 #: src/stores/polygon-usdt.ts:2171
@@ -1989,7 +1989,7 @@ msgstr ""
 msgid "USDT payments are temporarily unavailable due to maintenance. Please try again later."
 msgstr ""
 
-#: src/lib/flows/index.ts:339
+#: src/lib/flows/index.ts:340
 msgid "USDT staking requests are not supported"
 msgstr ""
 
@@ -2157,7 +2157,7 @@ msgstr ""
 msgid "Why this address is flagged"
 msgstr ""
 
-#: src/components/NimWithdraw.vue:74
+#: src/components/NimWithdraw.vue:75
 #: src/lib/flows/steps.ts:525
 #: src/views/HomeView.vue:40
 msgid "Withdraw"
@@ -2171,7 +2171,7 @@ msgstr ""
 msgid "Withdrawal"
 msgstr ""
 
-#: src/lib/flows/index.ts:497
+#: src/lib/flows/index.ts:498
 msgid "Withdrawal successful"
 msgstr ""
 
