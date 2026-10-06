@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- assertVisible: ${output.navigation.earnPointsBtn}
+- tapOn: ${output.navigation.earnPointsBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.cryptocityPoints.comingSoonMessage}
+
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- stopApp

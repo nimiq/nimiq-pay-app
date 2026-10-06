@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.topUpBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.topUp.title}
+- assertVisible:
+    text: ${output.topUp.addressPrefix}
+- assertVisible: ${output.topUp.copyAddress}
+
+- back
+- waitForAnimationToEnd
+- stopApp

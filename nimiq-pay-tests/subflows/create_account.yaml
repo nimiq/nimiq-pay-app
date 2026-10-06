@@ -1,0 +1,38 @@
+appId: ${APP_ID}
+---
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- launchApp:
+    clearState: true
+
+- extendedWaitUntil:
+    visible: ${output.launchScreen.getStartedBtn}
+    timeout: 45000
+- tapOn: ${output.launchScreen.getStartedBtn}
+- extendedWaitUntil:
+    visible: ${output.onboarding.choosePinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.onboarding.confirmPinTitle}
+    timeout: 10000
+- inputText: ${PIN}
+- waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.biometricTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- runFlow:
+    when:
+      visible: ${output.onboarding.enableNotificationsTitle}
+    commands:
+      - tapOn: ${output.onboarding.skipForNowBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 45000

@@ -1,0 +1,28 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.logoutBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.logoutBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.logout.title}
+- assertVisible:
+    text: ${output.logout.instructions}
+- assertVisible: ${output.logout.confirmBtn}
+
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.home.payTitle}
+
+- stopApp

@@ -1,0 +1,31 @@
+appId: ${APP_ID}
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+- tapOn: ${output.navigation.openMenuBtn}
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: ${output.navigation.aboutBtn}
+    timeout: 5000
+- assertVisible: ${output.navigation.aboutBtn}
+- tapOn: ${output.navigation.aboutBtn}
+
+- runFlow:
+    when:
+      visible: ${output.about.staySignedOutBtn}
+    commands:
+      - tapOn: ${output.about.staySignedOutBtn}
+      - waitForAnimationToEnd
+
+- extendedWaitUntil:
+    visible: ${output.about.pageUrl}
+    timeout: 10000
+- assertVisible: ${output.about.pageUrl}
+
+- stopApp

@@ -1,0 +1,104 @@
+name: Nimiq Pay - Maestro Suite Android (Suite Only)
+
+#This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
+#Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
+
+
+on:
+  push:
+    branches:
+      - feature/maestro-improvements
+  workflow_dispatch:
+
+jobs:
+  upload_maestro_suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload Maestro suite to BrowserStack
+        run: node scripts/browserstack-maestro-upload.js --custom-id francisco_tests
+
+  run_browserstack_maestro:
+    needs: upload_maestro_suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+      BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+      BROWSERSTACK_DEVICE: "Samsung Galaxy Tab S9-13.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Maestro flows on BrowserStack
+        # The folder's flows target com.nimiq.pay.debug and need the Mini Apps build, so this
+        # relies on the debug APK uploaded as NimiqPayAndroidApkDebug, not the release one.
+        run: |
+          shopt -s nullglob
+          flow_files=(nimiq-pay-tests/flows/francisco_tests/*.yaml)
+          if (( ${#flow_files[@]} == 0 )); then
+            echo "No Maestro flows found in nimiq-pay-tests/flows/francisco_tests."
+            exit 1
+          fi
+
+          test_exit_code=0
+          for flow_file in "${flow_files[@]}"; do
+            flow="${flow_file#nimiq-pay-tests/}"
+            flow_name="$(basename "$flow_file" .yaml)"
+            mkdir -p "./maestro-reports/$flow_name"
+            echo "Running $flow"
+            if ! node scripts/browserstack-maestro-run.js \
+              --app NimiqPayAndroidApkDebug \
+              --suite francisco_tests \
+              --device "Samsung Galaxy Tab S9-13.0" \
+              --flow "$flow" \
+              --env APP_ID=com.nimiq.pay.debug \
+              --env PIN=1111 \
+              --output "./maestro-reports/$flow_name" \
+              --timeout 3000; then
+              test_exit_code=1
+            fi
+          done
+          exit "$test_exit_code"
+
+      - name: Generate consolidated HTML report
+        if: always()
+        run: node scripts/browserstack-maestro-aggregate-report.js ./maestro-reports
+
+      - name: "Publish test results on Maestro Results Repo"
+        # The run step exits non-zero when tests fail, so publish the report regardless.
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
+          external_repository: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
+          publish_dir: './maestro-reports'
+          keep_files: true
+
+  slackNotification:
+    if: always()
+    needs: run_browserstack_maestro
+    name: Automation Tests Status
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Slack Notification
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_COLOR: ${{ job.status }}
+        SLACK_ICON: https://github.com/rtCamp.png?size=48
+        SLACK_MESSAGE: "Maestro Test Suite results: ${{ job.status }} URL: https://maestro-nimiq-pay-android-results.netlify.app/"
+        SLACK_TITLE: Automation Tests Status
+        SLACK_USERNAME: Francisco_Diaz
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}

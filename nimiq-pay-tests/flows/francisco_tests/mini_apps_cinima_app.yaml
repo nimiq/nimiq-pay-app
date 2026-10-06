@@ -1,0 +1,37 @@
+appId: ${APP_ID}
+
+name: Mini Apps Cinima App
+
+tags:
+  - franciscoTest
+
+---
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Mini Apps button lives in the Home footer, bottom right.
+- assertVisible: ${output.navigation.miniAppsBtn}
+- tapOn: ${output.navigation.miniAppsBtn}
+- waitForAnimationToEnd
+
+- assertVisible: ${output.miniApps.discoverTitle}
+- tapOn:
+    id: ${output.miniApps.searchInputId}
+- inputText: Cinima
+- waitForAnimationToEnd
+- assertVisible: ${output.miniApps.matchingAppsTitle}
+- assertVisible: ${output.miniApps.cinimaEntry}
+
+- tapOn: ${output.miniApps.cinimaEntry}
+
+# The native webview is presented only after the page loads, so the modal being covered
+# plus the toolbar title appearing is what proves Cinima actually loaded.
+- extendedWaitUntil:
+    notVisible: ${output.miniApps.discoverTitle}
+    timeout: 60000
+- extendedWaitUntil:
+    visible: ${output.miniApps.cinimaAppTitle}
+    timeout: 60000
+
+- stopApp
