@@ -84,3 +84,7 @@ The camera feed in mobile is weird. The Camera API for both Android and iOS, cre
 This creates an interesting challenge, since we need to make a "hole" in the WebView to show the camera feed. You can read more about this
 in the [useCameraFeed](./src/composables/useCameraFeed.ts) composable. In web,
 we just create a video element where we show the camera feed. Ez.
+
+## License
+
+Nimiq Pay is licensed under the [GNU General Public License v3.0 only](./LICENSE) (`GPL-3.0-only`).
