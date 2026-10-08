@@ -8,6 +8,7 @@ const closeModal = vi.fn()
 const htlcHistoryChecked = shallowRef<boolean | undefined>(false)
 const htlcCheckHoldStartedAt = shallowRef<number | undefined>()
 const consensus = shallowRef('established')
+let selfModal: HTMLIonModalElement
 
 vi.mock('@ionic/vue', () => {
   const passthrough = (tag: string) => defineComponent({
@@ -23,7 +24,7 @@ vi.mock('@ionic/vue', () => {
     IonHeader: passthrough('header'),
     IonIcon: passthrough('span'),
     IonToolbar: passthrough('div'),
-    modalController: { getTop: vi.fn(() => Promise.resolve({})) },
+    modalController: { getTop: vi.fn(async () => Array.from(document.querySelectorAll('ion-modal:not(.overlay-hidden)')).at(-1)) },
   }
 })
 
@@ -48,7 +49,7 @@ function $t(key: string, params?: Record<string, unknown>) {
 
 async function mountModal() {
   const { default: HtlcHistoryCheckModal } = await import('./HtlcHistoryCheckModal.vue')
-  return mount(HtlcHistoryCheckModal, { global: { mocks: { $t } } })
+  return mount(HtlcHistoryCheckModal, { attachTo: selfModal, global: { mocks: { $t } } })
 }
 
 describe('htlcHistoryCheckModal', () => {
@@ -62,10 +63,15 @@ describe('htlcHistoryCheckModal', () => {
     htlcHistoryChecked.value = false
     htlcCheckHoldStartedAt.value = Date.now()
     consensus.value = 'established'
+    // Ionic mounts the contents while their owning overlay is still hidden.
+    selfModal = document.createElement('ion-modal')
+    selfModal.classList.add('overlay-hidden')
+    document.body.appendChild(selfModal)
   })
 
   afterEach(() => {
     vi.useRealTimers()
+    document.querySelectorAll('ion-modal').forEach(modal => modal.remove())
   })
 
   it('shows how much of the hold has passed and the time left at most', async () => {
@@ -100,6 +106,7 @@ describe('htlcHistoryCheckModal', () => {
     await nextTick()
 
     expect(closeModal).toHaveBeenCalledOnce()
+    expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
   })
 
   it('closes itself once the hold limit releases the funds', async () => {
@@ -109,6 +116,7 @@ describe('htlcHistoryCheckModal', () => {
     await nextTick()
 
     expect(closeModal).toHaveBeenCalledOnce()
+    expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
   })
 
   it('closes itself when the check finished while it was loading', async () => {
@@ -118,5 +126,29 @@ describe('htlcHistoryCheckModal', () => {
     await Promise.resolve()
 
     expect(closeModal).toHaveBeenCalledOnce()
+    expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
+  })
+
+  it('closes itself manually when another modal is underneath', async () => {
+    const underlyingModal = document.createElement('ion-modal')
+    document.body.insertBefore(underlyingModal, selfModal)
+    const wrapper = await mountModal()
+    selfModal.classList.remove('overlay-hidden')
+
+    await wrapper.find('button').trigger('click')
+
+    expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
+  })
+
+  it('closes itself automatically when another modal is underneath', async () => {
+    const underlyingModal = document.createElement('ion-modal')
+    document.body.insertBefore(underlyingModal, selfModal)
+    await mountModal()
+    selfModal.classList.remove('overlay-hidden')
+
+    htlcHistoryChecked.value = true
+    await nextTick()
+
+    expect(closeModal).toHaveBeenCalledWith({ modal: selfModal })
   })
 })

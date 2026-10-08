@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar, modalController } from '@ionic/vue'
+import { IonButton, IonButtons, IonHeader, IonIcon, IonToolbar } from '@ionic/vue'
 import { useNow } from '@vueuse/core'
 import { close } from 'ionicons/icons'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import CircularProgress from '@/components/icons/CircularProgress.vue'
 import WorldIcon from '@/components/icons/WorldIcon.vue'
 import { useModal } from '@/composables/useModal'
@@ -24,12 +24,13 @@ const progress = computed(() => {
 // The check passing marks it checked; the hold ending (limit, funded HTLC, no local funds) clears the start.
 const isReleased = computed(() => htlcHistoryChecked.value || htlcCheckHoldStartedAt.value === undefined)
 
-// Pin to this specific modal so a later-stacked modal isn't dismissed instead.
+const content = ref<HTMLElement>()
+// Ionic mounts contents before presentation, so getTop() can still return an underlying modal.
 let selfModal: HTMLIonModalElement | undefined
-onMounted(async () => {
-  selfModal = await modalController.getTop()
+onMounted(() => {
+  selfModal = content.value?.closest('ion-modal') ?? undefined
   // The hold may end while this modal is still loading, before the watcher exists.
-  if (isReleased.value)
+  if (isReleased.value && selfModal)
     closeModal({ modal: selfModal })
 })
 
@@ -52,7 +53,7 @@ const minutesLeft = computed(() => Math.max(1, Math.ceil((maxProgress - progress
       </IonButtons>
     </IonToolbar>
   </IonHeader>
-  <div class="flex flex-col items-center h-full p-8 pt-0 gap-4">
+  <div ref="content" class="flex flex-col items-center h-full p-8 pt-0 gap-4">
     <h1 class="text-2xl font-bold text-center">
       {{ $t('Checking your account') }}
     </h1>
