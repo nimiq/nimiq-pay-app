@@ -17,7 +17,21 @@ const activeAsset = ref<Asset>(Asset.NIM)
 const localBalance = ref(0)
 const pendingNimSince = ref(0)
 const hasDismissedPendingNimHint = ref(false)
-const handleFunds = vi.fn()
+const handleFunds = vi.fn(async (_bypassThreshold?: boolean) => {})
+const htlcHistoryChecked = ref<boolean | undefined>(false)
+const htlcCheckHoldStartedAt = ref<number | undefined>()
+const showModal = vi.fn()
+const getTopModal = vi.fn(() => Promise.resolve(undefined as unknown))
+
+vi.mock('@ionic/vue', async importOriginal => ({
+  ...await importOriginal<typeof import('@ionic/vue')>(),
+  modalController: { getTop: () => getTopModal() },
+}))
+
+vi.mock('@/composables/useModal', () => ({
+  Modal: { HtlcHistoryCheck: 'HtlcHistoryCheck' },
+  useModal: () => ({ showModal }),
+}))
 
 vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
@@ -38,6 +52,8 @@ vi.mock('@/stores/polygon-usdt', () => ({
 vi.mock('@/stores/sync', () => ({
   useSync: () => ({
     isTransactionPending,
+    htlcHistoryChecked,
+    htlcCheckHoldStartedAt,
     handleFunds,
   }),
 }))
@@ -175,7 +191,12 @@ describe('theHomeAmounts', () => {
     localBalance.value = 0
     pendingNimSince.value = 0
     hasDismissedPendingNimHint.value = false
-    handleFunds.mockReset()
+    handleFunds.mockReset().mockResolvedValue(undefined)
+    htlcHistoryChecked.value = false
+    htlcCheckHoldStartedAt.value = undefined
+    showModal.mockReset()
+    getTopModal.mockReset()
+    getTopModal.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -421,6 +442,31 @@ describe('theHomeAmounts', () => {
 
     expect(handleFunds).toHaveBeenCalledWith(true)
     expect(hasDismissedPendingNimHint.value).toBe(true)
+  })
+
+  it.each([
+    ['re-explains a hold that is already running', 1, 1, undefined, true],
+    ['does not stack the explanation over an open modal', 1, 1, {}, false],
+    ['leaves a hold this tap starts to HomeView', undefined, 1, undefined, false],
+    ['stays quiet when the top-up was not held', undefined, undefined, undefined, false],
+  ])('%s', async (_, heldBefore, holdStartedAt, topModal, shown) => {
+    homeBalanceState.value = 'resolved-remote'
+    localBalance.value = 10
+    htlcCheckHoldStartedAt.value = heldBefore
+    getTopModal.mockResolvedValue(topModal)
+    handleFunds.mockImplementation(async () => {
+      htlcCheckHoldStartedAt.value = holdStartedAt
+    })
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+    await wrapper.get('[data-tour="pending-topup"]').trigger('click')
+    await flushPromises()
+
+    if (shown)
+      expect(showModal).toHaveBeenCalledExactlyOnceWith('HtlcHistoryCheck', { isOnTop: true, isSmall: true, canDismiss: false })
+    else
+      expect(showModal).not.toHaveBeenCalled()
   })
 
   it('hides the pending top-up line for USDT even when localBalance is set', async () => {

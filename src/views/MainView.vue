@@ -46,7 +46,7 @@ const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(usePolygonUsdt())
-const { isTransactionPending, hasPendingHtlcCreation, htlcCanBeExtended, blocksUntilNextMacroBlock } = storeToRefs(useSync())
+const { isTransactionPending, hasPendingHtlcCreation, htlcCanBeExtended, blocksUntilNextMacroBlock, htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
 
@@ -116,6 +116,15 @@ watchEffect(async () => {
       statusMessageIcon.value = markRaw(AlertIcon)
       isStatusMessageShown.value = true
     }
+  }
+  // handleFunds is holding new funds while a fresh database checks for older HTLCs.
+  else if (htlcCheckHoldStartedAt.value !== undefined && !htlcHistoryChecked.value) {
+    statusMessageText.value = i18n.t('Checking your account')
+    statusMessageBgColor.value = 'bg-[#F9EDE1]'
+    statusMessageTextColor.value = 'text-pumpkin'
+    statusMessageIconColor.value = 'text-pumpkin/60'
+    statusMessageIcon.value = markRaw(InfoIcon)
+    isStatusMessageShown.value = true
   }
   // Local funds are just accumulating (shown as "pending"), not processing, only while they're
   // below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:

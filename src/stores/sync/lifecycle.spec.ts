@@ -55,6 +55,29 @@ describe('useSyncLifecycle', () => {
       expect(state.client.waitForConsensusEstablished).not.toHaveBeenCalled()
     })
 
+    it.each([['1', true], [undefined, false]])('loads the HTLC history check from this wallet\'s DB (%s)', async (stored, checked) => {
+      state.consensus = 'connecting'
+      state.kvGetItem.mockImplementation(key => Promise.resolve(key === 'htlcHistoryChecked' ? stored : undefined))
+      const { useSyncState } = await import('./state')
+      // Logout and restore reload the page, so a sync starts from unloaded state.
+      useSyncState().htlcHistoryChecked = undefined
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      await useSyncLifecycle().syncWallets()
+
+      expect(useSyncState().htlcHistoryChecked).toBe(checked)
+    })
+
+    it('keeps syncing when the HTLC history check state cannot be read', async () => {
+      state.consensus = 'connecting'
+      state.kvGetItem.mockRejectedValue(new Error('database closed'))
+      const { useSyncLifecycle } = await import('./lifecycle')
+
+      await useSyncLifecycle().syncWallets()
+
+      expect(state.restorePendingOutgoingTransactions).toHaveBeenCalledOnce()
+    })
+
     it('restores pending outgoing transactions before remote signer initialization', async () => {
       state.consensus = 'connecting'
       const { useSyncLifecycle } = await import('./lifecycle')
@@ -84,7 +107,7 @@ describe('useSyncLifecycle', () => {
     it('registers the incoming listener before slow signer verification', async () => {
       state.consensus = 'connecting'
       let finishVerification!: () => void
-      state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise<any>(resolve => finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })))
+      state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise<any>(resolve => finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })))
       const { useSyncLifecycle } = await import('./lifecycle')
       const lifecycle = useSyncLifecycle()
       state.consensus = 'established'
@@ -113,7 +136,7 @@ describe('useSyncLifecycle', () => {
       }))
       let finishVerification!: () => void
       state.discoverRemoteSignersFromBlockchain.mockReturnValue(new Promise((resolve) => {
-        finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+        finishVerification = () => resolve({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
       }))
       const { useSyncLifecycle } = await import('./lifecycle')
       const lifecycle = useSyncLifecycle()
@@ -916,6 +939,70 @@ describe('useSyncLifecycle', () => {
       await vi.waitFor(() => expect(state.restorePendingOutgoingTransactions).toHaveBeenCalledOnce())
       expect(state.initRemoteSigner).toHaveBeenCalledOnce()
       expect(updateSingleTransaction).toHaveBeenCalledWith('pending-hash')
+    })
+
+    it('runs an unchecked database\'s verification without holding back handleFunds', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = false
+      state.remoteBalance = 0
+      state.height = 10
+      verifyRemoteSignersDb.mockClear().mockReturnValue(new Promise(() => {}))
+      handleFunds.mockClear()
+
+      await headListener()
+
+      expect(verifyRemoteSignersDb).toHaveBeenCalledOnce()
+      expect(handleFunds).toHaveBeenCalledOnce()
+    })
+
+    it('does not hold the head listener while an upgraded install still walks extensions', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = true
+      useSyncState().htlcExtensionsWalked = false
+      state.remoteBalance = 0
+      state.height = 10
+      verifyRemoteSignersDb.mockClear().mockReturnValue(new Promise(() => {}))
+      handleFunds.mockClear()
+
+      await headListener()
+
+      expect(handleFunds).toHaveBeenCalledOnce()
+    })
+
+    it.each([[false, 50_000, true], [true, 50_000, false], [false, 0, false]])('retries verification every 10 blocks while funded, checked=%s and local=%s', async (checked, local, verified) => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = checked
+      state.remoteBalance = 100_000
+      // A deposit waiting to be secured is what the faster retry is for.
+      state.localBalance = local
+      state.height = 10
+      verifyRemoteSignersDb.mockClear()
+
+      await headListener()
+
+      expect(verifyRemoteSignersDb).toHaveBeenCalledTimes(verified ? 1 : 0)
     })
 
     it('completes the online sync pipeline when an offline startup becomes ready', async () => {

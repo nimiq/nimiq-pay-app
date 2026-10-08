@@ -17,6 +17,7 @@ export enum Modal {
   Dev = '@/modals/DevModal.vue',
   EnableBiometric = '@/modals/EnableBiometricModal.vue',
   ExpiringPoints = '@/modals/ExpiringPointsModal.vue',
+  HtlcHistoryCheck = '@/modals/HtlcHistoryCheckModal.vue',
   LogoutConfirm = '@/modals/LogOutModal/Confirm.vue',
   LogoutWarning = '@/modals/LogOutModal/Warning.vue',
   LongTimeNoSee = '@/modals/LongTimeNoSeeModal.vue',
@@ -73,6 +74,9 @@ function _useModal() {
         break
       case Modal.LongTimeNoSee:
         component = defineAsyncComponent(() => import(Modal.LongTimeNoSee))
+        break
+      case Modal.HtlcHistoryCheck:
+        component = defineAsyncComponent(() => import(Modal.HtlcHistoryCheck))
         break
       case Modal.Menu:
         component = defineAsyncComponent(() => import(Modal.Menu))

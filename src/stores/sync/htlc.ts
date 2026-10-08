@@ -3,18 +3,20 @@ import type { WalletContext } from '@/stores/remote-signer'
 import type { SwapHtlc } from '@/types/swapHtlcs'
 import type { RecoverablePlainTransactionDetails } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
+import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
-import { SQLQuery } from '@/lib/sql-queries'
+import { isMockEnabled } from '@/lib/mock-mode'
+import { HTLC_CHECK_HOLD_STARTED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { getLegacyTransactionValidityStartHeight, promiseWithTimeout } from '@/lib/utils'
-import { useApp } from '@/stores/app'
+import { kv, useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useLocks } from '@/stores/locks'
 import { NO_ACCOUNT_ERROR, useNimiqNetwork } from '@/stores/nimiq-network'
 import { useRemoteSigner } from '@/stores/remote-signer'
-import { upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
+import { HTLC_HISTORY_CHECK_HOLD_MS, upsertPlainPendingByHash, useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
 import { getSwapHtlcTxHash } from '@/types/swapHtlcs'
 import { Transfer } from '@/types/transactions'
@@ -53,7 +55,15 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { activateRemoteSignerFromTransaction, deactivateRemoteSigner, findTransactionInHistory, getAllRemoteSigners, getWalletContext, isWalletContextCurrent, updateRemoteSigner } = remoteSignerStore
   const { sendTx, updateTransactionStatus } = useTransactions()
   const { htlcThreshold } = storeToRefs(useApp())
-  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration } = storeToRefs(useSyncState())
+  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt } = storeToRefs(useSyncState())
+
+  const { loadHtlcHistoryFlags } = useSyncState()
+
+  // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
+  watch(remoteBalance, (balance) => {
+    if (balance > 0)
+      htlcCheckHoldStartedAt.value = undefined
+  })
 
   /**
    * If the local wallet gets some funds, move them to the remote wallet immediately.
@@ -88,8 +98,44 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       remoteBalanceOnChain = data ?? 0
     }
 
-    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'Creating new HTLC' : 'Liquidating HTLC'}`)
+    logger.log(`Local balance: ${localBalance.value / 1e5} NIM. Remote balance: ${remoteBalanceOnChain / 1e5} NIM. ${remoteBalanceOnChain === 0 ? 'New HTLC needed' : 'Top-up needs liquidation'}`)
     logger.log({ isHtlcActive: isHtlcActive.value, isRemoteOk: isRemoteOk.value, isHtlcPending: isHtlcPending.value })
+
+    // A fresh database (install, restore, re-login) does not know older HTLCs yet, so a new HTLC could
+    // land beside a funded one. That includes a top-up, which liquidates the active HTLC to recreate it.
+    // Wait for the first clean sweep, bounded because payments need an HTLC.
+    // Mock mode never verifies remote signers, so it has no sweep to wait for.
+    if (!isMockEnabled && !isHtlcPending.value && !(await loadHtlcHistoryFlags()).checked) {
+      try {
+        let startedAt = htlcCheckHoldStartedAt.value ?? (Number(await kv().getItem(HTLC_CHECK_HOLD_STARTED_KV_KEY)) || undefined)
+        // A start in the future (clock moved back) would extend the hold indefinitely.
+        if (startedAt === undefined || startedAt > Date.now()) {
+          startedAt = Date.now()
+          await kv().setItem(HTLC_CHECK_HOLD_STARTED_KV_KEY, String(startedAt))
+        }
+        if (Date.now() - startedAt < HTLC_HISTORY_CHECK_HOLD_MS) {
+          // Only unsecured funds need the explanation; with a funded HTLC the deposit just stays pending.
+          if (remoteBalanceOnChain === 0 && htlcCheckHoldStartedAt.value !== startedAt) {
+            htlcCheckHoldStartedAt.value = startedAt
+            // handleFunds may not run again at the limit (pending tx, RPC error), so release the explanation here.
+            setTimeout(() => {
+              if (htlcCheckHoldStartedAt.value === startedAt)
+                htlcCheckHoldStartedAt.value = undefined
+            }, startedAt + HTLC_HISTORY_CHECK_HOLD_MS - Date.now())
+          }
+          logger.log('🧲 Holding local funds until the HTLC history check completes')
+          return
+        }
+        // Not marked checked: the sweep keeps following extensions and merges a split HTLC once found.
+        logger.warn('🧲 HTLC history check did not finish in time. Securing funds anyway')
+        htlcCheckHoldStartedAt.value = undefined
+      }
+      catch (error) {
+        // A DB error must not release the hold; retry on the next head.
+        logger.error('Error while checking the HTLC history hold', error)
+        return
+      }
+    }
 
     if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
       isProcessingRemote.value = true
@@ -110,6 +156,11 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
 
     if (isHtlcActive.value && isRemoteOk.value) {
+      // Past validity end the cosigner refuses to sign; checkRemoteValidity reclaims via timeout.
+      if (hasHtlcExpired.value) {
+        logger.log('Active HTLC expired. Leaving it to the timeout reclaim')
+        return
+      }
       const liquidationContext = {
         localBalance: localBalance.value,
         remoteBalance: remoteBalanceOnChain,

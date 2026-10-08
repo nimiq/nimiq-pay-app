@@ -18,7 +18,8 @@ const state = vi.hoisted(() => {
   const query = vi.fn((_sql?: string): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn(() => Promise.resolve())
   const sendTx = vi.fn(() => Promise.resolve({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' }))
-  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[] }))
+  const scanLocalHtlcCreations = vi.fn(async () => ({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] as string[] }))
+  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[], createdHtlcs: [], historyComplete: true }))
   const updateSignersTableBalance = vi.fn(() => Promise.resolve())
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
   const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
@@ -69,6 +70,7 @@ const state = vi.hoisted(() => {
     run,
     sendTx,
     discoverRemoteSignersFromBlockchain,
+    scanLocalHtlcCreations,
     updateSignersTableBalance,
     updateRemoteSigner,
     getAllRemoteSigners,
@@ -143,8 +145,9 @@ vi.mock('@/stores/app', () => {
     pointsToken: computed(() => undefined),
     htlcThreshold: computed(() => 0),
   }))
+  const kv = () => ({ getItem: vi.fn(async () => undefined), setItem: vi.fn(async () => {}), removeItem: vi.fn() })
 
-  return { useApp }
+  return { kv, useApp }
 })
 
 vi.mock('@/stores/conn', () => {
@@ -265,6 +268,7 @@ vi.mock('@/stores/remote-signer', () => {
     addRemoteSigner: state.addRemoteSigner,
     blockHeightToTimestamp: vi.fn((height: number) => Promise.resolve(height * 1000)),
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    scanLocalHtlcCreations: state.scanLocalHtlcCreations,
     getWalletContext: () => ({
       address: state.localAddress,
       client: state.client,
@@ -373,7 +377,7 @@ describe('useSync remote signer reconciliation', () => {
     state.sendTx.mockReset()
     state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' })
     state.discoverRemoteSignersFromBlockchain.mockReset()
-    state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+    state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
     state.updateSignersTableBalance.mockReset()
     state.updateSignersTableBalance.mockResolvedValue(undefined)
     state.updateRemoteSigner.mockReset()
@@ -403,6 +407,8 @@ describe('useSync remote signer reconciliation', () => {
 
     const { useSync } = await import('./sync')
     const store = useSync()
+    const { useSyncState } = await import('./sync/state')
+    useSyncState().htlcHistoryChecked = true
 
     await store.handleFunds()
 
@@ -423,6 +429,8 @@ describe('useSync remote signer reconciliation', () => {
 
     const { useSync } = await import('./sync')
     const store = useSync()
+    const { useSyncState } = await import('./sync/state')
+    useSyncState().htlcHistoryChecked = true
 
     await store.handleFunds()
 
@@ -721,7 +729,7 @@ describe('useSync remote signer reconciliation', () => {
     state.discoverRemoteSignersFromBlockchain.mockImplementation(async () => {
       await Promise.resolve()
       events.push('discover')
-      return { added: 0, alreadyKnown: 0, localComplete: true, errors: [] }
+      return { added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true }
     })
     state.getAllRemoteSigners.mockImplementation(async () => {
       events.push('getAllRemoteSigners')

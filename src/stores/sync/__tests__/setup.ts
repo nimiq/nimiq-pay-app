@@ -25,7 +25,8 @@ function makeState() {
     tx: { hash: 'drain-hash' },
     serialized: 'serialized-drain',
   }))
-  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[] }))
+  const scanLocalHtlcCreations = vi.fn((): Promise<any> => Promise.resolve({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] as string[] }))
+  const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[], createdHtlcs: [] as string[], historyComplete: true }))
   const registerValidatedRemoteSigner = vi.fn((candidate?: any): Promise<any> => Promise.resolve(candidate))
   const updateSignersTableBalance = vi.fn((): Promise<void> => Promise.resolve())
   const updateRemoteSigner = vi.fn((_signer?: any, _context?: any): Promise<void> => Promise.resolve())
@@ -35,6 +36,9 @@ function makeState() {
   const getAllRemoteSigners = vi.fn((): Promise<any[]> => Promise.resolve([]))
   const addRemoteSigner = vi.fn((_signer?: any): Promise<void> => Promise.resolve())
   const isOurRemoteSigner = vi.fn((_address?: string): Promise<boolean> => Promise.resolve(false))
+  const isCosignerAddress = vi.fn((address?: string): boolean => address === 'NQ99 TEST COSIGNER')
+  const kvGetItem = vi.fn((_key?: string): Promise<string | undefined> => Promise.resolve(undefined))
+  const kvSetItem = vi.fn((_key?: string, _value?: string): Promise<void> => Promise.resolve())
   const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<void> => Promise.resolve())
   const addReceiptTransaction = vi.fn()
   const scheduleIncomingPaymentNotification = vi.fn()
@@ -102,6 +106,7 @@ function makeState() {
       addTransactionListener: vi.fn((_fn?: any, _addrs?: any): Promise<number> => Promise.resolve(1)),
       removeListener: vi.fn((_id?: number): Promise<void> => Promise.resolve()),
       getAccount: vi.fn((_addr?: string): Promise<any> => Promise.resolve({ type: 'basic', balance: 0 })),
+      getAccounts: vi.fn((addrs?: any[]): Promise<any[]> => Promise.resolve((addrs ?? []).map(() => ({ type: 'basic', balance: 0 })))),
       getTransaction: vi.fn((_hash?: string): Promise<any> => Promise.resolve(undefined)),
       sendTransaction: vi.fn((_tx?: any): Promise<any> => Promise.resolve({ state: 'pending' })),
       getTransactionsByAddress: vi.fn((_addr?: string): Promise<any[]> => Promise.resolve([])),
@@ -118,6 +123,7 @@ function makeState() {
     run,
     sendTx,
     discoverRemoteSignersFromBlockchain,
+    scanLocalHtlcCreations,
     registerValidatedRemoteSigner,
     updateSignersTableBalance,
     updateRemoteSigner,
@@ -127,6 +133,9 @@ function makeState() {
     getAllRemoteSigners,
     addRemoteSigner,
     isOurRemoteSigner,
+    isCosignerAddress,
+    kvGetItem,
+    kvSetItem,
     registerOwnHtlcIfMissing,
     addReceiptTransaction,
     scheduleIncomingPaymentNotification,
@@ -236,6 +245,7 @@ export function resetSyncState() {
     addTransactionListener: vi.fn(() => Promise.resolve(1)),
     removeListener: vi.fn(() => Promise.resolve()),
     getAccount: vi.fn(() => Promise.resolve({ type: 'basic', balance: 0 })),
+    getAccounts: vi.fn((addrs: any[]) => Promise.resolve(addrs.map(() => ({ type: 'basic', balance: 0 })))),
     getTransaction: vi.fn(() => Promise.resolve(undefined)),
     sendTransaction: vi.fn(() => Promise.resolve({ state: 'pending' })),
     getTransactionsByAddress: vi.fn(() => Promise.resolve([])),
@@ -254,6 +264,7 @@ export function resetSyncState() {
     state.run,
     state.sendTx,
     state.discoverRemoteSignersFromBlockchain,
+    state.scanLocalHtlcCreations,
     state.registerValidatedRemoteSigner,
     state.updateSignersTableBalance,
     state.updateRemoteSigner,
@@ -263,6 +274,9 @@ export function resetSyncState() {
     state.getAllRemoteSigners,
     state.addRemoteSigner,
     state.isOurRemoteSigner,
+    state.isCosignerAddress,
+    state.kvGetItem,
+    state.kvSetItem,
     state.registerOwnHtlcIfMissing,
     state.addReceiptTransaction,
     state.scheduleIncomingPaymentNotification,
@@ -320,7 +334,8 @@ export function resetSyncState() {
   state.query.mockResolvedValue([])
   state.run.mockResolvedValue(undefined)
   state.sendTx.mockResolvedValue({ outcome: 'submitted', tx: { hash: 'drain-hash' }, serialized: 'serialized-drain' })
-  state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] })
+  state.discoverRemoteSignersFromBlockchain.mockResolvedValue({ added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true })
+  state.scanLocalHtlcCreations.mockResolvedValue({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] })
   state.registerValidatedRemoteSigner.mockImplementation(candidate => Promise.resolve(candidate))
   state.updateSignersTableBalance.mockResolvedValue(undefined)
   state.updateRemoteSigner.mockResolvedValue(undefined)
@@ -328,6 +343,9 @@ export function resetSyncState() {
   state.deactivateRemoteSigner.mockResolvedValue(true)
   state.activateRemoteSignerFromTransaction.mockResolvedValue(undefined)
   state.getAllRemoteSigners.mockResolvedValue([])
+  state.isCosignerAddress.mockImplementation(address => address === 'NQ99 TEST COSIGNER')
+  state.kvGetItem.mockResolvedValue(undefined)
+  state.kvSetItem.mockResolvedValue(undefined)
   state.addRemoteSigner.mockResolvedValue(undefined)
   state.isOurRemoteSigner.mockResolvedValue(false)
   state.registerOwnHtlcIfMissing.mockResolvedValue(undefined)
@@ -412,7 +430,8 @@ vi.mock('@/stores/app', () => {
     pointsToken: computed(() => state.pointsToken),
     htlcThreshold: computed(() => state.htlcThreshold),
   }))
-  return { useApp }
+  const kv = () => ({ getItem: state.kvGetItem, setItem: state.kvSetItem, removeItem: vi.fn() })
+  return { kv, useApp }
 })
 
 vi.mock('@/stores/conn', () => {
@@ -525,9 +544,11 @@ vi.mock('@/stores/remote-signer', () => {
     getAllRemoteSigners: state.getAllRemoteSigners,
     addRemoteSigner: state.addRemoteSigner,
     isOurRemoteSigner: state.isOurRemoteSigner,
+    isCosignerAddress: state.isCosignerAddress,
     registerOwnHtlcIfMissing: state.registerOwnHtlcIfMissing,
     blockHeightToTimestamp: state.blockHeightToTimestamp,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    scanLocalHtlcCreations: state.scanLocalHtlcCreations,
     registerValidatedRemoteSigner: state.registerValidatedRemoteSigner,
     getWalletContext: state.getWalletContext,
     isWalletContextCurrent: state.isWalletContextCurrent,

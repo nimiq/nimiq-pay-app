@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IonSkeletonText } from '@ionic/vue'
+import { IonSkeletonText, modalController } from '@ionic/vue'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { PopoverAnchor, PopoverArrow, PopoverClose, PopoverContent, PopoverPortal, PopoverRoot } from 'reka-ui'
@@ -8,6 +8,8 @@ import CryptoAmount from '@/components/CryptoAmount.vue'
 import TopUpIcon from '@/components/icons/top-up.vue'
 import PriceChange from '@/components/PriceChange.vue'
 import RollingNumber from '@/components/RollingNumber.vue'
+import { useLogger } from '@/composables/useLogger'
+import { Modal, useModal } from '@/composables/useModal'
 import { usePrice } from '@/composables/usePrice'
 import { Asset, assetToCrypto } from '@/lib/assets'
 import { Crypto, useApp } from '@/stores/app'
@@ -19,8 +21,9 @@ import { useSync } from '@/stores/sync'
 
 const { remoteBalance: balance, homeBalanceState, lastKnownRemoteBalance } = storeToRefs(useRemoteSigner())
 const { balance: usdtBalance, lastKnownBalance: lastKnownUsdtBalance, homeBalanceState: usdtHomeBalanceState } = storeToRefs(usePolygonUsdt())
-const { isTransactionPending } = storeToRefs(useSync())
+const { isTransactionPending, htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 const { handleFunds } = useSync()
+const logger = useLogger('TheHomeAmounts')
 const { showAnimations, activeAsset, hasDismissedPendingNimHint } = storeToRefs(useApp())
 const { localBalance, pendingNimSince } = storeToRefs(useLocalWallet())
 const { isProcessingRemote } = storeToRefs(useLocks())
@@ -93,9 +96,14 @@ function handlePendingNimHintOpen(open: boolean) {
   pendingNimHintOpen.value = open
 }
 
-function handlePendingNimClick() {
+async function handlePendingNimClick() {
   dismissPendingNimHint()
-  handleFunds(true)
+  // A hold this tap starts is announced by HomeView's watcher; only re-explain one already running.
+  const wasHeld = htlcCheckHoldStartedAt.value !== undefined
+  await handleFunds(true).catch(error => logger.error('Error while securing pending NIM', error))
+  // A held top-up would otherwise do nothing visible once the user closed the explanation.
+  if (wasHeld && htlcCheckHoldStartedAt.value !== undefined && !htlcHistoryChecked.value && !await modalController.getTop())
+    await useModal().showModal(Modal.HtlcHistoryCheck, { isOnTop: true, isSmall: true, canDismiss: false })
 }
 </script>
 

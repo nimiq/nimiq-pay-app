@@ -46,6 +46,7 @@ const { addLocalNotification, localNotifications, removeLocalNotification } = us
 const { isUpdatingTransactions } = storeToRefs(useLocks())
 const { isUsdtMaintenanceActive } = storeToRefs(useFeatureFlags())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
+const { htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 
 const notificationList: Ref<HTMLUListElement | undefined> = ref()
 const isReferralCardShown = ref(true)
@@ -231,6 +232,22 @@ watch([hasHtlcExpired, isRemoteOk, isUpdatingTransactions], async ([expired, rem
   const top = await modalController.getTop()
   top?.onDidDismiss().then(() => {
     isLongTimeNoSeeOpen = false
+  })
+}, { immediate: true })
+
+// Explain why new funds wait while a fresh database checks for older HTLCs.
+let isHtlcHistoryCheckOpen = false
+watch(htlcCheckHoldStartedAt, async (holdStartedAt) => {
+  if (holdStartedAt === undefined || htlcHistoryChecked.value || isHtlcHistoryCheckOpen)
+    return
+  isHtlcHistoryCheckOpen = true
+  const modal = await showModal(Modal.HtlcHistoryCheck, { isOnTop: true, isSmall: true, canDismiss: false }).catch(() => undefined)
+  if (!modal) {
+    isHtlcHistoryCheckOpen = false
+    return
+  }
+  modal.onDidDismiss().then(() => {
+    isHtlcHistoryCheckOpen = false
   })
 }, { immediate: true })
 

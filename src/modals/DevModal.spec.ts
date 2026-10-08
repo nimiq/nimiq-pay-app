@@ -263,6 +263,8 @@ describe('dev modal HTLC recovery', () => {
       alreadyKnown: 0,
       localComplete: true,
       errors: [],
+      createdHtlcs: [],
+      historyComplete: true,
     })
     state.getTransactionsByAddress.mockReset().mockResolvedValue([])
     state.purgeRemoteSigners.mockReset().mockResolvedValue(undefined)
@@ -456,7 +458,7 @@ describe('dev modal HTLC recovery', () => {
 
     expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
     expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({
-      discoveryResult: { added: 0, alreadyKnown: 0, localComplete: true, errors: [] },
+      discoveryResult: { added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true },
     })
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Scan complete')
   })
@@ -467,6 +469,8 @@ describe('dev modal HTLC recovery', () => {
       alreadyKnown: 0,
       localComplete: false,
       errors: ['Local history lookup timed out'],
+      createdHtlcs: [],
+      historyComplete: false,
     }
     state.discoverRemoteSignersFromBlockchain.mockResolvedValueOnce(discoveryResult)
     const wrapper = await mountModal()

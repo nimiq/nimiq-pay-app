@@ -180,6 +180,7 @@ const recoveryMessages = {
   'wallet-busy': 'HTLC registered. Recovery deferred: another transaction is unresolved.',
   'history-incomplete': 'HTLC registered. Recovery deferred: target transaction history is incomplete.',
   'outgoing-transaction': 'HTLC registered. Recovery deferred: an outgoing transaction already exists for this HTLC.',
+  'no-consensus': 'Recovery deferred: waiting for consensus to confirm the HTLC timeout.',
 } as const
 
 async function recoverValidatedHtlc(result: ValidatedRemoteSigner) {

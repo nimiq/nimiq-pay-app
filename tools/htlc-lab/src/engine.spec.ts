@@ -279,6 +279,39 @@ describe('scenario ordering and submission barriers', () => {
   })
 })
 
+describe('funded HTLC before restore', () => {
+  const restore = { ...config, scenario: 'restore' as const }
+
+  it('funds only A, keeps local funds, and opens observation once A is confirmed', async () => {
+    const t = setup()
+    await t.engine.start(restore)
+    t.confirm()
+    await t.tick()
+
+    expect(t.state.stage).toBe('observe')
+    expect(t.state.transactions.map(tx => tx.kind)).toEqual(['a'])
+    expect(t.state.contracts[0].expiry - Date.now()).toBeGreaterThan(86400000)
+  })
+
+  it('requires A plus the same amount again left in the app wallet', async () => {
+    const t = setup()
+    t.balances.set('owner', 199)
+
+    await expect(t.engine.start(restore)).rejects.toThrow('Reserve at least 0.002 NIM')
+  })
+
+  it('does not open observation when the app wallet no longer holds local funds', async () => {
+    const t = setup()
+    await t.engine.start(restore)
+    t.confirm()
+    t.balances.set('owner', 50)
+    await t.tick()
+
+    expect(t.state.stage).not.toBe('observe')
+    expect(t.state.error).toContain('local funds')
+  })
+})
+
 describe('normal deposits', () => {
   it('checks amount plus fee, tracks uncertain sends, and blocks duplicates and HTLC setup', async () => {
     const t = setup()

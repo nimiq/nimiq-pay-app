@@ -24,6 +24,8 @@ const hasPendingHtlcCreation = computed(() => pendingHtlcCreationTransactions.va
 ))
 const htlcCanBeExtended = ref(false)
 const blocksUntilNextMacroBlock = ref(1)
+const htlcHistoryChecked = ref<boolean | undefined>(true)
+const htlcCheckHoldStartedAt = ref<number | undefined>()
 const isProcessingRemote = ref(false)
 const isSyncingWallets = ref(false)
 const isConsensusNeeded = ref(false)
@@ -256,6 +258,8 @@ vi.mock('@/stores/sync', () => ({
     hasPendingHtlcCreation,
     htlcCanBeExtended,
     blocksUntilNextMacroBlock,
+    htlcHistoryChecked,
+    htlcCheckHoldStartedAt,
     syncWallets,
   }),
 }))
@@ -294,6 +298,8 @@ describe('mainView', () => {
     pendingHtlcCreationTransactions.value = []
     htlcCanBeExtended.value = false
     blocksUntilNextMacroBlock.value = 1
+    htlcHistoryChecked.value = true
+    htlcCheckHoldStartedAt.value = undefined
     isProcessingRemote.value = false
     isSyncingWallets.value = false
     isConsensusNeeded.value = false
@@ -433,6 +439,19 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Processing funds')
+  })
+
+  it('explains a held deposit instead of a short processing countdown', async () => {
+    isHtlcActive.value = false
+    remoteBalance.value = 0
+    localBalance.value = 2 * 1e5
+    htlcHistoryChecked.value = false
+    htlcCheckHoldStartedAt.value = Date.now()
+
+    const wrapper = await mountComponent()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="status-message"]').text()).toContain('Checking your account')
   })
 
   it('shows "Processing funds" once local balance reaches the HTLC threshold', async () => {
