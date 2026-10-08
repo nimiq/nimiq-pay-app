@@ -3,6 +3,7 @@
   "type": "module",
   "version": "2.22.0",
   "private": true,
+  "license": "GPL-3.0-only",
   "description": "An Ionic project",
   "scripts": {
     "dev:android": "ionic cap run android --livereload --external --watch",
