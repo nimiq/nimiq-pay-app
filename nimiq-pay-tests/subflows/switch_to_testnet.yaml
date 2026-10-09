@@ -1,0 +1,71 @@
+appId: ${APP_ID}
+---
+# From home on mainnet, switches the app to TESTNET through the dev modal and unlocks it again.
+# Leaves the app on home with the TESTNET badge. The choice lives in WebView localStorage, so a
+# clearState launch resets it.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+# On testnet already, "TESTNET" also matches the badge and the switch would fail confusingly.
+- assertNotVisible: ${output.home.testnetBadge}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+# The hold below needs the menu sheet at rest on the measured position.
+- waitForAnimationToEnd
+# The app opens the dev modal after a 3 s press and longPressOn holds about as long, so presses
+# miss in streaks (BrowserStack Tab S9: 5 hits in 15 presses). On devices whose Settings row was
+# measured, a zero-length swipe holds it for 4.5 s instead. DEV_MODAL_HOLD_DEVICE names the device
+# (CI passes its BrowserStack device); swipe points can't come from variables, Maestro parses them
+# before evaluating. A miss leaves the menu open, so the longPressOn retries still follow.
+- runFlow:
+    when:
+      true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && DEV_MODAL_HOLD_DEVICE == 'Samsung Galaxy Tab S9-13.0'}
+    commands:
+      # Settings row [34,1887][1566,1948] on 1600x2560.
+      - swipe:
+          start: 50%, 75%
+          end: 50%, 75%
+          duration: 4500
+      # Not a check: a miss shows as WARNED in the log, a sign the row moved and needs re-measuring.
+      - extendedWaitUntil:
+          visible: ${output.devModal.reconnectBtn}
+          timeout: 3000
+          optional: true
+          label: Hold opened the dev modal
+- runFlow:
+    when:
+      true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && DEV_MODAL_HOLD_DEVICE == 'Pixel_8'}
+    commands:
+      # Local Pixel_8 AVD: Settings row [42,1630][1039,1707] on 1080x2400.
+      - swipe:
+          start: 50%, 70%
+          end: 50%, 70%
+          duration: 4500
+      # Not a check: a miss shows as WARNED in the log, a sign the row moved and needs re-measuring.
+      - extendedWaitUntil:
+          visible: ${output.devModal.reconnectBtn}
+          timeout: 3000
+          optional: true
+          label: Hold opened the dev modal
+- repeat:
+    times: 8
+    while:
+      notVisible: ${output.devModal.reconnectBtn}
+    commands:
+      - longPressOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.devModal.reconnectBtn}
+    timeout: 3000
+- tapOn: ${output.devModal.testnetBtn}
+- tapOn: ${output.devModal.switchBtn}
+
+# The switch reloads the app to the PIN screen.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 30000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertVisible: ${output.home.testnetBadge}

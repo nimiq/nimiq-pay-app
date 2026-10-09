@@ -19,12 +19,17 @@ tags:
 - extendedWaitUntil:
     visible: ${output.whatsNew.title}
     timeout: 5000
-- assertVisible: ${output.whatsNew.version}
+- assertVisible: ${output.whatsNew.versionHeader}
+- assertNotVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
 - assertVisible: ${output.whatsNew.previousVersions}
 
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
-- assertVisible: ${output.whatsNew.previousVersionHighlight}
+- assertVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
 
 - back
 - waitForAnimationToEnd

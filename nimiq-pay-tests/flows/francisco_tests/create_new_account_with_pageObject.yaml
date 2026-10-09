@@ -1,23 +1,28 @@
-appId: com.nimiq.pay.debug
+appId: ${APP_ID}
 
 tags:
   - franciscoTest
 
 ---
+- runFlow: ../../subflows/require_pin.yaml
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - launchApp:
     clearState: true
 
+# Cold start after clearState: same budget as create_account.yaml.
+- extendedWaitUntil:
+    visible: ${output.launchScreen.getStartedBtn}
+    timeout: 45000
 - tapOn: ${output.launchScreen.getStartedBtn}
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000
-- inputText: '1111'
+- inputText: ${PIN}
 - extendedWaitUntil:
     visible: ${output.onboarding.confirmPinTitle}
     timeout: 10000
-- inputText: '1111'
+- inputText: ${PIN}
 - waitForAnimationToEnd
 
 - runFlow:

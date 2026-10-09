@@ -1,0 +1,69 @@
+appId: ${APP_ID}
+name: Security re-lock after background
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Never on screen: waiting for it is the only way to sleep in Maestro.
+  NEVER_VISIBLE: "maestro-background-wait-sentinel"
+
+---
+# Scope: resuming after more than 2 minutes in the background asks for the PIN again
+# (App.vue, RELOAD_AFTER_BACKGROUND_TIMEOUT_MS), while a short trip to the background does not.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# Short background: the wallet stays unlocked. This also proves that launchApp with
+# stopApp: false resumes the running app; a cold start would ask for the PIN.
+- pressKey: Home
+- extendedWaitUntil:
+    notVisible: ${output.navigation.topUpBtn}
+    timeout: 5000
+- launchApp:
+    stopApp: false
+- extendedWaitUntil:
+    visible: ${output.navigation.topUpBtn}
+    timeout: 15000
+# Same sleep exception as below: give an unwanted re-lock time to render, then assert none came.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 10000
+    optional: true
+    label: Give an unwanted re-lock time to show
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+- assertVisible: ${output.navigation.topUpBtn}
+
+# Long background: over the 2 min threshold.
+- pressKey: Home
+- extendedWaitUntil:
+    notVisible: ${output.navigation.topUpBtn}
+    timeout: 5000
+- evalScript: ${output.backgroundSince = Date.now()}
+# Named exception to the no-optional rule: this is a sleep, not an assertion.
+- extendedWaitUntil:
+    visible: ${NEVER_VISIBLE}
+    timeout: 140000
+    optional: true
+    label: Stay in the background for over 2 minutes
+- assertTrue:
+    condition: ${Date.now() - output.backgroundSince > 130000}
+    label: The app stayed in the background for over 2 minutes
+- launchApp:
+    stopApp: false
+# Limit: if Android killed the app during the wait, this cold start also shows the PIN. Only the
+# app's log ("Reloading app after being in background for more than 2 minutes") tells them apart.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- assertNotVisible: ${output.navigation.topUpBtn}
+
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertNotVisible: ${output.onboarding.enterPinTitle}
+
+- stopApp

@@ -5,6 +5,9 @@ tags:
   - franciscoTest
 
 ---
+# Scope: existing user returns to the app, then walks through Settings, Backup account,
+# What's New, About, and the main home flows (Top Up, Withdraw, Crypto Map, Earn Points),
+# verifying state survives an app restart (stopApp + relaunch with clearState: false).
 - runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
 
 - runFlow: ../../subflows/returning_to_dashboard.yaml
@@ -67,11 +70,16 @@ tags:
 - extendedWaitUntil:
     visible: ${output.whatsNew.title}
     timeout: 5000
-- assertVisible: ${output.whatsNew.version}
+- assertVisible: ${output.whatsNew.versionHeader}
+- assertNotVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
 - assertVisible: ${output.whatsNew.previousVersions}
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
-- assertVisible: ${output.whatsNew.previousVersionHighlight}
+- assertVisible:
+    text: ${output.whatsNew.versionHeader}
+    index: 1
 - back
 - waitForAnimationToEnd
 - assertVisible: ${output.navigation.whatsNewBtn}
@@ -99,11 +107,12 @@ tags:
 - stopApp
 - launchApp:
     clearState: false
+# Same cold-start budget as create_account.yaml; shorter waits flaked on a loaded emulator.
 - extendedWaitUntil:
     visible: ${output.onboarding.enterPinTitle}
-    timeout: 10000
+    timeout: 45000
 - assertNotVisible: ${output.home.payTitle}
-- inputText: '1111'
+- inputText: ${PIN}
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
     timeout: 10000

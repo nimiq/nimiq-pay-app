@@ -1,0 +1,75 @@
+appId: ${APP_ID}
+name: Backup validation
+
+tags:
+  - franciscoTest
+  - quarantine
+
+---
+# Scope: answering the backup quiz with the words shown on screen completes the backup: the
+# home "Recovery Words" reminder is gone, also after a relaunch.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- runFlow: ../../subflows/create_account.yaml
+
+# A fresh wallet has no backup, so home shows the reminder.
+- assertVisible: ${output.navigation.recoveryWordsBtn}
+
+- runFlow: ../../subflows/capture_recovery_words.yaml
+- tapOn: ${output.backup.continueBtn}
+- extendedWaitUntil:
+    visible: ${output.backup.validateTitle}
+    timeout: 10000
+
+# A wrong answer is rejected: "Try again" shows and the quiz restarts with new questions.
+- copyTextFrom: ${output.backup.question}
+- evalScript: ${output.quizPosition = parseInt(maestro.copiedText.match(/\d+/)[0])}
+- tapOn:
+    text: ${'(?!' + output.recoveryWords[output.quizPosition - 1] + ')[a-z]+'}
+    below: ${output.backup.question}
+- extendedWaitUntil:
+    visible: ${output.backup.tryAgainBtn}
+    timeout: 5000
+- tapOn: ${output.backup.tryAgainBtn}
+- extendedWaitUntil:
+    notVisible: ${output.backup.tryAgainBtn}
+    timeout: 5000
+- waitForAnimationToEnd
+
+# The quiz asks 3 positions (ValidateWords.vue QUESTION_COUNT), each with 6 shuffled options.
+- repeat:
+    times: 3
+    commands:
+      - copyTextFrom: ${output.backup.question}
+      - evalScript: ${output.quizPosition = parseInt(maestro.copiedText.match(/\d+/)[0])}
+      - tapOn:
+          text: ${output.recoveryWords[output.quizPosition - 1]}
+          below: ${output.backup.question}
+      # A wrong answer keeps the question on screen (with "Try again"), so this fails.
+      - extendedWaitUntil:
+          notVisible: ${output.backup.questionPrefix + output.quizPosition + output.backup.questionSuffix}
+          timeout: 5000
+
+# No check on the "Backup successful" toast: it lives 3 s and Maestro's settle wait after the
+# last answer can outlast it. The reminder only hides once hasDoneBackup is set.
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 10000
+- assertNotVisible: ${output.navigation.recoveryWordsBtn}
+
+# The backup state is persisted: the reminder stays gone after a relaunch.
+- stopApp
+- launchApp:
+    clearState: false
+# Same cold-start budget as create_account.yaml; 30 s timed out on a loaded emulator.
+- extendedWaitUntil:
+    visible: ${output.onboarding.enterPinTitle}
+    timeout: 45000
+- inputText: ${PIN}
+- extendedWaitUntil:
+    visible: ${output.home.payTitle}
+    timeout: 30000
+- assertVisible: ${output.navigation.topUpBtn}
+- assertNotVisible: ${output.navigation.recoveryWordsBtn}
+
+- stopApp

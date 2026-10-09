@@ -1,5 +1,6 @@
 appId: ${APP_ID}
 ---
+- runFlow: require_pin.yaml
 - runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
 - launchApp:
