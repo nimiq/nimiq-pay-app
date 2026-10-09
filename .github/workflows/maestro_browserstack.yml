@@ -8,6 +8,11 @@ on:
       #- feature/maestro-improvements
   workflow_dispatch:
 
+# Shares the francisco_tests suite id and the BrowserStack parallels with the suite-only workflow.
+concurrency:
+  group: maestro-browserstack-suite
+  cancel-in-progress: false
+
 jobs:
   build_android_apk:
     runs-on: ubuntu-latest
@@ -101,8 +106,11 @@ jobs:
           --app NimiqPayAndroidApk
           --suite francisco_tests
           --device "Samsung Galaxy Tab S9-13.0"
-          --flow flows/francisco_tests/create_new_account_with_pageObject_browserstack.yaml
-          --format HTML-DETAILED
+          --flow flows/francisco_tests/create_new_account_with_pageObject.yaml
+          --env APP_ID=com.nimiq.pay
+          --env PIN=1111
+          --max-attempts 1
+          --maestro-version 2.6.1
           --output nimiq-pay-tests/tests_output/maestro_report.html
 
 
