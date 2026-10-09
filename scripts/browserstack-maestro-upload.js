@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { env, exit } from 'node:process'
+import process, { env, exit } from 'node:process'
 
 function loadDotEnv(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -21,7 +21,7 @@ function loadDotEnv(filePath) {
     const key = trimmed.slice(0, separatorIndex).trim()
     let value = trimmed.slice(separatorIndex + 1).trim()
 
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith('\'') && value.endsWith('\''))) {
       value = value.slice(1, -1)
     }
 
@@ -52,7 +52,7 @@ function getArgValue(flag, fallback = undefined) {
   return next
 }
 
-const printHelp = () => {
+function printHelp() {
   console.log(`Usage: node scripts/browserstack-maestro-upload.js [options]
 
 Options:
@@ -95,7 +95,9 @@ const zipFolderName = path.basename(folderPath)
 console.log(`📦 Zipping ${folderPath} into ${zipPath}...`)
 
 try {
-  execSync(`cd "${zipParent}" && zip -r "${zipPath}" "${zipFolderName}" -x "${zipFolderName}/tests_output/*"`, { stdio: 'inherit' })
+  // BrowserStack rejects the whole suite if the zip holds any other file type (e.g. CLAUDE.md).
+  const allowedFiles = ['yaml', 'yml', 'js', 'png', 'jpeg', 'jpg', 'gif', 'mp4'].map(extension => `"*.${extension}"`).join(' ')
+  execSync(`cd "${zipParent}" && zip -r "${zipPath}" "${zipFolderName}" -i ${allowedFiles} -x "${zipFolderName}/tests_output/*" "*/.mutants/*"`, { stdio: 'inherit' })
 }
 catch (error) {
   console.error('❌ Failed to create zip archive.')
@@ -110,7 +112,20 @@ const curlCmd = `curl -u "${BS_USERNAME}:${BS_ACCESS_KEY}" -X POST "https://api-
 try {
   const output = execSync(curlCmd, { encoding: 'utf8' })
   console.log(output.trim())
-  console.log(`✅ Uploaded test suite zip: ${zipPath}`)
+
+  // curl exits 0 on HTTP errors too, so only a returned bs:// URL counts as an upload.
+  const testSuiteUrl = JSON.parse(output).test_suite_url
+  if (!testSuiteUrl) {
+    console.error('❌ BrowserStack did not return a test_suite_url.')
+    exit(1)
+  }
+
+  // Lets the run job pin this exact upload instead of resolving the shared custom_id, which a
+  // concurrent run may have replaced in the meantime.
+  if (env.GITHUB_OUTPUT) {
+    fs.appendFileSync(env.GITHUB_OUTPUT, `test_suite_url=${testSuiteUrl}\n`)
+  }
+  console.log(`✅ Uploaded test suite zip: ${zipPath} (${testSuiteUrl})`)
 }
 catch (error) {
   console.error('❌ Upload failed.')
