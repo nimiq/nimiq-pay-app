@@ -1,1 +1,20 @@
-{}
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/browserstack-maestro-run.js:*)",
+      "Bash(node scripts/browserstack-maestro-aggregate-report.js:*)",
+      "Bash(maestro test:*)",
+      "Bash(scripts/maestro-local.sh:*)",
+      "Bash(gh run download:*)",
+      "mcp__maestro__list_devices",
+      "mcp__maestro__inspect_screen",
+      "mcp__maestro__take_screenshot",
+      "mcp__maestro__cheat_sheet",
+      "mcp__maestro__run"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
