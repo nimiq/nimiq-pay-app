@@ -1,20 +1,25 @@
 appId: ${APP_ID}
 name: Returning to dashboard
 ---
+- runFlow: require_pin.yaml
 - runScript: ../pageObjects/android/mainFlowsAndroid.page.js
 
 - launchApp:
     clearState: true
 
+# Cold start after clearState: same budget as create_account.yaml.
+- extendedWaitUntil:
+    visible: ${output.launchScreen.getStartedBtn}
+    timeout: 45000
 - tapOn: ${output.launchScreen.getStartedBtn}
 - extendedWaitUntil:
     visible: ${output.onboarding.choosePinTitle}
     timeout: 10000
-- inputText: '1111'
+- inputText: ${PIN}
 - extendedWaitUntil:
     visible: ${output.onboarding.confirmPinTitle}
     timeout: 10000
-- inputText: '1111'
+- inputText: ${PIN}
 - waitForAnimationToEnd
 
 - runFlow:
@@ -39,11 +44,12 @@ name: Returning to dashboard
 - launchApp:
     clearState: false
 
+# A cold start to the PIN screen takes ~10 s on slow devices; 10 s here was flaky.
 - extendedWaitUntil:
     visible: ${output.onboarding.enterPinTitle}
-    timeout: 10000
+    timeout: 30000
 - assertNotVisible: ${output.home.payTitle}
-- inputText: '1111'
+- inputText: ${PIN}
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
     timeout: 10000

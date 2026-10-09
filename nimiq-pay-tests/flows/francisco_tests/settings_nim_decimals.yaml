@@ -1,0 +1,73 @@
+appId: ${APP_ID}
+name: Settings NIM decimals
+
+tags:
+  - franciscoTest
+  - quarantine
+  # CI skips it until the MAESTRO_TESTNET_WALLET_WORDS secret is set.
+  - needsTestnetWallet
+
+---
+# Scope: setting Minimum NIM Decimals to 5 shows the home NIM balance with 5 decimals; the
+# default (None) shows none. A zero balance always reads "0 NIM", so this imports the shared
+# funded testnet wallet (MAESTRO_TESTNET_WALLET_WORDS; locally via scripts/maestro-local.sh).
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ${output.launchScreen.loginBtn}
+    timeout: 45000
+- runFlow:
+    file: ../../subflows/import_wallet.yaml
+    env:
+      RECOVERY_PHRASE: ${MAESTRO_TESTNET_WALLET_WORDS}
+- runFlow: ../../subflows/switch_to_testnet.yaml
+
+# The balance needs testnet consensus. Below 10 NIM the app always shows decimals, so the
+# shared wallet must keep at least 10 NIM.
+- extendedWaitUntil:
+    visible: ${output.home.nimBalanceNoDecimals}
+    timeout: 120000
+    label: The shared testnet wallet shows a balance of at least 10 NIM
+# Pending funds replace the balance with a skeleton and show an amount in the same format.
+- extendedWaitUntil:
+    notVisible: ${output.home.pendingNim}
+    timeout: 120000
+    label: The shared testnet wallet has no pending NIM
+- assertVisible: ${output.home.nimBalanceNoDecimals}
+- assertNotVisible: ${output.home.nimBalanceFiveDecimals}
+
+- tapOn: ${output.navigation.openMenuBtn}
+- extendedWaitUntil:
+    visible: ${output.navigation.settingsBtn}
+    timeout: 5000
+- tapOn: ${output.navigation.settingsBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.minimumNimDecimals}
+    timeout: 5000
+- tapOn: ${output.settings.minimumNimDecimals}
+- extendedWaitUntil:
+    visible: ${output.nimDecimalsAlert.fiveOption}
+    timeout: 5000
+- tapOn: ${output.nimDecimalsAlert.fiveOption}
+- tapOn: ${output.nimDecimalsAlert.okBtn}
+- extendedWaitUntil:
+    visible: ${output.settings.nimDecimalsFiveSelected}
+    timeout: 5000
+# Back is ignored while the alert is still animating out.
+- waitForAnimationToEnd
+
+- back
+- waitForAnimationToEnd
+- assertVisible: ${output.navigation.backupAccountBtn}
+- back
+- waitForAnimationToEnd
+
+# The setting applies at once, but a login-time HTLC extension can show the balance skeleton.
+- extendedWaitUntil:
+    visible: ${output.home.nimBalanceFiveDecimals}
+    timeout: 60000
+- assertNotVisible: ${output.home.nimBalanceNoDecimals}
+
+- stopApp

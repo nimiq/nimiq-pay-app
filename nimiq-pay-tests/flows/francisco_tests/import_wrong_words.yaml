@@ -1,0 +1,62 @@
+appId: ${APP_ID}
+name: Import wrong words
+
+tags:
+  - franciscoTest
+  - quarantine
+
+env:
+  # Wordlist words. "${ELEVEN_WORDS} abandon" has a wrong checksum (the valid phrase ends in "about").
+  ELEVEN_WORDS: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
+  NOT_A_WORD: "zzzz"
+
+---
+# Scope: Setup > Login rejects bad recovery words and never reaches the PIN step: a phrase with
+# a wrong checksum shows "Invalid recovery words", and a word outside the wordlist disables
+# Confirm.
+- runScript: ../../pageObjects/android/mainFlowsAndroid.page.js
+
+# Fresh install, so the setup screen offers Login instead of a wallet.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: ${output.launchScreen.loginBtn}
+    timeout: 45000
+- tapOn: ${output.launchScreen.loginBtn}
+- extendedWaitUntil:
+    visible: ${output.login.title}
+    timeout: 10000
+
+- runFlow:
+    file: ../../subflows/enter_recovery_words.yaml
+    env:
+      RECOVERY_PHRASE: ${ELEVEN_WORDS} abandon
+- extendedWaitUntil:
+    visible:
+      text: ${output.login.confirmBtn}
+      enabled: true
+    timeout: 10000
+- assertNotVisible: ${output.login.invalidWordsError}
+- tapOn: ${output.login.confirmBtn}
+# The error clears itself after 10 s, so check it right away.
+- extendedWaitUntil:
+    visible: ${output.login.invalidWordsError}
+    timeout: 5000
+- assertVisible: ${output.login.title}
+- assertNotVisible: ${output.onboarding.choosePinTitle}
+
+# Typing into the last word turns it into a word outside the wordlist ("zzzz" lands wherever
+# the tap leaves the cursor, in or after "abandon"). Confirm was enabled above, so disabling
+# it now is caused by that word.
+- tapOn:
+    id: ${output.login.lastWordInputId}
+- inputText: ${NOT_A_WORD}
+- tapOn: ${output.login.title}
+- assertVisible:
+    id: ${output.login.lastWordInputId}
+    text: .*${NOT_A_WORD}.*
+- assertVisible:
+    text: ${output.login.confirmBtn}
+    enabled: false
+
+- stopApp

@@ -1,0 +1,21 @@
+appId: ${APP_ID}
+---
+# Types the space-separated words of ${RECOVERY_PHRASE} into the Login recovery words inputs,
+# one input per word, then blurs them. Typing the whole phrase into the first input relies on
+# the space moving focus, and Maestro types fast enough to drop the next character.
+- runScript: ../pageObjects/android/mainFlowsAndroid.page.js
+
+- evalScript: ${output.wordsToEnter = RECOVERY_PHRASE.trim().split(/\s+/); output.enteredWords = 0}
+- repeat:
+    while:
+      true: ${output.enteredWords < output.wordsToEnter.length}
+    commands:
+      # MnemonicInput ids are "01".."12".
+      - tapOn:
+          id: ${String(output.enteredWords + 1).padStart(2, '0')}
+      - inputText: ${output.wordsToEnter[output.enteredWords]}
+      - evalScript: ${output.enteredWords++}
+
+# Tapping the title blurs the input and closes the keyboard, which covers Confirm.
+# (hideKeyboard presses Back, which closes the flow when no keyboard is open.)
+- tapOn: ${output.login.title}

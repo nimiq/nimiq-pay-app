@@ -1,9 +1,10 @@
 appId: ${APP_ID}
 ---
-# Runs the wallet setup once on a fresh install (PIN 1111, skip biometric & notifications),
+# Runs the wallet setup once on a fresh install (PIN ${PIN}, skip biometric & notifications),
 # then hands over to the standard launcher. Used by the store-screenshots flow so a freshly
 # reset simulator/emulator can onboard without manual steps.
 
+- runFlow: require_pin.yaml
 - launchApp:
     clearState: false
 
@@ -16,11 +17,11 @@ appId: ${APP_ID}
       - extendedWaitUntil:
           visible: Choose a PIN
           timeout: 10000
-      - inputText: '1111'
+      - inputText: ${PIN}
       - extendedWaitUntil:
           visible: Confirm your PIN
           timeout: 10000
-      - inputText: '1111'
+      - inputText: ${PIN}
       - waitForAnimationToEnd
       # Biometric step is skipped automatically on devices without biometrics support
       - runFlow:
