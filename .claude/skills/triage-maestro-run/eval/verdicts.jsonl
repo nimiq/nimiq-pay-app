@@ -1,0 +1,5 @@
+{"buildId": "dc319f2a25de236273db8c61955a2c4d8ab44f92", "flow": "about", "outcome": "INFRA", "rule": "INFRA", "triager": "INFRA", "confidence": "high", "triagedAt": "2026-10-07T13:40:12Z"}
+{"buildId": "af0f1d847ee25121029df4c6b88f6d4ec308674b", "flow": "create_new_account_with_pageObject_browserstack", "outcome": "INFRA", "rule": "INFRA", "triager": "INFRA", "confidence": "high", "triagedAt": "2026-10-07T13:40:12Z"}
+{"buildId": "34e911c4f55aaf6b2980f9a258f63568398c5109", "flow": "create_new_account_with_pageObject", "outcome": "TEST_BUG", "rule": "TEST_BUG", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-07T13:40:12Z"}
+{"buildId": "92658e214a1c457a619eaa9e5e12575aff664740", "flow": "create_new_account_with_pageObject_browserstack", "outcome": "TEST_BUG", "rule": "TEST_BUG", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-07T13:40:12Z"}
+{"buildId": "dc319f2a25de236273db8c61955a2c4d8ab44f92", "flow": "top_up_flow", "outcome": "INFRA", "rule": "INFRA", "triager": "INFRA", "confidence": "medium", "triagedAt": "2026-10-07T13:40:12Z"}

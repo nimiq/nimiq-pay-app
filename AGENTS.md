@@ -52,6 +52,13 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - New feature or big UI change: check for existing tests; if none, add tests covering it. Maestro for e2e — in `nimiq-pay-tests`.
 - Run tests only before committing or when debugging a test failure.
 
+### Maestro on BrowserStack
+
+- BrowserStack's MCP server cannot see Maestro builds (its tools wrap Appium endpoints). Use the Maestro v2 REST API through `scripts/browserstack-maestro-run.js`.
+- A `failed` test case is not proof of an assertion failure: real runs show ADB device loss and an unreachable Maestro driver reported as `failed`. Classify from the failing command's error (`maestro_commands`) or the failing step's log lines, never from the status alone.
+- `vite build --mode development` is still mainnet (`isTestnet` follows `import.meta.env.DEV`, i.e. `NODE_ENV`). Switch test devices to testnet at runtime via the dev modal instead.
+- Test APKs for the suite come from `scripts/build-test-apk.mjs`, which disables Capgo over-the-air updates; otherwise a relaunch can swap in the production web bundle mid-run.
+
 ## Nimiq client & sync
 
 - `executionResult` is not failure-only: `true` means execution succeeded, `false` means execution failed. Missing/`undefined` means no result was provided; never assume success from absence.
