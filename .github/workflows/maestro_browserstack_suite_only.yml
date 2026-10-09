@@ -1,19 +1,35 @@
 name: Nimiq Pay - Maestro Suite Android (Suite Only)
 
-#This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
-#Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
-
+# This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
+# Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
+# The APK under test is the one recorded in the BROWSERSTACK_ANDROID_DEBUG_APP repo variable ("<bs:// url> <commit>"): build it with
+# `node scripts/build-test-apk.mjs` and upload it with `node scripts/browserstack-apk-upload.js --apk <apk> --set-repo-variables`.
 
 on:
   push:
     branches:
       - feature/maestro-improvements
+    paths:
+      - nimiq-pay-tests/**
+      - scripts/browserstack-maestro-*.js
+      - .github/workflows/maestro_browserstack_suite_only.yml
   workflow_dispatch:
+
+# Runs share BrowserStack parallels and custom ids with maestro_browserstack.yml (same group), so
+# they never overlap. GitHub keeps at most one run waiting per group: a newer run replaces a
+# waiting one, so intermediate commits can be skipped and a push also replaces a waiting manual
+# run of maestro_browserstack.yml (start that again afterwards). Not cancel-in-progress:
+# cancelling mid-flow would leave a BrowserStack build running.
+concurrency:
+  group: maestro-browserstack-suite
+  cancel-in-progress: false
 
 jobs:
   upload_maestro_suite:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    outputs:
+      test_suite_url: ${{ steps.upload.outputs.test_suite_url }}
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
@@ -23,82 +39,201 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Upload Maestro suite to BrowserStack
+        id: upload
         run: node scripts/browserstack-maestro-upload.js --custom-id francisco_tests
 
   run_browserstack_maestro:
     needs: upload_maestro_suite
     runs-on: ubuntu-latest
     timeout-minutes: 180
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      BROWSERSTACK_DEVICE: "Samsung Galaxy Tab S9-13.0"
+      BROWSERSTACK_DEVICE: Samsung Galaxy Tab S9-13.0
+      # "<bs:// app url> <commit>". The folder's flows target com.nimiq.pay.debug and need the Mini
+      # Apps build; without the variable the run falls back to the shared custom_id.
+      BROWSERSTACK_ANDROID_DEBUG_APP: ${{ vars.BROWSERSTACK_ANDROID_DEBUG_APP }}
+      TEST_SUITE: ${{ needs.upload_maestro_suite.outputs.test_suite_url }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Run Maestro flows on BrowserStack
-        # The folder's flows target com.nimiq.pay.debug and need the Mini Apps build, so this
-        # relies on the debug APK uploaded as NimiqPayAndroidApkDebug, not the release one.
+        # Each flow gets up to two attempts: one retry for failures classified as BrowserStack/CI
+        # infrastructure, or one diagnostic rerun for unclassified failures (never reported green).
+        env:
+          # Recovery words of the shared funded testnet wallet, only passed to flows tagged
+          # needsTestnetWallet. Those flows are skipped while the secret is unset.
+          MAESTRO_TESTNET_WALLET_WORDS: ${{ secrets.MAESTRO_TESTNET_WALLET_WORDS }}
         run: |
           shopt -s nullglob
+          read -r app app_commit <<< "${BROWSERSTACK_ANDROID_DEBUG_APP:-NimiqPayAndroidApkDebug}"
           flow_files=(nimiq-pay-tests/flows/francisco_tests/*.yaml)
           if (( ${#flow_files[@]} == 0 )); then
             echo "No Maestro flows found in nimiq-pay-tests/flows/francisco_tests."
             exit 1
           fi
 
+          # One attempt may spend up to 15 minutes in BrowserStack's queue before a ~4-minute run.
+          attempt_timeout=1500
+          # Headroom under the job's 180 minutes for an in-flight attempt, reporting and publishing.
+          deadline=$(( $(date +%s) + 150 * 60 ))
+          infra_first_attempts=0
+          stop_reason=""
           test_exit_code=0
+
           for flow_file in "${flow_files[@]}"; do
             flow="${flow_file#nimiq-pay-tests/}"
             flow_name="$(basename "$flow_file" .yaml)"
-            mkdir -p "./maestro-reports/$flow_name"
+            report_dir="./maestro-reports/$flow_name"
+            mkdir -p "$report_dir"
+            # Quarantined flows (new, not yet proven stable) run and report but never fail the job,
+            # except for fatal harness problems that affect every flow.
+            quarantined=false
+            if grep -qE '^[[:space:]]*-[[:space:]]*quarantine[[:space:]]*$' "$flow_file"; then
+              quarantined=true
+            fi
+
+            if [[ -z "$stop_reason" ]] && (( $(date +%s) + attempt_timeout > deadline )); then
+              stop_reason="Skipped: wall-clock budget exhausted"
+            fi
+            skip_signal="$stop_reason"
+            if [[ -z "$skip_signal" ]] && grep -qE '^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$' "$flow_file" \
+              && [[ -z "$MAESTRO_TESTNET_WALLET_WORDS" ]]; then
+              skip_signal="Skipped: the MAESTRO_TESTNET_WALLET_WORDS secret is not set"
+            fi
+            if [[ -n "$skip_signal" ]]; then
+              jq -n --arg flow "$flow" --arg signal "$skip_signal" --argjson quarantine "$quarantined" \
+                '{flow: $flow, outcome: "NOT_RUN", ok: false, quarantine: $quarantine, signal: $signal, attempts: []}' > "$report_dir/result.json"
+              if [[ "$quarantined" == false ]]; then
+                test_exit_code=1
+              fi
+              continue
+            fi
+
+            wallet_env=()
+            if grep -qE '^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$' "$flow_file"; then
+              # Read from this step's env and masked in the evidence; never on the command line.
+              wallet_env=(--secret-env MAESTRO_TESTNET_WALLET_WORDS)
+            fi
+
             echo "Running $flow"
-            if ! node scripts/browserstack-maestro-run.js \
-              --app NimiqPayAndroidApkDebug \
-              --suite francisco_tests \
-              --device "Samsung Galaxy Tab S9-13.0" \
+            code=0
+            node scripts/browserstack-maestro-run.js \
+              --app "$app" \
+              --app-commit "$app_commit" \
+              --suite "$TEST_SUITE" \
+              --device "$BROWSERSTACK_DEVICE" \
               --flow "$flow" \
               --env APP_ID=com.nimiq.pay.debug \
               --env PIN=1111 \
-              --output "./maestro-reports/$flow_name" \
-              --timeout 3000; then
+              --env "DEV_MODAL_HOLD_DEVICE=$BROWSERSTACK_DEVICE" \
+              ${wallet_env[@]+"${wallet_env[@]}"} \
+              --maestro-version 2.6.1 \
+              --output "$report_dir" \
+              --evidence "./maestro-evidence/$flow_name" \
+              --timeout "$attempt_timeout" \
+              --deadline "$deadline" || code=$?
+
+            if [[ "$quarantined" == true ]] && [[ -f "$report_dir/result.json" ]]; then
+              jq '.quarantine = true' "$report_dir/result.json" > "$report_dir/result.tmp" && mv "$report_dir/result.tmp" "$report_dir/result.json"
+              if (( code == 1 )); then
+                code=0
+              fi
+            fi
+            if (( code != 0 )); then
               test_exit_code=1
             fi
+            # Exit code 2: e.g. the app is not installed. Every later flow would fail the same way.
+            if (( code == 2 )); then
+              stop_reason="Skipped: an earlier flow hit a fatal CI/harness problem"
+              echo "::error::Fatal harness problem in $flow_name; skipping the remaining flows"
+            fi
+
+            if [[ "$(jq -r '.attempts[0].diagnosis // empty' "$report_dir/result.json" 2>/dev/null)" == "INFRA" ]]; then
+              infra_first_attempts=$(( infra_first_attempts + 1 ))
+              # More than 25% of the suite failing on BrowserStack's side: stop spending minutes.
+              if [[ -z "$stop_reason" ]] && (( infra_first_attempts * 4 > ${#flow_files[@]} )); then
+                stop_reason="Skipped: BrowserStack degraded (too many infrastructure failures)"
+                test_exit_code=1
+                echo "::error::BrowserStack degraded: $infra_first_attempts flows failed on infrastructure"
+              fi
+            fi
           done
+
           exit "$test_exit_code"
 
-      - name: Generate consolidated HTML report
+      - name: Stop BrowserStack builds left running by a cancelled job
+        # always(): it is unclear whether cancelled() holds after timeout-minutes. Without leftover
+        # active-build.txt files (a normal run removes them) this step does nothing.
         if: always()
-        run: node scripts/browserstack-maestro-aggregate-report.js ./maestro-reports
+        run: |
+          shopt -s nullglob
+          for file in ./maestro-evidence/*/attempt-*/active-build.txt; do
+            node scripts/browserstack-maestro-run.js --stop-build "$(cat "$file")"
+          done
 
-      - name: "Publish test results on Maestro Results Repo"
+      - name: Generate consolidated HTML report
+        id: summary
+        if: always()
+        run: |
+          node scripts/browserstack-maestro-aggregate-report.js ./maestro-reports
+          # Read before writing, so a failure cannot leave an unterminated output block.
+          summary="$(cat ./maestro-reports/slack-summary.txt)"
+          {
+            echo 'summary<<MAESTRO_SUMMARY_EOF'
+            echo "$summary"
+            echo 'MAESTRO_SUMMARY_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Keep failure evidence (private to this repository)
+        # Logs and screenshots can show recovery words, so they never go to the public report site.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-results
+          path: |
+            maestro-reports/
+            maestro-evidence/
+          retention-days: 30
+          if-no-files-found: ignore
+          overwrite: true
+
+      - name: Publish test results on Maestro Results Repo
         # The run step exits non-zero when tests fail, so publish the report regardless.
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
           external_repository: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
-          publish_dir: './maestro-reports'
+          publish_dir: ./maestro-reports
           keep_files: true
 
   slackNotification:
     if: always()
-    needs: run_browserstack_maestro
+    needs: [upload_maestro_suite, run_browserstack_maestro]
     name: Automation Tests Status
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Slack Notification
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_COLOR: ${{ job.status }}
-        SLACK_ICON: https://github.com/rtCamp.png?size=48
-        SLACK_MESSAGE: "Maestro Test Suite results: ${{ job.status }} URL: https://maestro-nimiq-pay-android-results.netlify.app/"
-        SLACK_TITLE: Automation Tests Status
-        SLACK_USERNAME: Francisco_Diaz
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          # The test job's result, not this job's own status (which is always success). Mapped
+          # because the action only knows success/failure/cancelled, not e.g. skipped.
+          SLACK_COLOR: ${{ needs.run_browserstack_maestro.result == 'success' && 'success' || 'failure' }}
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: |
+            Suite upload: ${{ needs.upload_maestro_suite.result }} · Test run: ${{ needs.run_browserstack_maestro.result }}
+            ${{ needs.run_browserstack_maestro.outputs.summary }}
+            Report: https://maestro-nimiq-pay-android-results.netlify.app/
+            Run and failure evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SLACK_TITLE: Automation Tests Status
+          SLACK_USERNAME: Francisco_Diaz
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
