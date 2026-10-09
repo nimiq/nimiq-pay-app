@@ -59,6 +59,11 @@ public/web3-provider.js
 nimiq-pay-tests/.maestro/screenshots
 
 /.capgo_key_v2
+# BrowserStack Maestro runs: failure evidence can show recovery words, never commit it
+maestro-evidence/
+/maestro-reports/
+maestro-triage/
+nimiq-pay-tests/**/.mutants/
 
 # Netlify CLI local state
 .netlify/
