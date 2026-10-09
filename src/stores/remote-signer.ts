@@ -509,27 +509,41 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     return true
   }
 
+  interface SignerMetadataOptions {
+    // Creation already read from chain history; spares a lookup when the cosigner has no hash.
+    knownCreation?: PlainTransactionDetails
+    // Discovery of old HTLCs: ask the cosigner for retired wallets too, and build the metadata from
+    // our own on-chain creation when the cosigner can't answer. Never for activating a signer.
+    allowRetired?: boolean
+  }
+
   async function resolveAddressSpecificSignerMetadata(
     address: Address,
     context: WalletContext,
+    options: SignerMetadataOptions = {},
   ): Promise<AddressSpecificSignerMetadataResult> {
     if (!isWalletContextCurrent(context))
       return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
 
     let response: Awaited<ReturnType<typeof getRemoteSigner>>
     try {
-      response = await promiseWithTimeout(getRemoteSigner({ address }), DISCOVER_TIMEOUT_MS)
+      response = await promiseWithTimeout(getRemoteSigner({ address, includeInactive: options.allowRetired }), DISCOVER_TIMEOUT_MS)
     }
     catch (error) {
-      return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) }
+      response = { data: undefined, hasError: true, status: 504, error: { message: error instanceof Error ? error.message : String(error), statusCode: 504, error: 'TIMEOUT' } }
     }
     if (!isWalletContextCurrent(context))
       return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
     if (response.error || !response.data) {
       const reason = response.error?.message || 'Cosigner metadata unavailable'
-      return response.error?.statusCode === 404
-        ? { status: 'rejected', reason }
-        : { status: 'unavailable', reason }
+      if (response.error?.statusCode === 404)
+        return { status: 'rejected', reason }
+      // Cosigners without includeInactive answer 409 for retired wallets.
+      if (options.allowRetired && options.knownCreation) {
+        logger.log('🔗 Cosigner metadata unavailable, using the chain', { address: address.toUserFriendlyAddress(), reason })
+        return signerMetadataFromChain(address, context, options.knownCreation)
+      }
+      return { status: 'unavailable', reason }
     }
 
     const remoteSignerApi = response.data
@@ -553,46 +567,89 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       return { status: 'rejected', reason: 'Cosigner returned an invalid validity start' }
     if (!Number.isSafeInteger(remoteSignerApi.validityEnd) || remoteSignerApi.validityEnd <= 0)
       return { status: 'rejected', reason: 'Cosigner returned an invalid validity end' }
-
     if (typeof remoteSignerApi.servicePublicKey !== 'string' || !remoteSignerApi.servicePublicKey.trim())
       return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
-    let cosignerRecipient: string
-    try {
-      cosignerRecipient = Nimiq.PublicKey.fromHex(remoteSignerApi.servicePublicKey).toAddress().toUserFriendlyAddress()
-    }
-    catch {
-      return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
-    }
 
-    let creationTransaction: PlainTransactionDetails | undefined
-    try {
-      if (creationTransactionHash == null) {
-        // Block-based cosigner registration can omit the hash; recover it from chain history.
-        const history = await getAllTransactionsForAddress(address)
-        creationTransaction = history.transactions.find(transaction =>
-          transaction.recipient === addressString
-          && transaction.recipientType === 'htlc'
-          && (transaction.flags & 0b1) === 0b1
-          && isSuccessfulHistoricalHtlcTransaction(transaction),
-        )
-        creationTransactionHash = creationTransaction?.transactionHash
-      }
-      else {
-        creationTransaction = await promiseWithTimeout(context.client.getTransaction(creationTransactionHash), DISCOVER_TIMEOUT_MS)
-      }
+    // A known creation answers both a missing hash and a matching one; a different hash is looked up and rejected below.
+    let creationTransaction = options.knownCreation
+      && (creationTransactionHash == null || creationTransactionHash === options.knownCreation.transactionHash)
+      ? options.knownCreation
+      : undefined
+    if (creationTransaction) {
+      creationTransactionHash = creationTransaction.transactionHash
     }
-    catch (error) {
-      return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) }
+    else {
+      try {
+        if (creationTransactionHash == null) {
+          // Block-based cosigner registration can omit the hash; recover it from chain history.
+          const history = await getAllTransactionsForAddress(address)
+          creationTransaction = history.transactions.find(transaction =>
+            transaction.recipient === addressString
+            && transaction.recipientType === 'htlc'
+            && (transaction.flags & 0b1) === 0b1
+            && isSuccessfulHistoricalHtlcTransaction(transaction),
+          )
+          creationTransactionHash = creationTransaction?.transactionHash
+        }
+        else {
+          creationTransaction = await promiseWithTimeout(context.client.getTransaction(creationTransactionHash), DISCOVER_TIMEOUT_MS)
+        }
+      }
+      catch (error) {
+        return { status: 'unavailable', reason: error instanceof Error ? error.message : String(error) }
+      }
+      if (!isWalletContextCurrent(context))
+        return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
     }
-    if (!isWalletContextCurrent(context))
-      return { status: 'unavailable', reason: 'Wallet or network changed while resolving signer metadata' }
     if (!creationTransaction || !creationTransactionHash)
       return { status: 'unavailable', reason: 'HTLC creation transaction unavailable' }
     if (creationTransaction.transactionHash !== creationTransactionHash)
       return { status: 'rejected', reason: 'HTLC creation transaction hash does not match cosigner metadata' }
+
+    return buildSignerMetadata(address, context, creationTransaction, {
+      publicKey: remoteSignerApi.servicePublicKey,
+      proofSize: remoteSignerApi.serviceSignatureProofSize,
+      end: remoteSignerApi.validityEnd,
+    })
+  }
+
+  // The HTLC must be our own successful creation to a configured cosigner key, the same evidence discovery
+  // scans for. Proof size is the one every current cosigner key uses.
+  function signerMetadataFromChain(address: Address, context: WalletContext, creation: PlainTransactionDetails): AddressSpecificSignerMetadataResult {
+    const data = creation.data
+    if (data.type !== 'htlc')
+      return { status: 'rejected', reason: 'HTLC creation details do not match cosigner metadata' }
+    const keys = remotePublicKey.value ? [...nimiqPayCosignerPublicKeys, remotePublicKey.value] : nimiqPayCosignerPublicKeys
+    const publicKey = keys.find((key) => {
+      try {
+        return Nimiq.PublicKey.fromHex(key).toAddress().toUserFriendlyAddress() === data.recipient
+      }
+      catch {
+        return false
+      }
+    })
+    if (!publicKey)
+      return { status: 'rejected', reason: 'HTLC recipient is not a known cosigner' }
+    return buildSignerMetadata(address, context, creation, { publicKey, proofSize: remoteProofSize.value, end: data.timeout })
+  }
+
+  function buildSignerMetadata(
+    address: Address,
+    context: WalletContext,
+    creationTransaction: PlainTransactionDetails,
+    cosigner: { publicKey: string, proofSize: number, end: number },
+  ): AddressSpecificSignerMetadataResult {
+    const addressString = address.toUserFriendlyAddress()
     if (!isSuccessfulHistoricalHtlcTransaction(creationTransaction))
       return { status: 'rejected', reason: 'HTLC creation transaction was not successful' }
 
+    let cosignerRecipient: string
+    try {
+      cosignerRecipient = Nimiq.PublicKey.fromHex(cosigner.publicKey).toAddress().toUserFriendlyAddress()
+    }
+    catch {
+      return { status: 'rejected', reason: 'Cosigner returned an invalid public key' }
+    }
     let creationRecipient: string
     try {
       creationRecipient = Nimiq.Address.fromString(creationTransaction.recipient).toUserFriendlyAddress()
@@ -607,7 +664,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       || !Number.isSafeInteger(creationTimestamp)
       || creationTimestamp < 0
       || data.type !== 'htlc'
-      || data.timeout !== remoteSignerApi.validityEnd
+      || data.timeout !== cosigner.end
       || data.sender !== context.owner
       || data.recipient !== cosignerRecipient) {
       return { status: 'rejected', reason: 'HTLC creation details do not match cosigner metadata' }
@@ -618,15 +675,15 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
       metadata: {
         address,
         addressString,
-        publicKey: remoteSignerApi.servicePublicKey,
-        proofSize: remoteSignerApi.serviceSignatureProofSize,
+        publicKey: cosigner.publicKey,
+        proofSize: cosigner.proofSize,
         cosignerRecipient,
-        creationTransactionHash,
+        creationTransactionHash: creationTransaction.transactionHash,
         creationState: creationTransaction.state,
         // Cosigner validityStart is its spending gate, not the creation transaction height.
         validityStartHeight: creationTransaction.validityStartHeight,
         start: creationTimestamp,
-        end: remoteSignerApi.validityEnd,
+        end: cosigner.end,
       },
     }
   }
@@ -1480,7 +1537,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
         logger.warn('Ignoring HTLC creation with invalid recipient address', transaction.transactionHash)
         continue
       }
-      const rootResult = await resolveAddressSpecificSignerMetadata(address, context)
+      const rootResult = await resolveAddressSpecificSignerMetadata(address, context, { knownCreation: transaction, allowRetired: true })
       if (!isWalletContextCurrent(context))
         return { ...result, errors: ['Wallet changed during discovery'] }
       if (rootResult.status === 'unavailable') {
@@ -1561,7 +1618,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
             logger.warn('Ignoring HTLC extension with invalid recipient address', extension.transactionHash)
             continue
           }
-          const childResult = await resolveAddressSpecificSignerMetadata(childAddress, context)
+          const childResult = await resolveAddressSpecificSignerMetadata(childAddress, context, { knownCreation: extension, allowRetired: true })
           if (!isWalletContextCurrent(context))
             return { ...result, errors: ['Wallet changed during discovery'] }
           if (childResult.status === 'unavailable') {

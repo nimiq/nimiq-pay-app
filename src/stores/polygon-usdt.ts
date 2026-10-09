@@ -1591,7 +1591,7 @@ export async function persistHistoryTransaction(group: TransferGroup, address: s
     message: '',
   } satisfies UserReceiptTransaction
 
-  await transactionsStore.addReceiptTransaction(receipt)
+  await transactionsStore.addReceiptTransactions([receipt])
   await options?.onIncomingPersisted?.(receipt)
 }
 

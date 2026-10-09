@@ -11,13 +11,13 @@ export function createAddress(value: string) {
 
 function makeState() {
   const getBalance = vi.fn((_address?: unknown): Promise<{ data: any, error: any }> => Promise.resolve({ data: 0, error: undefined }))
-  const getAccountTransactions = vi.fn((_address?: unknown): Promise<{ data: any[] }> => Promise.resolve({ data: [] }))
+  const getAccountTransactions = vi.fn((_address?: any, _limit?: number, _sinceHeight?: number): Promise<{ data: any[], error?: string }> => Promise.resolve({ data: [] }))
   const getLocalTransactions = vi.fn(async (_options?: { sinceHeight?: number, startAt?: string, limit?: number }): Promise<any[]> => (await getAccountTransactions(createAddress('NQ00 TEST LOCAL ADDRESS'))).data)
   const getAllTransactionsForAddress = vi.fn((_address?: unknown): Promise<{ transactions: any[], complete: boolean }> => Promise.resolve({ transactions: [], complete: true }))
   const getWalletContext = vi.fn((): { address: any, client: any, network: string, owner: string, generation: number } | undefined => undefined)
   const isWalletContextCurrent = vi.fn((_context: { client: unknown, network: string, owner: string, generation: number }): boolean => false)
   const findTransactionInHistory = vi.fn((_address?: unknown, _hash?: string): Promise<any> => Promise.resolve(undefined))
-  const getAllOutgoingTransactionsFromHtlcs = vi.fn((_address?: unknown): Promise<any[]> => Promise.resolve([]))
+  const getAllOutgoingTransactionsFromHtlcs = vi.fn((_address?: any): Promise<any[]> => Promise.resolve([]))
   const query = vi.fn((_sql?: string, _params?: any[]): Promise<any[]> => Promise.resolve([]))
   const run = vi.fn((_sql?: string, _params?: any[]): Promise<void> => Promise.resolve())
   const sendTx = vi.fn((_args?: any, _context?: any): Promise<any> => Promise.resolve({
@@ -40,11 +40,10 @@ function makeState() {
   const kvGetItem = vi.fn((_key?: string): Promise<string | undefined> => Promise.resolve(undefined))
   const kvSetItem = vi.fn((_key?: string, _value?: string): Promise<void> => Promise.resolve())
   const registerOwnHtlcIfMissing = vi.fn((_address?: string): Promise<void> => Promise.resolve())
-  const addReceiptTransaction = vi.fn()
+  const addReceiptTransactions = vi.fn((_txs?: any[], _context?: any): Promise<boolean> => Promise.resolve(true))
   const scheduleIncomingPaymentNotification = vi.fn()
-  const addUnknownPaymentToMerchantTransaction = vi.fn()
-  const addWithdrawalTransaction = vi.fn()
-  const addStakingtransaction = vi.fn()
+  const toUnknownPaymentToMerchantTransaction = vi.fn((_tx?: any, _transfer?: string, _rail?: string): any => undefined)
+  const saveTransactions = vi.fn((_txs?: any[]): Promise<boolean> => Promise.resolve(true))
   const updateTransactionStatus = vi.fn()
   const updateTransactionCashbackClaimed = vi.fn()
   const refreshFromDb = vi.fn((): Promise<void> => Promise.resolve())
@@ -137,11 +136,10 @@ function makeState() {
     kvGetItem,
     kvSetItem,
     registerOwnHtlcIfMissing,
-    addReceiptTransaction,
+    addReceiptTransactions,
     scheduleIncomingPaymentNotification,
-    addUnknownPaymentToMerchantTransaction,
-    addWithdrawalTransaction,
-    addStakingtransaction,
+    toUnknownPaymentToMerchantTransaction,
+    saveTransactions,
     updateTransactionStatus,
     updateTransactionCashbackClaimed,
     refreshFromDb,
@@ -278,11 +276,10 @@ export function resetSyncState() {
     state.kvGetItem,
     state.kvSetItem,
     state.registerOwnHtlcIfMissing,
-    state.addReceiptTransaction,
+    state.addReceiptTransactions,
     state.scheduleIncomingPaymentNotification,
-    state.addUnknownPaymentToMerchantTransaction,
-    state.addWithdrawalTransaction,
-    state.addStakingtransaction,
+    state.toUnknownPaymentToMerchantTransaction,
+    state.saveTransactions,
     state.updateTransactionStatus,
     state.updateTransactionCashbackClaimed,
     state.refreshFromDb,
@@ -309,6 +306,7 @@ export function resetSyncState() {
     fn.mockReset()
 
   state.getBalance.mockResolvedValue({ data: 0, error: undefined })
+  state.toUnknownPaymentToMerchantTransaction.mockImplementation((tx: any, transfer?: string, rail?: string) => ({ hash: tx?.transactionHash, transfer, rail }))
   state.getAccountTransactions.mockResolvedValue({ data: [] })
   state.getLocalTransactions.mockImplementation(async () => (await state.getAccountTransactions(state.localAddress)).data)
   state.getAllTransactionsForAddress.mockResolvedValue({ transactions: [], complete: true })
@@ -571,10 +569,9 @@ vi.mock('@/stores/transactions', () => {
   const useTransactions = defineStore('transactions', () => ({
     transactions: [] as any[],
     sendTx: state.sendTx,
-    addReceiptTransaction: state.addReceiptTransaction,
-    addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
-    addWithdrawalTransaction: state.addWithdrawalTransaction,
-    addStakingtransaction: state.addStakingtransaction,
+    addReceiptTransactions: state.addReceiptTransactions,
+    toUnknownPaymentToMerchantTransaction: state.toUnknownPaymentToMerchantTransaction,
+    saveTransactions: state.saveTransactions,
     updateTransactionCashbackClaimed: state.updateTransactionCashbackClaimed,
     updateTransactionStatus: state.updateTransactionStatus,
     refreshFromDb: state.refreshFromDb,

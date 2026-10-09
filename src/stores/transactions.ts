@@ -3,7 +3,7 @@ import type { NimHtlcDetails } from '@nimiq/fastspot-api-v1'
 import type { Swap } from '@nimiq/fastspot-api-v2'
 import type { DbPagination } from '@/lib/sql-queries'
 import type { WalletContext } from '@/stores/remote-signer'
-import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, StakingTransaction, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
+import type { AppTransactionState, ExternalTransaction, MerchantTransaction, PartialSendTxArgs, RecoverablePlainTransactionDetails, Transaction, TransactionSendResult, TransactionSentByUser, TransactionTitle, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, readonly, shallowRef, watch } from 'vue'
 import { useFastspotApiV2 } from '@/composables/useFastspotV2'
@@ -178,6 +178,32 @@ export const useTransactions = defineStore('transactions', () => {
   async function upsertTx(tx: Transaction) {
     logger.log(`📚 Upsert-ing transaction`, tx)
     await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
+  }
+
+  // One native call and one SQL transaction for the whole batch instead of one per tx.
+  // executeSet rolls back the whole set when one row fails, so retry row by row to keep the valid ones.
+  // Returns the txs that were written.
+  async function upsertTxs<T extends Transaction>(txs: T[]): Promise<T[]> {
+    logger.log(`📚 Upsert-ing ${txs.length} transactions`, txs.map(tx => tx.hash))
+    try {
+      await runSet(txs.map(tx => ({ statement: SQLQuery.UpsertTx, values: getUpsertTxValues(tx) })))
+      return txs
+    }
+    catch (batchError) {
+      logger.error(`📚 Batch upsert of ${txs.length} transactions failed, retrying one by one`, batchError)
+      const results = await Promise.allSettled(txs.map(tx => run(SQLQuery.UpsertTx, getUpsertTxValues(tx))))
+      const written = txs.filter((tx, index) => {
+        const result = results[index]
+        if (result.status === 'fulfilled')
+          return true
+        logger.error(`📚 Upsert-ing transaction ${tx.hash} failed`, result.reason)
+        return false
+      })
+      // Nothing written (e.g. DB locked): fail like a single write would.
+      if (!written.length)
+        throw batchError
+      return written
+    }
   }
 
   async function getStoredTransaction(hash: string) {
@@ -479,7 +505,7 @@ export const useTransactions = defineStore('transactions', () => {
       }
 
       if (isExternalTx(staged.tx) && remoteSigner.isWalletContextCurrent(sendContext))
-        addTransaction(staged.tx)
+        addTransactions([staged.tx])
     }
 
     function staleContextResult(errorMessage: string): TransactionSendResult {
@@ -872,27 +898,43 @@ export const useTransactions = defineStore('transactions', () => {
     await refreshFromDb()
   }, { immediate: true })
 
-  async function addReceiptTransaction(tx: UserReceiptTransaction, expectedContext?: WalletContext) {
+  // Resolves true only when every receipt that should be stored was written and published.
+  async function addReceiptTransactions(txs: UserReceiptTransaction[], expectedContext?: WalletContext) {
     const context = expectedContext ?? remoteSigner.getWalletContext()
     // Polygon receipts can arrive before a Nimiq client exists.
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
+      return false
     // Drop drains from our own remote-signer HTLCs — see filterDisplayableTxs.
-    if (tx.senderType === Nimiq.AccountType.HTLC && await remoteSigner.isOurRemoteSigner(tx.sender)) {
-      logger.log(`🚫 addReceiptTransaction skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
-      return
-    }
+    const ourSigners = await remoteSigner.getOurRemoteSignerAddresses()
+    const receipts = txs.filter((tx) => {
+      if (tx.senderType !== Nimiq.AccountType.HTLC || !ourSigners.has(tx.sender))
+        return true
+      logger.log(`🚫 addReceiptTransactions skipped own-HTLC drain`, { hash: tx.hash, sender: tx.sender, amount: tx.amount })
+      return false
+    })
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
-    await upsertTx(tx)
+      return false
+    if (!receipts.length)
+      return true
+    const written = await upsertTxs(receipts)
     if (context && !remoteSigner.isWalletContextCurrent(context))
-      return
-    addTransaction(tx)
+      return false
+    addTransactions(written)
+    return written.length === receipts.length
+  }
+
+  // Resolves true only when every tx was written.
+  async function saveTransactions(txs: ExternalTransaction[]) {
+    if (!txs.length)
+      return true
+    const written = await upsertTxs(txs)
+    addTransactions(written)
+    return written.length === txs.length
   }
 
   async function addPaymentToMerchantTransaction(tx: MerchantTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function addPolygonHistoryTransaction(tx: UserTransaction) {
@@ -901,7 +943,7 @@ export const useTransactions = defineStore('transactions', () => {
     if (!storedTx)
       return
 
-    addTransaction(storedTx)
+    addTransactions([storedTx])
   }
 
   async function addPolygonSwapTransactionWithRecovery(tx: MerchantTransaction, recoveryAddress: string) {
@@ -915,7 +957,7 @@ export const useTransactions = defineStore('transactions', () => {
         values: getUpsertTxValues(tx),
       },
     ])
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function replacePolygonTransactionHash(oldHash: string, newHash: string, recoveryAddress?: string) {
@@ -942,7 +984,7 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function addUnknownPaymentToMerchantTransaction(
+  function toUnknownPaymentToMerchantTransaction(
     tx: PlainTransactionDetails,
     transfer = Transfer.UserPaymentToMerchant,
     rail = Rail.Unknown,
@@ -953,8 +995,8 @@ export const useTransactions = defineStore('transactions', () => {
     },
     meta?: Record<string, any>,
   ) {
-    logger.log(`💸 addUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
-    const newTx = {
+    logger.log(`💸 toUnknownPaymentToMerchantTransaction`, { hash: tx.transactionHash, sender: tx.sender, senderType: tx.senderType, recipient: tx.recipient, amount: tx.value, transfer, state: tx.state, executionResult: tx.executionResult ?? null })
+    return {
       transfer,
       amount: tx.value,
       sender: tx.sender,
@@ -985,23 +1027,16 @@ export const useTransactions = defineStore('transactions', () => {
       asset: Asset.NIM,
       chain: Chain.Nimiq,
     } as MerchantTransaction
-    await upsertTx(newTx)
-    addTransaction(newTx)
   }
 
   async function addPaymentTransaction(tx: UserTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function addWithdrawalTransaction(tx: UserTransaction) {
     await upsertTx(tx)
-    addTransaction(tx)
-  }
-
-  async function addStakingtransaction(tx: StakingTransaction) {
-    await upsertTx(tx)
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
   async function replaceTransaction(tx: ExternalTransaction) {
@@ -1016,23 +1051,25 @@ export const useTransactions = defineStore('transactions', () => {
       return
     }
 
-    addTransaction(tx)
+    addTransactions([tx])
   }
 
-  function addTransaction(tx: ExternalTransaction) {
+  // Merges a whole batch with one list update and one sort: history sync can add thousands of txs.
+  function addTransactions(txs: ExternalTransaction[]) {
+    if (!txs.length)
+      return
     // Same hash can arrive via multiple paths (incoming-tx listener + recursive HTLC traversal +
     // periodic refresh) — replace any existing entry instead of stacking duplicates.
+    const incoming = new Map(txs.map(tx => [tx.hash, tx]))
     const others: ExternalTransaction[] = []
-    let replaced: ExternalTransaction | undefined
     for (const existing of transactions.value) {
-      if (existing.hash === tx.hash)
-        replaced = existing
+      const tx = incoming.get(existing.hash)
+      if (tx)
+        logger.log(`♻️ addTransactions replacing existing entry`, { hash: tx.hash, transfer: tx.transfer, previousTransfer: existing.transfer })
       else
         others.push(existing)
     }
-    if (replaced)
-      logger.log(`♻️ addTransaction replacing existing entry`, { hash: tx.hash, transfer: tx.transfer, previousTransfer: replaced.transfer })
-    transactions.value = [tx, ...others].sort(
+    transactions.value = [...incoming.values(), ...others].sort(
       (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
     )
   }
@@ -1090,7 +1127,7 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.SetSwapPreimage, [secret, txHash])
     const storedTx = await getStoredTransaction(txHash)
     if (storedTx && transactions.value.some(tx => tx.hash === txHash))
-      addTransaction(storedTx)
+      addTransactions([storedTx])
     return storedTx
   }
 
@@ -1134,15 +1171,15 @@ export const useTransactions = defineStore('transactions', () => {
     transactions: readonly(transactions),
     sendTx,
     restorePendingOutgoingTransactions,
-    addReceiptTransaction,
+    addReceiptTransactions,
+    saveTransactions,
     addPaymentToMerchantTransaction,
     addPolygonHistoryTransaction,
     addPolygonSwapTransactionWithRecovery,
     replacePolygonTransactionHash,
-    addUnknownPaymentToMerchantTransaction,
+    toUnknownPaymentToMerchantTransaction,
     addPaymentTransaction,
     addWithdrawalTransaction,
-    addStakingtransaction,
     replaceTransaction,
     updateTransactionStatus,
     updateTransactionTitle,

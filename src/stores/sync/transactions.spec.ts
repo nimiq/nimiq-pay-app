@@ -758,7 +758,29 @@ describe('useSyncTransactions', () => {
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
       expect(state.getLocalTransactions).toHaveBeenCalledWith({ sinceHeight: 0, limit: 100 })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
+    })
+
+    it('saves all new receipts of a history page in one batch', async () => {
+      const receipt = {
+        transactionHash: 'deposit-1',
+        sender: 'NQ77 EXTERNAL',
+        recipient: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 'basic',
+        recipientType: 'basic',
+        value: 100,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { raw: '' },
+        proof: { raw: '' },
+      }
+      state.getLocalTransactions.mockResolvedValueOnce([receipt, { ...receipt, transactionHash: 'deposit-2' }, { ...receipt, transactionHash: 'deposit-3' }])
+      const { useSyncTransactions } = await import('./transactions')
+      await useSyncTransactions().updateTransactionHistory()
+
+      expect(state.addReceiptTransactions).toHaveBeenCalledOnce()
+      expect(state.addReceiptTransactions.mock.calls[0][0]?.map((tx: any) => tx.hash)).toEqual(['deposit-1', 'deposit-2', 'deposit-3'])
     })
 
     it.each(['pending HTLC', 'replaced HTLC', 'replaced wallet'])('ingests the first page independently of %s and stalled older pages', async (scenario) => {
@@ -791,7 +813,7 @@ describe('useSyncTransactions', () => {
         state.localAddress = createAddress('NQ88 REPLACEMENT OWNER')
       page.resolve([receipt, ...Array.from({ length: 99 }, (_, index) => ({ ...receipt, sender: 'NQ00 TEST LOCAL ADDRESS', transactionHash: `outgoing-${index}` }))])
       await flushPromises()
-      const savedBeforeOlderPage = state.addReceiptTransaction.mock.calls.length
+      const savedBeforeOlderPage = state.addReceiptTransactions.mock.calls.length
       syncState.pendingHtlcCreationTransactions = []
       olderPage.resolve([])
       await update
@@ -838,7 +860,7 @@ describe('useSyncTransactions', () => {
       }) as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('skips already-saved hashes', async () => {
@@ -867,7 +889,7 @@ describe('useSyncTransactions', () => {
       })
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('updates an already-saved Nimiq Pay HTLC deposit with its owner', async () => {
@@ -914,10 +936,10 @@ describe('useSyncTransactions', () => {
 
       await useSyncTransactions().updateTransactionHistory()
 
-      expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      expect(state.addReceiptTransactions).toHaveBeenCalledWith([expect.objectContaining({
         hash: 'known-htlc-hash',
         sender: 'NQ44 HTLC OWNER',
-      }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+      })], expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
     })
 
     describe('own-HTLC drain filtering', () => {
@@ -949,7 +971,7 @@ describe('useSyncTransactions', () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve'))
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
-        expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+        expect(state.addReceiptTransactions).not.toHaveBeenCalled()
         expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith(
           'NQ44 SOME HTLC ADDRESS',
           expect.objectContaining({
@@ -964,7 +986,7 @@ describe('useSyncTransactions', () => {
         mockLocalAddressTxs(ownHtlcDrain('early-resolve'))
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
-        expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+        expect(state.addReceiptTransactions).not.toHaveBeenCalled()
         expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith(
           'NQ44 SOME HTLC ADDRESS',
           expect.objectContaining({
@@ -1017,17 +1039,17 @@ describe('useSyncTransactions', () => {
         finishReceipt({ hash: tx.transactionHash, sender: tx.sender })
         await update
 
-        expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+        expect(state.addReceiptTransactions).not.toHaveBeenCalled()
       })
 
       it('keeps a foreign HTLC drain (creator != local) as a Top-Up', async () => {
         mockLocalAddressTxs(ownHtlcDrain('timeout-resolve', 'NQ77 FOREIGN CREATOR'))
         const { useSyncTransactions } = await import('./transactions')
         await useSyncTransactions().updateTransactionHistory()
-        expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+        expect(state.addReceiptTransactions).toHaveBeenCalledWith([expect.objectContaining({
           hash: 'drain-hash',
           title: 'Top-Up',
-        }), expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+        })], expect.objectContaining({ client: state.client, generation: state.walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
         expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
       })
 
@@ -1037,7 +1059,7 @@ describe('useSyncTransactions', () => {
         await useSyncTransactions().updateTransactionHistory()
         // Receipt is persisted via the refresh path, but the notifier must stay silent
         // — that's the listener-only contract for incoming-payment notifications.
-        expect(state.addReceiptTransaction).toHaveBeenCalled()
+        expect(state.addReceiptTransactions).toHaveBeenCalled()
         expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
       })
     })
@@ -1095,12 +1117,12 @@ describe('useSyncTransactions', () => {
       state.getAllOutgoingTransactionsFromHtlcs.mockResolvedValue([swapLeafTx] as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
+      expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
         expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
       )
     })
 
-    it('routes withdrawal txs to addWithdrawalTransaction when recipient is a known top-up sender', async () => {
+    it('routes withdrawal txs to saveTransactions as withdrawals when recipient is a known top-up sender', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
       const withdrawalTx = {
@@ -1129,14 +1151,14 @@ describe('useSyncTransactions', () => {
       })
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addWithdrawalTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      expect(state.saveTransactions).toHaveBeenCalledWith([expect.objectContaining({
         hash: 'withdrawal-hash',
         validityStartHeight: 100,
         transfer: Transfer.UserPayment,
-      }))
+      })])
     })
 
-    it('routes unknown-recipient txs through addUnknownPaymentToMerchantTransaction', async () => {
+    it('routes unknown-recipient txs through toUnknownPaymentToMerchantTransaction', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
       const unknownTx = {
@@ -1159,12 +1181,13 @@ describe('useSyncTransactions', () => {
       }) as any)
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
+      expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
         expect.objectContaining({ transactionHash: 'unknown-hash' }),
       )
+      expect(state.saveTransactions).toHaveBeenCalledWith([expect.objectContaining({ hash: 'unknown-hash' })])
     })
 
-    it('routes BTC_LN swap to addUnknownPaymentToMerchantTransaction with Rail.BitcoinLightning', async () => {
+    it('routes BTC_LN swap to toUnknownPaymentToMerchantTransaction with Rail.BitcoinLightning', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
       const swapTx = {
@@ -1191,7 +1214,7 @@ describe('useSyncTransactions', () => {
       })
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
+      expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
         swapTx,
         Transfer.UserPaymentToAtomicSwap,
         Rail.BitcoinLightning,
@@ -1201,7 +1224,7 @@ describe('useSyncTransactions', () => {
       )
     })
 
-    it('logs swap fetch errors and falls back to addUnknownPaymentToMerchantTransaction', async () => {
+    it('logs swap fetch errors and falls back to toUnknownPaymentToMerchantTransaction', async () => {
       const signer = { address: 'NQ22 TEST FUNDED REMOTE ADDRESS' }
       state.getAllRemoteSigners.mockResolvedValue([{ address: createAddress(signer.address) }] as any)
       const swapTx = {
@@ -1226,7 +1249,7 @@ describe('useSyncTransactions', () => {
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
       expect(state.logger.error).toHaveBeenCalledWith('Error fetching contract info from Fastspot:', 'fastspot down')
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+      expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
     })
 
     it('logs error when contract.from.asset is not NIM', async () => {
@@ -1257,7 +1280,210 @@ describe('useSyncTransactions', () => {
       const { useSyncTransactions } = await import('./transactions')
       await useSyncTransactions().updateTransactionHistory()
       expect(state.logger.error).toHaveBeenCalledWith(expect.stringContaining('swap from another asset than NIM'))
-      expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+      expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(swapTx)
+    })
+  })
+
+  describe('incremental history', () => {
+    const receipt = {
+      transactionHash: 'deposit',
+      sender: 'NQ77 EXTERNAL',
+      recipient: 'NQ00 TEST LOCAL ADDRESS',
+      senderType: 'basic',
+      recipientType: 'basic',
+      value: 100,
+      fee: 0,
+      state: 'confirmed',
+      timestamp: 1,
+      data: { raw: '' },
+      proof: { raw: '' },
+    }
+    const signer = (address: string, balance: number, end: number) => ({ address: createAddress(address), balance, end, active: false, publicKey: 'k', start: 0, proofSize: 98 })
+
+    beforeEach(() => {
+      state.addReceiptTransactions.mockResolvedValue(true)
+      state.saveTransactions.mockResolvedValue(true)
+    })
+
+    it('fetches local history from one batch before the cursor after a complete run', async () => {
+      state.getLocalTransactions.mockResolvedValue([receipt])
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.lastMacroBlockHeight = 192
+      await sync.updateTransactionHistory()
+
+      expect(state.getLocalTransactions.mock.calls.map(([options]) => options?.sinceHeight)).toEqual([0, 128 - 32])
+    })
+
+    it('scans full history again after a run with a failed write', async () => {
+      state.getLocalTransactions.mockResolvedValue([receipt])
+      state.addReceiptTransactions.mockResolvedValue(false)
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+
+      expect(state.getLocalTransactions.mock.calls.map(([options]) => options?.sinceHeight)).toEqual([0, 0])
+    })
+
+    it('scans full history again after a failed history request', async () => {
+      state.getLocalTransactions.mockRejectedValueOnce(new Error('no peers')).mockResolvedValue([])
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+
+      expect(state.getLocalTransactions.mock.calls.map(([options]) => options?.sinceHeight)).toEqual([0, 0])
+    })
+
+    it('does not set a cursor before the first macro block is known', async () => {
+      state.lastMacroBlockHeight = 0
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+
+      expect(state.getLocalTransactions.mock.calls.map(([options]) => options?.sinceHeight)).toEqual([0, 0])
+    })
+
+    it('scans active, funded and newly found remote signers in full', async () => {
+      const drained = signer('NQ11 DRAINED EXPIRED', 0, 100_000)
+      const funded = signer('NQ12 FUNDED EXPIRED', 500, 100_000)
+      const active = signer('NQ13 EMPTY ACTIVE', 0, 300_000)
+      const found = signer('NQ14 FOUND LATER', 0, 100_000)
+      state.getAllRemoteSigners.mockResolvedValueOnce([drained, funded, active] as any).mockResolvedValue([drained, funded, active, found] as any)
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.getAccountTransactions.mockClear()
+      await sync.updateTransactionHistory()
+
+      const sinceBySigner = Object.fromEntries(state.getAccountTransactions.mock.calls
+        .filter(([address]) => address?.toUserFriendlyAddress() !== 'NQ00 TEST LOCAL ADDRESS')
+        .map(([address, , sinceHeight]) => [address.toUserFriendlyAddress(), sinceHeight]))
+      expect(sinceBySigner).toEqual({
+        'NQ11 DRAINED EXPIRED': 128 - 32,
+        'NQ12 FUNDED EXPIRED': 0,
+        'NQ13 EMPTY ACTIVE': 0,
+        'NQ14 FOUND LATER': 0,
+      })
+    })
+
+    it('keeps traversing extension HTLCs whose creation is older than the cursor', async () => {
+      const drained = signer('NQ11 DRAINED EXPIRED', 0, 100_000)
+      state.getAllRemoteSigners.mockResolvedValue([drained] as any)
+      const extensionTx = {
+        transactionHash: 'extension-hash',
+        sender: 'NQ11 DRAINED EXPIRED',
+        senderType: 'basic',
+        recipient: 'NQ44 EXTENSION HTLC',
+        recipientType: 'htlc',
+        value: 50_000,
+        fee: 0,
+        state: 'confirmed',
+        timestamp: 1,
+        data: { hashRoot: '0000000000000000000000000000000000000000000000000000000000000000' },
+        proof: { raw: '' },
+      }
+      state.getAccountTransactions.mockImplementation((async (address: any, _limit?: number, sinceHeight = 0) =>
+        ({ data: address?.toUserFriendlyAddress() === 'NQ11 DRAINED EXPIRED' && sinceHeight === 0 ? [extensionTx] : [] })) as any)
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.getAllOutgoingTransactionsFromHtlcs.mockClear()
+      await sync.updateTransactionHistory()
+
+      expect(state.getAccountTransactions).toHaveBeenLastCalledWith(expect.anything(), undefined, 128 - 32)
+      expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalledWith(expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }))
+      expect(state.getAllOutgoingTransactionsFromHtlcs.mock.calls[0][0].toUserFriendlyAddress()).toBe('NQ44 EXTENSION HTLC')
+    })
+
+    it('scans full history again after a wallet switch', async () => {
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.walletContextGeneration += 1
+      await sync.updateTransactionHistory()
+
+      expect(state.getLocalTransactions.mock.calls.map(([options]) => options?.sinceHeight)).toEqual([0, 0])
+    })
+  })
+
+  describe('remote signer discovery', () => {
+    const htlcCreation = {
+      transactionHash: 'creation',
+      sender: 'NQ00 TEST LOCAL ADDRESS',
+      senderType: 'basic',
+      recipient: 'NQ45 NEW HTLC',
+      recipientType: 'htlc',
+      value: 100,
+      fee: 0,
+      state: 'confirmed',
+      timestamp: 1,
+      data: { type: 'htlc', raw: '', sender: 'NQ00 TEST LOCAL ADDRESS', recipient: 'NQ99 TEST COSIGNER' },
+      proof: { raw: '' },
+    }
+
+    it('runs once per wallet after it completes', async () => {
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
+    })
+
+    it('retries an incomplete discovery only after the retry delay', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      state.discoverRemoteSignersFromBlockchain.mockResolvedValueOnce({ added: 0, alreadyKnown: 0, localComplete: false, errors: ['HTLC metadata unavailable'], createdHtlcs: [], historyComplete: true })
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
+
+      vi.setSystemTime(Date.now() + 5 * 60_000 + 1)
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+      vi.useRealTimers()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledTimes(2)
+    })
+
+    it('runs again after a wallet switch', async () => {
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.walletContextGeneration += 1
+      await sync.updateTransactionHistory()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledTimes(2)
+    })
+
+    it('runs again when local history shows an unknown cosigner HTLC creation', async () => {
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.getLocalTransactions.mockResolvedValueOnce([htlcCreation])
+      await sync.updateTransactionHistory()
+      await sync.updateTransactionHistory()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not run again for known signers or non-cosigner HTLCs', async () => {
+      state.isOurRemoteSigner.mockImplementation(async address => address === 'NQ45 NEW HTLC')
+      const { useSyncTransactions } = await import('./transactions')
+      const sync = useSyncTransactions()
+      await sync.updateTransactionHistory()
+      state.getLocalTransactions.mockResolvedValueOnce([
+        htlcCreation,
+        { ...htlcCreation, transactionHash: 'swap', recipient: 'NQ46 SWAP HTLC', data: { ...htlcCreation.data, recipient: 'NQ47 SWAP REDEEM' } },
+      ])
+      await sync.updateTransactionHistory()
+
+      expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
     })
   })
 

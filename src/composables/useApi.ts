@@ -299,13 +299,14 @@ const remoteSignerWsApi = (function () {
 export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
-  interface GetRemoteSignerArg { address: MaybeRef<Address> }
+  interface GetRemoteSignerArg { address: MaybeRef<Address>, includeInactive?: boolean }
   interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<NimiqTransaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
   interface GetTransactionStateArg { hash: MaybeRef<string> }
 
   interface StatusRes { status: RemoteStatus, blockHeight: number, servicePublicKey: string, network: string }
-  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number }
+  // isActive is only sent by cosigners that support includeInactive.
+  interface GetRemoteSignerRes { address: string, servicePublicKey: string, serviceSignatureProofSize: number, validityStart: number, validityEnd: number, creatingTransactionHash: string, balance: number, isActive?: boolean }
   interface GetTransactionStateRes { hash: string, state: RemoteSignerTransactionState, executionResult?: boolean, timestamp: number, value: number }
 
   interface RemoteErrorRes {
@@ -326,8 +327,9 @@ export function useRemoteSignerApi() {
     return { data: data!, status, hasError, error: undefined }
   }
 
-  async function getRemoteSigner({ address }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
-    const { data, error, status, hasError } = await remoteSignerWsApi<GetRemoteSignerRes, RemoteErrorRes>('wallet', { address: v(address).toUserFriendlyAddress() })
+  async function getRemoteSigner({ address, includeInactive }: GetRemoteSignerArg): AsyncResultApi<GetRemoteSignerRes, RemoteErrorRes> {
+    // includeInactive also returns retired wallets instead of a 409; older cosigners ignore it.
+    const { data, error, status, hasError } = await remoteSignerWsApi<GetRemoteSignerRes, RemoteErrorRes>('wallet', { address: v(address).toUserFriendlyAddress(), ...(includeInactive ? { includeInactive } : {}) })
     if (error || !data?.address || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
 
