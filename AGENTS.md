@@ -14,6 +14,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Tooling & commands
 
 - Use `pnpm` for dependencies and scripts.
+- `dotenv` scripts (`pnpm release:browserstack:apk`, …) swallow flags passed after them: `pnpm release:browserstack:apk --apk x` silently drops `--apk`. Run `pnpm exec dotenv -- node scripts/<script> --flag` instead.
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
@@ -24,6 +25,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - A pull that moves the pin leaves the old submodule checkout in place, and the build silently uses it. Before debugging Mini Apps provider behavior, run `git submodule status`: a leading `+` means the checkout differs from the pin. Fix with `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
 - The build script installs `web3-provider` with `--frozen-lockfile`. After changing its dependencies, run `pnpm --dir web3-provider install` to update `web3-provider/pnpm-lock.yaml` first.
 - When a change needs new provider code, move the submodule to a reviewed commit that exists on `nimiq/trust-web3-provider` in the same PR. Publishing a new SDK version or updating the demo dependency does not move the pin. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+- An app build without the bridge still succeeds: `public/web3-provider.js` is then a placeholder (or a stale copy) and `vite build` only logs "Failed to copy web3 provider script". Before building an APK, build the provider packages and run `pnpm build:web3-provider`, then check `assets/public/web3-provider.js` in the APK is the real bundle (~1.2 MB, not a few bytes).
 
 ## Naming & terminology
 
