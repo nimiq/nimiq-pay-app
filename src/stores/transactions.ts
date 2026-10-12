@@ -79,6 +79,13 @@ export enum TransactionListState {
   ShowingResults = 'showing-results',
 }
 
+export interface TransactionStatusUpdate {
+  hash: string
+  status: AppTransactionState
+  timestamp: number | undefined
+  executionResult?: boolean
+}
+
 export const useTransactions = defineStore('transactions', () => {
   const { query, run, runSet } = useConn()
   const { client, networkId, networkName, height, headTimestamp } = storeToRefs(useNimiqNetwork())
@@ -1074,17 +1081,32 @@ export const useTransactions = defineStore('transactions', () => {
     )
   }
 
-  async function updateTransactionStatus({ hash, status, timestamp, executionResult }: { hash: string, status: AppTransactionState, timestamp: number | undefined, executionResult?: boolean }) {
-    await run(SQLQuery.UpdateTxStatus, [status, timestamp ?? null, hash])
-    const index = transactions.value.findIndex(tx => tx.hash === hash)
-    if (index >= 0) {
-      const nextTransactions = [...transactions.value]
-      nextTransactions[index] = {
-        ...nextTransactions[index],
-        status,
-        executionResult: executionResult ?? nextTransactions[index].executionResult,
-        timestamp: timestamp ?? nextTransactions[index].timestamp,
+  // An array is written with one native call and merged with one sort: periodic refreshes can update many txs.
+  async function updateTransactionStatus(input: TransactionStatusUpdate | TransactionStatusUpdate[]) {
+    const updates = Array.isArray(input) ? input : [input]
+    if (!updates.length)
+      return
+    const values = ({ hash, status, timestamp }: TransactionStatusUpdate) => [status, timestamp ?? null, hash]
+    if (updates.length === 1)
+      await run(SQLQuery.UpdateTxStatus, values(updates[0]))
+    else
+      await runSet(updates.map(update => ({ statement: SQLQuery.UpdateTxStatus, values: values(update) })))
+
+    const byHash = new Map(updates.map(update => [update.hash, update]))
+    let changed = false
+    const nextTransactions = transactions.value.map((tx) => {
+      const update = byHash.get(tx.hash)
+      if (!update)
+        return tx
+      changed = true
+      return {
+        ...tx,
+        status: update.status,
+        executionResult: update.executionResult ?? tx.executionResult,
+        timestamp: update.timestamp ?? tx.timestamp,
       }
+    })
+    if (changed) {
       transactions.value = nextTransactions.sort(
         (a, b) => (b.timestamp || Number.MAX_SAFE_INTEGER) - (a.timestamp || Number.MAX_SAFE_INTEGER),
       )

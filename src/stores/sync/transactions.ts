@@ -2,6 +2,7 @@ import type { Client, PlainTransactionDetails, TransactionState } from '@nimiq/c
 import type { ContractWithEstimate } from '@nimiq/fastspot-api-v1'
 import type { RemoteSigner } from '@/lib/sql-queries'
 import type { WalletContext } from '@/stores/remote-signer'
+import type { TransactionStatusUpdate } from '@/stores/transactions'
 import type { AppTransactionState, ExternalTransaction, MerchantTransaction, StakingTransaction, Transaction, UserReceiptTransaction, UserTransaction } from '@/types/transactions'
 import { SwapAsset } from '@nimiq/fastspot-api-v1'
 import { defineStore, storeToRefs } from 'pinia'
@@ -519,6 +520,8 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
   async function updateTransactionsInDb() {
     const context = getPendingTransactionContext()
     const dbTxs: Transaction[] = await useConn().query(SQLQuery.SelectAllTransactions)
+    // Written together after all lookups: one native call and one list sort instead of one per tx.
+    const statusUpdates: TransactionStatusUpdate[] = []
 
     await Promise.all(dbTxs.map(async (dbTx) => {
       if (['failed', 'invalidated'].includes(dbTx.status))
@@ -562,7 +565,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
         if (dbTx.status !== txStatus) {
           logger.log(`📬 Updating transaction ${dbTx.hash} ${txStatus}`)
-          updateTransactionStatus({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
+          statusUpdates.push({ hash: dbTx.hash, status: txStatus, timestamp: dbTx.timestamp })
         }
       }
       else {
@@ -604,7 +607,7 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
           }
           if (dbTx.status !== state || dbTx.timestamp !== timestamp || (executionResult !== undefined && current?.executionResult !== executionResult)) {
             logger.log(`📬 Updating transaction ${dbTx.hash} ${state} with ${amount / 1e5} NIM`, { executionResult: executionResult ?? null })
-            updateTransactionStatus({ hash: dbTx.hash, status: state, timestamp, executionResult })
+            statusUpdates.push({ hash: dbTx.hash, status: state, timestamp, executionResult })
           }
         }
         catch (error) {
@@ -612,6 +615,18 @@ export const useSyncTransactions = defineStore('sync-transactions', () => {
         }
       }
     }))
+
+    if (context && !isPendingTransactionContextCurrent(context))
+      return
+    // Another refresh may have recorded a failure while the lookups ran.
+    const transactions = useTransactions().transactions
+    const updates = statusUpdates.filter((update) => {
+      const current = transactions.find(transaction => transaction.hash === update.hash)
+      return !(current && ['failed', 'invalidated'].includes(current.status)
+        && !['failed', 'invalidated'].includes(update.status) && update.executionResult !== true)
+    })
+    if (updates.length)
+      await updateTransactionStatus(updates)
   }
 
   async function toSwapTransaction(

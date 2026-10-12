@@ -399,6 +399,31 @@ describe('useTransactions', () => {
     expect(seenStatuses).toEqual(['confirmed'])
   })
 
+  it('writes a batch of status updates with one runSet and one list update', async () => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    await store.saveTransactions([
+      { hash: 'older', status: 'pending', timestamp: 1, asset: Asset.NIM } as any,
+      { hash: 'newer', status: 'pending', timestamp: 2, asset: Asset.NIM } as any,
+    ])
+    state.run.mockClear()
+    state.runSet.mockClear()
+
+    await store.updateTransactionStatus([
+      { hash: 'older', status: 'confirmed', timestamp: 3 },
+      { hash: 'newer', status: 'failed', timestamp: 2, executionResult: false },
+    ])
+
+    expect(state.run).not.toHaveBeenCalled()
+    expect(state.runSet).toHaveBeenCalledOnce()
+    expect(state.runSet.mock.calls[0][0]).toEqual([
+      { statement: SQLQuery.UpdateTxStatus, values: ['confirmed', 3, 'older'] },
+      { statement: SQLQuery.UpdateTxStatus, values: ['failed', 2, 'newer'] },
+    ])
+    expect(store.transactions.map(tx => [tx.hash, tx.status])).toEqual([['older', 'confirmed'], ['newer', 'failed']])
+  })
+
   it.each([true, false, undefined])('preserves executionResult=%s unless an update provides a result', async (executionResult) => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()
