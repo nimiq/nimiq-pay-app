@@ -103,8 +103,9 @@ export function useStringParser() {
       url = new URL(content)
     }
     catch (e) {
-      // Scanned or pasted content can be anything (even a seed phrase), so keep it out of the reported message.
-      logger.error('Error invalid URL', { content }, e)
+      // Scanned or pasted content can be anything (even a seed phrase), and some engines echo it in the URL
+      // error's message, so both stay nested where only the local log file sees them.
+      logger.error('Error invalid URL', { content, error: e })
       // Truncate the URL in the error message if it's too long, to avoid overwhelming the user with a long string
       const truncatedUrl = content.length > 100 ? `${content.substring(0, 100)}...` : content
       return { error: i18n.t('Invalid URL: {url}', { url: truncatedUrl }), data: undefined }

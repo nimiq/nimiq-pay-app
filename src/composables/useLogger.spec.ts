@@ -85,6 +85,15 @@ describe('useLogger', () => {
     expect(state.captureException.mock.calls[0][0].message).toBe('Upsert-ing transaction … failed: db')
   })
 
+  it('does not report an error nested in an object', async () => {
+    const logger = await loadLogger('useStringParser')
+    logger.error('Error invalid URL', { content: 'seed words', error: new TypeError('URL constructor: seed words is not a valid URL.') })
+    await flushReports()
+
+    expect(state.captureException.mock.calls[0][0].message).toBe('Error invalid URL')
+    expect(JSON.stringify(state.captureException.mock.calls[0][0])).not.toContain('seed words')
+  })
+
   it('reports an API error object with its status code', async () => {
     const logger = await loadLogger('useApi')
     logger.error('Request failed:', { message: 'Wallet no longer active', statusCode: 409 })
