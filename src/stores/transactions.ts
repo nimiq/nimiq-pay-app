@@ -79,6 +79,8 @@ export enum TransactionListState {
   ShowingResults = 'showing-results',
 }
 
+const UPSERT_CHUNK_SIZE = 200
+
 export interface TransactionStatusUpdate {
   hash: string
   status: AppTransactionState
@@ -187,30 +189,38 @@ export const useTransactions = defineStore('transactions', () => {
     await run(SQLQuery.UpsertTx, getUpsertTxValues(tx))
   }
 
-  // One native call and one SQL transaction for the whole batch instead of one per tx.
-  // executeSet rolls back the whole set when one row fails, so retry row by row to keep the valid ones.
+  // One native call and one SQL transaction per chunk instead of one per tx.
+  // executeSet rolls back the whole chunk when one row fails, so retry its rows one by one to keep the valid ones.
   // Returns the txs that were written.
   async function upsertTxs<T extends Transaction>(txs: T[]): Promise<T[]> {
     logger.log(`📚 Upsert-ing ${txs.length} transactions`, txs.map(tx => tx.hash))
-    try {
-      await runSet(txs.map(tx => ({ statement: SQLQuery.UpsertTx, values: getUpsertTxValues(tx) })))
-      return txs
-    }
-    catch (batchError) {
-      logger.error(`📚 Batch upsert of ${txs.length} transactions failed, retrying one by one`, batchError)
-      const results = await Promise.allSettled(txs.map(tx => run(SQLQuery.UpsertTx, getUpsertTxValues(tx))))
-      const written = txs.filter((tx, index) => {
+    const written: T[] = []
+    let firstError: unknown
+    // Chunks keep each native bridge message bounded when a remote signer returns thousands of txs.
+    for (let start = 0; start < txs.length; start += UPSERT_CHUNK_SIZE) {
+      const chunk = txs.slice(start, start + UPSERT_CHUNK_SIZE)
+      try {
+        await runSet(chunk.map(tx => ({ statement: SQLQuery.UpsertTx, values: getUpsertTxValues(tx) })))
+        written.push(...chunk)
+        continue
+      }
+      catch (batchError) {
+        firstError ??= batchError
+        logger.error(`📚 Batch upsert of ${chunk.length} transactions failed, retrying one by one`, batchError)
+      }
+      const results = await Promise.allSettled(chunk.map(tx => run(SQLQuery.UpsertTx, getUpsertTxValues(tx))))
+      chunk.forEach((tx, index) => {
         const result = results[index]
         if (result.status === 'fulfilled')
-          return true
-        logger.error(`📚 Upsert-ing transaction ${tx.hash} failed`, result.reason)
-        return false
+          written.push(tx)
+        else
+          logger.error(`📚 Upsert-ing transaction ${tx.hash} failed`, result.reason)
       })
-      // Nothing written (e.g. DB locked): fail like a single write would.
-      if (!written.length)
-        throw batchError
-      return written
     }
+    // Nothing written (e.g. DB locked): fail like a single write would.
+    if (txs.length && !written.length)
+      throw firstError
+    return written
   }
 
   async function getStoredTransaction(hash: string) {

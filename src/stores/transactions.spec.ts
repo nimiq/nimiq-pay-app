@@ -919,6 +919,23 @@ describe('useTransactions', () => {
       expect(store.transactions.map(tx => tx.hash)).toEqual(['good-2', 'good-1'])
     })
 
+    it('splits large batches into chunks and retries only the failed chunk row by row', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockClear()
+      state.run.mockClear()
+      // Second chunk fails as a set; its rows still write one by one.
+      state.runSet.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('constraint failed'))
+
+      await store.addReceiptTransactions(Array.from({ length: 450 }, (_, index) =>
+        makeUserReceiptRow({ sender: foreignHtlc, hash: `chunk-${index}`, timestamp: index })) as any)
+
+      expect(state.runSet.mock.calls.map(([statements]) => statements.length)).toEqual([200, 200, 50])
+      expect(state.run.mock.calls.filter(([sql]) => sql === SQLQuery.UpsertTx)).toHaveLength(200)
+      expect(store.transactions).toHaveLength(450)
+    })
+
     it('addReceiptTransactions throws when no row of a failed batch can be written', async () => {
       const { useTransactions } = await import('./transactions')
       const store = useTransactions()
