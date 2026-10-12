@@ -24,9 +24,9 @@ const state = vi.hoisted(() => {
   const updateRemoteSigner = vi.fn(() => Promise.resolve())
   const getAllRemoteSigners = vi.fn(() => Promise.resolve([]))
   const addRemoteSigner = vi.fn(() => Promise.resolve())
-  const addReceiptTransaction = vi.fn()
-  const addUnknownPaymentToMerchantTransaction = vi.fn()
-  const addWithdrawalTransaction = vi.fn()
+  const addReceiptTransactions = vi.fn()
+  const toUnknownPaymentToMerchantTransaction = vi.fn()
+  const saveTransactions = vi.fn()
   const logger = {
     log: vi.fn(),
     warn: vi.fn(),
@@ -75,9 +75,9 @@ const state = vi.hoisted(() => {
     updateRemoteSigner,
     getAllRemoteSigners,
     addRemoteSigner,
-    addReceiptTransaction,
-    addUnknownPaymentToMerchantTransaction,
-    addWithdrawalTransaction,
+    addReceiptTransactions,
+    toUnknownPaymentToMerchantTransaction,
+    saveTransactions,
     logger,
   }
 })
@@ -289,10 +289,9 @@ vi.mock('@/stores/remote-signer', () => {
 vi.mock('@/stores/transactions', () => {
   const useTransactions = defineStore('transactions', () => ({
     sendTx: state.sendTx,
-    addReceiptTransaction: state.addReceiptTransaction,
-    addUnknownPaymentToMerchantTransaction: state.addUnknownPaymentToMerchantTransaction,
-    addWithdrawalTransaction: state.addWithdrawalTransaction,
-    addStakingtransaction: vi.fn(),
+    addReceiptTransactions: state.addReceiptTransactions,
+    toUnknownPaymentToMerchantTransaction: state.toUnknownPaymentToMerchantTransaction,
+    saveTransactions: state.saveTransactions,
     updateTransactionCashbackClaimed: vi.fn(),
     updateTransactionStatus: vi.fn(),
     refreshFromDb: vi.fn(() => Promise.resolve()),
@@ -386,9 +385,9 @@ describe('useSync remote signer reconciliation', () => {
     state.getAllRemoteSigners.mockResolvedValue([])
     state.addRemoteSigner.mockReset()
     state.addRemoteSigner.mockResolvedValue(undefined)
-    state.addReceiptTransaction.mockReset()
-    state.addUnknownPaymentToMerchantTransaction.mockReset()
-    state.addWithdrawalTransaction.mockReset()
+    state.addReceiptTransactions.mockReset()
+    state.toUnknownPaymentToMerchantTransaction.mockReset()
+    state.saveTransactions.mockReset()
     state.logger.log.mockReset()
     state.logger.warn.mockReset()
     state.logger.error.mockReset()
@@ -719,7 +718,7 @@ describe('useSync remote signer reconciliation', () => {
     await store.updateTransactionHistory()
 
     expect(state.getAllOutgoingTransactionsFromHtlcs).toHaveBeenCalled()
-    expect(state.addUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
+    expect(state.toUnknownPaymentToMerchantTransaction).toHaveBeenCalledWith(
       expect.objectContaining({ transactionHash: 'swap-leaf-hash' }),
     )
   })

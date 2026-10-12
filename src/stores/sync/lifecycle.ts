@@ -7,7 +7,6 @@ import { watch } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
-import { usePrice } from '@/composables/usePrice'
 import { nakaBufferAddresses } from '@/lib'
 import { trackTopUpReceived } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -328,12 +327,12 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
       return
     }
 
-    logger.log(`📬 Saving ${tx.state} transaction with ${usePrice(tx.value).crypto.formatted}`)
+    logger.log(`📬 Saving ${tx.state} transaction with ${tx.value / 1e5} NIM`)
 
     const receipt = await buildTopUpReceipt(tx)
     if (!isListenerContextCurrent(context))
       return
-    await useTransactions().addReceiptTransaction(receipt, context)
+    await useTransactions().addReceiptTransactions([receipt], context)
     if (!isListenerContextCurrent(context))
       return
     trackTopUpReceived(receipt, useRemoteSigner().remoteBalance)

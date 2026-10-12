@@ -118,17 +118,17 @@ The sync/transactions/remote-signer paths emit emoji-prefixed events at every si
 
 | Grep | What it tells you |
 |---|---|
-| `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransaction` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
-| `grep -E "♻️.*replacing"` | `addTransaction` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
+| `grep -E "🚫.*own-HTLC"` | Listener / `addReceiptTransactions` correctly dropped a drain from one of our own HTLCs (sender in `remote_signers`). |
+| `grep -E "♻️.*replacing"` | `addTransactions` collapsed an in-memory duplicate (same hash already present). Includes both transfer types — useful when a tx is racing through multiple paths. |
 | `grep -E "🧹 filterDisplayableTxs dropped"` | Read-side filter (`selectTxs` / `refreshFromDb`) removed an own-HTLC `UserReceipt` already in DB. Lists hashes. |
 | `grep -E "🧹 filterUnseen"` | Recursive HTLC traversal filter dropped reclaim-to-local txs and dup hashes. Tags origin as `outer:<addr>` or `nested:<addr>`. |
 | `grep -E "📦 categorize"` | Per-remote-signer bucket distribution from `categorizeTransactions` (htlcExt/swap/withdraw/staking/unknown counts). Sanity-check whether traversal is finding what you expect. |
-| `grep -E "💸 addUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by `handleUnknownTxs`. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |
+| `grep -E "💸 toUnknownPaymentToMerchantTransaction"` | A tx is being recorded as a Payment by remote-signer history sync. If you see one whose `senderType: 2` (HTLC) and sender is your own remote signer, that's a categorization bug. |
 | `grep -E "🔄.*cache rebuilt"` | `getOurRemoteSignerAddresses` rebuilt its in-memory cache. Should fire after every `addRemoteSigner`/`updateRemoteSigner`/`discoverRemoteSignersFromBlockchain` insert. Missing rebuild = stale guard set. |
 | `grep -E "⚠️.*publicKey mismatch"` | Stored remote signer's cosigner publicKey ≠ API response's. Almost certainly cross-network stale state (testnet signer left over after switching to mainnet, or vice versa). |
 | `grep -E "All Transactions from Blockchain"` | `discoverRemoteSignersFromBlockchain` reached the chain query and returned. **Absence after `Verifying remote signers in DB` means the chain query stalled** — a 30s timeout aborts and lets the periodic head listener retry. |
 | `grep -E "🧬 Starting to sync wallets"` | `syncWallets` made it past `verifyRemoteSignersDb`. If missing, sync is wedged earlier and listeners + periodic refresh never started — that's why home appears empty. |
-| `grep -E "📚 Upsert-ing transaction"` | DB write happening. Compare count in fresh session against expected tx count to catch missing ingest. |
+| `grep -E "📚 Upsert-ing"` | DB write happening. Single writes log `Upsert-ing transaction`; history sync batches log `Upsert-ing <n> transactions` with the hashes. Sum both against the expected tx count to catch missing ingest. |
 
 ### Common diagnoses
 

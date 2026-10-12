@@ -399,6 +399,31 @@ describe('useTransactions', () => {
     expect(seenStatuses).toEqual(['confirmed'])
   })
 
+  it('writes a batch of status updates with one runSet and one list update', async () => {
+    const { useTransactions } = await import('./transactions')
+    const store = useTransactions()
+    await store.refreshFromDb()
+    await store.saveTransactions([
+      { hash: 'older', status: 'pending', timestamp: 1, asset: Asset.NIM } as any,
+      { hash: 'newer', status: 'pending', timestamp: 2, asset: Asset.NIM } as any,
+    ])
+    state.run.mockClear()
+    state.runSet.mockClear()
+
+    await store.updateTransactionStatus([
+      { hash: 'older', status: 'confirmed', timestamp: 3 },
+      { hash: 'newer', status: 'failed', timestamp: 2, executionResult: false },
+    ])
+
+    expect(state.run).not.toHaveBeenCalled()
+    expect(state.runSet).toHaveBeenCalledOnce()
+    expect(state.runSet.mock.calls[0][0]).toEqual([
+      { statement: SQLQuery.UpdateTxStatus, values: ['confirmed', 3, 'older'] },
+      { statement: SQLQuery.UpdateTxStatus, values: ['failed', 2, 'newer'] },
+    ])
+    expect(store.transactions.map(tx => [tx.hash, tx.status])).toEqual([['older', 'confirmed'], ['newer', 'failed']])
+  })
+
   it.each([true, false, undefined])('preserves executionResult=%s unless an update provides a result', async (executionResult) => {
     const { useTransactions } = await import('./transactions')
     const store = useTransactions()
@@ -429,10 +454,10 @@ describe('useTransactions', () => {
     await store.refreshFromDb()
     const { plain } = createSignedTransaction('imported-payment', { state: 'included', validityStartHeight: 100 })
 
-    await store.addUnknownPaymentToMerchantTransaction(plain as any)
+    await store.saveTransactions([store.toUnknownPaymentToMerchantTransaction(plain as any)])
 
-    const write = state.run.mock.calls.find(([sql]) => sql === SQLQuery.UpsertTx)
-    expect((write?.[1] as unknown[])?.at(-2)).toBe(100)
+    const write = state.runSet.mock.calls[0]?.[0].find(({ statement }) => statement === SQLQuery.UpsertTx)
+    expect(write?.values.at(-2)).toBe(100)
     expect(store.transactions.find(tx => tx.hash === 'imported-payment')?.validityStartHeight).toBe(100)
   })
 
@@ -670,7 +695,7 @@ describe('useTransactions', () => {
     expect(store.transactionsToShow).toHaveLength(1)
   })
 
-  describe('refreshFromDb / addReceiptTransaction filter our own HTLC drains', () => {
+  describe('refreshFromDb / addReceiptTransactions filter our own HTLC drains', () => {
     const ourHtlc = 'NQ22 TEST OUR OLD HTLC'
     const foreignHtlc = 'NQ33 OTHER NIMIQ PAY USER HTLC'
 
@@ -768,7 +793,7 @@ describe('useTransactions', () => {
       expect(store.transactions[1].hash).toBe('older')
     })
 
-    it('addReceiptTransaction drops drains from one of our remote signers (no upsert, no in-memory entry)', async () => {
+    it('addReceiptTransactions drops drains from one of our remote signers (no upsert, no in-memory entry)', async () => {
       const { useTransactions } = await import('./transactions')
       let store!: ReturnType<typeof useTransactions>
       mount(defineComponent({
@@ -779,8 +804,8 @@ describe('useTransactions', () => {
       }))
       await nextTick()
 
-      state.run.mockClear()
-      await store.addReceiptTransaction({
+      state.runSet.mockClear()
+      await store.addReceiptTransactions([{
         transfer: Transfer.UserReceipt,
         amount: 5505,
         sender: ourHtlc,
@@ -796,13 +821,10 @@ describe('useTransactions', () => {
         proofSize: 98,
         asset: Asset.NIM,
         chain: Chain.Nimiq,
-      } as any)
+      } as any])
       await nextTick()
 
-      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-        ([query]) => query === SQLQuery.UpsertTx,
-      )
-      expect(upsertCall).toBeUndefined()
+      expect(state.runSet).not.toHaveBeenCalled()
       expect(store.transactions.map(tx => tx.hash)).not.toContain('hash-our-drain')
     })
 
@@ -811,17 +833,17 @@ describe('useTransactions', () => {
       const { useRemoteSigner } = await import('./remote-signer')
       const store = useTransactions()
       await nextTick()
-      let finishLookup!: (isOurs: boolean) => void
-      vi.spyOn(useRemoteSigner(), 'isOurRemoteSigner').mockReturnValueOnce(
+      let finishLookup!: (ours: Set<string>) => void
+      vi.spyOn(useRemoteSigner(), 'getOurRemoteSignerAddresses').mockReturnValueOnce(
         new Promise(resolve => finishLookup = resolve),
       )
       const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-lookup-receipt' })
-      const persistence = store.addReceiptTransaction(receipt as any)
+      const persistence = store.addReceiptTransactions([receipt as any])
       state.walletContextGeneration += 1
-      finishLookup(false)
+      finishLookup(new Set())
       await persistence
 
-      expect(state.run).not.toHaveBeenCalled()
+      expect(state.runSet).not.toHaveBeenCalled()
       expect(store.transactions).toEqual([])
     })
 
@@ -830,16 +852,16 @@ describe('useTransactions', () => {
       const store = useTransactions()
       await nextTick()
       let finishWrite!: () => void
-      state.run.mockReturnValueOnce(new Promise(resolve => finishWrite = () => resolve(undefined)))
+      state.runSet.mockReturnValueOnce(new Promise(resolve => finishWrite = () => resolve(undefined)))
       const receipt = makeUserReceiptRow({ sender: foreignHtlc, hash: 'stale-native-receipt' })
-      const persistence = store.addReceiptTransaction(receipt as any)
-      await vi.waitFor(() => expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array)))
+      const persistence = store.addReceiptTransactions([receipt as any])
+      await vi.waitFor(() => expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }]))
       state.walletContextGeneration += 1
       finishWrite()
       await persistence
 
       expect(store.transactions).toEqual([])
-      expect(state.run).toHaveBeenCalledTimes(1)
+      expect(state.runSet).toHaveBeenCalledTimes(1)
     })
 
     it('stores a Polygon receipt while the Nimiq client is unavailable', async () => {
@@ -854,13 +876,81 @@ describe('useTransactions', () => {
         asset: Asset.USDT,
         chain: Chain.Polygon,
       })
-      await store.addReceiptTransaction(receipt as any)
+      await store.addReceiptTransactions([receipt as any])
 
-      expect(state.run).toHaveBeenCalledWith(SQLQuery.UpsertTx, expect.any(Array))
+      expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }])
       expect(store.transactions.map(tx => tx.hash)).toEqual(['polygon-receipt'])
     })
 
-    it('addReceiptTransaction stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
+    it('addReceiptTransactions writes a batch with one runSet and one sorted list update', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockClear()
+
+      await store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'older', timestamp: 1 }),
+        makeUserReceiptRow({ hash: 'own-drain', timestamp: 2 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'newer', timestamp: 3 }),
+      ] as any)
+
+      expect(state.runSet).toHaveBeenCalledOnce()
+      expect(state.runSet.mock.calls[0][0].map(({ values }) => values[0])).toEqual(['older', 'newer'])
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['newer', 'older'])
+    })
+
+    it('addReceiptTransactions keeps valid rows when the batch write fails on one row', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockRejectedValueOnce(new Error('constraint failed'))
+      state.run.mockImplementation(async (...args: unknown[]) => {
+        if ((args[1] as unknown[] | undefined)?.[0] === 'bad')
+          throw new Error('constraint failed')
+      })
+
+      await store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'good-1', timestamp: 1 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'bad', timestamp: 2 }),
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'good-2', timestamp: 3 }),
+      ] as any)
+
+      expect(state.run.mock.calls.filter(([sql]) => sql === SQLQuery.UpsertTx).map(([, values]) => (values as unknown[])[0])).toEqual(['good-1', 'bad', 'good-2'])
+      expect(store.transactions.map(tx => tx.hash)).toEqual(['good-2', 'good-1'])
+    })
+
+    it('splits large batches into chunks and retries only the failed chunk row by row', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      state.runSet.mockClear()
+      state.run.mockClear()
+      // Second chunk fails as a set; its rows still write one by one.
+      state.runSet.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('constraint failed'))
+
+      await store.addReceiptTransactions(Array.from({ length: 450 }, (_, index) =>
+        makeUserReceiptRow({ sender: foreignHtlc, hash: `chunk-${index}`, timestamp: index })) as any)
+
+      expect(state.runSet.mock.calls.map(([statements]) => statements.length)).toEqual([200, 200, 50])
+      expect(state.run.mock.calls.filter(([sql]) => sql === SQLQuery.UpsertTx)).toHaveLength(200)
+      expect(store.transactions).toHaveLength(450)
+    })
+
+    it('addReceiptTransactions throws when no row of a failed batch can be written', async () => {
+      const { useTransactions } = await import('./transactions')
+      const store = useTransactions()
+      await store.refreshFromDb()
+      const batchError = new Error('database locked')
+      state.runSet.mockRejectedValueOnce(batchError)
+      state.run.mockRejectedValue(new Error('database locked'))
+
+      await expect(store.addReceiptTransactions([
+        makeUserReceiptRow({ sender: foreignHtlc, hash: 'locked', timestamp: 1 }),
+      ] as any)).rejects.toBe(batchError)
+      expect(store.transactions).toEqual([])
+    })
+
+    it('addReceiptTransactions stores receipts from foreign HTLC senders (other Nimiq Pay users paying us)', async () => {
       const { useTransactions } = await import('./transactions')
       let store!: ReturnType<typeof useTransactions>
       mount(defineComponent({
@@ -871,8 +961,8 @@ describe('useTransactions', () => {
       }))
       await nextTick()
 
-      state.run.mockClear()
-      await store.addReceiptTransaction({
+      state.runSet.mockClear()
+      await store.addReceiptTransactions([{
         transfer: Transfer.UserReceipt,
         amount: 1234,
         sender: foreignHtlc,
@@ -888,13 +978,10 @@ describe('useTransactions', () => {
         proofSize: 98,
         asset: Asset.NIM,
         chain: Chain.Nimiq,
-      } as any)
+      } as any])
       await nextTick()
 
-      const upsertCall = (state.run.mock.calls as unknown as Array<[unknown, unknown[]]>).find(
-        ([query]) => query === SQLQuery.UpsertTx,
-      )
-      expect(upsertCall).toBeDefined()
+      expect(state.runSet).toHaveBeenCalledWith([{ statement: SQLQuery.UpsertTx, values: expect.any(Array) }])
       expect(store.transactions.map(tx => tx.hash)).toContain('hash-foreign-pay')
     })
   })

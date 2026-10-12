@@ -20,7 +20,7 @@ const state = vi.hoisted(() => ({
   waitForUnlock: vi.fn(async () => undefined),
   transactions: [] as Array<{ hash: string }>,
   formatUsdtAmount: vi.fn((_amount: number) => '5.00 USDT'),
-  usePriceFormatted: vi.fn(() => '123.456 NIM'),
+  formatCrypto: vi.fn((_amount?: number, _options?: object) => '123.456 NIM'),
 }))
 
 vi.mock('@capacitor/local-notifications', () => ({
@@ -76,8 +76,8 @@ vi.mock('@/composables/useModal', () => ({
   useModal: () => ({ showModal: vi.fn() }),
 }))
 
-vi.mock('@/composables/usePrice', () => ({
-  usePrice: () => ({ crypto: { formatted: state.usePriceFormatted() } }),
+vi.mock('@/composables/useCurrencyFormatter', () => ({
+  useCurrencyFormatter: () => ({ formatCrypto: state.formatCrypto }),
 }))
 
 vi.mock('@/composables/useApi', () => ({
@@ -102,6 +102,7 @@ vi.mock('@/lib/assets', () => ({
 }))
 
 vi.mock('@/stores/app', () => ({
+  Crypto: { NIM: 'NIM' },
   LocalNotificationsStatus: { GRANTED: 'granted', DENIED: 'denied', PROMPT: 'prompt' },
   PushNotificationsStatus: { GRANTED: 'granted', DENIED: 'denied', PROMPT: 'prompt' },
   useApp: () => ({
@@ -165,8 +166,8 @@ describe('useNotifications — local notifications', () => {
     state.waitForUnlock.mockResolvedValue(undefined)
     state.transactions = []
     state.formatUsdtAmount.mockClear()
-    state.usePriceFormatted.mockClear()
-    state.usePriceFormatted.mockReturnValue('123.456 NIM')
+    state.formatCrypto.mockClear()
+    state.formatCrypto.mockReturnValue('123.456 NIM')
   })
 
   describe('scheduleIncomingPaymentNotification gates', () => {
@@ -307,14 +308,14 @@ describe('useNotifications — local notifications', () => {
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ asset: 'USDT', amount: 5_000_000 }))
       expect(state.formatUsdtAmount).toHaveBeenCalledWith(5_000_000)
-      expect(state.usePriceFormatted).not.toHaveBeenCalled()
+      expect(state.formatCrypto).not.toHaveBeenCalled()
       expect(state.schedule.mock.calls[0]![0].notifications[0].title).toBe('You received {amount}::{"amount":"5.00 USDT"}')
     })
 
-    it('formats NIM amount via usePrice', async () => {
+    it('formats NIM amount without a price lookup', async () => {
       const { useNotifications } = await import('./useNotifications')
       await useNotifications().scheduleIncomingPaymentNotification(makeReceipt({ asset: 'NIM', amount: 12345 }))
-      expect(state.usePriceFormatted).toHaveBeenCalledTimes(1)
+      expect(state.formatCrypto).toHaveBeenCalledWith(12345, { currency: 'NIM' })
       expect(state.formatUsdtAmount).not.toHaveBeenCalled()
       expect(state.schedule.mock.calls[0]![0].notifications[0].title).toBe('You received {amount}::{"amount":"123.456 NIM"}')
     })

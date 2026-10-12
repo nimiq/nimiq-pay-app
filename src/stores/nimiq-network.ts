@@ -274,11 +274,12 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
     }
   }
 
-  async function getAccountTransactions(address: Address | undefined, limit?: number) {
+  // sinceHeight must be a final (macro) block height: older history is not fetched or verified.
+  async function getAccountTransactions(address: Address | undefined, limit?: number, sinceHeight = 0) {
     if (!address)
       return { data: [], error: i18n.t('Address missing') }
     try {
-      const transactions = await client.value?.getTransactionsByAddress(address, 0, undefined, undefined, limit)
+      const transactions = await client.value?.getTransactionsByAddress(address, sinceHeight, undefined, undefined, limit)
       if (!transactions)
         return { data: [], error: i18n.t('No transactions found') }
       return { data: transactions, error: undefined }

@@ -475,7 +475,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('ignores txs sent from the remote address', async () => {
@@ -491,7 +491,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('ignores add-stake txs to the staking contract from non-remote senders', async () => {
@@ -507,7 +507,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { type: 'add-stake', raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('skips txs whose hash is already in user_receipts', async () => {
@@ -528,7 +528,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('skips legacy NAKA refunds from buffer addresses', async () => {
@@ -544,7 +544,7 @@ describe('useSyncLifecycle', () => {
         state: 'confirmed',
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
     })
 
     it('drops own-HTLC drains identified by proof.creator and registers them', async () => {
@@ -562,7 +562,7 @@ describe('useSyncLifecycle', () => {
         data: { raw: '' },
         proof: { type: 'timeout-resolve', creator: 'NQ00 TEST LOCAL ADDRESS', raw: '' },
       })
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
       expect(state.registerOwnHtlcIfMissing).toHaveBeenCalledWith(
         'NQ44 EXTENSION HTLC ADDRESS',
         expect.objectContaining({
@@ -589,8 +589,8 @@ describe('useSyncLifecycle', () => {
         data: { raw: '' },
         proof: { type: 'timeout-resolve', creator: 'NQ77 FOREIGN CREATOR', raw: '' },
       })
-      expect(state.addReceiptTransaction).toHaveBeenCalledWith(
-        expect.objectContaining({ hash: 'foreign-htlc-hash', title: 'Top-Up' }),
+      expect(state.addReceiptTransactions).toHaveBeenCalledWith(
+        [expect.objectContaining({ hash: 'foreign-htlc-hash', title: 'Top-Up' })],
         expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }),
       )
       expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
@@ -611,11 +611,11 @@ describe('useSyncLifecycle', () => {
         timestamp: 5,
         data: { raw: '' },
       })
-      expect(state.addReceiptTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      expect(state.addReceiptTransactions).toHaveBeenCalledWith([expect.objectContaining({
         hash: 'h1',
         amount: 1000,
         sender: 'NQ77 NEW TOP-UP',
-      }), expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
+      })], expect.objectContaining({ client: state.client, generation: useSyncState().walletContextGeneration, network: state.networkName, owner: state.localAddress.toUserFriendlyAddress() }))
     })
 
     describe('local notification dispatch', () => {
@@ -899,7 +899,7 @@ describe('useSyncLifecycle', () => {
       finishReceiptQuery([])
       await callback
 
-      expect(state.addReceiptTransaction).not.toHaveBeenCalled()
+      expect(state.addReceiptTransactions).not.toHaveBeenCalled()
       expect(state.registerOwnHtlcIfMissing).not.toHaveBeenCalled()
       expect(state.scheduleIncomingPaymentNotification).not.toHaveBeenCalled()
     })

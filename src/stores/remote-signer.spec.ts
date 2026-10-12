@@ -910,28 +910,40 @@ describe('useRemoteSigner', () => {
     expect(store.remoteBalance).toBe(696_900_000)
   })
 
-  it.each(['cosigner', 'chain'])('releases discovery after a stalled %s metadata lookup', async (source) => {
+  it('falls back to the chain after a stalled cosigner metadata lookup', async () => {
     vi.useFakeTimers()
     try {
       const creation = createHtlcCreation()
       mockAddressSpecificSignerMetadata(creation)
       state.client.getTransactionsByAddress.mockResolvedValue([creation])
-      if (source === 'cosigner')
-        state.getRemoteSigner.mockReturnValue(new Promise(() => {}))
-      else
-        state.client.getTransaction.mockReturnValue(new Promise(() => {}))
+      // Later lookups time out like the real cosigner API does.
+      state.getRemoteSigner
+        .mockReturnValueOnce(new Promise(() => {}))
+        .mockResolvedValue({ data: undefined, hasError: true, status: 504, error: { message: 'Something went wrong', statusCode: 504, error: 'TIMEOUT' } })
       const { useRemoteSigner } = await import('./remote-signer')
       let result: unknown
       void useRemoteSigner().discoverRemoteSignersFromBlockchain().then(value => result = value)
 
       await vi.advanceTimersByTimeAsync(30_001)
 
-      expect(result).toMatchObject({ localComplete: false, added: 0 })
-      expect(state.run).not.toHaveBeenCalled()
+      expect(result).toMatchObject({ localComplete: true, added: 1 })
     }
     finally {
       vi.useRealTimers()
     }
+  })
+
+  it('does not look up a creation that discovery already read from local history', async () => {
+    const creation = createHtlcCreation()
+    mockAddressSpecificSignerMetadata(creation)
+    state.client.getTransactionsByAddress.mockResolvedValue([creation])
+    state.client.getTransaction.mockReturnValue(new Promise(() => {}))
+    const { useRemoteSigner } = await import('./remote-signer')
+
+    const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
+
+    expect(result).toMatchObject({ localComplete: true, added: 1 })
+    expect(state.client.getTransaction).not.toHaveBeenCalled()
   })
 
   it('activates a historical signer with metadata for its exact address after key rotation', async () => {
@@ -1810,7 +1822,7 @@ describe('useRemoteSigner', () => {
     expect(result).toEqual({ status: 'rejected', reason: 'Cosigner returned an invalid public key' })
   })
 
-  it('marks historical discovery incomplete when creation lookup returns no transaction', async () => {
+  it('validates historical discovery with the creation from local history when its lookup returns nothing', async () => {
     const creation = createHtlcCreation()
     state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
     state.getRemoteSigner.mockResolvedValue({
@@ -1825,10 +1837,9 @@ describe('useRemoteSigner', () => {
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result.localComplete).toBe(false)
-    expect(result.added).toBe(0)
-    expect(state.getRemoteSigner).toHaveBeenCalledOnce()
-    expect(state.run).not.toHaveBeenCalled()
+    expect(result.localComplete).toBe(true)
+    expect(result.added).toBe(1)
+    expect(result.errors).toEqual([])
   })
 
   it.each([null, undefined])('activates a confirmed HTLC when cosigner creation hash is %s', async (creatingTransactionHash) => {
@@ -1906,31 +1917,46 @@ describe('useRemoteSigner', () => {
     expect(result).toEqual({ status: 'rejected', reason: 'HTLC creation transaction hash does not match cosigner metadata' })
   })
 
-  it('marks historical discovery incomplete when address-specific metadata is unavailable', async () => {
+  it('trusts our on-chain creation when the cosigner is unreachable during discovery', async () => {
     const creation = createHtlcCreation()
     state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
-    state.getRemoteSigner.mockRejectedValue(new Error('transport unavailable'))
+    state.getRemoteSigner.mockResolvedValue({ data: undefined, hasError: true, status: 504, error: { message: 'transport unavailable', statusCode: 504, error: 'TIMEOUT' } })
     state.getAccount.mockResolvedValue({ data: createLiveHtlcAccount(), error: undefined })
 
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result.localComplete).toBe(false)
-    expect(result.added).toBe(0)
-    expect(state.getRemoteSigner).toHaveBeenCalledTimes(1)
-    expect(state.getRemoteSigner).toHaveBeenCalledWith({ address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }) })
-    expect(state.run).not.toHaveBeenCalled()
+    expect(result.localComplete).toBe(true)
+    expect(result.added).toBe(1)
+    expect(state.getRemoteSigner).toHaveBeenCalledWith({ address: expect.objectContaining({ toUserFriendlyAddress: expect.any(Function) }), includeInactive: true })
   })
 
-  it('reports why address-specific metadata is unavailable', async () => {
+  it('builds metadata of a retired wallet from the chain when the cosigner answers 409', async () => {
     const creation = createHtlcCreation()
     state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
-    state.getRemoteSigner.mockRejectedValue(new Error('transport unavailable'))
+    state.getRemoteSigner.mockResolvedValue({ data: undefined, hasError: true, status: 409, error: { message: 'Wallet no longer active', statusCode: 409, error: 'Conflict' } })
+    state.getAccount.mockResolvedValue({ data: undefined, error: 'No account found' })
 
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result.errors).toEqual([`HTLC metadata unavailable: ${creation.recipient} (transport unavailable)`])
+    expect(result).toMatchObject({ localComplete: true, added: 1, errors: [] })
+    const { SQLQuery } = await import('@/lib/sql-queries')
+    const insert = (state.run.mock.calls as unknown as [string, unknown[]][]).find(([sql]) => sql === SQLQuery.InsertInactiveRemoteSigner)
+    // address, balance, proofSize, publicKey, start, end, active
+    expect(insert?.[1]).toEqual([creation.recipient, 0, 98, 'service-public-key', creation.timestamp, creation.data.timeout, false])
+  })
+
+  it('keeps activation strict: no chain fallback when the cosigner answers 409', async () => {
+    const creation = createHtlcCreation()
+    state.getRemoteSigner.mockResolvedValue({ data: undefined, hasError: true, status: 409, error: { message: 'Wallet no longer active', statusCode: 409, error: 'Conflict' } })
+    const { useRemoteSigner } = await import('./remote-signer')
+    const store = useRemoteSigner()
+
+    const result = await store.resolveAddressSpecificSignerMetadata(createAddress(creation.recipient) as any, store.getWalletContext()!)
+
+    expect(result).toEqual({ status: 'unavailable', reason: 'Wallet no longer active' })
+    expect(state.getRemoteSigner).toHaveBeenCalledWith({ address: expect.anything(), includeInactive: undefined })
   })
 
   it('drops the HTLC history check together with the purged signers', async () => {
@@ -1957,12 +1983,11 @@ describe('useRemoteSigner', () => {
   it('lists HTLC creations from local history even when their metadata is unavailable', async () => {
     const creation = createHtlcCreation()
     state.client.getTransactionsByAddress = vi.fn(() => Promise.resolve([creation]))
-    state.getRemoteSigner.mockRejectedValue(new Error('transport unavailable'))
+    state.getRemoteSigner.mockResolvedValue({ data: undefined, hasError: true, status: 504, error: { message: 'transport unavailable', statusCode: 504, error: 'TIMEOUT' } })
 
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(result.localComplete).toBe(false)
     expect(result.createdHtlcs).toEqual([creation.recipient])
     expect(result.historyComplete).toBe(true)
   })
@@ -1986,20 +2011,24 @@ describe('useRemoteSigner', () => {
   it('reads every local history page before resolving cosigner metadata', async () => {
     const { newer, older, firstPage, secondPage } = twoHistoryPages()
     const calls: string[] = []
-    state.client.getTransactionsByAddress = vi.fn((_address: unknown, _sinceHeight: unknown, _known: unknown, startAt: string | undefined) => {
+    state.client.getTransactionsByAddress = vi.fn((address: any, _sinceHeight: unknown, _known: unknown, startAt: string | undefined) => {
+      // Signer histories are read after metadata; only local history pages must come first.
+      if (address?.toUserFriendlyAddress() !== 'NQ00 TEST LOCAL ADDRESS')
+        return Promise.resolve([])
       calls.push('history')
       return Promise.resolve(startAt ? secondPage : firstPage)
     })
     state.getRemoteSigner.mockImplementation(() => {
       calls.push('metadata')
-      return Promise.reject(new Error('transport unavailable'))
+      return Promise.resolve({ data: undefined, hasError: true, status: 504, error: { message: 'transport unavailable', statusCode: 504, error: 'TIMEOUT' } })
     })
 
     const { useRemoteSigner } = await import('./remote-signer')
     const result = await useRemoteSigner().discoverRemoteSignersFromBlockchain()
 
-    expect(calls.lastIndexOf('history')).toBeLessThan(calls.indexOf('metadata'))
-    expect(result).toMatchObject({ historyComplete: true, localComplete: false, createdHtlcs: [newer.recipient, older.recipient] })
+    // A complete discovery reads local history again afterwards (home balance); the scan's pages come first.
+    expect(calls.slice(0, calls.indexOf('metadata'))).toEqual(['history', 'history'])
+    expect(result).toMatchObject({ historyComplete: true, createdHtlcs: [newer.recipient, older.recipient] })
   })
 
   it('shares one history scan between concurrent callers', async () => {

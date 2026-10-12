@@ -9,7 +9,7 @@ import { Transfer } from '@/types/transactions'
 const loggerError = vi.fn()
 
 const txMocks = vi.hoisted(() => ({
-  addReceiptTransaction: vi.fn(),
+  addReceiptTransactions: vi.fn(),
   addPaymentTransaction: vi.fn(),
   addWithdrawalTransaction: vi.fn(),
   addPolygonHistoryTransaction: vi.fn(),
@@ -52,7 +52,7 @@ vi.mock('@/stores/transactions', () => ({
     addPaymentTransaction: txMocks.addPaymentTransaction,
     addWithdrawalTransaction: txMocks.addWithdrawalTransaction,
     addPolygonHistoryTransaction: txMocks.addPolygonHistoryTransaction,
-    addReceiptTransaction: txMocks.addReceiptTransaction,
+    addReceiptTransactions: txMocks.addReceiptTransactions,
     updateTransactionStatus: vi.fn(),
     updateTransactionTitle: vi.fn(),
   }),
@@ -897,7 +897,7 @@ describe('polygon-usdt quote helpers', () => {
 
 describe('persistHistoryTransaction onIncomingPersisted hook', () => {
   beforeEach(() => {
-    txMocks.addReceiptTransaction.mockReset()
+    txMocks.addReceiptTransactions.mockReset()
     txMocks.addPaymentTransaction.mockReset()
     txMocks.addWithdrawalTransaction.mockReset()
     txMocks.addPolygonHistoryTransaction.mockReset()
@@ -921,7 +921,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
     const { persistHistoryTransaction } = await import('./polygon-usdt')
     const onIncomingPersisted = vi.fn()
     await persistHistoryTransaction(makeIncomingGroup(2000, '0xfresh'), localAddr, { onIncomingPersisted })
-    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    expect(txMocks.addReceiptTransactions).toHaveBeenCalledTimes(1)
     expect(onIncomingPersisted).toHaveBeenCalledTimes(1)
     const arg = onIncomingPersisted.mock.calls[0]![0]
     expect(arg).toMatchObject({ hash: '0xfresh', transfer: Transfer.UserReceipt, asset: Asset.USDT, chain: Chain.Polygon, timestamp: 2000 })
@@ -930,7 +930,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
   it('does NOT invoke onIncomingPersisted when no options passed (initial-scan branch contract)', async () => {
     const { persistHistoryTransaction } = await import('./polygon-usdt')
     await persistHistoryTransaction(makeIncomingGroup(2000), localAddr)
-    expect(txMocks.addReceiptTransaction).toHaveBeenCalledTimes(1)
+    expect(txMocks.addReceiptTransactions).toHaveBeenCalledTimes(1)
     // callback omitted → nothing to assert beyond the receipt being persisted.
   })
 
@@ -947,7 +947,7 @@ describe('persistHistoryTransaction onIncomingPersisted hook', () => {
     } as any
     await persistHistoryTransaction(outgoingGroup, localAddr, { onIncomingPersisted })
     expect(onIncomingPersisted).not.toHaveBeenCalled()
-    expect(txMocks.addReceiptTransaction).not.toHaveBeenCalled()
+    expect(txMocks.addReceiptTransactions).not.toHaveBeenCalled()
     expect(txMocks.addPolygonHistoryTransaction).toHaveBeenCalledWith(expect.objectContaining({
       hash: '0xout',
       title: 'Payment',
