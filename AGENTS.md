@@ -15,6 +15,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 ## Tooling & commands
 
 - Use `pnpm` for dependencies and scripts.
+- `dotenv` scripts (`pnpm release:browserstack:apk`, …) swallow flags passed after them: `pnpm release:browserstack:apk --apk x` silently drops `--apk`. Run `pnpm exec dotenv -- node scripts/<script> --flag` instead.
 - Run `pnpm lint` and `pnpm typecheck` after any change.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
@@ -23,6 +24,7 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - `web3-provider/package.json` links to the sibling `../trust-web3-provider` checkout. CI builds the commit pinned in `.github/actions/setup-provider/action.yml`, so local tests can pass with newer provider code while CI fails.
 - When a change needs new provider code, update that CI pin in the same PR to a full commit SHA available in `nimiq/trust-web3-provider`. Publishing a new SDK version or updating the demo dependency does not update this pin.
 - Verify against that exact provider commit: build `core`, `nimiq`, then `ethereum` using the action's commands, rebuild the injected bridge, and run lint, typechecks, and the full unit suite. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+- An app build without the bridge still succeeds: `public/web3-provider.js` is then a placeholder (or a stale copy) and `vite build` only logs "Failed to copy web3 provider script". Before building an APK, build the provider packages and run `pnpm build:web3-provider`, then check `assets/public/web3-provider.js` in the APK is the real bundle (~1.2 MB, not a few bytes).
 
 ## Naming & terminology
 
