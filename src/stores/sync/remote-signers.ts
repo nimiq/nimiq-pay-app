@@ -44,8 +44,6 @@ function hasOutgoingTransactionForExactTarget(
 }
 
 export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
-  let verifyStartedAt = 0
-  let verifyReportedAsWedged = false
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -393,12 +391,6 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     if (isVerifyingRemoteSignersDb.value) {
       logger.log('Remote signer DB verification already running. Skipping duplicate run')
-      // A run that never settles blocks reconciliation silently; report it once while it is still running.
-      const runningMs = Date.now() - verifyStartedAt
-      if (!verifyReportedAsWedged && runningMs > VERIFY_WEDGED_MS) {
-        verifyReportedAsWedged = true
-        trackSyncSlow({ stage: 'remote_signer_verification', duration_ms: runningMs, finished: false })
-      }
       return
     }
     if (isTransactionPending.value || isSendingTx.value) {
@@ -407,9 +399,10 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }
 
     isVerifyingRemoteSignersDb.value = true
-    verifyStartedAt = Date.now()
-    verifyReportedAsWedged = false
-    let discovery: RemoteSignerDiscoveryResult | undefined
+    const startedAt = Date.now()
+    // A run that never settles blocks reconciliation silently, so report it while it is still running.
+    const wedgedTimeout = setTimeout(() => trackSyncSlow({ duration_ms: Date.now() - startedAt, finished: false }), VERIFY_WEDGED_MS)
+    let result: RemoteSignerDiscoveryResult | undefined
     try {
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
       const scan = discoveryResult ? undefined : await scanLocalHtlcCreations()
@@ -441,8 +434,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
         return
       }
       // Discovery scans again: an HTLC created while the sweep ran would be missing from the earlier scan.
-      const result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
-      discovery = result
+      result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
       // Unseen HTLCs can change which signer should stay active or be reclaimed.
       if (!result.localComplete) {
         logger.log('Remote signer discovery incomplete. Delaying reconciliation', result.errors)
@@ -461,14 +453,14 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }
     finally {
       isVerifyingRemoteSignersDb.value = false
-      const durationMs = Date.now() - verifyStartedAt
-      if (durationMs > VERIFY_SLOW_MS || (discovery && !discovery.localComplete)) {
+      clearTimeout(wedgedTimeout)
+      const durationMs = Date.now() - startedAt
+      if (durationMs > VERIFY_SLOW_MS || (result && !result.localComplete)) {
         trackSyncSlow({
-          stage: 'remote_signer_verification',
           duration_ms: durationMs,
           finished: true,
-          discovery_complete: discovery?.localComplete,
-          error_count: discovery?.errors.length,
+          discovery_complete: result?.localComplete,
+          error_count: result?.errors.length,
         })
       }
     }

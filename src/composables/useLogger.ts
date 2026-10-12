@@ -21,28 +21,31 @@ const directory = Directory.Cache
 const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
 const MAX_ERROR_REPORTS_PER_SESSION = 200
 const errorReportedAt = new Map<string, number>()
-let errorReportCount = 0
 
-// Events may carry tx hashes, never addresses: Nimiq user-friendly addresses and 20-byte EVM addresses.
-function redactAddresses(text: string) {
+// Never addresses (Nimiq and 20-byte EVM), 32-byte hex (tx hashes, but also keys) or URL query strings and
+// fragments. Collapsing hashes also keeps one PostHog issue per message instead of one per hash.
+function redact(text: string) {
   return text
     .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
+    .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')
     .replace(/\b0x[0-9a-fA-F]{40}\b/g, '0x…')
+    .replace(/(\b[a-z][\w+.-]*:\/\/[^\s?#]*)[?#]\S*/gi, '$1?…')
 }
 
-// Payload objects stay out of PostHog: only the message, error details and top-level tx hashes are sent.
+// Only the first string, the error and top-level `hash`/`transactionHash` fields are sent. Keep the first string a
+// static label: later string args and objects can hold user content (scanned QR codes, request bodies) and stay
+// in the local log file only.
 function reportError(name: string, args: any[]) {
-  if (import.meta.env.DEV)
+  if (import.meta.env.DEV || errorReportedAt.size >= MAX_ERROR_REPORTS_PER_SESSION)
     return
-  const [message = '', ...rest] = args.filter(arg => typeof arg === 'string').map(redactAddresses)
-  const cause = args.find(arg => arg instanceof Error || (typeof arg?.message === 'string'))
-  const causeMessage = cause ? redactAddresses(String(cause.message)) : undefined
+  const message = redact(args.find(arg => typeof arg === 'string') ?? '')
+  const cause = args.find(arg => typeof arg?.message === 'string')
+  const causeMessage = cause ? redact(cause.message) : undefined
   const key = `${name}|${message}|${causeMessage}`
   const now = Date.now()
-  if (errorReportCount >= MAX_ERROR_REPORTS_PER_SESSION || now - (errorReportedAt.get(key) ?? -Infinity) < ERROR_REPORT_THROTTLE_MS)
+  if (now - (errorReportedAt.get(key) ?? -Infinity) < ERROR_REPORT_THROTTLE_MS)
     return
   errorReportedAt.set(key, now)
-  errorReportCount += 1
 
   const txHashes = args.flatMap(arg => [arg?.transactionHash, arg?.hash]).filter(hash => typeof hash === 'string')
   // Reporting must never throw back into the caller's error path.
@@ -52,11 +55,10 @@ function reportError(name: string, args: any[]) {
     properties: {
       logger: name,
       log_message: message,
-      log_details: rest.length ? rest : undefined,
       error_message: causeMessage,
       error_status: typeof cause?.statusCode === 'number' ? cause.statusCode : undefined,
       tx_hashes: txHashes.length ? txHashes : undefined,
-      stack: cause instanceof Error && cause.stack ? redactAddresses(cause.stack) : undefined,
+      stack: typeof cause?.stack === 'string' ? redact(cause.stack) : undefined,
     },
   })).catch(() => {})
 }

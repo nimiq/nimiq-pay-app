@@ -233,41 +233,27 @@ export type FundsBlockReason
     | 'htlc_not_ready'
     | 'activation_failed'
 
-const reportedFundsBlocks = new Set<FundsBlockReason>()
-
-// handleFunds runs on every head, so a lasting block would repeat each second; once per reason per session.
 export function trackFundsBlocked(reason: FundsBlockReason, props: Record<string, unknown> = {}): void {
-  if (reportedFundsBlocks.has(reason))
-    return
-  reportedFundsBlocks.add(reason)
   capture('funds_blocked', { reason, ...props })
 }
 
-export interface FundsProcessingProperties {
+export function trackFundsProcessing(state: 'stuck' | 'resolved', props: {
   duration_ms: number
   last_block_reason?: FundsBlockReason
   is_htlc_active: boolean
   is_remote_ok: boolean
   is_processing_remote: boolean
-  is_transaction_pending: boolean
-  has_pending_htlc_creation: boolean
   has_local_balance: boolean
   has_remote_balance: boolean
   htlc_history_checked: boolean
   consensus: string
   pending_htlc_creation_hashes: string[]
+}): void {
+  capture(`funds_processing_${state}`, props)
 }
 
-export function trackFundsProcessingStuck(props: FundsProcessingProperties): void {
-  capture('funds_processing_stuck', props)
-}
-
-export function trackFundsProcessingResolved(props: FundsProcessingProperties): void {
-  capture('funds_processing_resolved', props)
-}
-
-export function trackSyncSlow(props: { stage: 'remote_signer_verification', duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
-  capture('sync_slow', props)
+export function trackSyncSlow(props: { duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
+  capture('sync_slow', { stage: 'remote_signer_verification', ...props })
 }
 
 export type Web3RequestType

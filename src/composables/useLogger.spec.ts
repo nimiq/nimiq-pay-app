@@ -63,6 +63,28 @@ describe('useLogger', () => {
     expect(JSON.stringify(report)).not.toContain('balance')
   })
 
+  it('sends only the first string, without URL query strings', async () => {
+    const logger = await loadLogger('useApi')
+    logger.error('Error fetching https://points.nimpay.app/api/user?phone=+34600000000#x', 'witch collapse practice feed shame open', { content: 'seed words' })
+    await flushReports()
+
+    const report = state.captureException.mock.calls[0][0]
+    expect(report.message).toBe('Error fetching https://points.nimpay.app/api/user?…')
+    expect(JSON.stringify(report)).not.toContain('600000000')
+    expect(JSON.stringify(report)).not.toContain('witch')
+    expect(JSON.stringify(report)).not.toContain('seed words')
+  })
+
+  it('collapses 32-byte hex in messages so one error keeps one throttle key', async () => {
+    const logger = await loadLogger('transactions')
+    logger.error(`Upsert-ing transaction ${HASH} failed`, new Error('db'))
+    logger.error(`Upsert-ing transaction ${'b'.repeat(64)} failed`, new Error('db'))
+    await flushReports()
+
+    expect(state.captureException).toHaveBeenCalledOnce()
+    expect(state.captureException.mock.calls[0][0].message).toBe('Upsert-ing transaction … failed: db')
+  })
+
   it('reports an API error object with its status code', async () => {
     const logger = await loadLogger('useApi')
     logger.error('Request failed:', { message: 'Wallet no longer active', statusCode: 409 })

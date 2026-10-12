@@ -360,13 +360,9 @@ describe('reportCriticalError', () => {
 })
 
 describe('trackFundsBlocked', () => {
-  it('captures each block reason once per session', () => {
-    trackFundsBlocked('pending_tx', { pending_tx_hashes: ['abc'] })
-    trackFundsBlocked('pending_tx', { pending_tx_hashes: ['def'] })
+  it('captures the reason with its properties', () => {
     trackFundsBlocked('activation_failed', { tx_hash: 'abc' })
 
-    expect(state.capture).toHaveBeenCalledTimes(2)
-    expect(state.capture).toHaveBeenNthCalledWith(1, { event: 'funds_blocked', properties: { reason: 'pending_tx', pending_tx_hashes: ['abc'] } })
-    expect(state.capture).toHaveBeenNthCalledWith(2, { event: 'funds_blocked', properties: { reason: 'activation_failed', tx_hash: 'abc' } })
+    expect(state.capture).toHaveBeenCalledWith({ event: 'funds_blocked', properties: { reason: 'activation_failed', tx_hash: 'abc' } })
   })
 })

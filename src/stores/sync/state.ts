@@ -68,8 +68,9 @@ export const useSyncState = defineStore('sync-state', () => {
   const htlcHistoryChecked = shallowRef<boolean>()
   const htlcExtensionsWalked = shallowRef<boolean>()
   const htlcCheckHoldStartedAt = shallowRef<number>()
-  // Sent with funds_processing_stuck, so a stuck banner says what last held the funds.
   const lastFundsBlockReason = shallowRef<FundsBlockReason>()
+  // handleFunds runs on every head, so a lasting block would repeat each second; once per reason per wallet.
+  const reportedFundsBlocks = new Set<FundsBlockReason>()
   let walletContext: { address: string, network: string } | undefined
 
   function setWalletContext(address: string, network: string) {
@@ -83,6 +84,8 @@ export const useSyncState = defineStore('sync-state', () => {
       pendingPaymentTransactions.value = []
       pendingRemoteDrainTxs.value = []
       pendingHtlcCreationTransactions.value = []
+      reportedFundsBlocks.clear()
+      lastFundsBlockReason.value = undefined
     }
     walletContext = { address, network }
     return walletContextGeneration.value
@@ -106,6 +109,9 @@ export const useSyncState = defineStore('sync-state', () => {
 
   function reportFundsBlocked(reason: FundsBlockReason, props?: Record<string, unknown>) {
     lastFundsBlockReason.value = reason
+    if (reportedFundsBlocks.has(reason))
+      return
+    reportedFundsBlocks.add(reason)
     trackFundsBlocked(reason, props)
   }
 

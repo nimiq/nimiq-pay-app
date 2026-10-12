@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { FundsProcessingProperties } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
@@ -20,7 +19,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
-import { trackFundsProcessingResolved, trackFundsProcessingStuck } from '@/lib/analytics'
+import { trackFundsProcessing } from '@/lib/analytics'
 import { Chain } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -76,21 +75,19 @@ const isProcessingFunds = computed(() =>
 
 // A processing banner past a few blocks means funds are stuck; report it, and its duration once it clears.
 const FUNDS_STUCK_MS = 2 * 60 * 1e3
-function fundsProcessingProperties(durationMs: number): FundsProcessingProperties {
-  return {
+function trackFundsProcessingState(state: 'stuck' | 'resolved', durationMs: number) {
+  trackFundsProcessing(state, {
     duration_ms: durationMs,
     last_block_reason: lastFundsBlockReason.value,
     is_htlc_active: isHtlcActive.value,
     is_remote_ok: isRemoteOk.value,
     is_processing_remote: isProcessingRemote.value,
-    is_transaction_pending: isTransactionPending.value,
-    has_pending_htlc_creation: hasPendingHtlcCreation.value,
     has_local_balance: localBalance.value > 0,
     has_remote_balance: remoteBalance.value > 0,
     htlc_history_checked: htlcHistoryChecked.value === true,
     consensus: consensus.value,
     pending_htlc_creation_hashes: pendingHtlcCreationTransactions.value.map(tx => tx.transactionHash),
-  }
+  })
 }
 watch(() => isNimiqAsset.value && isProcessingFunds.value, (processing, _, onCleanup) => {
   if (!processing)
@@ -99,13 +96,13 @@ watch(() => isNimiqAsset.value && isProcessingFunds.value, (processing, _, onCle
   let reported = false
   const timeout = setTimeout(() => {
     reported = true
-    trackFundsProcessingStuck(fundsProcessingProperties(Date.now() - startedAt))
+    trackFundsProcessingState('stuck', Date.now() - startedAt)
   }, FUNDS_STUCK_MS)
   onCleanup(() => {
     clearTimeout(timeout)
     // Cleanup also runs on unmount or asset switch, where the funds are still processing.
     if (reported && !isProcessingFunds.value)
-      trackFundsProcessingResolved(fundsProcessingProperties(Date.now() - startedAt))
+      trackFundsProcessingState('resolved', Date.now() - startedAt)
   })
 }, { immediate: true })
 
