@@ -94,7 +94,7 @@ jobs:
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      BROWSERSTACK_DEVICE: "Samsung Galaxy Tab S9-13.0"
+      BROWSERSTACK_DEVICE: "Samsung Galaxy S26-16.0"
 
     steps:
       - name: Checkout repository
@@ -105,7 +105,7 @@ jobs:
           node scripts/browserstack-maestro-run.js
           --app NimiqPayAndroidApk
           --suite francisco_tests
-          --device "Samsung Galaxy Tab S9-13.0"
+          --device "Samsung Galaxy S26-16.0"
           --flow flows/francisco_tests/create_new_account_with_pageObject.yaml
           --env APP_ID=com.nimiq.pay
           --env PIN=1111
