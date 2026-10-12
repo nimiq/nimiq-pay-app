@@ -149,6 +149,7 @@ vi.mock('@/lib', () => ({
 vi.mock('@/lib/analytics', () => ({
   trackSwapCompleted: state.trackSwapCompleted,
   trackSwapFailed: state.trackSwapFailed,
+  trackFundsBlocked: vi.fn(),
 }))
 
 vi.mock('@/lib/tx', () => ({

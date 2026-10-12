@@ -26,6 +26,7 @@ const htlcCanBeExtended = ref(false)
 const blocksUntilNextMacroBlock = ref(1)
 const htlcHistoryChecked = ref<boolean | undefined>(true)
 const htlcCheckHoldStartedAt = ref<number | undefined>()
+const lastFundsBlockReason = ref()
 const isProcessingRemote = ref(false)
 const isSyncingWallets = ref(false)
 const isConsensusNeeded = ref(false)
@@ -260,6 +261,8 @@ vi.mock('@/stores/sync', () => ({
     blocksUntilNextMacroBlock,
     htlcHistoryChecked,
     htlcCheckHoldStartedAt,
+    pendingHtlcCreationTransactions,
+    lastFundsBlockReason,
     syncWallets,
   }),
 }))

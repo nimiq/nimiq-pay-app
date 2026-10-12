@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FundsProcessingProperties } from '@/lib/analytics'
 import type { PaymentRequestData } from '@/lib/flows/steps.types'
 import { App } from '@capacitor/app'
 import { Clipboard } from '@capacitor/clipboard'
@@ -19,6 +20,7 @@ import { useLogger } from '@/composables/useLogger'
 import { useNotifications } from '@/composables/useNotifications'
 import { i18n } from '@/i18n/i18n-setup'
 import { debounceDelay, debounceMaxWait, isTestnet } from '@/lib'
+import { trackFundsProcessingResolved, trackFundsProcessingStuck } from '@/lib/analytics'
 import { Chain } from '@/lib/assets'
 import { addressesEqual } from '@/lib/ethereum'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -46,7 +48,7 @@ const { pointsBalance } = storeToRefs(usePoints())
 const { updatePointsBalance, updateTasks, updateStatus: updatePointsStatus } = usePoints()
 const { consensus } = storeToRefs(useNimiqNetwork())
 const { balance: polygonBalance, consensus: polygonConsensus } = storeToRefs(usePolygonUsdt())
-const { isTransactionPending, hasPendingHtlcCreation, htlcCanBeExtended, blocksUntilNextMacroBlock, htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
+const { isTransactionPending, hasPendingHtlcCreation, pendingHtlcCreationTransactions, htlcCanBeExtended, blocksUntilNextMacroBlock, htlcHistoryChecked, htlcCheckHoldStartedAt, lastFundsBlockReason } = storeToRefs(useSync())
 const { isProcessingRemote, isSyncingWallets, isConsensusNeeded, isScannerActive } = storeToRefs(useLocks())
 const { localBalance } = storeToRefs(useLocalWallet())
 
@@ -62,6 +64,50 @@ const isConsensusMessageShown = computed(() =>
   isNimiqAsset.value && consensus.value !== 'established' && (isConsensusNeeded.value || htlcCanBeExtended.value || hasHtlcExpired.value),
 )
 const isConsensusMessageShownDebounced = refThrottled(isConsensusMessageShown, debounceDelay)
+
+// Local funds are just accumulating (shown as "pending"), not processing, only while they're
+// below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
+// with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
+const isProcessingFunds = computed(() =>
+  ((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value)
+  || isProcessingRemote.value
+  || hasPendingHtlcCreation.value,
+)
+
+// A processing banner past a few blocks means funds are stuck; report it, and its duration once it clears.
+const FUNDS_STUCK_MS = 2 * 60 * 1e3
+function fundsProcessingProperties(durationMs: number): FundsProcessingProperties {
+  return {
+    duration_ms: durationMs,
+    last_block_reason: lastFundsBlockReason.value,
+    is_htlc_active: isHtlcActive.value,
+    is_remote_ok: isRemoteOk.value,
+    is_processing_remote: isProcessingRemote.value,
+    is_transaction_pending: isTransactionPending.value,
+    has_pending_htlc_creation: hasPendingHtlcCreation.value,
+    has_local_balance: localBalance.value > 0,
+    has_remote_balance: remoteBalance.value > 0,
+    htlc_history_checked: htlcHistoryChecked.value === true,
+    consensus: consensus.value,
+    pending_htlc_creation_hashes: pendingHtlcCreationTransactions.value.map(tx => tx.transactionHash),
+  }
+}
+watch(() => isNimiqAsset.value && isProcessingFunds.value, (processing, _, onCleanup) => {
+  if (!processing)
+    return
+  const startedAt = Date.now()
+  let reported = false
+  const timeout = setTimeout(() => {
+    reported = true
+    trackFundsProcessingStuck(fundsProcessingProperties(Date.now() - startedAt))
+  }, FUNDS_STUCK_MS)
+  onCleanup(() => {
+    clearTimeout(timeout)
+    // Cleanup also runs on unmount or asset switch, where the funds are still processing.
+    if (reported && !isProcessingFunds.value)
+      trackFundsProcessingResolved(fundsProcessingProperties(Date.now() - startedAt))
+  })
+}, { immediate: true })
 
 const statusMessageText = ref('')
 const statusMessageBgColor = ref('bg-[#F9EDE1]')
@@ -126,10 +172,7 @@ watchEffect(async () => {
     statusMessageIcon.value = markRaw(InfoIcon)
     isStatusMessageShown.value = true
   }
-  // Local funds are just accumulating (shown as "pending"), not processing, only while they're
-  // below the threshold AND a secured balance already exists to batch onto. Mirror handleFunds:
-  // with remoteBalance 0 even a below-threshold deposit triggers an HTLC, so treat it as processing.
-  else if (((remoteBalance.value > 0 || (localBalance.value > 0 && (remoteBalance.value === 0 || localBalance.value >= htlcThreshold.value))) && !isHtlcActive.value && !isSyncingWallets.value) || isProcessingRemote.value || hasPendingHtlcCreation.value) {
+  else if (isProcessingFunds.value) {
     statusMessageText.value = i18n.tc(
       'Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay.',
       blocksUntilNextMacroBlock.value,

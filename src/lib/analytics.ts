@@ -218,6 +218,58 @@ export function trackSwapFailed(props: { error_reason: string, asset: Asset }): 
   capture('swap_failed', { ...props, swap_pair: assetToSwapPair(props.asset), swap_provider: SWAP_PROVIDER })
 }
 
+// Why handleFunds (or the send right after it) left local funds unsecured.
+export type FundsBlockReason
+  = | 'pending_tx'
+    | 'remote_balance_error'
+    | 'history_check_hold'
+    | 'history_check_error'
+    | 'deposit_busy'
+    | 'deposit_failed'
+    | 'nodes_not_synced'
+    | 'htlc_expired'
+    | 'liquidation_busy'
+    | 'liquidation_failed'
+    | 'htlc_not_ready'
+    | 'activation_failed'
+
+const reportedFundsBlocks = new Set<FundsBlockReason>()
+
+// handleFunds runs on every head, so a lasting block would repeat each second; once per reason per session.
+export function trackFundsBlocked(reason: FundsBlockReason, props: Record<string, unknown> = {}): void {
+  if (reportedFundsBlocks.has(reason))
+    return
+  reportedFundsBlocks.add(reason)
+  capture('funds_blocked', { reason, ...props })
+}
+
+export interface FundsProcessingProperties {
+  duration_ms: number
+  last_block_reason?: FundsBlockReason
+  is_htlc_active: boolean
+  is_remote_ok: boolean
+  is_processing_remote: boolean
+  is_transaction_pending: boolean
+  has_pending_htlc_creation: boolean
+  has_local_balance: boolean
+  has_remote_balance: boolean
+  htlc_history_checked: boolean
+  consensus: string
+  pending_htlc_creation_hashes: string[]
+}
+
+export function trackFundsProcessingStuck(props: FundsProcessingProperties): void {
+  capture('funds_processing_stuck', props)
+}
+
+export function trackFundsProcessingResolved(props: FundsProcessingProperties): void {
+  capture('funds_processing_resolved', props)
+}
+
+export function trackSyncSlow(props: { stage: 'remote_signer_verification', duration_ms: number, finished: boolean, discovery_complete?: boolean, error_count?: number }): void {
+  capture('sync_slow', props)
+}
+
 export type Web3RequestType
   = | 'request_accounts'
     | 'sign_message'

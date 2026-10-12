@@ -732,7 +732,12 @@ export const useTransactions = defineStore('transactions', () => {
           }
           catch (error) {
             canClearPending = false
-            logger.error('Failed to activate included HTLC signer', error)
+            logger.error('Failed to activate included HTLC signer', error, { transactionHash: staged.tx.hash })
+            syncState.reportFundsBlocked('activation_failed', {
+              tx_hash: staged.tx.hash,
+              error_message: error instanceof Error ? error.message : String(error),
+              transfer: partialTx.transfer,
+            })
           }
         }
         if (canClearPending) {

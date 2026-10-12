@@ -2,6 +2,7 @@ import type { Ref } from 'vue'
 // import { isDev } from '@/lib'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { Posthog } from '@capawesome/capacitor-posthog'
 /* eslint-disable no-console */
 import { useDebounceFn } from '@vueuse/core'
 import { ref, watch } from 'vue'
@@ -15,6 +16,50 @@ let writingLock = Promise.resolve()
 const logFileName = 'logs.txt'
 // Save in the Cache, in case something goes wrong and cannot clear the logs they will be deleted when there's no space
 const directory = Directory.Cache
+
+// The same error from a retry loop would otherwise be reported on every head.
+const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
+const MAX_ERROR_REPORTS_PER_SESSION = 200
+const errorReportedAt = new Map<string, number>()
+let errorReportCount = 0
+
+// Events may carry tx hashes, never addresses: Nimiq user-friendly addresses and 20-byte EVM addresses.
+function redactAddresses(text: string) {
+  return text
+    .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
+    .replace(/\b0x[0-9a-fA-F]{40}\b/g, '0x…')
+}
+
+// Payload objects stay out of PostHog: only the message, error details and top-level tx hashes are sent.
+function reportError(name: string, args: any[]) {
+  if (import.meta.env.DEV)
+    return
+  const [message = '', ...rest] = args.filter(arg => typeof arg === 'string').map(redactAddresses)
+  const cause = args.find(arg => arg instanceof Error || (typeof arg?.message === 'string'))
+  const causeMessage = cause ? redactAddresses(String(cause.message)) : undefined
+  const key = `${name}|${message}|${causeMessage}`
+  const now = Date.now()
+  if (errorReportCount >= MAX_ERROR_REPORTS_PER_SESSION || now - (errorReportedAt.get(key) ?? -Infinity) < ERROR_REPORT_THROTTLE_MS)
+    return
+  errorReportedAt.set(key, now)
+  errorReportCount += 1
+
+  const txHashes = args.flatMap(arg => [arg?.transactionHash, arg?.hash]).filter(hash => typeof hash === 'string')
+  // Reporting must never throw back into the caller's error path.
+  void Promise.resolve().then(() => Posthog.captureException({
+    message: [message, causeMessage].filter(Boolean).join(': ') || 'Unknown error',
+    name: cause?.name ?? name,
+    properties: {
+      logger: name,
+      log_message: message,
+      log_details: rest.length ? rest : undefined,
+      error_message: causeMessage,
+      error_status: typeof cause?.statusCode === 'number' ? cause.statusCode : undefined,
+      tx_hashes: txHashes.length ? txHashes : undefined,
+      stack: cause instanceof Error && cause.stack ? redactAddresses(cause.stack) : undefined,
+    },
+  })).catch(() => {})
+}
 
 // Saves the logs to a file if there's no new logs for 5 seconds
 const debouncedSaveLogs = useDebounceFn(saveLogsToFile, 15 * 1e3, { maxWait: 60 * 1e3 })
@@ -121,12 +166,16 @@ export function useLogger(name: string = '') {
         console.error(`${name}:`, ...args)
     }
     logs.value.push(formatLogs(args))
+    reportError(name, args)
   }
 
   function formatLogs(args: any[]) {
     const prefix = `[${new Date().toISOString()}] ${name}:\n`
     try {
-      return prefix + JSON.stringify(args, null, 2)
+      // Error fields are non-enumerable, so a plain stringify writes `{}` and drops the message.
+      return prefix + JSON.stringify(args, (_, value) => value instanceof Error
+        ? { name: value.name, message: value.message, stack: value.stack }
+        : value, 2)
     }
     catch {
       try {

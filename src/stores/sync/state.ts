@@ -1,10 +1,12 @@
 import type { PlainTransactionDetails } from '@nimiq/core'
 import type { Ref } from 'vue'
+import type { FundsBlockReason } from '@/lib/analytics'
 import type { RecoverablePlainTransactionDetails, TransactionSentByUser } from '@/types/transactions'
 import { computedAsync } from '@vueuse/core'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { useLogger } from '@/composables/useLogger'
+import { trackFundsBlocked } from '@/lib/analytics'
 import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
 import { kv } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -66,6 +68,8 @@ export const useSyncState = defineStore('sync-state', () => {
   const htlcHistoryChecked = shallowRef<boolean>()
   const htlcExtensionsWalked = shallowRef<boolean>()
   const htlcCheckHoldStartedAt = shallowRef<number>()
+  // Sent with funds_processing_stuck, so a stuck banner says what last held the funds.
+  const lastFundsBlockReason = shallowRef<FundsBlockReason>()
   let walletContext: { address: string, network: string } | undefined
 
   function setWalletContext(address: string, network: string) {
@@ -100,6 +104,11 @@ export const useSyncState = defineStore('sync-state', () => {
     return { checked: htlcHistoryChecked.value, walked: htlcExtensionsWalked.value }
   }
 
+  function reportFundsBlocked(reason: FundsBlockReason, props?: Record<string, unknown>) {
+    lastFundsBlockReason.value = reason
+    trackFundsBlocked(reason, props)
+  }
+
   // Touch the local-wallet store here so sync-state stays tied to wallet lifetime in Pinia devtools.
   useLocalWallet()
 
@@ -117,6 +126,8 @@ export const useSyncState = defineStore('sync-state', () => {
     htlcHistoryChecked,
     htlcExtensionsWalked,
     htlcCheckHoldStartedAt,
+    lastFundsBlockReason,
+    reportFundsBlocked,
     setWalletContext,
     loadHtlcHistoryFlags,
     nodesAreSynced,

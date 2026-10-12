@@ -57,7 +57,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { htlcThreshold } = storeToRefs(useApp())
   const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt } = storeToRefs(useSyncState())
 
-  const { loadHtlcHistoryFlags } = useSyncState()
+  const { loadHtlcHistoryFlags, reportFundsBlocked } = useSyncState()
 
   // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
   watch(remoteBalance, (balance) => {
@@ -73,6 +73,13 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       return
     if (isTransactionPending.value || isSendingTx.value) {
       logger.log('There is a pending transaction. Delaying handleFunds', { pendingRemoteDrainTxs: pendingRemoteDrainTxs.value, pendingTransactions: pendingTransactions.value, pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value })
+      reportFundsBlocked('pending_tx', {
+        is_sending_tx: isSendingTx.value,
+        pending_tx_hashes: [
+          ...pendingRemoteDrainTxs.value.map(tx => tx.hash),
+          ...[...pendingTransactions.value, ...pendingHtlcCreationTransactions.value].map(tx => tx.transactionHash),
+        ],
+      })
       return
     }
 
@@ -93,6 +100,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       const { data, error } = await getBalance(remoteAddress.value)
       if (error && error !== NO_ACCOUNT_ERROR) {
         logger.error('Error while getting remote balance before handling funds', error)
+        reportFundsBlocked('remote_balance_error')
         return
       }
       remoteBalanceOnChain = data ?? 0
@@ -124,6 +132,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
             }, startedAt + HTLC_HISTORY_CHECK_HOLD_MS - Date.now())
           }
           logger.log('🧲 Holding local funds until the HTLC history check completes')
+          reportFundsBlocked('history_check_hold')
           return
         }
         // Not marked checked: the sweep keeps following extensions and merges a split HTLC once found.
@@ -133,6 +142,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
       catch (error) {
         // A DB error must not release the hold; retry on the next head.
         logger.error('Error while checking the HTLC history hold', error)
+        reportFundsBlocked('history_check_error')
         return
       }
     }
@@ -144,21 +154,26 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         isProcessingRemote.value = false
         if (result.reason === 'busy') {
           logger.log('Delaying deposit until the pending transaction resolves')
+          reportFundsBlocked('deposit_busy')
           return
         }
         setToast({ message: i18n.t('Error while creating deposit'), type: 'error', duration: 5000 })
         logger.error('Error while creating HTLC', result.error)
+        reportFundsBlocked('deposit_failed')
       }
       return
     }
 
-    if (!nodesAreSynced.value)
+    if (!nodesAreSynced.value) {
+      reportFundsBlocked('nodes_not_synced', { local_height: localHeight.value, remote_height: remoteHeight.value })
       return
+    }
 
     if (isHtlcActive.value && isRemoteOk.value) {
       // Past validity end the cosigner refuses to sign; checkRemoteValidity reclaims via timeout.
       if (hasHtlcExpired.value) {
         logger.log('Active HTLC expired. Leaving it to the timeout reclaim')
+        reportFundsBlocked('htlc_expired')
         return
       }
       const liquidationContext = {
@@ -183,15 +198,18 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         isProcessingRemote.value = false
         if (result.reason === 'busy') {
           logger.log('Delaying deposit until the pending transaction resolves')
+          reportFundsBlocked('liquidation_busy')
           return
         }
         setToast({ message: i18n.t('Error while topping up deposit'), type: 'error', duration: 5000 })
         logger.error('Error while liquidating HTLC', result.error, liquidationContext)
+        reportFundsBlocked('liquidation_failed')
       }
       return
     }
 
     logger.log(`Delaying deposit. isHtlcActive: ${isHtlcActive.value}, isRemoteOk: ${isRemoteOk.value}, isHtlcPending: ${isHtlcPending.value}`)
+    reportFundsBlocked('htlc_not_ready', { is_htlc_active: isHtlcActive.value, is_remote_ok: isRemoteOk.value, is_htlc_pending: isHtlcPending.value })
   }
 
   async function extendValidity() {
