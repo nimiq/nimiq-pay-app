@@ -20,7 +20,7 @@
     "screenshots:ios": "dotenv bundle exec fastlane ios screenshots",
     "screenshots:android": "dotenv bundle exec fastlane android screenshots",
     "screenshots:previews": "node scripts/store-preview-server.mjs --open",
-    "build:web3-provider": "pnpm --dir web3-provider install && pnpm --dir web3-provider build",
+    "build:web3-provider": "node scripts/build-web3-provider.mjs",
     "release": "pnpm i18n:sync && ionic cap build --prod",
     "release:beta": "pnpm i18n:sync && node scripts/release-beta.mjs",
     "changelog": "node scripts/generate-changelog.mjs",
@@ -117,6 +117,7 @@
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/test-utils": "^2.5.1",
     "autoprefixer": "^10.6.1",
+    "bun": "1.3.6",
     "dotenv-cli": "^10.0.0",
     "eslint": "^9.39.5",
     "eslint-plugin-format": "^1.5.0",
@@ -141,6 +142,9 @@
     "webpack-i18n-tools": "github:nimiq/webpack-i18n-tools"
   },
   "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
   "pnpm": {
     "overrides": {
       "jeep-sqlite": "2.5.6",
@@ -152,6 +156,7 @@
       "@web3-js/scrypt-shim",
       "@web3-js/websocket",
       "bufferutil",
+      "bun",
       "core-js",
       "electron",
       "es5-ext",

@@ -17,11 +17,13 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - Run `pnpm lint` and `pnpm typecheck` after finishing a change, before reporting done.
 - Don't touch `*.po` files — auto-generated. Update via `pnpm i18n:extract`.
 
-### Mini Apps provider dependency in CI
+### Mini Apps provider submodule
 
-- `web3-provider/package.json` links to the sibling `../trust-web3-provider` checkout. CI builds the commit pinned in `.github/actions/setup-provider/action.yml`, so local tests can pass with newer provider code while CI fails.
-- When a change needs new provider code, update that CI pin in the same PR to a full commit SHA available in `nimiq/trust-web3-provider`. Publishing a new SDK version or updating the demo dependency does not update this pin.
-- Verify against that exact provider commit: build `core`, `nimiq`, then `ethereum` using the action's commands, rebuild the injected bridge, and run lint, typechecks, and the full unit suite. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
+- `web3-provider/package.json` links to `vendor/trust-web3-provider`, a submodule of `nimiq/trust-web3-provider` (branch `nimiq`). Local builds and CI use the same pinned commit. Clone with `--recurse-submodules`, or run `git submodule update --init --recursive`.
+- `pnpm install` runs `scripts/build-web3-provider.mjs`. It builds `core`, `nimiq`, then `ethereum` with the pinned Bun devDependency, then typechecks and bundles the injected bridge. Run `pnpm build:web3-provider` after changing provider code.
+- A pull that moves the pin leaves the old submodule checkout in place, and the build silently uses it. Before debugging Mini Apps provider behavior, run `git submodule status`: a leading `+` means the checkout differs from the pin. Fix with `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
+- The build script installs `web3-provider` with `--frozen-lockfile`. After changing its dependencies, run `pnpm --dir web3-provider install` to update `web3-provider/pnpm-lock.yaml` first.
+- When a change needs new provider code, move the submodule to a reviewed commit that exists on `nimiq/trust-web3-provider` in the same PR. Publishing a new SDK version or updating the demo dependency does not move the pin. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
 
 ## Naming & terminology
 

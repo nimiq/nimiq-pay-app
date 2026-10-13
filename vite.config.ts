@@ -7,6 +7,7 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import wasm from 'vite-plugin-wasm'
 import poLoader from 'webpack-i18n-tools/loader/rollup'
 import poOptimizer from 'webpack-i18n-tools/optimizer/rollup'
+import { configDefaults } from 'vitest/config'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -46,6 +47,8 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'jsdom',
+      // The provider submodule ships Bun tests that Vitest cannot run.
+      exclude: [...configDefaults.exclude, 'vendor/**'],
       testTimeout: 20000,
       hookTimeout: 20000,
       retry: process.env.CI ? 2 : 0,

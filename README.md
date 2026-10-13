@@ -1,5 +1,25 @@
 # Nimiq Pay
 
+## Development setup
+
+Use Node from `.nvmrc` and pnpm from `packageManager` (for example through Corepack).
+Bun is installed as a pinned devDependency.
+
+```sh
+git clone --recurse-submodules https://github.com/nimiq/nimiq-pay-app.git
+cd nimiq-pay-app
+pnpm install
+pnpm dev
+```
+
+If you cloned without submodules, run `git submodule update --init --recursive`
+before `pnpm install`.
+
+After a pull that moves `vendor/trust-web3-provider`, run
+`git submodule update --init --recursive`, then `pnpm build:web3-provider`.
+Otherwise the app keeps the old provider build. To update it on every pull,
+run `git config submodule.recurse true` once.
+
 ## Native releases
 
 Run `pnpm release:beta` from a clean checkout on a Mac with the existing iOS and
