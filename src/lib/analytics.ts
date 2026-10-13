@@ -3,7 +3,7 @@ import { Device } from '@capacitor/device'
 import { Posthog } from '@capawesome/capacitor-posthog'
 import { useDecrypt } from '@/composables/useDecrypt'
 import { useDevice } from '@/composables/useDevice'
-import { useLogger } from '@/composables/useLogger'
+import { reportException, useLogger } from '@/composables/useLogger'
 import { isDev } from '@/lib'
 import { Asset, assetRegistry } from '@/lib/assets'
 import { useApp } from '@/stores/app'
@@ -23,11 +23,7 @@ function capture(event: string, properties: object): void {
 // filterable via the isDev person-property set in identifyUser().
 export function reportCriticalError(error: unknown, context?: Record<string, unknown>): void {
   const err = error instanceof Error ? error : new Error(String(error))
-  void Posthog.captureException({
-    message: err.message,
-    name: err.name,
-    properties: { ...context, stack: err.stack },
-  })
+  reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
 export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'

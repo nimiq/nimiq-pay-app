@@ -316,10 +316,17 @@ describe('core analytics events', () => {
 })
 
 describe('reportCriticalError', () => {
-  it('captures an Error with its message, name and stack', () => {
+  // Reports go through the logger's sink, which sends after a microtask.
+  const flushReports = async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+  }
+
+  it('captures an Error with its message, name and stack', async () => {
     const error = new TypeError('boom')
 
     reportCriticalError(error)
+    await flushReports()
 
     expect(state.captureException).toHaveBeenCalledWith({
       message: 'boom',
@@ -328,8 +335,26 @@ describe('reportCriticalError', () => {
     })
   })
 
-  it('normalizes non-Error values into an Error', () => {
+  it('reports the same error once', async () => {
+    const error = new Error('Request is a string')
+
+    reportCriticalError(error, { flow: 'payment' })
+    reportCriticalError(error, { flow: 'payment' })
+    await flushReports()
+
+    expect(state.captureException).toHaveBeenCalledOnce()
+  })
+
+  it('redacts addresses from the message', async () => {
+    reportCriticalError(new Error('Request: NQ80 E3XT 79B1 D8U8 EFDN FHB0 MSGX 1NR5 MYMQ'))
+    await flushReports()
+
+    expect(state.captureException.mock.calls[0][0].message).toBe('Request: NQ…')
+  })
+
+  it('normalizes non-Error values into an Error', async () => {
     reportCriticalError('plain failure')
+    await flushReports()
 
     expect(state.captureException).toHaveBeenCalledWith({
       message: 'plain failure',
@@ -338,10 +363,11 @@ describe('reportCriticalError', () => {
     })
   })
 
-  it('merges context into the reported properties', () => {
+  it('merges context into the reported properties', async () => {
     const error = new Error('invariant')
 
     reportCriticalError(error, { flow: 'payment' })
+    await flushReports()
 
     expect(state.captureException).toHaveBeenCalledWith({
       message: 'invariant',
@@ -350,10 +376,11 @@ describe('reportCriticalError', () => {
     })
   })
 
-  it('reports even in development mode (filterable via the isDev person-property)', () => {
+  it('reports even in development mode (filterable via the isDev person-property)', async () => {
     state.isDev = true
 
     reportCriticalError(new Error('still reported'))
+    await flushReports()
 
     expect(state.captureException).toHaveBeenCalledTimes(1)
   })

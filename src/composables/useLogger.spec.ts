@@ -94,6 +94,23 @@ describe('useLogger', () => {
     expect(JSON.stringify(state.captureException.mock.calls[0][0])).not.toContain('seed words')
   })
 
+  it('does not report an error that was already reported', async () => {
+    const { reportException } = await import('./useLogger')
+    const logger = await loadLogger('Flow')
+    const reported = new Error('Request is a string')
+    reportException(reported, { message: reported.message, name: reported.name })
+    await flushReports()
+    state.captureException.mockClear()
+    const fresh = new Error('Unhandled step failure')
+    logger.error('Unhandled error while completing step', reported)
+    logger.error('Unhandled error while completing step', fresh)
+    logger.error('Retried step failed again', fresh)
+    await flushReports()
+
+    expect(state.captureException).toHaveBeenCalledOnce()
+    expect(state.captureException.mock.calls[0][0].properties.error_message).toBe('Unhandled step failure')
+  })
+
   it('reports an API error object with its status code', async () => {
     const logger = await loadLogger('useApi')
     logger.error('Request failed:', { message: 'Wallet no longer active', statusCode: 409 })

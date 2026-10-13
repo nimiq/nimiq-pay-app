@@ -55,10 +55,9 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { activateRemoteSignerFromTransaction, deactivateRemoteSigner, findTransactionInHistory, getAllRemoteSigners, getWalletContext, isWalletContextCurrent, updateRemoteSigner } = remoteSignerStore
   const { sendTx, updateTransactionStatus } = useTransactions()
   const { htlcThreshold } = storeToRefs(useApp())
-  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt } = storeToRefs(useSyncState())
+  const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt, lastFundsBlockReason } = storeToRefs(useSyncState())
 
   const { loadHtlcHistoryFlags, reportFundsBlocked } = useSyncState()
-  const { lastFundsBlockReason } = storeToRefs(useSyncState())
 
   // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
   watch(remoteBalance, (balance) => {

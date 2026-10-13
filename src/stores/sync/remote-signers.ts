@@ -46,6 +46,9 @@ function hasOutgoingTransactionForExactTarget(
 export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
   // Verification retries every 10 blocks while history is incomplete, so report slowness once per session.
   let syncSlowReported = false
+  // Start of the current streak of incomplete discoveries. One fast incomplete run is normal on startup; a streak
+  // that outlasts VERIFY_SLOW_MS across retries is the slow case.
+  let incompleteSince: number | undefined
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -461,8 +464,10 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     finally {
       isVerifyingRemoteSignersDb.value = false
       clearTimeout(wedgedTimeout)
-      const durationMs = Date.now() - startedAt
-      if (!syncSlowReported && (durationMs > VERIFY_SLOW_MS || (result && !result.localComplete))) {
+      if (result)
+        incompleteSince = result.localComplete ? undefined : (incompleteSince ?? startedAt)
+      const durationMs = Date.now() - (incompleteSince ?? startedAt)
+      if (!syncSlowReported && durationMs > VERIFY_SLOW_MS) {
         syncSlowReported = true
         trackSyncSlow({
           duration_ms: durationMs,

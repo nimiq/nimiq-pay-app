@@ -269,8 +269,9 @@ const paymentFlow: FlowInit = async () => {
     // No translation as not user-facing. Dev error which should not occur in production.
     if (payWithPuntos && isNimPaymentRequest) {
       const msg = 'User can only pay with puntos if they have scanned a payment request'
-      reportCriticalError(new Error(msg), { flow: flowName })
-      throw new Error(msg)
+      const error = new Error(msg)
+      reportCriticalError(error, { flow: flowName })
+      throw error
     }
 
     // 2. Parse the payments parameters
@@ -380,8 +381,9 @@ const paymentFlow: FlowInit = async () => {
         if (!payment.request.rail || !payment.request.paymentRef) {
           // No translation as not user-facing. Dev error which should not occur in production.
           const msg = `You cannot pay with points without a rail nor paymentRef. Request: ${JSON.stringify(payment.request)}`
-          reportCriticalError(new Error(msg), { flow: flowName })
-          throw new Error(msg)
+          const error = new Error(msg)
+          reportCriticalError(error, { flow: flowName })
+          throw error
         }
 
         const { usePoints } = await import('@/stores/points')

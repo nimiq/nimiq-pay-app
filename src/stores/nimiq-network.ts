@@ -70,8 +70,9 @@ export const useNimiqNetwork = defineStore('nimiq-network', () => {
       // import). Never let that become an uncaught rejection or wedge boot — log and bail so the app
       // still unlocks and renders; sync simply stays offline until the next launch.
       // iOS Lockdown Mode is gated out in main.ts before init() runs, so this is a genuine failure.
-      logger.error('Nimiq WASM init failed; running without the PoS client', error)
+      // Reported first so PostHog gets the context; the logger then skips the already reported error.
       reportCriticalError(error, { context: 'nimiq-wasm-init', network: networkName.value })
+      logger.error('Nimiq WASM init failed; running without the PoS client', error)
       return
     }
 

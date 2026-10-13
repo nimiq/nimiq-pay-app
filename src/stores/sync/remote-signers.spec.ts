@@ -46,17 +46,31 @@ describe('useSyncRemoteSigners', () => {
     }
   }
 
-  it('reports an incomplete verification once per session, not on every retry', async () => {
+  it('reports verification as slow only once discovery stays incomplete past the threshold, once per session', async () => {
     const { trackSyncSlow } = await import('@/lib/analytics')
     const { useSyncRemoteSigners } = await import('./remote-signers')
     const store = useSyncRemoteSigners()
     const discoveryResult = { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local history incomplete'], createdHtlcs: [], historyComplete: false }
+    let now = 1_000_000
+    const dateNow = vi.spyOn(Date, 'now').mockImplementation(() => now)
 
-    await store.verifyRemoteSignersDb({ discoveryResult })
-    await store.verifyRemoteSignersDb({ discoveryResult })
+    try {
+      // A fast incomplete run is normal right after startup.
+      await store.verifyRemoteSignersDb({ discoveryResult })
+      expect(trackSyncSlow).not.toHaveBeenCalled()
 
-    expect(trackSyncSlow).toHaveBeenCalledOnce()
-    expect(trackSyncSlow).toHaveBeenCalledWith(expect.objectContaining({ finished: true, discovery_complete: false, error_count: 1 }))
+      now += 2 * 60 * 1e3 + 1
+      await store.verifyRemoteSignersDb({ discoveryResult })
+      expect(trackSyncSlow).toHaveBeenCalledOnce()
+      expect(trackSyncSlow).toHaveBeenCalledWith(expect.objectContaining({ duration_ms: 2 * 60 * 1e3 + 1, finished: true, discovery_complete: false, error_count: 1 }))
+
+      now += 10 * 60 * 1e3
+      await store.verifyRemoteSignersDb({ discoveryResult })
+      expect(trackSyncSlow).toHaveBeenCalledOnce()
+    }
+    finally {
+      dateNow.mockRestore()
+    }
   })
 
   describe('recoverRemoteSigner', () => {
