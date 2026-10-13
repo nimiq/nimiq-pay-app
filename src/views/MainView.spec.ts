@@ -1,5 +1,5 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, defineComponent, ref } from 'vue'
 import { Asset } from '@/lib/assets'
 
@@ -45,6 +45,14 @@ const loggerError = vi.fn()
 const routerReplace = vi.fn()
 const libState = vi.hoisted(() => ({
   isTestnet: false,
+}))
+const capture = vi.hoisted(() => vi.fn())
+
+enableAutoUnmount(afterEach)
+afterEach(() => vi.useRealTimers())
+
+vi.mock('@capawesome/capacitor-posthog', () => ({
+  Posthog: { capture },
 }))
 
 vi.mock('@capacitor/app', () => ({
@@ -320,6 +328,7 @@ describe('mainView', () => {
     loggerError.mockReset()
     routerReplace.mockReset()
     libState.isTestnet = false
+    capture.mockClear()
   })
 
   it('logs a rejected wallet sync instead of leaving it unhandled', async () => {
@@ -416,6 +425,34 @@ describe('mainView', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Processing funds')
+  })
+
+  it.each([60_000, 120_000])('preserves funds telemetry when switching assets after %s ms', async (switchAfterMs) => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    isProcessingRemote.value = true
+    await mountComponent()
+    await flushPromises()
+
+    await vi.advanceTimersByTimeAsync(switchAfterMs)
+    activeAsset.value = Asset.USDT
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(180_000 - switchAfterMs)
+
+    expect(capture).toHaveBeenCalledExactlyOnceWith({
+      event: 'funds_processing_stuck',
+      properties: expect.objectContaining({ duration_ms: 120_000 }),
+    })
+
+    isProcessingRemote.value = false
+    await flushPromises()
+    activeAsset.value = Asset.NIM
+    await flushPromises()
+
+    expect(capture).toHaveBeenCalledTimes(2)
+    expect(capture).toHaveBeenLastCalledWith({
+      event: 'funds_processing_resolved',
+      properties: expect.objectContaining({ duration_ms: 180_000, is_processing_remote: false }),
+    })
   })
 
   it('does not show "Processing funds" when accumulating below threshold onto an active HTLC', async () => {

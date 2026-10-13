@@ -89,7 +89,8 @@ function trackFundsProcessingState(state: 'stuck' | 'resolved', durationMs: numb
     pending_htlc_creation_hashes: pendingHtlcCreationTransactions.value.map(tx => tx.transactionHash),
   })
 }
-watch(() => isNimiqAsset.value && isProcessingFunds.value, (processing, _, onCleanup) => {
+// NIM funds keep processing while another asset is selected; keep the same telemetry episode alive.
+watch(isProcessingFunds, (processing, _, onCleanup) => {
   if (!processing)
     return
   const startedAt = Date.now()
@@ -100,7 +101,7 @@ watch(() => isNimiqAsset.value && isProcessingFunds.value, (processing, _, onCle
   }, FUNDS_STUCK_MS)
   onCleanup(() => {
     clearTimeout(timeout)
-    // Cleanup also runs on unmount or asset switch, where the funds are still processing.
+    // Unmounting does not mean the funds finished processing.
     if (reported && !isProcessingFunds.value)
       trackFundsProcessingState('resolved', Date.now() - startedAt)
   })
