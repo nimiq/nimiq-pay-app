@@ -112,6 +112,23 @@ describe('useLogger', () => {
     expect(state.captureException).toHaveBeenCalledTimes(2)
   })
 
+  it('caps reports per session, counting repeats after the throttle window', async () => {
+    vi.useFakeTimers()
+    try {
+      const logger = await loadLogger()
+      for (let round = 0; round < 25; round++) {
+        for (let i = 0; i < 10; i++)
+          logger.error(`recurring error ${i}`)
+        vi.advanceTimersByTime(10 * 60 * 1e3)
+      }
+      await flushReports()
+      expect(state.captureException).toHaveBeenCalledTimes(200)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('does not report from dev builds', async () => {
     vi.stubEnv('DEV', true)
     const logger = await loadLogger()

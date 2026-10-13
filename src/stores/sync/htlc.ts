@@ -58,6 +58,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
   const { isTransactionPending, nodesAreSynced, pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, htlcCanBeExtended, walletContextGeneration, htlcCheckHoldStartedAt } = storeToRefs(useSyncState())
 
   const { loadHtlcHistoryFlags, reportFundsBlocked } = useSyncState()
+  const { lastFundsBlockReason } = storeToRefs(useSyncState())
 
   // A funded active HTLC leaves nothing unsecured to explain, however it got activated.
   watch(remoteBalance, (balance) => {
@@ -148,6 +149,8 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
     }
 
     if (remoteBalanceOnChain === 0 && !isHtlcPending.value) {
+      // Nothing holds the funds now. Cleared before sending so a failure inside the send (activation_failed) stays.
+      lastFundsBlockReason.value = undefined
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.LocalToRemote })
       if (result.outcome === 'rejected') {
@@ -192,6 +195,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
         pendingHtlcCreationTransactions: pendingHtlcCreationTransactions.value.length,
       }
       logger.log('Preparing to top up deposit by liquidating active HTLC', liquidationContext)
+      lastFundsBlockReason.value = undefined
       isProcessingRemote.value = true
       const result = await sendTx({ transfer: Transfer.RemoteToLocal })
       if (result.outcome === 'rejected') {

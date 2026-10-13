@@ -38,11 +38,11 @@ msgstr ""
 #: src/stores/polygon-usdt.ts:2119
 #: src/stores/polygon-usdt.ts:2374
 #: src/stores/polygon-usdt.ts:2387
-#: src/stores/transactions.ts:342
+#: src/stores/transactions.ts:385
 msgid "A transaction is already in progress"
 msgstr ""
 
-#: src/stores/transactions.ts:359
+#: src/stores/transactions.ts:402
 msgid "A transaction is still pending. Wait for it to resolve before sending another."
 msgstr ""
 
@@ -79,7 +79,7 @@ msgstr ""
 
 #: src/stores/nimiq-network.ts:225
 #: src/stores/nimiq-network.ts:247
-#: src/stores/nimiq-network.ts:279
+#: src/stores/nimiq-network.ts:280
 msgid "Address missing"
 msgstr ""
 
@@ -195,7 +195,7 @@ msgstr ""
 msgid "Biometric is not supported on this device"
 msgstr ""
 
-#: src/composables/useStringParser.ts:231
+#: src/composables/useStringParser.ts:232
 msgid "Bitcoin Lightning invoice expired."
 msgstr ""
 
@@ -233,13 +233,13 @@ msgstr ""
 
 #: src/components/ChatConfirmDialog.vue:13
 #: src/components/PhoneInput.vue:66
-#: src/components/TheHomeTransactions.vue:67
+#: src/components/TheHomeTransactions.vue:78
 #: src/components/WithdrawalAddressList.vue:21
 #: src/composables/useBiometric.ts:40
 msgid "Cancel"
 msgstr ""
 
-#: src/composables/useStringParser.ts:277
+#: src/composables/useStringParser.ts:278
 msgid "Cannot create swap"
 msgstr ""
 
@@ -247,7 +247,7 @@ msgstr ""
 msgid "Cannot enable biometric"
 msgstr ""
 
-#: src/composables/useStringParser.ts:264
+#: src/composables/useStringParser.ts:265
 msgid "Cannot fetch existing swap"
 msgstr ""
 
@@ -255,7 +255,7 @@ msgstr ""
 msgid "Cashlink claimed successfully"
 msgstr ""
 
-#: src/composables/useNotifications.ts:356
+#: src/composables/useNotifications.ts:357
 #: src/types/transactions.ts:143
 msgid "Cashlink Claiming"
 msgstr ""
@@ -281,7 +281,7 @@ msgid "Check your connection and try again."
 msgstr ""
 
 #: src/modals/HtlcHistoryCheckModal.vue:13
-#: src/views/MainView.vue:122
+#: src/views/MainView.vue:165
 msgid "Checking your account"
 msgstr ""
 
@@ -351,7 +351,7 @@ msgstr ""
 
 #: src/components/NimWithdraw.vue:174
 #: src/components/PaymentAmountInput.vue:161
-#: src/views/MainView.vue:95
+#: src/views/MainView.vue:138
 msgid "Connecting to Polygon"
 msgstr ""
 
@@ -388,8 +388,8 @@ msgstr ""
 msgid "Copy or scan the address"
 msgstr ""
 
-#: src/stores/transactions.ts:557
-#: src/stores/transactions.ts:571
+#: src/stores/transactions.ts:600
+#: src/stores/transactions.ts:614
 msgid "Cosigner returned a different transaction"
 msgstr ""
 
@@ -397,7 +397,7 @@ msgstr ""
 msgid "Could not determine Polygon transaction hash"
 msgstr ""
 
-#: src/composables/useStringParser.ts:282
+#: src/composables/useStringParser.ts:283
 msgid "Could not fetch amount for Bitcoin Lightning swap."
 msgstr ""
 
@@ -405,7 +405,7 @@ msgstr ""
 msgid "Could not persist Polygon swap transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:354
+#: src/stores/transactions.ts:397
 msgid "Could not verify pending transactions"
 msgstr ""
 
@@ -554,7 +554,7 @@ msgstr ""
 msgid "Error getting account"
 msgstr ""
 
-#: src/stores/nimiq-network.ts:288
+#: src/stores/nimiq-network.ts:289
 msgid "Error getting account transactions"
 msgstr ""
 
@@ -571,19 +571,19 @@ msgstr ""
 msgid "Error using SecureStorage"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:149
+#: src/stores/sync/htlc.ts:160
 msgid "Error while creating deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:210
+#: src/stores/sync/htlc.ts:228
 msgid "Error while extending deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:235
+#: src/stores/sync/htlc.ts:253
 msgid "Error while recovering deposit"
 msgstr ""
 
-#: src/stores/sync/htlc.ts:188
+#: src/stores/sync/htlc.ts:204
 msgid "Error while topping up deposit"
 msgstr ""
 
@@ -706,11 +706,11 @@ msgstr ""
 msgid "Hey! Join me on Nimiq Pay app and earn Cryptocity Points to pay for your purchases using crypto! Use my code {code} to earn {amount} in Cryptocity Points at registration."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:68
+#: src/components/TheHomeTransactions.vue:79
 msgid "Hide"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:62
+#: src/components/TheHomeTransactions.vue:73
 msgid "Hide transaction?"
 msgstr ""
 
@@ -783,15 +783,15 @@ msgstr ""
 msgid "Invalid amount"
 msgstr ""
 
-#: src/composables/useStringParser.ts:240
+#: src/composables/useStringParser.ts:241
 msgid "Invalid Bitcoin Lightning invoice: missing amount."
 msgstr ""
 
-#: src/composables/useStringParser.ts:226
+#: src/composables/useStringParser.ts:227
 msgid "Invalid Bitcoin Lightning invoice: missing timestamp."
 msgstr ""
 
-#: src/composables/useStringParser.ts:221
+#: src/composables/useStringParser.ts:222
 msgid "Invalid Bitcoin Lightning invoice."
 msgstr ""
 
@@ -803,21 +803,21 @@ msgstr ""
 msgid "Invalid card signature. Please try again"
 msgstr ""
 
-#: src/composables/useStringParser.ts:193
+#: src/composables/useStringParser.ts:194
 msgid "Invalid CPLink. Could not fetch payment details."
 msgstr ""
 
-#: src/composables/useStringParser.ts:178
+#: src/composables/useStringParser.ts:179
 msgid "Invalid CPLink. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:172
-#: src/composables/useStringParser.ts:189
+#: src/composables/useStringParser.ts:173
+#: src/composables/useStringParser.ts:190
 msgid "Invalid CPLink. Missing id."
 msgstr ""
 
 #: src/composables/useGoCryptoMonitoring.ts:134
-#: src/composables/useStringParser.ts:208
+#: src/composables/useStringParser.ts:209
 msgid "Invalid GoCrypto link."
 msgstr ""
 
@@ -825,15 +825,15 @@ msgstr ""
 msgid "Invalid GoCrypto response"
 msgstr ""
 
-#: src/composables/useStringParser.ts:166
+#: src/composables/useStringParser.ts:167
 msgid "Invalid link format. CPLinks are only supported for NIM."
 msgstr ""
 
-#: src/composables/useStringParser.ts:133
+#: src/composables/useStringParser.ts:134
 msgid "Invalid link format. Only CPLinks for NIM and Bitcoin Lightning requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:134
+#: src/composables/useStringParser.ts:135
 msgid "Invalid link format. Only CPLinks for NIM are supported."
 msgstr ""
 
@@ -854,11 +854,11 @@ msgstr ""
 msgid "Invalid Nimiq Cashlink"
 msgstr ""
 
-#: src/composables/useStringParser.ts:342
+#: src/composables/useStringParser.ts:343
 msgid "Invalid Nimiq Wallet request. Missing recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:336
+#: src/composables/useStringParser.ts:337
 msgid "Invalid Nimiq Wallet request. Only Nimiq Wallet requests are supported."
 msgstr ""
 
@@ -904,8 +904,8 @@ msgstr ""
 msgid "Invalid transfer type"
 msgstr ""
 
-#: src/composables/useStringParser.ts:109
-msgid "Invalid URL: {url}"
+#: src/composables/useStringParser.ts:110
+msgid "Invalid URL"
 msgstr ""
 
 #: src/composables/useQRScanner.ts:89
@@ -914,17 +914,17 @@ msgstr ""
 msgid "Invalid USDT address"
 msgstr ""
 
-#: src/composables/useStringParser.ts:421
+#: src/composables/useStringParser.ts:422
 msgid "Invalid USDT Wallet request. Missing amount or recipient."
 msgstr ""
 
-#: src/composables/useStringParser.ts:401
+#: src/composables/useStringParser.ts:402
 msgid "Invalid USDT Wallet request. Only Polygon network requests are supported."
 msgstr ""
 
-#: src/composables/useStringParser.ts:398
-#: src/composables/useStringParser.ts:409
-#: src/composables/useStringParser.ts:413
+#: src/composables/useStringParser.ts:399
+#: src/composables/useStringParser.ts:410
+#: src/composables/useStringParser.ts:414
 msgid "Invalid USDT Wallet request. Only USDT Wallet requests are supported."
 msgstr ""
 
@@ -1056,8 +1056,8 @@ msgstr ""
 msgid "NFC is not supported on this device"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:75
-#: src/stores/transactions.ts:365
+#: src/stores/sync/remote-signers.ts:78
+#: src/stores/transactions.ts:408
 msgid "Nimiq network unavailable"
 msgstr ""
 
@@ -1121,7 +1121,7 @@ msgstr ""
 msgid "No one can see me"
 msgstr ""
 
-#: src/composables/useApi.ts:427
+#: src/composables/useApi.ts:429
 msgid "No payment details found"
 msgstr ""
 
@@ -1147,7 +1147,7 @@ msgid ""
 "Stay tuned."
 msgstr ""
 
-#: src/stores/nimiq-network.ts:283
+#: src/stores/nimiq-network.ts:284
 msgid "No transactions found"
 msgstr ""
 
@@ -1428,7 +1428,7 @@ msgstr ""
 msgid "Privacy Policy"
 msgstr ""
 
-#: src/views/MainView.vue:133
+#: src/views/MainView.vue:173
 msgid "Processing funds… | Processing funds. Wait ~{blocks} second to pay. | Processing funds. Wait ~{blocks} seconds to pay."
 msgstr ""
 
@@ -1603,7 +1603,7 @@ msgid "Sender"
 msgstr ""
 
 #: src/components/NimWithdraw.vue:183
-#: src/views/MainView.vue:112
+#: src/views/MainView.vue:155
 msgid "Server not available"
 msgstr ""
 
@@ -1679,8 +1679,8 @@ msgstr ""
 msgid "Something went wrong signing the transaction"
 msgstr ""
 
-#: src/composables/useApi.ts:325
-#: src/composables/useApi.ts:332
+#: src/composables/useApi.ts:326
+#: src/composables/useApi.ts:334
 #: src/composables/useMiniAppHost.ts:2054
 #: src/lib/tx.ts:200
 #: src/lib/tx.ts:267
@@ -1892,11 +1892,11 @@ msgstr ""
 msgid "This service is currently not available in your region."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:65
+#: src/components/TheHomeTransactions.vue:76
 msgid "This transaction will be hidden from your history. You can reveal it later from the dev menu."
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:64
+#: src/components/TheHomeTransactions.vue:75
 msgid "This transaction will reappear in your history."
 msgstr ""
 
@@ -1920,20 +1920,20 @@ msgstr ""
 msgid "Transaction"
 msgstr ""
 
-#: src/stores/transactions.ts:577
+#: src/stores/transactions.ts:620
 msgid "Transaction could not be staged"
 msgstr ""
 
-#: src/stores/transactions.ts:618
-#: src/stores/transactions.ts:637
+#: src/stores/transactions.ts:661
+#: src/stores/transactions.ts:680
 msgid "Transaction invalid"
 msgstr ""
 
-#: src/stores/transactions.ts:580
+#: src/stores/transactions.ts:623
 msgid "Transaction invalid for PoS network"
 msgstr ""
 
-#: src/stores/transactions.ts:677
+#: src/stores/transactions.ts:720
 msgid "Transaction submission could not be confirmed"
 msgstr ""
 
@@ -1962,11 +1962,11 @@ msgstr ""
 msgid "Unexpected GoCrypto error"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:68
+#: src/components/TheHomeTransactions.vue:79
 msgid "Unhide"
 msgstr ""
 
-#: src/components/TheHomeTransactions.vue:62
+#: src/components/TheHomeTransactions.vue:73
 msgid "Unhide transaction?"
 msgstr ""
 
@@ -1995,7 +1995,7 @@ msgstr ""
 msgid "Updating connection"
 msgstr ""
 
-#: src/views/MainView.vue:87
+#: src/views/MainView.vue:130
 msgid "USDT is only available on mainnet. Switch to mainnet to use USDT."
 msgstr ""
 
@@ -2044,36 +2044,36 @@ msgstr ""
 msgid "Wallet changed before sending"
 msgstr ""
 
-#: src/stores/sync/remote-signers.ts:81
-#: src/stores/sync/remote-signers.ts:94
-#: src/stores/transactions.ts:350
-#: src/stores/transactions.ts:369
-#: src/stores/transactions.ts:380
-#: src/stores/transactions.ts:448
-#: src/stores/transactions.ts:457
-#: src/stores/transactions.ts:467
-#: src/stores/transactions.ts:522
-#: src/stores/transactions.ts:539
+#: src/stores/sync/remote-signers.ts:84
+#: src/stores/sync/remote-signers.ts:97
+#: src/stores/transactions.ts:393
+#: src/stores/transactions.ts:412
+#: src/stores/transactions.ts:423
+#: src/stores/transactions.ts:491
+#: src/stores/transactions.ts:500
+#: src/stores/transactions.ts:510
 #: src/stores/transactions.ts:565
-#: src/stores/transactions.ts:589
-#: src/stores/transactions.ts:604
-#: src/stores/transactions.ts:605
-#: src/stores/transactions.ts:627
-#: src/stores/transactions.ts:680
-#: src/stores/transactions.ts:688
-#: src/stores/transactions.ts:698
-#: src/stores/transactions.ts:706
-#: src/stores/transactions.ts:714
-#: src/stores/transactions.ts:748
-#: src/stores/transactions.ts:758
-#: src/stores/transactions.ts:763
-#: src/stores/transactions.ts:768
-#: src/stores/transactions.ts:773
-#: src/stores/transactions.ts:791
-#: src/stores/transactions.ts:798
-#: src/stores/transactions.ts:804
-#: src/stores/transactions.ts:807
-#: src/stores/transactions.ts:810
+#: src/stores/transactions.ts:582
+#: src/stores/transactions.ts:608
+#: src/stores/transactions.ts:632
+#: src/stores/transactions.ts:647
+#: src/stores/transactions.ts:648
+#: src/stores/transactions.ts:670
+#: src/stores/transactions.ts:723
+#: src/stores/transactions.ts:731
+#: src/stores/transactions.ts:743
+#: src/stores/transactions.ts:751
+#: src/stores/transactions.ts:759
+#: src/stores/transactions.ts:793
+#: src/stores/transactions.ts:803
+#: src/stores/transactions.ts:808
+#: src/stores/transactions.ts:813
+#: src/stores/transactions.ts:818
+#: src/stores/transactions.ts:836
+#: src/stores/transactions.ts:843
+#: src/stores/transactions.ts:849
+#: src/stores/transactions.ts:852
+#: src/stores/transactions.ts:855
 msgid "Wallet or network changed before sending"
 msgstr ""
 
@@ -2203,7 +2203,7 @@ msgstr ""
 msgid "Wrong answer"
 msgstr ""
 
-#: src/composables/useStringParser.ts:236
+#: src/composables/useStringParser.ts:237
 msgid "Wrong network in Bitcoin Lightning invoice."
 msgstr ""
 
@@ -2265,7 +2265,7 @@ msgstr ""
 msgid "You have reached your daily spending limit"
 msgstr ""
 
-#: src/composables/useNotifications.ts:363
+#: src/composables/useNotifications.ts:364
 msgid "You received {amount}"
 msgstr ""
 

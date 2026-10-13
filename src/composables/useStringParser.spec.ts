@@ -73,6 +73,16 @@ describe('useStringParser', () => {
     state.run.mockResolvedValue(undefined)
   })
 
+  it('does not echo invalid input in the returned error', async () => {
+    const seed = 'witch collapse practice feed shame open despair creek road again ice least'
+    const { useStringParser } = await import('./useStringParser')
+    const { data, error } = await useStringParser().getPaymentRequestData(seed)
+
+    expect(data).toBeUndefined()
+    // Tests run i18n without interpolation, so assert the message takes no input parameter at all.
+    expect(error).toBe('Invalid URL')
+  })
+
   it('parses a raw Polygon address as a USDT payment target', async () => {
     const { useStringParser } = await import('./useStringParser')
     const { data, error } = await useStringParser().getPaymentRequestData('0x1111111111111111111111111111111111111111')

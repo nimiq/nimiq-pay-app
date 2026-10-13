@@ -46,6 +46,19 @@ describe('useSyncRemoteSigners', () => {
     }
   }
 
+  it('reports an incomplete verification once per session, not on every retry', async () => {
+    const { trackSyncSlow } = await import('@/lib/analytics')
+    const { useSyncRemoteSigners } = await import('./remote-signers')
+    const store = useSyncRemoteSigners()
+    const discoveryResult = { added: 0, alreadyKnown: 0, localComplete: false, errors: ['Local history incomplete'], createdHtlcs: [], historyComplete: false }
+
+    await store.verifyRemoteSignersDb({ discoveryResult })
+    await store.verifyRemoteSignersDb({ discoveryResult })
+
+    expect(trackSyncSlow).toHaveBeenCalledOnce()
+    expect(trackSyncSlow).toHaveBeenCalledWith(expect.objectContaining({ finished: true, discovery_complete: false, error_count: 1 }))
+  })
+
   describe('recoverRemoteSigner', () => {
     it('recovers the exact inactive target after incomplete global discovery without global reconciliation', async () => {
       const target = targetedCandidate('NQ22 TARGET SIGNER')

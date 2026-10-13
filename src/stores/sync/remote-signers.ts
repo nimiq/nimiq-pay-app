@@ -44,6 +44,8 @@ function hasOutgoingTransactionForExactTarget(
 }
 
 export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
+  // Verification retries every 10 blocks while history is incomplete, so report slowness once per session.
+  let syncSlowReported = false
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -401,7 +403,12 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     isVerifyingRemoteSignersDb.value = true
     const startedAt = Date.now()
     // A run that never settles blocks reconciliation silently, so report it while it is still running.
-    const wedgedTimeout = setTimeout(() => trackSyncSlow({ duration_ms: Date.now() - startedAt, finished: false }), VERIFY_WEDGED_MS)
+    const wedgedTimeout = setTimeout(() => {
+      if (syncSlowReported)
+        return
+      syncSlowReported = true
+      trackSyncSlow({ duration_ms: Date.now() - startedAt, finished: false })
+    }, VERIFY_WEDGED_MS)
     let result: RemoteSignerDiscoveryResult | undefined
     try {
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
@@ -455,7 +462,8 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
       isVerifyingRemoteSignersDb.value = false
       clearTimeout(wedgedTimeout)
       const durationMs = Date.now() - startedAt
-      if (durationMs > VERIFY_SLOW_MS || (result && !result.localComplete)) {
+      if (!syncSlowReported && (durationMs > VERIFY_SLOW_MS || (result && !result.localComplete))) {
+        syncSlowReported = true
         trackSyncSlow({
           duration_ms: durationMs,
           finished: true,

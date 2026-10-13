@@ -21,6 +21,8 @@ const directory = Directory.Cache
 const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
 const MAX_ERROR_REPORTS_PER_SESSION = 200
 const errorReportedAt = new Map<string, number>()
+// Counts every report, so recurring errors re-reported after the throttle window still hit the cap.
+let errorReportCount = 0
 
 // Never addresses (Nimiq and 20-byte EVM), 32-byte hex (tx hashes, but also keys) or URL query strings and
 // fragments. Collapsing hashes also keeps one PostHog issue per message instead of one per hash.
@@ -36,7 +38,7 @@ function redact(text: string) {
 // static label: later string args and objects can hold user content (scanned QR codes, request bodies) and stay
 // in the local log file only.
 function reportError(name: string, args: any[]) {
-  if (import.meta.env.DEV || errorReportedAt.size >= MAX_ERROR_REPORTS_PER_SESSION)
+  if (import.meta.env.DEV || errorReportCount >= MAX_ERROR_REPORTS_PER_SESSION)
     return
   const message = redact(args.find(arg => typeof arg === 'string') ?? '')
   const cause = args.find(arg => typeof arg?.message === 'string')
@@ -46,6 +48,7 @@ function reportError(name: string, args: any[]) {
   if (now - (errorReportedAt.get(key) ?? -Infinity) < ERROR_REPORT_THROTTLE_MS)
     return
   errorReportedAt.set(key, now)
+  errorReportCount += 1
 
   const txHashes = args.flatMap(arg => [arg?.transactionHash, arg?.hash]).filter(hash => typeof hash === 'string')
   // Reporting must never throw back into the caller's error path.
