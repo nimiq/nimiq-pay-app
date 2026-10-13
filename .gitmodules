@@ -1,0 +1,4 @@
+[submodule "vendor/trust-web3-provider"]
+	path = vendor/trust-web3-provider
+	url = https://github.com/nimiq/trust-web3-provider.git
+	branch = nimiq

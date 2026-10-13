@@ -1,5 +1,20 @@
 # Nimiq Pay
 
+## Development setup
+
+Use Node from `.nvmrc` and pnpm from `packageManager` (for example through Corepack).
+Bun is installed as a pinned devDependency.
+
+```sh
+git clone --recurse-submodules https://github.com/nimiq/nimiq-pay-app.git
+cd nimiq-pay-app
+pnpm install
+pnpm dev
+```
+
+If you cloned without submodules, run `git submodule update --init --recursive`
+before `pnpm install`.
+
 ## Native releases
 
 Run `pnpm release:beta` from a clean checkout on a Mac with the existing iOS and

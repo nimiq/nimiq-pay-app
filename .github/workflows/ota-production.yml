@@ -47,6 +47,7 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
           path: nimiq-pay-app
+          submodules: recursive
           persist-credentials: false
 
       - name: Validate OTA tag
@@ -153,12 +154,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 24
+          node-version-file: nimiq-pay-app/.nvmrc
           cache: pnpm
           cache-dependency-path: nimiq-pay-app/pnpm-lock.yaml
-
-      - name: Setup provider packages
-        uses: ./nimiq-pay-app/.github/actions/setup-provider
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
