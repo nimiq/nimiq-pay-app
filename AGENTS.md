@@ -21,6 +21,8 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 
 - `web3-provider/package.json` links to `vendor/trust-web3-provider`, a submodule of `nimiq/trust-web3-provider` (branch `nimiq`). Local builds and CI use the same pinned commit. Clone with `--recurse-submodules`, or run `git submodule update --init --recursive`.
 - `pnpm install` runs `scripts/build-web3-provider.mjs`. It builds `core`, `nimiq`, then `ethereum` with the pinned Bun devDependency, then typechecks and bundles the injected bridge. Run `pnpm build:web3-provider` after changing provider code.
+- A pull that moves the pin leaves the old submodule checkout in place, and the build silently uses it. Before debugging Mini Apps provider behavior, run `git submodule status`: a leading `+` means the checkout differs from the pin. Fix with `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
+- The build script installs `web3-provider` with `--frozen-lockfile`. After changing its dependencies, run `pnpm --dir web3-provider install` to update `web3-provider/pnpm-lock.yaml` first.
 - When a change needs new provider code, move the submodule to a reviewed commit that exists on `nimiq/trust-web3-provider` in the same PR. Publishing a new SDK version or updating the demo dependency does not move the pin. For missing provider methods or unexpected RPC calls in CI, check the pin before changing tests or mocks.
 
 ## Naming & terminology
