@@ -103,10 +103,11 @@ export function useStringParser() {
       url = new URL(content)
     }
     catch (e) {
-      logger.error(`Error invalid URL: ${content}`, e)
-      // Truncate the URL in the error message if it's too long, to avoid overwhelming the user with a long string
-      const truncatedUrl = content.length > 100 ? `${content.substring(0, 100)}...` : content
-      return { error: i18n.t('Invalid URL: {url}', { url: truncatedUrl }), data: undefined }
+      // Scanned or pasted content can be anything (even a seed phrase), and some engines echo it in the URL
+      // error's message. Logs reach PostHog and support reports, so record neither.
+      logger.error('Error invalid URL', { length: content.length, errorName: e instanceof Error ? e.name : typeof e })
+      // The returned error reaches logs, toasts and Mini Apps, so it must not echo the input.
+      return { error: i18n.t('Invalid URL'), data: undefined }
     }
 
     if (url.protocol === 'ethereum:' || url.protocol === 'polygon:')

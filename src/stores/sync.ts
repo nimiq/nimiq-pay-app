@@ -35,6 +35,7 @@ export const useSync = defineStore('sync', () => {
     blocksUntilNextMacroBlock,
     htlcHistoryChecked,
     htlcCheckHoldStartedAt,
+    lastFundsBlockReason,
   } = storeToRefs(syncState)
 
   return {
@@ -52,6 +53,7 @@ export const useSync = defineStore('sync', () => {
     blocksUntilNextMacroBlock,
     htlcHistoryChecked,
     htlcCheckHoldStartedAt,
+    lastFundsBlockReason,
     handleFunds,
     recoverRemoteSigner,
     verifyRemoteSignersDb,

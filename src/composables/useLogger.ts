@@ -2,9 +2,11 @@ import type { Ref } from 'vue'
 // import { isDev } from '@/lib'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import { Share } from '@capacitor/share'
+import { Posthog } from '@capawesome/capacitor-posthog'
 /* eslint-disable no-console */
 import { useDebounceFn } from '@vueuse/core'
 import { ref, watch } from 'vue'
+import { isDev as isDevBuild } from '@/lib'
 
 const isDev = true
 
@@ -15,6 +17,72 @@ let writingLock = Promise.resolve()
 const logFileName = 'logs.txt'
 // Save in the Cache, in case something goes wrong and cannot clear the logs they will be deleted when there's no space
 const directory = Directory.Cache
+
+// The same error from a retry loop would otherwise be reported on every head.
+const ERROR_REPORT_THROTTLE_MS = 10 * 60 * 1e3
+const MAX_ERROR_REPORTS_PER_SESSION = 200
+const errorReportedAt = new Map<string, number>()
+// Counts every report, so recurring errors re-reported after the throttle window still hit the cap.
+let errorReportCount = 0
+// Errors already sent to PostHog, so an error reported and then caught and logged is not sent twice.
+const reportedErrors = new WeakSet<object>()
+
+// Never addresses (Nimiq and 20-byte EVM), 32-byte hex (tx hashes, but also keys) or URL query strings and
+// fragments. Collapsing hashes also keeps one PostHog issue per message instead of one per hash.
+function redact(text: string) {
+  return text
+    .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
+    .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')
+    .replace(/\b0x[0-9a-fA-F]{40}\b/g, '0x…')
+    .replace(/(\b[a-z][\w+.-]*:\/\/[^\s?#]*)[?#]\S*/gi, '$1?…')
+}
+
+// Only the first string, the error and top-level `hash`/`transactionHash` fields are sent. Keep the first string a
+// static label: later string args and objects can hold user content (scanned QR codes, request bodies) and stay
+// in the local log file only.
+function reportError(name: string, args: any[]) {
+  if (isDevBuild || errorReportCount >= MAX_ERROR_REPORTS_PER_SESSION)
+    return
+  const message = redact(args.find(arg => typeof arg === 'string') ?? '')
+  const cause = args.find(arg => typeof arg?.message === 'string')
+  if (cause && reportedErrors.has(cause))
+    return
+  const causeMessage = cause ? redact(cause.message) : undefined
+  const key = `${name}|${message}|${causeMessage}`
+  const now = Date.now()
+  if (now - (errorReportedAt.get(key) ?? -Infinity) < ERROR_REPORT_THROTTLE_MS)
+    return
+  errorReportedAt.set(key, now)
+  errorReportCount += 1
+
+  const txHashes = args.flatMap(arg => [arg?.transactionHash, arg?.hash]).filter(hash => typeof hash === 'string')
+  reportException(cause, {
+    message: [message, causeMessage].filter(Boolean).join(': ') || 'Unknown error',
+    name: cause?.name ?? name,
+    properties: {
+      logger: name,
+      log_message: message,
+      error_message: causeMessage,
+      error_status: typeof cause?.statusCode === 'number' ? cause.statusCode : undefined,
+      tx_hashes: txHashes.length ? txHashes : undefined,
+    },
+  })
+}
+
+// The single PostHog exception sink, shared with reportCriticalError: redacts and sends each error object once.
+export function reportException(error: any, report: { message: string, name: string, properties?: Record<string, unknown> }) {
+  if (error && typeof error === 'object') {
+    if (reportedErrors.has(error))
+      return
+    reportedErrors.add(error)
+  }
+  // Reporting must never throw back into the caller's error path.
+  void Promise.resolve().then(() => Posthog.captureException({
+    message: redact(report.message),
+    name: report.name,
+    properties: { ...report.properties, stack: typeof error?.stack === 'string' ? redact(error.stack) : undefined },
+  })).catch(() => {})
+}
 
 // Saves the logs to a file if there's no new logs for 5 seconds
 const debouncedSaveLogs = useDebounceFn(saveLogsToFile, 15 * 1e3, { maxWait: 60 * 1e3 })
@@ -121,12 +189,17 @@ export function useLogger(name: string = '') {
         console.error(`${name}:`, ...args)
     }
     logs.value.push(formatLogs(args))
+    reportError(name, args)
   }
 
   function formatLogs(args: any[]) {
     const prefix = `[${new Date().toISOString()}] ${name}:\n`
     try {
-      return prefix + JSON.stringify(args, null, 2)
+      // Error fields are non-enumerable, so a plain stringify writes `{}` and drops the message.
+      // The replacer runs per value, so only pay for it when an arg is an Error.
+      return prefix + JSON.stringify(args, args.some(arg => arg instanceof Error)
+        ? (_, value) => value instanceof Error ? { name: value.name, message: value.message, stack: value.stack } : value
+        : undefined, 2)
     }
     catch {
       try {

@@ -507,8 +507,9 @@ export const paymentPreviewStep: StepInit = async () => {
       if (typeof request === 'string') {
         // No translation as not user-facing. Dev error which should not occur in production.
         const msg = `Request is a string: ${request}`
-        reportCriticalError(new Error(msg), { step: StepName.PaymentPreview })
-        throw new Error(msg)
+        const error = new Error(msg)
+        reportCriticalError(error, { step: StepName.PaymentPreview })
+        throw error
       }
 
       // We go to the next step, which it is the pin input, if it has been more than 5 minutes since the last pin input

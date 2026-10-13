@@ -5,6 +5,7 @@ import type { TransactionSendResult } from '@/types/transactions'
 import { defineStore, storeToRefs } from 'pinia'
 import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
+import { trackSyncSlow } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
@@ -21,6 +22,8 @@ import { Transfer } from '@/types/transactions'
 const logger = useLogger('useSync')
 const STRAY_HTLC_LOOKUP_TIMEOUT_MS = 30_000
 const STRAY_HTLC_BATCH_SIZE = 20
+const VERIFY_SLOW_MS = 2 * 60 * 1e3
+const VERIFY_WEDGED_MS = 5 * 60 * 1e3
 
 export type TargetedRemoteSignerRecoveryResult
   = | { status: 'submitted', transactionHash: string }
@@ -41,6 +44,11 @@ function hasOutgoingTransactionForExactTarget(
 }
 
 export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
+  // Verification retries every 10 blocks while history is incomplete, so report slowness once per session.
+  let syncSlowReported = false
+  // Start of the current streak of incomplete discoveries. One fast incomplete run is normal on startup; a streak
+  // that outlasts VERIFY_SLOW_MS across retries is the slow case.
+  let incompleteSince: number | undefined
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
@@ -396,6 +404,15 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }
 
     isVerifyingRemoteSignersDb.value = true
+    const startedAt = Date.now()
+    // A run that never settles blocks reconciliation silently, so report it while it is still running.
+    const wedgedTimeout = setTimeout(() => {
+      if (syncSlowReported)
+        return
+      syncSlowReported = true
+      trackSyncSlow({ duration_ms: Date.now() - startedAt, finished: false })
+    }, VERIFY_WEDGED_MS)
+    let result: RemoteSignerDiscoveryResult | undefined
     try {
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
       const scan = discoveryResult ? undefined : await scanLocalHtlcCreations()
@@ -427,7 +444,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
         return
       }
       // Discovery scans again: an HTLC created while the sweep ran would be missing from the earlier scan.
-      const result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
+      result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
       // Unseen HTLCs can change which signer should stay active or be reclaimed.
       if (!result.localComplete) {
         logger.log('Remote signer discovery incomplete. Delaying reconciliation', result.errors)
@@ -446,6 +463,19 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }
     finally {
       isVerifyingRemoteSignersDb.value = false
+      clearTimeout(wedgedTimeout)
+      if (result)
+        incompleteSince = result.localComplete ? undefined : (incompleteSince ?? startedAt)
+      const durationMs = Date.now() - (incompleteSince ?? startedAt)
+      if (!syncSlowReported && durationMs > VERIFY_SLOW_MS) {
+        syncSlowReported = true
+        trackSyncSlow({
+          duration_ms: durationMs,
+          finished: true,
+          discovery_complete: result?.localComplete,
+          error_count: result?.errors.length,
+        })
+      }
     }
   }
 

@@ -1,5 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
 describe('useSyncState', () => {
@@ -135,5 +135,24 @@ describe('useSyncState', () => {
     expect(store.pendingPaymentTransactions).toEqual([])
     expect(store.pendingRemoteDrainTxs).toEqual([])
     expect(store.pendingHtlcCreationTransactions).toEqual([])
+  })
+
+  it('reports each funds block reason once per wallet and remembers the last one', async () => {
+    const { trackFundsBlocked } = await import('@/lib/analytics')
+    vi.mocked(trackFundsBlocked).mockClear()
+    const { useSyncState } = await import('./state')
+    const store = useSyncState()
+    store.setWalletContext('NQ00 A', 'test')
+
+    store.reportFundsBlocked('pending_tx', { pending_tx_hashes: ['a'] })
+    store.reportFundsBlocked('pending_tx', { pending_tx_hashes: ['b'] })
+    store.reportFundsBlocked('htlc_not_ready')
+    expect(trackFundsBlocked).toHaveBeenCalledTimes(2)
+    expect(store.lastFundsBlockReason).toBe('htlc_not_ready')
+
+    store.setWalletContext('NQ00 B', 'test')
+    expect(store.lastFundsBlockReason).toBeUndefined()
+    store.reportFundsBlocked('pending_tx')
+    expect(trackFundsBlocked).toHaveBeenCalledTimes(3)
   })
 })
