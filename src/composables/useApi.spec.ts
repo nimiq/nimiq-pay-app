@@ -14,7 +14,9 @@ vi.mock('@vueuse/core', () => ({
     return { send: socket.send, data: socket.data }
   },
 }))
-vi.mock('@/composables/useLogger', () => ({ useLogger: () => ({ log: vi.fn(), warn: vi.fn(), error: vi.fn() }) }))
+const logger = vi.hoisted(() => ({ log: vi.fn(), warn: vi.fn(), error: vi.fn() }))
+
+vi.mock('@/composables/useLogger', () => ({ useLogger: () => logger }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (message: string) => message } }))
 vi.mock('@/lib/index', () => ({ isTestnet: true, isDev: true }))
 vi.mock('@/lib/mock-mode', () => ({ isMockEnabled: false }))
@@ -81,5 +83,45 @@ describe('cosigner WebSocket requests', () => {
     socket.data.value = JSON.stringify({ event: 'result', data: { id, payload: { txSent: true } } })
     await nextTick()
     await expect(request).resolves.toMatchObject({ data: { txSent: true }, hasError: false })
+  })
+})
+
+describe('points API failure logs', () => {
+  beforeEach(() => logger.error.mockReset())
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('logs neither the token nor phone credentials when a request throws', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }))
+    const { usePointsApi } = await import('./useApi')
+    const api = usePointsApi()
+
+    await api.verify({ phoneNumber: '+34600000000', accessCode: '123456' })
+    await api.payWithPoints({ token: 'secret-token', rail: 'cpl' as any, reference: 'ref-1', recipient: 'merchant' })
+
+    const logged = JSON.stringify(logger.error.mock.calls)
+    expect(logger.error).toHaveBeenCalledTimes(2)
+    expect(logged).not.toContain('secret-token')
+    expect(logged).not.toContain('+34600000000')
+    expect(logged).not.toContain('123456')
+    expect(logged).toContain('ref-1')
+    expect(logged).toContain('merchant')
+  })
+
+  it('logs neither the token nor phone credentials when an error response is not JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('<html>', { status: 502 })))
+    const { usePointsApi } = await import('./useApi')
+    const api = usePointsApi()
+
+    await api.authorize({ phoneNumber: '+34600000000', publicKey: 'public-key' })
+    await api.getBalance({ token: 'secret-token' })
+
+    const logged = JSON.stringify(logger.error.mock.calls)
+    expect(logger.error).toHaveBeenCalledTimes(2)
+    expect(logged).not.toContain('secret-token')
+    expect(logged).not.toContain('+34600000000')
+    expect(logged).not.toContain('public-key')
   })
 })
