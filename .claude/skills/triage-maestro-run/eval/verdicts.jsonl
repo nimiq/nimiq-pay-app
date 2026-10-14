@@ -7,3 +7,4 @@
 {"buildId": "eefcfc9fa2a7165181515176df645ea42b40f24c", "flow": "security_relock_background", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "HARNESS", "confidence": "medium", "triagedAt": "2026-10-12T11:10:36Z"}
 {"buildId": "95301af62de62423508cfc5c7b76db65de9eedce", "flow": "whats_new", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-12T13:02:00Z"}
 {"buildId": "277512c3fe6040d9438e208f9494c0cd206d85de", "flow": "returning_to_app_flows_and_settings", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-12T13:02:00Z"}
+{"buildId": "f907742cdadece50f5ce927ff8d453059687c660", "flow": "backup_validation", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-14T20:03:49Z"}
