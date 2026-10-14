@@ -35,6 +35,21 @@ appId: ${APP_ID}
           label: Hold opened the dev modal
 - runFlow:
     when:
+      true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && DEV_MODAL_HOLD_DEVICE == 'Samsung Galaxy S26-16.0'}
+    commands:
+      # Settings row [48,1392][1032,1476] on 1080x2340 (CI run 38245123899).
+      - swipe:
+          start: 50%, 61%
+          end: 50%, 61%
+          duration: 4500
+      # Not a check: a miss shows as WARNED in the log, a sign the row moved and needs re-measuring.
+      - extendedWaitUntil:
+          visible: ${output.devModal.reconnectBtn}
+          timeout: 3000
+          optional: true
+          label: Hold opened the dev modal
+- runFlow:
+    when:
       true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && DEV_MODAL_HOLD_DEVICE == 'Pixel_8'}
     commands:
       # Local Pixel_8 AVD: Settings row [42,1630][1039,1707] on 1080x2400.
