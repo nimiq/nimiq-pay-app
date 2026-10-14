@@ -26,11 +26,22 @@ For anything bigger than a small fix, open an issue first so we can agree on the
 
 See the [README](./README.md#development-setup). You need Node from `.nvmrc`, pnpm from `packageManager`, and the `vendor/trust-web3-provider` submodule. Copy `.env.example` to `.env` if you work on a feature that needs one of its values.
 
+## Branches and pull requests
+
+- Fork the repository and branch from `main`. Open your pull request against `main`.
+- Sign your commits ([GitHub docs](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits)). `main` rejects unsigned commits.
+- We usually squash-merge, so the pull request title becomes the commit message. Write it in the Conventional Commits format described below.
+- To merge, a pull request needs one approving review, all review threads resolved, a branch that is up to date with `main`, and passing `lint`, `test`, `build-web` and `cla` checks. New pushes dismiss earlier approvals.
+
 ## Making changes
 
 - Keep a pull request to one change. Unrelated fixes go in separate pull requests.
 - Add or update tests for new features and bug fixes.
-- Don't edit `src/i18n/*.po` by hand. Run `pnpm i18n:extract` after changing user-facing strings. Translations are managed separately.
+- Don't edit generated files by hand:
+  - `src/i18n/*.po`: run `pnpm i18n:extract` after changing user-facing strings. Translations are managed separately.
+  - `public/web3-provider.js`: built from `web3-provider/` by `pnpm build:web3-provider`, not committed.
+  - `public/nimiq/`: copied from `@nimiq/core` on install, not committed.
+- Database schema changes must be additive. Add a new migration in `src/lib/sql-queries.ts`; never edit an existing `CREATE TABLE`.
 - Write commit messages in the [Conventional Commits](https://www.conventionalcommits.org/) format, for example `fix(send): reject amounts above balance`.
 
 Run these before you push:
@@ -42,6 +53,15 @@ pnpm test:unit run
 ```
 
 CI runs the same checks on every pull request.
+
+## Terminology
+
+Use these terms in code, UI strings and docs:
+
+- **Mini Apps**: capitalized, two words. Not "mini apps", "mini-apps" or "dapps".
+- **NIM** for the coin, **Nimiq** for the network and the project.
+- **USDT** for Tether on Polygon.
+- **Remote signer**: an HTLC shared with the Nimiq Pay cosigner. See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md#nimiq-sync-and-the-cosigner).
 
 ## License
 
