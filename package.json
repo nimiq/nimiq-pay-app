@@ -4,7 +4,7 @@
   "version": "2.22.0",
   "private": true,
   "license": "GPL-3.0-only",
-  "description": "An Ionic project",
+  "description": "Self-custody mobile wallet for paying with NIM and USDT",
   "scripts": {
     "dev:android": "ionic cap run android --livereload --external --watch",
     "dev:a": "pnpm run dev:android",
