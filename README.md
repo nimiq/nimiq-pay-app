@@ -1,5 +1,10 @@
 # Nimiq Pay
 
+Nimiq Pay is a self-custody mobile wallet for paying with NIM and USDT. It runs on
+iOS and Android and is built with Vue, Ionic and Capacitor. Get it on the
+[App Store](https://apps.apple.com/app/nimiq-pay/id6471844738) or
+[Google Play](https://play.google.com/store/apps/details?id=com.nimiq.pay).
+
 ## Development setup
 
 Use Node from `.nvmrc` and pnpm from `packageManager` (for example through Corepack).
@@ -15,6 +20,8 @@ pnpm dev
 If you cloned without submodules, run `git submodule update --init --recursive`
 before `pnpm install`.
 
+Copy `.env.example` to `.env` and fill in the values for the features you work on.
+
 After a pull that moves `vendor/trust-web3-provider`, run
 `git submodule update --init --recursive`, then `pnpm build:web3-provider`.
 Otherwise the app keeps the old provider build. To update it on every pull,
@@ -29,8 +36,7 @@ translations, asks which AI CLI to use for the changelog, then starts release-it
 Set `GITHUB_TOKEN` in your local `.env` or shell environment. Use a personal access
 token with access to `nimiq/nimiq-pay-app` and **Contents: read and write** permission
 ([GitHub release permissions](https://docs.github.com/en/rest/releases/releases#create-a-release)).
-The token replaces `GITLAB_TOKEN`; no GitLab package registry token is needed for
-release assets. Git must also be authenticated for pushing commits and tags to
+Git must also be authenticated for pushing commits and tags to
 `origin`, which should point to `https://github.com/nimiq/nimiq-pay-app.git`.
 
 Release-it generates the changelog for review, builds iOS and Android, then commits
@@ -104,6 +110,11 @@ The camera feed in mobile is weird. The Camera API for both Android and iOS, cre
 This creates an interesting challenge, since we need to make a "hole" in the WebView to show the camera feed. You can read more about this
 in the [useCameraFeed](./src/composables/useCameraFeed.ts) composable. In web,
 we just create a video element where we show the camera feed. Ez.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Report security issues privately as
+described in [SECURITY.md](./SECURITY.md).
 
 ## License
 
