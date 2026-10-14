@@ -10,9 +10,13 @@ Do not open a public issue or pull request for a vulnerability. Follow [SECURITY
 
 Before we can merge your first pull request, you need to sign our [Contributor License Agreement](./CLA.md) (CLA). You keep the copyright in your work. The CLA lets Nimiq Labs Ltd. ship your contribution in the app stores, whose terms conflict with the GPL, and the open source version stays available under GPL-3.0.
 
-When you open a pull request, the CLA Assistant bot comments with a link. Sign in with GitHub and accept the agreement. You only sign once, unless the CLA text changes. Every author of a commit in the pull request must sign, so make sure your commits use an email address linked to your GitHub account.
+When you open a pull request, a bot comments with a link to the CLA. To sign, post this exact comment on the pull request:
 
-You can also review and sign it ahead of time at <https://cla-assistant.io/nimiq/nimiq-pay-app>.
+```text
+I have read the CLA Document and I hereby sign the CLA
+```
+
+You only sign once, unless the CLA text changes. Every author of a commit in the pull request must sign, so make sure your commits use an email address linked to your GitHub account. If the check doesn't update after you sign, comment `recheck`.
 
 ## Before you start
 
