@@ -89,3 +89,43 @@ describe('maintenance flag for USDT', () => {
     expect(flags.usdtMaintenanceNotice).toBe('Scheduled downtime')
   })
 })
+
+describe('cryptocity points flag', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    posthog.getFeatureFlag.mockResolvedValue({ value: null })
+    posthog.getFeatureFlagPayload.mockResolvedValue({ value: null })
+  })
+
+  afterEach(() => {
+    useFeatureFlags().$dispose()
+  })
+
+  it('hides points when the flag is missing', async () => {
+    const flags = useFeatureFlags()
+    await flushPromises()
+
+    expect(flags.isCryptocityPointsEnabled).toBe(false)
+  })
+
+  it('shows points when the flag is on and hides them once it is turned off', async () => {
+    posthog.getFeatureFlag.mockImplementation(async ({ key }) => ({ value: key === 'cryptocity-points' }))
+    const flags = useFeatureFlags()
+    await flushPromises()
+
+    expect(flags.isCryptocityPointsEnabled).toBe(true)
+
+    posthog.getFeatureFlag.mockResolvedValue({ value: false })
+    await flags.refreshCryptocityPoints()
+    expect(flags.isCryptocityPointsEnabled).toBe(false)
+  })
+
+  it('hides points if the flag read fails', async () => {
+    posthog.getFeatureFlag.mockRejectedValue(new Error('flags unavailable'))
+    const flags = useFeatureFlags()
+    await flushPromises()
+
+    expect(flags.isCryptocityPointsEnabled).toBe(false)
+  })
+})

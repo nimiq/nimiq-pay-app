@@ -154,7 +154,7 @@ App.addListener('resume', async () => {
 
   // Flags may change while backgrounded; refresh without delaying the reconnect check below
   void Posthog.reloadFeatureFlags()
-    .then(() => useFeatureFlags().refreshUsdtMaintenance())
+    .then(() => Promise.all([useFeatureFlags().refreshUsdtMaintenance(), useFeatureFlags().refreshCryptocityPoints()]))
     .catch(error => logger.error('Failed to reload feature flags', error))
 
   const { getStatus } = useRemoteSignerApi()
