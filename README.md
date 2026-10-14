@@ -27,7 +27,31 @@ After a pull that moves `vendor/trust-web3-provider`, run
 Otherwise the app keeps the old provider build. To update it on every pull,
 run `git config submodule.recurse true` once.
 
+See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for how the app is put together,
+and for which features need private configuration.
+
+## Official releases and community builds
+
+Official releases are the apps that Nimiq publishes on the App Store and Google Play,
+plus the OTA updates delivered to them. They are signed with Nimiq's keys, and OTA
+bundles are checked against a public key built into the store app.
+
+A build you compile from this repository is a community build. Nimiq doesn't
+support it, and the stores won't install it over an official release, because it
+is signed with a different key. Back up your recovery phrase before moving a wallet
+between builds.
+
+If you distribute your own build, change at least these in `capacitor.config.ts`:
+
+- `appId`, so your build doesn't conflict with `com.nimiq.pay`
+- `plugins.CapacitorUpdater`, which points at Nimiq's OTA server and public key by
+  default. Left as is, your build can download Nimiq's official web bundles, which
+  replace your changes. Set your own `updateUrl` and `publicKey`, or set
+  `autoUpdate` to `false`.
+
 ## Native releases
+
+These steps are for maintainers and need Nimiq's signing credentials.
 
 Run `pnpm release:beta` from a clean checkout on a Mac with the existing iOS and
 Android build tools and signing credentials configured. The command syncs
@@ -113,9 +137,12 @@ we just create a video element where we show the camera feed. Ez.
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). Report security issues privately as
-described in [SECURITY.md](./SECURITY.md).
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and the [Code of Conduct](./CODE_OF_CONDUCT.md).
+Report security issues privately as described in [SECURITY.md](./SECURITY.md). For
+help, see [SUPPORT.md](./SUPPORT.md).
 
 ## License
 
 Nimiq Pay is licensed under the [GNU General Public License v3.0 only](./LICENSE) (`GPL-3.0-only`).
+Bundled third-party files keep their own licenses, see
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
