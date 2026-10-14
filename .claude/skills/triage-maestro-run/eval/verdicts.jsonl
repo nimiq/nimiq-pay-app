@@ -5,3 +5,5 @@
 {"buildId": "dc319f2a25de236273db8c61955a2c4d8ab44f92", "flow": "top_up_flow", "outcome": "INFRA", "rule": "INFRA", "triager": "INFRA", "confidence": "medium", "triagedAt": "2026-10-07T13:40:12Z"}
 {"buildId": "272fa4e0f0302761cdd2d2aa7439ac186818e822", "flow": "backup_validation", "outcome": "INTERMITTENT", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-12T11:10:36Z"}
 {"buildId": "eefcfc9fa2a7165181515176df645ea42b40f24c", "flow": "security_relock_background", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "HARNESS", "confidence": "medium", "triagedAt": "2026-10-12T11:10:36Z"}
+{"buildId": "95301af62de62423508cfc5c7b76db65de9eedce", "flow": "whats_new", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-12T13:02:00Z"}
+{"buildId": "277512c3fe6040d9438e208f9494c0cd206d85de", "flow": "returning_to_app_flows_and_settings", "outcome": "DETERMINISTIC", "rule": "UNKNOWN", "triager": "TEST_BUG", "confidence": "medium", "triagedAt": "2026-10-12T13:02:00Z"}
