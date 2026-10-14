@@ -74,12 +74,17 @@ tags:
 - assertNotVisible:
     text: ${output.whatsNew.versionHeader}
     index: 1
-- assertVisible: ${output.whatsNew.previousVersions}
+# A long latest entry can push the button below the fold, where Maestro still finds it with
+# zero-height bounds but the tap misses; scrollUntilVisible rejects zero-height bounds.
+- scrollUntilVisible:
+    element: ${output.whatsNew.previousVersions}
 - tapOn: ${output.whatsNew.previousVersions}
 - waitForAnimationToEnd
-- assertVisible:
-    text: ${output.whatsNew.versionHeader}
-    index: 1
+# Only the expansion renders a second header; unlike assertVisible, this rejects one below the fold.
+- scrollUntilVisible:
+    element:
+      text: ${output.whatsNew.versionHeader}
+      index: 1
 - back
 - waitForAnimationToEnd
 - assertVisible: ${output.navigation.whatsNewBtn}
