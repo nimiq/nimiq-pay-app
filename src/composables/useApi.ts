@@ -20,11 +20,21 @@ const baseCurrencyPriceUrl = new URL('https://prices.nim.sh/')
 const cplApiUrl = new URL('https://firestore.googleapis.com/')
 const baseNotificationsUrl = new URL('https://nimiq-pay-notifications.pages.dev/api/')
 
+// Failure logs end up in the shareable log file, so only these body fields are logged. Phone numbers, SMS access
+// codes, public keys and task answers stay out, and the Points token header is never logged.
+const LOGGABLE_BODY_FIELDS = ['type', 'reference', 'destination', 'tx_hash']
+
 async function api<T = any, E = undefined>(url: URL, { token, body: _body, delete: _delete }: { token?: string, body?: object, delete?: boolean } = {}): AsyncResultApi<T, E> {
   const method = _delete ? 'DELETE' : _body ? 'POST' : 'GET'
   const body = _body ? JSON.stringify(_body) : undefined
   const baseHeaders = { 'Content-Type': 'application/json', 'Accept-Language': useApp().language }
   const headers = token ? { ...baseHeaders, token } : baseHeaders
+  const loggedRequest = {
+    url: url.toString(),
+    method,
+    hasToken: !!token,
+    body: _body && Object.fromEntries(Object.entries(_body).filter(([key]) => LOGGABLE_BODY_FIELDS.includes(key))),
+  }
 
   let response: Response | undefined
   try {
@@ -37,7 +47,7 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
       }
       catch (e) {
       // If the response is not JSON or not exist, we don't do anything
-        logger.error('Error parsing response', e, { response, url, method, headers, body })
+        logger.error('Error parsing response', e, { ...loggedRequest, status: response.status })
       }
       return {
         error: responseBody,
@@ -59,7 +69,7 @@ async function api<T = any, E = undefined>(url: URL, { token, body: _body, delet
     return { data, status: response.status, error: undefined, hasError: false }
   }
   catch (error) {
-    logger.error(`Error fetching ${url.toString()}`, { method, headers, body, response }, { error })
+    logger.error(`Error fetching ${url.toString()}`, { ...loggedRequest, status: response?.status }, { error })
     return { data: undefined, hasError: true, error: { message: i18n.t('Something went wrong'), statusCode: 520 } as E, status: 520 }
   }
 }
