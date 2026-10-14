@@ -44,7 +44,7 @@ const { pointsBalance, isCampaignActive } = storeToRefs(usePoints())
 const { updatePointsBalance, updateStatus: updatePointsStatus, redeemReferral, getReferralInfo } = usePoints()
 const { addLocalNotification, localNotifications, removeLocalNotification } = useNotifications()
 const { isUpdatingTransactions } = storeToRefs(useLocks())
-const { isUsdtMaintenanceActive } = storeToRefs(useFeatureFlags())
+const { isUsdtMaintenanceActive, isCryptocityPointsEnabled } = storeToRefs(useFeatureFlags())
 const { enabled: liveChatEnabled, shown: liveChatShown } = storeToRefs(useLiveChat())
 const { htlcHistoryChecked, htlcCheckHoldStartedAt } = storeToRefs(useSync())
 
@@ -267,7 +267,7 @@ onMounted(() => {
             <MenuIcon class="h-5 w-7 opacity-30" />
           </IonButton>
         </IonButtons>
-        <IonButtons slot="end">
+        <IonButtons v-if="isCryptocityPointsEnabled" slot="end">
           <IonButton
             class="text-base normal-case"
             aria-label="Earn Points"

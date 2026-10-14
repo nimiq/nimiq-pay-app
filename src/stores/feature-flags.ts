@@ -44,6 +44,19 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
   // Cold start read; App.vue refreshes again on resume
   void refreshUsdtMaintenance()
 
+  // Points backend disabled for now; hide the entry point unless the flag is on
+  const isCryptocityPointsEnabled = ref(false)
+  async function refreshCryptocityPoints() {
+    try {
+      const { value } = await Posthog.getFeatureFlag({ key: 'cryptocity-points' })
+      isCryptocityPointsEnabled.value = value === true
+    }
+    catch (error) {
+      logger.error('Error checking Cryptocity Points flag:', error)
+    }
+  }
+  void refreshCryptocityPoints()
+
   const polygonRpcUrl = computedAsync(async () => {
     // Dev override (set via DevModal) wins over everything else.
     if (polygonRpcOverride) {
@@ -75,6 +88,8 @@ export const useFeatureFlags = defineStore('featureFlags', () => {
     isUsdtMaintenanceActive,
     usdtMaintenanceNotice,
     refreshUsdtMaintenance,
+    isCryptocityPointsEnabled,
+    refreshCryptocityPoints,
     polygonRpcUrl,
   }
 })
