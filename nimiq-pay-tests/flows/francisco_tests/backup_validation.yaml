@@ -20,12 +20,17 @@ tags:
 - extendedWaitUntil:
     visible: ${output.backup.validateTitle}
     timeout: 10000
+# The title matches mid-slide, while the previous step is still in the hierarchy and a tap can
+# be aimed at a point that moves before it lands. Once settled, only the quiz remains.
+- waitForAnimationToEnd
 
 # A wrong answer is rejected: "Try again" shows and the quiz restarts with new questions.
 - copyTextFrom: ${output.backup.question}
 - evalScript: ${output.quizPosition = parseInt(maestro.copiedText.match(/\d+/)[0])}
+# The options are the wallet's other words (ValidateWords.vue), so name those: a catch-all like
+# [a-z]+ (case-insensitive) also hit the previous step's CONTINUE button.
 - tapOn:
-    text: ${'(?!' + output.recoveryWords[output.quizPosition - 1] + ')[a-z]+'}
+    text: ${'(' + output.recoveryWords.filter(w => w != output.recoveryWords[output.quizPosition - 1]).join('|') + ')'}
     below: ${output.backup.question}
 - extendedWaitUntil:
     visible: ${output.backup.tryAgainBtn}
