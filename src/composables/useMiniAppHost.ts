@@ -236,10 +236,14 @@ export class MiniAppHost {
   /** Current chain ID as set by the webview provider (hex string, e.g., '0x1') */
   private currentChainId: string = '0x1' // Default to Ethereum mainnet
   private ethAccountsPermission: EthAccountsPermission | null = null
+  /** Chains the user approved in this session; onChainChanged frames for other chains are ignored. */
+  private readonly approvedChainIds = new Set<string>()
   /** Stops the remote-signer watcher registered in the constructor. */
   private stopRemoteAddressWatcher: (() => void) | null = null
   /** The session object this host registered; destroy() only clears module state it still owns. */
-  private sessionState: MiniAppSessionState | null = null
+  private readonly sessionState: MiniAppSessionState
+  /** Own copy: approved custom chains are added here, and the launcher's defaults are shared by every session. */
+  private readonly evmRpcUrls: Record<string, string>
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
   private readonly pendingLightningInvoices = new Set<string>()
@@ -249,12 +253,13 @@ export class MiniAppHost {
   /** Resolve the RPC URL for the given chain (or current chain if not specified) */
   private getRpcUrlForChain(chainId?: string): string | undefined {
     const chain = chainId || this.currentChainId
-    return this.config.evmRpcUrls?.[chain]
+    return this.evmRpcUrls[chain]
   }
 
   constructor(inAppBrowser: typeof InAppBrowser, config: MiniAppHostConfig) {
     this.inAppBrowser = inAppBrowser
     this.config = config
+    this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
     this.setupBirpc()
 
@@ -263,7 +268,7 @@ export class MiniAppHost {
       url: config.url,
       title: config.title,
       chainId: this.currentChainId,
-      evmRpcUrls: config.evmRpcUrls,
+      evmRpcUrls: this.evmRpcUrls,
     }
     this.sessionState = _activeMiniAppSession
     isMiniAppActive.value = true
@@ -293,9 +298,7 @@ export class MiniAppHost {
   ): MiniAppHost {
     const host = new MiniAppHost(inAppBrowser, config)
     host.currentChainId = restoredChainId
-    if (_activeMiniAppSession) {
-      _activeMiniAppSession.chainId = restoredChainId
-    }
+    host.sessionState.chainId = restoredChainId
     return host
   }
 
@@ -379,6 +382,8 @@ export class MiniAppHost {
 
         const numericChainId = parseChainId(request.chainId)
         const chainName = request.chainName || (numericChainId ? EVM_CHAIN_NAMES[numericChainId] : undefined)
+        // Allowlisted chains always use the host's RPC, so don't show the dApp's.
+        const customRpcUrl = numericChainId && this.isAllowedChain(numericChainId) ? undefined : request.rpcUrl
         const confirmed = await this.config.requestUserConfirmation({
           url: this.config.url,
           name: this.config.title,
@@ -386,6 +391,7 @@ export class MiniAppHost {
           data: {
             ...request,
             chainName,
+            rpcUrl: customRpcUrl,
           },
           network: 'ethereum',
         })
@@ -401,6 +407,18 @@ export class MiniAppHost {
             chainId: request.chainId,
           })
         }
+        else if (numericChainId) {
+          // The webview reports the switch via onChainChanged, a frame the page itself can
+          // post. Record what the user approved so the host only follows approved chains.
+          const chainId = `0x${numericChainId.toString(16)}`
+          this.approvedChainIds.add(chainId)
+          if (request.action === 'add' && customRpcUrl) {
+            logger.log('[MiniAppHost] Chain added:', chainId, 'RPC:', customRpcUrl)
+            // Same object as sessionState.evmRpcUrls, so the session needs no separate write.
+            this.evmRpcUrls[chainId] = customRpcUrl
+            trackWeb3Request({ requestType: 'add_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
+          }
+        }
 
         return confirmed
       },
@@ -409,27 +427,18 @@ export class MiniAppHost {
         this.showErrorToast(i18n.t('This network is not supported by Nimiq Pay'))
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId })
       },
-      onChainAdded: (chainId: string, rpcUrl: string): void => {
-        logger.log('[MiniAppHost] Chain added:', chainId, 'RPC:', rpcUrl)
-        if (!this.config.evmRpcUrls) {
-          this.config.evmRpcUrls = {}
-        }
-        this.config.evmRpcUrls[chainId] = rpcUrl
-        if (_activeMiniAppSession) {
-          if (!_activeMiniAppSession.evmRpcUrls) {
-            _activeMiniAppSession.evmRpcUrls = {}
-          }
-          _activeMiniAppSession.evmRpcUrls[chainId] = rpcUrl
-        }
-        trackWeb3Request({ requestType: 'add_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
-      },
+      // The RPC of an approved custom chain is stored in requestChainApproval.
+      onChainAdded: (): void => {},
       onChainChanged: (chainId: string): void => {
+        if (this.destroyed || !this.approvedChainIds.has(chainId)) {
+          logger.warn('[MiniAppHost] Ignoring unapproved chain change:', chainId)
+          return
+        }
         const previousChainId = this.currentChainId
         this.currentChainId = chainId
-        if (_activeMiniAppSession) {
-          _activeMiniAppSession.chainId = this.currentChainId
-        }
-        logger.log('[MiniAppHost] Chain changed to:', this.currentChainId)
+        // Own session only: a closing host must not write into a newer host's session.
+        this.sessionState.chainId = chainId
+        logger.log('[MiniAppHost] Chain changed to:', chainId)
         trackChainSwitched(this.config.url, previousChainId, chainId)
         trackWeb3Request({ requestType: 'switch_chain', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: true, success: true, chainId })
 
@@ -439,10 +448,9 @@ export class MiniAppHost {
           this.birpc?.updateRpcUrl(newRpcUrl)
         }
 
-        const numericChainId = parseChainId(chainId)
-        const chainName = numericChainId ? EVM_CHAIN_NAMES[numericChainId] : `Chain ${numericChainId}`
+        const numericChainId = Number(chainId)
         Toast.show({
-          text: i18n.t('Switched to {chain}', { chain: chainName }),
+          text: i18n.t('Switched to {chain}', { chain: EVM_CHAIN_NAMES[numericChainId] ?? `Chain ${numericChainId}` }),
           duration: 'short',
           position: 'bottom',
         })
@@ -965,9 +973,6 @@ export class MiniAppHost {
       if (!txChainIdNumber) {
         throw new InvalidTransactionError('Invalid chainId for Ethereum transaction')
       }
-      if (!this.isAllowedChain(txChainIdNumber)) {
-        throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${txChainIdNumber}`)
-      }
       if (currentChainNumber && txChainIdNumber !== currentChainNumber) {
         throw new InvalidTransactionError(
           `Transaction chainId (${txChainIdNumber}) doesn't match current chain (${currentChainNumber})`,
@@ -977,6 +982,10 @@ export class MiniAppHost {
     }
     else if (currentChainNumber) {
       validatedChainIdNumber = currentChainNumber
+    }
+    // Also covers the omitted-chainId fallback: currentChainId may be a user-added custom chain.
+    if (validatedChainIdNumber && !this.isAllowedChain(validatedChainIdNumber)) {
+      throw new InvalidTransactionError(`Unsupported chainId for Ethereum transaction: ${validatedChainIdNumber}`)
     }
 
     const decodedAssetTransfer = this.decodeKnownPolygonUsdtTransfer({

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
-import { MiniAppHost } from './useMiniAppHost'
+import { getActiveMiniAppSession, MiniAppHost } from './useMiniAppHost'
 
 const erc20Interface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -172,11 +172,12 @@ function createBrowser() {
   }
 }
 
-async function createPermissionHost(options: { confirmed?: boolean } = {}) {
+async function createPermissionHost(options: { confirmed?: boolean, evmRpcUrls?: Record<string, string> } = {}) {
   const browser = createBrowser()
   const confirmationPrompt = vi.fn().mockResolvedValue(options.confirmed ?? true)
 
   const _host = new MiniAppHost(browser as never, {
+    evmRpcUrls: options.evmRpcUrls,
     requestUserConfirmation: confirmationPrompt,
     selectLightningAsset,
     title: 'Example',
@@ -188,6 +189,7 @@ async function createPermissionHost(options: { confirmed?: boolean } = {}) {
   return {
     browser,
     host: _host,
+    handlers,
     handleRequest: handlers.handleRequest as (params: {
       network: string
       name: string
@@ -273,6 +275,75 @@ describe('fullscreen host API', () => {
     expect(browser.removeListener).toHaveBeenCalledTimes(1)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
+  })
+})
+
+describe('chain approval', () => {
+  it('ignores chain frames the page posts without an approval', async () => {
+    const shared = { '0x1': 'https://eth-rpc.test' }
+    const { host, handlers } = await createPermissionHost({ evmRpcUrls: shared })
+
+    handlers.onChainAdded('0x1f', 'https://attacker.test')
+    handlers.onChainChanged('0x1f')
+
+    expect(getActiveMiniAppSession()).toMatchObject({ chainId: '0x1', evmRpcUrls: { '0x1': 'https://eth-rpc.test' } })
+    expect(shared).toEqual({ '0x1': 'https://eth-rpc.test' })
+    expect(trackWeb3Request).not.toHaveBeenCalled()
+    await host.destroy()
+  })
+
+  it('ignores a switch the user rejected', async () => {
+    const { host, handlers } = await createPermissionHost({ confirmed: false, evmRpcUrls: {} })
+
+    expect(await handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })).toBe(false)
+    handlers.onChainChanged('0x89')
+
+    expect(getActiveMiniAppSession()?.chainId).toBe('0x1')
+    await host.destroy()
+  })
+
+  it('switches to an approved allowlisted chain but keeps the host RPC', async () => {
+    const { host, handlers, requestUserConfirmation } = await createPermissionHost({ evmRpcUrls: { '0x89': 'https://polygon-rpc.test' } })
+
+    expect(await handlers.requestChainApproval({ action: 'add', chainId: '0x89', rpcUrl: 'https://attacker.test' })).toBe(true)
+    handlers.onChainChanged('0x89')
+
+    expect(requestUserConfirmation.mock.calls[0][0].data.rpcUrl).toBeUndefined()
+    expect(getActiveMiniAppSession()).toMatchObject({ chainId: '0x89', evmRpcUrls: { '0x89': 'https://polygon-rpc.test' } })
+    expect(createBirpc.mock.results.at(-1)!.value.updateRpcUrl).toHaveBeenCalledWith('https://polygon-rpc.test')
+    await host.destroy()
+  })
+
+  it('keeps an approved custom chain in its own session and refuses to sign on it', async () => {
+    const shared = { '0x1': 'https://eth-rpc.test' }
+    const { host, handlers } = await createPermissionHost({ evmRpcUrls: shared })
+
+    await handlers.requestChainApproval({ action: 'add', chainId: '0x1f', rpcUrl: 'https://custom.test' })
+    handlers.onChainChanged('0x1f')
+
+    expect(getActiveMiniAppSession()).toMatchObject({ chainId: '0x1f', evmRpcUrls: { '0x1f': 'https://custom.test' } })
+    expect(shared).toEqual({ '0x1': 'https://eth-rpc.test' })
+    // Omitted chainId falls back to the current chain, which must still pass the allowlist.
+    await expect((host as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      gas: '0x5208',
+      gasPrice: '0x3b9aca00',
+      nonce: '0x0',
+    })).rejects.toThrow('Unsupported chainId for Ethereum transaction: 31')
+    await host.destroy()
+  })
+
+  it('does not let a closing host write into a newer host session', async () => {
+    const first = await createPermissionHost({ evmRpcUrls: {} })
+    await first.handlers.requestChainApproval({ action: 'switch', chainId: '0x89' })
+
+    const second = await createPermissionHost({ evmRpcUrls: {} })
+    first.handlers.onChainChanged('0x89')
+
+    expect(getActiveMiniAppSession()?.chainId).toBe('0x1')
+    await first.host.destroy()
+    await second.host.destroy()
   })
 })
 
