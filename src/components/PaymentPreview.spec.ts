@@ -368,6 +368,29 @@ describe('paymentPreview', () => {
     expect(wrapper.get('[data-testid="payment-preview-pay"]').attributes('disabled')).toBeDefined()
   })
 
+  it('lets the user pay again with a fresh fee after the payment failed on the PIN step', async () => {
+    const wrapper = await mountComponent({ isVisible: true })
+    await flushPromises()
+
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+    expect(wrapper.emitted('done')).toHaveLength(1)
+
+    // Flow moves on to the PIN step, where the payment fails with the error attached to that step
+    await wrapper.setProps({ isVisible: false })
+    refreshTransferQuote.mockResolvedValueOnce({
+      ...(await refreshTransferQuote.getMockImplementation()?.()),
+      fee: 5_000_000,
+      totalDebit: 121_440_000,
+    })
+    await wrapper.setProps({ isVisible: true })
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="transaction-amounts"]').attributes('data-crypto-total')).toBe('121440000')
+    await wrapper.get('[data-testid="payment-preview-pay"]').trigger('click')
+    expect(wrapper.emitted('done')).toHaveLength(2)
+    expect(wrapper.emitted('done')![1][0]).toMatchObject({ polygonQuote: { fee: 5_000_000 } })
+  })
+
   it('disables the USDT pay action when the quoted fee pushes total debit above balance', async () => {
     usdtBalance.value = 118_000_000
 
