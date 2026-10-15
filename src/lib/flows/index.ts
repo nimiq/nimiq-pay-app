@@ -267,7 +267,7 @@ const paymentFlow: FlowInit = async () => {
     const isNimPaymentRequest = objectHasData(nimPaymentRequest)
 
     // No translation as not user-facing. Dev error which should not occur in production.
-    if (payWithPuntos && isNimPaymentRequest) {
+    if (payWithPuntos && !isNimPaymentRequest) {
       const msg = 'User can only pay with puntos if they have scanned a payment request'
       const error = new Error(msg)
       reportCriticalError(error, { flow: flowName })

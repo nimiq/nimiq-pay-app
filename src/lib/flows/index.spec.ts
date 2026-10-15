@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import { Asset } from '@/lib/assets'
-import { Transfer } from '@/types/transactions'
+import { Rail, Transfer } from '@/types/transactions'
 import { FlowName, StepName } from './steps.types'
 
 const state = vi.hoisted(() => ({
@@ -31,6 +31,8 @@ const state = vi.hoisted(() => ({
   sendTx: vi.fn(),
   setToast: vi.fn(),
   trackPaymentCompleted: vi.fn(),
+  reportCriticalError: vi.fn(),
+  payWithPoints: vi.fn(),
 }))
 
 vi.mock('@ionic/vue', () => ({
@@ -118,6 +120,11 @@ vi.mock('@/lib/analytics', () => ({
   trackFeatureOpened: state.trackFeatureOpened,
   trackWalletCreated: state.trackWalletCreated,
   trackWalletImported: state.trackWalletImported,
+  reportCriticalError: state.reportCriticalError,
+}))
+
+vi.mock('@/stores/points', () => ({
+  usePoints: () => ({ payWithPoints: state.payWithPoints }),
 }))
 
 vi.mock('@/router', () => ({
@@ -192,6 +199,9 @@ describe('initializeFlow analytics and setup hooks', () => {
     state.polygonSendPayment.mockResolvedValue({ outcome: 'submitted', data: { tx: { hash: 'polygon-payment' }, serialized: 'polygon-payment' } })
     state.setToast.mockClear()
     state.trackPaymentCompleted.mockClear()
+    state.reportCriticalError.mockClear()
+    state.payWithPoints.mockReset()
+    state.payWithPoints.mockResolvedValue({ data: {}, error: undefined })
   })
 
   it('warms the Polygon transfer fee snapshot without blocking payment flow initialization for USDT', async () => {
@@ -277,6 +287,32 @@ describe('initializeFlow analytics and setup hooks', () => {
       [StepName.QRCodeScanner]: {},
       [StepName.PaymentPreview]: { payWithPuntos: false },
     }, { err: vi.fn(), setToast: vi.fn() })).rejects.toThrow('Unexpected payment method. Expected one of {"payWithPuntos":false}')
+  })
+
+  it('pays a scanned CryptoPaymentLink request with Points', async () => {
+    state.isNimiqAsset = true
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.Payment)
+    const flow = getLastCreatedFlow()
+    const err = vi.fn()
+    const request = {
+      transfer: Transfer.UserPaymentToMerchant,
+      recipient: 'NQ22 MERCHANT',
+      amount: 10,
+      rail: Rail.CryptoPaymentLink,
+      paymentRef: 'cpl-ref',
+    }
+
+    await flow.onDone({
+      [StepName.QRCodeScanner]: request,
+      [StepName.PaymentPreview]: { payWithPuntos: true },
+    }, { err, setToast: vi.fn() })
+
+    expect(state.reportCriticalError).not.toHaveBeenCalled()
+    expect(state.payWithPoints).toHaveBeenCalledWith(request)
+    expect(state.sendTx).not.toHaveBeenCalled()
+    expect(err).not.toHaveBeenCalled()
+    expect(state.trackPaymentCompleted).toHaveBeenCalledTimes(1)
   })
 
   it('does not complete or fail an uncertain NIM payment', async () => {
