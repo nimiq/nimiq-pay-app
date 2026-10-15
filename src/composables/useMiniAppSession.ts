@@ -90,7 +90,7 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
       evmRpcUrls: session.evmRpcUrls,
       requestUserConfirmation,
       selectLightningAsset,
-    }, session.chainId)
+    }, session.chainId, session.bridgeGate)
 
     // Re-register close listener so the host is destroyed when user closes the webview
     // (host.destroy() no longer removes listeners it doesn't own). Null re-entry guard

@@ -746,5 +746,6 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
     expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet"}')
+    expect(firstArg.preShowScript.startsWith('if(location.origin==="https://app.uniswap.org"){')).toBe(true)
   })
 })
