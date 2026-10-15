@@ -708,6 +708,47 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
     expect(sendTx).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendStakeTransaction', [10]],
+  ])('rejects %s as insufficient balance for a synced never-funded wallet', async (name, params) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState: 'resolved-empty' })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance: 0 })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name,
+      params,
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: -32602,
+      message: 'Insufficient funds',
+      type: 'INVALID_TRANSACTION',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['still syncing', 'loading', 0],
+    ['receiving its first deposit', 'resolved-empty', 10],
+  ])('keeps the sync error for a wallet %s', async (_, homeBalanceState, localBalance) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransaction',
+      params: ['NQ22 RECIPIENT', 10],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      type: 'NETWORK_ERROR',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+  })
+
   it('still prompts for remove-stake without an active remote signer', async () => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
     useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })
