@@ -268,11 +268,11 @@ export class MiniAppHost {
     // When the remote signer address changes (added/refreshed mid-session), the
     // previously-cached Nimiq accounts list is stale. Clear the webview cache so
     // the dApp re-prompts and receives the up-to-date account set.
+    // Watch the address string: signer reloads create new Address objects for
+    // the same address, which would clear the cache without a real change.
     this.stopRemoteAddressWatcher = watch(
-      () => useRemoteSigner().remoteAddress,
-      (newAddress, oldAddress) => {
-        if (newAddress === oldAddress)
-          return
+      () => useRemoteSigner().remoteAddress?.toUserFriendlyAddress(),
+      () => {
         logger.log('[MiniAppHost] remoteAddress changed; clearing webview Nimiq account cache')
         this.birpc?.clearAccountCache('nimiq')
       },
