@@ -15,6 +15,7 @@ import { trackSwapCompleted, trackSwapFailed } from '@/lib/analytics'
 import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
+import { waitForSwapPreimage } from '@/lib/swap-preimage'
 import { getSignedTx, toAccountType } from '@/lib/tx'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
@@ -386,6 +387,7 @@ export const useTransactions = defineStore('transactions', () => {
     }
 
     isSendingTx.value = true
+    let swapSettlement: Promise<unknown> | undefined
     try {
       if (expectedContext && !remoteSigner.isWalletContextCurrent(expectedContext)) {
         return {
@@ -424,17 +426,26 @@ export const useTransactions = defineStore('transactions', () => {
         }
       }
 
-      return await _sendTx(partialTx, sendContext, onSubmitted)
+      return await _sendTx(partialTx, sendContext, onSubmitted, settlement => swapSettlement = settlement)
     }
     catch (error) {
       return { outcome: 'rejected', error: error instanceof Error ? error.message : String(error) }
     }
     finally {
       isSendingTx.value = false
+      // Lightning settlement can take until the HTLC expires. Funds already moved, so other sends and
+      // reclaims may run; callers without onSubmitted still wait until settlement ends.
+      if (!onSubmitted)
+        await swapSettlement
     }
   }
 
-  async function _sendTx(partialTx: PartialSendTxArgs, sendContext: WalletContext, onSubmitted?: (hash: string) => Promise<void>): Promise<TransactionSendResult> {
+  async function _sendTx(
+    partialTx: PartialSendTxArgs,
+    sendContext: WalletContext,
+    onSubmitted: ((hash: string) => Promise<void>) | undefined,
+    onSwapSettlement: (settlement: Promise<unknown>) => void,
+  ): Promise<TransactionSendResult> {
     const localWallet = useLocalWallet()
     const createsHtlc = partialTx.transfer === Transfer.LocalToRemote || partialTx.transfer === Transfer.ExtendRemote
     let stagedSend: StagedSend | undefined
@@ -798,39 +809,12 @@ export const useTransactions = defineStore('transactions', () => {
       if (patchedSwap && partialTx.transfer === Transfer.UserPaymentToAtomicSwap) {
         const finishSwap = async () => {
           try {
-            const patchedSwapResult = await patchedSwap.catch(() => undefined)
-            if (!remoteSigner.isWalletContextCurrent(sendContext))
-              return staleContextResult(i18n.t('Wallet or network changed before sending'))
-            const secret = patchedSwapResult?.preimage || await new Promise<string>((resolve, reject) => {
-              let timeoutId: number
-              async function checkSecret() {
-                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                  reject(new Error(i18n.t('Wallet or network changed before sending')))
-                  return
-                }
-                const { getSwap } = await useFastspotApiV2()
-                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                  reject(new Error(i18n.t('Wallet or network changed before sending')))
-                  return
-                }
-                const currentSwap = await getSwap((partialTx as MerchantTransaction).paymentRef)
-                if (!remoteSigner.isWalletContextCurrent(sendContext)) {
-                  reject(new Error(i18n.t('Wallet or network changed before sending')))
-                  return
-                }
-                if ('preimage' in currentSwap && currentSwap.preimage) {
-                  window.clearTimeout(timeoutId)
-                  resolve(currentSwap.preimage)
-                }
-                else if (currentSwap.status === 'EXPIRED') {
-                  reject(new Error('Lightning swap expired before settlement'))
-                }
-                else {
-                  timeoutId = window.setTimeout(() => void checkSecret().catch(reject), 1e3)
-                }
-              }
-              void checkSecret().catch(reject)
-            })
+            const secret = await waitForSwapPreimage(
+              (partialTx as MerchantTransaction).paymentRef,
+              patchedSwap,
+              (swap!.contracts.NIM!.htlc as NimHtlcDetails).timeoutTime,
+              () => remoteSigner.isWalletContextCurrent(sendContext),
+            )
 
             if (!remoteSigner.isWalletContextCurrent(sendContext))
               return staleContextResult(i18n.t('Wallet or network changed before sending'))
@@ -858,10 +842,7 @@ export const useTransactions = defineStore('transactions', () => {
             logger.error('Failed to finish accepted swap bookkeeping', error)
           }
         }
-        if (onSubmitted)
-          void finishSwap()
-        else
-          await finishSwap()
+        onSwapSettlement(finishSwap())
       }
 
       return {
