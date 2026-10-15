@@ -2053,8 +2053,14 @@ export class MiniAppHost {
     }
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
-    if (spendsFromRemote && !useRemoteSigner().remoteAddress)
+    const remoteSigner = useRemoteSigner()
+    if (spendsFromRemote && !remoteSigner.remoteAddress) {
+      // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.
+      // Local funds mean the first HTLC is being created, so that stays a sync error.
+      if (remoteSigner.homeBalanceState === 'resolved-empty' && useLocalWallet().localBalance === 0)
+        throw new InvalidTransactionError(i18n.t('Insufficient funds'))
       throw new NetworkError(i18n.t('Something went wrong syncing your account'))
+    }
 
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
