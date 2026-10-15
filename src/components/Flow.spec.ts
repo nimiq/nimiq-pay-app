@@ -69,6 +69,8 @@ vi.mock('@/composables/useModal', () => ({
   }),
 }))
 
+vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (text: string) => text } }))
+
 vi.mock('@/composables/useToast', () => ({
   useToast: () => ({
     setToast: state.setToast,
@@ -493,10 +495,14 @@ describe('flow', () => {
     expect(wrapper.find('[data-testid="preview-step"]').exists()).toBe(true)
   })
 
-  it('logs and surfaces unexpected beforeNext errors', async () => {
+  it('logs unexpected beforeNext errors and shows them on the step', async () => {
     const thrownError = new Error('Unexpected beforeNext failure')
     const ThrowingStep = markRaw(defineComponent({
-      template: '<div data-testid="throwing-step" />',
+      props: {
+        errorMsg: String,
+      },
+      emits: ['done'],
+      template: '<div data-testid="throwing-step">{{ errorMsg }}</div>',
     }))
 
     const flow: Flow = {
@@ -534,11 +540,115 @@ describe('flow', () => {
     const doneHandler = stepWrapper.vm.$.vnode.props?.onDone as ((value: string) => Promise<void>) | undefined
 
     expect(doneHandler).toBeTypeOf('function')
-    await expect(doneHandler?.('request')).rejects.toThrow(thrownError)
+    await expect(doneHandler?.('request')).resolves.toBeUndefined()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="throwing-step"]').text()).toBe('Something went wrong')
     expect(state.logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Unhandled error while completing step'),
       thrownError,
     )
+  })
+
+  it('shows an error on the step when the flow onDone hook throws', async () => {
+    const thrownError = new Error('Unexpected onDone failure')
+    const PinStep = markRaw(defineComponent({
+      props: {
+        errorMsg: String,
+      },
+      emits: ['done'],
+      template: '<div data-testid="pin-error">{{ errorMsg }}</div>',
+    }))
+
+    const flow: Flow = {
+      flowName: FlowName.Payment,
+      steps: [
+        {
+          step: StepName.PinCode,
+          main: PinStep,
+          beforeNext: async (_state, { finalizeFlow }) => finalizeFlow(),
+        },
+      ],
+      onDone: async () => {
+        throw thrownError
+      },
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    const doneHandler = wrapper.findComponent(PinStep).vm.$.vnode.props?.onDone as ((value: string) => Promise<void>) | undefined
+
+    await expect(doneHandler?.('123456')).resolves.toBeUndefined()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="pin-error"]').text()).toBe('Something went wrong')
+    expect(state.logger.error).toHaveBeenCalledWith(expect.stringContaining('onDone'), thrownError)
+    expect(state.closeModal).not.toHaveBeenCalled()
+  })
+
+  it('does not show an error when closing the modal fails after onDone succeeds', async () => {
+    state.closeModal.mockRejectedValueOnce(new Error('Modal already dismissed'))
+    const PinStep = markRaw(defineComponent({
+      props: {
+        errorMsg: String,
+      },
+      emits: ['done'],
+      template: '<div data-testid="pin-error">{{ errorMsg }}</div>',
+    }))
+
+    const flow: Flow = {
+      flowName: FlowName.Payment,
+      steps: [
+        {
+          step: StepName.PinCode,
+          main: PinStep,
+          beforeNext: async (_state, { finalizeFlow }) => finalizeFlow(),
+        },
+      ],
+      onDone: async () => {},
+    }
+
+    const { default: FlowComponent } = await import('./Flow.vue')
+    const wrapper = mount(FlowComponent, {
+      props: {
+        flow,
+        isClosing: false,
+        height: 'h-max',
+        initialState: {},
+      },
+      slots: {
+        default: ({ activeStep }: { activeStep: { step: StepName } }) => h('div', { 'data-testid': 'active-step' }, activeStep.step),
+      },
+      global: {
+        stubs: {
+          Transition: false,
+        },
+      },
+    })
+
+    const doneHandler = wrapper.findComponent(PinStep).vm.$.vnode.props?.onDone as ((value: string) => Promise<void>) | undefined
+
+    await doneHandler?.('123456')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="pin-error"]').text()).toBe('')
+    expect(state.setToast).not.toHaveBeenCalled()
   })
 
   it('blocks navigation changes while step completion is in progress', async () => {
