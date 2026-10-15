@@ -793,6 +793,38 @@ describe('MiniAppHost rejection messages', () => { // eslint-disable-line test/p
     })
   })
 
+  const foreignAddress = '0x0000000000000000000000000000000000000001'
+  it.each([
+    ['signTransaction', [{ to: '0x0000000000000000000000000000000000000000', from: foreignAddress, gas: '0x5208', gasPrice: '0x3b9aca00', nonce: '0x0' }]],
+    ['signPersonalMessage', { data: 'hello', address: foreignAddress }],
+    ['signTypedMessage', { raw: JSON.stringify({ types: {}, domain: {}, primaryType: 'Mail', message: {} }), address: foreignAddress }],
+  ])('checks a mismatched %s address only after confirmation, without revealing the wallet address', async (name, params) => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('Unexpected RPC call')
+    }))
+    const signMessage = vi.fn()
+    const signTypedData = vi.fn()
+    useLocalWallet.mockReturnValue({
+      getEthWallet: vi.fn(() => ({ data: { address: ethAddress, signTransaction, signMessage, signTypedData }, error: undefined })),
+    })
+
+    for (const confirmed of [false, true]) {
+      const { handleRequest, requestUserConfirmation } = await createPermissionHost({ confirmed })
+
+      const error = await handleRequest({ network: 'ethereum', name, params })
+        .catch((error: unknown) => JSON.parse(JSON.stringify(error)))
+
+      expect(requestUserConfirmation).toHaveBeenCalledOnce()
+      expect(error).toEqual(confirmed
+        ? { code: -32602, message: 'Requested address does not match the wallet address' }
+        : { code: 4001, message: 'User rejected the request.' })
+      expect(JSON.stringify(error)).not.toContain(ethAddress)
+    }
+    expect(signTransaction).not.toHaveBeenCalled()
+    expect(signMessage).not.toHaveBeenCalled()
+    expect(signTypedData).not.toHaveBeenCalled()
+  })
+
   it('returns no permissions before eth_accounts access is granted', async () => {
     const { handleRequest } = await createPermissionHost()
 
