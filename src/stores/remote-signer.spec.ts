@@ -397,6 +397,27 @@ describe('useRemoteSigner', () => {
     }
   })
 
+  it('keeps one bounded cosigner status poll in flight', async () => {
+    vi.useFakeTimers()
+    try {
+      let settlePoll!: (value: any) => void
+      state.getStatus.mockReturnValueOnce(new Promise<any>(resolve => settlePoll = resolve))
+      const { useRemoteSigner } = await import('./remote-signer')
+      useRemoteSigner()
+      await vi.advanceTimersByTimeAsync(9_000)
+      expect(state.getStatus).toHaveBeenCalledTimes(1)
+      expect(state.getStatus).toHaveBeenCalledWith(10_000)
+
+      settlePoll({ data: undefined, error: { message: 'timeout' }, hasError: true, status: 504 })
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      expect(state.getStatus).toHaveBeenCalledTimes(2)
+    }
+    finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('stops estimating block time when neither height source becomes available', async () => {
     vi.useFakeTimers()
     try {

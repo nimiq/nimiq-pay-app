@@ -419,8 +419,17 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   const isRemoteOk = computed(() => status.value === RemoteStatus.Good || false)
 
+  // Ticks fire without awaiting the callback. Keep one poll in flight, bounded to two intervals
+  // (the default WS read timeout is 30s), so a slow or hung cosigner demotes the status instead of
+  // keeping the last Good, and polls cannot pile up or settle out of order.
+  let isPollingStatus = false
   useIntervalFn(async () => {
-    const { data, error } = await getStatus()
+    if (isPollingStatus)
+      return
+    isPollingStatus = true
+    const { data, error } = await getStatus(10_000).finally(() => {
+      isPollingStatus = false
+    })
     if (error || !data) {
       logger.error('Error getting cosigner status', error)
       status.value = RemoteStatus.Unknown

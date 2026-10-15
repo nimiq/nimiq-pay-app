@@ -45,6 +45,18 @@ describe('cosigner WebSocket requests', () => {
     expect(socket.send).not.toHaveBeenCalled()
   })
 
+  it('times out cosigner status reads after the given timeout', async () => {
+    const { useRemoteSignerApi } = await import('./useApi')
+    let result: unknown
+    void useRemoteSignerApi().getStatus(10_000).then(value => result = value)
+
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(result).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(1)
+
+    expect(result).toMatchObject({ hasError: true, status: 504 })
+  })
+
   it('returns a successful read without replaying it on reconnect', async () => {
     const { useRemoteSignerApi } = await import('./useApi')
     const request = useRemoteSignerApi().getTransactionState({ hash: 'tx-hash' })

@@ -212,7 +212,7 @@ const remoteSignerWsApi = (function () {
     },
   })
 
-  function request<T = any, E = undefined>(event: string, args: any = {}): AsyncResultApi<T, E> {
+  function request<T = any, E = undefined>(event: string, args: any = {}, timeoutMs = 30_000): AsyncResultApi<T, E> {
     const id = `${idCounter++}`
     const requestObject = { event, data: { ...args, id } }
     const response = new Promise<ResultApi<T, E>>((resolve) => {
@@ -222,7 +222,7 @@ const remoteSignerWsApi = (function () {
     // Sends retain their recovery anchor; only read requests can be discarded on timeout.
     if (event.startsWith('wallet-send-'))
       return response
-    return promiseWithTimeout(response, 30_000)
+    return promiseWithTimeout(response, timeoutMs)
       .catch((): ResultApi<T, E> => ({
         data: undefined,
         hasError: true,
@@ -325,13 +325,13 @@ export function useRemoteSignerApi() {
     message: string
   }
 
-  async function getStatus(): AsyncResultApi<StatusRes, RemoteErrorRes> {
+  async function getStatus(timeoutMs?: number): AsyncResultApi<StatusRes, RemoteErrorRes> {
     // No cosigner in mock mode: report Good here so every consumer (cosigner poll,
     // resume height check) behaves without needing its own mock guard.
     if (isMockEnabled)
       return { data: { status: RemoteStatus.Good, blockHeight: 0, servicePublicKey: '', network: '' }, status: 200, hasError: false, error: undefined }
 
-    const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status')
+    const { data, error, status, hasError } = await remoteSignerWsApi<StatusRes>('status', {}, timeoutMs)
     if (error || data?.status !== 'good' || hasError)
       return { data: undefined, status, hasError: true, error: error || { message: i18n.t('Something went wrong syncing your account'), statusCode: 520, error: 'Unknown Error' } }
     return { data: data!, status, hasError, error: undefined }
