@@ -459,6 +459,25 @@ describe('initializeFlow analytics and setup hooks', () => {
     expect(state.polygonSendPayment).not.toHaveBeenCalled()
   })
 
+  it('signs the Polygon withdrawal with the quote confirmed on the confirm step', async () => {
+    const { initializeFlow } = await import('./index')
+    await initializeFlow(FlowName.NimWithdraw)
+    const flow = getLastCreatedFlow()
+    const staleQuote = { fee: 10_000 }
+    const confirmedQuote = { fee: 50_000 }
+
+    await flow.onDone({
+      [StepName.NimWithdrawalAmountSelectionStep]: {
+        amount: 10,
+        recipient: '0x00000000000000000000000000000000000000AA',
+        polygonQuote: staleQuote,
+      },
+      [StepName.NimWithdrawalConfirmStep]: { polygonQuote: confirmedQuote },
+    }, { err: vi.fn(), setToast: vi.fn() })
+
+    expect(state.polygonSendPayment).toHaveBeenCalledWith(expect.anything(), 'Withdrawal', { quote: confirmedQuote })
+  })
+
   it('does not report an uncertain Polygon withdrawal as failed or successful', async () => {
     state.polygonSendPayment.mockResolvedValue({
       outcome: 'unknown',

@@ -41,6 +41,7 @@ const props = defineProps({
   canSkip: { type: Boolean },
   state: { type: Object as PropType<State>, required: true },
   isConfirmationAlert: { type: Boolean },
+  isVisible: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(stepEmits)
@@ -100,6 +101,7 @@ const {
   error: usdtQuoteError,
   quoteLoading: usdtQuoteLoading,
   feeText: usdtFeeText,
+  refresh: refreshUsdtQuote,
 } = useUsdtQuoteRefresh(currentUsdtQuoteRequest, loading, { autoRefresh: true })
 
 // Use VueUse's built-in evaluating ref to track loading state — setting a
@@ -421,6 +423,15 @@ watch(() => goCryptoError.value || flowErrorMessage.value, (message) => {
     // Go back to QR scanner
     emit('back', StepName.QRCodeScanner)
 }, { immediate: true })
+
+// A payment failing on the PIN step puts its error there, so the preview's error watch never resets `loading`.
+// Reset it when the user comes back, which also resumes the paused USDT quote refresh so the fee shown is current.
+watch(() => props.isVisible, (visible) => {
+  if (!visible || !loading.value)
+    return
+  loading.value = false
+  void refreshUsdtQuote()
+})
 
 function handlePay() {
   if (loading.value || isUsdtMaintenanceBlocked.value)

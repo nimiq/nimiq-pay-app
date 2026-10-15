@@ -722,7 +722,7 @@ describe('polygon-usdt quote helpers', () => {
       amount: 116_440_000,
       recipient: '0x0000000000000000000000000000000000000001',
       transfer: Transfer.UserPaymentToMerchant,
-      fee: 5_000_000n,
+      fee: 4_000_000n,
       balance: 500_000_000,
       gasLimit: 123_000n,
       gasPrice: 456_000_000n,
@@ -753,6 +753,62 @@ describe('polygon-usdt quote helpers', () => {
 
     expect(buildFreshQuote).toHaveBeenCalledTimes(1)
     expect(resolvedQuote).toEqual(freshQuote)
+  })
+
+  it('rejects a refreshed quote whose fee exceeds the approved fee', async () => {
+    const { buildPolygonTransferQuote, resolvePolygonTransferQuote } = await import('./polygon-usdt')
+
+    const staleQuote = buildPolygonTransferQuote({
+      amount: 116_440_000,
+      recipient: '0x0000000000000000000000000000000000000001',
+      transfer: Transfer.UserPaymentToMerchant,
+      fee: 4_000_000n,
+      balance: 500_000_000,
+      gasLimit: 123_000n,
+      gasPrice: 456_000_000n,
+      relay: {
+        url: 'https://relay.example/stale',
+        baseRelayFee: 1n,
+        pctRelayFee: 2n,
+        relayManagerAddress: '0x0000000000000000000000000000000000000011',
+        relayWorkerAddress: '0x0000000000000000000000000000000000000022',
+        minGasPrice: 3n,
+      },
+      now: 1_000,
+    })
+
+    const freshQuote = buildPolygonTransferQuote({
+      amount: 116_440_000,
+      recipient: '0x0000000000000000000000000000000000000001',
+      transfer: Transfer.UserPaymentToMerchant,
+      fee: 5_000_000n,
+      balance: 500_000_000,
+      gasLimit: 123_000n,
+      gasPrice: 456_000_000n,
+      relay: {
+        url: 'https://relay.example/fresh',
+        baseRelayFee: 1n,
+        pctRelayFee: 2n,
+        relayManagerAddress: '0x0000000000000000000000000000000000000011',
+        relayWorkerAddress: '0x0000000000000000000000000000000000000022',
+        minGasPrice: 3n,
+      },
+      now: staleQuote.expiresAt + 1,
+    })
+
+    const buildFreshQuote = vi.fn().mockResolvedValue(freshQuote)
+
+    await expect(resolvePolygonTransferQuote({
+      request: {
+        amount: 116_440_000,
+        recipient: '0x0000000000000000000000000000000000000001',
+        transfer: Transfer.UserPaymentToMerchant,
+      },
+      balance: 500_000_000,
+      providedQuote: staleQuote,
+      buildFreshQuote,
+      now: staleQuote.expiresAt + 1,
+    })).rejects.toThrow('Polygon fee changed; review the payment again')
   })
 
   it('surfaces a deterministic insufficient-after-fee error from refreshed quotes', async () => {

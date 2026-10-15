@@ -736,6 +736,47 @@ describe('MiniAppHost Nimiq remote signer guard', () => { // eslint-disable-line
     expect(sendTx).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['sendBasicTransaction', ['NQ22 RECIPIENT', 10]],
+    ['sendNewStakerTransaction', ['NQ33 VALIDATOR', 10]],
+    ['sendStakeTransaction', [10]],
+  ])('rejects %s as insufficient balance for a synced never-funded wallet', async (name, params) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState: 'resolved-empty' })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance: 0 })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name,
+      params,
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toEqual({
+      code: -32602,
+      message: 'Insufficient funds',
+      type: 'INVALID_TRANSACTION',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+    expect(sendTx).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['still syncing', 'loading', 0],
+    ['receiving its first deposit', 'resolved-empty', 10],
+  ])('keeps the sync error for a wallet %s', async (_, homeBalanceState, localBalance) => {
+    useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined, homeBalanceState })
+    useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' }, localBalance })
+    const { handleRequest, requestUserConfirmation: confirmationPrompt } = await createPermissionHost()
+
+    await expect(handleRequest({
+      network: 'nimiq',
+      name: 'sendBasicTransaction',
+      params: ['NQ22 RECIPIENT', 10],
+    }).catch((error: unknown) => JSON.parse(JSON.stringify(error)))).resolves.toMatchObject({
+      code: -32000,
+      type: 'NETWORK_ERROR',
+    })
+    expect(confirmationPrompt).not.toHaveBeenCalled()
+  })
+
   it('still prompts for remove-stake without an active remote signer', async () => {
     useRemoteSigner.mockReturnValue({ remoteHeight: 0, remoteAddress: undefined })
     useLocalWallet.mockReturnValue({ localAddress: { toUserFriendlyAddress: () => 'NQ00 LOCAL' } })
@@ -778,6 +819,38 @@ describe('MiniAppHost rejection messages', () => { // eslint-disable-line test/p
       code: 4001,
       message: 'User rejected the request.',
     })
+  })
+
+  const foreignAddress = '0x0000000000000000000000000000000000000001'
+  it.each([
+    ['signTransaction', [{ to: '0x0000000000000000000000000000000000000000', from: foreignAddress, gas: '0x5208', gasPrice: '0x3b9aca00', nonce: '0x0' }]],
+    ['signPersonalMessage', { data: 'hello', address: foreignAddress }],
+    ['signTypedMessage', { raw: JSON.stringify({ types: {}, domain: {}, primaryType: 'Mail', message: {} }), address: foreignAddress }],
+  ])('checks a mismatched %s address only after confirmation, without revealing the wallet address', async (name, params) => {
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new Error('Unexpected RPC call')
+    }))
+    const signMessage = vi.fn()
+    const signTypedData = vi.fn()
+    useLocalWallet.mockReturnValue({
+      getEthWallet: vi.fn(() => ({ data: { address: ethAddress, signTransaction, signMessage, signTypedData }, error: undefined })),
+    })
+
+    for (const confirmed of [false, true]) {
+      const { handleRequest, requestUserConfirmation } = await createPermissionHost({ confirmed })
+
+      const error = await handleRequest({ network: 'ethereum', name, params })
+        .catch((error: unknown) => JSON.parse(JSON.stringify(error)))
+
+      expect(requestUserConfirmation).toHaveBeenCalledOnce()
+      expect(error).toEqual(confirmed
+        ? { code: -32602, message: 'Requested address does not match the wallet address' }
+        : { code: 4001, message: 'User rejected the request.' })
+      expect(JSON.stringify(error)).not.toContain(ethAddress)
+    }
+    expect(signTransaction).not.toHaveBeenCalled()
+    expect(signMessage).not.toHaveBeenCalled()
+    expect(signTypedData).not.toHaveBeenCalled()
   })
 
   it('returns no permissions before eth_accounts access is granted', async () => {
