@@ -259,7 +259,8 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded
+    expect(browser.removeListener).toHaveBeenCalledTimes(3)
   })
 
   it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
@@ -270,9 +271,105 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    // fullscreenChange + urlChangeEvent + browserPageLoaded
+    expect(browser.removeListener).toHaveBeenCalledTimes(3)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
+  })
+})
+
+describe('bridge origin', () => {
+  async function bridgeTransport(host: { browser: ReturnType<typeof createBrowser> }) {
+    await Promise.resolve()
+    const [, transport] = createBirpc.mock.calls.at(-1)! as any[]
+    const receive = vi.fn()
+    transport.on(receive)
+    const emit = (event: string, payload: unknown) =>
+      (host.browser.addListener.mock.calls.find(([name]) => name === event)![1] as (event: unknown) => void)(payload)
+    return { emit, post: transport.post as (data: unknown) => void, receive }
+  }
+
+  it('ignores and withholds bridge messages while the webview is on another origin', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, post, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-app' })
+    expect(receive).toHaveBeenCalledExactlyOnceWith('from-app')
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://evil.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    post('response')
+    expect(receive).toHaveBeenCalledOnce()
+    expect(browser.postMessage).not.toHaveBeenCalled()
+
+    // A navigation back to the Mini App only reopens the bridge once it has loaded.
+    emit('urlChangeEvent', { id: 'm', url: 'https://APP.example/after-login?x=1' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    expect(receive).toHaveBeenCalledOnce()
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-app-again' })
+    post('response')
+    expect(receive).toHaveBeenLastCalledWith('from-app-again')
+    expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
+  })
+
+  it('never accepts popup webviews, even when the main webview is on the Mini App origin', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'p', url: 'https://evil.example/' })
+    emit('browserPageLoaded', { id: 'p' })
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'p', detail: 'from-popup' })
+    expect(receive).not.toHaveBeenCalled()
+  })
+
+  it('only talks to the main webview, the first one it hears from', async () => {
+    const { browser } = await createPermissionHost()
+    const { emit, post, receive } = await bridgeTransport({ browser })
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('urlChangeEvent', { id: 'p', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'p' })
+    emit('messageFromWebview', { id: 'p', detail: 'from-popup' })
+    expect(receive).not.toHaveBeenCalled()
+
+    post('response')
+    expect(browser.postMessage).toHaveBeenCalledExactlyOnceWith({ detail: 'response', id: 'm' })
+  })
+
+  it('keeps a closed gate closed across reconnect until the webview loads the Mini App again', async () => {
+    const browser = createBrowser()
+    MiniAppHost.reconnect(browser as never, {
+      requestUserConfirmation,
+      title: 'Example',
+      url: 'https://app.example',
+    }, '0x1', { mainId: 'm', urlOk: false, open: false })
+    const { emit, receive } = await bridgeTransport({ browser })
+
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    expect(receive).not.toHaveBeenCalled()
+
+    emit('urlChangeEvent', { id: 'm', url: 'https://app.example/' })
+    emit('browserPageLoaded', { id: 'm' })
+    emit('messageFromWebview', { id: 'm', detail: 'from-app' })
+    expect(receive).toHaveBeenCalledExactlyOnceWith('from-app')
+  })
+
+  it('starts closed on reconnect without a saved gate', async () => {
+    const browser = createBrowser()
+    MiniAppHost.reconnect(browser as never, {
+      requestUserConfirmation,
+      title: 'Example',
+      url: 'https://app.example',
+    }, '0x1')
+    const { emit, receive } = await bridgeTransport({ browser })
+
+    emit('messageFromWebview', { id: 'm', detail: 'from-evil' })
+    expect(receive).not.toHaveBeenCalled()
   })
 })
 

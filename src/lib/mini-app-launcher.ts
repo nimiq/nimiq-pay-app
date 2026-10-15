@@ -202,7 +202,9 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
       userFiat: options.userFiat ?? Fiat.USD,
       network: isTestnet ? 'testnet' : 'mainnet',
     })
-    const scriptContent = `window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}`
+    // The plugin injects this into every frame and every navigated-to document;
+    // only the Mini App's own origin gets the provider and host context.
+    const scriptContent = `if(location.origin===${JSON.stringify(new URL(targetUrl).origin)}){window.__NIMIQ_PAY__=${hostContext};window.__NIMIQ_RPC_URL__=${JSON.stringify(NIMIQ_RPC_URL)};${baseScript}\n}`
 
     // Attach BEFORE openWebView so events fired during the open animation aren't missed.
     // Null re-entry guard: plugin close() and dialog dismiss can both emit closeEvent.
