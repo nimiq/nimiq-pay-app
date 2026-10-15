@@ -495,10 +495,14 @@ describe('flow', () => {
     expect(wrapper.find('[data-testid="preview-step"]').exists()).toBe(true)
   })
 
-  it('logs and surfaces unexpected beforeNext errors', async () => {
+  it('logs unexpected beforeNext errors and shows them on the step', async () => {
     const thrownError = new Error('Unexpected beforeNext failure')
     const ThrowingStep = markRaw(defineComponent({
-      template: '<div data-testid="throwing-step" />',
+      props: {
+        errorMsg: String,
+      },
+      emits: ['done'],
+      template: '<div data-testid="throwing-step">{{ errorMsg }}</div>',
     }))
 
     const flow: Flow = {
@@ -536,7 +540,10 @@ describe('flow', () => {
     const doneHandler = stepWrapper.vm.$.vnode.props?.onDone as ((value: string) => Promise<void>) | undefined
 
     expect(doneHandler).toBeTypeOf('function')
-    await expect(doneHandler?.('request')).rejects.toThrow(thrownError)
+    await expect(doneHandler?.('request')).resolves.toBeUndefined()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="throwing-step"]').text()).toBe('Something went wrong')
     expect(state.logger.error).toHaveBeenCalledWith(
       expect.stringContaining('Unhandled error while completing step'),
       thrownError,

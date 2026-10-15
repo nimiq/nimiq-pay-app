@@ -432,8 +432,8 @@ async function onStepDone(stepName: StepName, value: OnDoneStepValue) {
   }
   catch (error) {
     logger.error(`Unhandled error while completing step ${stepName}`, error)
-    stepCompletionInProgress.value = null
-    throw error
+    // Step emits ignore the returned promise, so rethrowing would leave the step spinner on with no message
+    defaultErrorHandler(i18n.t('Something went wrong'))
   }
   finally {
     // Some steps intentionally no-op from beforeNext until input becomes valid. Release the guard if no
