@@ -601,13 +601,17 @@ export function buildPolygonTransferQuoteFromSnapshot(input: BuildPolygonTransfe
 
 export async function resolvePolygonTransferQuote(input: ResolvePolygonTransferQuoteInput): Promise<PolygonTransferQuote> {
   const now = input.now ?? Date.now()
-  const quote = input.providedQuote
-    && matchesPolygonTransferQuote(input.providedQuote, input.request)
-    && input.providedQuote.expiresAt > now
+  const approvedQuote = input.providedQuote && matchesPolygonTransferQuote(input.providedQuote, input.request)
     ? input.providedQuote
+    : undefined
+  const quote = approvedQuote && approvedQuote.expiresAt > now
+    ? approvedQuote
     : await input.buildFreshQuote()
 
   assertQuoteBalance(quote.amount, BigInt(quote.fee), input.balance)
+  // The user confirmed the approved quote's total; never sign a higher fee they did not see.
+  if (approvedQuote && quote.fee > approvedQuote.fee)
+    throw new Error(i18n.t('Polygon fee changed; review the payment again'))
   return quote
 }
 

@@ -438,7 +438,7 @@ export const paymentRequestManualInputStep: StepInit = async ({ allowGoBack }) =
     get title() { return i18n.t('Enter payment request') },
     main: markRaw(PaymentRequestManualInput),
     allowGoBack,
-    beforeNext: async (state, { next, navigateTo }) => {
+    beforeNext: async (state, { navigateTo }) => {
       const request = state.paymentRequestManualInput
       state.qrCodeScanner = request
 
@@ -448,7 +448,7 @@ export const paymentRequestManualInputStep: StepInit = async ({ allowGoBack }) =
         return
       }
 
-      next()
+      navigateTo({ step: StepName.PaymentPreview })
     },
   } satisfies Step
 }

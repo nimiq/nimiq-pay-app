@@ -97,9 +97,9 @@ export enum StepName {
   ComingSoon = 'comingSoon',
 }
 
-export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput] as const
+export const inputSteps = [StepName.PromoCode, StepName.PinCode, StepName.PinCodeConfirm, StepName.PinCodeChange, StepName.PhoneNumber, StepName.PhoneNumberConfirm, StepName.NimAddressDisplay, StepName.RecoveryWordsStep, StepName.QRCodeScanner, StepName.PaymentPreview, StepName.NimWithdrawalAmountSelectionStep, StepName.NimWithdrawalAddressSelectionStep, StepName.NimWithdrawalConfirmStep, StepName.NimAddressInput, StepName.TransactionList, StepName.PaymentRequestManualInput, StepName.PaymentAmountInput] as const
 export type InputStepName = typeof inputSteps[number]
-const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion, StepName.NimWithdrawalConfirmStep] as const
+const infoSteps = [StepName.EnableBiometric, StepName.GetNotified, StepName.OnBoardingPoints, /* StepName.OnBoardingCashback1, StepName.OnBoardingCashback2, StepName.OnBoardingCashback3,  StepName.OnBoardingCashback4, */ StepName.OnBoardingBluecode1, StepName.OnBoardingBluecode2, StepName.OnBoardingBluecode3, StepName.TransactionDetail, StepName.BackupIntroduction, StepName.ShowWords, StepName.ValidateWords, StepName.QRCodeDisplay, StepName.ComingSoon, StepName.BluecodePayment, StepName.ConfirmAddressDeletion] as const
 export type InfoStepName = typeof infoSteps[number]
 
 export function isInputStep(step: Step | StepName): step is typeof step extends Step ? InputStep : InputStepName {
@@ -132,6 +132,7 @@ export interface State {
   }
   [StepName.NimWithdrawalAmountSelectionStep]: NimWithdrawalSelection
   [StepName.NimWithdrawalAddressSelectionStep]: string // User selects a saved address
+  [StepName.NimWithdrawalConfirmStep]: { polygonQuote?: PolygonTransferQuote } // Quote shown when the user confirmed
   [StepName.NimAddressInput]: string
   [StepName.TransactionList]: ExternalTransaction // User selects a transaction
   [StepName.ComingSoon]: string
@@ -294,7 +295,7 @@ export type StepInitOptions<Props = undefined> = {
 export type StepInit<Props = undefined> = (options: StepInitOptions<Props>) => Promise<Step>
 export const defaultStepInitOptions: StepInitOptions = { skipAheadBy: undefined, goBackBy: 1, props: undefined }
 
-export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction | NimWithdrawalSelection | { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote, usdtFeeAllowance?: number }
+export type OnDoneStepValue = string | boolean | PaymentRequestData | PaymentMethod | ExternalTransaction | NimWithdrawalSelection | { payWithPuntos: boolean, polygonQuote?: PolygonTransferQuote, usdtFeeAllowance?: number } | { polygonQuote?: PolygonTransferQuote }
 
 export const stepEmits: EmitsOptions = {
   done: (_: OnDoneStepValue) => true,

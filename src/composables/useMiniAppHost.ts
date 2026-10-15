@@ -43,6 +43,9 @@ import { useFastspotApiV2 } from './useFastspotV2'
 import { useLogger } from './useLogger'
 
 const logger = useLogger('MiniAppHost')
+// Sent to the webview on `from`/`address` mismatch. Must not include the wallet
+// address: the caller may not have been granted eth_requestAccounts.
+const ETH_ADDRESS_MISMATCH_MESSAGE = 'Requested address does not match the wallet address'
 const erc20TransferInterface = new Interface([
   'function transfer(address to, uint256 amount) returns (bool)',
 ])
@@ -791,7 +794,8 @@ export class MiniAppHost {
       throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
     if (!addressesEqual(ethWallet.address, address)) {
-      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
+      logger.warn('[MiniAppHost] Address mismatch', { requested: address, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
     }
 
     // Sign the message - for hex data, pass raw bytes; ethers.js handles personal_sign prefix
@@ -880,7 +884,8 @@ export class MiniAppHost {
       throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
     }
     if (!addressesEqual(ethWallet.address, address)) {
-      throw new PermissionDeniedError(`Address mismatch: requested ${address}, but wallet address is ${ethWallet.address}`)
+      logger.warn('[MiniAppHost] Address mismatch', { requested: address, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
     }
 
     // Remove EIP712Domain from types (ethers.js handles it automatically)
@@ -952,19 +957,6 @@ export class MiniAppHost {
     }
 
     const gasLimit = txParams.gas || txParams.gasLimit
-
-    // Get Ethereum wallet to verify address
-    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
-    if (error || !ethWallet) {
-      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
-    }
-
-    // Verify the from address matches the wallet using EIP-55 safe comparison
-    if (!addressesEqual(ethWallet.address, txParams.from)) {
-      throw new PermissionDeniedError(
-        `Address mismatch: requested ${txParams.from}, but wallet address is ${ethWallet.address}`,
-      )
-    }
 
     const currentChainNumber = parseChainId(this.currentChainId)
     let validatedChainIdNumber: number | undefined
@@ -1160,6 +1152,17 @@ export class MiniAppHost {
     if (!confirmed) {
       trackWeb3Request({ requestType: 'sign_transaction', blockchain: 'ethereum', dappUrl: this.config.url, dappName: this.config.title, approved: false, success: false, chainId: this.currentChainId })
       throw new PermissionDeniedError(USER_REJECTED_REQUEST_MESSAGE)
+    }
+
+    // Compared only after confirmation, like the message signers, so an
+    // unapproved caller cannot probe the wallet address.
+    const { data: ethWallet, error } = useLocalWallet().getEthWallet()
+    if (error || !ethWallet) {
+      throw new InternalError(`Failed to get Ethereum wallet: ${error || 'wallet not available'}`)
+    }
+    if (!addressesEqual(ethWallet.address, txParams.from)) {
+      logger.warn('[ETH_TX] Address mismatch', { requested: txParams.from, wallet: ethWallet.address })
+      throw new InvalidRequestError(ETH_ADDRESS_MISMATCH_MESSAGE)
     }
 
     // Build transaction object for ethers.js
@@ -2050,8 +2053,14 @@ export class MiniAppHost {
     }
     // Everything but remove-stake spends from the HTLC; fail before prompting instead of after the user confirms
     const spendsFromRemote = !(txData.transfer === Transfer.Staking && txData.stakingData.type === 'remove-stake')
-    if (spendsFromRemote && !useRemoteSigner().remoteAddress)
+    const remoteSigner = useRemoteSigner()
+    if (spendsFromRemote && !remoteSigner.remoteAddress) {
+      // A synced, never-funded wallet has no HTLC yet; only a wallet still syncing is a sync problem.
+      // Local funds mean the first HTLC is being created, so that stays a sync error.
+      if (remoteSigner.homeBalanceState === 'resolved-empty' && useLocalWallet().localBalance === 0)
+        throw new InvalidTransactionError(i18n.t('Insufficient funds'))
       throw new NetworkError(i18n.t('Something went wrong syncing your account'))
+    }
 
     const confirmed = await this.config.requestUserConfirmation({
       url: this.config.url,
