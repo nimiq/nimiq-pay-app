@@ -2348,6 +2348,54 @@ describe('useTransactions', () => {
       })
     })
 
+    it('writes staking tx data to the columns as hex', async () => {
+      state.runSet.mockImplementation(async (statements: { statement: string, values: unknown[] }[]) => {
+        for (const { statement, values } of statements)
+          db.prepare(statement).run(...values.map(value => value ?? null) as Array<string | number | null>)
+      })
+      const { useTransactions } = await import('./transactions')
+
+      await useTransactions().saveTransactions([{
+        hash: 'nim-staking',
+        timestamp: 1,
+        sender: 'NQ00 TEST LOCAL ADDRESS',
+        senderType: 0,
+        recipient: 'NQ77 STAKING CONTRACT',
+        recipientType: 3,
+        amount: 10,
+        fee: 0,
+        status: 'confirmed',
+        transfer: Transfer.Staking,
+        title: 'Staking Contract',
+        proofSize: 0,
+        senderData: '',
+        recipientData: 'aabb',
+      }])
+
+      expect(db.prepare('SELECT senderData, recipientData FROM transactions WHERE hash = ?').get('nim-staking')).toEqual({
+        senderData: '',
+        recipientData: 'aabb',
+      })
+    })
+
+    it('reads staking tx data columns back as hex', async () => {
+      db.prepare(`INSERT INTO transactions
+        (hash, status, timestamp, sender, recipient, amount, fee, transfer, asset, chain, senderData, recipientData, validityStartHeight)
+        VALUES ('nim-staking', 'confirmed', 1, 'NQ00 TEST LOCAL ADDRESS', 'NQ77 STAKING CONTRACT', 10, 0, ?, ?, ?, 'aabb', '', 789)`).run(
+        Transfer.Staking,
+        Asset.NIM,
+        Chain.Nimiq,
+      )
+      const { useTransactions } = await import('./transactions')
+
+      // setSwapPreimage only touches meta and returns the stored row.
+      await expect(useTransactions().setSwapPreimage('nim-staking', 'preimage')).resolves.toMatchObject({
+        senderData: 'aabb',
+        recipientData: '',
+        validityStartHeight: 789,
+      })
+    })
+
     it('persists a native swap refund when its tx is not loaded', async () => {
       const { useTransactions } = await import('./transactions')
 

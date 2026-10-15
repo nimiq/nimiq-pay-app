@@ -24,7 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
-import { sleep } from '@/lib/utils'
+import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -1597,15 +1597,6 @@ export async function persistHistoryTransaction(group: TransferGroup, address: s
 
   await transactionsStore.addReceiptTransactions([receipt])
   await options?.onIncomingPersisted?.(receipt)
-}
-
-function parseStoredTransaction(tx: ExternalTransaction | null) {
-  if (!tx)
-    return null
-
-  tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
-  tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
-  return tx
 }
 
 // Dynamic import to avoid a circular dep between useNotifications and this store.

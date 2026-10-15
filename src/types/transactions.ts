@@ -275,8 +275,9 @@ export type StakingData = {
 export type StakingTransaction = BaseTransaction & {
   transfer: Transfer.Staking
   title: TransactionTitle
-  recipientData?: Uint8Array
-  senderData?: Uint8Array
+  // Hex, as provided by the chain and stored in the DB.
+  recipientData?: string
+  senderData?: string
   rail?: Rail.MiniApp
   railMerchantId?: string // Mini-app URL
   merchantName?: string // Mini-app name
