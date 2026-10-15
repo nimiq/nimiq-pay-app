@@ -14,6 +14,7 @@ import { useModal } from '@/composables/useModal'
 import { useSharedPinInput } from '@/composables/useSharedPinInput'
 
 import { useToast } from '@/composables/useToast'
+import { i18n } from '@/i18n/i18n-setup'
 import { inputSteps, isInputStep, StepName } from '@/lib/flows/steps.types'
 
 const props = defineProps({
@@ -91,6 +92,13 @@ function makeFlowHandler(originalHandler?: FlowHookCb, role?: CloseRole): () => 
       // If no error occurred, proceed to close the modal unless it's already closing.
       if (!hasError && !props.isClosing && !prevent)
         await useModal().closeModal({ role })
+    }
+    catch (error) {
+      // Without this, a throwing hook never reaches the step's error state and the PIN/Pay spinner never stops
+      logger.error(`Unhandled error in ${flowName} ${role === 'cancel' ? 'onCancel' : 'onDone'} hook`, error)
+      // A failed closeModal after a successful hook must not report the completed action as failed
+      if (!hasRunSuccessfully.get(flowName))
+        _err(i18n.t('Something went wrong'))
     }
     finally {
       // Release the lock for subsequent operations and reset the lock state.
@@ -186,12 +194,8 @@ function defaultErrorHandler(errorMessage: string) {
     window.setTimeout(() => errors.value[activeStepName] = '', 10 * 1e3)
   }
   else { setToast({ message: errorMessage, type: 'error', duration: 10 * 1e3 }) }
-  try {
-    Haptics.notification({ type: NotificationType.Error })
-  }
-  catch (error) {
-    logger.error('Failed to trigger haptic feedback', error)
-  }
+  Haptics.notification({ type: NotificationType.Error })
+    .catch(error => logger.error('Failed to trigger haptic feedback', error))
 }
 
 function shouldBlockNavigation(source: string) {
