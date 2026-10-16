@@ -3,7 +3,6 @@ name: Settings language
 
 tags:
   - franciscoTest
-  - quarantine
 
 ---
 # Scope: choosing German, Spanish, French and Portuguese in Settings translates the Settings

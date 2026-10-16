@@ -3,7 +3,6 @@ name: Wallet import roundtrip
 
 tags:
   - franciscoTest
-  - quarantine
 
 ---
 # Scope: after logging out, logging in with the wallet's recovery words restores the same

@@ -3,7 +3,6 @@ name: Import wrong words
 
 tags:
   - franciscoTest
-  - quarantine
 
 env:
   # Wordlist words. "${ELEVEN_WORDS} abandon" has a wrong checksum (the valid phrase ends in "about").
