@@ -16,7 +16,7 @@ import { Asset, Chain } from '@/lib/assets'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { DEFAULT_LIMIT, SQLQuery, UPSERT_POLYGON_HISTORY_TX } from '@/lib/sql-queries'
 import { getSignedTx, toAccountType } from '@/lib/tx'
-import { promiseWithTimeout } from '@/lib/utils'
+import { parseStoredTransaction, promiseWithTimeout } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -175,9 +175,9 @@ export const useTransactions = defineStore('transactions', () => {
       tx.meta
         ? JSON.stringify(tx.meta)
         : null,
-      tx.senderData ? Nimiq.BufferUtils.toHex(tx.senderData) : null,
+      tx.senderData ?? null,
       tx.hash,
-      tx.recipientData ? Nimiq.BufferUtils.toHex(tx.recipientData) : null,
+      tx.recipientData ?? null,
       tx.hash,
       tx.validityStartHeight ?? null,
       tx.hash,
@@ -224,12 +224,7 @@ export const useTransactions = defineStore('transactions', () => {
   }
 
   async function getStoredTransaction(hash: string) {
-    const tx = await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true })
-    if (tx) {
-      tx.invoiced = typeof tx.invoiced === 'string' ? JSON.parse(tx.invoiced) : tx.invoiced
-      tx.meta = typeof tx.meta === 'string' ? JSON.parse(tx.meta) : tx.meta
-    }
-    return tx
+    return parseStoredTransaction(await query<ExternalTransaction | null>(SQLQuery.GetTransactionByHash, [hash], { single: true }))
   }
 
   async function clearTxHistory() {
