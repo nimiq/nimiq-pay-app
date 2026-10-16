@@ -135,6 +135,25 @@ describe('polygon-usdt quote helpers', () => {
     expect(send).toHaveBeenCalledWith('eth_gasPrice', [])
   })
 
+  it('retries the required relay gas lookup after a failed RPC call', async () => {
+    vi.resetModules()
+    const { getRequiredRelayGas } = await import('./polygon-usdt')
+    const lookup = vi.fn()
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce(70_000n)
+    const client = {
+      transferContract: {
+        getRequiredRelayGas: lookup,
+        interface: new Interface(['function transferWithApproval()']),
+      },
+    } as any
+
+    await expect(getRequiredRelayGas(client)).rejects.toThrow('network error')
+    await expect(getRequiredRelayGas(client)).resolves.toBe(70_000n)
+    await expect(getRequiredRelayGas(client)).resolves.toBe(70_000n)
+    expect(lookup).toHaveBeenCalledTimes(2)
+  })
+
   it('logs relay broadcast RPC errors before falling back to polling', async () => {
     const { broadcastPolygonRelayTransaction } = await import('./polygon-usdt')
     const rpcError = new Error('evm timeout')

@@ -24,7 +24,7 @@ import { getBestRelay, getRelayAddr } from '@/lib/polygon/opengsn'
 import { resolveTokenMetaTxDomain } from '@/lib/polygon/token-meta-tx'
 import { getRegisteredPoolAddress, quoteWrappedNativePrice } from '@/lib/polygon/uniswap'
 import { SQLQuery } from '@/lib/sql-queries'
-import { sleep } from '@/lib/utils'
+import { parseStoredTransaction, sleep } from '@/lib/utils'
 import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
@@ -735,6 +735,9 @@ async function getPoolAddress(client: PolygonUsdtClient) {
       provider: client.provider,
       registryAddress: polygonUsdtConfig.transferContract,
       tokenAddress: polygonUsdtConfig.tokenContract,
+    }).catch((error) => {
+      poolAddressPromise = null
+      throw error
     })
   }
 
@@ -825,11 +828,14 @@ async function getTokenQuotePerBaseUnit(client: PolygonUsdtClient) {
   return tokenQuotePerBaseUnit
 }
 
-async function getRequiredRelayGas(client: PolygonUsdtClient) {
+export async function getRequiredRelayGas(client: PolygonUsdtClient) {
   if (!requiredRelayGasPromise) {
     requiredRelayGasPromise = client.transferContract.getRequiredRelayGas(
       client.transferContract.interface.getFunction('transferWithApproval')!.selector,
-    ).then(result => BigInt(result.toString()))
+    ).then(result => BigInt(result.toString())).catch((error) => {
+      requiredRelayGasPromise = null
+      throw error
+    })
   }
 
   return requiredRelayGasPromise
@@ -839,6 +845,9 @@ async function getAcceptanceBudget(client: PolygonUsdtClient) {
   if (!acceptanceBudgetPromise) {
     acceptanceBudgetPromise = client.transferContract.getGasAndDataLimits().then((limits) => {
       return BigInt(((limits.acceptanceBudget ?? limits[0]) as bigint).toString())
+    }).catch((error) => {
+      acceptanceBudgetPromise = null
+      throw error
     })
   }
 
@@ -848,7 +857,10 @@ async function getAcceptanceBudget(client: PolygonUsdtClient) {
 async function getCalldataGasCost(client: PolygonUsdtClient) {
   if (!calldataGasCostPromise) {
     const relayHub = new Contract(polygonUsdtConfig.openGsnRelayHubContract, POLYGON_RELAY_HUB_ABI, client.provider)
-    calldataGasCostPromise = relayHub.calldataGasCost(1220).then((value: bigint) => BigInt(value.toString()))
+    calldataGasCostPromise = relayHub.calldataGasCost(1220).then((value: bigint) => BigInt(value.toString())).catch((error: unknown) => {
+      calldataGasCostPromise = null
+      throw error
+    })
   }
 
   return calldataGasCostPromise
@@ -972,7 +984,10 @@ async function getRequiredHtlcRelayGas(client: PolygonUsdtClient) {
   if (!requiredHtlcRelayGasPromise) {
     requiredHtlcRelayGasPromise = client.htlcContract.getRequiredRelayGas(
       client.htlcContract.interface.getFunction('openWithApproval')!.selector,
-    ).then(result => BigInt(result.toString()))
+    ).then(result => BigInt(result.toString())).catch((error) => {
+      requiredHtlcRelayGasPromise = null
+      throw error
+    })
   }
 
   return requiredHtlcRelayGasPromise
@@ -982,6 +997,9 @@ async function getHtlcAcceptanceBudget(client: PolygonUsdtClient) {
   if (!htlcAcceptanceBudgetPromise) {
     htlcAcceptanceBudgetPromise = client.htlcContract.getGasAndDataLimits().then((limits) => {
       return BigInt(((limits.acceptanceBudget ?? limits[0]) as bigint).toString())
+    }).catch((error) => {
+      htlcAcceptanceBudgetPromise = null
+      throw error
     })
   }
 
@@ -1599,15 +1617,6 @@ export async function persistHistoryTransaction(group: TransferGroup, address: s
   await options?.onIncomingPersisted?.(receipt)
 }
 
-function parseStoredTransaction(tx: ExternalTransaction | null) {
-  if (!tx)
-    return null
-
-  tx.invoiced = tx.invoiced ? JSON.parse(tx.invoiced as unknown as string) as { amount: number, currency: string } : undefined
-  tx.meta = tx.meta ? JSON.parse(tx.meta as unknown as string) as Record<string, any> : undefined
-  return tx
-}
-
 // Dynamic import to avoid a circular dep between useNotifications and this store.
 async function notifyFreshIncoming(txs: UserReceiptTransaction[], currentBalance: number, previousMaxTimestamp = 0) {
   const fresh = txs.filter(tx => typeof tx.timestamp === 'number' && tx.timestamp > previousMaxTimestamp)
@@ -1650,11 +1659,18 @@ async function fetchRangesParallel(
 
 export const usePolygonUsdt = defineStore('polygon-usdt', () => {
   const { polygonRpcUrl, isUsdtMaintenanceActive, usdtMaintenanceNotice } = storeToRefs(useFeatureFlags())
-  // Invalidate the cached client when the RPC URL changes from PostHog
+  // Invalidate the cached client and its lookups when the RPC URL changes from PostHog;
+  // a lookup still pending on the old provider must not block quotes on the new one
   watch(polygonRpcUrl, (newUrl) => {
     if (newUrl !== resolvedRpcUrl) {
       resolvedRpcUrl = newUrl
       clientPromise = null
+      poolAddressPromise = null
+      requiredRelayGasPromise = null
+      acceptanceBudgetPromise = null
+      calldataGasCostPromise = null
+      requiredHtlcRelayGasPromise = null
+      htlcAcceptanceBudgetPromise = null
     }
   }, { immediate: true })
 
