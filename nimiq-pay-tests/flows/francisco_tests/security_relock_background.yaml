@@ -3,7 +3,6 @@ name: Security re-lock after background
 
 tags:
   - franciscoTest
-  - quarantine
 
 env:
   # Never on screen: waiting for it is the only way to sleep in Maestro.

@@ -3,7 +3,6 @@ name: Settings currency
 
 tags:
   - franciscoTest
-  - quarantine
 
 ---
 # Scope: switching the fiat currency from USD to EUR in Settings changes the home amount

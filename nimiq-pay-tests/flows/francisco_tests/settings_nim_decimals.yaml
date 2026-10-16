@@ -3,7 +3,6 @@ name: Settings NIM decimals
 
 tags:
   - franciscoTest
-  - quarantine
   # CI skips it until the MAESTRO_TESTNET_WALLET_WORDS secret is set.
   - needsTestnetWallet
 

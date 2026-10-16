@@ -3,7 +3,6 @@ name: Security change PIN
 
 tags:
   - franciscoTest
-  - quarantine
 
 env:
   # Any 4-digit PIN other than ${PIN}.
