@@ -28,6 +28,9 @@ export const HTLC_HISTORY_CHECKED_KV_KEY = 'htlcHistoryChecked'
 // Set once a clean sweep followed every HTLC's extensions. Separate from the check because upgraded installs
 // are backfilled as checked (no hold) but may still miss a funded extension an older version never stored.
 export const HTLC_EXTENSIONS_WALKED_KV_KEY = 'htlcExtensionsWalked'
+// Set once a clean sweep included the cosigner's list of our HTLCs. Upgraded installs are backfilled as
+// checked, so this flag, not the check, decides whether to ask the cosigner on its own.
+export const COSIGNER_HTLCS_LISTED_KV_KEY = 'cosignerHtlcsListed'
 // Persisted so restarts don't restart the hold and block HTLC creation forever.
 export const HTLC_CHECK_HOLD_STARTED_KV_KEY = 'htlcCheckHoldStartedAt'
 

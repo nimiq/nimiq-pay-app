@@ -7,7 +7,7 @@ import { useLogger } from '@/composables/useLogger'
 import { i18n } from '@/i18n/i18n-setup'
 import { trackSyncSlow } from '@/lib/analytics'
 import { isMockEnabled } from '@/lib/mock-mode'
-import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
+import { COSIGNER_HTLCS_LISTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
 import { kv } from '@/stores/app'
 import { useConn } from '@/stores/conn'
@@ -52,7 +52,7 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
   const { getBalance } = useNimiqNetwork()
   const { consensus, headTimestamp } = storeToRefs(useNimiqNetwork())
   const { isSendingTx } = storeToRefs(useLocks())
-  const { pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, isTransactionPending, isVerifyingRemoteSignersDb, htlcHistoryChecked, htlcExtensionsWalked } = storeToRefs(useSyncState())
+  const { pendingRemoteDrainTxs, pendingTransactions, pendingHtlcCreationTransactions, isTransactionPending, isVerifyingRemoteSignersDb, htlcHistoryChecked, htlcExtensionsWalked, cosignerHtlcsListed } = storeToRefs(useSyncState())
   const { loadHtlcHistoryFlags } = useSyncState()
   const { updateBalances } = useSyncBalances()
   const { sendTx } = useTransactions()
@@ -196,13 +196,15 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
   async function recoverStrayFundedHtlc(
     discovery: Pick<RemoteSignerDiscoveryResult, 'createdHtlcs' | 'historyComplete'>,
     context: WalletContext,
+    // From the cosigner, which already holds extension HTLCs: checked on chain below but not walked.
+    listedHtlcs: string[] = [],
   ): Promise<'recovering' | 'clean' | 'unclear'> {
     const storedAddresses = (await getAllRemoteSigners()).map(signer => signer.address.toUserFriendlyAddress())
     if (!isWalletContextCurrent(context))
       return 'unclear'
     const addresses = [...new Set([...discovery.createdHtlcs, ...storedAddresses])]
     let complete = discovery.historyComplete
-    if (addresses.length === 0)
+    if (addresses.length === 0 && listedHtlcs.length === 0)
       return complete ? 'clean' : 'unclear'
 
     try {
@@ -232,6 +234,14 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
             addresses.push(transaction.recipient)
           }
         }
+      }
+    }
+
+    const candidates = new Set(addresses)
+    for (const address of listedHtlcs) {
+      if (!candidates.has(address)) {
+        candidates.add(address)
+        addresses.push(address)
       }
     }
 
@@ -388,7 +398,8 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     return result?.outcome === 'submitted' || result?.outcome === 'unknown'
   }
 
-  async function verifyRemoteSignersDb({ discoveryResult }: { discoveryResult?: RemoteSignerDiscoveryResult } = {}) {
+  // forceCosignerListing: a manual scan asks the cosigner even after a clean sweep included its list.
+  async function verifyRemoteSignersDb({ discoveryResult, forceCosignerListing }: { discoveryResult?: RemoteSignerDiscoveryResult, forceCosignerListing?: boolean } = {}) {
     // No client in mock mode — discoverRemoteSignersFromBlockchain would await it forever
     // and wedge pull-to-refresh.
     if (isMockEnabled)
@@ -414,29 +425,45 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     }, VERIFY_WEDGED_MS)
     let result: RemoteSignerDiscoveryResult | undefined
     try {
+      // Until a clean sweep has included it once, the cosigner lists our HTLCs in one query, in parallel
+      // with the chain scan, which can stall for minutes. Only the chain scan can mark the history clean.
+      const listing = forceCosignerListing || !(await loadHtlcHistoryFlags()).listed ? remoteSignerStore.listCosignerHtlcs() : undefined
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
       const scan = discoveryResult ? undefined : await scanLocalHtlcCreations()
+      const listed = await listing
       const sweepInput = discoveryResult ?? (scan && { createdHtlcs: scan.creations.map(transaction => transaction.recipient), historyComplete: scan.historyComplete })
       // The scan's own context: a wallet switch since then must not sweep (and mark clean) the wrong wallet.
       const sweepContext = scan?.context ?? remoteSignerStore.getWalletContext()
       const sweep = sweepContext && sweepInput
-        ? await recoverStrayFundedHtlc(sweepInput, sweepContext).catch((error) => {
+        ? await recoverStrayFundedHtlc(sweepInput, sweepContext, listed).catch((error) => {
           // A failed sweep proves nothing; discovery and reconciliation below still run.
             logger.error('Error while sweeping for stray funded HTLCs', error)
             return 'unclear' as const
           })
         : 'unclear'
-      // A clean sweep before the walk was recorded followed every extension, so it settles both.
-      if (sweep === 'clean' && !htlcExtensionsWalked.value && sweepContext && isWalletContextCurrent(sweepContext)) {
-        try {
-          await kv().setItem(HTLC_HISTORY_CHECKED_KV_KEY, '1')
-          await kv().setItem(HTLC_EXTENSIONS_WALKED_KV_KEY, '1')
-          htlcHistoryChecked.value = true
-          htlcExtensionsWalked.value = true
+      if (sweep === 'clean' && sweepContext && isWalletContextCurrent(sweepContext)) {
+        // A clean sweep before the walk was recorded followed every extension, so it settles both.
+        if (!htlcExtensionsWalked.value) {
+          try {
+            await kv().setItem(HTLC_HISTORY_CHECKED_KV_KEY, '1')
+            await kv().setItem(HTLC_EXTENSIONS_WALKED_KV_KEY, '1')
+            htlcHistoryChecked.value = true
+            htlcExtensionsWalked.value = true
+          }
+          catch (error) {
+            // Unrecorded, the next clean sweep records it; discovery and reconciliation still run.
+            logger.error('Failed to record the HTLC history check', error)
+          }
         }
-        catch (error) {
-          // Unrecorded, the next clean sweep records it; discovery and reconciliation still run.
-          logger.error('Failed to record the HTLC history check', error)
+        // A drain that is deferred or fails leaves the sweep unclean, so the cosigner is asked again later.
+        if (listed && !cosignerHtlcsListed.value) {
+          try {
+            await kv().setItem(COSIGNER_HTLCS_LISTED_KV_KEY, '1')
+            cosignerHtlcsListed.value = true
+          }
+          catch (error) {
+            logger.error('Failed to record the cosigner HTLC listing', error)
+          }
         }
       }
       if (sweep === 'recovering') {

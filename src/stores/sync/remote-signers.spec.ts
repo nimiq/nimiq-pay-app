@@ -3,7 +3,7 @@ import './__tests__/setup'
 import { createPinia, setActivePinia } from 'pinia'
 import type { ValidatedRemoteSigner } from '@/stores/remote-signer'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
+import { COSIGNER_HTLCS_LISTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
 import { Transfer } from '@/types/transactions'
 import { createAddress, remoteSignerFixture, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
 
@@ -885,6 +885,105 @@ describe('useSyncRemoteSigners', () => {
       await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([strayAddress]) })
 
       expect(state.sendTx).not.toHaveBeenCalled()
+    })
+
+    it('drains a funded HTLC the cosigner lists while local history stalls', async () => {
+      const context = state.getWalletContext()
+      state.scanLocalHtlcCreations.mockResolvedValue({ context, creations: [], historyComplete: false, sawHtlcTransaction: false, errors: ['Operation timed out'] })
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      mockAccounts({ [strayAddress]: htlcAccount(6_370_006_413) })
+      mockRecoverableStray(6_370_006_413)
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+      expect(state.listCosignerHtlcs).toHaveBeenCalledOnce()
+      expect(state.registerValidatedRemoteSigner).toHaveBeenCalledExactlyOnceWith({ address: strayAddress })
+      expect(state.sendTx).toHaveBeenCalledOnce()
+      expect(persistedHtlcHistoryCheck()).toBe(false)
+    })
+
+    it('ignores a listed HTLC that the chain does not show as ours', async () => {
+      const context = state.getWalletContext()
+      state.scanLocalHtlcCreations.mockResolvedValue({ context, creations: [], historyComplete: false, sawHtlcTransaction: false, errors: [] })
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      mockAccounts({ [strayAddress]: htlcAccount(860_000, { sender: 'NQ00 SOMEONE ELSE' }) })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+      expect(state.registerValidatedRemoteSigner).not.toHaveBeenCalled()
+      expect(state.sendTx).not.toHaveBeenCalled()
+    })
+
+    it('does not walk the history of HTLCs the cosigner lists', async () => {
+      const context = state.getWalletContext()
+      state.scanLocalHtlcCreations.mockResolvedValue({ context, creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] })
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+      expect(state.client.getAccounts).toHaveBeenCalled()
+      expect(state.getAllTransactionsForAddress.mock.calls.map(([address]) => (address as any).toUserFriendlyAddress())).not.toContain(strayAddress)
+    })
+
+    it('asks the cosigner on request even when the HTLC history is checked', async () => {
+      state.kvGetItem.mockImplementation(key => Promise.resolve(key === HTLC_HISTORY_CHECKED_KV_KEY || key === HTLC_EXTENSIONS_WALKED_KV_KEY ? '1' : undefined))
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+      mockRecoverableStray(860_000)
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress]), forceCosignerListing: true })
+
+      expect(state.listCosignerHtlcs).toHaveBeenCalledOnce()
+      expect(state.sendTx).toHaveBeenCalledOnce()
+    })
+
+    it('asks the cosigner once on an upgraded install whose history is already checked', async () => {
+      state.kvGetItem.mockImplementation(key => Promise.resolve(key === HTLC_HISTORY_CHECKED_KV_KEY || key === HTLC_EXTENSIONS_WALKED_KV_KEY ? '1' : undefined))
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress]) })
+
+      expect(state.listCosignerHtlcs).toHaveBeenCalledOnce()
+    })
+
+    it('does not ask the cosigner once a clean sweep confirmed its listing', async () => {
+      state.kvGetItem.mockImplementation(key => Promise.resolve(key === COSIGNER_HTLCS_LISTED_KV_KEY ? '1' : undefined))
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress]) })
+
+      expect(state.listCosignerHtlcs).not.toHaveBeenCalled()
+    })
+
+    it('records the cosigner listing after a clean sweep that included it', async () => {
+      state.listCosignerHtlcs.mockResolvedValue([])
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([]) })
+
+      expect(state.kvSetItem).toHaveBeenCalledWith(COSIGNER_HTLCS_LISTED_KV_KEY, '1')
+    })
+
+    it('keeps asking the cosigner when its listing was unavailable', async () => {
+      state.listCosignerHtlcs.mockResolvedValue(undefined)
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([]) })
+
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(COSIGNER_HTLCS_LISTED_KV_KEY, '1')
+    })
+
+    it('keeps asking the cosigner while the sweep is not clean', async () => {
+      state.listCosignerHtlcs.mockResolvedValue([])
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([], false, false) })
+
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(COSIGNER_HTLCS_LISTED_KV_KEY, '1')
     })
 
     it('recovers a lone funded HTLC when no signer is active', async () => {

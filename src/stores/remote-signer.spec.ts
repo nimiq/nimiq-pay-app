@@ -78,6 +78,7 @@ const rawState = vi.hoisted(() => {
     hasError: false,
     status: 200,
   }))
+  const getOwnerWallets = vi.fn((_arg?: unknown): Promise<unknown> => Promise.resolve({ data: [], error: undefined, hasError: false, status: 200 }))
   const getRemoteSigner = vi.fn((): Promise<unknown> => Promise.resolve({
     data: undefined,
     error: { message: 'not found', statusCode: 404, error: 'NOT_FOUND' },
@@ -119,6 +120,7 @@ const rawState = vi.hoisted(() => {
     getAccounts,
     getStatus,
     getRemoteSigner,
+    getOwnerWallets,
     query,
     run,
     runSet,
@@ -284,6 +286,7 @@ vi.mock('@/composables/useApi', () => ({
   useRemoteSignerApi: () => ({
     getStatus: state.getStatus,
     getRemoteSigner: state.getRemoteSigner,
+    getOwnerWallets: state.getOwnerWallets,
   }),
 }))
 
@@ -353,6 +356,8 @@ describe('useRemoteSigner', () => {
       status: 200,
     })
     state.getRemoteSigner.mockReset()
+    state.getOwnerWallets.mockReset()
+    state.getOwnerWallets.mockResolvedValue({ data: [], error: undefined, hasError: false, status: 200 })
     state.getRemoteSigner.mockResolvedValue({
       data: undefined,
       error: { message: 'not found', statusCode: 404, error: 'NOT_FOUND' },
@@ -1981,7 +1986,7 @@ describe('useRemoteSigner', () => {
   })
 
   it('drops the HTLC history check together with the purged signers', async () => {
-    const { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } = await import('@/lib/sql-queries')
+    const { COSIGNER_HTLCS_LISTED_KV_KEY, HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } = await import('@/lib/sql-queries')
     const { useSyncState } = await import('@/stores/sync/state')
     const { useRemoteSigner } = await import('./remote-signer')
     useSyncState().htlcHistoryChecked = true
@@ -1994,6 +1999,7 @@ describe('useRemoteSigner', () => {
       { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
       { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
+      { statement: SQLQuery.DeleteKv, values: [COSIGNER_HTLCS_LISTED_KV_KEY] },
     ])
     // handleFunds trusts the cached flag, so a stale `true` would skip the hold for the new signer set.
     expect(useSyncState().htlcHistoryChecked).toBe(false)
@@ -3361,6 +3367,48 @@ describe('useRemoteSigner', () => {
     expect(state.run).toHaveBeenCalledTimes(5)
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [1, 'NQ20 TEST REMOTE ADDRESS'])
     expect(state.run).toHaveBeenCalledWith(expect.any(String), [5, 'NQ24 TEST REMOTE ADDRESS'])
+  })
+
+  describe('listCosignerHtlcs', () => {
+    const listedAddress = 'NQ33 TEST LISTED HTLC'
+
+    it('lists the HTLC addresses the cosigner holds for the local wallet', async () => {
+      state.getOwnerWallets.mockResolvedValue({ data: [{ address: listedAddress }, { address: 'malformed' }], error: undefined, hasError: false, status: 200 })
+      const { useRemoteSigner } = await import('./remote-signer')
+
+      const addresses = await useRemoteSigner().listCosignerHtlcs()
+
+      expect(addresses).toEqual([listedAddress])
+      expect(state.getOwnerWallets).toHaveBeenCalledExactlyOnceWith({ owner: state.localAddress })
+    })
+
+    it('asks the cosigner only once per wallet', async () => {
+      state.getOwnerWallets.mockResolvedValue({ data: [{ address: listedAddress }], error: undefined, hasError: false, status: 200 })
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+
+      await store.listCosignerHtlcs()
+      const addresses = await store.listCosignerHtlcs()
+
+      expect(addresses).toEqual([listedAddress])
+      expect(state.getOwnerWallets).toHaveBeenCalledOnce()
+    })
+
+    it('waits 5 minutes before asking again after a failure', async () => {
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+      state.getOwnerWallets.mockResolvedValue({ data: undefined, error: { message: 'unknown event', statusCode: 400, error: 'Bad Request' }, hasError: true, status: 400 })
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+
+      expect(await store.listCosignerHtlcs()).toBeUndefined()
+      expect(await store.listCosignerHtlcs()).toBeUndefined()
+      expect(state.getOwnerWallets).toHaveBeenCalledOnce()
+
+      now.mockReturnValue(1_000_000 + 5 * 60 * 1000)
+      await store.listCosignerHtlcs()
+      expect(state.getOwnerWallets).toHaveBeenCalledTimes(2)
+      now.mockRestore()
+    })
   })
 
   describe('registerOwnHtlcIfMissing', () => {
