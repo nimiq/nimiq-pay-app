@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer'
 import { Toast } from '@capacitor/toast'
 import { Interface, parseUnits } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, reactive } from 'vue'
 import { Asset } from '@/lib/assets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { MiniAppHost } from './useMiniAppHost'
@@ -44,6 +45,7 @@ const {
   addressesEqual: vi.fn(),
   createBirpc: vi.fn(() => ({
     $close: vi.fn(),
+    clearAccountCache: vi.fn(),
     fullscreenChanged: { asEvent: vi.fn() },
     onChainAdded: { asEvent: vi.fn() },
     onChainChanged: { asEvent: vi.fn() },
@@ -195,6 +197,32 @@ async function createPermissionHost(options: { confirmed?: boolean } = {}) {
     requestUserConfirmation: confirmationPrompt,
   }
 }
+
+describe('remote address watcher', () => {
+  it('clears the Nimiq account cache only when the address string changes', async () => {
+    const signer = reactive<{ remoteAddress?: { toUserFriendlyAddress: () => string } }>({
+      remoteAddress: { toUserFriendlyAddress: () => 'NQ11 REMOTE' },
+    })
+    useRemoteSigner.mockReturnValue(signer)
+    const { host } = await createPermissionHost()
+    const bridge = createBirpc.mock.results.at(-1)!.value
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ11 REMOTE' }
+    await nextTick()
+    expect(bridge.clearAccountCache).not.toHaveBeenCalled()
+
+    signer.remoteAddress = { toUserFriendlyAddress: () => 'NQ22 REMOTE' }
+    await nextTick()
+    expect(bridge.clearAccountCache).toHaveBeenCalledOnce()
+    expect(bridge.clearAccountCache).toHaveBeenCalledWith('nimiq')
+
+    signer.remoteAddress = undefined
+    await nextTick()
+    expect(bridge.clearAccountCache).toHaveBeenCalledTimes(2)
+
+    await host.destroy()
+  })
+})
 
 describe('fullscreen host API', () => {
   it('changes and reads native fullscreen without a host confirmation', async () => {

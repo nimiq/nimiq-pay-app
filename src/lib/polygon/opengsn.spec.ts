@@ -1,13 +1,48 @@
 import { Interface } from 'ethers'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   buildDescendingBlockRanges,
   buildRelayAddressUrl,
   createOpenGsnConfig,
   fetchRelayRegistrations,
+  getRelayAddr,
 } from './opengsn'
 
 describe('polygon opengsn helpers', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('times out a relay ping whose socket never answers', async () => {
+    vi.useFakeTimers()
+    const fetch = vi.fn((_url: string, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(init.signal!.reason))
+    }))
+    vi.stubGlobal('fetch', fetch)
+
+    const relayAddr = getRelayAddr('https://relay.example')
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await expect(relayAddr).resolves.toBeNull()
+    expect(fetch).toHaveBeenCalledWith('https://relay.example/getaddr', { signal: expect.any(AbortSignal) })
+  })
+
+  it('times out a relay ping whose body never finishes', async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => ({
+      ok: true,
+      json: () => new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal!.reason))
+      }),
+    })))
+
+    const relayAddr = getRelayAddr('https://relay.example')
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await expect(relayAddr).resolves.toBeNull()
+  })
+
   it('normalizes relay getaddr endpoints', () => {
     expect(buildRelayAddressUrl('https://relay.example')).toBe('https://relay.example/getaddr')
     expect(buildRelayAddressUrl('https://relay.example/')).toBe('https://relay.example/getaddr')

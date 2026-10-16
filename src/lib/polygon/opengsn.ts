@@ -18,6 +18,7 @@ const logger = useLogger('OpenGSN')
 export const POLYGON_BLOCKS_PER_MINUTE = 30
 export const DEFAULT_MAX_PCT_RELAY_FEE = 70n
 export const DEFAULT_MAX_BASE_RELAY_FEE = 0n
+const DEFAULT_RELAY_PING_TIMEOUT_MS = 10_000
 
 const relayHubInterface = new Interface(POLYGON_RELAY_HUB_ABI)
 
@@ -35,7 +36,7 @@ export function createOpenGsnConfig(config: PolygonOpenGsnConfig): Required<Poly
     relayHubAddress: config.relayHubAddress,
     networkId: config.networkId,
     rpcMaxBlockRange: config.rpcMaxBlockRange ?? 3_000,
-    relayPingTimeoutMs: config.relayPingTimeoutMs ?? 10_000,
+    relayPingTimeoutMs: config.relayPingTimeoutMs ?? DEFAULT_RELAY_PING_TIMEOUT_MS,
     relayVersionPrefix: config.relayVersionPrefix ?? '2.',
     preferredRelaySuffixes: config.preferredRelaySuffixes ?? [],
     maxLookbackBlocks: config.maxLookbackBlocks ?? 60 * POLYGON_BLOCKS_PER_MINUTE,
@@ -60,12 +61,21 @@ export function buildDescendingBlockRanges(height: number, untilBlock: number, b
   return ranges
 }
 
-export async function getRelayAddr(relayUrl: string, signal?: AbortSignal) {
-  const response = await fetch(buildRelayAddressUrl(relayUrl), { signal }).catch(() => null)
-  if (!response?.ok)
-    return null
+// Always bounded: fetch has no default timeout, and a stalled relay socket would otherwise hang fee quoting forever.
+export async function getRelayAddr(relayUrl: string, timeoutMs = DEFAULT_RELAY_PING_TIMEOUT_MS, signal?: AbortSignal) {
+  return withTimeout(async (timeoutSignal) => {
+    try {
+      const response = await fetch(buildRelayAddressUrl(relayUrl), { signal: timeoutSignal })
+      if (!response.ok)
+        return null
 
-  return response.json() as Promise<RelayAddressInfo>
+      return await (response.json() as Promise<RelayAddressInfo>)
+    }
+    catch (error) {
+      logger.log('Relay ping failed', relayUrl, error)
+      return null
+    }
+  }, timeoutMs, signal)
 }
 
 export async function fetchRelayRegistrations(
@@ -191,11 +201,7 @@ async function mapRelayRegistrationToCandidate(
   signal?: AbortSignal,
 ) {
   const pingStartedAt = Date.now()
-  const relayAddr = await withTimeout(
-    s => getRelayAddr(registration.url, s),
-    config.relayPingTimeoutMs,
-    signal,
-  )
+  const relayAddr = await getRelayAddr(registration.url, config.relayPingTimeoutMs, signal)
   if (!relayAddr?.ready) {
     logger.log('Skipping relay: not ready', registration.url)
     return null
