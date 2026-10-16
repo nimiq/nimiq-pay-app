@@ -34,7 +34,7 @@ const { consensus, head, height, peerCount, client, networkName, headTimestamp }
 const { localAddress, localBalance } = storeToRefs(useLocalWallet())
 const remoteSignerStore = useRemoteSigner()
 const { remoteAddress, remoteBalance, start: validityStart, end: validityEnd, isRemoteOk, isHtlcActive, hasHtlcExpired, remoteHeight } = storeToRefs(remoteSignerStore)
-const { discoverRemoteSignersFromBlockchain, validateRemoteSignerAddress } = remoteSignerStore
+const { discoverRemoteSignersFromBlockchain, listCosignerHtlcs, validateRemoteSignerAddress } = remoteSignerStore
 const { recoverRemoteSigner, verifyRemoteSignersDb } = useSync()
 const { showHiddenTransactions } = storeToRefs(useApp())
 const { polygonRpcUrl } = storeToRefs(useFeatureFlags())
@@ -136,11 +136,14 @@ async function scanForMissingHtlcs() {
   isHtlcRecoveryBusy.value = true
   htlcStatus.value = 'Scanning local transaction history…'
   try {
+    // Started first so the cosigner answers while the chain scan pages; the sweep reuses this request.
+    const listing = listCosignerHtlcs()
     const result = await discoverRemoteSignersFromBlockchain()
-    await verifyRemoteSignersDb({ discoveryResult: result })
+    await verifyRemoteSignersDb({ discoveryResult: result, forceCosignerListing: true })
+    const listed = await listing
     const completeness = result.localComplete ? '' : ' History scan was incomplete.'
     const errors = result.errors.length ? ` ${result.errors.join('; ')}` : ''
-    htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known.${completeness}${errors}`
+    htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known, ${listed ? `${listed.length} listed by the cosigner` : 'cosigner listing unavailable'}.${completeness}${errors}`
   }
   catch (error) {
     setHtlcRecoveryError(error)

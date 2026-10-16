@@ -6,7 +6,7 @@ import { computed, readonly, ref, watch } from 'vue'
 import { RemoteStatus, useRemoteSignerApi } from '@/composables/useApi'
 import { useLogger } from '@/composables/useLogger'
 import { nimiqPayCosignerPublicKeys } from '@/lib'
-import { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
+import { COSIGNER_HTLCS_LISTED_KV_KEY, HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY, SQLQuery } from '@/lib/sql-queries'
 import { promiseWithTimeout } from '@/lib/utils'
 import { useConn } from '@/stores/conn'
 import { useLocalWallet } from '@/stores/local-wallet'
@@ -19,6 +19,7 @@ export type HomeBalanceState = 'loading' | 'resolved-empty' | 'resolved-remote'
 const REMOTE_SIGNER_BALANCE_BATCH_SIZE = 20
 const HISTORY_PAGE_SIZE = 100
 const DISCOVER_TIMEOUT_MS = 30_000
+const COSIGNER_LISTING_RETRY_MS = 5 * 60 * 1000
 
 export interface RemoteSignerValidationDetails {
   address: string
@@ -256,11 +257,13 @@ function useRemoteSignerDb() {
         { statement: SQLQuery.DeleteKv, values: [HTLC_HISTORY_CHECKED_KV_KEY] },
         { statement: SQLQuery.DeleteKv, values: [HTLC_EXTENSIONS_WALKED_KV_KEY] },
         { statement: SQLQuery.DeleteKv, values: [HTLC_CHECK_HOLD_STARTED_KV_KEY] },
+        { statement: SQLQuery.DeleteKv, values: [COSIGNER_HTLCS_LISTED_KV_KEY] },
       ]))
       await write
       const syncState = useSyncState()
       syncState.htlcHistoryChecked = false
       syncState.htlcExtensionsWalked = false
+      syncState.cosignerHtlcsListed = false
       syncState.htlcCheckHoldStartedAt = undefined
     },
 
@@ -335,7 +338,7 @@ function useRemoteSignerDb() {
 export const useRemoteSigner = defineStore('remote-signer', () => {
   const { createHistoryClient, getAccount, getBalance } = useNimiqNetwork()
   const { headTimestamp, height, client, consensus, networkName } = storeToRefs(useNimiqNetwork())
-  const { getStatus, getRemoteSigner } = useRemoteSignerApi()
+  const { getStatus, getRemoteSigner, getOwnerWallets } = useRemoteSignerApi()
   const { localAddress, hasLocalWallet } = storeToRefs(useLocalWallet())
   const { isProcessingRemote } = storeToRefs(useLocks())
   const { getSignerWriteRevision, getActiveRemoteSigner, getAllRemoteSigners, setRemoteSigner, updateBalance, updateActiveWallet: _updateActiveWallet, deactivateAllRemoteSigners, deactivateRemoteSignerInDb, insertInactiveRemoteSigner, upsertTargetRemoteSigner, purgeRemoteSigners } = useRemoteSignerDb()
@@ -1419,6 +1422,50 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     }
   }
 
+  // One cosigner DB query per wallet and network per session; a failure waits before asking again.
+  let cosignerListing: { identity: WalletIdentity, request?: Promise<string[] | undefined>, retryAt?: number } | undefined
+
+  /**
+   * HTLC addresses the cosigner created for the local wallet, retired ones included. Unverified:
+   * callers must confirm each one on chain before acting. Undefined when the cosigner can't answer.
+   */
+  async function listCosignerHtlcs(): Promise<string[] | undefined> {
+    const context = getWalletContext()
+    if (!context)
+      return undefined
+    if (!cosignerListing || cosignerListing.identity.network !== context.network || cosignerListing.identity.owner !== context.owner)
+      cosignerListing = { identity: { network: context.network, owner: context.owner } }
+    const listing = cosignerListing
+    if (!listing.request && listing.retryAt !== undefined && Date.now() < listing.retryAt)
+      return undefined
+
+    // The settled request is the session memo; only a failure clears it.
+    listing.request ??= (async () => {
+      try {
+        const { data, error } = await promiseWithTimeout(getOwnerWallets({ owner: context.address }), DISCOVER_TIMEOUT_MS)
+        if (error || !data)
+          throw new Error(error?.message ?? 'Invalid cosigner response')
+        const addresses = data.flatMap((wallet) => {
+          try {
+            return [Nimiq.Address.fromString(wallet.address).toUserFriendlyAddress()]
+          }
+          catch {
+            return []
+          }
+        })
+        logger.log('📇 Cosigner listed HTLCs', { count: addresses.length })
+        return addresses
+      }
+      catch (error) {
+        logger.warn('📇 Cosigner HTLC listing unavailable', error instanceof Error ? error.message : String(error))
+        listing.request = undefined
+        listing.retryAt = Date.now() + COSIGNER_LISTING_RETRY_MS
+        return undefined
+      }
+    })()
+    return listing.request
+  }
+
   async function discoverRemoteSignersFromBlockchain(): Promise<RemoteSignerDiscoveryResult> {
     const context = localAddress.value && client.value ? getWalletContext() : undefined
     if (!context)
@@ -1838,6 +1885,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     resolveAddressSpecificSignerMetadata,
     updateSignersTableBalance,
     discoverRemoteSignersFromBlockchain,
+    listCosignerHtlcs,
     scanLocalHtlcCreations,
     validateRemoteSignerAddress,
     registerValidatedRemoteSigner,

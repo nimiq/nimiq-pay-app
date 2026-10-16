@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   alertRole: 'confirm',
   clearTxHistory: vi.fn(),
   discoverRemoteSignersFromBlockchain: vi.fn(),
+  listCosignerHtlcs: vi.fn(),
   getTransactionsByAddress: vi.fn(),
   purgeRemoteSigners: vi.fn(),
   query: vi.fn(),
@@ -195,6 +196,7 @@ vi.mock('@/stores/remote-signer', () => ({
   useRemoteSigner: () => ({
     ...stores.remoteSigner,
     discoverRemoteSignersFromBlockchain: state.discoverRemoteSignersFromBlockchain,
+    listCosignerHtlcs: state.listCosignerHtlcs,
     purgeRemoteSigners: state.purgeRemoteSigners,
     validateRemoteSignerAddress: state.validateRemoteSignerAddress,
   }),
@@ -277,6 +279,7 @@ describe('dev modal HTLC recovery', () => {
     state.setNetworkOverride.mockReset()
     state.validateRemoteSignerAddress.mockReset().mockResolvedValue(importable)
     state.verifyRemoteSignersDb.mockReset().mockResolvedValue(undefined)
+    state.listCosignerHtlcs.mockReset().mockResolvedValue([])
   })
 
   it('does not scan transaction history when the modal opens', async () => {
@@ -459,8 +462,25 @@ describe('dev modal HTLC recovery', () => {
     expect(state.discoverRemoteSignersFromBlockchain).toHaveBeenCalledOnce()
     expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({
       discoveryResult: { added: 0, alreadyKnown: 0, localComplete: true, errors: [], createdHtlcs: [], historyComplete: true },
+      forceCosignerListing: true,
     })
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Scan complete')
+  })
+
+  it('asks the cosigner before the chain scan and shows how many HTLCs it listed', async () => {
+    let finishDiscovery = () => {}
+    state.discoverRemoteSignersFromBlockchain.mockReturnValueOnce(new Promise((resolve) => {
+      finishDiscovery = () => resolve({ added: 0, alreadyKnown: 0, localComplete: false, errors: [], createdHtlcs: [], historyComplete: false })
+    }))
+    state.listCosignerHtlcs.mockResolvedValue(['NQ33 TEST LISTED HTLC', 'NQ34 TEST LISTED HTLC'])
+    const wrapper = await mountModal()
+
+    await wrapper.get('[data-testid="htlc-scan"]').trigger('click')
+    expect(state.listCosignerHtlcs).toHaveBeenCalledOnce()
+    finishDiscovery()
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('2 listed by the cosigner')
   })
 
   it('preserves incomplete scan results for reconciliation and displays the failure', async () => {
@@ -478,7 +498,7 @@ describe('dev modal HTLC recovery', () => {
     await wrapper.get('[data-testid="htlc-scan"]').trigger('click')
     await flushPromises()
 
-    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ discoveryResult })
+    expect(state.verifyRemoteSignersDb).toHaveBeenCalledWith({ discoveryResult, forceCosignerListing: true })
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('History scan was incomplete')
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('Local history lookup timed out')
     expect(wrapper.get<HTMLButtonElement>('[data-testid="htlc-scan"]').element.disabled).toBe(false)

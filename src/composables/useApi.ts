@@ -310,6 +310,7 @@ export function useRemoteSignerApi() {
   interface GetTransactionByHashArg { hash: MaybeRef<string> }
   interface GetTransactionsByAddressArg { address: MaybeRef<string> }
   interface GetRemoteSignerArg { address: MaybeRef<Address>, includeInactive?: boolean }
+  interface GetOwnerWalletsArg { owner: MaybeRef<Address> }
   interface SendTransactionArg { address: MaybeRef<string>, tx: MaybeRef<NimiqTransaction> }
   interface SendRawTransactionArg { address: MaybeRef<string>, rawTx: MaybeRef<string> }
   interface GetTransactionStateArg { hash: MaybeRef<string> }
@@ -346,12 +347,21 @@ export function useRemoteSignerApi() {
     return { data, error: undefined, status, hasError }
   }
 
+  // Every wallet the cosigner created for an owner, retired ones included, without balances.
+  async function getOwnerWallets({ owner }: GetOwnerWalletsArg): AsyncResultApi<Omit<GetRemoteSignerRes, 'balance'>[], RemoteErrorRes> {
+    const { data, error, status, hasError } = await remoteSignerWsApi<Omit<GetRemoteSignerRes, 'balance'>[], RemoteErrorRes>('owner-wallets', { owner: v(owner).toUserFriendlyAddress() })
+    if (error || !Array.isArray(data) || hasError)
+      return { data: undefined, status, hasError: true, error: error || { message: 'Invalid cosigner response', statusCode: 520, error: 'Unknown Error' } }
+    return { data, error: undefined, status, hasError }
+  }
+
   return {
     getStatus,
     getTransactionByHash: ({ hash }: GetTransactionByHashArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('tx', { hash: v(hash) }),
     getTransactionsByAddress: ({ address }: GetTransactionsByAddressArg) => remoteSignerWsApi<Transaction[], RemoteErrorRes>('wallet-txs', { address: v(address) }),
     getTransactionState: ({ hash }: GetTransactionStateArg) => remoteSignerWsApi<GetTransactionStateRes, RemoteErrorRes>('tx-state', { hash: v(hash) }),
     getRemoteSigner,
+    getOwnerWallets,
     sendTransaction: ({ address, tx }: SendTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-tx', { address: v(address), payload: Nimiq.Transaction.fromAny(v(tx)).toPlain() }),
     sendRawTransaction: ({ address, ...body }: SendRawTransactionArg) => remoteSignerWsApi<Transaction, RemoteErrorRes>('wallet-send-raw-tx', { address: v(address), payload: body }),
   }

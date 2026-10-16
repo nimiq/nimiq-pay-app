@@ -7,7 +7,7 @@ import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { useLogger } from '@/composables/useLogger'
 import { trackFundsBlocked } from '@/lib/analytics'
-import { HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
+import { COSIGNER_HTLCS_LISTED_KV_KEY, HTLC_EXTENSIONS_WALKED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
 import { kv } from '@/stores/app'
 import { useLocalWallet } from '@/stores/local-wallet'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
@@ -67,6 +67,7 @@ export const useSyncState = defineStore('sync-state', () => {
   // Undefined until read from this wallet's DB; sync can start before syncWallets loads it.
   const htlcHistoryChecked = shallowRef<boolean>()
   const htlcExtensionsWalked = shallowRef<boolean>()
+  const cosignerHtlcsListed = shallowRef<boolean>()
   const htlcCheckHoldStartedAt = shallowRef<number>()
   const lastFundsBlockReason = shallowRef<FundsBlockReason>()
   // handleFunds runs on every head, so a lasting block would repeat each second; once per reason per wallet.
@@ -93,18 +94,19 @@ export const useSyncState = defineStore('sync-state', () => {
 
   // Logout and restore reload the page and purgeRemoteSigners resets these, so a cached value is never stale.
   async function loadHtlcHistoryFlags() {
-    if (htlcHistoryChecked.value === undefined || htlcExtensionsWalked.value === undefined) {
+    if (htlcHistoryChecked.value === undefined || htlcExtensionsWalked.value === undefined || cosignerHtlcsListed.value === undefined) {
       try {
-        const [checked, walked] = await Promise.all([kv().getItem(HTLC_HISTORY_CHECKED_KV_KEY), kv().getItem(HTLC_EXTENSIONS_WALKED_KV_KEY)])
+        const [checked, walked, listed] = await Promise.all([kv().getItem(HTLC_HISTORY_CHECKED_KV_KEY), kv().getItem(HTLC_EXTENSIONS_WALKED_KV_KEY), kv().getItem(COSIGNER_HTLCS_LISTED_KV_KEY)])
         htlcHistoryChecked.value ??= checked === '1'
         htlcExtensionsWalked.value ??= walked === '1'
+        cosignerHtlcsListed.value ??= listed === '1'
       }
       catch (error) {
         // Unloaded reads as unchecked, which keeps the hold: the safe side.
         logger.error('Failed to load the HTLC history check state', error)
       }
     }
-    return { checked: htlcHistoryChecked.value, walked: htlcExtensionsWalked.value }
+    return { checked: htlcHistoryChecked.value, walked: htlcExtensionsWalked.value, listed: cosignerHtlcsListed.value }
   }
 
   function reportFundsBlocked(reason: FundsBlockReason, props?: Record<string, unknown>) {
@@ -131,6 +133,7 @@ export const useSyncState = defineStore('sync-state', () => {
     walletContextGeneration,
     htlcHistoryChecked,
     htlcExtensionsWalked,
+    cosignerHtlcsListed,
     htlcCheckHoldStartedAt,
     lastFundsBlockReason,
     reportFundsBlocked,
