@@ -113,6 +113,8 @@ vi.mock('@/lib/site-metadata', () => ({
 }))
 
 vi.mock('@/lib/analytics', () => ({ trackDAppClosed, trackDAppOpened }))
+const { noteLaunch } = vi.hoisted(() => ({ noteLaunch: vi.fn() }))
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => ({ noteLaunch }) }))
 
 vi.mock('@/lib', () => ({
   get isDev() { return false },
@@ -170,6 +172,25 @@ describe('mini-app-launcher', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as [[{ url: string }]]
     expect(firstArg.url).toBe('https://example.com/')
+  })
+
+  it('notes each opening, so the widget gallery can find the Mini App', async () => {
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'example.com', source: 'deeplink' })
+
+    expect(noteLaunch).toHaveBeenCalledWith('https://example.com/')
+  })
+
+  it('still opens the Mini App when noting the launch throws', async () => {
+    noteLaunch.mockImplementationOnce(() => {
+      throw new Error('store broke')
+    })
+    const { launchMiniApp } = await importLauncher()
+
+    await launchMiniApp({ url: 'example.com', source: 'deeplink' })
+
+    expect(openWebView).toHaveBeenCalledTimes(1)
   })
 
   it('short-circuits concurrent launches', async () => {

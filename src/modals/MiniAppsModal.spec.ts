@@ -210,6 +210,7 @@ vi.mock('@/lib', () => ({
   },
   isTestnet: false,
 }))
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => ({ noteLaunch: vi.fn() }) }))
 
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({

@@ -32,3 +32,24 @@ describe('requestUserConfirmation Lightning payment', () => {
     }))
   })
 })
+
+describe('requestUserConfirmation widget', () => {
+  it('asks to add the widget, naming the site and what the widget cannot do', async () => {
+    vi.mocked(ExtendedDialog.sheet).mockReset().mockResolvedValue({ confirmed: false })
+
+    const confirmed = await requestUserConfirmation({ type: 'widget', url: 'https://swap.example/app', widgetName: 'Swap status', description: 'Follows your swap.' })
+
+    expect(confirmed).toBe(false)
+    expect(ExtendedDialog.sheet).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Add Swap status to Home?',
+      subtitle: 'Follows your swap.',
+      rows: [
+        { title: '• Shows what swap.example sends' },
+        { title: '• Cannot see your balance or move funds' },
+        { title: '• Remove it any time from its menu' },
+      ],
+      confirmButtonTitle: 'Add to Home',
+      cancelButtonTitle: 'Not now',
+    }))
+  })
+})

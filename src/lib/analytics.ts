@@ -26,7 +26,7 @@ export function reportCriticalError(error: unknown, context?: Record<string, unk
   reportException(err, { message: err.message, name: err.name, properties: context })
 }
 
-export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition'
+export type DAppOpenSource = 'featured' | 'recent' | 'search' | 'deeplink' | 'competition' | 'home_widget'
 
 export type AppOpenSource = 'cold_start' | 'resume'
 
@@ -264,6 +264,7 @@ export type Web3RequestType
     | 'nimiq_send_transaction'
     | `nimiq_staking_${string}`
     | 'request_device_identifier'
+    | 'widget_add'
 
 export function trackDAppOpened(url: string, name: string, source: DAppOpenSource): void {
   capture('miniapp_opened', { dapp_url: url, dapp_name: name, source })

@@ -34,6 +34,10 @@ beforeEach(() => {
   })
   closeNative = () => native.$close()
   emitFullscreenChange = enabled => (native as any).fullscreenChanged.asEvent(enabled)
+  runProvider()
+})
+
+function runProvider() {
   runInNewContext(script, {
     window,
     sessionStorage,
@@ -47,7 +51,7 @@ beforeEach(() => {
     setTimeout,
     clearTimeout,
   })
-})
+}
 
 describe('Mini App fullscreen API', () => {
   it('requests entry, exit, and current state through the host bridge', async () => {
@@ -81,6 +85,25 @@ describe('Mini App fullscreen API', () => {
   it('propagates native fullscreen errors', async () => {
     handleRequest.mockRejectedValueOnce(new Error('WebView is hidden'))
     await expect(window.nimiqPay!.requestFullscreen()).rejects.toThrow('WebView is hidden')
+  })
+})
+
+describe('window.nimiqPay.widgets', () => {
+  it('is offered to the top frame only', () => {
+    expect(window.nimiqPay!.widgets).toBeDefined()
+    const top = Object.getOwnPropertyDescriptor(window, 'top')!
+    const self = Object.getOwnPropertyDescriptor(window, 'self')!
+    const topFrame = {}
+    Object.defineProperty(window, 'top', { value: topFrame, configurable: true })
+    Object.defineProperty(window, 'self', { value: topFrame, configurable: true })
+    try {
+      runProvider()
+    }
+    finally {
+      Object.defineProperty(window, 'top', top)
+      Object.defineProperty(window, 'self', self)
+    }
+    expect(window.nimiqPay!.widgets).toBeUndefined()
   })
 })
 

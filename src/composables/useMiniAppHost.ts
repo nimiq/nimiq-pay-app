@@ -11,18 +11,21 @@ import { createBirpc } from 'birpc'
 import { getAddress, Interface } from 'ethers'
 import { ref, watch } from 'vue'
 import { i18n } from '@/i18n/i18n-setup'
-import { isTestnet } from '@/lib'
+import { isDev, isTestnet } from '@/lib'
 import { trackChainSwitched, trackWeb3Request } from '@/lib/analytics'
 import { Asset, formatUsdtAmount } from '@/lib/assets'
 import { deriveAppScopedId } from '@/lib/device-identifier'
 import { hexToBytes } from '@/lib/ethereum/hex-utils'
 import { addressesEqual, isValidEthAddress, parseChainId } from '@/lib/ethereum/validation'
+import { localizeDefinition, parseWidgetState, WIDGET_ID_RE, WIDGET_LIMITS, widgetFileUrl } from '@/lib/mini-app-widgets'
 import { polygonUsdtConfig } from '@/lib/polygon/config'
 import { SQLQuery } from '@/lib/sql-queries'
 import { sleep } from '@/lib/utils'
+import { useApp } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLocalWallet } from '@/stores/local-wallet'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { useMiniApps } from '@/stores/mini-apps'
 import { STAKING_CONTRACT_ADDRESS, useNimiqNetwork } from '@/stores/nimiq-network'
 import { usePolygonUsdt } from '@/stores/polygon-usdt'
@@ -199,6 +202,13 @@ export type UserConfirmationRequest
       /** Mini-app supplied human-readable explanation. Shown verbatim in the prompt. */
       reason: string
     })
+    | {
+      type: 'widget'
+      url: string
+      /** From the Mini App's widget file: untrusted text. */
+      widgetName: string
+      description?: string
+    }
 
 /**
  * Configuration for the MiniAppHost
@@ -220,6 +230,22 @@ export interface MiniAppHostConfig {
    */
   requestUserConfirmation?: (request: UserConfirmationRequest) => Promise<boolean>
   selectLightningAsset?: (app: { url: string, name: string, description?: string }) => Promise<Asset | undefined>
+}
+
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin
+  }
+  catch {
+    return null
+  }
+}
+
+function widgetIdParam(params: unknown): string {
+  const id = (params as { id?: unknown } | null | undefined)?.id
+  if (typeof id !== 'string' || !WIDGET_ID_RE.test(id))
+    throw new InvalidRequestError('id must be a widget id from nimiq-pay-widgets.json')
+  return id
 }
 
 /**
@@ -247,6 +273,23 @@ export class MiniAppHost {
   /** Lower-cased origin of `config.url`; used as the consent + ID scope. */
   private readonly origin: string
   private readonly pendingLightningInvoices = new Set<string>()
+  /** After a "no", `add` answers false at once for the rest of the session, so a Mini App cannot nag. */
+  private readonly declinedWidgets = new Set<string>()
+  private readonly pendingWidgetAdds = new Map<string, Promise<boolean>>()
+  private lastPageUrl: string | null = null
+  /** Fixed at the first page load, so widgets keep one scope per session however the page navigates. */
+  private sessionUrl: string
+  private sessionLocked = false
+  private lastReportedOrigin: string | null
+  /** iOS reports a navigation's URL before the old page is gone, so after an origin change no page may change widgets until the new one has loaded. */
+  private originTransitionPending = false
+  /** A reconnected host saw none of the surviving webview's navigation, so it trusts no page until one loads on the launch origin. */
+  private pageUnverified = false
+  private mainWebViewId: string | null = null
+  private readonly openPopupIds = new Set<string>()
+  private pageLoadedListener: PluginListenerHandle | null = null
+  private urlChangeListener: PluginListenerHandle | null = null
+  private closeListener: PluginListenerHandle | null = null
   private lightningAccessScope: string | null = null
   private lightningAccessRequest: { scope: string, promise: Promise<boolean> } | null = null
 
@@ -261,6 +304,8 @@ export class MiniAppHost {
     this.config = config
     this.evmRpcUrls = { ...config.evmRpcUrls }
     this.origin = new URL(config.url).origin.toLowerCase()
+    this.sessionUrl = config.url
+    this.lastReportedOrigin = this.origin
     this.setupBirpc()
 
     // Track the active session at module level
@@ -299,6 +344,7 @@ export class MiniAppHost {
     const host = new MiniAppHost(inAppBrowser, config)
     host.currentChainId = restoredChainId
     host.sessionState.chainId = restoredChainId
+    host.pageUnverified = true
     return host
   }
 
@@ -321,6 +367,9 @@ export class MiniAppHost {
       this.inAppBrowser?.clearAllCookies(),
       this.messageFromWebviewListener?.remove(),
       this.fullscreenChangeListener?.remove(),
+      this.urlChangeListener?.remove(),
+      this.pageLoadedListener?.remove(),
+      this.closeListener?.remove(),
     ])
     for (const result of cleanupResults) {
       if (result.status === 'rejected')
@@ -328,6 +377,9 @@ export class MiniAppHost {
     }
     this.messageFromWebviewListener = null
     this.fullscreenChangeListener = null
+    this.urlChangeListener = null
+    this.pageLoadedListener = null
+    this.closeListener = null
     this.birpc?.$close()
     this.birpc = null
     this.inAppBrowser = null
@@ -360,17 +412,18 @@ export class MiniAppHost {
           }
         }
         catch (error) {
-          const isFullscreenRequest = params.network === 'host' && (params.name === 'setFullscreen' || params.name === 'getFullscreen')
+          // Fullscreen and widget errors are for the Mini App's developer, not the user.
+          const isSilentRequest = params.network === 'host' && (params.name === 'setFullscreen' || params.name === 'getFullscreen' || (typeof params.name === 'string' && params.name.startsWith('widgets.')))
           if (error instanceof MiniAppError) {
             // Show toast for user-actionable errors (skip permission denied - user already knows)
-            if (!isFullscreenRequest && !(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
+            if (!isSilentRequest && !(error instanceof PermissionDeniedError) && !(error instanceof UnknownRequestError)) {
               this.showErrorToast(error.message)
             }
             // Add the Nimiq type while preserving RPC fields used by older SDKs.
             throw this.createRpcError(this.errorCode(error), error.message, params.network === 'nimiq' ? error.type : undefined, params.network === 'nimiq' ? error.data : undefined)
           }
           const message = `An unknown error occurred: ${(error as Error).message}`
-          if (!isFullscreenRequest)
+          if (!isSilentRequest)
             this.showErrorToast(message)
           throw this.createRpcError(-32603, message, params.network === 'nimiq' ? 'INTERNAL_ERROR' : undefined)
         }
@@ -464,7 +517,8 @@ export class MiniAppHost {
       },
       on: (fn) => {
         // @ts-expect-error - TS cannot detect the correct overload
-        browser.addListener('messageFromWebview', (event: { detail: unknown }) => {
+        browser.addListener('messageFromWebview', (event: { id?: string, detail: unknown }) => {
+          this.isFromMainWebView(event.id)
           if (event.detail)
             fn(event.detail)
         }).then((handle: PluginListenerHandle) => {
@@ -490,6 +544,62 @@ export class MiniAppHost {
       else
         this.fullscreenChangeListener = handle
     }).catch(error => logger.error('Could not observe Mini App fullscreen changes', error))
+
+    void browser.addListener('urlChangeEvent', ({ id, url }) => {
+      if (!this.isFromMainWebView(id))
+        return
+      this.lastPageUrl = url
+      const origin = originOf(url)
+      if (origin !== this.lastReportedOrigin)
+        this.originTransitionPending = true
+      this.lastReportedOrigin = origin
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.urlChangeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App navigation', error))
+
+    void browser.addListener('browserPageLoaded', ({ id }) => {
+      if (!this.isFromMainWebView(id))
+        return
+      if (this.pageUnverified) {
+        if (!this.lastPageUrl || originOf(this.lastPageUrl) !== this.origin)
+          return
+        this.pageUnverified = false
+      }
+      if (!this.sessionLocked) {
+        this.sessionLocked = true
+        this.sessionUrl = this.lastPageUrl ?? this.config.url
+      }
+      this.originTransitionPending = false
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.pageLoadedListener = handle
+    }).catch(error => logger.error('Could not observe Mini App page loads', error))
+
+    void browser.addListener('closeEvent', ({ id }) => {
+      if (id)
+        this.openPopupIds.delete(id)
+    }).then((handle) => {
+      if (this.destroyed)
+        void handle.remove()
+      else
+        this.closeListener = handle
+    }).catch(error => logger.error('Could not observe Mini App popups closing', error))
+  }
+
+  /** Popups report through the same listeners; the first id seen is taken as the main webview's, as at launch its first navigation precedes any script that could open one. */
+  private isFromMainWebView(id: string | undefined): boolean {
+    if (!id)
+      return true
+    this.mainWebViewId ??= id
+    if (id === this.mainWebViewId)
+      return true
+    this.openPopupIds.add(id)
+    return false
   }
 
   private showErrorToast(message: string): void {
@@ -1360,9 +1470,93 @@ export class MiniAppHost {
         return (await this.inAppBrowser!.getFullscreen()).enabled
       case 'requestDeviceIdentifier':
         return this.requestDeviceIdentifier(message.params)
+      case 'widgets.add':
+        return this.addWidget(message.params)
+      case 'widgets.update':
+        return this.updateWidget(message.params)
+      case 'widgets.remove': {
+        const id = widgetIdParam(message.params)
+        if (!this.canChangeWidgets())
+          return
+        const found = await useMiniAppWidgets().discover(this.sessionUrl)
+        if (found.ok)
+          useMiniAppWidgets().remove(found.value.scope, id)
+        return
+      }
+      case 'widgets.list': {
+        if (!this.canChangeWidgets())
+          return []
+        const found = await useMiniAppWidgets().discover(this.sessionUrl)
+        return found.ok ? useMiniAppWidgets().listForScope(found.value.scope) : []
+      }
       default:
         throw new UnknownRequestError(`Unknown host message name: ${message.name}`)
     }
+  }
+
+  /** Checks the page, not the sending frame, which the bridge does not report: an iframe on another origin can still pass as this page. */
+  private canChangeWidgets(): boolean {
+    return !this.pageUnverified && this.openPopupIds.size === 0 && !this.originTransitionPending && originOf(this.lastPageUrl ?? this.config.url) === originOf(this.sessionUrl)
+  }
+
+  private addWidget(params: unknown): Promise<boolean> {
+    const id = widgetIdParam(params)
+    if (!this.canChangeWidgets())
+      return Promise.reject(new InvalidRequestError('This page cannot change Home widgets'))
+    const pending = this.pendingWidgetAdds.get(id)
+    if (pending)
+      return pending
+    const request = this.requestWidgetAdd(id).finally(() => this.pendingWidgetAdds.delete(id))
+    this.pendingWidgetAdds.set(id, request)
+    return request
+  }
+
+  private async requestWidgetAdd(id: string): Promise<boolean> {
+    const widgets = useMiniAppWidgets()
+    // Keyed by the folder the widget file sits in, so two Mini Apps of one site stay apart.
+    const found = await widgets.discover(this.sessionUrl)
+    if (!found.ok)
+      throw new InvalidRequestError(found.error)
+    const { scope, file } = found.value
+    if (widgets.isOnHome(scope, id))
+      return true
+    if (this.declinedWidgets.has(id))
+      return false
+    const definition = file.widgets.find(d => d.id === id)
+    if (!definition)
+      throw new InvalidRequestError(`${widgetFileUrl(scope)} declares no widget "${id}"`)
+    if (!widgets.canAdd)
+      throw new InvalidRequestError(`Home already holds ${WIDGET_LIMITS.widgetsOnHome} widgets`)
+    if (!this.config.requestUserConfirmation)
+      throw new InternalError('Confirmation handler not provided')
+    const { name, description } = localizeDefinition(definition, useApp().language)
+    const confirmed = await this.config.requestUserConfirmation({
+      url: this.sessionUrl,
+      type: 'widget',
+      widgetName: name,
+      description,
+    })
+    trackWeb3Request({ requestType: 'widget_add', blockchain: 'host', dappUrl: this.config.url, dappName: this.config.title, approved: confirmed, success: confirmed })
+    if (!confirmed) {
+      this.declinedWidgets.add(id)
+      return false
+    }
+    return widgets.add(scope, definition)
+  }
+
+  private async updateWidget(params: unknown): Promise<boolean> {
+    const id = widgetIdParam(params)
+    if (!this.canChangeWidgets())
+      return false
+    const found = await useMiniAppWidgets().discover(this.sessionUrl)
+    if (!found.ok)
+      return false
+    const raw = (params as { state?: unknown }).state ?? null
+    const { scope } = found.value
+    const parsed = parseWidgetState(raw, { origin: new URL(scope).origin, base: scope, now: Date.now(), allowInsecure: isDev })
+    if (!parsed.ok)
+      throw new InvalidRequestError(`Invalid widget state: ${parsed.error}`)
+    return useMiniAppWidgets().update(scope, id, parsed.value)
   }
 
   private async requestDeviceIdentifier(params: unknown): Promise<string> {

@@ -273,6 +273,17 @@ window.nimiqPay = Object.freeze({
     }
     return birpc.handleRequest({ network: 'host', name: 'requestDeviceIdentifier', params: { reason } }) as Promise<string>
   },
+  // Top frame only, against embedded third-party frames; `window`, not `self`, which a page can replace.
+  ...(window === window.top
+    ? {
+        widgets: Object.freeze({
+          add: (id: string): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'widgets.add', params: { id } }) as Promise<boolean>,
+          update: (id: string, state: Record<string, unknown> | null): Promise<boolean> => birpc.handleRequest({ network: 'host', name: 'widgets.update', params: { id, state } }) as Promise<boolean>,
+          remove: (id: string): Promise<void> => birpc.handleRequest({ network: 'host', name: 'widgets.remove', params: { id } }) as Promise<void>,
+          list: (): Promise<string[]> => birpc.handleRequest({ network: 'host', name: 'widgets.list' }) as Promise<string[]>,
+        }),
+      }
+    : {}),
 })
 
 // Announce provider immediately for EIP-6963 discovery

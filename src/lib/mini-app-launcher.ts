@@ -16,6 +16,7 @@ import { getFaviconUrl } from '@/lib/site-metadata'
 import { safeHostname } from '@/lib/url-safety'
 import { normalizeMiniAppUrl } from '@/modals/mini-app-search'
 import { Fiat } from '@/stores/app'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { useMiniApps } from '@/stores/mini-apps'
 
 const logger = useLogger('MiniAppLauncher')
@@ -124,6 +125,13 @@ export async function launchMiniApp(options: LaunchMiniAppOptions): Promise<void
   const icon = options.icon ?? getFaviconUrl(targetUrl)
   // Upgrade + cache this site's real icon for opened/searched apps not resolved via the list.
   void useMiniApps().ensureBestIcon(targetUrl)
+  // Recently Viewed keeps only the site's root, so a launch is where the gallery learns of a Mini App in a subfolder.
+  try {
+    useMiniAppWidgets().noteLaunch(targetUrl)
+  }
+  catch (error) {
+    logger.warn('Could not note Mini App launch for widgets:', error)
+  }
   // Loading toast only for deeplinks; modal callers show per-button spinner via `openingMiniAppUrl`.
   const showLoadingToast = options.source === 'deeplink'
   if (showLoadingToast)

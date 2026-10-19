@@ -59,6 +59,19 @@ export declare global {
        * @throws if the user denies the prompt
        */
       requestDeviceIdentifier: (options: { reason: string }) => Promise<string>
+      /**
+       * Home screen widgets declared in the Mini App's `nimiq-pay-widgets.json`. Nimiq Pay draws them;
+       * the Mini App only sends states. Only in the top frame. See docs/MINI-APP-WIDGETS.md in the Nimiq Pay repo.
+       */
+      readonly widgets?: {
+        /** Asks the user once per session; true when the widget is on Home. */
+        add: (id: string) => Promise<boolean>
+        /** Replaces the widget's state; null returns it to its resting state. False when not applied, e.g. not on Home. */
+        update: (id: string, state: Record<string, unknown> | null) => Promise<boolean>
+        remove: (id: string) => Promise<void>
+        /** Ids of this Mini App's widgets on Home. */
+        list: () => Promise<string[]>
+      }
     }
   }
 

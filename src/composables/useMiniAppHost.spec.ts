@@ -89,6 +89,7 @@ vi.mock('@capacitor/toast', () => ({
   },
 }))
 
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: vi.fn() }))
 vi.mock('birpc', () => ({
   createBirpc,
 }))
@@ -261,7 +262,7 @@ describe('fullscreen host API', () => {
     expect(bridge.fullscreenChanged.asEvent).toHaveBeenCalledWith(false)
 
     await host.destroy()
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    expect(browser.removeListener).toHaveBeenCalledTimes(4)
   })
 
   it('closes the bridge and removes listeners when cookie cleanup fails', async () => {
@@ -272,7 +273,7 @@ describe('fullscreen host API', () => {
 
     await host.destroy()
 
-    expect(browser.removeListener).toHaveBeenCalledTimes(1)
+    expect(browser.removeListener).toHaveBeenCalledTimes(4)
     expect(bridge.$close).toHaveBeenCalledOnce()
     expect(loggerError).toHaveBeenCalledWith('Could not clean up Mini App host', expect.any(Error))
   })

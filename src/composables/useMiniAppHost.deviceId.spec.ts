@@ -28,6 +28,7 @@ const {
 
 vi.mock('@capacitor/toast', () => ({ Toast: { show: vi.fn() } }))
 vi.mock('birpc', () => ({ createBirpc }))
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: vi.fn() }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (m: string) => m } }))
 vi.mock('@/lib/analytics', () => ({ trackChainSwitched: vi.fn(), trackWeb3Request }))
 vi.mock('@/lib/ethereum/hex-utils', () => ({ hexToBytes: vi.fn() }))

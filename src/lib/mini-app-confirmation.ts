@@ -352,6 +352,24 @@ export async function requestUserConfirmation(request: UserConfirmationRequest):
       return result.confirmed
     }
 
+    case 'widget': {
+      const host = new URL(request.url).hostname
+      const result = await ExtendedDialog.sheet({
+        title: `Add ${request.widgetName} to Home?`,
+        subtitle: request.description,
+        headerLogo: resolveMiniAppLogo(request.url),
+        headerLogoCornerRadius: -1,
+        rows: [
+          { title: `• Shows what ${host} sends` },
+          { title: '• Cannot see your balance or move funds' },
+          { title: '• Remove it any time from its menu' },
+        ],
+        confirmButtonTitle: 'Add to Home',
+        cancelButtonTitle: 'Not now',
+      })
+      return result.confirmed
+    }
+
     default:
       logger.error('Unknown confirmation request type:', request)
       return false
