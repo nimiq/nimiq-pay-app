@@ -928,6 +928,38 @@ describe('useSyncRemoteSigners', () => {
       expect(state.getAllTransactionsForAddress.mock.calls.map(([address]) => (address as any).toUserFriendlyAddress())).not.toContain(strayAddress)
     })
 
+    it('drains a listed HTLC before walking the history of known HTLCs', async () => {
+      const context = state.getWalletContext()
+      state.scanLocalHtlcCreations.mockResolvedValue({ context, creations: [activeAddress], historyComplete: true, sawHtlcTransaction: false, errors: [] })
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+      mockRecoverableStray(860_000)
+      const walked: string[] = []
+      state.getAllTransactionsForAddress.mockImplementation(async (address: any) => {
+        walked.push(address.toUserFriendlyAddress())
+        return { transactions: [], complete: true }
+      })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await expect(useSyncRemoteSigners().verifyRemoteSignersDb()).resolves.toBe('recovering')
+
+      expect(state.sendTx).toHaveBeenCalledOnce()
+      expect(walked).not.toContain(activeAddress)
+    })
+
+    it('drops a listing made for another wallet', async () => {
+      const context = state.getWalletContext()
+      state.scanLocalHtlcCreations.mockResolvedValue({ context: { ...context, owner: 'NQ00 OTHER WALLET' }, creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] })
+      state.listCosignerHtlcs.mockResolvedValue([strayAddress])
+      mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb()
+
+      expect(state.client.getAccounts).not.toHaveBeenCalled()
+      expect(state.kvSetItem).not.toHaveBeenCalledWith(COSIGNER_HTLCS_LISTED_KV_KEY, '1')
+    })
+
     it('asks the cosigner on request even when the HTLC history is checked', async () => {
       state.kvGetItem.mockImplementation(key => Promise.resolve(key === HTLC_HISTORY_CHECKED_KV_KEY || key === HTLC_EXTENSIONS_WALKED_KV_KEY ? '1' : undefined))
       state.listCosignerHtlcs.mockResolvedValue([strayAddress])
@@ -1057,7 +1089,7 @@ describe('useSyncRemoteSigners', () => {
       state.getAllRemoteSigners.mockRejectedValue(new Error('database closed'))
       const { useSyncRemoteSigners } = await import('./remote-signers')
 
-      await expect(useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress], true) })).resolves.toBeUndefined()
+      await expect(useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress], true) })).resolves.toBe('unclear')
 
       expect(persistedHtlcHistoryCheck()).toBe(false)
       expect(state.updateSignersTableBalance).toHaveBeenCalled()
@@ -1068,7 +1100,7 @@ describe('useSyncRemoteSigners', () => {
       state.kvSetItem.mockRejectedValue(new Error('database is locked'))
       const { useSyncRemoteSigners } = await import('./remote-signers')
 
-      await expect(useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress], true) })).resolves.toBeUndefined()
+      await expect(useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress], true) })).resolves.toBe('clean')
 
       expect(await htlcHistoryChecked()).not.toBe(true)
       expect(state.updateSignersTableBalance).toHaveBeenCalled()

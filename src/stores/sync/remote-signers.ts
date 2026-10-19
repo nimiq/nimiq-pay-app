@@ -13,7 +13,7 @@ import { kv } from '@/stores/app'
 import { useConn } from '@/stores/conn'
 import { useLocks } from '@/stores/locks'
 import { useNimiqNetwork } from '@/stores/nimiq-network'
-import { parseAddress, useRemoteSigner } from '@/stores/remote-signer'
+import { parseAddress, sameWalletIdentity, useRemoteSigner } from '@/stores/remote-signer'
 import { useSyncBalances } from '@/stores/sync/balances'
 import { useSyncState } from '@/stores/sync/state'
 import { useTransactions } from '@/stores/transactions'
@@ -217,11 +217,75 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     if (!isWalletContextCurrent(context))
       return 'unclear'
 
+    const activeAddress = remoteSignerStore.remoteAddress?.toUserFriendlyAddress()
+    // Our own creation stays inactive until its inclusion is handled; draining it would loop.
+    const creating = new Set(pendingHtlcCreationTransactions.value.map(transaction => transaction.recipient))
+    const funded: { address: string, timeout: number }[] = []
+
+    // false when the wallet changed mid-lookup.
+    async function lookUpFunded(batchAddresses: string[]) {
+      for (let offset = 0; offset < batchAddresses.length; offset += STRAY_HTLC_BATCH_SIZE) {
+        const batch = batchAddresses.slice(offset, offset + STRAY_HTLC_BATCH_SIZE)
+        let accounts: PlainAccount[]
+        try {
+          accounts = await promiseWithTimeout(
+            context.client.getAccounts(batch.map(address => Nimiq.Address.fromString(address))),
+            STRAY_HTLC_LOOKUP_TIMEOUT_MS,
+          )
+        }
+        catch (error) {
+          logger.error('Error getting accounts for stray HTLC sweep', error)
+          complete = false
+          continue
+        }
+        if (!isWalletContextCurrent(context))
+          return false
+        accounts.forEach((account, index) => {
+          if (account.type === 'htlc'
+            && account.balance > 0
+            && account.sender === context.owner
+            && isCosignerAddress(account.recipient)) {
+            funded.push({ address: batch[index], timeout: account.timeout })
+          }
+        })
+      }
+      return true
+    }
+
+    // Strays among funded[start:]. 'recovering' or 'unclear' ends the sweep; undefined continues it.
+    async function recoverStrays(start: number): Promise<'recovering' | 'unclear' | undefined> {
+      // Without a funded active signer (e.g. the cosigner reports a newer, empty HTLC), every funded one is
+      // drained: activation needs cosigner metadata that may never resolve, and draining into the wallet is safe.
+      const strays = funded.slice(start).filter(htlc => htlc.address !== activeAddress && !creating.has(htlc.address))
+      // One unrecoverable stray must not block the others.
+      for (const target of strays.sort((a, b) => a.timeout - b.timeout)) {
+        // An activation landing mid-sweep may have made a stray the real signer.
+        if (isTransactionPending.value || isSendingTx.value || !isWalletContextCurrent(context)
+          || remoteSignerStore.remoteAddress?.toUserFriendlyAddress() !== activeAddress) {
+          return 'unclear'
+        }
+        logger.log('🧲 Recovering funded HTLC that is not the active signer', { target, activeAddress, funded: funded.length })
+        const result = await recoverRemoteSigner({ address: target.address }, target.timeout)
+        logger.log('🧲 Stray HTLC recovery result', { address: target.address, result })
+        if (result.status === 'submitted' || result.status === 'unknown')
+          return 'recovering'
+      }
+      return undefined
+    }
+
+    // Known and cosigner-listed HTLCs first: the extension walk below can stall for 30s per history.
+    const known = new Set([...addresses, ...listedHtlcs])
+    if (!(await lookUpFunded([...known])))
+      return 'unclear'
+    let ended = await recoverStrays(0)
+    if (ended)
+      return ended
+
     // Extensions are created by an HTLC, not the local wallet, so local history misses them and a fresh
     // database has not stored them yet. Follow HTLC history until the gate opens; the account lookup
-    // below decides which ones are ours.
+    // decides which ones are ours. Listed HTLCs already include the cosigner's extensions, so only ours are walked.
     if (!(await loadHtlcHistoryFlags()).walked) {
-      const known = new Set(addresses)
+      const walkedFrom = addresses.length
       for (let index = 0; index < addresses.length; index++) {
         const history = await getAllTransactionsForAddress(Nimiq.Address.fromString(addresses[index]))
         if (!isWalletContextCurrent(context))
@@ -235,67 +299,16 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
           }
         }
       }
-    }
-
-    const candidates = new Set(addresses)
-    for (const address of listedHtlcs) {
-      if (!candidates.has(address)) {
-        candidates.add(address)
-        addresses.push(address)
-      }
-    }
-
-    const funded: { address: string, timeout: number }[] = []
-    for (let offset = 0; offset < addresses.length; offset += STRAY_HTLC_BATCH_SIZE) {
-      const batch = addresses.slice(offset, offset + STRAY_HTLC_BATCH_SIZE)
-      let accounts: PlainAccount[]
-      try {
-        accounts = await promiseWithTimeout(
-          context.client.getAccounts(batch.map(address => Nimiq.Address.fromString(address))),
-          STRAY_HTLC_LOOKUP_TIMEOUT_MS,
-        )
-      }
-      catch (error) {
-        logger.error('Error getting accounts for stray HTLC sweep', error)
-        complete = false
-        continue
-      }
-      if (!isWalletContextCurrent(context))
+      const fundedFrom = funded.length
+      if (!(await lookUpFunded(addresses.slice(walkedFrom))))
         return 'unclear'
-      accounts.forEach((account, index) => {
-        if (account.type === 'htlc'
-          && account.balance > 0
-          && account.sender === context.owner
-          && isCosignerAddress(account.recipient)) {
-          funded.push({ address: batch[index], timeout: account.timeout })
-        }
-      })
+      ended = await recoverStrays(fundedFrom)
+      if (ended)
+        return ended
     }
 
-    const activeAddress = remoteSignerStore.remoteAddress?.toUserFriendlyAddress()
-    // Our own creation stays inactive until its inclusion is handled; draining it would loop.
-    const creating = new Set(pendingHtlcCreationTransactions.value.map(transaction => transaction.recipient))
-    // Without a funded active signer (e.g. the cosigner reports a newer, empty HTLC), every funded one is
-    // drained: activation needs cosigner metadata that may never resolve, and draining into the wallet is safe.
-    const strays = funded.filter(htlc => htlc.address !== activeAddress && !creating.has(htlc.address))
-    if (strays.length === 0)
-      // Any other funded HTLC, even our own creation still settling, means a split is live.
-      return complete && funded.every(htlc => htlc.address === activeAddress) ? 'clean' : 'unclear'
-
-    // One unrecoverable stray must not block the others.
-    for (const target of strays.sort((a, b) => a.timeout - b.timeout)) {
-      // An activation landing mid-sweep may have made a stray the real signer.
-      if (isTransactionPending.value || isSendingTx.value || !isWalletContextCurrent(context)
-        || remoteSignerStore.remoteAddress?.toUserFriendlyAddress() !== activeAddress) {
-        return 'unclear'
-      }
-      logger.log('🧲 Recovering funded HTLC that is not the active signer', { target, activeAddress, funded: funded.length })
-      const result = await recoverRemoteSigner({ address: target.address }, target.timeout)
-      logger.log('🧲 Stray HTLC recovery result', { address: target.address, result })
-      if (result.status === 'submitted' || result.status === 'unknown')
-        return 'recovering'
-    }
-    return 'unclear'
+    // Any other funded HTLC, even our own creation still settling, or a stray that could not be recovered, means a split is live.
+    return complete && funded.every(htlc => htlc.address === activeAddress) ? 'clean' : 'unclear'
   }
 
   async function ensureSingleRemoteActive(context: WalletContext) {
@@ -398,7 +411,10 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     return result?.outcome === 'submitted' || result?.outcome === 'unknown'
   }
 
-  // forceCosignerListing: a manual scan asks the cosigner even after a clean sweep included its list.
+  /**
+   * forceCosignerListing: a manual scan asks the cosigner even after a clean sweep included its list.
+   * Returns the stray sweep result, or undefined when the run was skipped before sweeping.
+   */
   async function verifyRemoteSignersDb({ discoveryResult, forceCosignerListing }: { discoveryResult?: RemoteSignerDiscoveryResult, forceCosignerListing?: boolean } = {}) {
     // No client in mock mode — discoverRemoteSignersFromBlockchain would await it forever
     // and wedge pull-to-refresh.
@@ -427,13 +443,15 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
     try {
       // Until a clean sweep has included it once, the cosigner lists our HTLCs in one query, in parallel
       // with the chain scan, which can stall for minutes. Only the chain scan can mark the history clean.
+      const listingIdentity = remoteSignerStore.getWalletIdentity()
       const listing = forceCosignerListing || !(await loadHtlcHistoryFlags()).listed ? remoteSignerStore.listCosignerHtlcs() : undefined
       // History alone finds funded HTLCs in seconds; slow cosigner validation runs after the sweep.
       const scan = discoveryResult ? undefined : await scanLocalHtlcCreations()
-      const listed = await listing
       const sweepInput = discoveryResult ?? (scan && { createdHtlcs: scan.creations.map(transaction => transaction.recipient), historyComplete: scan.historyComplete })
       // The scan's own context: a wallet switch since then must not sweep (and mark clean) the wrong wallet.
       const sweepContext = scan?.context ?? remoteSignerStore.getWalletContext()
+      // A listing for another wallet or network must neither feed the sweep nor be recorded for this one.
+      const listed = listingIdentity && sweepContext && sameWalletIdentity(listingIdentity, sweepContext) ? await listing : undefined
       const sweep = sweepContext && sweepInput
         ? await recoverStrayFundedHtlc(sweepInput, sweepContext, listed).catch((error) => {
           // A failed sweep proves nothing; discovery and reconciliation below still run.
@@ -468,25 +486,26 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
       }
       if (sweep === 'recovering') {
         logger.log('Stray HTLC recovery started. Skipping remaining checks until it settles')
-        return
+        return sweep
       }
       // Discovery scans again: an HTLC created while the sweep ran would be missing from the earlier scan.
       result = discoveryResult ?? await discoverRemoteSignersFromBlockchain()
       // Unseen HTLCs can change which signer should stay active or be reclaimed.
       if (!result.localComplete) {
         logger.log('Remote signer discovery incomplete. Delaying reconciliation', result.errors)
-        return
+        return sweep
       }
       await useRemoteSigner().updateSignersTableBalance()
       const reconciliationContext = remoteSignerStore.getWalletContext()
       if (!reconciliationContext)
-        return
+        return sweep
       const recoveryStarted = await ensureSingleRemoteActive(reconciliationContext)
       if (recoveryStarted || isTransactionPending.value || isSendingTx.value) {
         logger.log('Remote signer DB verification started recovery transactions. Skipping remaining checks until they settle')
-        return
+        return sweep
       }
       await ensureSingleRemoteSignerWithBalance(reconciliationContext)
+      return sweep
     }
     finally {
       isVerifyingRemoteSignersDb.value = false

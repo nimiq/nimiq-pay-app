@@ -136,14 +136,17 @@ async function scanForMissingHtlcs() {
   isHtlcRecoveryBusy.value = true
   htlcStatus.value = 'Scanning local transaction history…'
   try {
-    // Started first so the cosigner answers while the chain scan pages; the sweep reuses this request.
-    const listing = listCosignerHtlcs()
+    // Started first so the cosigner answers while the chain scan pages; the sweep reuses this fresh request.
+    const listing = listCosignerHtlcs({ fresh: true })
     const result = await discoverRemoteSignersFromBlockchain()
-    await verifyRemoteSignersDb({ discoveryResult: result, forceCosignerListing: true })
+    const sweep = await verifyRemoteSignersDb({ discoveryResult: result, forceCosignerListing: true })
     const listed = await listing
     const completeness = result.localComplete ? '' : ' History scan was incomplete.'
     const errors = result.errors.length ? ` ${result.errors.join('; ')}` : ''
-    htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known, ${listed ? `${listed.length} listed by the cosigner` : 'cosigner listing unavailable'}.${completeness}${errors}`
+    const cosigner = sweep
+      ? (listed ? `${listed.length} listed by the cosigner` : 'cosigner listing unavailable')
+      : 'HTLC sweep skipped (verification already running or a transaction is pending)'
+    htlcStatus.value = `Scan complete: ${result.added} added, ${result.alreadyKnown} already known, ${cosigner}.${completeness}${errors}`
   }
   catch (error) {
     setHtlcRecoveryError(error)

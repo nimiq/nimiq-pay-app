@@ -245,9 +245,9 @@ export const useSyncLifecycle = defineStore('sync-lifecycle', () => {
           || ((remoteBalance.value === 0 || (!syncState.htlcHistoryChecked && localBalance.value > 0)) && localHeight.value % 10 === 0)
         if (shouldVerify) {
           const verifying = verifyRemoteSignersDb()
-          // Until extensions are walked its sweep can outlast the hold, so don't hold this listener: handleFunds
-          // must run to end the hold, and payment status updates must not wait either.
-          if (syncState.htlcExtensionsWalked)
+          // Until extensions are walked and the cosigner has listed our HTLCs, its sweep can outlast the hold, so
+          // don't hold this listener: handleFunds must run to end the hold, and payment status updates must not wait either.
+          if (syncState.htlcExtensionsWalked && syncState.cosignerHtlcsListed)
             await verifying
           else
             verifying.catch(error => logger.error('Error in background remote signer verification', error))

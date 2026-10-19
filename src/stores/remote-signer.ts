@@ -74,6 +74,11 @@ export interface WalletContext {
   generation: number
 }
 
+// Wallet and network only: a stalled history replaces the client without changing the wallet.
+export function sameWalletIdentity(a: WalletIdentity, b: WalletIdentity) {
+  return a.network === b.network && a.owner === b.owner
+}
+
 export function sameWalletContext(a: WalletContext, b: WalletContext) {
   return a.client === b.client
     && a.network === b.network
@@ -104,7 +109,7 @@ export type AddressSpecificSignerMetadataResult
     | { status: 'rejected', reason: string }
     | { status: 'unavailable', reason: string }
 
-interface WalletIdentity {
+export interface WalletIdentity {
   network: string
   owner: string
 }
@@ -354,7 +359,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
 
   function isWalletIdentityCurrent(identity: WalletIdentity) {
     const current = getWalletIdentity()
-    return current?.network === identity.network && current.owner === identity.owner
+    return current !== undefined && sameWalletIdentity(current, identity)
   }
 
   function getWalletContext(): WalletContext | undefined {
@@ -1428,12 +1433,13 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
   /**
    * HTLC addresses the cosigner created for the local wallet, retired ones included. Unverified:
    * callers must confirm each one on chain before acting. Undefined when the cosigner can't answer.
+   * fresh: a manual scan drops the session result and the retry wait; later calls reuse its request.
    */
-  async function listCosignerHtlcs(): Promise<string[] | undefined> {
+  async function listCosignerHtlcs({ fresh = false }: { fresh?: boolean } = {}): Promise<string[] | undefined> {
     const context = getWalletContext()
     if (!context)
       return undefined
-    if (!cosignerListing || cosignerListing.identity.network !== context.network || cosignerListing.identity.owner !== context.owner)
+    if (fresh || !cosignerListing || !sameWalletIdentity(cosignerListing.identity, context))
       cosignerListing = { identity: { network: context.network, owner: context.owner } }
     const listing = cosignerListing
     if (!listing.request && listing.retryAt !== undefined && Date.now() < listing.retryAt)
@@ -1442,7 +1448,8 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     // The settled request is the session memo; only a failure clears it.
     listing.request ??= (async () => {
       try {
-        const { data, error } = await promiseWithTimeout(getOwnerWallets({ owner: context.address }), DISCOVER_TIMEOUT_MS)
+        // The WS request times out on its own and returns a TIMEOUT error.
+        const { data, error } = await getOwnerWallets({ owner: context.address })
         if (error || !data)
           throw new Error(error?.message ?? 'Invalid cosigner response')
         const addresses = data.flatMap((wallet) => {
@@ -1864,6 +1871,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     blockHeightToTimestamp,
     resolveHomeBalanceState,
     getWalletContext,
+    getWalletIdentity,
     isWalletContextCurrent,
     getLocalTransactions,
     getAllTransactionsForAddress,

@@ -26,7 +26,7 @@ function makeState() {
     serialized: 'serialized-drain',
   }))
   const scanLocalHtlcCreations = vi.fn((): Promise<any> => Promise.resolve({ creations: [], historyComplete: true, sawHtlcTransaction: false, errors: [] as string[] }))
-  const listCosignerHtlcs = vi.fn((_context?: unknown): Promise<string[] | undefined> => Promise.resolve([]))
+  const listCosignerHtlcs = vi.fn((_options?: { fresh?: boolean }): Promise<string[] | undefined> => Promise.resolve([]))
   const discoverRemoteSignersFromBlockchain = vi.fn(async () => ({ added: 0, alreadyKnown: 0, localComplete: true, errors: [] as string[], createdHtlcs: [] as string[], historyComplete: true }))
   const registerValidatedRemoteSigner = vi.fn((candidate?: any): Promise<any> => Promise.resolve(candidate))
   const updateSignersTableBalance = vi.fn((): Promise<void> => Promise.resolve())
@@ -556,6 +556,10 @@ vi.mock('@/stores/remote-signer', () => {
     listCosignerHtlcs: state.listCosignerHtlcs,
     registerValidatedRemoteSigner: state.registerValidatedRemoteSigner,
     getWalletContext: state.getWalletContext,
+    getWalletIdentity: () => {
+      const context = state.getWalletContext()
+      return context && { network: context.network, owner: context.owner }
+    },
     isWalletContextCurrent: state.isWalletContextCurrent,
     getLocalTransactions: state.getLocalTransactions,
     getAllTransactionsForAddress: state.getAllTransactionsForAddress,
@@ -569,7 +573,9 @@ vi.mock('@/stores/remote-signer', () => {
     init: state.initRemoteSigner,
     resolveHomeBalanceState: state.resolveHomeBalanceState,
   }))
-  return { parseAddress, sameWalletContext, useRemoteSigner }
+  const sameWalletIdentity = (a: any, b: any) => a.network === b.network && a.owner === b.owner
+
+  return { parseAddress, sameWalletContext, sameWalletIdentity, useRemoteSigner }
 })
 
 vi.mock('@/stores/transactions', () => {

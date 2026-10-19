@@ -3394,6 +3394,20 @@ describe('useRemoteSigner', () => {
       expect(state.getOwnerWallets).toHaveBeenCalledOnce()
     })
 
+    it('asks again on a fresh request, even during the retry wait', async () => {
+      state.getOwnerWallets.mockResolvedValueOnce({ data: undefined, error: { message: 'TIMEOUT', statusCode: 504, error: 'TIMEOUT' }, hasError: true, status: 504 })
+      state.getOwnerWallets.mockResolvedValue({ data: [{ address: listedAddress }], error: undefined, hasError: false, status: 200 })
+      const { useRemoteSigner } = await import('./remote-signer')
+      const store = useRemoteSigner()
+
+      expect(await store.listCosignerHtlcs()).toBeUndefined()
+      expect(await store.listCosignerHtlcs({ fresh: true })).toEqual([listedAddress])
+      state.getOwnerWallets.mockResolvedValue({ data: [], error: undefined, hasError: false, status: 200 })
+      expect(await store.listCosignerHtlcs({ fresh: true })).toEqual([])
+      expect(await store.listCosignerHtlcs()).toEqual([])
+      expect(state.getOwnerWallets).toHaveBeenCalledTimes(3)
+    })
+
     it('waits 5 minutes before asking again after a failure', async () => {
       const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
       state.getOwnerWallets.mockResolvedValue({ data: undefined, error: { message: 'unknown event', statusCode: 400, error: 'Bad Request' }, hasError: true, status: 400 })

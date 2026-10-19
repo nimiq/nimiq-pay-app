@@ -985,6 +985,29 @@ describe('useSyncLifecycle', () => {
       expect(handleFunds).toHaveBeenCalledOnce()
     })
 
+    it('does not hold the head listener while the cosigner listing is still pending', async () => {
+      state.consensus = 'established'
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+      const { useSyncHtlc } = await import('./htlc')
+      const verifyRemoteSignersDb = vi.spyOn(useSyncRemoteSigners(), 'verifyRemoteSignersDb').mockResolvedValue(undefined)
+      const handleFunds = vi.spyOn(useSyncHtlc(), 'handleFunds').mockResolvedValue(undefined)
+      const { useSyncLifecycle } = await import('./lifecycle')
+      await useSyncLifecycle().syncWallets()
+      const headListener = vi.mocked(state.client.addHeadChangedListener).mock.calls.at(-1)![0]
+      const { useSyncState } = await import('./state')
+      useSyncState().htlcHistoryChecked = true
+      useSyncState().htlcExtensionsWalked = true
+      useSyncState().cosignerHtlcsListed = false
+      state.remoteBalance = 0
+      state.height = 10
+      verifyRemoteSignersDb.mockClear().mockReturnValue(new Promise(() => {}))
+      handleFunds.mockClear()
+
+      await headListener()
+
+      expect(handleFunds).toHaveBeenCalledOnce()
+    })
+
     it.each([[false, 50_000, true], [true, 50_000, false], [false, 0, false]])('retries verification every 10 blocks while funded, checked=%s and local=%s', async (checked, local, verified) => {
       state.consensus = 'established'
       const { useSyncRemoteSigners } = await import('./remote-signers')

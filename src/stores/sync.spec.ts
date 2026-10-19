@@ -279,6 +279,7 @@ vi.mock('@/stores/remote-signer', () => {
       owner: state.localAddress.toUserFriendlyAddress(),
       generation: 0,
     }),
+    getWalletIdentity: () => ({ network: 'testalbatross', owner: state.localAddress.toUserFriendlyAddress() }),
     isWalletContextCurrent: (context: any) => context.address === state.localAddress && context.client === state.client,
     updateSignersTableBalance: state.updateSignersTableBalance,
     updateRemoteSigner: state.updateRemoteSigner,
@@ -286,7 +287,9 @@ vi.mock('@/stores/remote-signer', () => {
     resolveHomeBalanceState: vi.fn(() => Promise.resolve()),
   }))
 
-  return { parseAddress, useRemoteSigner }
+  const sameWalletIdentity = (a: any, b: any) => a.network === b.network && a.owner === b.owner
+
+  return { parseAddress, sameWalletIdentity, useRemoteSigner }
 })
 
 vi.mock('@/stores/transactions', () => {

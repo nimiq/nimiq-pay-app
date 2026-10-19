@@ -278,7 +278,7 @@ describe('dev modal HTLC recovery', () => {
     state.run.mockReset().mockResolvedValue(undefined)
     state.setNetworkOverride.mockReset()
     state.validateRemoteSignerAddress.mockReset().mockResolvedValue(importable)
-    state.verifyRemoteSignersDb.mockReset().mockResolvedValue(undefined)
+    state.verifyRemoteSignersDb.mockReset().mockResolvedValue('clean')
     state.listCosignerHtlcs.mockReset().mockResolvedValue([])
   })
 
@@ -476,11 +476,24 @@ describe('dev modal HTLC recovery', () => {
     const wrapper = await mountModal()
 
     await wrapper.get('[data-testid="htlc-scan"]').trigger('click')
-    expect(state.listCosignerHtlcs).toHaveBeenCalledOnce()
+    expect(state.listCosignerHtlcs).toHaveBeenCalledExactlyOnceWith({ fresh: true })
     finishDiscovery()
     await flushPromises()
 
     expect(wrapper.get('[data-testid="htlc-status"]').text()).toContain('2 listed by the cosigner')
+  })
+
+  it('reports a skipped sweep instead of the cosigner count', async () => {
+    state.verifyRemoteSignersDb.mockResolvedValue(undefined)
+    state.listCosignerHtlcs.mockResolvedValue(['NQ33 TEST LISTED HTLC'])
+    const wrapper = await mountModal()
+
+    await wrapper.get('[data-testid="htlc-scan"]').trigger('click')
+    await flushPromises()
+
+    const status = wrapper.get('[data-testid="htlc-status"]').text()
+    expect(status).toContain('HTLC sweep skipped')
+    expect(status).not.toContain('listed by the cosigner')
   })
 
   it('preserves incomplete scan results for reconciliation and displays the failure', async () => {
