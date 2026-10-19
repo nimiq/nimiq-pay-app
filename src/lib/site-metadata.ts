@@ -50,7 +50,7 @@ function sizesToPixels(sizes: string | null | undefined): number {
 const MAX_REDIRECTS = 5
 
 /** Case-insensitive header lookup (native platforms vary the casing, e.g. `Location`/`location`). */
-function headerValue(headers: Record<string, string> | undefined, name: string): string | undefined {
+export function headerValue(headers: Record<string, string> | undefined, name: string): string | undefined {
   const target = name.toLowerCase()
   for (const [key, value] of Object.entries(headers ?? {})) {
     if (key.toLowerCase() === target)
