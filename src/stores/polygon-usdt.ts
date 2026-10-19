@@ -728,6 +728,7 @@ async function getClient() {
 
   return clientPromise
 }
+export { getClient as getPolygonUsdtClient }
 
 async function getPoolAddress(client: PolygonUsdtClient) {
   if (!poolAddressPromise) {

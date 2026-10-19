@@ -1865,6 +1865,7 @@ export const useRemoteSigner = defineStore('remote-signer', () => {
     getWalletContext,
     isWalletContextCurrent,
     getLocalTransactions,
+    getTransactionsForAddress,
     getAllTransactionsForAddress,
     findTransactionInHistory,
 
