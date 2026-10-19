@@ -63,6 +63,8 @@ The catalog comes from [`nimiq/awesome`](https://github.com/nimiq/awesome) (`src
 
 Requests from the Mini App reach the host over `postMessage` (`src/composables/useMiniAppHost.ts`). The user has to confirm every sensitive request (`src/lib/mini-app-confirmation.ts`).
 
+A Mini App can offer a home screen widget by serving `nimiq-pay-widget.json` next to its start page. After the user agrees to share their address, Nimiq Pay polls the manifest's `dataUrl` on the Mini App's own origin while home is visible and draws the JSON it returns with its own component. No webview runs for a widget (`src/lib/mini-app-widgets.ts`, `src/stores/mini-app-widgets.ts`, `src/components/MiniAppWidget.vue`). The demo Mini App in `mini-app-sdk/dapp` serves sample widget data.
+
 Mini Apps are off unless `VITE_ENABLE_MINI_APPS` is set.
 
 ## External services

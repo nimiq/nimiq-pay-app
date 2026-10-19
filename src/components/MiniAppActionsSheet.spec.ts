@@ -6,9 +6,18 @@ import MiniAppActionsSheet from './MiniAppActionsSheet.vue'
 
 const REPORT_URL = 'https://nimpay.app/miniapps/evm/evm-mini-wallet/report'
 
-const { browserOpen, shareShare } = vi.hoisted(() => ({
+const { browserOpen, shareShare, dialogSheet, fetchWidgetManifest, widgetsStore } = vi.hoisted(() => ({
   browserOpen: vi.fn(() => Promise.resolve()),
   shareShare: vi.fn(() => Promise.resolve()),
+  dialogSheet: vi.fn(() => Promise.resolve({ confirmed: true })),
+  fetchWidgetManifest: vi.fn(() => Promise.resolve<unknown>(undefined)),
+  widgetsStore: {
+    onHome: false,
+    canAddWidget: true,
+    isOnHome: vi.fn(() => widgetsStore.onHome),
+    addWidget: vi.fn(),
+    removeWidget: vi.fn(),
+  },
 }))
 
 vi.mock('@capacitor/browser', () => ({ Browser: { open: browserOpen } }))
@@ -17,10 +26,15 @@ vi.mock('@capacitor/haptics', () => ({
   Haptics: { impact: vi.fn(() => Promise.resolve()) },
   ImpactStyle: { Light: 'LIGHT' },
 }))
+vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { sheet: dialogSheet } }))
+vi.mock('@/lib/mini-app-widgets', () => ({ fetchWidgetManifest }))
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => widgetsStore }))
 
 const app = { name: 'EVM Mini Wallet', url: 'https://evm-mini-wallet.vercel.app/', icon: '' }
 
 let wrapper: ReturnType<typeof mount> | undefined
+
+const manifest = { name: 'Staking', description: 'Your stake', dataUrl: 'https://evm-mini-wallet.vercel.app/api/widget' }
 
 async function mountSheet(context: MiniAppMenuContext) {
   browserOpen.mockClear()
@@ -39,6 +53,10 @@ afterEach(() => {
   wrapper?.unmount()
   wrapper = undefined
   document.body.replaceChildren()
+  widgetsStore.onHome = false
+  widgetsStore.canAddWidget = true
+  fetchWidgetManifest.mockResolvedValue(undefined)
+  vi.clearAllMocks()
 })
 
 describe('miniAppActionsSheet', () => {
@@ -88,5 +106,48 @@ describe('miniAppActionsSheet', () => {
     expect(w.emitted('remove')).toHaveLength(1)
     expect(browserOpen).not.toHaveBeenCalled()
     expect(w.emitted('update:open')?.at(-1)).toEqual([false])
+  })
+
+  it('offers no widget action when the Mini App has no widget', async () => {
+    await mountSheet({ app, reportUrl: undefined, removable: false })
+    expect(fetchWidgetManifest).toHaveBeenCalledWith(app.url)
+    expect(action('mini-app-add-widget-action')).toBeNull()
+    expect(action('mini-app-remove-widget-action')).toBeNull()
+  })
+
+  it('adds the widget after the person agrees to share their address', async () => {
+    fetchWidgetManifest.mockResolvedValue(manifest)
+    const w = await mountSheet({ app, reportUrl: undefined, removable: false })
+    action('mini-app-add-widget-action')!.click()
+    await flushPromises()
+
+    expect(dialogSheet).toHaveBeenCalledWith(expect.objectContaining({ title: 'Add EVM Mini Wallet to Home?', subtitle: 'Your stake' }))
+    expect(widgetsStore.addWidget).toHaveBeenCalledWith(app, manifest)
+    expect(w.emitted('update:open')?.at(-1)).toEqual([false])
+  })
+
+  it('does not add the widget when the person cancels', async () => {
+    fetchWidgetManifest.mockResolvedValue(manifest)
+    dialogSheet.mockResolvedValueOnce({ confirmed: false })
+    await mountSheet({ app, reportUrl: undefined, removable: false })
+    action('mini-app-add-widget-action')!.click()
+    await flushPromises()
+    expect(widgetsStore.addWidget).not.toHaveBeenCalled()
+  })
+
+  it('hides add at the widget limit', async () => {
+    fetchWidgetManifest.mockResolvedValue(manifest)
+    widgetsStore.canAddWidget = false
+    await mountSheet({ app, reportUrl: undefined, removable: false })
+    expect(action('mini-app-add-widget-action')).toBeNull()
+  })
+
+  it('removes a widget that is already on home', async () => {
+    widgetsStore.onHome = true
+    await mountSheet({ app, reportUrl: undefined, removable: false })
+    expect(fetchWidgetManifest).not.toHaveBeenCalled()
+    action('mini-app-remove-widget-action')!.click()
+    await flushPromises()
+    expect(widgetsStore.removeWidget).toHaveBeenCalledWith(app.url)
   })
 })

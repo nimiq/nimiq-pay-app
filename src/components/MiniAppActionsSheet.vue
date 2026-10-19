@@ -1,15 +1,20 @@
 <script setup lang="ts">
+import type { WidgetManifest } from '@/lib/mini-app-widgets'
 import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import { Share } from '@capacitor/share'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { DialogClose, DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import FlagIcon from '@/components/icons/flag.vue'
+import HomeIcon from '@/components/icons/home.vue'
 import RemoveIcon from '@/components/icons/remove.vue'
 import ShareIcon from '@/components/icons/share.vue'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { fetchWidgetManifest } from '@/lib/mini-app-widgets'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 
 const props = defineProps<{
   open: boolean
@@ -48,6 +53,48 @@ function onRemove() {
   close()
 }
 
+const widgets = useMiniAppWidgets()
+
+// Fetched on every open, so "Add to Home" shows up once the Mini App's server answers.
+const widgetManifest = ref<WidgetManifest>()
+watch(() => [props.open, props.context?.app.url] as const, async ([isOpen, url]) => {
+  widgetManifest.value = undefined
+  if (!isOpen || !url || widgets.isOnHome(url))
+    return
+  const manifest = await fetchWidgetManifest(url)
+  // The sheet may have closed or switched apps while the manifest loaded.
+  if (props.open && props.context?.app.url === url)
+    widgetManifest.value = manifest
+}, { immediate: true })
+
+async function onAddWidget() {
+  const context = props.context
+  const manifest = widgetManifest.value
+  close()
+  if (!context || !manifest)
+    return
+  const { confirmed } = await ExtendedDialog.sheet({
+    title: `Add ${context.app.name} to Home?`,
+    subtitle: manifest.description,
+    headerLogo: context.app.icon || undefined,
+    headerLogoCornerRadius: -1,
+    rows: [
+      { title: `• ${context.app.name} will see your NIM address every time the widget refreshes` },
+      { title: '• It can\'t move your funds' },
+    ],
+    confirmButtonTitle: 'Add to Home',
+    cancelButtonTitle: 'Cancel',
+  })
+  if (confirmed)
+    widgets.addWidget(context.app, manifest)
+}
+
+function onRemoveWidget() {
+  if (props.context)
+    widgets.removeWidget(props.context.app.url)
+  close()
+}
+
 // Color tokens differ per row; the shared layout classes live on the button in the template.
 const actions = computed(() => {
   const context = props.context
@@ -58,6 +105,11 @@ const actions = computed(() => {
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
       : []),
+    ...(widgets.isOnHome(context.app.url)
+      ? [{ testid: 'mini-app-remove-widget-action', label: 'Remove from Home', icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemoveWidget }]
+      : widgetManifest.value && widgets.canAddWidget
+        ? [{ testid: 'mini-app-add-widget-action', label: 'Add to Home', icon: HomeIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onAddWidget }]
+        : []),
     ...(context.removable
       ? [{ testid: 'mini-app-remove-action', label: 'Remove from Recently Viewed', icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemove }]
       : []),

@@ -1,0 +1,6 @@
+{
+  "v": 1,
+  "name": "Staking",
+  "description": "Sample widget data, cycling through the staking states every minute.",
+  "dataUrl": "/api/widget"
+}

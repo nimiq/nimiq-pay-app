@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { Ref } from 'vue'
+import type { HomeWidget } from '@/stores/mini-app-widgets'
+import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { IonBackdrop, IonButton, IonButtons, IonContent, IonGrid, IonHeader, IonPage, IonRefresher, IonRefresherContent, IonRow, IonToolbar, modalController } from '@ionic/vue'
-import { computedAsync, useElementVisibility, useEventListener, useResizeObserver } from '@vueuse/core'
+import { computedAsync, useDocumentVisibility, useElementVisibility, useEventListener, useIntervalFn, useResizeObserver } from '@vueuse/core'
 import { motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
@@ -10,6 +12,8 @@ import CryptoCityLogo from '@/components/icons/cryptocity-logo.vue'
 import MenuIcon from '@/components/icons/menu.vue'
 import LiveChat from '@/components/LiveChat.vue'
 import LiveChatBadge from '@/components/LiveChatBadge.vue'
+import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
+import MiniAppWidget from '@/components/MiniAppWidget.vue'
 // TODO: lazy load
 import NotificationCard from '@/components/NotificationCard.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
@@ -21,14 +25,18 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
+import { launchMiniApp } from '@/lib/mini-app-launcher'
 import { isMockEnabled } from '@/lib/mock-mode'
 import { promiseWithTimeout, sleep } from '@/lib/utils'
 import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
+import { useMiniApps } from '@/stores/mini-apps'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
@@ -92,6 +100,47 @@ watchEffect(() => {
 onBeforeUnmount(() => {
   isHomeVisible.value = false
 })
+
+const miniAppWidgets = useMiniAppWidgets()
+const { widgets: homeWidgets } = storeToRefs(miniAppWidgets)
+const shownWidgets = computed(() => isMiniAppsEnabled ? homeWidgets.value.filter(widget => !widget.data?.hidden) : [])
+// Widgets only refresh while home is on screen and the app is in the foreground; the store decides
+// which ones are due, so the interval just has to tick more often than the shortest refresh.
+const documentVisibility = useDocumentVisibility()
+const isWidgetRefreshActive = computed(() => isMiniAppsEnabled && isHomeVisible.value && documentVisibility.value === 'visible')
+watch(isWidgetRefreshActive, (active) => {
+  if (active)
+    void miniAppWidgets.refresh()
+}, { immediate: true })
+useIntervalFn(() => {
+  if (isWidgetRefreshActive.value)
+    void miniAppWidgets.refresh()
+}, 30_000)
+
+const widgetMenuOpen = ref(false)
+const widgetMenuContext = ref<MiniAppMenuContext | null>(null)
+
+function openWidgetMenu(widget: HomeWidget) {
+  const miniApps = useMiniApps()
+  widgetMenuContext.value = {
+    app: { name: widget.appName, url: widget.appUrl, icon: miniApps.iconForUrl(widget.appUrl) },
+    reportUrl: miniApps.getMiniAppReportUrl(widget.appUrl),
+    removable: false,
+  }
+  widgetMenuOpen.value = true
+}
+
+function openWidget(widget: HomeWidget) {
+  const app = useApp()
+  void launchMiniApp({
+    url: widget.data?.path ?? widget.appUrl,
+    title: widget.appName,
+    source: 'home_widget',
+    icon: useMiniApps().iconForUrl(widget.appUrl),
+    language: app.language,
+    userFiat: app.selectedFiat,
+  })
+}
 
 const referralInfo = computedAsync(async () => {
   const { data, error } = await getReferralInfo()
@@ -174,6 +223,7 @@ async function handleRefresh(event: CustomEvent) {
       useSync().updateBalances(),
       useSync().updateTransactionHistory(),
       usePolygonSync().triggerNow(),
+      isMiniAppsEnabled && miniAppWidgets.refresh(undefined, true),
     ])
     await useSync().verifyRemoteSignersDb()
     await useTransactions().refreshFromDb()
@@ -357,7 +407,19 @@ onMounted(() => {
         </IonRow>
       </IonGrid>
 
+      <div v-if="shownWidgets.length" class="flex flex-col gap-3" data-testid="home-mini-app-widgets">
+        <MiniAppWidget
+          v-for="widget in shownWidgets"
+          :key="widget.appUrl"
+          :widget="widget"
+          @open="openWidget(widget)"
+          @menu="openWidgetMenu(widget)"
+        />
+      </div>
+
       <TheHomeTransactions class="mt-10" />
+
+      <MiniAppActionsSheet v-if="isMiniAppsEnabled" v-model:open="widgetMenuOpen" :context="widgetMenuContext" />
     </IonContent>
 
     <!-- Live Chat -->
