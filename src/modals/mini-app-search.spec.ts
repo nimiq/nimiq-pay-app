@@ -24,6 +24,10 @@ describe('normalizeMiniAppUrl', () => {
     expect(normalizeMiniAppUrl('127.0.0.1')).toBe('http://127.0.0.1/')
   })
 
+  it('keeps the query string, so a widget can open a deep link', () => {
+    expect(normalizeMiniAppUrl('https://swap.example/?swap=abc')).toBe('https://swap.example/?swap=abc')
+  })
+
   it('returns undefined for non-URL inputs', () => {
     expect(normalizeMiniAppUrl('swap tokens')).toBeUndefined()
     expect(normalizeMiniAppUrl('')).toBeUndefined()

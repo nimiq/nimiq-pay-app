@@ -14,6 +14,7 @@ import LiveChatBadge from '@/components/LiveChatBadge.vue'
 import NotificationCard from '@/components/NotificationCard.vue'
 import TheHomeAmounts from '@/components/TheHomeAmounts.vue'
 import TheHomeTransactions from '@/components/TheHomeTransactions.vue'
+import TheHomeWidgets from '@/components/TheHomeWidgets.vue'
 import { useLogger } from '@/composables/useLogger'
 import { isMiniAppActive } from '@/composables/useMiniAppHost'
 import { Modal, useModal } from '@/composables/useModal'
@@ -21,6 +22,7 @@ import { useNotifications } from '@/composables/useNotifications'
 import { usePolygonSync } from '@/composables/usePolygonSync'
 import { toCoins } from '@/composables/usePrice'
 import { i18n } from '@/i18n/i18n-setup'
+import { isMiniAppsEnabled } from '@/lib'
 import { initializeFlow } from '@/lib/flows'
 import { FlowName } from '@/lib/flows/steps.types'
 import { isMockEnabled } from '@/lib/mock-mode'
@@ -29,6 +31,7 @@ import { Crypto, useApp } from '@/stores/app'
 import { useFeatureFlags } from '@/stores/feature-flags'
 import { useLiveChat } from '@/stores/livechat'
 import { useLocks } from '@/stores/locks'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { usePoints } from '@/stores/points'
 import { useRemoteSigner } from '@/stores/remote-signer'
 import { useSync } from '@/stores/sync'
@@ -162,6 +165,11 @@ const REFRESH_SPINNER_TIMEOUT = 5_000 // hide wheel even if sync still running (
 
 async function handleRefresh(event: CustomEvent) {
   logger.log('Manual refresh triggered')
+  const homeWidgets = isMiniAppsEnabled ? useMiniAppWidgets() : undefined
+  // A forced widget check with no widgets on Home would still record a chain check and delay the first widget's lookups.
+  const widgetWork = homeWidgets?.widgets.length
+    ? homeWidgets.tick({ force: true }).catch(err => logger.error('Refresh widgets failed', err))
+    : Promise.resolve()
   // Detached so the spinner can be capped while sync finishes. The `.catch` keeps this promise
   // from rejecting (the timeout below may leave it pending) — it ONLY handles real sync failures.
   // The trailing refreshFromDb repaints the list with freshly-written txs once sync finishes,
@@ -179,11 +187,11 @@ async function handleRefresh(event: CustomEvent) {
     await useTransactions().refreshFromDb()
   })().catch(err => logger.error('Refresh sync work failed', err))
 
-  // Cap the wheel: if sync outlives the timeout it keeps running in the background and the
+  // Cap the wheel: if sync or the widget refresh outlives the timeout it keeps running in the background and the
   // refreshFromDb inside syncWork repaints the list when it completes. This catch only ever
-  // fires on timeout (syncWork never rejects), so the message is accurate.
-  await promiseWithTimeout(syncWork, REFRESH_SPINNER_TIMEOUT)
-    .catch(() => logger.warn('Refresh still syncing after timeout, dismissing spinner (APP-159)'))
+  // fires on timeout (neither promise rejects), so the message is accurate.
+  await promiseWithTimeout(Promise.all([syncWork, widgetWork]), REFRESH_SPINNER_TIMEOUT)
+    .catch(() => logger.warn('Refresh sync or widgets still running after timeout, dismissing spinner (APP-159)'))
   await useTransactions().refreshFromDb()
   event.detail.complete()
 }
@@ -356,6 +364,8 @@ onMounted(() => {
           </motion.div>
         </IonRow>
       </IonGrid>
+
+      <TheHomeWidgets v-if="isMiniAppsEnabled" class="mt-2 mb-8" />
 
       <TheHomeTransactions class="mt-10" />
     </IonContent>

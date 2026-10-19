@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { WidgetSize } from '@/lib/mini-app-widgets'
 import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
@@ -8,8 +9,10 @@ import { computed, watch } from 'vue'
 import FlagIcon from '@/components/icons/flag.vue'
 import RemoveIcon from '@/components/icons/remove.vue'
 import ShareIcon from '@/components/icons/share.vue'
+import { i18n } from '@/i18n/i18n-setup'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { WIDGET_SIZES } from '@/lib/mini-app-widgets'
 
 const props = defineProps<{
   open: boolean
@@ -19,7 +22,13 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'update:open', value: boolean): void
   (e: 'remove'): void
+  (e: 'size', size: WidgetSize): void
+  (e: 'removeWidget'): void
 }>()
+
+const widgetSizes = computed(() => WIDGET_SIZES.filter(size => props.context?.widget?.sizes.includes(size)))
+// Literal calls, so the i18n extraction finds every size name.
+const sizeLabels = computed<Record<WidgetSize, string>>(() => ({ icon: i18n.t('Icon'), small: i18n.t('Small'), medium: i18n.t('Medium'), large: i18n.t('Large') }))
 
 function close() {
   emit('update:open', false)
@@ -48,6 +57,16 @@ function onRemove() {
   close()
 }
 
+function onSize(size: WidgetSize) {
+  emit('size', size)
+  close()
+}
+
+function onRemoveWidget() {
+  emit('removeWidget')
+  close()
+}
+
 // Color tokens differ per row; the shared layout classes live on the button in the template.
 const actions = computed(() => {
   const context = props.context
@@ -57,6 +76,9 @@ const actions = computed(() => {
     { testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare },
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
+      : []),
+    ...(context.widget
+      ? [{ testid: 'mini-app-remove-widget-action', label: i18n.t('Remove from Home'), icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemoveWidget }]
       : []),
     ...(context.removable
       ? [{ testid: 'mini-app-remove-action', label: 'Remove from Recently Viewed', icon: RemoveIcon, classes: 'text-cherry active:bg-cherry/[0.06] focus-visible:ring-cherry', onClick: onRemove }]
@@ -102,6 +124,23 @@ watch(() => props.open, (isOpen) => {
             Actions for {{ context.app.name }}
           </DialogDescription>
 
+          <div v-if="context.widget && widgetSizes.length > 1" data-testid="mini-app-widget-size" class="flex items-center justify-between gap-3 px-2 pb-3">
+            <span class="text-lg font-semibold text-space">{{ $t('Size') }}</span>
+            <div class="flex gap-1 rounded-full bg-space/[0.06] p-1" role="group" :aria-label="$t('Widget size')">
+              <button
+                v-for="size in widgetSizes"
+                :key="size"
+                type="button"
+                :data-testid="`mini-app-widget-size-${size}`"
+                :aria-pressed="size === context.widget.size"
+                class="relative rounded-full px-3 py-1.5 text-sm font-bold before:absolute before:inset-x-0 before:content-[''] before:-inset-y-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                :class="size === context.widget.size ? 'bg-white text-space shadow' : 'text-space/60'"
+                @click="onSize(size)"
+              >
+                {{ sizeLabels[size] }}
+              </button>
+            </div>
+          </div>
           <div class="flex flex-col divide-y divide-ash">
             <button
               v-for="action in actions"

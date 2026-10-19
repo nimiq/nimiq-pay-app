@@ -1,3 +1,4 @@
+import type { WidgetSize } from '@/lib/mini-app-widgets'
 import { CapacitorHttp } from '@capacitor/core'
 import { computedAsync, useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
@@ -36,6 +37,7 @@ export interface MiniAppMenuContext {
   app: Pick<RowDApp, 'name' | 'url' | 'icon'>
   reportUrl?: string
   removable: boolean
+  widget?: { size: WidgetSize, sizes: WidgetSize[] }
 }
 
 interface BaseDApp {
