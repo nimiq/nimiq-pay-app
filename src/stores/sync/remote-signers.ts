@@ -283,8 +283,10 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
 
     // Extensions are created by an HTLC, not the local wallet, so local history misses them and a fresh
     // database has not stored them yet. Follow HTLC history until the gate opens; the account lookup
-    // decides which ones are ours. Listed HTLCs already include the cosigner's extensions, so only ours are walked.
+    // decides which ones are ours. Listed HTLCs are not walked, but a walk reaching one continues through it:
+    // the listing may be stale and miss its newer extensions. `known` only dedupes the account lookup.
     if (!(await loadHtlcHistoryFlags()).walked) {
+      const queued = new Set(addresses)
       const walkedFrom = addresses.length
       for (let index = 0; index < addresses.length; index++) {
         const history = await getAllTransactionsForAddress(Nimiq.Address.fromString(addresses[index]))
@@ -293,14 +295,14 @@ export const useSyncRemoteSigners = defineStore('sync-remote-signers', () => {
         if (!history.complete)
           complete = false
         for (const transaction of history.transactions) {
-          if (transaction.sender === addresses[index] && transaction.recipientType === 'htlc' && !known.has(transaction.recipient)) {
-            known.add(transaction.recipient)
+          if (transaction.sender === addresses[index] && transaction.recipientType === 'htlc' && !queued.has(transaction.recipient)) {
+            queued.add(transaction.recipient)
             addresses.push(transaction.recipient)
           }
         }
       }
       const fundedFrom = funded.length
-      if (!(await lookUpFunded(addresses.slice(walkedFrom))))
+      if (!(await lookUpFunded(addresses.slice(walkedFrom).filter(address => !known.has(address)))))
         return 'unclear'
       ended = await recoverStrays(fundedFrom)
       if (ended)

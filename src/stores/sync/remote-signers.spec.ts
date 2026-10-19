@@ -1208,6 +1208,26 @@ describe('useSyncRemoteSigners', () => {
       expect(persistedHtlcHistoryCheck()).toBe(false)
     })
 
+    it('follows extensions through an HTLC the cosigner listed', async () => {
+      // A stale listing knows the middle HTLC but not its newer, funded extension.
+      const middle = 'NQ97 TEST LISTED MIDDLE'
+      state.remoteAddress = undefined
+      state.listCosignerHtlcs.mockResolvedValue([activeAddress, middle])
+      state.getAllTransactionsForAddress.mockImplementation((address: any) => {
+        const from = address.toUserFriendlyAddress()
+        const to = from === activeAddress ? middle : from === middle ? strayAddress : undefined
+        return Promise.resolve({ transactions: to ? [{ sender: from, recipient: to, recipientType: 'htlc' }] : [], complete: true })
+      })
+      mockAccounts({ [strayAddress]: htlcAccount(860_000) })
+      mockRecoverableStray(860_000)
+      const { useSyncRemoteSigners } = await import('./remote-signers')
+
+      await useSyncRemoteSigners().verifyRemoteSignersDb({ discoveryResult: discovery([activeAddress]) })
+
+      expect(state.registerValidatedRemoteSigner).toHaveBeenCalledExactlyOnceWith({ address: strayAddress })
+      expect(state.kvSetItem).not.toHaveBeenCalledWith('htlcExtensionsWalked', '1')
+    })
+
     it('does not record the HTLC history check when extension history is incomplete', async () => {
       mockExtension(activeAddress, strayAddress, false)
       const { useSyncRemoteSigners } = await import('./remote-signers')
