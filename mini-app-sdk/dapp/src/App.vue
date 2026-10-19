@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
 import Staking from './components/Staking.vue'
+import Widgets from './components/Widgets.vue'
 import { useNimiqMiniApp } from './composables/useNimiqMiniApp'
 
 const view = ref('kitchen-sink')
@@ -146,6 +147,9 @@ onBeforeUnmount(() => stopFullscreenChanges?.())
     <button @click="view = 'staking'">
       Staking
     </button>
+    <button @click="view = 'widgets'">
+      Widgets
+    </button>
   </nav>
 
   <HelloWorld
@@ -156,12 +160,13 @@ onBeforeUnmount(() => stopFullscreenChanges?.())
     :retry-init="retryInit"
   />
   <Staking
-    v-else
+    v-else-if="view === 'staking'"
     :provider="provider"
     :is-initializing="isInitializing"
     :init-error="initError"
     :retry-init="retryInit"
   />
+  <Widgets v-else :provider="provider" />
 </template>
 
 <style scoped>

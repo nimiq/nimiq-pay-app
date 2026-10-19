@@ -1,0 +1,24 @@
+{
+  "v": 1,
+  "widgets": [
+    {
+      "id": "nim-price",
+      "name": "NIM price",
+      "description": "The NIM price in your currency, kept current by Nimiq Pay. This widget has no code.",
+      "sizes": ["small", "large", "medium", "icon"],
+      "content": {
+        "label": "NIM",
+        "value": { "live": { "price": "NIM" } },
+        "info": { "live": { "priceChange": { "asset": "NIM", "range": "24h" } } },
+        "chart": { "kind": "line", "priceHistory": { "asset": "NIM", "range": "24h" } }
+      }
+    },
+    {
+      "id": "lab",
+      "name": "Widget lab",
+      "description": "Every size, a scheduled state and a chain trigger.",
+      "sizes": ["large", "medium", "small", "icon"],
+      "content": { "label": "Widget lab", "value": { "text": "Ready" }, "info": "Push a state from the demo" }
+    }
+  ]
+}

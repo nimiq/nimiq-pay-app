@@ -63,6 +63,8 @@ The catalog comes from [`nimiq/awesome`](https://github.com/nimiq/awesome) (`src
 
 Requests from the Mini App reach the host over `postMessage` (`src/composables/useMiniAppHost.ts`). The user has to confirm every sensitive request (`src/lib/mini-app-confirmation.ts`).
 
+A Mini App can put widgets on Home. It declares them in a `nimiq-pay-widgets.json` in its folder (or a parent up to the site root) and sends states through `window.nimiqPay.widgets`; Nimiq Pay validates them (`src/lib/mini-app-widgets.ts`), stores them per account (`src/stores/mini-app-widgets.ts`) and draws them itself (`src/components/MiniAppWidget.vue`). While the Mini App is closed, Nimiq Pay follows the states' scheduled and on-chain triggers (`src/lib/mini-app-widget-chain.ts`) and polls same-origin refresh URLs (`src/lib/mini-app-widget-sources.ts`), only while Home is on screen. No Mini App code runs for a widget. Developer reference: [`MINI-APP-WIDGETS.md`](./MINI-APP-WIDGETS.md).
+
 Mini Apps are off unless `VITE_ENABLE_MINI_APPS` is set.
 
 ## External services
