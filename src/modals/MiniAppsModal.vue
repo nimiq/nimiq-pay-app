@@ -6,6 +6,7 @@ import type { MiniAppMenuContext, MiniAppType } from '@/stores/mini-apps'
 import { Browser } from '@capacitor/browser'
 import { IonBackButton, IonButtons, IonSearchbar, IonSkeletonText, useBackButton } from '@ionic/vue'
 import { useStorageAsync } from '@vueuse/core'
+import { ExtendedDialog } from 'capacitor-extended-dialog'
 import { AnimatePresence, motion } from 'motion-v'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
@@ -15,18 +16,26 @@ import MiniAppsCompetitionView from '@/components/competition/MiniAppsCompetitio
 import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import MiniAppRow from '@/components/MiniAppRow.vue'
 import MiniAppTypeFilter from '@/components/MiniAppTypeFilter.vue'
+import MiniAppWidgetGallery from '@/components/MiniAppWidgetGallery.vue'
 import ModalTemplate from '@/components/ModalTemplate.vue'
 import SwipeToDeleteRow from '@/components/SwipeToDeleteRow.vue'
 import { isMiniAppActive } from '@/composables/useMiniAppHost'
+import { useModal } from '@/composables/useModal'
 import { trackFeatureOpened } from '@/lib/analytics'
 import { launchMiniApp, openingMiniAppUrl, warmUpWeb3ProviderScript } from '@/lib/mini-app-launcher'
 import { getFaviconUrl } from '@/lib/site-metadata'
+import { safeOrigin } from '@/lib/url-safety'
 import { kvPreferences, useApp } from '@/stores/app'
 import { useCompetitionMiniApps } from '@/stores/competition-mini-apps'
+import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { useMiniApps } from '@/stores/mini-apps'
 import { normalizeMiniAppUrl, useMiniAppSearch } from './mini-app-search'
 
 type InAppDAppSource = Exclude<DAppOpenSource, 'deeplink' | 'competition'>
+
+const props = defineProps<{
+  initialStep?: 'apps' | 'widgets'
+}>()
 
 const store = useMiniApps()
 const { popularDApps, featuredDApps, nonFeaturedDApps, isLoading, descriptionTexts, recentDAppsWithDescriptions } = storeToRefs(store)
@@ -41,15 +50,38 @@ const {
 const recentDAppsWithTestIds = computed(() =>
   (recentDAppsWithDescriptions.value ?? []).map(dapp => ({ ...dapp, testId: toUrlTestId(dapp.url) })),
 )
+const widgets = useMiniAppWidgets()
+const { closeModal } = useModal()
+
+async function removeRecent(url: string, name: string) {
+  store.removeRecentlyViewed(url)
+  const origin = safeOrigin(url)
+  const count = widgets.listForOrigin(origin).length
+  if (!count)
+    return
+  // Asked, never assumed: a widget can stay on Home after its Mini App leaves Recently Viewed.
+  const { value } = await ExtendedDialog.confirm({
+    title: 'Remove its widgets too?',
+    message: count === 1
+      ? `${name} has a widget on Home. You can also remove it later from its menu.`
+      : `${name} has ${count} widgets on Home. You can also remove them later from each widget's menu.`,
+    okButtonTitle: 'Remove widgets',
+    cancelButtonTitle: 'Keep them',
+  })
+  if (value)
+    widgets.removeForOrigin(origin)
+}
+
 const appStore = useApp()
 const { language, selectedFiat, showAnimations } = storeToRefs(appStore)
-const flowStep = shallowRef<'apps' | 'competition' | 'competitionDetail'>('apps')
+const flowStep = shallowRef<'apps' | 'widgets' | 'competition' | 'competitionDetail'>(props.initialStep ?? 'apps')
 const selectedCompetitionApp = ref<CompetitionMiniApp>()
 const flowTransition = computed(() => ({ duration: showAnimations.value ? 0.22 : 0, ease: 'easeOut' as const }))
 const flowOffset = computed(() => ({
   apps: '0%',
   competition: '-100%',
   competitionDetail: '-200%',
+  widgets: '-300%',
 })[flowStep.value])
 const isOpeningSelectedCompetitionApp = computed(() => !!selectedCompetitionApp.value
   && isOpeningUrl(selectedCompetitionApp.value.url))
@@ -160,6 +192,10 @@ function openCompetitionApp(app: CompetitionMiniApp) {
 }
 
 function backInMiniAppsFlow() {
+  if (flowStep.value === 'widgets' && props.initialStep === 'widgets') {
+    void closeModal()
+    return
+  }
   flowStep.value = flowStep.value === 'competitionDetail' ? 'competition' : 'apps'
 }
 
@@ -200,22 +236,32 @@ async function openCompetitionExternal(url: string) {
 
     <div class="mini-apps-flow -mx-6 h-full min-h-0 w-[calc(100%+3rem)] shrink-0 overflow-hidden">
       <motion.div
-        class="flex h-full w-[300%]"
+        class="flex h-full w-[400%]"
         :initial="false"
         :animate="{ marginLeft: flowOffset }"
         :transition="flowTransition"
       >
         <section
           data-testid="mini-apps-flow-apps"
-          class="ion-content-scroll-host mini-apps-flow-step h-full w-1/3 shrink-0 overflow-y-auto"
+          class="ion-content-scroll-host mini-apps-flow-step h-full w-1/4 shrink-0 overflow-y-auto"
           :class="{ 'pointer-events-none': flowStep !== 'apps' }"
           :aria-hidden="flowStep !== 'apps'"
           :inert="flowStep !== 'apps'"
         >
           <div class="flex min-h-full w-full flex-col gap-6 px-6 pb-8">
-            <p class="text-2xl font-bold">
-              Discover
-            </p>
+            <div class="flex items-center justify-between gap-3">
+              <p class="text-2xl font-bold">
+                Discover
+              </p>
+              <button
+                type="button"
+                data-testid="mini-apps-widgets-button"
+                class="relative rounded-full bg-space/[0.06] px-3 py-1.5 before:absolute before:inset-x-0 before:top-0 before:-bottom-3 before:content-[''] text-sm font-bold text-space transition-colors active:bg-space/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
+                @click="flowStep = 'widgets'"
+              >
+                {{ $t('Widgets') }}
+              </button>
+            </div>
 
             <!-- Search Bar -->
             <IonSearchbar
@@ -268,7 +314,7 @@ async function openCompetitionExternal(url: string) {
                     :delete-label="`Remove ${dapp.name} from Recently Viewed`"
                     :delete-testid="`recent-dapp-delete-${dapp.testId}`"
                     @launch="openMiniApp(dapp.url, dapp.name, 'recent')"
-                    @delete="store.removeRecentlyViewed(dapp.url)"
+                    @delete="removeRecent(dapp.url, dapp.name)"
                   >
                     <MiniAppRow
                       :dapp="dapp"
@@ -387,7 +433,7 @@ async function openCompetitionExternal(url: string) {
 
         <section
           data-testid="mini-apps-flow-competition"
-          class="h-full w-1/3 shrink-0"
+          class="h-full w-1/4 shrink-0"
           :class="{ 'pointer-events-none': flowStep !== 'competition' }"
           :aria-hidden="flowStep !== 'competition'"
           :inert="flowStep !== 'competition'"
@@ -397,7 +443,7 @@ async function openCompetitionExternal(url: string) {
 
         <section
           data-testid="mini-apps-flow-competition-detail"
-          class="h-full w-1/3 min-w-0 shrink-0 overflow-hidden px-6"
+          class="h-full w-1/4 min-w-0 shrink-0 overflow-hidden px-6"
           :class="{ 'pointer-events-none': flowStep !== 'competitionDetail' }"
           :aria-hidden="flowStep !== 'competitionDetail'"
           :inert="flowStep !== 'competitionDetail'"
@@ -411,13 +457,23 @@ async function openCompetitionExternal(url: string) {
             @open-external="openCompetitionExternal"
           />
         </section>
+
+        <section
+          data-testid="mini-apps-flow-widgets"
+          class="ion-content-scroll-host mini-apps-flow-step h-full w-1/4 shrink-0 overflow-y-auto"
+          :class="{ 'pointer-events-none': flowStep !== 'widgets' }"
+          :aria-hidden="flowStep !== 'widgets'"
+          :inert="flowStep !== 'widgets'"
+        >
+          <MiniAppWidgetGallery :active="flowStep === 'widgets'" />
+        </section>
       </motion.div>
     </div>
 
     <MiniAppActionsSheet
       v-model:open="menuOpen"
       :context="menuContext"
-      @remove="menuContext && store.removeRecentlyViewed(menuContext.app.url)"
+      @remove="menuContext && removeRecent(menuContext.app.url, menuContext.app.name)"
     />
   </ModalTemplate>
 </template>

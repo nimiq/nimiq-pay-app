@@ -210,7 +210,14 @@ vi.mock('@/lib', () => ({
   },
   isTestnet: false,
 }))
-vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => ({ noteLaunch: vi.fn() }) }))
+const { closeModal, dialogConfirm, listForOrigin, removeForOrigin } = vi.hoisted(() => ({
+  closeModal: vi.fn(() => Promise.resolve()),
+  dialogConfirm: vi.fn(),
+  listForOrigin: vi.fn((): string[] => []),
+  removeForOrigin: vi.fn(),
+}))
+vi.mock('@/stores/mini-app-widgets', () => ({ useMiniAppWidgets: () => ({ noteLaunch: vi.fn(), listForOrigin, removeForOrigin }) }))
+vi.mock('capacitor-extended-dialog', () => ({ ExtendedDialog: { confirm: dialogConfirm } }))
 
 vi.mock('@/stores/conn', () => ({
   useConn: () => ({
@@ -223,7 +230,7 @@ vi.mock('@/composables/useModal', () => ({
   Modal: {},
   useModal: () => ({
     showModal: vi.fn(() => Promise.resolve()),
-    closeModal: vi.fn(() => Promise.resolve()),
+    closeModal,
     closeAllModals: vi.fn(() => Promise.resolve()),
   }),
 }))
@@ -267,8 +274,9 @@ const SwipeToDeleteRowStub = defineComponent({
   `,
 })
 
-function mountModal(component: Component = MiniAppsModal) {
+function mountModal(component: Component = MiniAppsModal, props: Record<string, unknown> = {}) {
   return mount(component, {
+    props,
     global: {
       plugins: [createPinia()],
       mocks: { $t: translate },
@@ -287,6 +295,7 @@ function mountModal(component: Component = MiniAppsModal) {
           template: '<div><slot /></div>',
         },
         SwipeToDeleteRow: SwipeToDeleteRowStub,
+        MiniAppWidgetGallery: true,
       },
     },
   })
@@ -294,6 +303,14 @@ function mountModal(component: Component = MiniAppsModal) {
 
 function toUrlTestId(url: string) {
   return url.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase()
+}
+
+async function removeFromRecentlyViewed(wrapper: ReturnType<typeof mountModal>, url: string, name: string) {
+  const { useMiniApps } = await import('@/stores/mini-apps')
+  useMiniApps().addRecentlyViewed({ url, name, icon: '' })
+  await flushPromises()
+  await wrapper.find(`[data-testid="recent-dapp-delete-${toUrlTestId(url)}"]`).trigger('click')
+  await flushPromises()
 }
 
 function getHardwareBackHandler() {
@@ -339,6 +356,11 @@ describe('mini apps modal', () => {
     screenOrientationLock.mockReset()
     screenOrientationLock.mockImplementation(() => Promise.resolve())
     trackDAppClosed.mockReset()
+    dialogConfirm.mockReset()
+    closeModal.mockClear()
+    listForOrigin.mockReset()
+    listForOrigin.mockReturnValue([])
+    removeForOrigin.mockReset()
     trackFeatureOpened.mockReset()
     trackDAppOpened.mockReset()
     isDevState.value = false
@@ -747,5 +769,85 @@ describe('mini apps modal', () => {
     expect(openWebView).toHaveBeenCalledTimes(1)
     const [[firstArg]] = openWebView.mock.calls as unknown as Array<[{ preShowScript: string }]>
     expect(firstArg.preShowScript).toContain('window.__NIMIQ_PAY__={"lang":"es","userFiat":"EUR","network":"mainnet"}')
+  })
+
+  it('opens the widget gallery from the Widgets button and goes back to Discover', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await wrapper.find('[data-testid="mini-apps-widgets-button"]').trigger('click')
+    expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('false')
+
+    await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('true')
+  })
+
+  it('extends the Widgets button\'s hit area only downward, since the scroll section clips its top', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+    const classes = wrapper.find('[data-testid="mini-apps-widgets-button"]').classes()
+    expect(classes).toEqual(expect.arrayContaining(['before:top-0', 'before:-bottom-3']))
+    expect(classes).not.toContain('before:-inset-y-1.5')
+  })
+
+  it('starts on the gallery when opened with initialStep "widgets"', () => {
+    const wrapper = mountModal(MiniAppsModal, { initialStep: 'widgets' })
+
+    expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('false')
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('true')
+  })
+
+  it('asks before removing a Mini App\'s widgets with it, and keeps them when told to', async () => {
+    listForOrigin.mockReturnValue(['swap'])
+    const wrapper = mountModal()
+    await flushPromises()
+
+    dialogConfirm.mockResolvedValueOnce({ value: false })
+    await removeFromRecentlyViewed(wrapper, 'https://swap.example', 'Swap')
+    expect(listForOrigin).toHaveBeenCalledWith('https://swap.example')
+    expect(dialogConfirm).toHaveBeenCalledWith(expect.objectContaining({ title: 'Remove its widgets too?', okButtonTitle: 'Remove widgets', cancelButtonTitle: 'Keep them' }))
+    expect(removeForOrigin).not.toHaveBeenCalled()
+
+    dialogConfirm.mockResolvedValueOnce({ value: true })
+    await removeFromRecentlyViewed(wrapper, 'https://swap.example', 'Swap')
+    expect(removeForOrigin).toHaveBeenCalledWith('https://swap.example')
+  })
+
+  it('asks about the widgets from the Remove from Recently Viewed menu action too', async () => {
+    listForOrigin.mockReturnValue(['swap'])
+    dialogConfirm.mockResolvedValueOnce({ value: true })
+    const { useMiniApps } = await import('@/stores/mini-apps')
+    const wrapper = mountModal()
+    await flushPromises()
+    useMiniApps().addRecentlyViewed({ url: 'https://swap.example', name: 'Swap', icon: '' })
+    await flushPromises()
+
+    await wrapper.find(`[data-testid="recent-dapp-menu-${toUrlTestId('https://swap.example')}"]`).trigger('click')
+    wrapper.findComponent({ name: 'MiniAppActionsSheet' }).vm.$emit('remove')
+    await flushPromises()
+
+    expect(dialogConfirm).toHaveBeenCalledWith(expect.objectContaining({ message: 'Swap has a widget on Home. You can also remove it later from its menu.' }))
+    expect(removeForOrigin).toHaveBeenCalledWith('https://swap.example')
+  })
+
+  it('closes the modal instead of going to Discover when the gallery was opened from Home', async () => {
+    const wrapper = mountModal(MiniAppsModal, { initialStep: 'widgets' })
+    await flushPromises()
+
+    await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
+
+    expect(closeModal).toHaveBeenCalledTimes(1)
+    expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('false')
+  })
+
+  it('does not ask when the Mini App has no widgets on Home', async () => {
+    const wrapper = mountModal()
+    await flushPromises()
+
+    await removeFromRecentlyViewed(wrapper, 'https://swap.example', 'Swap')
+
+    expect(listForOrigin).toHaveBeenCalledWith('https://swap.example')
+    expect(dialogConfirm).not.toHaveBeenCalled()
   })
 })
