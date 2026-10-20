@@ -26,6 +26,9 @@ const EXIT_FATAL = 2
 // BrowserStack may add later, keeps the poll going until the attempt times out.
 const TERMINAL_STATUSES = new Set(['passed', 'failed', 'error', 'timedout', 'timeout', 'done', 'stopped', 'cancelled', 'canceled', 'aborted', 'skipped'])
 const FAILED_BUILD_STATUSES = new Set(['failed', 'error', 'timedout', 'timeout'])
+// BrowserStack's error when it cannot start a session; on the session and on its test case.
+const SESSION_NOT_STARTED = /Could not start a session/i
+const SESSION_NOT_STARTED_VERDICT = Object.freeze({ diagnosis: 'INFRA', disposition: 'RETRYABLE', signal: 'BrowserStack could not start the session' })
 const ARTIFACT_HOST = /^https:\/\/[\w.-]+\.browserstack\.com\//
 const ZIP_SIGNATURE = Buffer.from([0x50, 0x4B, 0x03, 0x04])
 // Maestro's step and error wording, logcat crash markers, JSON literals, and BrowserStack's
@@ -320,8 +323,14 @@ export function summarizeResults(build, sessions) {
   const ok = ['passed', 'done'].includes(buildStatus)
     && counts.passed > 0
     && rows.every(row => ['passed', 'skipped'].includes(String(row.status ?? '').toLowerCase()))
+  // The session can fail to start before any test case runs: the error is on the session and
+  // its test cases stay queued (the only status seen), so none of them reaches diagnoseTestcase.
+  const neverStarted = (sessions ?? []).some((session) => {
+    const statuses = (session.testcases?.data ?? []).flatMap(group => group.testcases ?? []).map(testcase => String(testcase.status ?? '').toLowerCase())
+    return SESSION_NOT_STARTED.test(session?.error?.message ?? '') && statuses.length > 0 && statuses.every(status => status === 'queued')
+  })
 
-  return { rows, counts, buildStatus, ok, crashLogs }
+  return { rows, counts, buildStatus, ok, crashLogs, neverStarted }
 }
 
 /** The Maestro command that failed, from BrowserStack's maestro_commands (an array of {command, metadata}). */
@@ -415,9 +424,9 @@ export function diagnoseTestcase({ session, testcase, maestroLog = '', commands,
 
   // BrowserStack documents `error` as its own infrastructure failing; with no flow started, the
   // app never ran. Session-level errors carry the same "Could not start a session" message.
-  const neverStarted = String(testcase?.status ?? '').toLowerCase() === 'error' || /Could not start a session/i.test(session?.error?.message ?? '')
+  const neverStarted = String(testcase?.status ?? '').toLowerCase() === 'error' || SESSION_NOT_STARTED.test(session?.error?.message ?? '')
   if (neverStarted && Number(testcase?.metadata?.total_flows) === 0) {
-    return { diagnosis: 'INFRA', disposition: 'RETRYABLE', signal: 'BrowserStack could not start the session' }
+    return SESSION_NOT_STARTED_VERDICT
   }
 
   const failedCommand = findFailedCommand(commands)
@@ -467,6 +476,10 @@ export function diagnoseAttempt(summary, diagnoses = [], { waitError, sessionsEr
 
   if (fromTestcases) {
     return fromTestcases
+  }
+
+  if (summary.neverStarted) {
+    return SESSION_NOT_STARTED_VERDICT
   }
 
   if (waitError?.timedOut) {
