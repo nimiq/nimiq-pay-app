@@ -80,11 +80,13 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
     return null
   }
 
+  let host: MiniAppHost | null = null
+  let closeHandle: PluginListenerHandle | null = null
   try {
     const { MiniAppHost } = await import('@/composables/useMiniAppHost')
     const { requestUserConfirmation, selectLightningAsset } = await import('@/lib/mini-app-confirmation')
 
-    const host = MiniAppHost.reconnect(InAppBrowser, {
+    host = MiniAppHost.reconnect(InAppBrowser, {
       url: session.url,
       title: session.title,
       evmRpcUrls: session.evmRpcUrls,
@@ -95,13 +97,14 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
     // Re-register close listener so the host is destroyed when user closes the webview
     // (host.destroy() no longer removes listeners it doesn't own). Null re-entry guard
     // because plugin close() and dialog dismiss can both emit closeEvent.
-    let closeHandle: PluginListenerHandle | null = await InAppBrowser.addListener('closeEvent', async () => {
+    const hostRef = host
+    closeHandle = await InAppBrowser.addListener('closeEvent', async () => {
       const h = closeHandle
       if (h === null)
         return
       closeHandle = null
       logger.log('Reconnected mini-app webview closed, destroying host')
-      await host.destroy()
+      await hostRef.destroy()
       await h.remove()
     })
 
@@ -112,6 +115,10 @@ export async function reconnectAndShow(): Promise<MiniAppHost | null> {
   }
   catch (error) {
     logger.error('Failed to reconnect webview:', error)
+    // With the webview gone, close() rejects without emitting closeEvent, so the
+    // listener above never destroys the host and isMiniAppActive would stay true.
+    await closeHandle?.remove().catch(() => {})
+    await host?.destroy()
     await clearSession()
     // Try to close any orphaned webview
     try {
