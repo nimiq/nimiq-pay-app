@@ -25,18 +25,21 @@ export const useConn = defineStore('conn', () => {
   const db = ref<SQLiteDBConnection>()
 
   const locked = ref(true)
-  // Once the db is unlocked, this function is resolved and all the waiting promises are resolved.
-  let resolveUnlockDb: () => void
-  // The promise that resolves when the db is unlocked. When resolved, it sets locked to false.
-  const unlockPromise = new Promise<void>((resolve) => {
-    resolveUnlockDb = () => {
-      locked.value = false
-      resolve()
-    }
-  })
-  // If the db is locked, it will return the promise that resolves when the db is unlocked.
-  async function waitForUnlock(): AsyncOption<string> {
+  // Resolved by open(). close() and deleteDatabase() re-arm it, so queries issued while the db is
+  // closed wait for the next open() instead of hitting a dead or missing handle.
+  let resolveUnlockDb!: () => void
+  let unlockPromise = new Promise<void>(resolve => resolveUnlockDb = resolve)
+  function lock() {
+    // Keep the pending promise when already locked: callers may be awaiting it.
     if (locked.value)
+      return
+    locked.value = true
+    unlockPromise = new Promise<void>(resolve => resolveUnlockDb = resolve)
+  }
+  // Waits until the db is open, including across close()/reopen cycles.
+  async function waitForUnlock(): AsyncOption<string> {
+    // Loop: the db can be locked again between open() resolving and this waiter resuming.
+    while (locked.value)
       await unlockPromise
     if (!db.value) {
       logger.error('The db instance is not defined')
@@ -89,19 +92,22 @@ export const useConn = defineStore('conn', () => {
     if (isWeb)
       await db.value!.execute(`PRAGMA journal_mode=WAL;`, false)
 
+    locked.value = false
     resolveUnlockDb()
     logger.log('🗄️ open: unlocked')
     dbExists.value = !!(await sqlite.isDatabase(DB_NAME)).result
   }
 
   async function close() {
-    if (!isOpen.value)
+    // Locked means already closed, deleted or never opened. isOpen alone goes stale after a close.
+    if (locked.value || !isOpen.value)
       return
-    await waitForUnlock()
+    lock()
     await db.value!.close()
   }
 
   async function deleteDatabase(reload: boolean = true) {
+    lock()
     try {
       if (dbExists.value) {
         logger.log('Deleting database')
