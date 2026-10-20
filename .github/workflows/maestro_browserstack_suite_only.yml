@@ -1,6 +1,6 @@
-name: Nimiq Pay - Maestro Suite Android (Suite Only)
+name: Nimiq Pay - Maestro Suite (Suite Only)
 
-# This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack.
+# This workflow uploads the Maestro suite, and runs the Maestro tests on BrowserStack, on Android and iOS in parallel.
 # Using this with every push to the feature/maestro-improvements branch will allow us to test the Maestro suite without having to build and upload the Android APK every time.
 # The APK under test is the one recorded in the BROWSERSTACK_ANDROID_DEBUG_APP repo variable ("<bs:// url> <commit>"): build it with
 # `node scripts/build-test-apk.mjs` and upload it with `node scripts/browserstack-apk-upload.js --apk <apk> --set-repo-variables`.
@@ -43,18 +43,54 @@ jobs:
         run: node scripts/browserstack-maestro-upload.js --custom-id francisco_tests
 
   run_browserstack_maestro:
+    name: Maestro ${{ matrix.platform }}
     needs: upload_maestro_suite
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: ${{ matrix.timeout_minutes }}
+    # iOS doesn't fail the workflow until it has passed 2 runs in a row.
+    continue-on-error: ${{ matrix.platform == 'ios' }}
+    permissions:
+      contents: read
+      # The iOS job reads the Android job's status before its wallet flows.
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: android
+            device: Samsung Galaxy S26-16.0
+            # "<bs:// app url> <commit>". The folder's flows target com.nimiq.pay.debug and need the
+            # Mini Apps build; without the variable the run falls back to the shared custom_id.
+            app: ${{ vars.BROWSERSTACK_ANDROID_DEBUG_APP || 'NimiqPayAndroidApkDebug' }}
+            app_id: com.nimiq.pay.debug
+            results_repo: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
+            # Flows stop starting at the budget; the rest is headroom for an in-flight attempt,
+            # reporting and publishing.
+            timeout_minutes: 180
+            budget_minutes: 150
+          - platform: ios
+            device: iPhone 17 Pro-26
+            # The dev team's latest release .ipa (no commit), over-the-air updates on: a newer
+            # production web bundle can load on background/relaunch.
+            app: NimiqPayiOS
+            app_id: com.nimiq.pay
+            results_repo: franciscodiaz4/Maestro-Results-Nimiq-Pay-iOS
+            # An hour more than Android: its wallet flows can only start once the Android job is done.
+            timeout_minutes: 240
+            budget_minutes: 210
     outputs:
-      summary: ${{ steps.summary.outputs.summary }}
+      summary_android: ${{ steps.summary.outputs.summary_android }}
+      summary_ios: ${{ steps.summary.outputs.summary_ios }}
+      status_android: ${{ steps.status.outputs.status_android }}
+      status_ios: ${{ steps.status.outputs.status_ios }}
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
       BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
-      BROWSERSTACK_DEVICE: Samsung Galaxy S26-16.0
-      # "<bs:// app url> <commit>". The folder's flows target com.nimiq.pay.debug and need the Mini
-      # Apps build; without the variable the run falls back to the shared custom_id.
-      BROWSERSTACK_ANDROID_DEBUG_APP: ${{ vars.BROWSERSTACK_ANDROID_DEBUG_APP }}
+      PLATFORM: ${{ matrix.platform }}
+      BUDGET_MINUTES: ${{ matrix.budget_minutes }}
+      BROWSERSTACK_DEVICE: ${{ matrix.device }}
+      BROWSERSTACK_APP: ${{ matrix.app }}
+      APP_ID: ${{ matrix.app_id }}
       TEST_SUITE: ${{ needs.upload_maestro_suite.outputs.test_suite_url }}
 
     steps:
@@ -68,19 +104,36 @@ jobs:
           # Recovery words of the shared funded testnet wallet, only passed to flows tagged
           # needsTestnetWallet. Those flows are skipped while the secret is unset.
           MAESTRO_TESTNET_WALLET_WORDS: ${{ secrets.MAESTRO_TESTNET_WALLET_WORDS }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          read -r app app_commit <<< "${BROWSERSTACK_ANDROID_DEBUG_APP:-NimiqPayAndroidApkDebug}"
+          read -r app app_commit <<< "$BROWSERSTACK_APP"
           flow_files=(nimiq-pay-tests/flows/francisco_tests/*.yaml)
           if (( ${#flow_files[@]} == 0 )); then
             echo "No Maestro flows found in nimiq-pay-tests/flows/francisco_tests."
             exit 1
           fi
+          wallet_tag='^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$'
+          # Both jobs use the same testnet wallet, which must not be logged in twice at once (a login
+          # can extend its HTLC), so iOS runs its wallet flows last, once the Android job is done.
+          if [[ "$PLATFORM" == ios ]]; then
+            other_flows=()
+            wallet_flows=()
+            for flow_file in "${flow_files[@]}"; do
+              if grep -qE "$wallet_tag" "$flow_file"; then
+                wallet_flows+=("$flow_file")
+              else
+                other_flows+=("$flow_file")
+              fi
+            done
+            flow_files=(${other_flows[@]+"${other_flows[@]}"} ${wallet_flows[@]+"${wallet_flows[@]}"})
+          fi
+          android_done=false
 
           # One attempt may spend up to 15 minutes in BrowserStack's queue before a ~4-minute run.
           attempt_timeout=1500
-          # Headroom under the job's 180 minutes for an in-flight attempt, reporting and publishing.
-          deadline=$(( $(date +%s) + 150 * 60 ))
+          # The matrix's budget, under the job's timeout (see there).
+          deadline=$(( $(date +%s) + BUDGET_MINUTES * 60 ))
           infra_first_attempts=0
           stop_reason=""
           test_exit_code=0
@@ -101,13 +154,42 @@ jobs:
               stop_reason="Skipped: wall-clock budget exhausted"
             fi
             skip_signal="$stop_reason"
-            if [[ -z "$skip_signal" ]] && grep -qE '^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$' "$flow_file" \
+            if [[ -z "$skip_signal" ]] && grep -qE "$wallet_tag" "$flow_file" \
               && [[ -z "$MAESTRO_TESTNET_WALLET_WORDS" ]]; then
               skip_signal="Skipped: the MAESTRO_TESTNET_WALLET_WORDS secret is not set"
             fi
+            if [[ -z "$skip_signal" && "$PLATFORM" == ios && "$android_done" == false ]] && grep -qE "$wallet_tag" "$flow_file"; then
+              echo "Waiting for the Android job to finish with the shared testnet wallet"
+              wait_signal="Skipped: the Android job still used the shared testnet wallet"
+              api_errors=0
+              # Leaves room for this flow's attempt before the deadline.
+              while (( $(date +%s) + attempt_timeout <= deadline )); do
+                # The latest attempt of each job, so a re-run of only this job doesn't wait. Empty
+                # output (no such job, e.g. after a rename) counts as an error too.
+                android_status="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" \
+                  --jq '.jobs[] | select(.name == "Maestro android") | .status' || true)"
+                if [[ "$android_status" == completed ]]; then
+                  android_done=true
+                  break
+                fi
+                if [[ -z "$android_status" ]]; then
+                  api_errors=$(( api_errors + 1 ))
+                  if (( api_errors >= 5 )); then
+                    wait_signal="Skipped: could not read the status of the job \"Maestro android\""
+                    break
+                  fi
+                else
+                  api_errors=0
+                fi
+                sleep 60
+              done
+              if [[ "$android_done" == false ]]; then
+                skip_signal="$wait_signal"
+              fi
+            fi
             if [[ -n "$skip_signal" ]]; then
-              jq -n --arg flow "$flow" --arg signal "$skip_signal" --argjson quarantine "$quarantined" \
-                '{flow: $flow, outcome: "NOT_RUN", ok: false, quarantine: $quarantine, signal: $signal, attempts: []}' > "$report_dir/result.json"
+              jq -n --arg flow "$flow" --arg platform "$PLATFORM" --arg signal "$skip_signal" --argjson quarantine "$quarantined" \
+                '{flow: $flow, platform: $platform, outcome: "NOT_RUN", ok: false, quarantine: $quarantine, signal: $signal, attempts: []}' > "$report_dir/result.json"
               if [[ "$quarantined" == false ]]; then
                 test_exit_code=1
               fi
@@ -115,7 +197,7 @@ jobs:
             fi
 
             wallet_env=()
-            if grep -qE '^[[:space:]]*-[[:space:]]*needsTestnetWallet[[:space:]]*$' "$flow_file"; then
+            if grep -qE "$wallet_tag" "$flow_file"; then
               # Read from this step's env and masked in the evidence; never on the command line.
               wallet_env=(--secret-env MAESTRO_TESTNET_WALLET_WORDS)
             fi
@@ -126,9 +208,10 @@ jobs:
               --app "$app" \
               --app-commit "$app_commit" \
               --suite "$TEST_SUITE" \
+              --platform "$PLATFORM" \
               --device "$BROWSERSTACK_DEVICE" \
               --flow "$flow" \
-              --env APP_ID=com.nimiq.pay.debug \
+              --env "APP_ID=$APP_ID" \
               --env PIN=1111 \
               --env "DEV_MODAL_HOLD_DEVICE=$BROWSERSTACK_DEVICE" \
               ${wallet_env[@]+"${wallet_env[@]}"} \
@@ -183,8 +266,9 @@ jobs:
           node scripts/browserstack-maestro-aggregate-report.js ./maestro-reports
           # Read before writing, so a failure cannot leave an unterminated output block.
           summary="$(cat ./maestro-reports/slack-summary.txt)"
+          # One output per platform: matrix jobs share the job's outputs.
           {
-            echo 'summary<<MAESTRO_SUMMARY_EOF'
+            echo "summary_$PLATFORM<<MAESTRO_SUMMARY_EOF"
             echo "$summary"
             echo 'MAESTRO_SUMMARY_EOF'
           } >> "$GITHUB_OUTPUT"
@@ -194,7 +278,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-results
+          name: maestro-results-${{ matrix.platform }}
           path: |
             maestro-reports/
             maestro-evidence/
@@ -208,9 +292,15 @@ jobs:
         uses: peaceiris/actions-gh-pages@v4
         with:
           personal_token: ${{ secrets.POST_TESTS_RESULTS_TOKEN }}
-          external_repository: franciscodiaz4/Maestro-Results-Nimiq-Pay-Android
+          external_repository: ${{ matrix.results_repo }}
           publish_dir: ./maestro-reports
           keep_files: true
+
+      - name: Record the job status for Slack
+        # Per platform: the needs context has one combined result for both matrix jobs.
+        id: status
+        if: always()
+        run: echo "status_$PLATFORM=${{ job.status }}" >> "$GITHUB_OUTPUT"
 
   slackNotification:
     if: always()
@@ -225,14 +315,15 @@ jobs:
       - name: Slack Notification
         uses: rtCamp/action-slack-notify@v2
         env:
-          # The test job's result, not this job's own status (which is always success). Mapped
-          # because the action only knows success/failure/cancelled, not e.g. skipped.
-          SLACK_COLOR: ${{ needs.run_browserstack_maestro.result == 'success' && 'success' || 'failure' }}
+          # The Android job's status, not this job's own (which is always success); iOS doesn't count
+          # yet. Mapped because the action only knows success/failure/cancelled, not e.g. skipped.
+          SLACK_COLOR: ${{ needs.run_browserstack_maestro.outputs.status_android == 'success' && 'success' || 'failure' }}
           SLACK_ICON: https://github.com/rtCamp.png?size=48
           SLACK_MESSAGE: |
-            Suite upload: ${{ needs.upload_maestro_suite.result }} · Test run: ${{ needs.run_browserstack_maestro.result }}
-            ${{ needs.run_browserstack_maestro.outputs.summary }}
-            Report: https://maestro-nimiq-pay-android-results.netlify.app/
+            Suite upload: ${{ needs.upload_maestro_suite.result }} · Android: ${{ needs.run_browserstack_maestro.outputs.status_android || 'not run' }} · iOS (non-blocking): ${{ needs.run_browserstack_maestro.outputs.status_ios || 'not run' }}
+            Android: ${{ needs.run_browserstack_maestro.outputs.summary_android }}
+            iOS: ${{ needs.run_browserstack_maestro.outputs.summary_ios }}
+            Reports: https://maestro-nimiq-pay-android-results.netlify.app/ · iOS: https://github.com/franciscodiaz4/Maestro-Results-Nimiq-Pay-iOS
             Run and failure evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Automation Tests Status
           SLACK_USERNAME: Francisco_Diaz
