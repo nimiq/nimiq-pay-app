@@ -21,6 +21,7 @@ import {
   renderReport,
   resolveOutcome,
   shouldRetry,
+  stopOrphanedBuild,
   summarizeResults,
   writeAttemptReport,
 } from './browserstack-maestro-run.js'
@@ -727,5 +728,35 @@ describe('parseBrowserStackTime', () => {
 
   it('returns NaN for missing values, which never counts as recent', () => {
     expect(parseBrowserStackTime(undefined)).toBeNaN()
+  })
+})
+
+describe('stopOrphanedBuild', () => {
+  const postedAt = Date.UTC(2026, 9, 19, 12, 0, 0)
+  const flow = ['flows/francisco_tests/about.yaml']
+
+  async function stoppedBuilds(builds, payload) {
+    const stopped = []
+    const request = async (endpoint, options) => {
+      if (endpoint === '/builds?limit=10') {
+        return builds.map(({ id }) => ({ id, start_time: '2026-10-19 12:00:05 UTC' }))
+      }
+      if (options?.method === 'POST') {
+        stopped.push(endpoint.match(/builds\/([^/]+)\/stop$/)[1])
+        return {}
+      }
+      return builds.find(({ id }) => endpoint === `/builds/${id}`)
+    }
+    await stopOrphanedBuild(request, payload, postedAt)
+    return stopped
+  }
+
+  it('stops only the running build of the same flow on the same device', async () => {
+    const builds = [
+      { id: 'android', status: 'running', input_capabilities: { execute: flow, devices: ['Samsung Galaxy S26-16.0'] } },
+      { id: 'ios', status: 'running', input_capabilities: { execute: flow, devices: ['iPhone 17 Pro-26'] } },
+      { id: 'ios-done', status: 'passed', input_capabilities: { execute: flow, devices: ['iPhone 17 Pro-26'] } },
+    ]
+    expect(await stoppedBuilds(builds, { execute: flow, devices: ['iPhone 17 Pro-26'] })).toEqual(['ios'])
   })
 })
