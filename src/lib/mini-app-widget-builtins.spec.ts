@@ -13,6 +13,7 @@ describe('builtin widgets', () => {
   })
 
   it('live on a scope no Mini App can be served from', () => {
-    expect(isAllowedWidgetOrigin(new URL(BUILTIN_WIDGET_SCOPE).origin, false)).toBe(false)
+    for (const allowInsecure of [false, true])
+      expect(isAllowedWidgetOrigin(new URL(BUILTIN_WIDGET_SCOPE).origin, allowInsecure)).toBe(false)
   })
 })

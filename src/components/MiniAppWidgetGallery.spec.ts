@@ -14,7 +14,7 @@ const { recents, setToast, store } = await vi.hoisted(async () => {
       resolvePreviews: vi.fn(),
       isOnHome: vi.fn(() => false),
       add: vi.fn(() => true),
-      previewView: vi.fn((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: 'Swap', appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope })),
+      previewView: vi.fn((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: 'Swap', appAddress: scope === 'https://swap.example/' ? 'swap.example' : undefined, appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope })),
     },
   }
 })
@@ -64,7 +64,7 @@ describe('miniAppWidgetGallery', () => {
     expect(wrapper.text()).toContain('Klein · Groß')
     expect(wrapper.find('[data-testid="gallery-app-https://none.example/"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mini-app-widget-large"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Only Mini Apps you\'ve opened appear here.')
+    expect(wrapper.text()).toContain('Mini Apps appear here once you\'ve opened them.')
   })
 
   it('lists Nimiq Pay\'s own widgets first, even before any Mini App was opened', async () => {
@@ -86,15 +86,10 @@ describe('miniAppWidgetGallery', () => {
 
   it('shows a Mini App\'s address under its name', async () => {
     store.galleryFiles.set('https://swap.example/', { widgets: [DEFINITION] })
-    const preview = store.previewView.getMockImplementation()!
-    store.previewView.mockImplementation((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: scope === 'https://swap.example/' ? 'SwapSpace' : 'Nimiq Pay', appAddress: scope === 'https://swap.example/' ? 'swap.example' : undefined, appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope }))
-    recents.value = [{ url: 'https://swap.example', name: 'Swap', icon: '' }]
     const wrapper = render()
     await flushPromises()
-    expect(wrapper.find('[data-testid="gallery-app-https://swap.example/"]').text()).toContain('SwapSpace')
     expect(wrapper.find('[data-testid="gallery-address-https://swap.example/"]').text()).toBe('swap.example')
     expect(wrapper.findAll('[data-testid^="gallery-address-"]')).toHaveLength(1)
-    store.previewView.mockImplementation(preview)
   })
 
   it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {

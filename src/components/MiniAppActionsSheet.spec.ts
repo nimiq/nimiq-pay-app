@@ -2,7 +2,6 @@ import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
-import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
 import MiniAppActionsSheet from './MiniAppActionsSheet.vue'
 
 const REPORT_URL = 'https://nimpay.app/miniapps/evm/evm-mini-wallet/report'
@@ -122,7 +121,7 @@ describe('miniAppActionsSheet', () => {
   })
 
   it('offers no Share for Nimiq Pay\'s own widget', async () => {
-    await mountSheet({ app: { ...app, url: BUILTIN_WIDGET_SCOPE }, removable: false, widget: { size: 'small', sizes: ['small', 'large'] } })
+    await mountSheet({ app, removable: false, shareable: false, widget: { size: 'small', sizes: ['small', 'large'] } })
     expect(action('mini-app-share-action')).toBeNull()
     expect(action('mini-app-remove-widget-action')).not.toBeNull()
   })

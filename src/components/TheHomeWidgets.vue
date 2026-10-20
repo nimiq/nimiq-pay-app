@@ -9,6 +9,8 @@ import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { Modal, useModal } from '@/composables/useModal'
 import { launchMiniApp } from '@/lib/mini-app-launcher'
+import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
+import { WIDGET_GRID_CLASS } from '@/lib/mini-app-widgets'
 import { useApp } from '@/stores/app'
 import { useLocks } from '@/stores/locks'
 import { TICK_MS, useMiniAppWidgets } from '@/stores/mini-app-widgets'
@@ -39,6 +41,7 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
   return {
     app: { name: view.appName, url: view.scope, icon: view.appIcon },
     address: view.appAddress,
+    shareable: view.scope !== BUILTIN_WIDGET_SCOPE,
     reportUrl: useMiniApps().getMiniAppReportUrl(view.scope),
     removable: false,
     widget: { size: view.size, sizes: view.sizes },
@@ -48,6 +51,10 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
 function openMenu(view: WidgetView) {
   menuView.value = view
   menuOpen.value = true
+}
+
+function openGallery(source: 'home_widgets' | 'home_widgets_empty') {
+  showModal(Modal.MiniApps, { componentProps: { initialStep: 'widgets' }, analytics: { featureName: 'mini_apps', source } })
 }
 
 function open(view: WidgetView, url: string) {
@@ -66,12 +73,12 @@ function open(view: WidgetView, url: string) {
         type="button"
         data-testid="home-widgets-add"
         class="relative rounded-full px-3 py-1 text-sm font-bold before:absolute before:inset-x-0 before:content-[''] before:-inset-y-2 text-sky transition-colors active:bg-sky/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky"
-        @click="showModal(Modal.MiniApps, { componentProps: { initialStep: 'widgets' }, analytics: { featureName: 'mini_apps', source: 'home_widgets' } })"
+        @click="openGallery('home_widgets')"
       >
         {{ $t('Add') }}
       </button>
     </div>
-    <div class="grid grid-cols-4 gap-3">
+    <div :class="WIDGET_GRID_CLASS">
       <MiniAppWidget
         v-for="view in views"
         :key="view.key"
@@ -83,14 +90,14 @@ function open(view: WidgetView, url: string) {
     <MiniAppActionsSheet
       v-model:open="menuOpen"
       :context="menuContext"
-      @size="size => menuView && widgets.setSize(menuView.scope, menuView.widgetId, size)"
+      @size="size => { if (menuView) { widgets.setSize(menuView.scope, menuView.widgetId, size); void widgets.tick({ force: true }) } }"
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
     />
   </section>
   <AddWidgetsPill
     v-else-if="ready"
     data-testid="home-widgets-add-empty"
-    @click="showModal(Modal.MiniApps, { componentProps: { initialStep: 'widgets' }, analytics: { featureName: 'mini_apps', source: 'home_widgets_empty' } })"
+    @click="openGallery('home_widgets_empty')"
   >
     {{ $t('Add widgets') }}
   </AddWidgetsPill>

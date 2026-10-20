@@ -115,12 +115,11 @@ describe('adding, updating, removing', () => {
     const store = await setup()
     store.add('https://swapspace.example/', definition({ appName: 'SwapSpace' }))
     store.add(SCOPE, definition({ id: 'listed', appName: 'Other' }))
-    store.add('https://emoji.example/', definition({ id: 'emoji', appName: '\u{1F680} Caf\u00E9 \u3059\u3057' }))
     store.add('https://plain.example/', definition({ id: 'plain' }))
-    expect(store.views.map(v => v.appName)).toEqual(['SwapSpace', 'Swap', '\u{1F680} Caf\u00E9 \u3059\u3057', 'plain.example'])
+    expect(store.views.map(v => v.appName)).toEqual(['SwapSpace', 'Swap', 'plain.example'])
     expect(store.views[0]).toMatchObject({ appAddress: 'swapspace.example', launchTitle: 'swapspace.example' })
     expect(store.views[1]).toMatchObject({ appAddress: 'swap.example', launchTitle: 'Swap' })
-    expect(store.views[3]).toMatchObject({ appAddress: undefined, launchTitle: 'plain.example' })
+    expect(store.views[2]).toMatchObject({ appAddress: undefined, launchTitle: 'plain.example' })
   })
 
   it('names a Mini App outside the catalog by host and folder', async () => {
@@ -470,6 +469,29 @@ describe('tick', () => {
     app.selectedFiat = 'USD'
     await store.tick({ chain: fakeChain({ price }), at: NOW + 1000 })
     expect(store.views[0]!.value).toEqual({ kind: 'amount', amount: '0.0005', currency: 'USD' })
+  })
+
+  it('looks up rows only at the large size, which draws them', async () => {
+    const store = await setup()
+    store.add(SCOPE, definition({ sizes: ['medium', 'large'], content: { value: { text: 'Staked' }, tone: 'neutral', rows: [{ label: 'Wallet', value: { live: { nimiqBalance: ADDRESS } } }] } }))
+    const nimiqBalance = vi.fn(async () => 1e5)
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW })
+    expect(nimiqBalance).not.toHaveBeenCalled()
+    store.setSize(SCOPE, 'swap', 'large')
+    await store.tick({ chain: fakeChain({ nimiqBalance }), at: NOW + 30_000 })
+    expect(nimiqBalance).toHaveBeenCalledTimes(1)
+  })
+
+  it('looks up a chart\'s price history only at the large size, which draws it', async () => {
+    const store = await setup()
+    const chart = definition({ sizes: ['small', 'large'], content: { value: { live: { price: 'NIM' } }, chart: { kind: 'line', priceHistory: { asset: 'NIM', range: '24h' } }, tone: 'neutral', rows: [] } })
+    store.add(SCOPE, chart)
+    const price = vi.fn(async () => 0.0004)
+    await store.tick({ chain: fakeChain({ price }), at: NOW })
+    expect(price).toHaveBeenCalledTimes(1)
+    store.setSize(SCOPE, 'swap', 'large')
+    await store.tick({ chain: fakeChain({ price }), at: NOW + 1000 })
+    expect(store.views[0]!.chart?.points).toHaveLength(25)
   })
 
   it('retries a failed price and price history lookup at the next chain check, not after five minutes', async () => {

@@ -59,7 +59,7 @@ msgstr ""
 msgid "Activating scanner"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:35
+#: src/components/MiniAppWidgetGallery.vue:40
 #: src/components/TheHomeWidgets.vue:13
 msgid "Add"
 msgstr ""
@@ -220,7 +220,7 @@ msgstr ""
 msgid "Both expected and the given PIN are empty"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:54
+#: src/components/MiniAppWidgetGallery.vue:59
 msgid "Browse Mini Apps"
 msgstr ""
 
@@ -731,7 +731,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:69
+#: src/components/MiniAppWidgetGallery.vue:71
 msgid "Home holds at most {count} widgets"
 msgstr ""
 
@@ -748,7 +748,7 @@ msgid "I have turned it off"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:31
-#: src/components/MiniAppWidgetGallery.vue:42
+#: src/components/MiniAppWidgetGallery.vue:44
 msgid "Icon"
 msgstr ""
 
@@ -978,7 +978,7 @@ msgid "Language"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:31
-#: src/components/MiniAppWidgetGallery.vue:42
+#: src/components/MiniAppWidgetGallery.vue:44
 msgid "Large"
 msgstr ""
 
@@ -1039,7 +1039,7 @@ msgid "Matching submissions: {count}"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:31
-#: src/components/MiniAppWidgetGallery.vue:42
+#: src/components/MiniAppWidgetGallery.vue:44
 msgid "Medium"
 msgstr ""
 
@@ -1055,6 +1055,10 @@ msgstr ""
 msgid "Mini Apps"
 msgstr ""
 
+#: src/components/MiniAppWidgetGallery.vue:55
+msgid "Mini Apps appear here once you've opened them."
+msgstr ""
+
 #: src/components/competition/CompetitionSpotlight.vue:29
 #: src/components/competition/MiniAppsCompetitionView.vue:37
 msgid "Mini Apps Competition"
@@ -1064,7 +1068,7 @@ msgstr ""
 msgid "Minimum NIM Decimals"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:94
+#: src/components/MiniAppWidget.vue:96
 msgid "More actions for {name}"
 msgstr ""
 
@@ -1204,7 +1208,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:85
+#: src/components/MiniAppWidget.vue:87
 msgid "Not updated since {time}"
 msgstr ""
 
@@ -1220,16 +1224,12 @@ msgstr ""
 msgid "Notifications cannot be enabled, skipping this step."
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:35
+#: src/components/MiniAppWidgetGallery.vue:40
 msgid "On Home"
 msgstr ""
 
 #: src/modals/ReferralModal.vue:21
 msgid "Only {count} out of {total} remaining."
-msgstr ""
-
-#: src/components/MiniAppWidgetGallery.vue:50
-msgid "Only Mini Apps you've opened appear here."
 msgstr ""
 
 #: src/components/competition/CompetitionAppDetail.vue:136
@@ -1679,7 +1679,7 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:33
+#: src/components/MiniAppActionsSheet.vue:38
 msgid "Size"
 msgstr ""
 
@@ -1690,7 +1690,7 @@ msgid "Skip for now"
 msgstr ""
 
 #: src/components/MiniAppActionsSheet.vue:31
-#: src/components/MiniAppWidgetGallery.vue:42
+#: src/components/MiniAppWidgetGallery.vue:44
 msgid "Small"
 msgstr ""
 
@@ -2244,7 +2244,7 @@ msgstr ""
 msgid "Why this address is flagged"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:34
+#: src/components/MiniAppActionsSheet.vue:39
 msgid "Widget size"
 msgstr ""
 

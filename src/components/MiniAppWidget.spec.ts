@@ -186,6 +186,12 @@ describe('miniAppWidget', () => {
     expect(wrapper.emitted('open')).toEqual([['https://swap.example/?swap=abc']])
   })
 
+  it('labels a widget without a URL as one group for screen readers', () => {
+    const card = render({ view: view({ url: undefined }) })
+    expect(card.attributes()).toMatchObject({ 'role': 'group', 'aria-label': expect.stringContaining('Swap') })
+    expect(render({ view: view() }).attributes('role')).toBeUndefined()
+  })
+
   it('opens nothing for a widget without a URL, while a long press still opens its menu', async () => {
     vi.useFakeTimers()
     const wrapper = render({ view: view({ url: undefined }) })
@@ -206,10 +212,11 @@ describe('miniAppWidget', () => {
     expect(wrapper.emitted('menu')).toBeUndefined()
   })
 
-  it('confines the menu target to the corner on icon size so it never covers the icon', () => {
-    expect(render({ view: view({ size: 'icon' }) }).find('[data-testid="widget-menu"]').classes()).toEqual(expect.arrayContaining(['size-[18px]', 'rounded-tr-2xl']))
-    for (const size of ['small', 'medium', 'large'] as const)
-      expect(render({ view: view({ size }) }).find('[data-testid="widget-menu"]').classes()).toContain('size-11')
+  it('draws the icon size as a bare app icon whose menu shows only on keyboard focus', () => {
+    const icon = render({ view: view({ size: 'icon' }) })
+    expect(icon.classes()).not.toContain('bg-white')
+    expect(icon.find('[data-testid="widget-menu"]').classes()).toEqual(expect.arrayContaining(['opacity-0', 'pointer-events-none', 'focus-visible:opacity-100', 'focus-visible:pointer-events-auto']))
+    expect(render({ view: view({ size: 'small' }) }).classes()).toContain('bg-white')
   })
 
   it('hides the progress bar on small and an expired countdown on medium', () => {
@@ -241,9 +248,17 @@ describe('miniAppWidget', () => {
     expect(wrapper.find('[data-testid="widget-label"]').classes()).toEqual(expect.arrayContaining(['truncate', 'min-w-0']))
   })
 
+  it('spreads a small card\'s lines over its height, with text values a size smaller', () => {
+    const small = render({ view: view({ size: 'small', value: { kind: 'text', text: 'Start a swap' } }) })
+    expect(small.classes()).toContain('justify-between')
+    expect(small.find('[data-testid="widget-value"]').classes()).toContain('text-xl')
+    expect(render({ view: view({ size: 'small' }) }).find('[data-testid="widget-value"]').classes()).toContain('text-2xl')
+    expect(render({ view: view({ size: 'medium', value: { kind: 'text', text: 'Start a swap' } }) }).classes()).not.toContain('justify-between')
+  })
+
   it('spans its size in the four-column grid', () => {
     expect(render({ view: view({ size: 'icon' }) }).classes()).toContain('col-span-1')
-    expect(render({ view: view({ size: 'small' }) }).classes()).toContain('col-span-2')
+    expect(render({ view: view({ size: 'small' }) }).classes()).toEqual(expect.arrayContaining(['col-span-2', 'row-span-2']))
     expect(render({ view: view({ size: 'large' }) }).classes()).toContain('col-span-4')
   })
 

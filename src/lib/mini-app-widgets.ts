@@ -5,6 +5,7 @@ import { ValidationUtils } from '@nimiq/utils/validation-utils'
 export const WIDGET_FILE_NAME = 'nimiq-pay-widgets.json'
 
 export const WIDGET_SIZES = ['icon', 'small', 'medium', 'large'] as const
+export const WIDGET_GRID_CLASS = 'grid auto-rows-[minmax(4.75rem,auto)] grid-cols-4 gap-3'
 export type WidgetSize = (typeof WIDGET_SIZES)[number]
 
 export const WIDGET_ASSETS = ['NIM', 'BTC', 'ETH', 'USDT'] as const
@@ -141,7 +142,7 @@ const BLANK_RE = /^[\s\u2800\p{Default_Ignorable_Code_Point}]*$/u
 const MARK_RE = /\p{M}/u
 const MAX_GRAPHEME_CODE_POINTS = 12
 const MAX_GRAPHEME_MARKS = 6
-const DEV_ONLY_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.lan', '.invalid']
+const DEV_ONLY_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.lan']
 const MAX_CHART_VALUE = 1e15
 const IP_HOST_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i
 const TX_STATUSES = ['confirmed', 'failed'] as const
@@ -243,7 +244,8 @@ export function isAllowedWidgetOrigin(origin: string, allowInsecure: boolean): b
   catch {
     return false
   }
-  if (url.origin !== origin)
+  // `.invalid` is reserved for Nimiq Pay's own widgets, in development builds too.
+  if (url.origin !== origin || url.hostname.endsWith('.invalid'))
     return false
   if (allowInsecure)
     return url.protocol === 'https:' || url.protocol === 'http:'

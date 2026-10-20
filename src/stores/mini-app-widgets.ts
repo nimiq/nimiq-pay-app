@@ -107,12 +107,13 @@ function originOf(scope: string): string {
   return new URL(scope).origin
 }
 
-function liveSpecs(content: WidgetContent): LiveSpec[] {
-  const values: unknown[] = [content.value, content.info, ...content.rows.map(row => row.value)]
+function liveSpecs(content: WidgetContent, size: WidgetSize): LiveSpec[] {
+  // Only the large size draws rows and a chart, so smaller sizes skip their lookups and leave the budget to what is shown.
+  const values: unknown[] = [content.value, content.info, ...(size === 'large' ? content.rows.map(row => row.value) : [])]
   const specs: LiveSpec[] = values
     .filter((value): value is { live: LiveValue } => typeof value === 'object' && value !== null && 'live' in value)
     .map(value => ({ live: value.live }))
-  if (content.chart && 'priceHistory' in content.chart)
+  if (size === 'large' && content.chart && 'priceHistory' in content.chart)
     specs.push({ priceHistory: content.chart.priceHistory })
   return specs
 }
@@ -282,28 +283,28 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return shownState(widget, at)?.content ?? localizeDefinition(widget.definition, useApp().language).content
   }
 
-  function identity(scope: string, declared?: string): { name: string, address: string, title: string } {
-    const url = new URL(scope)
+  function identity(widget: HomeWidget): Pick<WidgetView, 'appName' | 'appAddress' | 'launchTitle'> {
+    if (widget.scope === BUILTIN_WIDGET_SCOPE)
+      return { appName: 'Nimiq Pay', launchTitle: 'Nimiq Pay' }
+    const url = new URL(widget.scope)
     const address = stripTrailingSlash(`${url.hostname}${url.pathname}`)
-    const listed = useMiniApps().popularDApps.find(app => stripTrailingSlash(app.url) === stripTrailingSlash(scope))
+    const listed = useMiniApps().popularDApps.find(app => stripTrailingSlash(app.url) === stripTrailingSlash(widget.scope))
     if (listed)
-      return { name: listed.name, address, title: listed.name }
-    return { name: declared ?? address, address, title: address }
+      return { appName: listed.name, appAddress: listed.name === address ? undefined : address, launchTitle: listed.name }
+    const declared = widget.definition.appName
+    return { appName: declared ?? address, appAddress: declared && declared !== address ? address : undefined, launchTitle: address }
   }
 
   function toView(widget: HomeWidget, at: number): WidgetView {
     const content = shownContent(widget, at)
     const { countdown, chart } = content
     const builtin = widget.scope === BUILTIN_WIDGET_SCOPE
-    const app = builtin ? { name: 'Nimiq Pay', address: undefined, title: 'Nimiq Pay' } : identity(widget.scope, widget.definition.appName)
     const history = chart && 'priceHistory' in chart ? live.get(liveKey({ priceHistory: chart.priceHistory }))?.value : undefined
     return {
       key: widgetKey(widget.scope, widget.widgetId),
       scope: widget.scope,
       widgetId: widget.widgetId,
-      appName: app.name,
-      appAddress: app.address !== app.name ? app.address : undefined,
-      launchTitle: app.title,
+      ...identity(widget),
       appIcon: builtin ? nimiqPayIcon : useMiniApps().iconForUrl(widget.scope),
       size: widget.size,
       sizes: widget.definition.sizes,
@@ -429,9 +430,9 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     patch(widget.scope, widget.widgetId, w => ({ definition, definitionCheckedAt: at, size: definition.sizes.includes(w.size) ? w.size : definition.sizes[0]! }))
   }
 
-  async function resolveLive(contents: WidgetContent[], chain: WidgetChain, at: number, budget: Budget) {
+  async function resolveLive(shown: { content: WidgetContent, size: WidgetSize }[], chain: WidgetChain, at: number, budget: Budget) {
     const seen = new Set<string>()
-    for (const spec of contents.flatMap(liveSpecs)) {
+    for (const spec of shown.flatMap(item => liveSpecs(item.content, item.size))) {
       const key = liveKey(spec)
       if (seen.has(key))
         continue
@@ -469,7 +470,8 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       if (!widget)
         continue
       await applyExpiryAndTriggers(widget, at, chain, checkChain, budget)
-      await resolveLive([shownContent(find(widget.scope, widget.widgetId) ?? widget, at)], chain, at, budget)
+      const current = find(widget.scope, widget.widgetId) ?? widget
+      await resolveLive([{ content: shownContent(current, at), size: current.size }], chain, at, budget)
     }
     const files = new Map<string, Promise<FetchOutcome<WidgetFile>>>()
     await Promise.all(widgets.value.map(async (widget) => {
@@ -479,7 +481,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
       if (at - widget.definitionCheckedAt >= DAY_MS)
         await recheckDefinition(widget, at, files)
     }))
-    await resolveLive(widgets.value.map(w => shownContent(w, at)), chain, at, budget)
+    await resolveLive(widgets.value.map(w => ({ content: shownContent(w, at), size: w.size })), chain, at, budget)
   }
 
   /** Call only while Home is visible. A forced tick during a running one is queued, not dropped, and resolves once it has run. */
@@ -519,7 +521,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function resolvePreviews(definitions: WidgetDefinition[]) {
     const at = Date.now()
     observe(at)
-    return resolveLive(definitions.map(d => localizeDefinition(d, useApp().language).content), createWidgetChain(), at, lookupBudget(true))
+    return resolveLive(definitions.map(d => ({ content: localizeDefinition(d, useApp().language).content, size: d.sizes[0]! })), createWidgetChain(), at, lookupBudget(true))
   }
 
   return {

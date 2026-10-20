@@ -87,7 +87,7 @@ describe('theHomeWidgets', () => {
     store.views.value = [view('small'), view('large'), view('icon')]
     const wrapper = render()
     const grid = wrapper.find('[data-testid="home-widgets"] > div:nth-child(2)')
-    expect(grid.classes()).toEqual(expect.arrayContaining(['grid', 'grid-cols-4']))
+    expect(grid.classes()).toEqual(expect.arrayContaining(['grid', 'grid-cols-4', 'auto-rows-[minmax(4.75rem,auto)]']))
     expect(grid.classes()).not.toContain('grid-flow-row-dense')
     expect(wrapper.findAll('[data-testid^="mini-app-widget-"]').map(w => w.classes().find(c => c.startsWith('col-span-')))).toEqual(['col-span-2', 'col-span-4', 'col-span-1'])
   })
@@ -117,7 +117,7 @@ describe('theHomeWidgets', () => {
     expect(wrapper.findComponent({ name: 'MiniAppActionsSheet' }).props('open')).toBe(true)
   })
 
-  it('launches under the catalog name or address, never a declared name', async () => {
+  it('launches under the view\'s launch title', async () => {
     store.views.value = [{ ...view('small'), appName: 'SwapSpace', launchTitle: 'swap.example' }]
     await render().find('[data-testid="widget-open"]').trigger('click')
     expect(launchMiniApp).toHaveBeenCalledWith(expect.objectContaining({ title: 'swap.example' }))
@@ -136,6 +136,7 @@ describe('theHomeWidgets', () => {
     const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
     expect(sheet.props('context')).toMatchObject({ app: { name: 'Swap', url: 'https://swap.example/' }, address: 'swap.example', widget: { size: 'small', sizes: ['small', 'medium'] } })
     sheet.vm.$emit('size', 'medium')
+    expect(store.tick).toHaveBeenLastCalledWith({ force: true })
     sheet.vm.$emit('removeWidget')
     expect(store.setSize).toHaveBeenCalledWith('https://swap.example/', 'swap', 'medium')
     expect(store.remove).toHaveBeenCalledWith('https://swap.example/', 'swap')

@@ -23,7 +23,7 @@ const now = useNow({ interval: 30_000 })
 // Intl formats any three-letter code as money, crypto tickers included, so only ISO 4217 codes count as fiat.
 const FIAT_CODES = new Set(typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : ['USD', 'EUR', 'CRC', 'GMD'])
 const TONE_DOT = { neutral: '', positive: 'bg-mint', attention: 'bg-pumpkin', negative: 'bg-cherry' } as const
-const SPAN = { icon: 'col-span-1', small: 'col-span-2', medium: 'col-span-4', large: 'col-span-4' } as const
+const SPAN = { icon: 'col-span-1', small: 'col-span-2 row-span-2', medium: 'col-span-4', large: 'col-span-4' } as const
 
 // Not useCurrencyFormatter: its crypto path takes luna and its fiat path shows sub-cent prices as "~€0.00"; widget amounts are decimal strings.
 function formatValue(value: DisplayValue): string {
@@ -55,6 +55,7 @@ function changeClass(value: DisplayValue | undefined): string {
 const dot = computed(() => TONE_DOT[view.tone])
 const isCard = computed(() => view.size !== 'icon')
 const showExtras = computed(() => view.size === 'medium' || view.size === 'large')
+const isSmall = computed(() => view.size === 'small')
 
 const timeLeft = computed(() => {
   const until = view.countdown?.until
@@ -91,7 +92,7 @@ const staleTime = computed(() => {
 
 const ariaLabel = computed(() => `${view.appName}: ${[view.label, formatValue(view.value), view.info && formatValue(view.info)].filter(Boolean).join(', ')}`)
 
-// A long press opens the menu like the small corner target does; the click its release may still fire must not also open the Mini App.
+// A long press opens the menu, the only touch route to it on icon widgets; the click its release may still fire must not also open the Mini App.
 let longPressed = false
 onLongPress(useTemplateRef<HTMLElement>('card'), () => {
   if (!preview)
@@ -111,18 +112,20 @@ function onClickCapture(event: MouseEvent) {
 <template>
   <div
     ref="card"
-    class="relative overflow-hidden rounded-2xl bg-white text-space shadow-card"
-    :class="[SPAN[view.size], isCard ? 'flex flex-col gap-1 px-4 pt-3 pb-4' : 'flex aspect-square flex-col items-center justify-center gap-1.5 p-2']"
+    class="relative text-space"
+    :class="[SPAN[view.size], isCard ? 'flex flex-col gap-1 overflow-hidden rounded-md bg-white px-4 pt-3 pb-4 shadow-card' : 'flex flex-col items-center justify-center gap-1.5 px-1', { 'justify-between': isSmall }]"
     :data-testid="`mini-app-widget-${view.size}`"
+    :role="view.url ? undefined : 'group'"
+    :aria-label="view.url ? undefined : ariaLabel"
     @click.capture="onClickCapture"
     @contextmenu.prevent="!preview && emit('menu')"
   >
-    <!-- The button is the whole card's tap target; everything painted above it is pointer-events-none except row links and the menu. -->
+    <!-- The button is the whole card's tap target; everything painted above it is pointer-events-none except row links and a card's menu. -->
     <button
       v-if="view.url"
       type="button"
       data-testid="widget-open"
-      class="absolute inset-0 rounded-2xl transition-colors active:bg-space/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky"
+      class="absolute inset-0 rounded-md transition-colors active:bg-space/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky"
       :disabled="preview"
       :aria-label="ariaLabel"
       @click="emit('open', view.url!)"
@@ -130,10 +133,10 @@ function onClickCapture(event: MouseEvent) {
 
     <template v-if="!isCard">
       <span class="pointer-events-none relative">
-        <img :src="view.appIcon" alt="" class="size-10 rounded-full object-contain" referrerpolicy="no-referrer" @error="applyIconFallback($event, view.scope)">
-        <span v-if="dot" class="absolute -bottom-0.5 -left-0.5 size-3 rounded-full ring-2 ring-white" :class="dot" />
+        <img :src="view.appIcon" alt="" class="size-12 rounded-full bg-white object-contain p-1 shadow-card" referrerpolicy="no-referrer" @error="applyIconFallback($event, view.scope)">
+        <span v-if="dot" class="absolute bottom-0 left-0 size-3 rounded-full ring-2 ring-white" :class="dot" />
       </span>
-      <span class="pointer-events-none w-full min-w-0 truncate text-center text-xs font-semibold">{{ view.appName }}</span>
+      <span class="pointer-events-none w-full min-w-0 truncate text-center text-xs font-bold">{{ view.appName }}</span>
     </template>
 
     <template v-else>
@@ -142,7 +145,7 @@ function onClickCapture(event: MouseEvent) {
         <span class="min-w-0 truncate">{{ view.appName }}</span>
       </span>
 
-      <span v-if="view.label" class="pointer-events-none relative mt-1 flex min-w-0 items-center gap-1.5 text-sm font-semibold text-space/60">
+      <span v-if="view.label" class="pointer-events-none relative flex min-w-0 items-center gap-1.5 text-sm font-semibold text-space/60" :class="{ 'mt-1': !isSmall }">
         <span v-if="dot" class="size-2 shrink-0 rounded-full" :class="dot" />
         <span data-testid="widget-label" class="min-w-0 truncate">{{ view.label }}</span>
       </span>
@@ -150,7 +153,7 @@ function onClickCapture(event: MouseEvent) {
       <span class="pointer-events-none relative flex min-w-0 items-end justify-between gap-3">
         <span class="flex min-w-0 items-center gap-2">
           <span v-if="dot && !view.label" class="size-2.5 shrink-0 rounded-full" :class="dot" />
-          <span class="min-w-0 truncate text-2xl font-bold leading-tight" :class="changeClass(view.value)">{{ formatValue(view.value) }}</span>
+          <span data-testid="widget-value" class="min-w-0 truncate font-bold leading-tight" :class="[changeClass(view.value), isSmall && view.value.kind === 'text' ? 'text-xl' : 'text-2xl']">{{ formatValue(view.value) }}</span>
         </span>
         <span v-if="showExtras && timeLeft" class="shrink-0 text-right text-sm leading-tight">
           <span class="block text-xs text-space/50">{{ view.countdown!.label }}</span>
@@ -202,8 +205,8 @@ function onClickCapture(event: MouseEvent) {
       data-testid="widget-menu"
       aria-haspopup="menu"
       :aria-label="$t('More actions for {name}', { name: view.appName })"
-      class="absolute top-0 right-0 grid place-items-center text-space/40 transition-colors active:bg-space/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky"
-      :class="isCard ? 'size-11 rounded-full' : 'size-[18px] rounded-tr-2xl'"
+      class="absolute grid place-items-center rounded-md text-space/40 before:absolute before:content-[''] transition-colors active:bg-space/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky"
+      :class="isCard ? 'top-2 right-2 size-7 before:-inset-2' : 'pointer-events-none top-0 right-0 size-6 opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100'"
       @click="emit('menu')"
     >
       <HorizontalEllipsisIcon :class="isCard ? 'h-[5px] w-5' : 'h-[3.5px] w-3.5'" />

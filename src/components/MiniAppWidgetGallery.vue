@@ -9,7 +9,7 @@ import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { applyIconFallback } from '@/lib/mini-app-icons'
 import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
-import { localizeDefinition, WIDGET_LIMITS, WIDGET_SIZES } from '@/lib/mini-app-widgets'
+import { localizeDefinition, WIDGET_GRID_CLASS, WIDGET_LIMITS, WIDGET_SIZES } from '@/lib/mini-app-widgets'
 import { safeOrigin } from '@/lib/url-safety'
 import { useApp } from '@/stores/app'
 import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
@@ -82,15 +82,15 @@ function add(scope: string, definition: WidgetDefinition) {
       <div class="flex min-w-0 items-center gap-2">
         <img :src="section.items[0]!.view.appIcon" alt="" class="size-6 shrink-0 rounded-full object-contain" referrerpolicy="no-referrer" @error="applyIconFallback($event, section.scope)">
         <div class="flex min-w-0 flex-col">
-          <p class="text-lg font-bold text-space [overflow-wrap:anywhere]">
+          <p class="text-lg font-bold text-space break-words">
             {{ section.items[0]!.view.appName }}
           </p>
-          <p v-if="section.items[0]!.view.appAddress" :data-testid="`gallery-address-${section.scope}`" class="text-sm text-space/60 [overflow-wrap:anywhere]">
+          <p v-if="section.items[0]!.view.appAddress" :data-testid="`gallery-address-${section.scope}`" class="text-sm text-space/60 break-words">
             {{ section.items[0]!.view.appAddress }}
           </p>
         </div>
       </div>
-      <div v-for="item in section.items" :key="item.definition.id" class="flex flex-col gap-3 rounded-2xl bg-space/[0.04] p-3">
+      <div v-for="item in section.items" :key="item.definition.id" class="flex flex-col gap-3 rounded-md bg-space/[0.04] p-3">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
             <p class="truncate font-bold text-space">
@@ -114,7 +114,7 @@ function add(scope: string, definition: WidgetDefinition) {
             {{ item.onHome ? $t('On Home') : $t('Add') }}
           </button>
         </div>
-        <div class="grid grid-cols-4 gap-3">
+        <div :class="WIDGET_GRID_CLASS">
           <MiniAppWidget :view="item.view" preview />
         </div>
       </div>
@@ -122,11 +122,11 @@ function add(scope: string, definition: WidgetDefinition) {
 
     <div v-if="isLoading" data-testid="gallery-loading" class="flex flex-col gap-3">
       <IonSkeletonText :animated="true" class="h-5 w-1/3 rounded" />
-      <IonSkeletonText :animated="true" class="h-24 w-full rounded-2xl" />
+      <IonSkeletonText :animated="true" class="h-24 w-full rounded-md" />
     </div>
 
     <p class="text-center text-sm text-space/60">
-      {{ $t('Only Mini Apps you\'ve opened appear here.') }}
+      {{ $t('Mini Apps appear here once you\'ve opened them.') }}
     </p>
 
     <AddWidgetsPill v-if="!isLoading && !appSections.length" data-testid="gallery-browse" @click="emit('browse')">

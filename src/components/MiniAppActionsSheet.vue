@@ -12,7 +12,6 @@ import ShareIcon from '@/components/icons/share.vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
-import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
 import { WIDGET_SIZES } from '@/lib/mini-app-widgets'
 
 const props = defineProps<{
@@ -74,8 +73,7 @@ const actions = computed(() => {
   if (!context)
     return []
   return [
-    // Nimiq Pay's own widgets have no Mini App to share.
-    ...(context.app.url === BUILTIN_WIDGET_SCOPE
+    ...(context.shareable === false
       ? []
       : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
     ...(context.reportUrl
@@ -121,10 +119,10 @@ watch(() => props.open, (isOpen) => {
               @error="applyIconFallback($event, context.app.url)"
             >
             <div class="flex min-w-0 flex-col">
-              <DialogTitle class="text-lg font-semibold text-space [overflow-wrap:anywhere]">
+              <DialogTitle class="text-lg font-semibold text-space break-words">
                 {{ context.app.name }}
               </DialogTitle>
-              <p v-if="context.address" data-testid="mini-app-address" class="text-sm text-space/60 [overflow-wrap:anywhere]">
+              <p v-if="context.address" data-testid="mini-app-address" class="text-sm text-space/60 break-words">
                 {{ context.address }}
               </p>
             </div>
