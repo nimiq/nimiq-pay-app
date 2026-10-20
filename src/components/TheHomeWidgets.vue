@@ -4,6 +4,7 @@ import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { useDocumentVisibility, useIntervalFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppActionsSheet from '@/components/MiniAppActionsSheet.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { Modal, useModal } from '@/composables/useModal'
@@ -14,7 +15,7 @@ import { TICK_MS, useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { useMiniApps } from '@/stores/mini-apps'
 
 const widgets = useMiniAppWidgets()
-const { views } = storeToRefs(widgets)
+const { ready, views } = storeToRefs(widgets)
 const { isAppInBackground, isHomeVisible } = storeToRefs(useLocks())
 const { showModal } = useModal()
 const documentVisibility = useDocumentVisibility()
@@ -85,4 +86,11 @@ function open(view: WidgetView, url: string) {
       @remove-widget="menuView && widgets.remove(menuView.scope, menuView.widgetId)"
     />
   </section>
+  <AddWidgetsPill
+    v-else-if="ready"
+    data-testid="home-widgets-add-empty"
+    @click="showModal(Modal.MiniApps, { componentProps: { initialStep: 'widgets' }, analytics: { featureName: 'mini_apps', source: 'home_widgets_empty' } })"
+  >
+    {{ $t('Add widgets') }}
+  </AddWidgetsPill>
 </template>

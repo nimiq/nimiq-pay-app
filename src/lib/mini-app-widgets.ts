@@ -138,7 +138,7 @@ const BLANK_RE = /^[\s\u2800\p{Default_Ignorable_Code_Point}]*$/u
 const MARK_RE = /\p{M}/u
 const MAX_GRAPHEME_CODE_POINTS = 12
 const MAX_GRAPHEME_MARKS = 6
-const LOCAL_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.lan']
+const DEV_ONLY_SUFFIXES = ['.local', '.localhost', '.internal', '.home.arpa', '.lan', '.invalid']
 const MAX_CHART_VALUE = 1e15
 const IP_HOST_RE = /^(?:\d{1,3}(?:\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i
 const TX_STATUSES = ['confirmed', 'failed'] as const
@@ -249,7 +249,7 @@ export function isAllowedWidgetOrigin(origin: string, allowInsecure: boolean): b
     && host.includes('.')
     && !host.endsWith('.')
     && !IP_HOST_RE.test(host)
-    && !LOCAL_SUFFIXES.some(suffix => host.endsWith(suffix))
+    && !DEV_ONLY_SUFFIXES.some(suffix => host.endsWith(suffix))
 }
 
 export function widgetFileUrl(scope: string): string {

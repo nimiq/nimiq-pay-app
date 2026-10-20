@@ -119,12 +119,13 @@ function onClickCapture(event: MouseEvent) {
   >
     <!-- The button is the whole card's tap target; everything painted above it is pointer-events-none except row links and the menu. -->
     <button
+      v-if="view.url"
       type="button"
       data-testid="widget-open"
       class="absolute inset-0 rounded-2xl transition-colors active:bg-space/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky"
       :disabled="preview"
       :aria-label="ariaLabel"
-      @click="emit('open', view.url)"
+      @click="emit('open', view.url!)"
     />
 
     <template v-if="!isCard">
@@ -136,7 +137,7 @@ function onClickCapture(event: MouseEvent) {
     </template>
 
     <template v-else>
-      <span class="pointer-events-none relative flex min-w-0 items-center gap-2 pr-8 text-sm font-bold text-space/60">
+      <span class="pointer-events-none relative flex min-w-0 items-center gap-2 text-sm font-bold text-space/60" :class="{ 'pr-8': !preview }">
         <img :src="view.appIcon" alt="" class="size-5 shrink-0 rounded-full object-contain" referrerpolicy="no-referrer" @error="applyIconFallback($event, view.scope)">
         <span class="min-w-0 truncate">{{ view.appName }}</span>
       </span>

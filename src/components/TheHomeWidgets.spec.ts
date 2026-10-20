@@ -10,7 +10,7 @@ const { background, launchMiniApp, showModal, store, visible } = await vi.hoiste
     showModal: vi.fn(),
     visible: ref(true),
     background: ref(false),
-    store: { views: ref<WidgetView[]>([]), tick: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
+    store: { ready: ref(true), views: ref<WidgetView[]>([]), tick: vi.fn(), setSize: vi.fn(), remove: vi.fn() },
   }
 })
 
@@ -42,6 +42,7 @@ beforeEach(() => {
   visible.value = true
   background.value = false
   visibility.value = 'visible'
+  store.ready.value = true
   store.views.value = []
 })
 
@@ -51,8 +52,16 @@ afterEach(() => {
 })
 
 describe('theHomeWidgets', () => {
-  it('renders nothing without widgets', () => {
-    expect(render().find('[data-testid="home-widgets"]').exists()).toBe(false)
+  it('offers the gallery while Home has no widgets', async () => {
+    const wrapper = render()
+    expect(wrapper.find('[data-testid="home-widgets"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="home-widgets-add-empty"]').trigger('click')
+    expect(showModal).toHaveBeenCalledWith('MiniApps', expect.objectContaining({ componentProps: { initialStep: 'widgets' }, analytics: expect.objectContaining({ source: 'home_widgets_empty' }) }))
+  })
+
+  it('waits for the stored widgets before offering the gallery', () => {
+    store.ready.value = false
+    expect(render().find('[data-testid="home-widgets-add-empty"]').exists()).toBe(false)
   })
 
   it('lays widgets out by size', () => {
@@ -128,7 +137,9 @@ describe('theHomeWidgets', () => {
 
   it('opens the gallery from Add', async () => {
     store.views.value = [view('small')]
-    await render().find('[data-testid="home-widgets-add"]').trigger('click')
-    expect(showModal).toHaveBeenCalledWith('MiniApps', expect.objectContaining({ componentProps: { initialStep: 'widgets' } }))
+    const wrapper = render()
+    expect(wrapper.find('[data-testid="home-widgets-add-empty"]').exists()).toBe(false)
+    await wrapper.find('[data-testid="home-widgets-add"]').trigger('click')
+    expect(showModal).toHaveBeenCalledWith('MiniApps', expect.objectContaining({ componentProps: { initialStep: 'widgets' }, analytics: expect.objectContaining({ source: 'home_widgets' }) }))
   })
 })

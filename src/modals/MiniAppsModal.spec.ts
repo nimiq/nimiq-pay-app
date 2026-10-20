@@ -841,6 +841,20 @@ describe('mini apps modal', () => {
     expect(wrapper.find('[data-testid="mini-apps-flow-widgets"]').attributes('aria-hidden')).toBe('false')
   })
 
+  it('goes to Discover when the gallery asks to browse, so back from the gallery then returns there', async () => {
+    const wrapper = mountModal(MiniAppsModal, { initialStep: 'widgets' })
+    await flushPromises()
+
+    wrapper.findComponent({ name: 'MiniAppWidgetGallery' }).vm.$emit('browse')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
+
+    await wrapper.find('[data-testid="mini-apps-widgets-button"]').trigger('click')
+    await wrapper.find('[data-testid="competition-flow-back"]').trigger('click')
+    expect(closeModal).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="mini-apps-flow-apps"]').attributes('aria-hidden')).toBe('false')
+  })
+
   it('does not ask when the Mini App has no widgets on Home', async () => {
     const wrapper = mountModal()
     await flushPromises()

@@ -12,6 +12,7 @@ import ShareIcon from '@/components/icons/share.vue'
 import { i18n } from '@/i18n/i18n-setup'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
 import { applyIconFallback, MINI_APP_FALLBACK_ICON as FALLBACK_ICON } from '@/lib/mini-app-icons'
+import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
 import { WIDGET_SIZES } from '@/lib/mini-app-widgets'
 
 const props = defineProps<{
@@ -73,7 +74,10 @@ const actions = computed(() => {
   if (!context)
     return []
   return [
-    { testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare },
+    // Nimiq Pay's own widgets have no Mini App to share.
+    ...(context.app.url === BUILTIN_WIDGET_SCOPE
+      ? []
+      : [{ testid: 'mini-app-share-action', label: 'Share', icon: ShareIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onShare }]),
     ...(context.reportUrl
       ? [{ testid: 'mini-app-report-action', label: 'Report', icon: FlagIcon, classes: 'text-space active:bg-space/[0.04] focus-visible:ring-sky', onClick: onReport }]
       : []),

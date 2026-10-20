@@ -298,7 +298,7 @@ Response.json({
 
 The demo Mini App in `mini-app-sdk/dapp` ships two widgets (`nim-price` and `lab`) in `public/nimiq-pay-widgets.json` and a Widgets tab. Open the demo in a Nimiq Pay build with widgets (a demo served over plain http or from a LAN IP address works only in development builds of Nimiq Pay), then either:
 
-- open the Mini Apps modal, tap Widgets at the top and add them from the gallery (it lists Mini Apps you have opened), or
+- open the Mini Apps modal, tap Widgets at the top and add them from the gallery (it lists Nimiq Pay's own NIM price widget first, then the Mini Apps you have opened), or
 - use the demo's Widgets tab: it adds each widget, pushes a scheduled state that turns green after two minutes, a bar chart, a chain trigger that waits for a 0.00001 NIM payment to yourself (and gives up after 30 minutes), a button that calls `remove`, and a deliberately invalid state to see the error message. The buttons that need your account stay disabled until the demo's provider is ready.
 
 The tab shows the result of every call in its status line. Remove a widget from its "⋯" menu.

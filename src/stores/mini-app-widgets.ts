@@ -17,8 +17,10 @@ import type { NetworkMode } from '@/lib/network'
 import { useStorageAsync } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
+import nimiqPayIcon from '@/assets/graphics/nimiq-pay.png'
 import { useLogger } from '@/composables/useLogger'
 import { isTestnet } from '@/lib'
+import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { createWidgetChain, evaluateTrigger, isBalanceLive, needsLookup, resolveLiveValue, resolvePriceHistory } from '@/lib/mini-app-widget-chain'
 import { fetchWidgetFile, fetchWidgetRefresh, findWidgetFile } from '@/lib/mini-app-widget-sources'
 import { localizeDefinition, WIDGET_LIMITS, widgetScopeCandidates } from '@/lib/mini-app-widgets'
@@ -71,7 +73,7 @@ export interface WidgetView {
   countdown?: { label: string, until: number }
   rows: { label: string, value: DisplayValue, url?: string }[]
   chart?: { kind: 'line' | 'bars', points: number[] }
-  url: string
+  url?: string
   /** After repeated refresh failures: when the content last updated. */
   staleSince?: number
 }
@@ -122,8 +124,10 @@ function dueAt(state: WidgetState | undefined, definition: WidgetDefinition, at:
 
 export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   const network: NetworkMode = isTestnet ? 'testnet' : 'mainnet'
+  // Home waits for the first read, so the empty state never flashes for someone who has widgets.
+  const ready = ref(false)
   // kv() so widgets clear on logout with the rest of the account.
-  const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false })
+  const stored = useStorageAsync<HomeWidget[]>('miniAppWidgets', [], kv(), { writeDefaults: false, onReady: () => ready.value = true })
   // Launch folder → its search result, for the gallery; misses are kept too, so a site without widgets is not searched on every launch.
   const checks = useStorageAsync<Record<string, FolderCheck>>('miniAppWidgetChecks', {}, kv(), { writeDefaults: false })
   const widgets = computed(() => stored.value.filter(w => w.network === network))
@@ -286,13 +290,14 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   function toView(widget: HomeWidget, at: number): WidgetView {
     const content = shownContent(widget, at)
     const { countdown, chart } = content
+    const builtin = widget.scope === BUILTIN_WIDGET_SCOPE
     const history = chart && 'priceHistory' in chart ? live.get(liveKey({ priceHistory: chart.priceHistory }))?.value : undefined
     return {
       key: widgetKey(widget.scope, widget.widgetId),
       scope: widget.scope,
       widgetId: widget.widgetId,
-      appName: appName(widget.scope),
-      appIcon: useMiniApps().iconForUrl(widget.scope),
+      appName: builtin ? 'Nimiq Pay' : appName(widget.scope),
+      appIcon: builtin ? nimiqPayIcon : useMiniApps().iconForUrl(widget.scope),
       size: widget.size,
       sizes: widget.definition.sizes,
       label: content.label,
@@ -307,7 +312,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
           : head.value.height > 0 ? { label: countdown.label, until: head.value.at + (countdown.untilNimiqHeight - head.value.height) * 1000 } : undefined,
       rows: content.rows.map(row => ({ label: row.label, value: display(row.value), url: row.path })),
       chart: !chart ? undefined : 'points' in chart ? { kind: chart.kind, points: chart.points } : Array.isArray(history) ? { kind: 'line', points: history } : undefined,
-      url: content.path ?? widget.scope,
+      url: content.path ?? (builtin ? undefined : widget.scope),
       staleSince: widget.failures >= STALE_AFTER_FAILURES ? widget.updatedAt : undefined,
     }
   }
@@ -402,7 +407,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
 
   async function recheckDefinition(widget: HomeWidget, at: number, files: Map<string, Promise<FetchOutcome<WidgetFile>>>) {
     if (!files.has(widget.scope))
-      files.set(widget.scope, fetchWidgetFile(widget.scope, at))
+      files.set(widget.scope, widget.scope === BUILTIN_WIDGET_SCOPE ? Promise.resolve({ ok: true, value: builtinWidgetFile() }) : fetchWidgetFile(widget.scope, at))
     const result = await files.get(widget.scope)!
     if (!result.ok) {
       // Only a valid file that no longer declares the widget removes it; errors never do.
@@ -511,6 +516,7 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
   }
 
   return {
+    ready,
     widgets,
     views,
     canAdd,

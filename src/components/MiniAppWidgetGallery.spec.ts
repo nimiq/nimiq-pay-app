@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const { recents, setToast, store } = await vi.hoisted(async () => {
   const { reactive, ref } = await import('vue')
   return {
-    recents: ref([{ url: 'https://swap.example', name: 'Swap', icon: '' }, { url: 'https://none.example', name: 'None', icon: '' }]),
+    recents: ref<Array<{ url: string, name: string, icon: string }>>([]),
     setToast: vi.fn(),
     store: {
       galleryFiles: reactive(new Map()),
@@ -26,6 +26,7 @@ vi.mock('@/composables/useToast', () => ({ useToast: () => ({ setToast }) }))
 vi.mock('@/i18n/i18n-setup', () => ({ i18n: { t: (m: string) => ({ Small: 'Klein', Large: 'Groß' } as Record<string, string>)[m] ?? m } }))
 
 const { default: MiniAppWidgetGallery } = await import('./MiniAppWidgetGallery.vue')
+const { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } = await import('@/lib/mini-app-widget-builtins')
 
 const DEFINITION: WidgetDefinition = { id: 'swap', name: 'Swap status', description: 'Follows your swap.', sizes: ['large', 'small'], content: { value: { text: 'Start a swap' }, tone: 'neutral', rows: [] }, translations: {} }
 
@@ -35,6 +36,7 @@ function render(active = true) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  recents.value = [{ url: 'https://swap.example', name: 'Swap', icon: '' }, { url: 'https://none.example', name: 'None', icon: '' }]
   store.galleryFiles.clear()
   store.isOnHome.mockReturnValue(false)
   store.add.mockReturnValue(true)
@@ -63,6 +65,41 @@ describe('miniAppWidgetGallery', () => {
     expect(wrapper.find('[data-testid="gallery-app-https://none.example/"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="mini-app-widget-large"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Only Mini Apps you\'ve opened appear here.')
+  })
+
+  it('lists Nimiq Pay\'s own widgets first, even before any Mini App was opened', async () => {
+    recents.value = []
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid^="gallery-app-"]').attributes('data-testid')).toBe(`gallery-app-${BUILTIN_WIDGET_SCOPE}`)
+    expect(wrapper.text()).toContain('NIM price')
+    expect(store.resolvePreviews).toHaveBeenCalledWith(builtinWidgetFile().widgets)
+  })
+
+  it('adds Nimiq Pay\'s own widget under its own scope', async () => {
+    recents.value = []
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.find('[data-testid="gallery-add-nim-price"]').trigger('click')
+    expect(store.add).toHaveBeenCalledWith(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0])
+  })
+
+  it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {
+    store.galleryFiles.set('https://swap.example/', null)
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.find('[data-testid="gallery-browse"]').trigger('click')
+    expect(wrapper.emitted('browse')).toHaveLength(1)
+  })
+
+  it('hides Browse Mini Apps while files load and once a Mini App lists widgets', async () => {
+    store.galleryFiles.set('https://swap.example/', 'loading')
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-browse"]').exists()).toBe(false)
+    store.galleryFiles.set('https://swap.example/', { widgets: [DEFINITION] })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-browse"]').exists()).toBe(false)
   })
 
   it('shows a placeholder while a file loads', async () => {

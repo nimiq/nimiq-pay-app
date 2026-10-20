@@ -3,10 +3,12 @@ import type { WidgetDefinition, WidgetSize } from '@/lib/mini-app-widgets'
 import { IonSkeletonText } from '@ionic/vue'
 import { storeToRefs } from 'pinia'
 import { computed, watch } from 'vue'
+import AddWidgetsPill from '@/components/AddWidgetsPill.vue'
 import MiniAppWidget from '@/components/MiniAppWidget.vue'
 import { useToast } from '@/composables/useToast'
 import { i18n } from '@/i18n/i18n-setup'
 import { applyIconFallback } from '@/lib/mini-app-icons'
+import { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } from '@/lib/mini-app-widget-builtins'
 import { localizeDefinition, WIDGET_LIMITS, WIDGET_SIZES } from '@/lib/mini-app-widgets'
 import { safeOrigin } from '@/lib/url-safety'
 import { useApp } from '@/stores/app'
@@ -14,6 +16,7 @@ import { useMiniAppWidgets } from '@/stores/mini-app-widgets'
 import { useMiniApps } from '@/stores/mini-apps'
 
 const { active } = defineProps<{ active: boolean }>()
+const emit = defineEmits<{ browse: [] }>()
 
 const widgets = useMiniAppWidgets()
 const { recentlyViewedDApps } = storeToRefs(useMiniApps())
@@ -25,6 +28,7 @@ const scopes = computed(() => widgets.galleryScopesFor([...new Set(recentlyViewe
 watch([() => active, scopes], async ([isActive, list]) => {
   if (!isActive)
     return
+  void widgets.resolvePreviews(builtinWidgetFile().widgets)
   await widgets.loadGallery(list)
   const definitions = list.flatMap((scope) => {
     const file = widgets.galleryFiles.get(scope)
@@ -39,13 +43,10 @@ const isLoading = computed(() => scopes.value.some(scope => widgets.galleryFiles
 // Literal calls, so the i18n extraction finds every size name.
 const sizeLabels = computed<Record<WidgetSize, string>>(() => ({ icon: i18n.t('Icon'), small: i18n.t('Small'), medium: i18n.t('Medium'), large: i18n.t('Large') }))
 
-const sections = computed(() => scopes.value.flatMap((scope) => {
-  const file = widgets.galleryFiles.get(scope)
-  if (!file || file === 'loading' || !file.widgets.length)
-    return []
-  return [{
+function toSection(scope: string, definitions: WidgetDefinition[]) {
+  return {
     scope,
-    items: file.widgets.map((definition) => {
+    items: definitions.map((definition) => {
       const { name, description } = localizeDefinition(definition, app.language)
       return {
         definition,
@@ -56,8 +57,14 @@ const sections = computed(() => scopes.value.flatMap((scope) => {
         onHome: widgets.isOnHome(scope, definition.id),
       }
     }),
-  }]
+  }
+}
+
+const appSections = computed(() => scopes.value.flatMap((scope) => {
+  const file = widgets.galleryFiles.get(scope)
+  return file && file !== 'loading' && file.widgets.length ? [toSection(scope, file.widgets)] : []
 }))
+const sections = computed(() => [toSection(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets), ...appSections.value])
 
 function add(scope: string, definition: WidgetDefinition) {
   if (!widgets.add(scope, definition))
@@ -116,5 +123,9 @@ function add(scope: string, definition: WidgetDefinition) {
     <p class="text-center text-sm text-space/60">
       {{ $t('Only Mini Apps you\'ve opened appear here.') }}
     </p>
+
+    <AddWidgetsPill v-if="!isLoading && !appSections.length" data-testid="gallery-browse" @click="emit('browse')">
+      {{ $t('Browse Mini Apps') }}
+    </AddWidgetsPill>
   </div>
 </template>

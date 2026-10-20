@@ -77,6 +77,10 @@ msgstr ""
 msgid "Add to address book"
 msgstr ""
 
+#: src/components/TheHomeWidgets.vue:37
+msgid "Add widgets"
+msgstr ""
+
 #: src/components/AddressDisplay.vue:50
 #: src/components/NimAddressDisplay.vue:39
 msgid "Address copied to clipboard"
@@ -214,6 +218,10 @@ msgstr ""
 
 #: src/composables/useDecrypt.ts:36
 msgid "Both expected and the given PIN are empty"
+msgstr ""
+
+#: src/components/MiniAppWidgetGallery.vue:54
+msgid "Browse Mini Apps"
 msgstr ""
 
 #: src/components/competition/CompetitionAppDetail.vue:84
@@ -723,7 +731,7 @@ msgstr ""
 msgid "Hold your phone near the terminal"
 msgstr ""
 
-#: src/components/MiniAppWidgetGallery.vue:66
+#: src/components/MiniAppWidgetGallery.vue:69
 msgid "Home holds at most {count} widgets"
 msgstr ""
 
@@ -739,8 +747,8 @@ msgstr ""
 msgid "I have turned it off"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:32
-#: src/components/MiniAppWidgetGallery.vue:41
+#: src/components/MiniAppActionsSheet.vue:31
+#: src/components/MiniAppWidgetGallery.vue:42
 msgid "Icon"
 msgstr ""
 
@@ -969,8 +977,8 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:32
-#: src/components/MiniAppWidgetGallery.vue:41
+#: src/components/MiniAppActionsSheet.vue:31
+#: src/components/MiniAppWidgetGallery.vue:42
 msgid "Large"
 msgstr ""
 
@@ -1030,8 +1038,8 @@ msgstr ""
 msgid "Matching submissions: {count}"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:32
-#: src/components/MiniAppWidgetGallery.vue:41
+#: src/components/MiniAppActionsSheet.vue:31
+#: src/components/MiniAppWidgetGallery.vue:42
 msgid "Medium"
 msgstr ""
 
@@ -1056,7 +1064,7 @@ msgstr ""
 msgid "Minimum NIM Decimals"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:93
+#: src/components/MiniAppWidget.vue:94
 msgid "More actions for {name}"
 msgstr ""
 
@@ -1083,6 +1091,10 @@ msgstr ""
 
 #: src/components/HoldCardToReader.vue:61
 msgid "NFC is not supported on this device"
+msgstr ""
+
+#: src/lib/mini-app-widget-builtins.ts:11
+msgid "NIM price"
 msgstr ""
 
 #: src/stores/sync/remote-signers.ts:83
@@ -1192,7 +1204,7 @@ msgstr ""
 msgid "Not a pending payment request"
 msgstr ""
 
-#: src/components/MiniAppWidget.vue:84
+#: src/components/MiniAppWidget.vue:85
 msgid "Not updated since {time}"
 msgstr ""
 
@@ -1524,7 +1536,7 @@ msgstr ""
 msgid "Refunded"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:82
+#: src/components/MiniAppActionsSheet.vue:83
 msgid "Remove from Home"
 msgstr ""
 
@@ -1677,8 +1689,8 @@ msgstr ""
 msgid "Skip for now"
 msgstr ""
 
-#: src/components/MiniAppActionsSheet.vue:32
-#: src/components/MiniAppWidgetGallery.vue:41
+#: src/components/MiniAppActionsSheet.vue:31
+#: src/components/MiniAppWidgetGallery.vue:42
 msgid "Small"
 msgstr ""
 
@@ -1839,6 +1851,10 @@ msgstr ""
 
 #: src/lib/issuer-websocket.ts:71
 msgid "The exchange rate is unfavorable. Please try again later"
+msgstr ""
+
+#: src/lib/mini-app-widget-builtins.ts:12
+msgid "The NIM price in your currency, with its change over the last 24 hours."
 msgstr ""
 
 #: src/components/NimAddressDisplay.vue:11

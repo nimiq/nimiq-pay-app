@@ -2,6 +2,7 @@ import type { MiniAppMenuContext } from '@/stores/mini-apps'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { miniAppOpenDeeplink } from '@/lib/mini-app-deeplink'
+import { BUILTIN_WIDGET_SCOPE } from '@/lib/mini-app-widget-builtins'
 import MiniAppActionsSheet from './MiniAppActionsSheet.vue'
 
 const REPORT_URL = 'https://nimpay.app/miniapps/evm/evm-mini-wallet/report'
@@ -113,6 +114,12 @@ describe('miniAppActionsSheet', () => {
     expect(sizeRow.querySelector('span')!.textContent!.trim()).toBe('Größe')
     expect(sizeRow.querySelector('[role="group"]')!.getAttribute('aria-label')).toBe('Widget-Größe')
     expect(action('mini-app-remove-widget-action')!.textContent!.trim()).toBe('Von Home entfernen')
+  })
+
+  it('offers no Share for Nimiq Pay\'s own widget', async () => {
+    await mountSheet({ app: { ...app, url: BUILTIN_WIDGET_SCOPE }, removable: false, widget: { size: 'small', sizes: ['small', 'large'] } })
+    expect(action('mini-app-share-action')).toBeNull()
+    expect(action('mini-app-remove-widget-action')).not.toBeNull()
   })
 
   it('shows no Size row for a single-size widget, but still offers Remove', async () => {

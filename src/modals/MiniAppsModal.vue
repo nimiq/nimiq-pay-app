@@ -191,8 +191,10 @@ function openCompetitionApp(app: CompetitionMiniApp) {
   flowStep.value = 'competitionDetail'
 }
 
+const backClosesGallery = shallowRef(props.initialStep === 'widgets')
+
 function backInMiniAppsFlow() {
-  if (flowStep.value === 'widgets' && props.initialStep === 'widgets') {
+  if (flowStep.value === 'widgets' && backClosesGallery.value) {
     void closeModal()
     return
   }
@@ -465,7 +467,7 @@ async function openCompetitionExternal(url: string) {
           :aria-hidden="flowStep !== 'widgets'"
           :inert="flowStep !== 'widgets'"
         >
-          <MiniAppWidgetGallery :active="flowStep === 'widgets'" />
+          <MiniAppWidgetGallery :active="flowStep === 'widgets'" @browse="backClosesGallery = false; flowStep = 'apps'" />
         </section>
       </motion.div>
     </div>

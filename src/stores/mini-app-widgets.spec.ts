@@ -629,6 +629,20 @@ describe('removing and previewing', () => {
     expect(store.isOnHome(SCOPE, 'swap')).toBe(false)
   })
 
+  it('draws Nimiq Pay\'s own widget under its name, opening nothing, and re-checks it without a download', async () => {
+    const { BUILTIN_WIDGET_SCOPE, builtinWidgetFile } = await import('@/lib/mini-app-widget-builtins')
+    const store = await setup()
+    store.add(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0]!)
+    expect(store.views[0]).toMatchObject({ appName: 'Nimiq Pay', url: undefined })
+    await store.tick({ chain: fakeChain(), at: NOW + 25 * 3600_000 })
+    expect(fetchWidgetFile).not.toHaveBeenCalled()
+    expect(store.widgets).toHaveLength(1)
+  })
+
+  it('is ready once the stored widgets have been read', async () => {
+    expect((await setup()).ready).toBe(true)
+  })
+
   it('builds a preview view of a definition without adding it', async () => {
     const store = await setup()
     expect(store.previewView(SCOPE, definition())).toMatchObject({ appName: 'Swap', size: 'medium', value: { kind: 'text', text: 'Start a swap' }, key: `${SCOPE}#swap` })

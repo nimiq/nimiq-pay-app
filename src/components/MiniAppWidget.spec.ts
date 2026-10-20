@@ -185,6 +185,16 @@ describe('miniAppWidget', () => {
     expect(wrapper.emitted('open')).toEqual([['https://swap.example/?swap=abc']])
   })
 
+  it('opens nothing for a widget without a URL, while a long press still opens its menu', async () => {
+    vi.useFakeTimers()
+    const wrapper = render({ view: view({ url: undefined }) })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="widget-open"]').exists()).toBe(false)
+    wrapper.element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+    await vi.advanceTimersByTimeAsync(500)
+    expect(wrapper.emitted('menu')).toHaveLength(1)
+  })
+
   it('opens no menu on a long press or the context menu as a gallery preview', async () => {
     vi.useFakeTimers()
     const wrapper = render({ view: view(), preview: true })
