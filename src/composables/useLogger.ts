@@ -27,10 +27,14 @@ let errorReportCount = 0
 // Errors already sent to PostHog, so an error reported and then caught and logged is not sent twice.
 const reportedErrors = new WeakSet<object>()
 
-// Never addresses (Nimiq and 20-byte EVM), 32-byte hex (tx hashes, but also keys) or URL query strings and
-// fragments. Collapsing hashes also keeps one PostHog issue per message instead of one per hash.
+// Never addresses (Nimiq, 20-byte EVM, Bitcoin), Lightning invoices and LNURLs, 32-byte hex (tx hashes, but also
+// keys) or URL query strings and fragments. Swap API errors can echo the invoice back. Collapsing hashes also keeps
+// one PostHog issue per message instead of one per hash.
 export function redact(text: string) {
   return text
+    .replace(/\b(?:lightning:)?ln(?:bc|tb|bcrt|url)[0-9a-z]{20,}\b/gi, 'ln…')
+    .replace(/\b(?:bc|tb|bcrt)1[0-9a-z]{20,}\b/gi, 'btc…')
+    .replace(/\b[13mn2][1-9A-HJ-NP-Za-km-z]{25,34}\b/g, 'btc…')
     .replace(/NQ\d{2}(?: ?[0-9A-Z]{4}){8}/g, 'NQ…')
     .replace(/\b(?:0x)?[0-9a-fA-F]{64}\b/g, '…')
     .replace(/\b0x[0-9a-fA-F]{40}\b/g, '0x…')

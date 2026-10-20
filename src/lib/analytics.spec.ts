@@ -413,6 +413,19 @@ describe('trackSwapStep', () => {
 
     expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Rejected … from NQ…')
   })
+
+  it('redacts Lightning invoices, LNURLs and Bitcoin addresses from the error reason', async () => {
+    const { Asset } = await import('@/lib/assets')
+    const invoice = 'lnbc10u1pjqqqqqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdqqcqzzsxqyz5vq'
+    trackSwapStep({
+      step: 'quote',
+      ok: false,
+      asset: Asset.NIM,
+      error_reason: `Bad peer ${invoice}, LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS, bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq, 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2`,
+    })
+
+    expect(state.capture.mock.calls[0][0].properties.error_reason).toBe('Bad peer ln…, ln…, btc…, btc…')
+  })
 })
 
 describe('trackPaymentUnknown', () => {
