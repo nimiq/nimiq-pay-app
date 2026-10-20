@@ -1117,6 +1117,49 @@ describe('miniAppHost', () => {
     })
   })
 
+  it('ignores a Mini App supplied rpcUrl and resolves every RPC call through the host RPC', async () => {
+    const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const payload = JSON.parse(String(init?.body)) as { method: string }
+
+      switch (payload.method) {
+        case 'eth_getTransactionCount':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 1, result: '0x7' })
+        case 'eth_gasPrice':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 2, result: '0x3b9aca00' })
+        case 'eth_maxPriorityFeePerGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 3, result: '0x1' })
+        case 'eth_estimateGas':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 4, result: '0x5208' })
+        case 'eth_sendRawTransaction':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 5, result: '0xabc123' })
+        // Non-null receipt ends the background Polygon refresh loop.
+        case 'eth_getTransactionReceipt':
+          return jsonRpcResponse({ jsonrpc: '2.0', id: 6, result: { status: '0x1' } })
+        default:
+          throw new Error(`Unexpected RPC method: ${payload.method}`)
+      }
+    })
+    vi.stubGlobal('fetch', rpcFetch)
+
+    const host = createReconnectHost()
+
+    await (host as any).signEthTransaction({
+      to: '0x2222222222222222222222222222222222222222',
+      from: ethAddress,
+      value: '0x0',
+      chainId: '0x89',
+      rpcUrl: 'https://attacker.test',
+    })
+    await vi.waitFor(() => expect(updateBalance).toHaveBeenCalledOnce())
+
+    expect(new Set(rpcFetch.mock.calls.map(([url]) => url))).toEqual(new Set(['https://polygon-rpc.test']))
+    expect(signTransaction).toHaveBeenCalledWith(expect.objectContaining({
+      nonce: 7,
+      maxFeePerGas: 2_000_000_000n,
+      maxPriorityFeePerGas: 1n,
+    }))
+  })
+
   it('shows decoded Polygon USDT transfer details in the confirmation request', async () => {
     const rpcFetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const payload = JSON.parse(String(init?.body)) as { method: string }

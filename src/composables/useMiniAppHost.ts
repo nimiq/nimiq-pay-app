@@ -209,7 +209,6 @@ export interface MiniAppHostConfig {
   /**
    * Map of hex chain IDs to their JSON-RPC endpoints.
    * Used for nonce fetching, gas estimation, and transaction broadcasting.
-   * If not provided, the RPC URL can be passed per-transaction via txParams.rpcUrl.
    */
   evmRpcUrls?: Record<string, string>
 
@@ -922,7 +921,6 @@ export class MiniAppHost {
       gasPrice?: string
       nonce?: string | number
       chainId?: string
-      rpcUrl?: string
     }
 
     if (Array.isArray(params) && params.length > 0) {
@@ -948,7 +946,6 @@ export class MiniAppHost {
       nonce: txParams.nonce,
       nonceType: typeof txParams.nonce,
       chainId: txParams.chainId,
-      rpcUrl: txParams.rpcUrl,
     })
 
     // Validate required fields
@@ -1000,7 +997,9 @@ export class MiniAppHost {
     const chainName = validatedChainIdNumber ? EVM_CHAIN_NAMES[validatedChainIdNumber] : undefined
 
     // --- Resolve all missing tx fields from RPC before showing confirmation ---
-    const rpcUrl = txParams.rpcUrl || this.getRpcUrlForChain()
+    // Host RPC only, keyed by the chain being signed. A Mini App chosen RPC would supply the
+    // nonce and fees the user signs, and receive the signed transaction.
+    const rpcUrl = this.getRpcUrlForChain(validatedChainIdNumber ? `0x${validatedChainIdNumber.toString(16)}` : undefined)
 
     // Nonce resolution: fetch from broadcast RPC if not provided by dApp
     logger.log('[ETH_TX] Step 3 - Nonce analysis:', {
