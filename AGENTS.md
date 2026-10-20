@@ -61,6 +61,12 @@ Common mistakes, gotchas, and confusion points in this project. If something sur
 - `vite build --mode development` is still mainnet (`isTestnet` follows `import.meta.env.DEV`, i.e. `NODE_ENV`). Switch test devices to testnet at runtime via the dev modal instead.
 - Test APKs for the suite come from `scripts/build-test-apk.mjs`, which disables Capgo over-the-air updates; otherwise a relaunch can swap in the production web bundle mid-run.
 
+### iOS simulator build (Maestro)
+
+- `VITE_ENABLE_MINI_APPS=true pnpm build:web` (it rewrites `src/i18n/en.po`; restore it), then `pnpm exec cap sync ios`. Its `bundle exec pod install` fails while the `Gemfile.lock` gems aren't installed (its `bundle` probe can first spin at 100% CPU for minutes; killing that process is safe, the web assets are already copied); run `pod install` in `ios/App` instead. That only rewrites the `COCOAPODS:` line of `Podfile.lock`: keep it locally (Xcode checks it against `Pods/Manifest.lock`), never commit it.
+- Turn off over-the-air updates in `ios/App/App/capacitor.config.json` with `disableOtaUpdates` from `scripts/build-test-apk.mjs`.
+- Sign ad hoc, no Apple account needed: `xcodebuild -workspace ios/App/App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath <dir> CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- PROVISIONING_PROFILE_SPECIFIER= build`. Never `CODE_SIGNING_ALLOWED=NO`: the app then lacks `application-identifier`, every Keychain call fails (`-34018`), and onboarding shows "Something went wrong decrypting the database", which looks like an app bug but isn't.
+
 ## Nimiq client & sync
 
 - `executionResult` is not failure-only: `true` means execution succeeded, `false` means execution failed. Missing/`undefined` means no result was provided; never assume success from absence.

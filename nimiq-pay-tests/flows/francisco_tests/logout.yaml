@@ -21,8 +21,10 @@ tags:
     text: ${output.logout.instructions}
 - assertVisible: ${output.logout.confirmBtn}
 
-- back
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.logout.confirmBtn}
 - assertVisible: ${output.home.payTitle}
 
 - stopApp

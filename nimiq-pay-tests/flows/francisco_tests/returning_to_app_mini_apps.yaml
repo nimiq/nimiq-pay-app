@@ -14,11 +14,21 @@ tags:
 - tapOn: ${output.navigation.miniAppsBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.miniApps.discoverTitle}
-- assertVisible:
-    id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: ${output.miniApps.searchInputIos}
 - assertVisible: ${output.miniApps.closeBtn}
 - tapOn: ${output.miniApps.closeBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
 - assertVisible: ${output.home.payTitle}
 
 # Mini Apps filters
@@ -46,14 +56,14 @@ tags:
 - assertVisible: ${output.miniApps.evmMiniWalletEntry}
 - tapOn: ${output.miniApps.closeBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
 - assertVisible: ${output.home.payTitle}
 
 # Mini Apps search
 - tapOn: ${output.navigation.miniAppsBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.miniApps.discoverTitle}
-- tapOn:
-    id: ${output.miniApps.searchInputId}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
 - inputText: Nimtris
 - waitForAnimationToEnd
 - extendedWaitUntil:
@@ -62,14 +72,14 @@ tags:
 - assertVisible: ${output.miniApps.nimtrisEntry}
 - tapOn: ${output.miniApps.closeBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
 - assertVisible: ${output.home.payTitle}
 
 # Cinima Mini App
 - tapOn: ${output.navigation.miniAppsBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.miniApps.discoverTitle}
-- tapOn:
-    id: ${output.miniApps.searchInputId}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
 - inputText: Cinima
 - waitForAnimationToEnd
 - extendedWaitUntil:

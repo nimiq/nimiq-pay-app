@@ -12,6 +12,13 @@ output.onboarding = {
     skipForNowBtn: "Skip for now"
 };
 
+// iOS shows a one-time slide-to-type intro over the letter keyboard the first time it opens on
+// a device; typing goes nowhere until it is dismissed.
+output.iosKeyboard = {
+    quickPathIntro: "Speed up your typing.*",
+    continueBtn: "Continue"
+};
+
 output.home = {
     payTitle: "Pay",
     switchAssetBtn: "Switch asset",
@@ -47,7 +54,16 @@ output.navigation = {
     logoutBtn: "Log Out",
     topUpBtn: "Top Up",
     withdrawBtn: "Withdraw",
-    closeFlowModalBtn: "close flow modal"
+    closeFlowModalBtn: "close flow modal",
+    // Toolbar back button of stacked modals (Settings): "back" on Android, "Back" on iOS.
+    // Used instead of the `back` command, which does nothing on iOS.
+    backBtn: "back",
+    // A point on the backdrop above a sheet modal; tapping it closes the sheet. The menu and
+    // the Log Out confirmation sheets have an unlabelled close button, and `back` does
+    // nothing on iOS. The menu sheet's top is the highest: 34% of the screen on the Pixel_8, 31%
+    // on the iPhone 17 Pro and about 22% on the Galaxy S26 (scaled from its Settings row); Log Out
+    // starts at 50% (Pixel_8).
+    sheetBackdrop: "50%,10%"
 };
 
 output.settings = {
@@ -108,6 +124,9 @@ output.changePin = {
 output.topUp = {
     title: "Top up address",
     addressPrefix: "NQ.*",
+    // One text node per address on Android; nine 4-character nodes on iOS. Matches any 4-letter
+    // text too (Maestro ignores case), so capture_top_up_address.yaml bounds it to the address.
+    addressPart: "NQ.*|[0-9A-Z]{4}",
     copyAddress: "Copy address"
 };
 
@@ -126,11 +145,14 @@ output.withdraw = {
     // Address picker sheet ("Choose an address"); the list is empty after clearState.
     addAnotherAddressBtn: "Add another address",
     addressTitle: "Send to this address",
-    // The address is 9 inputs with HTML ids "0".."8", one group of 4 characters each.
+    // The address is 9 inputs with HTML ids "0".."8", one group of 4 characters each. Android
+    // exposes only the ids; iOS only their aria-labels, "Address segment 0".."8".
+    addressSegmentLabel: "Address segment ",
     saveAddressBtn: "Save",
     confirmTitle: "Confirm Withdrawal",
     // The 1 NIM withdraw_nim_testnet sends, as the confirmation and the transaction detail show it.
-    oneNimAmount: "1\\.0 NIM",
+    // iOS splits it into "1.0" and "NIM".
+    oneNimAmount: "1\\.0( NIM)?",
     confirmAndSendBtn: "Confirm and send",
     // Only asked when the last PIN entry is over 5 minutes old (MIN_PIN_INPUT_INTERVAL).
     pinTitle: "Insert PIN to confirm"
@@ -168,8 +190,6 @@ output.backup = {
 // Setup > Login: the recovery words step.
 output.login = {
     title: "Enter recovery words",
-    // MnemonicInput gives its 12 inputs the HTML ids "01".."12" (see enter_recovery_words.yaml).
-    lastWordInputId: "12",
     confirmBtn: "Confirm",
     invalidWordsError: "Invalid recovery words"
 };
@@ -180,13 +200,15 @@ output.whatsNew = {
     // "Previous versions" is expanded, so a second header proves the expansion without
     // depending on release-specific text.
     versionHeader: "Version [0-9]+\\.[0-9]+\\.[0-9]+",
-    previousVersions: "Previous versions"
+    previousVersions: "Previous versions",
+    closeBtn: "Close"
 };
 
 output.about = {
     pageTitle: "Nimiq",
     staySignedOutBtn: "Stay signed out",
-    pageUrl: "nimiq.com"
+    // iOS Safari's address bar reads "nimiq.com" after a leading left-to-right mark (U+200E).
+    pageUrl: "\u200E?nimiq\\.com"
 };
 
 output.logout = {
@@ -205,10 +227,12 @@ output.cryptocityMap = {
 
 output.miniApps = {
     discoverTitle: "Discover",
-    // The searchbar exposes neither text nor an accessible label to Maestro (the real
-    // <input> sits in Ionic's shadow DOM), so it is targeted by the id on its host
-    // element, which Android WebView maps to a resource-id.
+    // On Android the searchbar exposes neither text nor an accessible label to Maestro (the
+    // real <input> sits in Ionic's shadow DOM), so it is targeted by the id on its host
+    // element, which Android WebView maps to a resource-id. iOS exposes no HTML ids but
+    // labels the input "search text" (see tap_mini_apps_search.yaml).
     searchInputId: "mini-apps-search",
+    searchInputIos: "search text",
     closeBtn: "close modal",
     matchingAppsTitle: "Matching Apps",
     noResultsMessage: "No apps found.",

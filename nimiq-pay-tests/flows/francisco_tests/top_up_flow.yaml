@@ -12,6 +12,8 @@ appId: ${APP_ID}
     text: ${output.topUp.addressPrefix}
 - assertVisible: ${output.topUp.copyAddress}
 
-- back
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.topUp.copyAddress}
+- assertVisible: ${output.home.payTitle}
 - stopApp

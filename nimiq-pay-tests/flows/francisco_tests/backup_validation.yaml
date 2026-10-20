@@ -3,7 +3,6 @@ name: Backup validation
 
 tags:
   - franciscoTest
-  - quarantine
 
 ---
 # Scope: answering the backup quiz with the words shown on screen completes the backup: the
@@ -21,7 +20,9 @@ tags:
     visible: ${output.backup.validateTitle}
     timeout: 10000
 # The title matches mid-slide, while the previous step is still in the hierarchy and a tap can
-# be aimed at a point that moves before it lands. Once settled, only the quiz remains.
+# be aimed at a point that moves before it lands. Once settled, only the quiz remains on Android;
+# iOS keeps the earlier slides at the left edge (x=0), so the taps below also need rightOf the
+# toolbar back button, which only the quiz options are.
 - waitForAnimationToEnd
 
 # A wrong answer is rejected: "Try again" shows and the quiz restarts with new questions.
@@ -32,6 +33,7 @@ tags:
 - tapOn:
     text: ${'(' + output.recoveryWords.filter(w => w != output.recoveryWords[output.quizPosition - 1]).join('|') + ')'}
     below: ${output.backup.question}
+    rightOf: ${output.navigation.backBtn}
 - extendedWaitUntil:
     visible: ${output.backup.tryAgainBtn}
     timeout: 5000
@@ -50,6 +52,7 @@ tags:
       - tapOn:
           text: ${output.recoveryWords[output.quizPosition - 1]}
           below: ${output.backup.question}
+          rightOf: ${output.navigation.backBtn}
       # A wrong answer keeps the question on screen (with "Try again"), so this fails.
       - extendedWaitUntil:
           notVisible: ${output.backup.questionPrefix + output.quizPosition + output.backup.questionSuffix}

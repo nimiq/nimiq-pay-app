@@ -50,9 +50,10 @@ appId: ${APP_ID}
           label: Hold opened the dev modal
 - runFlow:
     when:
-      true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && DEV_MODAL_HOLD_DEVICE == 'Pixel_8'}
+      true: ${typeof DEV_MODAL_HOLD_DEVICE == 'string' && (DEV_MODAL_HOLD_DEVICE == 'Pixel_8' || DEV_MODAL_HOLD_DEVICE == 'iPhone 17 Pro-26')}
     commands:
-      # Local Pixel_8 AVD: Settings row [42,1630][1039,1707] on 1080x2400.
+      # Settings row: local Pixel_8 AVD [42,1630][1039,1707] on 1080x2400; iPhone 17 Pro
+      # [17,593][385,622] on 402x874 points (simulator, iOS 26.2).
       - swipe:
           start: 50%, 70%
           end: 50%, 70%

@@ -15,12 +15,8 @@ tags:
 - extendedWaitUntil:
     visible: ${output.topUp.copyAddress}
     timeout: 10000
-- copyTextFrom: ${output.topUp.addressPrefix}
-# The address is grouped with (non-breaking) spaces.
-- evalScript: ${output.originalAddress = maestro.copiedText.replace(/\s/g, '')}
-- assertTrue:
-    condition: ${output.originalAddress.length == 36 && output.originalAddress.indexOf('NQ') == 0}
-    label: Captured a NIM address before the logout
+- runFlow: ../../subflows/capture_top_up_address.yaml
+- evalScript: ${output.originalAddress = output.topUpAddress}
 - tapOn: ${output.navigation.closeFlowModalBtn}
 - extendedWaitUntil:
     visible: ${output.home.payTitle}
@@ -56,10 +52,9 @@ tags:
 - extendedWaitUntil:
     visible: ${output.topUp.copyAddress}
     timeout: 10000
-- copyTextFrom: ${output.topUp.addressPrefix}
-- evalScript: ${output.importedAddress = maestro.copiedText.replace(/\s/g, '')}
+- runFlow: ../../subflows/capture_top_up_address.yaml
 - assertTrue:
-    condition: ${output.importedAddress == output.originalAddress}
+    condition: ${output.topUpAddress == output.originalAddress}
     label: Imported wallet has the original address
 
 - stopApp

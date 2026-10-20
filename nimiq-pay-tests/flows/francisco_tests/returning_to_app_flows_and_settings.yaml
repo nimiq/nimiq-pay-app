@@ -30,11 +30,15 @@ tags:
 - assertVisible: ${output.settings.reduceAnimations}
 - assertVisible: ${output.settings.changePin}
 
-- back
+- tapOn: ${output.navigation.backBtn}
 - waitForAnimationToEnd
+# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
+- assertNotVisible: ${output.settings.changePin}
 - assertVisible: ${output.navigation.backupAccountBtn}
-- back
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
 - assertVisible: ${output.home.payTitle}
 
 - tapOn: ${output.navigation.openMenuBtn}
@@ -58,6 +62,7 @@ tags:
 - assertVisible: ${output.backup.question}
 - tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.backup.question}
 - assertVisible: ${output.home.payTitle}
 
 - tapOn: ${output.navigation.openMenuBtn}
@@ -85,11 +90,16 @@ tags:
     element:
       text: ${output.whatsNew.versionHeader}
       index: 1
-- back
+- tapOn: ${output.whatsNew.closeBtn}
 - waitForAnimationToEnd
-- assertVisible: ${output.navigation.whatsNewBtn}
-- back
+# The menu stays in the hierarchy under What's New, so check the changelog itself is gone.
+- assertNotVisible: ${output.whatsNew.previousVersions}
+# Log Out, not What's New: home also shows a "What's New" card.
+- assertVisible: ${output.navigation.logoutBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.logoutBtn}
 - assertVisible: ${output.home.payTitle}
 
 - tapOn: ${output.navigation.openMenuBtn}
@@ -133,8 +143,9 @@ tags:
 - assertVisible:
     text: ${output.topUp.addressPrefix}
 - assertVisible: ${output.topUp.copyAddress}
-- back
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.topUp.copyAddress}
 - assertVisible: ${output.home.payTitle}
 
 - tapOn: ${output.navigation.withdrawBtn}
@@ -150,6 +161,7 @@ tags:
 - assertVisible: ${output.withdraw.amount100}
 - tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.withdraw.amount25}
 - assertVisible: ${output.home.payTitle}
 
 - runFlow:
@@ -164,14 +176,16 @@ tags:
 - assertVisible: ${output.cryptocityMap.closeBtn}
 - tapOn: ${output.cryptocityMap.closeBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.cryptocityMap.closeBtn}
 - assertVisible: ${output.home.payTitle}
 
 - assertVisible: ${output.navigation.earnPointsBtn}
 - tapOn: ${output.navigation.earnPointsBtn}
 - waitForAnimationToEnd
 - assertVisible: ${output.cryptocityPoints.comingSoonMessage}
-- back
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
 - assertVisible: ${output.home.payTitle}
 
 - stopApp

@@ -14,8 +14,9 @@ tags:
 
 - assertVisible: ${output.cryptocityPoints.comingSoonMessage}
 
-- back
+- tapOn: ${output.navigation.closeFlowModalBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.cryptocityPoints.comingSoonMessage}
 - assertVisible: ${output.home.payTitle}
 
 - stopApp

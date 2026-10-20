@@ -16,11 +16,13 @@ tags:
 - waitForAnimationToEnd
 
 - assertVisible: ${output.miniApps.discoverTitle}
-- tapOn:
-    id: ${output.miniApps.searchInputId}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
 - inputText: Cinima
 - waitForAnimationToEnd
-- assertVisible: ${output.miniApps.matchingAppsTitle}
+# The Mini App list comes from the network.
+- extendedWaitUntil:
+    visible: ${output.miniApps.matchingAppsTitle}
+    timeout: 20000
 - assertVisible: ${output.miniApps.cinimaEntry}
 
 - tapOn: ${output.miniApps.cinimaEntry}

@@ -16,8 +16,7 @@ tags:
 - waitForAnimationToEnd
 
 - assertVisible: ${output.miniApps.discoverTitle}
-- tapOn:
-    id: ${output.miniApps.searchInputId}
+- runFlow: ../../subflows/tap_mini_apps_search.yaml
 - inputText: Nimtris
 - waitForAnimationToEnd
 
