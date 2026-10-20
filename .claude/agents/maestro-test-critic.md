@@ -22,7 +22,7 @@ Flakiness:
 Conventions:
 - `appId: ${APP_ID}` and `${PIN}`, never hard-coded; selectors in `pageObjects/android/mainFlowsAndroid.page.js`; tags `franciscoTest` and, for new flows, `quarantine`.
 - Only commands available in Maestro 2.6.1 (what BrowserStack runs); never `jsEngine: rhino`.
-- Maestro sees text, `aria-label` and HTML `id` only, never `data-testid`. Check selectors against the source in `src/` and, when a device is available, against `inspect_screen`.
+- Maestro sees text, `aria-label` and HTML `id` only, never `data-testid`. Flows also run on iOS, where HTML `id` is invisible and `back` does nothing: flag either outside a `when: platform:` branch (iOS rules in `nimiq-pay-tests/CLAUDE.md`). Check selectors against the source in `src/` and, when a device is available, against `inspect_screen`.
 
 ## Negative control (required for APPROVE)
 

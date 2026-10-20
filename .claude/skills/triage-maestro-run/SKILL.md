@@ -9,8 +9,9 @@ Triage the Maestro run `$ARGUMENTS`. This is shadow mode: report only. Never sta
 
 ## 1. Get the run
 
-- A number is a GitHub Actions run id of the "Nimiq Pay - Maestro Suite Android (Suite Only)" workflow:
-  `mkdir -p maestro-triage/<id> && gh run download <id> -n maestro-results -D maestro-triage/<id>`
+- A number is a GitHub Actions run id of the "Nimiq Pay - Maestro Suite (Suite Only)" workflow (formerly "… Android (Suite Only)"):
+  `mkdir -p maestro-triage/<id> && gh run download <id> -p 'maestro-results*' -D maestro-triage/<id>`
+  Each artifact lands in its own subfolder, and each subfolder is a run to triage on its own: `maestro-results-android` and `maestro-results-ios`, or `maestro-results` (Android only) for runs of the older workflow file.
   (`maestro-triage/` is gitignored: the evidence can show recovery words.)
 - Otherwise it is a local folder that contains `maestro-reports/` and `maestro-evidence/` (e.g. output of `scripts/browserstack-maestro-run.js`).
 
@@ -27,11 +28,11 @@ Read every `RUN/maestro-reports/*/result.json`. Triage each flow whose `outcome`
   - in the build: `git log --oneline -20 <commit> -- src/`
   - app side, after the build (not in the tested APK): `git log --oneline <commit>..HEAD -- src/`
   - test side, after the build: `git log --oneline <commit>..HEAD -- nimiq-pay-tests/`
-  If it is null or unknown, say so; the triager must then not lean on "what changed".
+  If it is null or unknown, say so; the triager must then not lean on "what changed". iOS runs (`platform: "ios"` in result.json) test the dev team's latest release `.ipa`, so their `appCommit` is null and the app can differ from the branch's `src/`; tell the triager the platform.
 
 ## 4. Run the triagers in parallel
 
-Send ONE message with one `Agent` call per flow, `subagent_type: maestro-failure-triager`. Each prompt contains only: the flow name, the absolute paths of its `result.json`, its evidence folder, its flow file (`nimiq-pay-tests/<result.flow>`), and the three labelled commit lists from step 3. Do not paste log contents into the prompt.
+Send ONE message with one `Agent` call per flow, `subagent_type: maestro-failure-triager`. Each prompt contains only: the flow name, its platform, the absolute paths of its `result.json`, its evidence folder, its flow file (`nimiq-pay-tests/<result.flow>`), and the three labelled commit lists from step 3. Do not paste log contents into the prompt.
 
 ## 5. Check every verdict
 
