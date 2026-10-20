@@ -111,6 +111,18 @@ describe('adding, updating, removing', () => {
     expect(store.add('https://eleven.example/', definition())).toBe(false)
   })
 
+  it('shows a declared name instead of the address, unless the catalog names the Mini App, and launches under the address', async () => {
+    const store = await setup()
+    store.add('https://swapspace.example/', definition({ appName: 'SwapSpace' }))
+    store.add(SCOPE, definition({ id: 'listed', appName: 'Other' }))
+    store.add('https://emoji.example/', definition({ id: 'emoji', appName: '\u{1F680} Caf\u00E9 \u3059\u3057' }))
+    store.add('https://plain.example/', definition({ id: 'plain' }))
+    expect(store.views.map(v => v.appName)).toEqual(['SwapSpace', 'Swap', '\u{1F680} Caf\u00E9 \u3059\u3057', 'plain.example'])
+    expect(store.views[0]).toMatchObject({ appAddress: 'swapspace.example', launchTitle: 'swapspace.example' })
+    expect(store.views[1]).toMatchObject({ appAddress: 'swap.example', launchTitle: 'Swap' })
+    expect(store.views[3]).toMatchObject({ appAddress: undefined, launchTitle: 'plain.example' })
+  })
+
   it('names a Mini App outside the catalog by host and folder', async () => {
     const store = await setup()
     store.add(SUBFOLDER, definition())

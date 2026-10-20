@@ -84,6 +84,19 @@ describe('miniAppWidgetGallery', () => {
     expect(store.add).toHaveBeenCalledWith(BUILTIN_WIDGET_SCOPE, builtinWidgetFile().widgets[0])
   })
 
+  it('shows a Mini App\'s address under its name', async () => {
+    store.galleryFiles.set('https://swap.example/', { widgets: [DEFINITION] })
+    const preview = store.previewView.getMockImplementation()!
+    store.previewView.mockImplementation((scope: string, definition: { id: string, sizes: string[] }) => ({ key: `${scope}#${definition.id}`, scope, widgetId: definition.id, appName: scope === 'https://swap.example/' ? 'SwapSpace' : 'Nimiq Pay', appAddress: scope === 'https://swap.example/' ? 'swap.example' : undefined, appIcon: '', size: definition.sizes[0], sizes: definition.sizes, value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: scope }))
+    recents.value = [{ url: 'https://swap.example', name: 'Swap', icon: '' }]
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="gallery-app-https://swap.example/"]').text()).toContain('SwapSpace')
+    expect(wrapper.find('[data-testid="gallery-address-https://swap.example/"]').text()).toBe('swap.example')
+    expect(wrapper.findAll('[data-testid^="gallery-address-"]')).toHaveLength(1)
+    store.previewView.mockImplementation(preview)
+  })
+
   it('offers Browse Mini Apps when no opened Mini App lists widgets', async () => {
     store.galleryFiles.set('https://swap.example/', null)
     const wrapper = render()

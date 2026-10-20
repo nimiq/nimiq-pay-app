@@ -37,6 +37,8 @@ export interface MiniAppMenuContext {
   app: Pick<RowDApp, 'name' | 'url' | 'icon'>
   reportUrl?: string
   removable: boolean
+  /** The site a widget comes from, shown under its name. */
+  address?: string
   widget?: { size: WidgetSize, sizes: WidgetSize[] }
 }
 

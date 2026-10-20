@@ -25,7 +25,7 @@ vi.mock('@/composables/useModal', () => ({ Modal: { MiniApps: 'MiniApps' }, useM
 const { default: TheHomeWidgets } = await import('./TheHomeWidgets.vue')
 
 function view(size: WidgetView['size'], widgetId: string = size): WidgetView {
-  return { key: `https://swap.example/#${widgetId}`, scope: 'https://swap.example/', widgetId, appName: 'Swap', appIcon: '', size, sizes: ['small', 'medium'], value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: 'https://swap.example/?swap=1' }
+  return { key: `https://swap.example/#${widgetId}`, scope: 'https://swap.example/', widgetId, appName: 'Swap', appIcon: '', size, sizes: ['small', 'medium'], value: { kind: 'text', text: 'Start a swap' }, tone: 'neutral', rows: [], url: 'https://swap.example/?swap=1', appAddress: 'swap.example', launchTitle: 'Swap' }
 }
 
 const mounted: Array<{ unmount: () => void }> = []
@@ -117,6 +117,12 @@ describe('theHomeWidgets', () => {
     expect(wrapper.findComponent({ name: 'MiniAppActionsSheet' }).props('open')).toBe(true)
   })
 
+  it('launches under the catalog name or address, never a declared name', async () => {
+    store.views.value = [{ ...view('small'), appName: 'SwapSpace', launchTitle: 'swap.example' }]
+    await render().find('[data-testid="widget-open"]').trigger('click')
+    expect(launchMiniApp).toHaveBeenCalledWith(expect.objectContaining({ title: 'swap.example' }))
+  })
+
   it('opens the Mini App at the widget URL', async () => {
     store.views.value = [view('small')]
     await render().find('[data-testid="widget-open"]').trigger('click')
@@ -128,7 +134,7 @@ describe('theHomeWidgets', () => {
     const wrapper = render()
     await wrapper.find('[data-testid="widget-menu"]').trigger('click')
     const sheet = wrapper.findComponent({ name: 'MiniAppActionsSheet' })
-    expect(sheet.props('context')).toMatchObject({ app: { name: 'Swap', url: 'https://swap.example/' }, widget: { size: 'small', sizes: ['small', 'medium'] } })
+    expect(sheet.props('context')).toMatchObject({ app: { name: 'Swap', url: 'https://swap.example/' }, address: 'swap.example', widget: { size: 'small', sizes: ['small', 'medium'] } })
     sheet.vm.$emit('size', 'medium')
     sheet.vm.$emit('removeWidget')
     expect(store.setSize).toHaveBeenCalledWith('https://swap.example/', 'swap', 'medium')

@@ -81,9 +81,14 @@ function add(scope: string, definition: WidgetDefinition) {
     <section v-for="section in sections" :key="section.scope" class="flex flex-col gap-3" :data-testid="`gallery-app-${section.scope}`">
       <div class="flex min-w-0 items-center gap-2">
         <img :src="section.items[0]!.view.appIcon" alt="" class="size-6 shrink-0 rounded-full object-contain" referrerpolicy="no-referrer" @error="applyIconFallback($event, section.scope)">
-        <p class="truncate text-lg font-bold text-space">
-          {{ section.items[0]!.view.appName }}
-        </p>
+        <div class="flex min-w-0 flex-col">
+          <p class="text-lg font-bold text-space [overflow-wrap:anywhere]">
+            {{ section.items[0]!.view.appName }}
+          </p>
+          <p v-if="section.items[0]!.view.appAddress" :data-testid="`gallery-address-${section.scope}`" class="text-sm text-space/60 [overflow-wrap:anywhere]">
+            {{ section.items[0]!.view.appAddress }}
+          </p>
+        </div>
       </div>
       <div v-for="item in section.items" :key="item.definition.id" class="flex flex-col gap-3 rounded-2xl bg-space/[0.04] p-3">
         <div class="flex items-start justify-between gap-3">

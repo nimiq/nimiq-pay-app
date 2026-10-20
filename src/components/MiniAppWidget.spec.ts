@@ -23,6 +23,7 @@ function view(extra: Partial<WidgetView> = {}): WidgetView {
     rows: [{ label: 'You send', value: { kind: 'amount', amount: '0.05', currency: 'ETH' } }, { label: 'Order', value: { kind: 'text', text: '#12' }, url: 'https://swap.example/orders/12' }],
     chart: { kind: 'line', points: [1, 3, 2] },
     url: 'https://swap.example/?swap=abc',
+    launchTitle: 'Swap',
     ...extra,
   }
 }

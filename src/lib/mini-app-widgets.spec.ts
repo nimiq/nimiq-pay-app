@@ -43,6 +43,12 @@ describe('parseWidgetFile', () => {
     })
   })
 
+  it('gives every widget the file\'s Mini App name, cleaned and capped', () => {
+    const result = parseWidgetFile({ ...file(), name: ' Swap\u202ESpace and a name that runs on ' }, ctx)
+    expect(result.ok && result.value.widgets[0]!.appName).toBe('SwapSpace and a name tha')
+    expectError(parseWidgetFile({ ...file(), name: 42 }, ctx), 'file.name')
+  })
+
   it('requires version 1', () => {
     expectError(parseWidgetFile({ ...file(), v: 2 }, ctx), 'file.v')
   })

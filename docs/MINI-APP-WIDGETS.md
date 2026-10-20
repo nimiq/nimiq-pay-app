@@ -8,7 +8,7 @@ This page is the reference for Mini App authors. The code is the authority if th
 
 - Nimiq Pay draws every widget itself, so it always looks like Nimiq Pay and can be restyled in one place. You send meaning (text, numbers, a tone), never layout, colours, fonts or images.
 - The user picks the size of each widget: `icon`, `small`, `medium` or `large`. You list the sizes your widget supports; the first one is the default.
-- The card header (your Mini App's icon and name, and the "⋯" menu) belongs to Nimiq Pay. It shows the catalog name only when the widget's folder equals the catalog entry's URL, otherwise the host and folder (`name.github.io/my-app`). A widget has no buttons or inputs: tapping the card opens your Mini App.
+- The card header (your Mini App's icon and name, and the "⋯" menu) belongs to Nimiq Pay. It shows the catalog name when the widget's folder equals the catalog entry's URL, otherwise the name your widget file declares (see `name` below), otherwise the host and folder (`name.github.io/my-app`). The address always appears in the widget's menu and in the gallery. A widget has no buttons or inputs: tapping the card opens your Mini App.
 - A Mini App only runs while it is open, so a widget changes in three ways: your Mini App sends a new state while it is open, Nimiq Pay follows scheduled and on-chain triggers you described earlier, or Nimiq Pay polls a URL on your server (section 5).
 
 ## 2. The widget file
@@ -26,6 +26,7 @@ Serve a `nimiq-pay-widgets.json` file next to your Mini App. It lists up to 6 wi
 | Field | Meaning |
 | --- | --- |
 | `v` | Always `1`. |
+| `name` | Optional. Your Mini App's name, shown on your widgets instead of your site's address; the address stays in each widget's menu and in the gallery. At most 24 characters (longer text is cut, an emoji counts once), not translated. A Mini App in the Nimiq Pay catalog shows its catalog name instead. Like every text, a `name` that is not a non-empty string makes the file invalid. |
 | `widgets[].id` | Lower-case letters, digits and dashes, not starting with a dash, at most 32 characters, unique in the file. |
 | `widgets[].name` | Shown in the gallery and the consent sheet. At most 32 characters (longer text is cut). |
 | `widgets[].description` | Optional, at most 120 characters. |

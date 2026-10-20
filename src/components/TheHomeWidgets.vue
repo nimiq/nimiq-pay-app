@@ -38,6 +38,7 @@ const menuContext = computed<MiniAppMenuContext | null>(() => {
     return null
   return {
     app: { name: view.appName, url: view.scope, icon: view.appIcon },
+    address: view.appAddress,
     reportUrl: useMiniApps().getMiniAppReportUrl(view.scope),
     removable: false,
     widget: { size: view.size, sizes: view.sizes },
@@ -51,7 +52,7 @@ function openMenu(view: WidgetView) {
 
 function open(view: WidgetView, url: string) {
   const app = useApp()
-  void launchMiniApp({ url, title: view.appName, source: 'home_widget', icon: view.appIcon, language: app.language, userFiat: app.selectedFiat })
+  void launchMiniApp({ url, title: view.launchTitle, source: 'home_widget', icon: view.appIcon, language: app.language, userFiat: app.selectedFiat })
 }
 </script>
 

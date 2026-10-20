@@ -120,9 +120,14 @@ watch(() => props.open, (isOpen) => {
               referrerpolicy="no-referrer"
               @error="applyIconFallback($event, context.app.url)"
             >
-            <DialogTitle class="text-lg font-semibold text-space truncate">
-              {{ context.app.name }}
-            </DialogTitle>
+            <div class="flex min-w-0 flex-col">
+              <DialogTitle class="text-lg font-semibold text-space [overflow-wrap:anywhere]">
+                {{ context.app.name }}
+              </DialogTitle>
+              <p v-if="context.address" data-testid="mini-app-address" class="text-sm text-space/60 [overflow-wrap:anywhere]">
+                {{ context.address }}
+              </p>
+            </div>
           </div>
           <DialogDescription class="sr-only">
             Actions for {{ context.app.name }}

@@ -116,6 +116,11 @@ describe('miniAppActionsSheet', () => {
     expect(action('mini-app-remove-widget-action')!.textContent!.trim()).toBe('Von Home entfernen')
   })
 
+  it('names the widget\'s site under its name', async () => {
+    await mountSheet({ app, removable: false, address: 'swapspace.example', widget: { size: 'small', sizes: ['small'] } })
+    expect(action('mini-app-address')!.textContent!.trim()).toBe('swapspace.example')
+  })
+
   it('offers no Share for Nimiq Pay\'s own widget', async () => {
     await mountSheet({ app: { ...app, url: BUILTIN_WIDGET_SCOPE }, removable: false, widget: { size: 'small', sizes: ['small', 'large'] } })
     expect(action('mini-app-share-action')).toBeNull()

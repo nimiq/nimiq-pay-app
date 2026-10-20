@@ -62,6 +62,10 @@ export interface WidgetView {
   scope: string
   widgetId: string
   appName: string
+  /** The site the widget comes from, when the name does not already say it; unset for Nimiq Pay's own widgets. */
+  appAddress?: string
+  /** The catalog name or the address: a declared name never reaches the signing sheets of the launched Mini App. */
+  launchTitle: string
   appIcon: string
   size: WidgetSize
   sizes: WidgetSize[]
@@ -278,25 +282,28 @@ export const useMiniAppWidgets = defineStore('mini-app-widgets', () => {
     return shownState(widget, at)?.content ?? localizeDefinition(widget.definition, useApp().language).content
   }
 
-  /** The catalog name only for the catalog's own URL, else host and folder, so no Mini App can pose as another on its site. */
-  function appName(scope: string): string {
+  function identity(scope: string, declared?: string): { name: string, address: string, title: string } {
+    const url = new URL(scope)
+    const address = stripTrailingSlash(`${url.hostname}${url.pathname}`)
     const listed = useMiniApps().popularDApps.find(app => stripTrailingSlash(app.url) === stripTrailingSlash(scope))
     if (listed)
-      return listed.name
-    const url = new URL(scope)
-    return stripTrailingSlash(`${url.hostname}${url.pathname}`)
+      return { name: listed.name, address, title: listed.name }
+    return { name: declared ?? address, address, title: address }
   }
 
   function toView(widget: HomeWidget, at: number): WidgetView {
     const content = shownContent(widget, at)
     const { countdown, chart } = content
     const builtin = widget.scope === BUILTIN_WIDGET_SCOPE
+    const app = builtin ? { name: 'Nimiq Pay', address: undefined, title: 'Nimiq Pay' } : identity(widget.scope, widget.definition.appName)
     const history = chart && 'priceHistory' in chart ? live.get(liveKey({ priceHistory: chart.priceHistory }))?.value : undefined
     return {
       key: widgetKey(widget.scope, widget.widgetId),
       scope: widget.scope,
       widgetId: widget.widgetId,
-      appName: builtin ? 'Nimiq Pay' : appName(widget.scope),
+      appName: app.name,
+      appAddress: app.address !== app.name ? app.address : undefined,
+      launchTitle: app.title,
       appIcon: builtin ? nimiqPayIcon : useMiniApps().iconForUrl(widget.scope),
       size: widget.size,
       sizes: widget.definition.sizes,

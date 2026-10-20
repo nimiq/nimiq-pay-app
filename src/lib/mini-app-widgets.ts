@@ -23,6 +23,7 @@ export const WIDGET_LIMITS = {
   valueText: 28,
   info: 40,
   rowLabel: 20,
+  appName: 24,
   name: 32,
   description: 120,
   rows: 3,
@@ -107,6 +108,8 @@ export interface WidgetDefinition {
   content: WidgetContent
   refresh?: WidgetRefresh
   translations: Record<string, { name?: string, description?: string, content?: WidgetContent }>
+  /** The file's top-level `name`: the Mini App's, not the widget's. */
+  appName?: string
 }
 
 export interface WidgetFile {
@@ -502,6 +505,7 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
     const widgets = list(r.widgets, 'file.widgets')
     if (widgets.length > L.widgetsPerFile)
       fail('file.widgets', `at most ${L.widgetsPerFile} widgets`)
+    const appName = r.name === undefined ? undefined : text(r.name, L.appName, 'file.name')
     const ids = new Set<string>()
     return {
       widgets: widgets.map((raw, i) => {
@@ -524,6 +528,8 @@ export function parseWidgetFile(raw: unknown, ctx: ParseContext): ParseResult<Wi
         }
         if (w.description !== undefined)
           definition.description = text(w.description, L.description, `${path}.description`)
+        if (appName !== undefined)
+          definition.appName = appName
         if (w.refresh !== undefined)
           definition.refresh = refresh(w.refresh, ctx, `${path}.refresh`)
         if (w.translations !== undefined) {
