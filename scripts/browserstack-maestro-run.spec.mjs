@@ -58,6 +58,13 @@ function testcase(name, status, extra = {}) {
   return { name, status, duration: 12.5, ...extra }
 }
 
+// Excerpt of real failures of this suite (BrowserStack builds from Sept/Oct 2026).
+const SESSION_NOT_STARTED = {
+  status: 'error',
+  reason: 'runtime-error',
+  error: { message: 'Could not start a session : Something went wrong during test execution. Please try to run the test again.', code: null },
+}
+
 describe('parseEnvVariables', () => {
   it('collects repeated --env flags', () => {
     const variables = parseEnvVariables(['--app', 'X', '--env', 'APP_ID=com.nimiq.pay.debug', '--env', 'PIN=1111'])
@@ -114,6 +121,28 @@ describe('summarizeResults', () => {
     expect(summary.ok).toBe(false)
   })
 
+  it('flags a session BrowserStack never started, whose test case stays queued', () => {
+    // iOS run 39411645185: the session carried the error and its only test case stayed queued.
+    const session = sessionFixture([testcase('flows/francisco_tests/returning_to_app_mini_apps', 'queued')], SESSION_NOT_STARTED)
+
+    expect(summarizeResults(buildFixture({ status: 'error' }), [session]).neverStarted).toBe(true)
+    expect(summarizeResults(buildFixture({ status: 'error' }), [{ ...session, error: undefined }]).neverStarted).toBe(false)
+  })
+
+  it('does not flag a session error once a test case finished, or without test cases', () => {
+    const finished = sessionFixture([testcase('flows/francisco_tests/about', 'failed')], SESSION_NOT_STARTED)
+
+    expect(summarizeResults(buildFixture({ status: 'error' }), [finished]).neverStarted).toBe(false)
+    expect(summarizeResults(buildFixture({ status: 'error' }), [sessionFixture([], SESSION_NOT_STARTED)]).neverStarted).toBe(false)
+  })
+
+  it('judges each session by its own error and test cases', () => {
+    const ran = sessionFixture([testcase('flows/francisco_tests/about', 'failed')], SESSION_NOT_STARTED)
+    const queued = sessionFixture([testcase('flows/francisco_tests/about', 'queued')], { id: 'session-2' })
+
+    expect(summarizeResults(buildFixture({ status: 'error' }), [ran, queued]).neverStarted).toBe(false)
+  })
+
   it('never reports a build that is still running as passed', () => {
     // After a poll error the last known build can be mid-run with every reported row passed.
     const summary = summarizeResults(buildFixture({ status: 'running' }), [sessionFixture([testcase('flow', 'passed')])])
@@ -147,11 +176,6 @@ describe('summarizeResults', () => {
 })
 
 // Excerpts of real failures of this suite (BrowserStack builds from Sept/Oct 2026).
-const SESSION_NOT_STARTED = {
-  status: 'error',
-  reason: 'runtime-error',
-  error: { message: 'Could not start a session : Something went wrong during test execution. Please try to run the test again.', code: null },
-}
 const NOT_STARTED_TESTCASE = {
   name: 'flows/francisco_tests/top_up_flow',
   status: 'error',
@@ -404,6 +428,19 @@ describe('diagnoseAttempt', () => {
     const verdict = diagnoseAttempt({ ok: false, rows: [], buildStatus: 'passed' }, [], { sessionsError: new Error('404') })
 
     expect(verdict).toMatchObject({ diagnosis: 'HARNESS', disposition: 'RETRYABLE' })
+  })
+
+  it('retries a build whose session BrowserStack never started, even after a poll error', () => {
+    // iOS run 39411645185: the session errored and its only test case stayed queued.
+    const queued = [testcase('flows/francisco_tests/returning_to_app_mini_apps', 'queued')]
+    const summary = summarizeResults(buildFixture({ status: 'error' }), [sessionFixture(queued, SESSION_NOT_STARTED)])
+
+    expect(diagnoseAttempt(summary)).toMatchObject({ diagnosis: 'INFRA', disposition: 'RETRYABLE' })
+    expect(diagnoseAttempt({ ...summary, buildStatus: 'stopped' }, [], { waitError: Object.assign(new Error('500'), { transient: true }) }))
+      .toMatchObject({ diagnosis: 'INFRA', disposition: 'RETRYABLE' })
+    // The same build without the session error stays a diagnostic rerun.
+    expect(diagnoseAttempt(summarizeResults(buildFixture({ status: 'error' }), [sessionFixture(queued)])))
+      .toMatchObject({ diagnosis: 'UNKNOWN', disposition: 'DIAGNOSTIC' })
   })
 
   it('does not retry a finished build without test cases, nor stop the suite for it', () => {
