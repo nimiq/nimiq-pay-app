@@ -644,6 +644,7 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
                 return undefined
               })
             if (refund?.executionResult === true) {
+              trackSwapStep({ step: 'refund', ok: true, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: refund.state, execution_result: true })
               await useTransactions().setSwapHtlcRefunded(htlc.address)
               await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
               continue
@@ -664,8 +665,10 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
               }
               // Past its window, only a complete history scan tells whether the refund drained the HTLC.
               const landedRefund = await findTransactionInHistory(Nimiq.Address.fromUserFriendlyAddress(htlc.address), htlc.refund_hash!)
-              if (landedRefund?.executionResult === true)
+              if (landedRefund?.executionResult === true) {
+                trackSwapStep({ step: 'refund', ok: true, asset: Asset.NIM, swap_id: htlc.swap_id, tx_state: landedRefund.state, execution_result: true })
                 await useTransactions().setSwapHtlcRefunded(htlc.address)
+              }
             }
             logger.log('Swap HTLC is empty, deleting from db', htlc)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])
@@ -697,15 +700,18 @@ export const useSyncHtlc = defineStore('sync-htlc', () => {
           refundTx.proof = proof
           await conn.run(SQLQuery.SetNativeSwapHtlcRefundHash, [refundTx.hash(), Date.now(), validityStartHeight, htlc.address])
           const txDetails = await promiseWithTimeout(client.value!.sendTransaction(refundTx), HTLC_CALL_TIMEOUT_MS)
-          trackSwapStep({
-            step: 'refund',
-            ok: txDetails.executionResult === true,
-            asset: Asset.NIM,
-            swap_id: htlc.swap_id,
-            tx_state: txDetails.state,
-            execution_result: txDetails.executionResult ?? null,
-            rebroadcast: refundWindowOpen,
-          })
+          // Pending broadcasts have no outcome yet; reconciliation reports their confirmed execution.
+          if (typeof txDetails.executionResult === 'boolean' || txDetails.state === 'invalidated' || txDetails.state === 'expired') {
+            trackSwapStep({
+              step: 'refund',
+              ok: txDetails.executionResult === true,
+              asset: Asset.NIM,
+              swap_id: htlc.swap_id,
+              tx_state: txDetails.state,
+              execution_result: txDetails.executionResult ?? null,
+              rebroadcast: refundWindowOpen,
+            })
+          }
           if (txDetails.executionResult === true) {
             await useTransactions().setSwapHtlcRefunded(htlc.address)
             await conn.run(SQLQuery.DeleteSwapHtlc, [htlc.address])

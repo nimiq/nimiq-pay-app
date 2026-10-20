@@ -3,6 +3,7 @@ import './__tests__/setup'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
+import { trackSwapStep } from '@/lib/analytics'
 import { HTLC_CHECK_HOLD_STARTED_KV_KEY, HTLC_HISTORY_CHECKED_KV_KEY } from '@/lib/sql-queries'
 import { Transfer } from '@/types/transactions'
 import { createAddress, remoteSignerFixture, resetSyncState, state, stubNimiqGlobal } from './__tests__/setup'
@@ -13,6 +14,7 @@ describe('useSyncHtlc', () => {
     setActivePinia(createPinia())
     stubNimiqGlobal()
     resetSyncState()
+    vi.mocked(trackSwapStep).mockClear()
   })
 
   afterEach(() => {
@@ -1893,15 +1895,42 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.setSwapHtlcRefunded).toHaveBeenCalledWith('NQ55 SWAP HTLC ADDRESS')
       expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: true, execution_result: true }))
     })
 
-    it('does not mark a native refund done before its execution is known', async () => {
+    it.each(['new', 'pending'])('does not report a refund outcome while the transaction is %s', async (txState) => {
       state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS' }])
       state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
-      state.client.sendTransaction = vi.fn(() => Promise.resolve({ state: 'pending' })) as any
+      state.client.sendTransaction = vi.fn(() => Promise.resolve({ state: txState })) as any
       const { useSyncHtlc } = await import('./htlc')
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+      expect(trackSwapStep).not.toHaveBeenCalled()
+    })
+
+    it('reports refund success when a pending broadcast confirms on the next sweep', async () => {
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-id' }])
+      state.client.getAccount = vi.fn(() => Promise.resolve({ balance: 100_000, type: 'htlc' })) as any
+      const { useSyncHtlc } = await import('./htlc')
+      const htlc = useSyncHtlc()
+      await htlc.checkExpiredSwapHtlcs()
+
+      expect(trackSwapStep).not.toHaveBeenCalled()
+      state.query.mockResolvedValue([{ address: 'NQ55 SWAP HTLC ADDRESS', swap_id: 'swap-id', refund_hash: 'refund-hash', refund_block: 128 }])
+      state.client.getTransaction = vi.fn(() => Promise.resolve({ state: 'confirmed', executionResult: true })) as any
+      state.headTimestamp += 1000
+      await htlc.checkExpiredSwapHtlcs()
+
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        step: 'refund',
+        ok: true,
+        asset: 'NIM',
+        swap_id: 'swap-id',
+        tx_state: 'confirmed',
+        execution_result: true,
+      }))
+      expect(state.setSwapHtlcRefunded).toHaveBeenCalledWith('NQ55 SWAP HTLC ADDRESS')
+      expect(state.client.sendTransaction).toHaveBeenCalledOnce()
     })
 
     it('does not mark a native refund done when its execution failed', async () => {
@@ -1912,6 +1941,7 @@ describe('useSyncHtlc', () => {
       await useSyncHtlc().checkExpiredSwapHtlcs()
       expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
       expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, execution_result: false }))
     })
 
     it('holds the swap lock until the refund flag is written', async () => {
@@ -1972,6 +2002,7 @@ describe('useSyncHtlc', () => {
       expect(state.logger.error).toHaveBeenCalledWith('Error while sending refund swap HTLC tx', expect.any(Object))
       expect(state.run).not.toHaveBeenCalledWith(SQLQuery.ClearSwapHtlcRefundHash, expect.anything())
       expect(state.setSwapHtlcRefunded).not.toHaveBeenCalled()
+      expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: false, tx_state: sendState }))
     })
 
     it('marks refunded and deletes the row when a stored refund succeeded', async () => {
@@ -2066,6 +2097,10 @@ describe('useSyncHtlc', () => {
       expect(state.findTransactionInHistory).toHaveBeenCalledWith(expect.anything(), 'stored-refund')
       expect(state.setSwapHtlcRefunded).toHaveBeenCalledTimes(refunded ? 1 : 0)
       expect(state.run).toHaveBeenCalledWith(SQLQuery.DeleteSwapHtlc, ['NQ55 SWAP HTLC ADDRESS'])
+      if (refunded)
+        expect(trackSwapStep).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ step: 'refund', ok: true, execution_result: true }))
+      else
+        expect(trackSwapStep).not.toHaveBeenCalled()
     })
 
     it('does not scan HTLC history for an empty HTLC', async () => {
