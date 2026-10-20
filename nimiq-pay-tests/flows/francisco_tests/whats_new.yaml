@@ -36,11 +36,18 @@ tags:
       text: ${output.whatsNew.versionHeader}
       index: 1
 
-- back
+- tapOn: ${output.whatsNew.closeBtn}
 - waitForAnimationToEnd
-- assertVisible: ${output.navigation.whatsNewBtn}
-- back
+# The menu stays in the hierarchy under What's New, so check the changelog itself is gone by
+# its headers. "Previous versions" can't prove it: once scrolled to the second header, Maestro
+# already reports it not visible with the changelog still open.
+- assertNotVisible: ${output.whatsNew.versionHeader}
+# Log Out, not What's New: home also shows a "What's New" card.
+- assertVisible: ${output.navigation.logoutBtn}
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.logoutBtn}
 - assertVisible: ${output.home.payTitle}
 
 - stopApp

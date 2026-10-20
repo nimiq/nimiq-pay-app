@@ -4,7 +4,7 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 
 ## Layout
 
-- `flows/francisco_tests/`: the suite CI runs on BrowserStack, one build per flow (`.github/workflows/maestro_browserstack_suite_only.yml`). Every flow starts from a fresh wallet.
+- `flows/francisco_tests/`: the suite CI runs on BrowserStack, one build per flow (`.github/workflows/maestro_browserstack_suite_only.yml`), on Android and iOS in parallel. Every flow starts from a fresh wallet. The iOS job doesn't fail the workflow until it has 2 green runs in a row, and runs its `needsTestnetWallet` flows last, once the Android job is done, so the shared wallet is never logged in twice at once.
 - `flows/*.yaml` (top level): older flows that assume an already set-up wallet with history (`subflows/launch_app.yaml`). Not run in CI.
 - `subflows/`: shared steps. `create_account.yaml` wipes app data and creates a wallet with `${PIN}`.
 - `pageObjects/android/mainFlowsAndroid.page.js`: every selector, loaded with `runScript` and used as `${output.<screen>.<element>}`. Its comments explain past fixes (shadow DOM search box, anchored regexes).
@@ -13,6 +13,13 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 
 - Header: `appId: ${APP_ID}`, tag `franciscoTest`, then `runScript` of the page objects and `runFlow: ../../subflows/create_account.yaml`. Setup/Login flows start with `launchApp: clearState: true` instead, since Login only exists before a wallet is created. Never hard-code the app id or `'1111'`; use `${APP_ID}` and `${PIN}`.
 - Maestro sees visible text, `aria-label` and HTML `id` of the WebView. It does not see `data-testid`. Selectors depend on English UI text.
+- Flows run on Android and iOS (app id `com.nimiq.pay` on iOS). What differs on iOS:
+  - `back` does nothing. Close screens with the app's own controls: `navigation.backBtn` (Settings), `navigation.closeFlowModalBtn` (flows), `whatsNew.closeBtn`, or a tap on `navigation.sheetBackdrop` for the menu and Log Out sheets, whose close button has no label.
+  - A screen covered by a modal stays in the hierarchy (the menu under Settings), so after closing, assert an element only the closed screen has is gone.
+  - HTML `id` is not visible. Use text or `aria-label`, or a `when: platform:` branch (`subflows/tap_mini_apps_search.yaml`).
+  - Earlier slides of a flow stay in the hierarchy pinned to the left edge (x=0); `rightOf: ${output.navigation.backBtn}` keeps only the current slide (backup quiz).
+  - Text can split into more nodes (the address is nine 4-character nodes, `subflows/capture_top_up_address.yaml`) or gain invisible characters (Safari's URL starts with U+200E).
+  - The first letter keyboard on a device shows a "Speed up your typing" intro that swallows typing until dismissed (`output.iosKeyboard`).
 - Network-bound UI (consensus, cosigner, Mini App list, prices) needs `extendedWaitUntil` with a realistic timeout (30 s+ for consensus/cosigner), not `assertVisible`.
 - `runFlow: when: visible` is only for screens that may or may not appear (biometrics, notifications, Chrome sign-in). Never wrap the assertion that proves the feature worked, and never use `optional: true` on it.
 - Assert the result of the action (new state, new screen, new list entry), not only that a button exists.
@@ -25,10 +32,12 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 ## Running
 
 - Locally: `maestro test nimiq-pay-tests/flows/francisco_tests/<flow>.yaml --env APP_ID=com.nimiq.pay.debug --env PIN=1111`, or the Maestro MCP `run` tool with `files`.
+- iOS simulator (iPhone 17 Pro, the CI model): `maestro --device <udid> test --env APP_ID=com.nimiq.pay --env PIN=1111 <flow>`. Use the CLI only: a Maestro MCP call on the same simulator starts a second driver, both die ("Device unreachable"), and the MCP stays unusable until it is restarted. Build the app as in the root `CLAUDE.md` ("iOS simulator build").
 - Flows tagged `needsTestnetWallet` import the shared funded testnet wallet from `MAESTRO_TESTNET_WALLET_WORDS`. Locally, run them with `scripts/maestro-local.sh` (same arguments as `maestro`), from the repo root: it exports the `MAESTRO_*` lines of the gitignored `.env`. Maestro's debug and test output (`maestro.log`, `commands*.json`) record the typed words, so the wrapper sends whichever of `--debug-output` / `--test-output-dir` you don't pass to a temporary folder it deletes; treat folders you pass as secret. Don't run these flows while CI may be using the same wallet (logins can extend its HTLC). CI skips these flows while the repo secret is unset.
 - `subflows/switch_to_testnet.yaml` opens the dev modal by holding the menu's Settings row at a measured point when `DEV_MODAL_HOLD_DEVICE` names the device (`-e DEV_MODAL_HOLD_DEVICE=Pixel_8` locally; CI passes its BrowserStack device). Otherwise it falls back to repeated `longPressOn`, which races the app's 3 s threshold (5 hits in 15 presses on the Tab S9). A new device needs its point measured (the Settings row bounds: `maestro hierarchy` locally; for a BrowserStack device, a run's maestro_log) and a branch in the subflow.
 - The shared testnet wallet must keep at least 10 NIM: below that the home balance always shows decimals (`settings_nim_decimals`).
 - One flow on BrowserStack (costs a session): `node scripts/browserstack-maestro-run.js --app NimiqPayAndroidApkDebug --suite francisco_tests --device "Samsung Galaxy S26-16.0" --flow flows/francisco_tests/<flow>.yaml --env APP_ID=com.nimiq.pay.debug --env PIN=1111 --maestro-version 2.6.1 --output <dir>`. For `needsTestnetWallet` flows add `--secret-env MAESTRO_TESTNET_WALLET_WORDS --env "DEV_MODAL_HOLD_DEVICE=Samsung Galaxy S26-16.0"`: the script reads the value from the environment or `.env` and masks each word in the evidence, failing step and reports. Screenshots are not masked (they can show the words on the Login screen).
+- One flow on BrowserStack iOS: `--platform ios --app NimiqPayiOS --device "iPhone 17 Pro-26" --env APP_ID=com.nimiq.pay`, otherwise as above. `NimiqPayiOS` is the dev team's latest release `.ipa` (uploaded by `scripts/browserstack-upload.js`; list it with `/app-automate/recent_group_apps`). Its over-the-air updates are on, so a newer production web bundle can load on background/relaunch (accepted risk; triage as HARNESS).
 - The run script refuses a wallet whose words also appear in this folder's flow and page-object text (full-line comments excluded), its file paths, the run options or Maestro/log/BrowserStack wording, because masking them would corrupt evidence and reveal them in public reports. So a new selector, label or flow file name can make CI refuse the wallet flows: the flow records `NOT_RUN`, and the job log's `::error::` names the sources (never the words). Reword the source, or rotate to a new wallet. The current wallet passed on 2026-10-09.
 
 ## When a run fails

@@ -54,6 +54,8 @@ tags:
 - copyTextFrom: ${output.transaction.date}
 - evalScript: ${output.previousNewestDate = maestro.copiedText}
 - tapOn: ${output.navigation.closeFlowModalBtn}
+# On iOS a tap while the detail is still closing is lost.
+- waitForAnimationToEnd
 
 - tapOn: ${output.navigation.withdrawBtn}
 - extendedWaitUntil:
@@ -73,8 +75,17 @@ tags:
     while:
       true: ${output.typedGroups < output.addressGroups.length}
     commands:
-      - tapOn:
-          id: ${String(output.typedGroups)}
+      - runFlow:
+          when:
+            platform: Android
+          commands:
+            - tapOn:
+                id: ${String(output.typedGroups)}
+      - runFlow:
+          when:
+            platform: iOS
+          commands:
+            - tapOn: ${output.withdraw.addressSegmentLabel + output.typedGroups}
       - inputText: ${output.addressGroups[output.typedGroups]}
       - evalScript: ${output.typedGroups++}
 # Save only enables for a valid address, so a dropped character fails here.
@@ -94,8 +105,27 @@ tags:
     visible: ${output.withdraw.confirmTitle}
     timeout: 10000
 - assertVisible: ${output.withdraw.oneNimAmount}
-# The full address, its groups separated by no-break spaces.
-- assertVisible: ${FAUCET_ADDRESS.match(/.{4}/g).join('.') + '.?'}
+# The full address: on Android one text, its groups separated by no-break spaces; on iOS one
+# text per group.
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: ${FAUCET_ADDRESS.match(/.{4}/g).join('.') + '.?'}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - evalScript: ${output.checkedGroups = 0}
+      - repeat:
+          while:
+            true: ${output.checkedGroups < output.addressGroups.length}
+          commands:
+            - assertVisible:
+                text: ${output.addressGroups[output.checkedGroups]}
+                below: ${output.withdraw.confirmTitle}
+                above: ${output.withdraw.confirmAndSendBtn}
+            - evalScript: ${output.checkedGroups++}
 - tapOn: ${output.withdraw.confirmAndSendBtn}
 # Next comes either the PIN step or home; wait for the confirmation to leave so a slow PIN step
 # isn't missed. Without a PIN step it stays up while the send runs, which can wait up to 30 s each
@@ -142,6 +172,7 @@ tags:
       notVisible: ${output.transaction.confirmed}
     commands:
       - tapOn: ${output.navigation.closeFlowModalBtn}
+      - waitForAnimationToEnd
       - tapOn:
           text: ${output.transaction.row}
           index: 0

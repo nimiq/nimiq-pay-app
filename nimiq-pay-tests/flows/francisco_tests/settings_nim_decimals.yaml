@@ -54,14 +54,18 @@ tags:
 - extendedWaitUntil:
     visible: ${output.settings.nimDecimalsFiveSelected}
     timeout: 5000
-# Back is ignored while the alert is still animating out.
+# Leaving Settings is ignored while the alert is still animating out.
 - waitForAnimationToEnd
 
-- back
+- tapOn: ${output.navigation.backBtn}
 - waitForAnimationToEnd
+# The menu stays in the hierarchy under Settings, so check Settings itself is gone.
+- assertNotVisible: ${output.settings.minimumNimDecimals}
 - assertVisible: ${output.navigation.backupAccountBtn}
-- back
+- tapOn:
+    point: ${output.navigation.sheetBackdrop}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.navigation.backupAccountBtn}
 
 # The setting applies at once, but a login-time HTLC extension can show the balance skeleton.
 - extendedWaitUntil:

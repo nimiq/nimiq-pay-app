@@ -13,12 +13,22 @@ tags:
 - waitForAnimationToEnd
 
 - assertVisible: ${output.miniApps.discoverTitle}
-- assertVisible:
-    id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible:
+          id: ${output.miniApps.searchInputId}
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: ${output.miniApps.searchInputIos}
 - assertVisible: ${output.miniApps.closeBtn}
 
 - tapOn: ${output.miniApps.closeBtn}
 - waitForAnimationToEnd
+- assertNotVisible: ${output.miniApps.discoverTitle}
 - assertVisible: ${output.home.payTitle}
 
 - stopApp
