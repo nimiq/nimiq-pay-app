@@ -71,8 +71,9 @@ jobs:
           - platform: ios
             device: iPhone 17 Pro-26
             # The dev team's latest release .ipa (no commit), over-the-air updates on: a newer
-            # production web bundle can load on background/relaunch.
-            app: NimiqPayiOS
+            # production web bundle can load on background/relaunch. Another account uploads it, so
+            # it needs the shareable id: a bare custom_id only resolves the caller's own uploads (422).
+            app: alberto_O8FErZ/NimiqPayiOS
             app_id: com.nimiq.pay
             results_repo: franciscodiaz4/Maestro-Results-Nimiq-Pay-iOS
             # An hour more than Android: its wallet flows can only start once the Android job is done.
