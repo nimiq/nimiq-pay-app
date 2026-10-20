@@ -1218,6 +1218,22 @@ async function buildHtlcRelayEnvelope(
   }
 }
 
+// Swap funding and expiry refunds sign with the same on-chain HTLC forwarder nonce. Hold it from the
+// read in buildHtlcRelayEnvelope until the relay settles, so two relays can't sign the same nonce.
+let htlcForwarderRelay: Promise<unknown> | null = null
+
+async function withHtlcForwarderNonce<T>(relay: () => Promise<T>): Promise<T> {
+  const current = (htlcForwarderRelay ?? Promise.resolve()).catch(() => {}).then(relay)
+  htlcForwarderRelay = current
+  try {
+    return await current
+  }
+  finally {
+    if (htlcForwarderRelay === current)
+      htlcForwarderRelay = null
+  }
+}
+
 async function buildHtlcRelayExecution(
   wallet: HDNodeWallet,
   htlcId: string,
@@ -2450,86 +2466,88 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
 
       const htlcDetails = usdtContract.htlc as import('@nimiq/fastspot-api-v1').Erc20HtlcDetails
 
-      const feeSnapshot = await primeHtlcFee()
-      if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
-        throw new Error(i18n.t('Polygon fee changed; review the payment again'))
-      ensureApprovedSender()
-
-      // Build and execute HTLC relay transaction
-      const execution = await buildHtlcRelayExecution(
-        wallet,
-        htlcDetails.address,
-        BigInt(usdtContract.amount),
-        usdtContract.redeemAddress,
-        `0x${swap.hash}`,
-        usdtContract.timeout,
-        feeSnapshot,
-      )
-      ensureApprovedSender()
-
       const provisionalSwapHtlcKey = htlcDetails.address
       let createdProvisionalRow = false
       let tx: MerchantTransaction | undefined
       let receipt: PolygonRelayOutcome
       try {
-        receipt = await relayTransaction(execution, {
-          beforeRelay: async () => {
-            if (isUsdtMaintenanceActive.value)
-              throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
-            const existingRow = await query<SwapHtlc | null>(
-              SQLQuery.GetSwapHtlcByAddress,
-              [provisionalSwapHtlcKey, provisionalSwapHtlcKey],
-              { single: true },
-            )
-            if (existingRow?.tx_hash) {
-              fundingPossible = true
-              throw new Error(i18n.t('Polygon swap transaction is already pending'))
-            }
-            if (existingRow) {
-              fundingPossible = true
-              ensureApprovedSender()
-              return
-            }
+        receipt = await withHtlcForwarderNonce(async () => {
+          // Fetched under the lock so a wait behind another HTLC relay can't leave an expired fee.
+          const feeSnapshot = await primeHtlcFee()
+          if (options.maxFee !== undefined && feeSnapshot.fee > options.maxFee)
+            throw new Error(i18n.t('Polygon fee changed; review the payment again'))
+          ensureApprovedSender()
 
-            await run(
-              SQLQuery.InsertSwapHtlcProvisional,
-              [
-                provisionalSwapHtlcKey,
-                usdtContract.amount,
-                usdtContract.timeout * 1000,
-                swap.id,
-                swap.status,
-                htlcDetails.address,
-              ],
-            )
-            createdProvisionalRow = true
-            try {
-              ensureApprovedSender()
-            }
-            catch (error) {
-              await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
-              createdProvisionalRow = false
-              throw error
-            }
-            fundingPossible = true
-          },
-          beforeBroadcast: async (relayHash) => {
-            tx = buildOutgoingTransaction(
-              request,
-              title,
-              wallet.address,
-              relayHash,
-              Date.now(),
-              feeSnapshot.fee,
-              'pending',
-            ) as MerchantTransaction
-            await useTransactions().addPolygonSwapTransactionWithRecovery(tx, provisionalSwapHtlcKey)
-          },
-          onReplaced: async (oldHash, newHash) => {
-            await useTransactions().replacePolygonTransactionHash(oldHash, newHash, provisionalSwapHtlcKey)
-            if (tx?.hash === oldHash)
-              tx = { ...tx, hash: newHash }
-          },
+          const execution = await buildHtlcRelayExecution(
+            wallet,
+            htlcDetails.address,
+            BigInt(usdtContract.amount),
+            usdtContract.redeemAddress,
+            `0x${swap.hash}`,
+            usdtContract.timeout,
+            feeSnapshot,
+          )
+          ensureApprovedSender()
+
+          return relayTransaction(execution, {
+            beforeRelay: async () => {
+              if (isUsdtMaintenanceActive.value)
+                throw new PolygonRelayRejectedError(usdtMaintenanceNotice.value)
+              const existingRow = await query<SwapHtlc | null>(
+                SQLQuery.GetSwapHtlcByAddress,
+                [provisionalSwapHtlcKey, provisionalSwapHtlcKey],
+                { single: true },
+              )
+              if (existingRow?.tx_hash) {
+                fundingPossible = true
+                throw new Error(i18n.t('Polygon swap transaction is already pending'))
+              }
+              if (existingRow) {
+                fundingPossible = true
+                ensureApprovedSender()
+                return
+              }
+
+              await run(
+                SQLQuery.InsertSwapHtlcProvisional,
+                [
+                  provisionalSwapHtlcKey,
+                  usdtContract.amount,
+                  usdtContract.timeout * 1000,
+                  swap.id,
+                  swap.status,
+                  htlcDetails.address,
+                ],
+              )
+              createdProvisionalRow = true
+              try {
+                ensureApprovedSender()
+              }
+              catch (error) {
+                await run(SQLQuery.DeleteSwapHtlc, [provisionalSwapHtlcKey])
+                createdProvisionalRow = false
+                throw error
+              }
+              fundingPossible = true
+            },
+            beforeBroadcast: async (relayHash) => {
+              tx = buildOutgoingTransaction(
+                request,
+                title,
+                wallet.address,
+                relayHash,
+                Date.now(),
+                feeSnapshot.fee,
+                'pending',
+              ) as MerchantTransaction
+              await useTransactions().addPolygonSwapTransactionWithRecovery(tx, provisionalSwapHtlcKey)
+            },
+            onReplaced: async (oldHash, newHash) => {
+              await useTransactions().replacePolygonTransactionHash(oldHash, newHash, provisionalSwapHtlcKey)
+              if (tx?.hash === oldHash)
+                tx = { ...tx, hash: newHash }
+            },
+          })
         })
       }
       catch (error) {
@@ -2722,18 +2740,25 @@ export const usePolygonUsdt = defineStore('polygon-usdt', () => {
       wallet.address,
       BigInt(feeSnapshot.fee),
     ])
-    const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
     // Retain the earliest scan boundary until a Refund event or a successful receipt proves completion.
     const refundBlock = htlc.refund_block ?? await client.provider.getBlockNumber()
     async function persistRefundHash(refundHash: string) {
       await run(SQLQuery.SetSwapHtlcRefundHash, [refundHash, Date.now(), refundBlock, htlc.address])
     }
-    const receipt = await relayTransaction(execution, {
-      beforeRelay: async () => {
-        await run(SQLQuery.SetSwapHtlcRefundAttempt, [Date.now(), refundBlock, htlc.address])
-      },
-      beforeBroadcast: persistRefundHash,
-      onReplaced: async (_oldHash, newHash) => persistRefundHash(newHash),
+    // Don't hold the sweep behind a user's swap funding; the next sweep retries.
+    if (htlcForwarderRelay) {
+      logger.log('Deferring Polygon HTLC refund while another HTLC relay is in flight', htlc.address)
+      return { refunded: false }
+    }
+    const receipt = await withHtlcForwarderNonce(async () => {
+      const execution = await buildHtlcRelayEnvelope(wallet, data, feeSnapshot)
+      return relayTransaction(execution, {
+        beforeRelay: async () => {
+          await run(SQLQuery.SetSwapHtlcRefundAttempt, [Date.now(), refundBlock, htlc.address])
+        },
+        beforeBroadcast: persistRefundHash,
+        onReplaced: async (_oldHash, newHash) => persistRefundHash(newHash),
+      })
     })
 
     if (receipt.status === 'pending')
