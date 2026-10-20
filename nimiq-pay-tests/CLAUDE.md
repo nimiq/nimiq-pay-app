@@ -28,6 +28,7 @@ Maestro e2e flows for Nimiq Pay. This folder is zipped and uploaded to BrowserSt
 - Every command re-queries the screen. A value read over several commands (e.g. the 12 recovery words) can mix two screen states; read it until two passes agree (`subflows/capture_recovery_words.yaml`).
 - BrowserStack runs Maestro 2.6.1 (pinned in the workflow; the newest it offers). The local CLI may be newer: avoid commands or options added after 2.6.1, and never set `jsEngine: rhino` (removed in 2.6.1).
 - New flows join the suite tagged `quarantine` and are promoted after 2 green BrowserStack runs in a row.
+- Tag `androidOnly` makes the iOS job skip a flow: it records `NOT_RUN` (never green) without failing the job. Say why in a comment next to the tag.
 
 ## Running
 
@@ -52,6 +53,6 @@ Each flow's `result.json` has an `outcome`:
 | `INFRA` / `HARNESS` | BrowserStack or our CI/config failed (see `signal`) |
 | `APP_BUG` / `TEST_BUG` | Crash logs captured, or the flow launches the wrong app id |
 | `UNKNOWN` | Not classifiable by the rules |
-| `NOT_RUN` | Skipped: circuit breaker, fatal harness problem, time budget, unset secret, or a secret sharing words with the suite |
+| `NOT_RUN` | Skipped: circuit breaker, fatal harness problem, time budget, unset secret, a secret sharing words with the suite, or `androidOnly` on iOS |
 
 `/triage-maestro-run <GitHub run id>` diagnoses every non-passing flow from its evidence (shadow mode, writes `triage.md`). The rules live in `scripts/browserstack-maestro-run.js`; see "Maestro on BrowserStack" in the root `CLAUDE.md`.

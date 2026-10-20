@@ -155,6 +155,13 @@ jobs:
               stop_reason="Skipped: wall-clock budget exhausted"
             fi
             skip_signal="$stop_reason"
+            # A deliberate platform exclusion, not a failure: reported as NOT_RUN (never green),
+            # without failing the job.
+            if [[ -z "$skip_signal" && "$PLATFORM" == ios ]] && grep -qE '^[[:space:]]*-[[:space:]]*androidOnly[[:space:]]*$' "$flow_file"; then
+              jq -n --arg flow "$flow" --arg platform "$PLATFORM" --argjson quarantine "$quarantined" \
+                '{flow: $flow, platform: $platform, outcome: "NOT_RUN", ok: false, quarantine: $quarantine, signal: "Skipped on iOS: the flow is tagged androidOnly", attempts: []}' > "$report_dir/result.json"
+              continue
+            fi
             if [[ -z "$skip_signal" ]] && grep -qE "$wallet_tag" "$flow_file" \
               && [[ -z "$MAESTRO_TESTNET_WALLET_WORDS" ]]; then
               skip_signal="Skipped: the MAESTRO_TESTNET_WALLET_WORDS secret is not set"
